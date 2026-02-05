@@ -10,6 +10,7 @@ import com.anton.elementalwands.util.MeteorManager;
 import com.anton.elementalwands.util.TemporaryBlockManager;
 import com.anton.elementalwands.util.TemporarySnowManager;
 import com.anton.elementalwands.util.TitanDomeManager;
+import com.anton.elementalwands.util.BlazeTrailManager;
 import net.fabricmc.api.ModInitializer;
 
 public class ElementalWandsMod implements ModInitializer {
@@ -24,6 +25,7 @@ public class ElementalWandsMod implements ModInitializer {
         CycloneManager.init();
         MeteorManager.init();
         TitanDomeManager.init();
+        BlazeTrailManager.init();
         ModEntities.registerAll();
         ModItems.registerAll();
         ModNetworking.registerPayloads();

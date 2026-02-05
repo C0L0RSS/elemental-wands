@@ -57,7 +57,7 @@ public final class MeteorManager {
         BlockPos spawnBlockPos = BlockPos.ofFloored(targetPos).add(0, spawnHeight, 0);
         FallingBlockEntity meteor = FallingBlockEntity.spawnFromBlock(world, spawnBlockPos, meteorState);
         meteor.setPosition(targetPos.x, spawnBlockPos.getY(), targetPos.z);
-        meteor.setVelocity(0.0, -0.85, 0.0);
+        meteor.setVelocity(0.0, -0.3, 0.0);
         meteor.setHurtEntities(10.0f, 40);
         meteor.setDestroyedOnLanding();
 
@@ -67,13 +67,17 @@ public final class MeteorManager {
 
         world.playSound(null, spawnBlockPos, SoundEvents.ENTITY_GHAST_SHOOT, SoundCategory.PLAYERS, 1.4f,
                 0.6f);
-        world.spawnParticles(ParticleTypes.FLAME, meteor.getX(), meteor.getY(), meteor.getZ(), 80, 0.4, 0.6, 0.4, 0.06);
-        world.spawnParticles(ParticleTypes.SMOKE, meteor.getX(), meteor.getY(), meteor.getZ(), 50, 0.5, 0.7, 0.5, 0.03);
+        // Significantly increased particle count for "larger" feel
+        world.spawnParticles(ParticleTypes.FLAME, meteor.getX(), meteor.getY(), meteor.getZ(), 200, 1.0, 1.0, 1.0,
+                0.08);
+        world.spawnParticles(ParticleTypes.SMOKE, meteor.getX(), meteor.getY(), meteor.getZ(), 100, 1.0, 1.0, 1.0,
+                0.05);
     }
 
     private static void tickWorld(ServerWorld world) {
         List<Meteor> meteors = METEORS.get(world.getRegistryKey());
-        if (meteors == null || meteors.isEmpty()) return;
+        if (meteors == null || meteors.isEmpty())
+            return;
 
         int now = world.getServer().getTicks();
 
@@ -95,10 +99,12 @@ public final class MeteorManager {
 
             meteor.lastPos = falling.getEntityPos();
 
-            world.spawnParticles(ParticleTypes.FLAME, meteor.lastPos.x, meteor.lastPos.y, meteor.lastPos.z, 8, 0.25, 0.25,
-                    0.25, 0.02);
-            world.spawnParticles(ParticleTypes.SMOKE, meteor.lastPos.x, meteor.lastPos.y, meteor.lastPos.z, 3, 0.2, 0.2, 0.2,
-                    0.01);
+            world.spawnParticles(ParticleTypes.FLAME, meteor.lastPos.x, meteor.lastPos.y, meteor.lastPos.z, 20, 0.5,
+                    0.5,
+                    0.5, 0.03);
+            world.spawnParticles(ParticleTypes.SMOKE, meteor.lastPos.x, meteor.lastPos.y, meteor.lastPos.z, 10, 0.4,
+                    0.4,
+                    0.4, 0.02);
 
             if (falling.isOnGround()) {
                 explode(world, meteor);
@@ -117,9 +123,11 @@ public final class MeteorManager {
 
         world.createExplosion(caster, meteor.lastPos.x, meteor.lastPos.y, meteor.lastPos.z, meteor.explosionPower, true,
                 World.ExplosionSourceType.MOB);
-        world.playSound(null, BlockPos.ofFloored(meteor.lastPos), SoundEvents.ENTITY_GENERIC_EXPLODE.value(), SoundCategory.PLAYERS,
+        world.playSound(null, BlockPos.ofFloored(meteor.lastPos), SoundEvents.ENTITY_GENERIC_EXPLODE.value(),
+                SoundCategory.PLAYERS,
                 1.8f, 0.9f);
-        world.spawnParticles(ParticleTypes.EXPLOSION_EMITTER, meteor.lastPos.x, meteor.lastPos.y, meteor.lastPos.z, 1, 0, 0, 0,
+        world.spawnParticles(ParticleTypes.EXPLOSION_EMITTER, meteor.lastPos.x, meteor.lastPos.y, meteor.lastPos.z, 1,
+                0, 0, 0,
                 0);
     }
 }

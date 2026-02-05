@@ -10,23 +10,37 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.entity.FlyingItemEntityRenderer;
+import net.minecraft.client.option.KeyBinding;
+import net.minecraft.util.Identifier;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import org.lwjgl.glfw.GLFW;
 
 public class ElementalWandsClient implements ClientModInitializer {
+
+    private static KeyBinding ultimateKey;
+
     @Override
     public void onInitializeClient() {
+        ultimateKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.elementalwands.ultimate",
+                GLFW.GLFW_KEY_X,
+                new KeyBinding.Category(Identifier.of("elementalwands", "general"))));
         EntityRendererRegistry.register(ModEntities.BOULDER_PROJECTILE, FlyingItemEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.CHILL_SNOWBALL, FlyingItemEntityRenderer::new);
         ClientTickEvents.END_CLIENT_TICK.register(ElementalWandsClient::tickClient);
     }
 
     private static void tickClient(MinecraftClient client) {
-        if (client.player == null || client.getNetworkHandler() == null) return;
-        if (client.currentScreen != null) return;
+        if (client.player == null || client.getNetworkHandler() == null)
+            return;
+        if (client.currentScreen != null)
+            return;
 
-        if (!(client.player.getMainHandStack().getItem() instanceof AbstractWandItem)) return;
+        if (!(client.player.getMainHandStack().getItem() instanceof AbstractWandItem))
+            return;
 
-        while (client.options.attackKey.wasPressed()) {
-            ClientPlayNetworking.send(ModNetworking.CastPrimaryPayload.INSTANCE);
+        while (ultimateKey.wasPressed()) {
+            ClientPlayNetworking.send(ModNetworking.CastUltimatePayload.INSTANCE);
         }
     }
 }

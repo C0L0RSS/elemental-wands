@@ -51,14 +51,17 @@ public abstract class AbstractWandItem extends Item {
     public ActionResult use(World world, PlayerEntity user, Hand hand) {
         ItemStack stack = user.getStackInHand(hand);
 
-        if (world.isClient()) return ActionResult.SUCCESS;
-        if (!(world instanceof ServerWorld serverWorld)) return ActionResult.SUCCESS;
-        if (user.isSpectator()) return ActionResult.PASS;
+        if (world.isClient())
+            return ActionResult.SUCCESS;
+        if (!(world instanceof ServerWorld serverWorld))
+            return ActionResult.SUCCESS;
+        if (user.isSpectator())
+            return ActionResult.PASS;
 
         if (user.isSneaking()) {
-            castUltimate(serverWorld, user, stack);
-        } else {
             castSecondary(serverWorld, user, stack);
+        } else {
+            castPrimary(serverWorld, user, stack);
         }
         return ActionResult.SUCCESS;
     }
@@ -113,7 +116,8 @@ public abstract class AbstractWandItem extends Item {
     }
 
     protected final boolean applyDamage(ServerWorld world, PlayerEntity caster, Entity target, float amount) {
-        if (!(target instanceof LivingEntity living)) return false;
+        if (!(target instanceof LivingEntity living))
+            return false;
 
         DamageSource source = world.getDamageSources().playerAttack(caster);
         return living.damage(world, source, amount);

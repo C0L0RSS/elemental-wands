@@ -21,31 +21,65 @@ public final class ModNetworking {
     private static boolean payloadsRegistered = false;
 
     public static void registerPayloads() {
-        if (payloadsRegistered) return;
+        if (payloadsRegistered)
+            return;
         payloadsRegistered = true;
         PayloadTypeRegistry.playC2S().register(CastPrimaryPayload.ID, CastPrimaryPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(CastUltimatePayload.ID, CastUltimatePayload.CODEC);
     }
 
     public static void registerC2SReceivers() {
         ServerPlayNetworking.registerGlobalReceiver(CastPrimaryPayload.ID,
                 (payload, context) -> handleCastPrimary(context.player()));
+        ServerPlayNetworking.registerGlobalReceiver(CastUltimatePayload.ID,
+                (payload, context) -> handleCastUltimate(context.player()));
     }
 
     private static void handleCastPrimary(ServerPlayerEntity player) {
-        if (player.isSpectator()) return;
+        if (player.isSpectator())
+            return;
 
-        if (!(player.getEntityWorld() instanceof ServerWorld world)) return;
+        if (!(player.getEntityWorld() instanceof ServerWorld world))
+            return;
 
         ItemStack stack = player.getMainHandStack();
-        if (!(stack.getItem() instanceof AbstractWandItem wand)) return;
+        if (!(stack.getItem() instanceof AbstractWandItem wand))
+            return;
 
         wand.castPrimary(world, player, stack);
     }
 
+    private static void handleCastUltimate(ServerPlayerEntity player) {
+        if (player.isSpectator())
+            return;
+
+        if (!(player.getEntityWorld() instanceof ServerWorld world))
+            return;
+
+        ItemStack stack = player.getMainHandStack();
+        if (!(stack.getItem() instanceof AbstractWandItem wand))
+            return;
+
+        wand.castUltimate(world, player, stack);
+    }
+
     public record CastPrimaryPayload() implements CustomPayload {
-        public static final Id<CastPrimaryPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID, "cast_primary"));
+        public static final Id<CastPrimaryPayload> ID = new Id<>(
+                Identifier.of(ElementalWandsMod.MOD_ID, "cast_primary"));
         public static final CastPrimaryPayload INSTANCE = new CastPrimaryPayload();
         public static final PacketCodec<RegistryByteBuf, CastPrimaryPayload> CODEC = PacketCodec.unit(INSTANCE);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    public record CastUltimatePayload() implements CustomPayload {
+        public static final Id<CastUltimatePayload> ID = new Id<>(
+                Identifier.of(ElementalWandsMod.MOD_ID, "cast_ultimate"));
+        public static final CastUltimatePayload INSTANCE = new CastUltimatePayload();
+        public static final PacketCodec<RegistryByteBuf, CastUltimatePayload> CODEC = PacketCodec.unit(INSTANCE);
 
         @Override
         public Id<? extends CustomPayload> getId() {

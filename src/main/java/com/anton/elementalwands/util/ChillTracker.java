@@ -15,10 +15,11 @@ import net.minecraft.world.World;
 
 public final class ChillTracker {
 
-    private record ChillData(int stacks, int expiryTick) {
+    private record ChillData(int stacks, int lastHitTick) {
     }
 
     private static final Map<RegistryKey<World>, Map<UUID, ChillData>> CHILL = new HashMap<>();
+    private static final int CLEAR_DELAY = 100;
 
     private ChillTracker() {
     }
@@ -28,30 +29,69 @@ public final class ChillTracker {
     }
 
     public static void addStack(ServerWorld world, LivingEntity target) {
-        if (!target.isAlive()) return;
+        if (!target.isAlive())
+            return;
 
         int now = world.getServer().getTicks();
         RegistryKey<World> key = world.getRegistryKey();
         Map<UUID, ChillData> map = CHILL.computeIfAbsent(key, _k -> new HashMap<>());
 
         ChillData existing = map.get(target.getUuid());
-        int stacks = (existing != null && now < existing.expiryTick) ? existing.stacks : 0;
+        int currentStacks = 0;
 
-        stacks = Math.min(stacks + 1, 6);
-        map.put(target.getUuid(), new ChillData(stacks, now + 100));
+        if (existing != null) {
+            // If we are within the clear window, keep stacks, otherwise reset
+            if (now - existing.lastHitTick < CLEAR_DELAY) {
+                currentStacks = existing.stacks;
+            }
+        }
 
+        int newStacks = Math.min(currentStacks + 1, 6);
+        map.put(target.getUuid(), new ChillData(newStacks, now));
+
+        applyEffects(target, newStacks);
+    }
+
+    public static int getStacks(LivingEntity entity) {
+        World world = entity.getEntityWorld();
+        if (!(world instanceof ServerWorld sw))
+            return 0;
+
+        Map<UUID, ChillData> map = CHILL.get(sw.getRegistryKey());
+        if (map == null)
+            return 0;
+
+        ChillData data = map.get(entity.getUuid());
+        // If data exists but is stale (expired), return 0
+        if (data != null && (sw.getServer().getTicks() - data.lastHitTick >= CLEAR_DELAY)) {
+            return 0;
+        }
+
+        return data != null ? data.stacks : 0;
+    }
+
+    private static void applyEffects(LivingEntity target, int stacks) {
+        // Deep Frozen: 6 stacks
         if (stacks >= 6) {
-            target.setFrozenTicks(Math.min(target.getFrozenTicks() + 200, 320));
-            target.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 60, 3, false, true, true));
+            // Total Immobilization: 30 ticks (approx 1.5s), max frozen ticks
+            target.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 30, 255, false, true, true)); // 255
+                                                                                                                  // puts
+                                                                                                                  // movement
+                                                                                                                  // to
+                                                                                                                  // 0
+            target.setFrozenTicks(target.getMinFreezeDamageTicks() + 100); // instant freeze damage range
         } else {
+            // 1 stack = Slowness I (amplifer 0), 2 stacks = Slowness II (amplifier 1), etc.
+            // Duration refreshes to 60 ticks (3s)
             target.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 60, stacks - 1, false, true, true));
-            target.setFrozenTicks(Math.min(target.getFrozenTicks() + 20, 200));
+            target.setFrozenTicks(Math.min(target.getFrozenTicks() + 40, 300));
         }
     }
 
     private static void tickWorld(ServerWorld world) {
         Map<UUID, ChillData> map = CHILL.get(world.getRegistryKey());
-        if (map == null || map.isEmpty()) return;
+        if (map == null || map.isEmpty())
+            return;
 
         int now = world.getServer().getTicks();
 
@@ -59,8 +99,11 @@ public final class ChillTracker {
         while (it.hasNext()) {
             Map.Entry<UUID, ChillData> entry = it.next();
             ChillData data = entry.getValue();
-            if (now < data.expiryTick) continue;
-            it.remove();
+
+            // Auto-clear if no hits for 100 ticks
+            if (now - data.lastHitTick >= CLEAR_DELAY) {
+                it.remove();
+            }
         }
 
         if (map.isEmpty()) {
@@ -68,4 +111,3 @@ public final class ChillTracker {
         }
     }
 }
-

@@ -95,7 +95,15 @@ public abstract class AbstractWandItem extends Item {
         };
 
         int last = nbt.getInt(key, -1_000_000_000);
-        int remaining = abilityCooldownTicks - (now - last);
+        int elapsed = now - last;
+
+        // If player has Frost stacks, time passes 2x slower for cooldowns (elapsed is
+        // halved)
+        if (com.anton.elementalwands.util.ChillTracker.getStacks(player) > 0) {
+            elapsed /= 2;
+        }
+
+        int remaining = abilityCooldownTicks - elapsed;
         if (remaining > 0) {
             sendCooldownActionbar(player, ability, remaining);
             return false;

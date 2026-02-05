@@ -21,15 +21,12 @@ import net.minecraft.util.math.Vec3d;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.anton.elementalwands.entity.ChillSnowballEntity;
+import com.anton.elementalwands.registry.ModEntities;
+import com.anton.elementalwands.util.FrostZoneManager;
 import com.anton.elementalwands.util.BlizzardManager;
-import com.anton.elementalwands.util.TemporaryBlockManager;
 
 public class IceWandItem extends AbstractWandItem {
-
-    private static final float ICE_SHARD_DAMAGE = 4.0f;
-    private static final int ICE_SHARD_SLOW_TICKS = 80;
-
-    private static final int WALL_DURATION_TICKS = 160;
 
     public IceWandItem(Settings settings) {
         super(settings);
@@ -37,76 +34,49 @@ public class IceWandItem extends AbstractWandItem {
 
     @Override
     public void castPrimary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!tryStartCooldown(world, caster, stack, Ability.PRIMARY, DEFAULT_PRIMARY_COOLDOWN_TICKS)) return;
+        if (!tryStartCooldown(world, caster, stack, Ability.PRIMARY, DEFAULT_PRIMARY_COOLDOWN_TICKS))
+            return;
 
-        HitResult hit = raycast(world, caster, DEFAULT_RANGE);
-        Vec3d start = caster.getEyePos();
-        Vec3d end = hit.getPos();
+        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_SNOWBALL_THROW, SoundCategory.PLAYERS, 0.5F,
+                0.4F / (world.getRandom().nextFloat() * 0.4F + 0.8F));
 
-        spawnParticleLine(world, start, end, ParticleTypes.SNOWFLAKE);
-        world.playSound(null, caster.getBlockPos(), SoundEvents.BLOCK_GLASS_BREAK, SoundCategory.PLAYERS, 0.8f, 1.3f);
-
-        if (hit.getType() == HitResult.Type.ENTITY) {
-            if (((EntityHitResult) hit).getEntity() instanceof LivingEntity target) {
-                applyDamage(world, caster, target, ICE_SHARD_DAMAGE);
-                target.addStatusEffect(
-                        new StatusEffectInstance(StatusEffects.SLOWNESS, ICE_SHARD_SLOW_TICKS, 1, false, true, true));
-                target.setFrozenTicks(Math.min(target.getFrozenTicks() + 60, 240));
-            }
-        } else if (hit.getType() == HitResult.Type.BLOCK) {
-            BlockPos top = ((BlockHitResult) hit).getBlockPos().up();
-            if (world.getBlockState(top).isAir()) {
-                var snow = Blocks.SNOW.getDefaultState().with(SnowBlock.LAYERS, 1);
-                if (snow.canPlaceAt(world, top)) {
-                    world.setBlockState(top, snow, 3);
-                }
-            }
+        for (int i = 0; i < 3; i++) {
+            ChillSnowballEntity snowball = new ChillSnowballEntity(ModEntities.CHILL_SNOWBALL, world);
+            snowball.setOwner(caster);
+            snowball.setPosition(caster.getEyePos());
+            snowball.setVelocity(caster, caster.getPitch(), caster.getYaw(), 0.0F, 1.5F, 4.0F); // 4.0F divergence for
+                                                                                                // volley spread
+            world.spawnEntity(snowball);
         }
     }
 
     @Override
     public void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!tryStartCooldown(world, caster, stack, Ability.SECONDARY, DEFAULT_SECONDARY_COOLDOWN_TICKS)) return;
+        if (!tryStartCooldown(world, caster, stack, Ability.SECONDARY, DEFAULT_SECONDARY_COOLDOWN_TICKS))
+            return;
 
-        List<BlockPos> positions = wallPositions(caster, 5, 3, 2);
-        int placed = TemporaryBlockManager.placeTemporaryBlocks(
-                world,
-                positions,
-                Blocks.PACKED_ICE.getDefaultState(),
-                WALL_DURATION_TICKS,
-                state -> (state.isAir() || state.isReplaceable()) && state.getFluidState().isEmpty());
-
-        if (placed > 0) {
-            world.playSound(null, caster.getBlockPos(), SoundEvents.BLOCK_GLASS_PLACE, SoundCategory.PLAYERS, 0.9f, 1.2f);
-            world.spawnParticles(ParticleTypes.SNOWFLAKE, caster.getX(), caster.getBodyY(0.6), caster.getZ(), 35, 1.0, 0.6,
-                    1.0, 0.03);
+        HitResult hit = raycast(world, caster, DEFAULT_RANGE);
+        BlockPos center;
+        if (hit.getType() == HitResult.Type.MISS) {
+            center = BlockPos.ofFloored(hit.getPos());
+        } else {
+            center = BlockPos.ofFloored(hit.getPos());
         }
+
+        FrostZoneManager.createZone(world, center, 3, 120);
+        world.playSound(null, center, SoundEvents.BLOCK_GLASS_BREAK, SoundCategory.PLAYERS, 1.0f, 0.5f);
     }
 
     @Override
     public void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!tryStartCooldown(world, caster, stack, Ability.ULTIMATE, DEFAULT_ULTIMATE_COOLDOWN_TICKS)) return;
+        if (!tryStartCooldown(world, caster, stack, Ability.ULTIMATE, DEFAULT_ULTIMATE_COOLDOWN_TICKS))
+            return;
 
         HitResult hit = raycast(world, caster, DEFAULT_RANGE);
         Vec3d center = hit.getType() == HitResult.Type.MISS ? caster.getEntityPos() : hit.getPos();
 
         BlizzardManager.startBlizzard(world, caster, center);
-        world.playSound(null, BlockPos.ofFloored(center), SoundEvents.BLOCK_SNOW_BREAK, SoundCategory.PLAYERS, 0.8f, 0.6f);
-    }
-
-    private static List<BlockPos> wallPositions(PlayerEntity caster, int width, int height, int forward) {
-        var facing = caster.getHorizontalFacing();
-        var left = facing.rotateYCounterclockwise();
-
-        BlockPos origin = caster.getBlockPos().offset(facing, forward);
-        int half = width / 2;
-
-        List<BlockPos> positions = new ArrayList<>();
-        for (int dx = -half; dx <= half; dx++) {
-            for (int dy = 0; dy < height; dy++) {
-                positions.add(origin.offset(left, dx).up(dy));
-            }
-        }
-        return positions;
+        world.playSound(null, BlockPos.ofFloored(center), SoundEvents.BLOCK_SNOW_BREAK, SoundCategory.PLAYERS, 1.0f,
+                0.5f);
     }
 }

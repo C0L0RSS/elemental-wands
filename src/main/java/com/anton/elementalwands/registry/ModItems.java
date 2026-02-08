@@ -11,6 +11,7 @@ import com.anton.elementalwands.item.WindWandItem;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroups;
+import net.minecraft.item.ToolMaterial;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKey;
@@ -23,6 +24,8 @@ public class ModItems {
     public static final Item WIND_WAND = register("wind_wand", settings -> new WindWandItem(settings));
     public static final Item STONE_WAND = register("stone_wand", settings -> new StoneWandItem(settings));
     public static final Item ICE_WAND = register("ice_wand", settings -> new IceWandItem(settings));
+    public static final Item TITAN_SWORD = register("titan_sword", settings -> new Item(
+            settings.sword(ToolMaterial.NETHERITE, 3.0f, -2.4f).fireproof().maxCount(1)));
 
     public static void registerAll() {
         ItemGroupEvents.modifyEntriesEvent(ItemGroups.TOOLS).register(entries -> {
@@ -30,6 +33,7 @@ public class ModItems {
             entries.add(WIND_WAND);
             entries.add(STONE_WAND);
             entries.add(ICE_WAND);
+            entries.add(TITAN_SWORD);
         });
     }
 

@@ -51,6 +51,7 @@ public final class CycloneManager {
         ServerTickEvents.END_WORLD_TICK.register(CycloneManager::tickWorld);
     }
 
+    @Deprecated(since = "2.2.0", forRemoval = false)
     public static void startCyclone(ServerWorld world, PlayerEntity caster, Vec3d center) {
         int now = world.getServer().getTicks();
         CYCLONES.computeIfAbsent(world.getRegistryKey(), _k -> new ArrayList<>())

@@ -70,6 +70,13 @@ public final class ChillTracker {
         return data != null ? data.stacks : 0;
     }
 
+    public static void clearFrostStacks(ServerWorld world, LivingEntity entity) {
+        Map<UUID, ChillData> map = CHILL.get(world.getRegistryKey());
+        if (map != null) {
+            map.remove(entity.getUuid());
+        }
+    }
+
     private static void applyEffects(LivingEntity target, int stacks) {
         // Deep Frozen: 6 stacks
         if (stacks >= 6) {

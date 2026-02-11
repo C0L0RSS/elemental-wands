@@ -7,23 +7,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import com.anton.elementalwands.registry.ModEntities;
-
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.thrown.SnowballEntity;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.Heightmap;
-import net.minecraft.util.math.Box;
+import net.minecraft.block.Blocks;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.block.Blocks;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.particle.ParticleTypes;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Box;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
 public final class BlizzardManager {
@@ -32,24 +29,38 @@ public final class BlizzardManager {
         private final Vec3d center;
         private final int radius;
         private final UUID casterUuid;
+        private final int startTick;
         private final int expiryTick;
-        private int nextWaveTick;
 
-        private Blizzard(Vec3d center, int radius, UUID casterUuid, int expiryTick, int nextWaveTick) {
+        private Blizzard(Vec3d center, int radius, UUID casterUuid, int startTick, int expiryTick) {
             this.center = center;
             this.radius = radius;
             this.casterUuid = casterUuid;
+            this.startTick = startTick;
             this.expiryTick = expiryTick;
-            this.nextWaveTick = nextWaveTick;
         }
     }
 
     private static final Map<RegistryKey<World>, List<Blizzard>> BLIZZARDS = new HashMap<>();
 
-    private static final int DURATION_TICKS = 160;
-    private static final int RADIUS = 25;
-    private static final int WAVE_INTERVAL_TICKS = 5;
-    private static final int SNOWBALLS_PER_WAVE = 3;
+    // 3-Phase Rime Awakening
+    private static final int PHASE_1_DURATION_TICKS = 60; // 3 seconds
+    private static final int PHASE_2_DURATION_TICKS = 60; // 3 seconds
+    private static final int PHASE_3_CAGE_DURATION_TICKS = 80; // 4 seconds - APPROVED
+    private static final int TOTAL_DURATION_TICKS = PHASE_1_DURATION_TICKS + PHASE_2_DURATION_TICKS;
+
+    // Phase 1 - Build-up
+    private static final int PHASE_1_PARTICLE_RATE = 20;
+
+    // Phase 2 - Storm
+    private static final int PHASE_2_PARTICLE_RATE = 100;
+    private static final float PHASE_2_DAMAGE_PER_SECOND = 2.0f;
+    private static final int PHASE_2_FROST_STACK_INTERVAL_TICKS = 20;
+
+    // Phase 3 - Finale (ice cage)
+    private static final int ICE_CAGE_SIZE = 3; // 3x3x3 blocks
+
+    private static final int RADIUS = 25; // Large blizzard radius
 
     private BlizzardManager() {
     }
@@ -62,10 +73,11 @@ public final class BlizzardManager {
         int now = world.getServer().getTicks();
 
         BLIZZARDS.computeIfAbsent(world.getRegistryKey(), _k -> new ArrayList<>())
-                .add(new Blizzard(center, RADIUS, caster.getUuid(), now + DURATION_TICKS, now));
+                .add(new Blizzard(center, RADIUS, caster.getUuid(), now, now + TOTAL_DURATION_TICKS));
 
-        TemporarySnowManager.createSnowField(world, BlockPos.ofFloored(center), RADIUS, DURATION_TICKS + 60);
-        world.spawnParticles(ParticleTypes.SNOWFLAKE, center.x, center.y + 1.0, center.z, 200, 8.0, 4.0, 8.0, 0.02);
+        // Initial snow field
+        TemporarySnowManager.createSnowField(world, BlockPos.ofFloored(center), RADIUS,
+                TOTAL_DURATION_TICKS + PHASE_3_CAGE_DURATION_TICKS + 60);
     }
 
     private static void tickWorld(ServerWorld world) {
@@ -78,19 +90,20 @@ public final class BlizzardManager {
         Iterator<Blizzard> it = blizzards.iterator();
         while (it.hasNext()) {
             Blizzard blizzard = it.next();
-
-            // Apply Area Effects (Blindness + Freeze)
-            applyBlizzardEffects(world, blizzard);
+            int age = now - blizzard.startTick;
 
             if (now >= blizzard.expiryTick) {
-                triggerFinale(world, blizzard);
+                // Trigger Phase 3 Finale
+                triggerPhase3Finale(world, blizzard);
                 it.remove();
                 continue;
             }
 
-            if (now >= blizzard.nextWaveTick) {
-                spawnWave(world, blizzard);
-                blizzard.nextWaveTick = now + WAVE_INTERVAL_TICKS;
+            // Determine current phase
+            if (age <= PHASE_1_DURATION_TICKS) {
+                tickPhase1BuildUp(world, blizzard, age);
+            } else {
+                tickPhase2Storm(world, blizzard, age);
             }
         }
 
@@ -99,73 +112,130 @@ public final class BlizzardManager {
         }
     }
 
-    private static void applyBlizzardEffects(ServerWorld world, Blizzard blizzard) {
+    private static void tickPhase1BuildUp(ServerWorld world, Blizzard blizzard, int age) {
+        // Phase 1: Build-up with light snow and wind sounds
         Box box = Box.of(blizzard.center, blizzard.radius * 2, 24.0, blizzard.radius * 2);
         List<LivingEntity> targets = world.getEntitiesByClass(LivingEntity.class, box,
                 e -> e.getUuid() != blizzard.casterUuid);
 
         for (LivingEntity target : targets) {
-            // Whiteout Effect
+            // Apply Slowness I
+            target.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 20, 0, false, false, false));
+        }
+
+        // Light snow particles
+        if (age % 2 == 0) { // Every other tick
+            for (int i = 0; i < PHASE_1_PARTICLE_RATE / 10; i++) {
+                double angle = world.random.nextDouble() * Math.PI * 2;
+                double radius = world.random.nextDouble() * blizzard.radius;
+                double px = blizzard.center.x + Math.cos(angle) * radius;
+                double pz = blizzard.center.z + Math.sin(angle) * radius;
+                double py = blizzard.center.y + 5 + world.random.nextDouble() * 8;
+
+                world.spawnParticles(ParticleTypes.SNOWFLAKE, px, py, pz, 1, 0.2, 0.2, 0.2, 0.01);
+            }
+        }
+
+        // Wind sounds periodically
+        if (age % 40 == 0) {
+            world.playSound(null, BlockPos.ofFloored(blizzard.center), SoundEvents.ENTITY_BREEZE_WIND_BURST.value(),
+                    SoundCategory.PLAYERS, 0.8f, 0.7f);
+        }
+    }
+
+    private static void tickPhase2Storm(ServerWorld world, Blizzard blizzard, int age) {
+        // Phase 2: Intense storm with thick fog and rapid freezing
+        Box box = Box.of(blizzard.center, blizzard.radius * 2, 24.0, blizzard.radius * 2);
+        List<LivingEntity> targets = world.getEntitiesByClass(LivingEntity.class, box,
+                e -> e.getUuid() != blizzard.casterUuid);
+
+        for (LivingEntity target : targets) {
+            // Apply Blindness (whiteout effect)
             target.addStatusEffect(new StatusEffectInstance(StatusEffects.BLINDNESS, 40, 0, false, false, false));
 
-            // Aggressive Freezing (3x faster -> +5 ticks per tick (since normal is
-            // slow-ish? or just +3))
-            // Vanilla powder snow adds some ticks. We'll add +3 ticks directly.
-            target.setFrozenTicks(Math.min(target.getFrozenTicks() + 3, target.getMinFreezeDamageTicks() + 100));
+            // Deal damage every 10 ticks (0.5 seconds) for 2 damage/second
+            if (age % 10 == 0) {
+                target.damage(world, world.getDamageSources().freeze(), PHASE_2_DAMAGE_PER_SECOND / 2);
+            }
+
+            // Add Frost stack every 20 ticks
+            if (age % PHASE_2_FROST_STACK_INTERVAL_TICKS == 0) {
+                ChillTracker.addStack(world, target);
+            }
+
+            // Aggressive freezing
+            target.setFrozenTicks(Math.min(target.getFrozenTicks() + 5, target.getMinFreezeDamageTicks() + 100));
+        }
+
+        // Thick snow particles
+        if (age % 1 == 0) { // Every tick
+            for (int i = 0; i < PHASE_2_PARTICLE_RATE / 20; i++) {
+                double angle = world.random.nextDouble() * Math.PI * 2;
+                double radius = world.random.nextDouble() * blizzard.radius;
+                double px = blizzard.center.x + Math.cos(angle) * radius;
+                double pz = blizzard.center.z + Math.sin(angle) * radius;
+                double py = blizzard.center.y + 5 + world.random.nextDouble() * 10;
+
+                world.spawnParticles(ParticleTypes.SNOWFLAKE, px, py, pz, 2, 0.3, 0.3, 0.3, 0.02);
+            }
+        }
+
+        // Louder blizzard sounds
+        if (age % 30 == 0) {
+            world.playSound(null, BlockPos.ofFloored(blizzard.center), SoundEvents.ENTITY_PLAYER_HURT_FREEZE,
+                    SoundCategory.PLAYERS, 1.5f, 0.5f);
         }
     }
 
-    private static void triggerFinale(ServerWorld world, Blizzard blizzard) {
+    private static void triggerPhase3Finale(ServerWorld world, Blizzard blizzard) {
+        // Phase 3: Ice cage finale - encase all entities still in radius
         Box box = Box.of(blizzard.center, blizzard.radius * 2, 24.0, blizzard.radius * 2);
         List<LivingEntity> targets = world.getEntitiesByClass(LivingEntity.class, box,
                 e -> e.getUuid() != blizzard.casterUuid);
 
         for (LivingEntity target : targets) {
-            placeIceRing(world, target.getBlockPos());
+            createIceCage(world, target.getBlockPos());
+
+            // Apply immobilization during cage
+            target.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, PHASE_3_CAGE_DURATION_TICKS, 255,
+                    false, true, true));
         }
+
+        // Finale particles and sound
+        world.spawnParticles(ParticleTypes.SNOWFLAKE, blizzard.center.x, blizzard.center.y + 1.0, blizzard.center.z,
+                300, blizzard.radius * 0.9, 4.0, blizzard.radius * 0.9, 0.05);
+        world.spawnParticles(ParticleTypes.EXPLOSION_EMITTER, blizzard.center.x, blizzard.center.y + 1.0,
+                blizzard.center.z, 5, 3.0, 2.0, 3.0, 0.0);
+        world.playSound(null, BlockPos.ofFloored(blizzard.center), SoundEvents.BLOCK_GLASS_BREAK,
+                SoundCategory.PLAYERS, 2.0f, 0.3f);
     }
 
-    private static void placeIceRing(ServerWorld world, BlockPos center) {
-        List<BlockPos> validPositions = new ArrayList<>();
+    private static void createIceCage(ServerWorld world, BlockPos center) {
+        // Create 3x3x3 ice cage around entity
+        List<BlockPos> cagePositions = new ArrayList<>();
 
-        int[][] card = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 }, { 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 } };
-        for (int[] off : card) {
-            validPositions.add(center.add(off[0], 0, off[1]));
-            validPositions.add(center.add(off[0], 1, off[1]));
+        for (int x = -1; x <= 1; x++) {
+            for (int y = -1; y <= 1; y++) {
+                for (int z = -1; z <= 1; z++) {
+                    // Don't place block at exact center (entity position)
+                    if (x == 0 && y == 0 && z == 0)
+                        continue;
+
+                    cagePositions.add(center.add(x, y, z));
+                }
+            }
         }
 
+        // Place temporary ice cage
         TemporaryBlockManager.placeTemporaryBlocks(
                 world,
-                validPositions,
+                cagePositions,
                 Blocks.PACKED_ICE.getDefaultState(),
-                100, // 5 seconds entrapment
+                PHASE_3_CAGE_DURATION_TICKS,
                 state -> state.isAir() || state.isReplaceable());
-    }
 
-    private static void spawnWave(ServerWorld world, Blizzard blizzard) {
-        PlayerEntity caster = world.getPlayerByUuid(blizzard.casterUuid);
-        if (caster == null)
-            return;
-
-        for (int i = 0; i < SNOWBALLS_PER_WAVE; i++) {
-            double angle = world.random.nextDouble() * MathHelper.TAU;
-            double dist = Math.sqrt(world.random.nextDouble()) * blizzard.radius;
-            double x = blizzard.center.x + Math.cos(angle) * dist;
-            double z = blizzard.center.z + Math.sin(angle) * dist;
-
-            int topY = world.getTopY(Heightmap.Type.MOTION_BLOCKING, MathHelper.floor(x), MathHelper.floor(z));
-            double y = topY + 12.0 + world.random.nextDouble() * 3.0;
-
-            com.anton.elementalwands.entity.ChillSnowballEntity snowball = new com.anton.elementalwands.entity.ChillSnowballEntity(
-                    ModEntities.CHILL_SNOWBALL,
-                    world);
-            snowball.setOwner(caster);
-            snowball.setPosition(x, y, z);
-            snowball.setVelocity(0.0, -1.25 - world.random.nextDouble() * 0.35, 0.0);
-            world.spawnEntity(snowball);
-        }
-
-        world.spawnParticles(ParticleTypes.SNOWFLAKE, blizzard.center.x, blizzard.center.y + 1.0, blizzard.center.z, 40,
-                blizzard.radius * 0.8, 1.2, blizzard.radius * 0.8, 0.02);
+        // Spawn particles
+        world.spawnParticles(ParticleTypes.SNOWFLAKE, center.getX() + 0.5, center.getY() + 0.5, center.getZ() + 0.5,
+                50, 1.5, 1.5, 1.5, 0.1);
     }
 }

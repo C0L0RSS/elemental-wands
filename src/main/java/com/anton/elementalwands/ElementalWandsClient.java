@@ -3,6 +3,7 @@ package com.anton.elementalwands;
 import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.registry.ModEntities;
+import com.anton.elementalwands.client.renderer.EmptyEntityRenderer;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -27,6 +28,12 @@ public class ElementalWandsClient implements ClientModInitializer {
                 new KeyBinding.Category(Identifier.of("elementalwands", "general"))));
         EntityRendererRegistry.register(ModEntities.BOULDER_PROJECTILE, FlyingItemEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.CHILL_SNOWBALL, FlyingItemEntityRenderer::new);
+
+        // Register empty renderers for particle-based entities
+        EntityRendererRegistry.register(ModEntities.VACUUM_BLADE, EmptyEntityRenderer::new);
+        EntityRendererRegistry.register(ModEntities.CALAMITY_TORNADO, EmptyEntityRenderer::new);
+        EntityRendererRegistry.register(ModEntities.INFERNO_WAVE, EmptyEntityRenderer::new);
+
         ClientTickEvents.END_CLIENT_TICK.register(ElementalWandsClient::tickClient);
     }
 

@@ -15,6 +15,7 @@ import net.minecraft.entity.FallingBlockEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryKey;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
@@ -41,6 +42,7 @@ public final class MeteorManager {
     }
 
     private static final Map<RegistryKey<World>, List<Meteor>> METEORS = new HashMap<>();
+    private static final int WARNING_RADIUS = 60; // blocks
 
     private MeteorManager() {
     }
@@ -57,7 +59,7 @@ public final class MeteorManager {
         BlockPos spawnBlockPos = BlockPos.ofFloored(targetPos).add(0, spawnHeight, 0);
         FallingBlockEntity meteor = FallingBlockEntity.spawnFromBlock(world, spawnBlockPos, meteorState);
         meteor.setPosition(targetPos.x, spawnBlockPos.getY(), targetPos.z);
-        meteor.setVelocity(0.0, -0.3, 0.0);
+        meteor.setVelocity(0.0, -0.2, 0.0); // BUFFED: Much slower fall (was -0.3)
         meteor.setHurtEntities(10.0f, 40);
         meteor.setDestroyedOnLanding();
 
@@ -65,8 +67,20 @@ public final class MeteorManager {
         METEORS.computeIfAbsent(world.getRegistryKey(), _k -> new ArrayList<>())
                 .add(new Meteor(meteor.getId(), caster.getUuid(), meteor.getEntityPos(), explosionPower, now + 240));
 
-        world.playSound(null, spawnBlockPos, SoundEvents.ENTITY_GHAST_SHOOT, SoundCategory.PLAYERS, 1.4f,
-                0.6f);
+        // BUFFED: Play global Wither spawn sound for dramatic effect
+        world.playSound(null, spawnBlockPos, SoundEvents.ENTITY_WITHER_SPAWN, SoundCategory.PLAYERS, 2.0f, 1.0f);
+        world.playSound(null, spawnBlockPos, SoundEvents.ENTITY_GHAST_SHOOT, SoundCategory.PLAYERS, 1.4f, 0.6f);
+
+        // BUFFED: Display HUD title to all players within 60-block radius
+        for (ServerPlayerEntity player : world.getPlayers()) {
+            if (player.squaredDistanceTo(targetPos) <= WARNING_RADIUS * WARNING_RADIUS) {
+                player.sendMessage(
+                        net.minecraft.text.Text.literal("⚠ MAXIMUM METEOR DETECTED ⚠")
+                                .formatted(net.minecraft.util.Formatting.RED, net.minecraft.util.Formatting.BOLD),
+                        true); // true = actionbar
+            }
+        }
+
         // Significantly increased particle count for "larger" feel
         world.spawnParticles(ParticleTypes.FLAME, meteor.getX(), meteor.getY(), meteor.getZ(), 200, 1.0, 1.0, 1.0,
                 0.08);

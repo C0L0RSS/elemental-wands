@@ -14,6 +14,7 @@ import net.minecraft.client.render.entity.FlyingItemEntityRenderer;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.util.Identifier;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import org.lwjgl.glfw.GLFW;
 
 public class ElementalWandsClient implements ClientModInitializer {
@@ -35,6 +36,9 @@ public class ElementalWandsClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.INFERNO_WAVE, EmptyEntityRenderer::new);
 
         ClientTickEvents.END_CLIENT_TICK.register(ElementalWandsClient::tickClient);
+
+        // Register HUD Overlay
+        HudRenderCallback.EVENT.register(new com.anton.elementalwands.client.overlay.WandHudOverlay());
     }
 
     private static void tickClient(MinecraftClient client) {

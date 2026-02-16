@@ -76,14 +76,15 @@ public abstract class AbstractWandItem extends Item {
 
     protected final boolean tryStartCooldown(ServerWorld world, PlayerEntity player, ItemStack stack,
             Ability ability, int abilityCooldownTicks) {
-        int now = world.getServer().getTicks();
+        long now = world.getTime();
 
         NbtCompound nbt = stack.getOrDefault(DataComponentTypes.CUSTOM_DATA, NbtComponent.DEFAULT).copyNbt();
 
-        int lastGlobal = nbt.getInt(NBT_LAST_GLOBAL, -1_000_000_000);
-        int globalRemaining = GLOBAL_COOLDOWN_TICKS - (now - lastGlobal);
+        // Using orElse because getLong returns an Optional<Long> in this mapping
+        long lastGlobal = nbt.getLong(NBT_LAST_GLOBAL).orElse(-1_000_000_000L);
+        long globalRemaining = GLOBAL_COOLDOWN_TICKS - (now - lastGlobal);
         if (globalRemaining > 0) {
-            sendCooldownActionbar(player, Ability.GLOBAL, globalRemaining);
+            sendCooldownActionbar(player, Ability.GLOBAL, (int) globalRemaining);
             return false;
         }
 
@@ -94,8 +95,8 @@ public abstract class AbstractWandItem extends Item {
             case GLOBAL -> NBT_LAST_GLOBAL;
         };
 
-        int last = nbt.getInt(key, -1_000_000_000);
-        int elapsed = now - last;
+        long last = nbt.getLong(key).orElse(-1_000_000_000L);
+        long elapsed = now - last;
 
         // If player has Frost stacks, time passes 2x slower for cooldowns (elapsed is
         // halved)
@@ -103,15 +104,15 @@ public abstract class AbstractWandItem extends Item {
             elapsed /= 2;
         }
 
-        int remaining = abilityCooldownTicks - elapsed;
+        long remaining = abilityCooldownTicks - elapsed;
         if (remaining > 0) {
-            sendCooldownActionbar(player, ability, remaining);
+            sendCooldownActionbar(player, ability, (int) remaining);
             return false;
         }
 
         NbtComponent.set(DataComponentTypes.CUSTOM_DATA, stack, data -> {
-            data.putInt(key, now);
-            data.putInt(NBT_LAST_GLOBAL, now);
+            data.putLong(key, now);
+            data.putLong(NBT_LAST_GLOBAL, now);
         });
         return true;
     }

@@ -89,7 +89,7 @@ public class FireWandItem extends AbstractWandItem {
 
     @Override
     public void castPrimary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!tryStartCooldown(world, caster, stack, Ability.PRIMARY, DEFAULT_PRIMARY_COOLDOWN_TICKS))
+        if (!tryStartCooldown(world, caster, stack, Ability.PRIMARY, getPrimaryCooldownTicks()))
             return;
 
         // Spawn Inferno Wave projectile
@@ -103,7 +103,7 @@ public class FireWandItem extends AbstractWandItem {
 
     @Override
     public void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!tryStartCooldown(world, caster, stack, Ability.SECONDARY, DEFAULT_SECONDARY_COOLDOWN_TICKS))
+        if (!tryStartCooldown(world, caster, stack, Ability.SECONDARY, getSecondaryCooldownTicks()))
             return;
 
         // Magma Surf: Apply Speed II for 3 seconds (1.5x speed multiplier)
@@ -126,7 +126,7 @@ public class FireWandItem extends AbstractWandItem {
 
     @Override
     public void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!tryStartCooldown(world, caster, stack, Ability.ULTIMATE, DEFAULT_ULTIMATE_COOLDOWN_TICKS))
+        if (!tryStartCooldown(world, caster, stack, Ability.ULTIMATE, getUltimateCooldownTicks()))
             return;
 
         HitResult hit = raycast(world, caster, DEFAULT_RANGE);

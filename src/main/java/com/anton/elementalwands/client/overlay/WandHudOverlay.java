@@ -71,18 +71,19 @@ public class WandHudOverlay implements HudRenderCallback {
         context.getMatrices().pushMatrix();
         context.getMatrices().scale(HUD_SCALE, HUD_SCALE);
 
-        renderAbility(context, client, stack, AbstractWandItem.Ability.PRIMARY, 0, slotCentersX[0], slotCenterY,
-                AbstractWandItem.DEFAULT_PRIMARY_COOLDOWN_TICKS, theme, accentColor);
-        renderAbility(context, client, stack, AbstractWandItem.Ability.SECONDARY, 1, slotCentersX[1], slotCenterY,
-                AbstractWandItem.DEFAULT_SECONDARY_COOLDOWN_TICKS, theme, accentColor);
-        renderAbility(context, client, stack, AbstractWandItem.Ability.ULTIMATE, 2, slotCentersX[2], slotCenterY,
-                AbstractWandItem.DEFAULT_ULTIMATE_COOLDOWN_TICKS, theme, accentColor);
+        renderAbility(context, client, stack, wand, AbstractWandItem.Ability.PRIMARY, 0, slotCentersX[0], slotCenterY,
+                wand.getPrimaryCooldownTicks(), theme, accentColor);
+        renderAbility(context, client, stack, wand, AbstractWandItem.Ability.SECONDARY, 1, slotCentersX[1], slotCenterY,
+                wand.getSecondaryCooldownTicks(), theme, accentColor);
+        renderAbility(context, client, stack, wand, AbstractWandItem.Ability.ULTIMATE, 2, slotCentersX[2], slotCenterY,
+                wand.getUltimateCooldownTicks(), theme, accentColor);
 
         context.getMatrices().popMatrix();
     }
 
-    private void renderAbility(DrawContext context, MinecraftClient client, ItemStack stack, AbstractWandItem.Ability ability,
-            int slotIndex, int x, int y, int maxCooldownTicks, WandTheme theme, int accentColor) {
+    private void renderAbility(DrawContext context, MinecraftClient client, ItemStack stack, AbstractWandItem wand,
+            AbstractWandItem.Ability ability, int slotIndex, int x, int y, int maxCooldownTicks, WandTheme theme,
+            int accentColor) {
         long now = client.world.getTime();
 
         NbtCompound nbt = stack.getOrDefault(DataComponentTypes.CUSTOM_DATA, NbtComponent.DEFAULT).copyNbt();
@@ -102,8 +103,24 @@ public class WandHudOverlay implements HudRenderCallback {
 
         long remaining = maxCooldownTicks - elapsed;
         boolean onCooldown = remaining > 0;
+        boolean isWindSecondary = wand instanceof WindWandItem && ability == AbstractWandItem.Ability.SECONDARY;
+        int windCharges = 0;
+        int windMaxCharges = 0;
+        int windRechargeTicks = 0;
+        int windRechargeDurationTicks = 0;
+        boolean windPartialRecharge = false;
 
-        int frameSize = 36;
+        if (isWindSecondary) {
+            windMaxCharges = WindWandItem.getDashMaxCharges();
+            windCharges = WindWandItem.getDashCharges(stack);
+            windRechargeTicks = WindWandItem.getDashRechargeTicks(stack);
+            windRechargeDurationTicks = WindWandItem.getDashRechargeDurationTicks();
+
+            onCooldown = windCharges <= 0;
+            windPartialRecharge = windCharges > 0 && windCharges < windMaxCharges;
+        }
+
+        int frameSize = SLOT_SIZE;
         int renderX = x - (frameSize / 2);
         int renderY = y - (frameSize / 2);
 
@@ -115,21 +132,58 @@ public class WandHudOverlay implements HudRenderCallback {
         context.drawTexture(RenderPipelines.GUI_TEXTURED, HUD_TEXTURE, renderX, renderY, u, v, frameSize, frameSize,
                 256, 256);
 
-        AnimationProfile animation = animationProfileForState(onCooldown);
+        AnimationProfile animation = isWindSecondary
+                ? animationProfileForWindChargeState(windCharges, windMaxCharges)
+                : animationProfileForState(onCooldown);
         if (onCooldown) {
             context.fill(renderX + 4, renderY + 4, renderX + frameSize - 4, renderY + frameSize - 4, 0x8A000000);
+        } else if (windPartialRecharge) {
+            context.fill(renderX + 5, renderY + 5, renderX + frameSize - 5, renderY + frameSize - 5,
+                    withAlpha(accentColor, 0x48));
         } else {
             context.fill(renderX + 5, renderY + 5, renderX + frameSize - 5, renderY + frameSize - 5,
                     withAlpha(accentColor, 0x32));
         }
 
         drawThemeCooldownMotif(context, theme, slotIndex, renderX, renderY, now, animation);
-        if (onCooldown && remaining > 20) {
+        if (isWindSecondary) {
+            drawWindDashPips(context, renderX, renderY, windCharges, windMaxCharges, windRechargeTicks,
+                    windRechargeDurationTicks, now);
+        } else if (onCooldown && remaining > 20) {
             String digit = String.valueOf((int) Math.ceil(remaining / 20.0));
             int txtWidth = client.textRenderer.getWidth(digit);
             int bubbleY = renderY - 8;
             context.fill(x - (txtWidth / 2) - 2, bubbleY - 1, x + (txtWidth / 2) + 2, bubbleY + 9, 0xB0000000);
             context.drawText(client.textRenderer, digit, x - (txtWidth / 2), bubbleY, 0xFFFFFFFF, true);
+        }
+    }
+
+    private void drawWindDashPips(DrawContext context, int renderX, int renderY, int charges, int maxCharges,
+            int rechargeTicks, int rechargeDurationTicks, long now) {
+        int pipSize = 3;
+        int pipGap = 2;
+        int totalWidth = (maxCharges * pipSize) + ((maxCharges - 1) * pipGap);
+        int startX = renderX + ((SLOT_SIZE - totalWidth) / 2);
+        int pipY = renderY + SLOT_SIZE - 8;
+
+        for (int i = 0; i < maxCharges; i++) {
+            int pipX = startX + (i * (pipSize + pipGap));
+            boolean isFilled = i < charges;
+            boolean isRechargingPip = !isFilled && charges < maxCharges && i == charges;
+
+            int borderColor = 0xCC1B242A;
+            int fillColor = isFilled ? 0xFFD1F6FF : 0x7A41505A;
+
+            if (isRechargingPip) {
+                float pulse = 0.5f + 0.5f * (float) Math.sin((now + i * 6L) * 0.45f);
+                float refillProgress = rechargeDurationTicks <= 0 ? 0.0f
+                        : clamp01(rechargeTicks / (float) rechargeDurationTicks);
+                float alphaScale = 0.35f + (pulse * 0.45f) + (refillProgress * 0.2f);
+                fillColor = scaledAlpha(0xD8BDE9FF, alphaScale);
+            }
+
+            context.fill(pipX - 1, pipY - 1, pipX + pipSize + 1, pipY + pipSize + 1, borderColor);
+            context.fill(pipX, pipY, pipX + pipSize, pipY + pipSize, fillColor);
         }
     }
 
@@ -235,10 +289,24 @@ public class WandHudOverlay implements HudRenderCallback {
         return new AnimationProfile(0.55f, 0.55f, 0.6f);
     }
 
+    private AnimationProfile animationProfileForWindChargeState(int charges, int maxCharges) {
+        if (charges <= 0) {
+            return animationProfileForState(true);
+        }
+        if (charges < maxCharges) {
+            return new AnimationProfile(0.78f, 0.78f, 0.8f);
+        }
+        return animationProfileForState(false);
+    }
+
     private int scaledAlpha(int color, float alphaScale) {
         int alpha = (color >>> 24) & 0xFF;
         int scaled = Math.max(0, Math.min(255, Math.round(alpha * alphaScale)));
         return (scaled << 24) | (color & 0x00FFFFFF);
+    }
+
+    private float clamp01(float value) {
+        return Math.max(0.0f, Math.min(1.0f, value));
     }
 
     private WandTheme resolveTheme(AbstractWandItem wand) {

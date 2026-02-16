@@ -25,9 +25,10 @@ public class WindWandItem extends AbstractWandItem {
 
     // Secondary: Waylay Dash
     private static final int DASH_MAX_CHARGES = 3;
+    private static final int DASH_RECHARGE_TICKS = 80;
     private static final int DASH_CHAIN_WINDOW_TICKS = 30; // 1.5 seconds
     private static final float DASH_BASE_STRENGTH = 2.0f;
-    private static final float DASH_CHAIN_BONUS = 0.4f; // +0.4 per chain (additive)
+
     private static final int SLOW_FALLING_DURATION_TICKS = 40; // 2 seconds
 
     private static final String NBT_DASH_CHARGES = "DashCharges";
@@ -39,9 +40,37 @@ public class WindWandItem extends AbstractWandItem {
         super(settings);
     }
 
+    public static int getDashMaxCharges() {
+        return DASH_MAX_CHARGES;
+    }
+
+    public static int getDashRechargeDurationTicks() {
+        return DASH_RECHARGE_TICKS;
+    }
+
+    public static int getDashCharges(ItemStack stack) {
+        NbtComponent nbtComponent = stack.getOrDefault(DataComponentTypes.CUSTOM_DATA, NbtComponent.DEFAULT);
+        NbtCompound data = nbtComponent.copyNbt();
+        if (!data.contains(NBT_DASH_CHARGES)) {
+            return DASH_MAX_CHARGES;
+        }
+
+        return clamp(data.getInt(NBT_DASH_CHARGES, DASH_MAX_CHARGES), 0, DASH_MAX_CHARGES);
+    }
+
+    public static int getDashRechargeTicks(ItemStack stack) {
+        NbtComponent nbtComponent = stack.getOrDefault(DataComponentTypes.CUSTOM_DATA, NbtComponent.DEFAULT);
+        NbtCompound data = nbtComponent.copyNbt();
+        if (!data.contains(NBT_RECHARGE_TICKS)) {
+            return 0;
+        }
+
+        return clamp(data.getInt(NBT_RECHARGE_TICKS, 0), 0, DASH_RECHARGE_TICKS);
+    }
+
     @Override
     public void castPrimary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!tryStartCooldown(world, caster, stack, Ability.PRIMARY, DEFAULT_PRIMARY_COOLDOWN_TICKS))
+        if (!tryStartCooldown(world, caster, stack, Ability.PRIMARY, getPrimaryCooldownTicks()))
             return;
 
         // Get perpendicular offset to spawn two blades side-by-side
@@ -82,7 +111,7 @@ public class WindWandItem extends AbstractWandItem {
         // Passive Recharge
         if (charges < DASH_MAX_CHARGES) {
             rechargeTicks++;
-            if (rechargeTicks >= 80) { // 4 seconds
+            if (rechargeTicks >= DASH_RECHARGE_TICKS) { // 4 seconds
                 charges++;
                 rechargeTicks = 0;
 
@@ -128,7 +157,12 @@ public class WindWandItem extends AbstractWandItem {
         }
 
         // Calculate dash strength with additive bonus
-        float dashStrength = DASH_BASE_STRENGTH + (chainCount * DASH_CHAIN_BONUS);
+        // Calculate dash strength with multiplicative decay
+        // Base (2.0) * (0.66 ^ chainCount)
+        // Chain 0: 2.0
+        // Chain 1: ~1.32
+        // Chain 2: ~0.87
+        float dashStrength = (float) (DASH_BASE_STRENGTH * Math.pow(0.66, chainCount));
 
         // Execute dash
         Vec3d look = caster.getRotationVec(1.0f).normalize();
@@ -173,7 +207,7 @@ public class WindWandItem extends AbstractWandItem {
 
     @Override
     public void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!tryStartCooldown(world, caster, stack, Ability.ULTIMATE, DEFAULT_ULTIMATE_COOLDOWN_TICKS))
+        if (!tryStartCooldown(world, caster, stack, Ability.ULTIMATE, getUltimateCooldownTicks()))
             return;
 
         // Spawn Calamity Tornado
@@ -192,6 +226,10 @@ public class WindWandItem extends AbstractWandItem {
     private NbtCompound getDashData(ItemStack stack) {
         NbtComponent nbtComponent = stack.getOrDefault(DataComponentTypes.CUSTOM_DATA, NbtComponent.DEFAULT);
         return nbtComponent.copyNbt();
+    }
+
+    private static int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
     }
 
     private void saveDashData(ItemStack stack, NbtCompound data) {

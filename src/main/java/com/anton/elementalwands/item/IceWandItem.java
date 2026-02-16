@@ -48,7 +48,7 @@ public class IceWandItem extends AbstractWandItem {
 
     @Override
     public void castPrimary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!tryStartCooldown(world, caster, stack, Ability.PRIMARY, DEFAULT_PRIMARY_COOLDOWN_TICKS))
+        if (!tryStartCooldown(world, caster, stack, Ability.PRIMARY, getPrimaryCooldownTicks()))
             return;
 
         world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_SNOWBALL_THROW, SoundCategory.PLAYERS, 0.5F,
@@ -67,7 +67,7 @@ public class IceWandItem extends AbstractWandItem {
 
     @Override
     public void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!tryStartCooldown(world, caster, stack, Ability.SECONDARY, DEFAULT_SECONDARY_COOLDOWN_TICKS))
+        if (!tryStartCooldown(world, caster, stack, Ability.SECONDARY, getSecondaryCooldownTicks()))
             return;
 
         // Permafrost Spikes: Erupting line of ice spikes
@@ -129,7 +129,7 @@ public class IceWandItem extends AbstractWandItem {
 
     @Override
     public void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!tryStartCooldown(world, caster, stack, Ability.ULTIMATE, DEFAULT_ULTIMATE_COOLDOWN_TICKS))
+        if (!tryStartCooldown(world, caster, stack, Ability.ULTIMATE, getUltimateCooldownTicks()))
             return;
 
         HitResult hit = raycast(world, caster, DEFAULT_RANGE);

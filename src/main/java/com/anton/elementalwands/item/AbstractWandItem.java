@@ -47,6 +47,18 @@ public abstract class AbstractWandItem extends Item {
 
     public abstract void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack);
 
+    public int getPrimaryCooldownTicks() {
+        return DEFAULT_PRIMARY_COOLDOWN_TICKS;
+    }
+
+    public int getSecondaryCooldownTicks() {
+        return DEFAULT_SECONDARY_COOLDOWN_TICKS;
+    }
+
+    public int getUltimateCooldownTicks() {
+        return DEFAULT_ULTIMATE_COOLDOWN_TICKS;
+    }
+
     @Override
     public ActionResult use(World world, PlayerEntity user, Hand hand) {
         ItemStack stack = user.getStackInHand(hand);

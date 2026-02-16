@@ -27,6 +27,7 @@ import java.util.UUID;
 
 public class StoneWandItem extends AbstractWandItem {
 
+    private static final int PRIMARY_COOLDOWN_TICKS = 60;
     private static final int TECTONIC_LENGTH = 15;
     private static final float TECTONIC_DAMAGE = 6.0f;
     private static final double TECTONIC_VERTICAL_KNOCKBACK = 0.5;
@@ -41,12 +42,19 @@ public class StoneWandItem extends AbstractWandItem {
     }
 
     @Override
+    public int getPrimaryCooldownTicks() {
+        return PRIMARY_COOLDOWN_TICKS;
+    }
+
+    @Override
     public void castPrimary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!tryStartCooldown(world, caster, stack, Ability.PRIMARY, DEFAULT_PRIMARY_COOLDOWN_TICKS)) return;
+        if (!tryStartCooldown(world, caster, stack, Ability.PRIMARY, getPrimaryCooldownTicks()))
+            return;
 
         Vec3d forward = horizontalForward(caster);
         List<BlockPos> spikes = new ArrayList<>(new LinkedHashSet<>(buildTectonicSpikePath(world, caster, forward)));
-        if (spikes.isEmpty()) return;
+        if (spikes.isEmpty())
+            return;
 
         TemporaryBlockManager.placeTemporaryBlocks(
                 world,
@@ -64,7 +72,8 @@ public class StoneWandItem extends AbstractWandItem {
 
     @Override
     public void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!tryStartCooldown(world, caster, stack, Ability.SECONDARY, DEFAULT_SECONDARY_COOLDOWN_TICKS)) return;
+        if (!tryStartCooldown(world, caster, stack, Ability.SECONDARY, getSecondaryCooldownTicks()))
+            return;
 
         TitanDomeManager.startAegis(world, caster);
 
@@ -75,7 +84,8 @@ public class StoneWandItem extends AbstractWandItem {
 
     @Override
     public void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!tryStartCooldown(world, caster, stack, Ability.ULTIMATE, DEFAULT_ULTIMATE_COOLDOWN_TICKS)) return;
+        if (!tryStartCooldown(world, caster, stack, Ability.ULTIMATE, getUltimateCooldownTicks()))
+            return;
 
         TitanDomeManager.startDome(world, caster);
     }
@@ -117,12 +127,15 @@ public class StoneWandItem extends AbstractWandItem {
 
         for (int delta = 0; delta <= TECTONIC_TERRAIN_SCAN_RANGE; delta++) {
             int up = clampedReferenceY + delta;
-            if (up <= maxY && isGroundCandidate(world, x, up, z)) return up;
+            if (up <= maxY && isGroundCandidate(world, x, up, z))
+                return up;
 
-            if (delta == 0) continue;
+            if (delta == 0)
+                continue;
 
             int down = clampedReferenceY - delta;
-            if (down >= minY && isGroundCandidate(world, x, down, z)) return down;
+            if (down >= minY && isGroundCandidate(world, x, down, z))
+                return down;
         }
 
         for (int y = clampedReferenceY; y >= minY; y--) {
@@ -137,7 +150,8 @@ public class StoneWandItem extends AbstractWandItem {
     private static boolean isGroundCandidate(ServerWorld world, int x, int y, int z) {
         BlockPos groundPos = new BlockPos(x, y, z);
         BlockState ground = world.getBlockState(groundPos);
-        if (ground.isAir() || !ground.isSolidBlock(world, groundPos)) return false;
+        if (ground.isAir() || !ground.isSolidBlock(world, groundPos))
+            return false;
 
         BlockState above = world.getBlockState(groundPos.up());
         return (above.isAir() || above.isReplaceable()) && above.getFluidState().isEmpty();
@@ -157,7 +171,8 @@ public class StoneWandItem extends AbstractWandItem {
                     e -> e.isAlive() && !e.isSpectator() && e != caster);
 
             for (LivingEntity target : targets) {
-                if (!hitTargets.add(target.getUuid())) continue;
+                if (!hitTargets.add(target.getUuid()))
+                    continue;
                 applyDamage(world, caster, target, TECTONIC_DAMAGE);
                 target.addVelocity(0.0, TECTONIC_VERTICAL_KNOCKBACK, 0.0);
                 target.velocityModified = true;

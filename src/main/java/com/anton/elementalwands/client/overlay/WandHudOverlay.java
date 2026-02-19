@@ -3,6 +3,7 @@ package com.anton.elementalwands.client.overlay;
 import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.item.FireWandItem;
 import com.anton.elementalwands.item.IceWandItem;
+import com.anton.elementalwands.item.SpaceWandItem;
 import com.anton.elementalwands.item.StoneWandItem;
 import com.anton.elementalwands.item.WindWandItem;
 import com.anton.elementalwands.util.ChillTracker;
@@ -194,6 +195,7 @@ public class WandHudOverlay implements HudRenderCallback {
             case ICE -> drawIceCooldown(context, slotIndex, renderX, renderY, now, animation);
             case WIND -> drawWindCooldown(context, slotIndex, renderX, renderY, now, animation);
             case STONE -> drawStoneCooldown(context, slotIndex, renderX, renderY, now, animation);
+            case SPACE -> drawSpaceCooldown(context, slotIndex, renderX, renderY, now, animation);
             case ARCANE -> drawArcaneCooldown(context, slotIndex, renderX, renderY, now, animation);
         }
     }
@@ -282,6 +284,30 @@ public class WandHudOverlay implements HudRenderCallback {
         context.fill(renderX + 32, renderY + 32, renderX + 34, renderY + 34, scaledAlpha(0x88E4DBB3, animation.alpha));
     }
 
+    private void drawSpaceCooldown(DrawContext context, int slotIndex, int renderX, int renderY, long now,
+            AnimationProfile animation) {
+        int centerX = renderX + (SLOT_SIZE / 2);
+        int centerY = renderY + (SLOT_SIZE / 2);
+
+        int orbitMotes = Math.max(3, Math.round(6 * animation.density));
+        for (int i = 0; i < orbitMotes; i++) {
+            double theta = (now * (0.07 + animation.speed * 0.07)) + slotIndex * 0.9 + i * (Math.PI * 2.0 / orbitMotes);
+            double radius = 5.0 + (i % 3) * 2.5;
+
+            int px = centerX + (int) Math.round(Math.cos(theta) * radius);
+            int py = centerY + (int) Math.round(Math.sin(theta * 1.2) * radius * 0.6);
+            int color = (i % 2 == 0) ? scaledAlpha(0xCCB894FF, animation.alpha) : scaledAlpha(0x889D8DFF, animation.alpha);
+            context.fill(px, py, px + 2, py + 2, color);
+        }
+
+        int ringOffset = (int) ((now * (0.9f + animation.speed)) % 10L);
+        context.fill(centerX - 5 + ringOffset, centerY - 6, centerX - 4 + ringOffset, centerY + 7,
+                scaledAlpha(0x66B89DFF, animation.alpha));
+        context.fill(centerX - 6, centerY - 1 + ringOffset, centerX + 7, centerY + ringOffset,
+                scaledAlpha(0x55CAB5FF, animation.alpha));
+        context.fill(centerX - 1, centerY - 1, centerX + 1, centerY + 1, scaledAlpha(0xE0E2DDFF, animation.alpha));
+    }
+
     private AnimationProfile animationProfileForState(boolean onCooldown) {
         if (onCooldown) {
             return new AnimationProfile(1.0f, 1.0f, 1.0f);
@@ -322,6 +348,9 @@ public class WandHudOverlay implements HudRenderCallback {
         if (wand instanceof StoneWandItem) {
             return WandTheme.STONE;
         }
+        if (wand instanceof SpaceWandItem) {
+            return WandTheme.SPACE;
+        }
         return WandTheme.ARCANE;
     }
 
@@ -331,6 +360,7 @@ public class WandHudOverlay implements HudRenderCallback {
             case ICE -> 0x8EDCF8;
             case WIND -> 0xCFEBAE;
             case STONE -> 0xC6B79A;
+            case SPACE -> 0xB29DFF;
             case ARCANE -> 0xD9D2AF;
         };
     }
@@ -344,6 +374,7 @@ public class WandHudOverlay implements HudRenderCallback {
         ICE,
         WIND,
         STONE,
+        SPACE,
         ARCANE
     }
 

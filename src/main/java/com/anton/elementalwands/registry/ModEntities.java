@@ -5,6 +5,7 @@ import com.anton.elementalwands.entity.BoulderProjectileEntity;
 import com.anton.elementalwands.entity.CalamityTornadoEntity;
 import com.anton.elementalwands.entity.ChillSnowballEntity;
 import com.anton.elementalwands.entity.InfernoWaveEntity;
+import com.anton.elementalwands.entity.SingularityBoltEntity;
 import com.anton.elementalwands.entity.VacuumBladeEntity;
 
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricEntityTypeBuilder;
@@ -72,6 +73,17 @@ public final class ModEntities {
                                         .trackedUpdateRate(1)
                                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
                                                         Identifier.of(ElementalWandsMod.MOD_ID, "calamity_tornado"))));
+
+        public static final EntityType<SingularityBoltEntity> SINGULARITY_BOLT = Registry.register(
+                        Registries.ENTITY_TYPE,
+                        Identifier.of(ElementalWandsMod.MOD_ID, "singularity_bolt"),
+                        FabricEntityTypeBuilder
+                                        .<SingularityBoltEntity>create(SpawnGroup.MISC, SingularityBoltEntity::new)
+                                        .dimensions(EntityDimensions.fixed(0.35f, 0.35f))
+                                        .trackRangeBlocks(64)
+                                        .trackedUpdateRate(1)
+                                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
+                                                        Identifier.of(ElementalWandsMod.MOD_ID, "singularity_bolt"))));
 
         private ModEntities() {
         }

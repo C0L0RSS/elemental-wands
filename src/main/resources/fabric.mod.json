@@ -3,7 +3,7 @@
   "id": "elementalwands",
   "version": "${version}",
   "name": "Elemental Wands",
-  "description": "Adds four combat wands (Fire/Wind/Stone/Ice) with primary/secondary/ultimate spells.",
+  "description": "Adds five combat wands (Fire/Wind/Stone/Ice/Space) with primary/secondary/ultimate spells.",
   "authors": ["Anton (and ChatGPT)"],
   "contact": {},
   "license": "MIT",

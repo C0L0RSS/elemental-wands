@@ -5,6 +5,7 @@ import java.util.function.Function;
 import com.anton.elementalwands.ElementalWandsMod;
 import com.anton.elementalwands.item.FireWandItem;
 import com.anton.elementalwands.item.IceWandItem;
+import com.anton.elementalwands.item.SpaceWandItem;
 import com.anton.elementalwands.item.StoneWandItem;
 import com.anton.elementalwands.item.WindWandItem;
 
@@ -24,6 +25,7 @@ public class ModItems {
     public static final Item WIND_WAND = register("wind_wand", settings -> new WindWandItem(settings));
     public static final Item STONE_WAND = register("stone_wand", settings -> new StoneWandItem(settings));
     public static final Item ICE_WAND = register("ice_wand", settings -> new IceWandItem(settings));
+    public static final Item SPACE_WAND = register("space_wand", settings -> new SpaceWandItem(settings));
     public static final Item TITAN_SWORD = register("titan_sword", settings -> new Item(
             settings.sword(ToolMaterial.NETHERITE, 3.0f, -2.4f).fireproof().maxCount(1)));
 
@@ -33,6 +35,7 @@ public class ModItems {
             entries.add(WIND_WAND);
             entries.add(STONE_WAND);
             entries.add(ICE_WAND);
+            entries.add(SPACE_WAND);
             entries.add(TITAN_SWORD);
         });
     }

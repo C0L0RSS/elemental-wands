@@ -8,6 +8,7 @@ import com.anton.elementalwands.util.BlinkRiftManager;
 import com.anton.elementalwands.util.ChillTracker;
 import com.anton.elementalwands.util.CycloneManager;
 import com.anton.elementalwands.util.EventHorizonManager;
+import com.anton.elementalwands.util.HollowPurpleChargeManager;
 import com.anton.elementalwands.util.MeteorManager;
 import com.anton.elementalwands.util.MovementDisruptManager;
 import com.anton.elementalwands.util.TemporaryBlockManager;
@@ -32,6 +33,7 @@ public class ElementalWandsMod implements ModInitializer {
         MovementDisruptManager.init();
         BlinkRiftManager.init();
         EventHorizonManager.init();
+        HollowPurpleChargeManager.init();
         ModEntities.registerAll();
         ModItems.registerAll();
         ModNetworking.registerPayloads();

@@ -4,7 +4,7 @@ import java.util.Optional;
 
 import com.anton.elementalwands.entity.SingularityBoltEntity;
 import com.anton.elementalwands.util.BlinkRiftManager;
-import com.anton.elementalwands.util.EventHorizonManager;
+import com.anton.elementalwands.util.HollowPurpleChargeManager;
 
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
@@ -27,7 +27,6 @@ public class SpaceWandItem extends AbstractWandItem {
 
     private static final double BLINK_RANGE = 10.0;
     private static final int RIFT_DURATION_TICKS = SECONDARY_COOLDOWN_TICKS;
-    private static final double EVENT_HORIZON_RANGE = 22.0;
 
     public SpaceWandItem(Settings settings) {
         super(settings);
@@ -50,6 +49,9 @@ public class SpaceWandItem extends AbstractWandItem {
 
     @Override
     public void castPrimary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
+        if (HollowPurpleChargeManager.isCharging(world, caster)) {
+            return;
+        }
         if (!tryStartCooldown(world, caster, stack, Ability.PRIMARY, getPrimaryCooldownTicks())) {
             return;
         }
@@ -65,6 +67,9 @@ public class SpaceWandItem extends AbstractWandItem {
 
     @Override
     public void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
+        if (HollowPurpleChargeManager.isCharging(world, caster)) {
+            return;
+        }
         BlinkRiftManager.SwapResult swapResult = BlinkRiftManager.trySwapWithRift(world, caster);
         if (swapResult == BlinkRiftManager.SwapResult.SWAPPED) {
             return;
@@ -101,16 +106,14 @@ public class SpaceWandItem extends AbstractWandItem {
 
     @Override
     public void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {
+        if (HollowPurpleChargeManager.isCharging(world, caster)) {
+            return;
+        }
         if (!tryStartCooldown(world, caster, stack, Ability.ULTIMATE, getUltimateCooldownTicks())) {
             return;
         }
 
-        Vec3d look = caster.getRotationVec(1.0f).normalize();
-        Vec3d rawCenter = caster.getEyePos().add(look.multiply(EVENT_HORIZON_RANGE));
-        double clampedY = Math.max(world.getBottomY() + 2.0, Math.min(world.getTopYInclusive() - 2.0, rawCenter.y));
-        Vec3d center = new Vec3d(rawCenter.x, clampedY, rawCenter.z);
-
-        EventHorizonManager.startEventHorizon(world, caster, center);
+        HollowPurpleChargeManager.startCharge(world, caster);
     }
 
     private Optional<Vec3d> findSafeBlinkDestination(ServerWorld world, PlayerEntity caster, double range) {

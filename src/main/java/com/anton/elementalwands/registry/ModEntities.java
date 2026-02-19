@@ -4,6 +4,7 @@ import com.anton.elementalwands.ElementalWandsMod;
 import com.anton.elementalwands.entity.BoulderProjectileEntity;
 import com.anton.elementalwands.entity.CalamityTornadoEntity;
 import com.anton.elementalwands.entity.ChillSnowballEntity;
+import com.anton.elementalwands.entity.HollowPurpleOrbEntity;
 import com.anton.elementalwands.entity.InfernoWaveEntity;
 import com.anton.elementalwands.entity.SingularityBoltEntity;
 import com.anton.elementalwands.entity.VacuumBladeEntity;
@@ -84,6 +85,17 @@ public final class ModEntities {
                                         .trackedUpdateRate(1)
                                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
                                                         Identifier.of(ElementalWandsMod.MOD_ID, "singularity_bolt"))));
+
+        public static final EntityType<HollowPurpleOrbEntity> HOLLOW_PURPLE_ORB = Registry.register(
+                        Registries.ENTITY_TYPE,
+                        Identifier.of(ElementalWandsMod.MOD_ID, "hollow_purple_orb"),
+                        FabricEntityTypeBuilder
+                                        .<HollowPurpleOrbEntity>create(SpawnGroup.MISC, HollowPurpleOrbEntity::new)
+                                        .dimensions(EntityDimensions.fixed(6.0f, 6.0f))
+                                        .trackRangeBlocks(128)
+                                        .trackedUpdateRate(1)
+                                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
+                                                        Identifier.of(ElementalWandsMod.MOD_ID, "hollow_purple_orb"))));
 
         private ModEntities() {
         }

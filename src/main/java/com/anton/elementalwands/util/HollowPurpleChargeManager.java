@@ -12,6 +12,7 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.particle.DustParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.world.ServerWorld;
@@ -166,33 +167,53 @@ public final class HollowPurpleChargeManager {
 
     private static void spawnSnakeLines(ServerWorld world, PlayerEntity caster, Vec3d anchor, float progress, int age,
             boolean holdPhase) {
-        int lines = 3;
-        int segments = holdPhase ? 16 : 12;
+        int lines = 4; // 2 red, 2 blue
         Vec3d feet = new Vec3d(caster.getX(), caster.getY() + 0.10, caster.getZ());
-        double baseRadius = 0.42 + (progress * 0.28);
+        double baseRadius = 2.0;
+
+        // Colors
+        int redColor = 0xFF1919; // Vibrant Red
+        int blueColor = 0x194CFF; // Vibrant Blue
+        float size = 1.8f; // Slightly larger, distinct particles
+
+        // Calculate how much of the path to cover this tick based on progress (0.0 to
+        // 1.0)
+        double currentT = holdPhase ? 1.0 : progress;
+        double previousT = holdPhase ? 1.0 : Math.max(0.0, (age - 1) / (float) ASCENT_TICKS);
+
+        // We interpolate a few points between last tick and this tick to avoid gaps in
+        // the trail
+        int subSteps = holdPhase ? 1 : 3;
 
         for (int line = 0; line < lines; line++) {
-            double startAngle = (line * (Math.PI * 2.0 / lines)) + (age * 0.11);
-            Vec3d start = new Vec3d(
-                    feet.x + Math.cos(startAngle) * 0.55,
-                    feet.y,
-                    feet.z + Math.sin(startAngle) * 0.55);
+            boolean isRedLine = line % 2 == 0;
+            DustParticleEffect dust = new DustParticleEffect(isRedLine ? redColor : blueColor, size);
 
-            for (int i = 0; i <= segments; i++) {
-                double t = i / (double) segments;
+            for (int step = 0; step < subSteps; step++) {
+                double interp = subSteps == 1 ? 1.0 : (step + 1) / (double) subSteps;
+                double t = previousT + (currentT - previousT) * interp;
+
+                // Calculate age at this exact interpolated sub-tick for smooth rotation
+                double exactAge = (age - 1) + interp;
+
+                double startAngle = (line * (Math.PI * 2.0 / lines)) + (exactAge * 0.15);
+                Vec3d start = new Vec3d(
+                        feet.x + Math.cos(startAngle) * baseRadius,
+                        feet.y,
+                        feet.z + Math.sin(startAngle) * baseRadius);
+
                 Vec3d pathPoint = start.lerp(anchor, t);
 
-                double snakeAngle = startAngle + (t * 10.0) + (age * 0.22);
-                double radius = baseRadius * (1.0 - (t * 0.50));
+                // Spiral around the lerped center
+                double snakeAngle = startAngle + (t * 12.0);
+                double radius = baseRadius * (1.0 - t); // Shrinks to 0 at the anchor
 
                 double px = pathPoint.x + (Math.cos(snakeAngle) * radius);
-                double py = pathPoint.y + (Math.sin((age * 0.17) + (t * 8.0) + line) * 0.045);
+                // Add subtle wobble
+                double py = pathPoint.y + (Math.sin(exactAge * 0.2 + line) * 0.1);
                 double pz = pathPoint.z + (Math.sin(snakeAngle) * radius);
 
-                world.spawnParticles(ParticleTypes.PORTAL, px, py, pz, 1, 0.0, 0.0, 0.0, 0.0);
-                if ((i + line + age) % (holdPhase ? 4 : 6) == 0) {
-                    world.spawnParticles(ParticleTypes.WITCH, px, py, pz, 1, 0.0, 0.0, 0.0, 0.0);
-                }
+                world.spawnParticles(dust, px, py, pz, 1, 0.0, 0.0, 0.0, 0.0);
             }
         }
     }
@@ -210,7 +231,6 @@ public final class HollowPurpleChargeManager {
         caster.fallDistance = 0.0f;
         caster.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOW_FALLING, 80, 0, false, false, true));
 
-        world.spawnParticles(ParticleTypes.EXPLOSION_EMITTER, anchor.x, anchor.y, anchor.z, 2, 0.2, 0.2, 0.2, 0.0);
         world.spawnParticles(ParticleTypes.REVERSE_PORTAL, anchor.x, anchor.y, anchor.z, 90, 1.3, 1.3, 1.3, 0.12);
         world.spawnParticles(ParticleTypes.WITCH, anchor.x, anchor.y, anchor.z, 70, 1.2, 1.2, 1.2, 0.04);
 

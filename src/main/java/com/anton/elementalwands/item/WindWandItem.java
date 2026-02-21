@@ -157,12 +157,11 @@ public class WindWandItem extends AbstractWandItem {
         }
 
         // Calculate dash strength with additive bonus
-        // Calculate dash strength with multiplicative decay
-        // Base (2.0) * (0.66 ^ chainCount)
+        // Base (2.0) + (0.5 * chainCount)
         // Chain 0: 2.0
-        // Chain 1: ~1.32
-        // Chain 2: ~0.87
-        float dashStrength = (float) (DASH_BASE_STRENGTH * Math.pow(0.66, chainCount));
+        // Chain 1: 2.5
+        // Chain 2: 3.0
+        float dashStrength = DASH_BASE_STRENGTH + (chainCount * 0.5f);
 
         // Execute dash
         Vec3d look = caster.getRotationVec(1.0f).normalize();

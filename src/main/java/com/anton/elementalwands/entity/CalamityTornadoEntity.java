@@ -147,8 +147,8 @@ public class CalamityTornadoEntity extends ProjectileEntity {
         List<Entity> entities = world.getOtherEntities(this, box, entity -> entity instanceof LivingEntity);
 
         for (Entity entity : entities) {
-            // Grace period for owner
-            if (entity.equals(getOwner()) && this.age < 10) {
+            // Grace period for owner (3 seconds)
+            if (entity.equals(getOwner()) && this.age < 60) {
                 continue;
             }
 

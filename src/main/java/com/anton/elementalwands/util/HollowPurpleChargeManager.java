@@ -155,66 +155,48 @@ public final class HollowPurpleChargeManager {
         float progress = MathHelper.clamp(age / (float) ASCENT_TICKS, 0.0f, 1.0f);
         boolean holdPhase = age >= ASCENT_TICKS;
 
-        spawnSnakeLines(world, caster, anchor, progress, age, holdPhase);
+        int redColor = 0xFF1919; // Vibrant Red (Cursed Technique Reversal: Red)
+        int blueColor = 0x194CFF; // Vibrant Blue (Lapse: Blue)
 
-        world.spawnParticles(ParticleTypes.REVERSE_PORTAL, anchor.x, anchor.y, anchor.z, holdPhase ? 3 : 1, 0.08, 0.08,
-                0.08, holdPhase ? 0.01 : 0.0);
-        if (holdPhase) {
-            world.spawnParticles(ParticleTypes.PORTAL, anchor.x, anchor.y, anchor.z, 10, 0.16, 0.16, 0.16, 0.008);
-            world.spawnParticles(ParticleTypes.WITCH, anchor.x, anchor.y, anchor.z, 4, 0.12, 0.12, 0.12, 0.0);
+        // Calculate positions for Red (Right) and Blue (Left) orbs relative to caster
+        Vec3d lookDir = caster.getRotationVec(1.0f).normalize();
+        Vec3d rightDir = lookDir.crossProduct(new Vec3d(0, 1, 0)).normalize();
+
+        // Start 3 blocks apart, closing in to 0 during holdPhase
+        double spread = holdPhase ? MathHelper.lerp((age - ASCENT_TICKS) / (double) HOLD_TICKS, 3.0, 0.0) : 3.0;
+
+        Vec3d redPos = anchor.add(rightDir.multiply(spread));
+        Vec3d bluePos = anchor.add(rightDir.multiply(-spread));
+
+        // Generate spherical dense particles for each orb
+        spawnDenseOrb(world, redPos, redColor, 1.5, progress);
+        spawnDenseOrb(world, bluePos, blueColor, 1.5, progress);
+
+        if (holdPhase && spread < 0.5) {
+            // Merging singularity at the center
+            world.spawnParticles(ParticleTypes.REVERSE_PORTAL, anchor.x, anchor.y, anchor.z, 20, 0.3, 0.3, 0.3, 0.05);
+            world.spawnParticles(ParticleTypes.WITCH, anchor.x, anchor.y, anchor.z, 15, 0.3, 0.3, 0.3, 0.02);
+            world.spawnParticles(new DustParticleEffect(0x8A2BE2, 3.0f), anchor.x, anchor.y, anchor.z, 10, 0.2, 0.2,
+                    0.2, 0.0);
         }
     }
 
-    private static void spawnSnakeLines(ServerWorld world, PlayerEntity caster, Vec3d anchor, float progress, int age,
-            boolean holdPhase) {
-        int lines = 4; // 2 red, 2 blue
-        Vec3d feet = new Vec3d(caster.getX(), caster.getY() + 0.10, caster.getZ());
-        double baseRadius = 2.0;
+    private static void spawnDenseOrb(ServerWorld world, Vec3d pos, int color, double radius, float progress) {
+        DustParticleEffect dust = new DustParticleEffect(color, 2.5f);
+        int numParticles = (int) (40 * progress); // Scale particle density with charge progress
 
-        // Colors
-        int redColor = 0xFF1919; // Vibrant Red
-        int blueColor = 0x194CFF; // Vibrant Blue
-        float size = 1.8f; // Slightly larger, distinct particles
+        for (int i = 0; i < numParticles; i++) {
+            double theta = world.random.nextDouble() * Math.PI * 2.0;
+            double phi = Math.acos((world.random.nextDouble() * 2.0) - 1.0);
 
-        // Calculate how much of the path to cover this tick based on progress (0.0 to
-        // 1.0)
-        double currentT = holdPhase ? 1.0 : progress;
-        double previousT = holdPhase ? 1.0 : Math.max(0.0, (age - 1) / (float) ASCENT_TICKS);
+            // Concentrate particles towards the surface to form a defined sphere
+            double r = radius * (0.8 + world.random.nextDouble() * 0.2);
 
-        // We interpolate a few points between last tick and this tick to avoid gaps in
-        // the trail
-        int subSteps = holdPhase ? 1 : 3;
+            double px = pos.x + r * Math.sin(phi) * Math.cos(theta);
+            double py = pos.y + r * Math.cos(phi);
+            double pz = pos.z + r * Math.sin(phi) * Math.sin(theta);
 
-        for (int line = 0; line < lines; line++) {
-            boolean isRedLine = line % 2 == 0;
-            DustParticleEffect dust = new DustParticleEffect(isRedLine ? redColor : blueColor, size);
-
-            for (int step = 0; step < subSteps; step++) {
-                double interp = subSteps == 1 ? 1.0 : (step + 1) / (double) subSteps;
-                double t = previousT + (currentT - previousT) * interp;
-
-                // Calculate age at this exact interpolated sub-tick for smooth rotation
-                double exactAge = (age - 1) + interp;
-
-                double startAngle = (line * (Math.PI * 2.0 / lines)) + (exactAge * 0.15);
-                Vec3d start = new Vec3d(
-                        feet.x + Math.cos(startAngle) * baseRadius,
-                        feet.y,
-                        feet.z + Math.sin(startAngle) * baseRadius);
-
-                Vec3d pathPoint = start.lerp(anchor, t);
-
-                // Spiral around the lerped center
-                double snakeAngle = startAngle + (t * 12.0);
-                double radius = baseRadius * (1.0 - t); // Shrinks to 0 at the anchor
-
-                double px = pathPoint.x + (Math.cos(snakeAngle) * radius);
-                // Add subtle wobble
-                double py = pathPoint.y + (Math.sin(exactAge * 0.2 + line) * 0.1);
-                double pz = pathPoint.z + (Math.sin(snakeAngle) * radius);
-
-                world.spawnParticles(dust, px, py, pz, 1, 0.0, 0.0, 0.0, 0.0);
-            }
+            world.spawnParticles(dust, px, py, pz, 1, 0.0, 0.0, 0.0, 0.0);
         }
     }
 

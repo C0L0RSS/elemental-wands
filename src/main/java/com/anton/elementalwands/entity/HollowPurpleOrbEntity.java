@@ -24,14 +24,15 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
+import net.minecraft.particle.DustParticleEffect;
 
 public class HollowPurpleOrbEntity extends ProjectileEntity {
 
     private static final double ORB_SPEED = 1.3;
-    private static final double ORB_RADIUS = 3.0; // ~6 blocks diameter
+    private static final double ORB_RADIUS = 5.0; // 10 blocks diameter
     private static final int MAX_LIFETIME_TICKS = 65;
     private static final int MAX_TRAVEL_DISTANCE = 90;
-    private static final float MASSIVE_DAMAGE = 40.0f;
+    private static final float MASSIVE_DAMAGE = 60.0f; // Slightly stronger
 
     private final Set<UUID> damagedUuids = new HashSet<>();
     private Vec3d startPos;
@@ -175,25 +176,30 @@ public class HollowPurpleOrbEntity extends ProjectileEntity {
     private void spawnOrbParticles(ServerWorld world) {
         Vec3d center = getEntityPos();
 
-        // Dense purple shell for a "hollow purple" look.
-        for (int i = 0; i < 60; i++) {
+        // Massive dense purple singularity
+        DustParticleEffect purpleDust = new DustParticleEffect(0x8A2BE2, 4.0f);
+
+        for (int i = 0; i < 250; i++) { // Massive particle count
             double theta = world.random.nextDouble() * Math.PI * 2.0;
             double phi = Math.acos((world.random.nextDouble() * 2.0) - 1.0);
-            double radius = ORB_RADIUS * (0.78 + world.random.nextDouble() * 0.22);
+
+            // Concentrate heavily on the outer shell of the sphere
+            double radius = ORB_RADIUS * (0.85 + world.random.nextDouble() * 0.15);
 
             double sinPhi = Math.sin(phi);
             double px = center.x + radius * sinPhi * Math.cos(theta);
             double py = center.y + radius * Math.cos(phi);
             double pz = center.z + radius * sinPhi * Math.sin(theta);
 
-            world.spawnParticles(ParticleTypes.PORTAL, px, py, pz, 1, 0.0, 0.0, 0.0, 0.0);
-            if (i % 2 == 0) {
-                world.spawnParticles(ParticleTypes.WITCH, px, py, pz, 1, 0.0, 0.0, 0.0, 0.0);
+            world.spawnParticles(purpleDust, px, py, pz, 1, 0.0, 0.0, 0.0, 0.0);
+
+            if (i % 4 == 0) {
+                world.spawnParticles(ParticleTypes.REVERSE_PORTAL, px, py, pz, 1, 0.1, 0.1, 0.1, 0.05);
             }
         }
 
-        world.spawnParticles(ParticleTypes.WITCH, center.x, center.y, center.z, 10, 0.8, 0.8, 0.8, 0.02);
-        world.spawnParticles(ParticleTypes.REVERSE_PORTAL, center.x, center.y, center.z, 6, 0.4, 0.4, 0.4, 0.04);
+        world.spawnParticles(ParticleTypes.WITCH, center.x, center.y, center.z, 40, 2.5, 2.5, 2.5, 0.02);
+        world.spawnParticles(ParticleTypes.PORTAL, center.x, center.y, center.z, 20, 2.0, 2.0, 2.0, 0.08);
     }
 
     @Override

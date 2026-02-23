@@ -171,6 +171,12 @@ public class WindWandItem extends AbstractWandItem {
     public void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
         // Get or initialize dash data
         NbtCompound data = getDashData(stack);
+
+        // Disable Waylay Dash during Zephyr Strike
+        if (data.getBoolean(NBT_ZEPHYR_ACTIVE).orElse(false)) {
+            return;
+        }
+
         int charges = data.getInt(NBT_DASH_CHARGES, 0);
         int lastDashTick = data.getInt(NBT_LAST_DASH_TICK, 0);
         int chainCount = data.getInt(NBT_CHAIN_COUNT, 0);

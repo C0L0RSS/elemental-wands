@@ -195,7 +195,7 @@ public class IceWandItem extends AbstractWandItem {
             this.startPos = spawnPos;
 
             float yaw = owner.getYaw() + yawOffset;
-            Vec3d direction = Vec3d.fromPolar(0, yaw).normalize(); // Horizontal plane using pitch=0
+            Vec3d direction = Vec3d.fromPolar(owner.getPitch(), yaw).normalize(); // Use pitch for vertical aiming
             setVelocity(direction.multiply(1.5));
         }
 

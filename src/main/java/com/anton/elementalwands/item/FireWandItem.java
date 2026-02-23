@@ -35,7 +35,6 @@ public class FireWandItem extends AbstractWandItem {
 
     // Secondary: Dragon's Pyre
     private static final int PYRE_CONE_LENGTH = 40;
-    private static final double PYRE_CONE_ANGLE = Math.toRadians(45.0); // 45 degrees wide
     private static final int PYRE_GROUND_DURATION = 100; // 5 seconds
     private static final String NBT_LAST_PYRE_CAST = "LastPyreCast";
 
@@ -102,27 +101,29 @@ public class FireWandItem extends AbstractWandItem {
         data.putLong(NBT_LAST_PYRE_CAST, world.getServer().getTicks());
         stack.set(DataComponentTypes.CUSTOM_DATA, NbtComponent.of(data));
 
-        // Compute 7-block cone
+        // Compute 40-block runway
         Vec3d origin = caster.getEyePos();
         Vec3d forward = caster.getRotationVec(1.0f).normalize();
 
+        // Define 'right' vector for width
+        Vec3d up = new Vec3d(0, 1, 0);
+        Vec3d right = forward.crossProduct(up).normalize();
+        if (right.lengthSquared() < 0.001) { // Fallback if looking straight up/down
+            right = new Vec3d(1, 0, 0);
+        }
+
         Set<BlockPos> groundBlocks = new HashSet<>();
 
-        for (int r = 1; r <= PYRE_CONE_LENGTH; r++) {
-            int numPoints = r * 3;
-            for (int i = 0; i <= numPoints; i++) {
-                double angleOffset = -PYRE_CONE_ANGLE / 2.0 + (PYRE_CONE_ANGLE * i / (double) numPoints);
+        // Map out runway points: 40 blocks long, from -2 to +2 wide
+        for (double d = 1.0; d <= PYRE_CONE_LENGTH; d += 0.5) {
+            Vec3d center = origin.add(forward.multiply(d));
 
-                double cos = Math.cos(angleOffset);
-                double sin = Math.sin(angleOffset);
-                Vec3d rayDir = new Vec3d(forward.x * cos - forward.z * sin, forward.y,
-                        forward.x * sin + forward.z * cos).normalize();
+            for (double w = -2.0; w <= 2.0; w += 0.5) {
+                Vec3d target = center.add(right.multiply(w));
 
-                Vec3d target = origin.add(rayDir.multiply(r));
-
-                world.spawnParticles(ParticleTypes.FLAME, target.x, target.y, target.z, 2, 0.2, 0.2, 0.2, 0.05);
-                if (world.getRandom().nextFloat() < 0.2f) {
-                    world.spawnParticles(ParticleTypes.LAVA, target.x, target.y, target.z, 1, 0.1, 0.1, 0.1, 0.0);
+                world.spawnParticles(ParticleTypes.FLAME, target.x, target.y, target.z, 1, 0.1, 0.1, 0.1, 0.05);
+                if (world.getRandom().nextFloat() < 0.1f) {
+                    world.spawnParticles(ParticleTypes.LAVA, target.x, target.y, target.z, 1, 0.0, 0.0, 0.0, 0.0);
                 }
 
                 BlockPos targetPos = BlockPos.ofFloored(target);
@@ -139,14 +140,20 @@ public class FireWandItem extends AbstractWandItem {
         // Deal damage
         java.util.List<LivingEntity> targets = world.getEntitiesByClass(LivingEntity.class,
                 caster.getBoundingBox().expand(PYRE_CONE_LENGTH), e -> e != caster && e.isAlive());
+
+        // Calculate runway bounds for damage
+        Vec3d rightVec = forward.crossProduct(new Vec3d(0, 1, 0)).normalize();
+        if (rightVec.lengthSquared() < 0.001)
+            rightVec = new Vec3d(1, 0, 0);
+
         for (LivingEntity target : targets) {
-            Vec3d toTarget = target.getEntityPos().subtract(caster.getEntityPos()).normalize();
-            if (caster.getEntityPos().distanceTo(target.getEntityPos()) <= PYRE_CONE_LENGTH) {
-                double dotProduct = forward.normalize().dotProduct(toTarget);
-                if (dotProduct >= Math.cos(PYRE_CONE_ANGLE / 2.0)) {
-                    target.damage(world, world.getDamageSources().onFire(), 5.0f);
-                    target.setFireTicks(100);
-                }
+            Vec3d toTarget = target.getEntityPos().subtract(caster.getEntityPos());
+            double distForward = toTarget.dotProduct(forward);
+            double distRight = Math.abs(toTarget.dotProduct(rightVec));
+
+            if (distForward > 0 && distForward <= PYRE_CONE_LENGTH && distRight <= 2.5) {
+                target.damage(world, world.getDamageSources().onFire(), 5.0f);
+                target.setFireTicks(100);
             }
         }
 

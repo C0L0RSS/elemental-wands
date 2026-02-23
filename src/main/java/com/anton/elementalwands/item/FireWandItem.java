@@ -19,8 +19,11 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
 import com.anton.elementalwands.entity.InfernoWaveEntity;
-import com.anton.elementalwands.util.MeteorManager;
 import com.anton.elementalwands.util.TemporaryBlockManager;
+import com.anton.elementalwands.util.MeteorManager;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.NbtComponent;
+import net.minecraft.nbt.NbtCompound;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -30,9 +33,11 @@ public class FireWandItem extends AbstractWandItem {
     // Primary: Inferno Wave
     private static final double INFERNO_WAVE_SPEED = 1.5;
 
-    // Secondary: Magma Surf
-    private static final int MAGMA_SURF_DURATION_TICKS = 60; // 3 seconds
-    private static final int MAGMA_SURF_FIRE_TRAIL_DURATION_TICKS = 40; // 2 seconds
+    // Secondary: Dragon's Pyre
+    private static final int PYRE_CONE_LENGTH = 40;
+    private static final double PYRE_CONE_ANGLE = Math.toRadians(45.0); // 45 degrees wide
+    private static final int PYRE_GROUND_DURATION = 100; // 5 seconds
+    private static final String NBT_LAST_PYRE_CAST = "LastPyreCast";
 
     // Ultimate: Maximum Meteor
     private static final int METEOR_SPAWN_HEIGHT = 35;
@@ -51,38 +56,23 @@ public class FireWandItem extends AbstractWandItem {
             living.addStatusEffect(new StatusEffectInstance(StatusEffects.FIRE_RESISTANCE, 2, 0, false, false, true));
         }
 
-        // Handle Magma Surf fire trail
-        if (entity instanceof ServerPlayerEntity player && player.hasStatusEffect(StatusEffects.SPEED)) {
-            // Check if this is our Magma Surf buff (we set it with amplifier 1 = Speed II)
-            StatusEffectInstance speedEffect = player.getStatusEffect(StatusEffects.SPEED);
-            if (speedEffect != null && speedEffect.getAmplifier() == 1) {
-                // Leave fire trail behind player
-                BlockPos playerPos = player.getBlockPos();
-                BlockPos groundPos = playerPos.down();
-
-                if (world.getBlockState(playerPos).isAir() &&
-                        world.getBlockState(groundPos).isSolidBlock(world, groundPos)) {
-
-                    Set<BlockPos> positions = new HashSet<>();
-                    positions.add(playerPos);
-
-                    TemporaryBlockManager.placeTemporaryBlocks(
-                            world,
-                            positions,
-                            Blocks.FIRE.getDefaultState(),
-                            MAGMA_SURF_FIRE_TRAIL_DURATION_TICKS,
-                            state -> state.isAir());
+        if (!world.isClient() && entity instanceof PlayerEntity player
+                && (slot == EquipmentSlot.MAINHAND || slot == EquipmentSlot.OFFHAND)) {
+            NbtComponent nbtComponent = stack.getOrDefault(DataComponentTypes.CUSTOM_DATA, NbtComponent.DEFAULT);
+            NbtCompound data = nbtComponent.copyNbt();
+            if (data.contains(NBT_LAST_PYRE_CAST)) {
+                long lastCast = data.getLong(NBT_LAST_PYRE_CAST).orElse(0L);
+                if (world.getServer().getTicks() - lastCast <= PYRE_GROUND_DURATION) {
+                    BlockPos groundPos = player.getBlockPos().down();
+                    net.minecraft.block.BlockState groundState = world.getBlockState(groundPos);
+                    if (groundState.isOf(Blocks.FIRE) || groundState.isOf(Blocks.MAGMA_BLOCK)) {
+                        player.addStatusEffect(
+                                new StatusEffectInstance(StatusEffects.REGENERATION, 20, 1, false, false, true)); // Regen
+                                                                                                                  // II
+                        player.addStatusEffect(
+                                new StatusEffectInstance(StatusEffects.SPEED, 20, 2, false, false, true)); // Speed III
+                    }
                 }
-
-                // Spawn magma/fire particles around player
-                world.spawnParticles(
-                        ParticleTypes.FLAME,
-                        player.getX(), player.getY() + 0.1, player.getZ(),
-                        8, 0.5, 0.1, 0.5, 0.02);
-                world.spawnParticles(
-                        ParticleTypes.LAVA,
-                        player.getX(), player.getY() + 0.1, player.getZ(),
-                        2, 0.3, 0.1, 0.3, 0.01);
             }
         }
     }
@@ -106,22 +96,79 @@ public class FireWandItem extends AbstractWandItem {
         if (!tryStartCooldown(world, caster, stack, Ability.SECONDARY, getSecondaryCooldownTicks()))
             return;
 
-        // Magma Surf: Apply Speed II for 3 seconds (1.5x speed multiplier)
-        caster.addStatusEffect(new StatusEffectInstance(StatusEffects.SPEED, MAGMA_SURF_DURATION_TICKS, 1)); // Amplifier
-                                                                                                             // 1 =
-                                                                                                             // Speed II
-        caster.addStatusEffect(new StatusEffectInstance(StatusEffects.FIRE_RESISTANCE, MAGMA_SURF_DURATION_TICKS, 0));
+        // Record cast time
+        NbtComponent nbtComponent = stack.getOrDefault(DataComponentTypes.CUSTOM_DATA, NbtComponent.DEFAULT);
+        NbtCompound data = nbtComponent.copyNbt();
+        data.putLong(NBT_LAST_PYRE_CAST, world.getServer().getTicks());
+        stack.set(DataComponentTypes.CUSTOM_DATA, NbtComponent.of(data));
 
-        // Sound and particles for activation
-        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_BLAZE_SHOOT, SoundCategory.PLAYERS, 1.0f, 1.0f);
-        world.spawnParticles(
-                ParticleTypes.FLAME,
-                caster.getX(), caster.getY() + 0.5, caster.getZ(),
-                30, 0.5, 0.5, 0.5, 0.1);
-        world.spawnParticles(
-                ParticleTypes.LAVA,
-                caster.getX(), caster.getY() + 0.5, caster.getZ(),
-                10, 0.3, 0.3, 0.3, 0.05);
+        // Compute 7-block cone
+        Vec3d origin = caster.getEyePos();
+        Vec3d forward = caster.getRotationVec(1.0f).normalize();
+
+        Set<BlockPos> groundBlocks = new HashSet<>();
+
+        for (int r = 1; r <= PYRE_CONE_LENGTH; r++) {
+            int numPoints = r * 3;
+            for (int i = 0; i <= numPoints; i++) {
+                double angleOffset = -PYRE_CONE_ANGLE / 2.0 + (PYRE_CONE_ANGLE * i / (double) numPoints);
+
+                double cos = Math.cos(angleOffset);
+                double sin = Math.sin(angleOffset);
+                Vec3d rayDir = new Vec3d(forward.x * cos - forward.z * sin, forward.y,
+                        forward.x * sin + forward.z * cos).normalize();
+
+                Vec3d target = origin.add(rayDir.multiply(r));
+
+                world.spawnParticles(ParticleTypes.FLAME, target.x, target.y, target.z, 2, 0.2, 0.2, 0.2, 0.05);
+                if (world.getRandom().nextFloat() < 0.2f) {
+                    world.spawnParticles(ParticleTypes.LAVA, target.x, target.y, target.z, 1, 0.1, 0.1, 0.1, 0.0);
+                }
+
+                BlockPos targetPos = BlockPos.ofFloored(target);
+                for (int yOffset = 0; yOffset >= -3; yOffset--) {
+                    BlockPos p = targetPos.add(0, yOffset, 0);
+                    if (world.getBlockState(p).isSolidBlock(world, p)) {
+                        groundBlocks.add(p);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Deal damage
+        java.util.List<LivingEntity> targets = world.getEntitiesByClass(LivingEntity.class,
+                caster.getBoundingBox().expand(PYRE_CONE_LENGTH), e -> e != caster && e.isAlive());
+        for (LivingEntity target : targets) {
+            Vec3d toTarget = target.getEntityPos().subtract(caster.getEntityPos()).normalize();
+            if (caster.getEntityPos().distanceTo(target.getEntityPos()) <= PYRE_CONE_LENGTH) {
+                double dotProduct = forward.normalize().dotProduct(toTarget);
+                if (dotProduct >= Math.cos(PYRE_CONE_ANGLE / 2.0)) {
+                    target.damage(world, world.getDamageSources().onFire(), 5.0f);
+                    target.setFireTicks(100);
+                }
+            }
+        }
+
+        // Place magma/fire
+        Set<BlockPos> validGround = new HashSet<>();
+        Set<BlockPos> validAbove = new HashSet<>();
+
+        for (BlockPos p : groundBlocks) {
+            validGround.add(p);
+            if (world.getBlockState(p.up()).isAir() || world.getBlockState(p.up()).isReplaceable()) {
+                validAbove.add(p.up());
+            }
+        }
+
+        TemporaryBlockManager.placeTemporaryBlocks(world, validGround, Blocks.MAGMA_BLOCK.getDefaultState(),
+                PYRE_GROUND_DURATION,
+                state -> !state.hasBlockEntity() && !state.isOf(Blocks.OBSIDIAN) && !state.isOf(Blocks.BEDROCK));
+        TemporaryBlockManager.placeTemporaryBlocks(world, validAbove, Blocks.FIRE.getDefaultState(),
+                PYRE_GROUND_DURATION, state -> state.isAir() || state.isReplaceable());
+
+        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_ENDER_DRAGON_SHOOT, SoundCategory.PLAYERS, 1.0f,
+                0.8f);
     }
 
     @Override

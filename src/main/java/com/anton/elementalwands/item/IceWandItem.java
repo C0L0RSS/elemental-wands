@@ -1,9 +1,13 @@
 package com.anton.elementalwands.item;
 
+import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
@@ -36,11 +40,9 @@ public class IceWandItem extends AbstractWandItem {
     private static final float SHATTER_AOE_DAMAGE = 2.0f;
     private static final int SHATTER_AOE_FROST_STACKS = 1; // Apply 1 Frost stack to AoE targets
 
-    // Secondary: Permafrost Spikes
-    private static final int SPIKE_LINE_LENGTH = 10;
-    private static final float SPIKE_DAMAGE = 5.0f;
-    private static final double SPIKE_KNOCKUP_VELOCITY = 1.0;
-    private static final int SPIKE_DURATION_TICKS = 60; // 3 seconds
+    // Secondary: Glacial Gust
+    private static final float GUST_DAMAGE = 4.0f;
+    private static final int GUST_LIFETIME = 15; // 15 ticks ~ 0.75s
 
     public IceWandItem(Settings settings) {
         super(settings);
@@ -70,61 +72,17 @@ public class IceWandItem extends AbstractWandItem {
         if (!tryStartCooldown(world, caster, stack, Ability.SECONDARY, getSecondaryCooldownTicks()))
             return;
 
-        // Permafrost Spikes: Erupting line of ice spikes
-        Vec3d direction = caster.getRotationVec(1.0f).normalize();
-        Vec3d start = caster.getEntityPos();
+        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_SNOW_GOLEM_SHOOT, SoundCategory.PLAYERS, 1.0F,
+                0.5F);
+        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 0.8F,
+                1.2F);
 
-        Set<BlockPos> spikePositions = new HashSet<>();
-        Set<Entity> hitEntities = new HashSet<>();
-
-        // Create line of spikes
-        for (int i = 1; i <= SPIKE_LINE_LENGTH; i++) {
-            Vec3d pos = start.add(direction.multiply(i));
-            BlockPos blockPos = BlockPos.ofFloored(pos);
-            BlockPos groundPos = blockPos.down();
-
-            // Check if there's solid ground
-            if (world.getBlockState(groundPos).isSolidBlock(world, groundPos)) {
-                // Place spike blocks (ice spikes)
-                spikePositions.add(blockPos);
-                spikePositions.add(blockPos.up()); // 2 blocks tall spike
-
-                // Check for entities at this position and damage/knock them up
-                Box hitBox = Box.of(Vec3d.ofCenter(blockPos), 1.5, 2.5, 1.5);
-                List<Entity> entities = world.getOtherEntities(caster, hitBox);
-
-                for (Entity entity : entities) {
-                    if (hitEntities.contains(entity))
-                        continue;
-                    hitEntities.add(entity);
-
-                    // Deal damage
-                    entity.damage(world, world.getDamageSources().magic(), SPIKE_DAMAGE);
-
-                    // Knock upward
-                    entity.setVelocity(entity.getVelocity().x, SPIKE_KNOCKUP_VELOCITY, entity.getVelocity().z);
-                    entity.velocityModified = true;
-                }
-
-                // Spawn particles
-                world.spawnParticles(
-                        ParticleTypes.SNOWFLAKE,
-                        blockPos.getX() + 0.5, blockPos.getY() + 0.5, blockPos.getZ() + 0.5,
-                        15, 0.3, 0.5, 0.3, 0.05);
-            }
+        // Fire 5 horizontal projectiles for Glacial Gust
+        for (int i = 0; i < 5; i++) {
+            float yawOffset = (i - 2) * 15.0f; // -30, -15, 0, 15, 30 spread
+            ColdWaveProjectile projectile = new ColdWaveProjectile(world, caster, new Vec3d(0, 0, 0), yawOffset);
+            world.spawnEntity(projectile);
         }
-
-        // Place temporary ice spike blocks
-        TemporaryBlockManager.placeTemporaryBlocks(
-                world,
-                spikePositions,
-                Blocks.PACKED_ICE.getDefaultState(),
-                SPIKE_DURATION_TICKS,
-                state -> state.isAir());
-
-        // Sound effects
-        world.playSound(null, caster.getBlockPos(), SoundEvents.BLOCK_GLASS_BREAK, SoundCategory.PLAYERS, 1.0f, 0.5f);
-        world.playSound(null, caster.getBlockPos(), SoundEvents.BLOCK_GLASS_PLACE, SoundCategory.PLAYERS, 1.2f, 0.8f);
     }
 
     @Override
@@ -218,6 +176,77 @@ public class IceWandItem extends AbstractWandItem {
                     SoundEvents.BLOCK_GLASS_BREAK,
                     SoundCategory.PLAYERS,
                     1.5f, 0.8f);
+        }
+    }
+
+    // Custom projectile for Glacial Gust
+    private static class ColdWaveProjectile extends ProjectileEntity {
+        private Vec3d startPos;
+        private final Set<Entity> hitEntities = new HashSet<>();
+        private int ticksAlive = 0;
+
+        public ColdWaveProjectile(ServerWorld world, LivingEntity owner, Vec3d offset, float yawOffset) {
+            super(ModEntities.VACUUM_BLADE, world);
+            setOwner(owner);
+            setNoGravity(true);
+
+            Vec3d spawnPos = owner.getEyePos().add(offset);
+            setPosition(spawnPos.x, spawnPos.y, spawnPos.z);
+            this.startPos = spawnPos;
+
+            float yaw = owner.getYaw() + yawOffset;
+            Vec3d direction = Vec3d.fromPolar(0, yaw).normalize(); // Horizontal plane using pitch=0
+            setVelocity(direction.multiply(1.5));
+        }
+
+        @Override
+        protected void initDataTracker(net.minecraft.entity.data.DataTracker.Builder builder) {
+        }
+
+        @Override
+        public void tick() {
+            super.tick();
+            if (!(getEntityWorld() instanceof ServerWorld sw))
+                return;
+
+            ticksAlive++;
+            if (ticksAlive > GUST_LIFETIME) {
+                discard();
+                return;
+            }
+
+            // Particles
+            sw.spawnParticles(ParticleTypes.CLOUD, getX(), getY(), getZ(), 6, 0.3, 0.3, 0.3, 0.05);
+            sw.spawnParticles(ParticleTypes.ITEM_SNOWBALL, getX(), getY(), getZ(), 3, 0.3, 0.3, 0.3, 0.05);
+
+            // Piercing collision check
+            Box hitBox = getBoundingBox().expand(0.5);
+            List<LivingEntity> targets = sw.getEntitiesByClass(LivingEntity.class, hitBox,
+                    e -> e != getOwner() && e.isAlive() && !hitEntities.contains(e));
+
+            for (LivingEntity target : targets) {
+                hitEntities.add(target);
+
+                target.damage(sw, sw.getDamageSources().magic(), GUST_DAMAGE);
+
+                int stacks = ChillTracker.getStacks(target);
+                if (stacks >= 2) {
+                    target.addStatusEffect(
+                            new StatusEffectInstance(StatusEffects.SLOWNESS, 40, 255, false, true, true));
+                } else {
+                    target.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 50, 4, false, true, true));
+                }
+            }
+
+            // Block collision - ignore small blocks
+            BlockPos pos = getBlockPos();
+            BlockState state = sw.getBlockState(pos);
+            if (state.isSolidBlock(sw, pos) && state.isFullCube(sw, pos)) {
+                discard();
+            }
+
+            Vec3d vel = getVelocity();
+            setPosition(getX() + vel.x, getY() + vel.y, getZ() + vel.z);
         }
     }
 }

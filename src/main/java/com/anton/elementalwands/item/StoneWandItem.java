@@ -24,10 +24,25 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.Map;
+import java.util.HashMap;
+import net.minecraft.entity.Entity;
 
 public class StoneWandItem extends AbstractWandItem {
 
     private static final int PRIMARY_COOLDOWN_TICKS = 60;
+
+    private static class WallData {
+        public final BlockPos center;
+        public final int creationTick;
+
+        public WallData(BlockPos center, int tick) {
+            this.center = center;
+            this.creationTick = tick;
+        }
+    }
+
+    private static final Map<UUID, WallData> ACTIVE_WALLS = new HashMap<>();
     private static final int TECTONIC_LENGTH = 15;
     private static final float TECTONIC_DAMAGE = 6.0f;
     private static final double TECTONIC_VERTICAL_KNOCKBACK = 0.5;
@@ -43,7 +58,31 @@ public class StoneWandItem extends AbstractWandItem {
 
     @Override
     public int getPrimaryCooldownTicks() {
-        return PRIMARY_COOLDOWN_TICKS;
+        return 40; // Reduced to 2s
+    }
+
+    @Override
+    public void inventoryTick(ItemStack stack, ServerWorld world, Entity entity,
+            net.minecraft.entity.EquipmentSlot slot) {
+        super.inventoryTick(stack, world, entity, slot);
+        if (!world.isClient() && entity instanceof PlayerEntity player &&
+                (slot == net.minecraft.entity.EquipmentSlot.MAINHAND
+                        || slot == net.minecraft.entity.EquipmentSlot.OFFHAND)) {
+
+            WallData wall = ACTIVE_WALLS.get(player.getUuid());
+            if (wall != null) {
+                int currentTick = world.getServer().getTicks();
+                if (currentTick - wall.creationTick > TECTONIC_BLOCK_DURATION) {
+                    ACTIVE_WALLS.remove(player.getUuid());
+                } else {
+                    double dist = player.getEntityPos().distanceTo(Vec3d.ofCenter(wall.center));
+                    if (dist <= 3.5) {
+                        player.addStatusEffect(new net.minecraft.entity.effect.StatusEffectInstance(
+                                net.minecraft.entity.effect.StatusEffects.RESISTANCE, 20, 2, false, false, true));
+                    }
+                }
+            }
+        }
     }
 
     @Override
@@ -56,18 +95,11 @@ public class StoneWandItem extends AbstractWandItem {
         if (spikes.isEmpty())
             return;
 
-        TemporaryBlockManager.placeTemporaryBlocks(
-                world,
-                spikes,
-                Blocks.STONE.getDefaultState(),
-                TECTONIC_BLOCK_DURATION,
-                state -> (state.isAir() || state.isReplaceable()) && state.getFluidState().isEmpty());
+        TectonicSchedulerEntity scheduler = new TectonicSchedulerEntity(world, caster, spikes);
+        world.spawnEntity(scheduler);
 
-        applyTectonicSpikeHits(world, caster, spikes);
-
-        world.playSound(null, caster.getBlockPos(), SoundEvents.BLOCK_STONE_BREAK, SoundCategory.PLAYERS, 0.9f, 0.8f);
-        world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, Blocks.COBBLESTONE.getDefaultState()),
-                caster.getX(), caster.getBodyY(0.6), caster.getZ(), 16, 0.6, 0.3, 0.6, 0.10);
+        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_EVOKER_PREPARE_ATTACK, SoundCategory.PLAYERS,
+                1.0f, 1.0f);
     }
 
     @Override
@@ -75,11 +107,25 @@ public class StoneWandItem extends AbstractWandItem {
         if (!tryStartCooldown(world, caster, stack, Ability.SECONDARY, getSecondaryCooldownTicks()))
             return;
 
-        TitanDomeManager.startAegis(world, caster);
+        // Place 3x3 vertical wall 2 blocks in front
+        Vec3d forward = horizontalForward(caster);
+        Vec3d right = new Vec3d(-forward.z, 0, forward.x);
+        BlockPos center = BlockPos.ofFloored(caster.getX() + forward.x * 2, caster.getY() + 1,
+                caster.getZ() + forward.z * 2);
 
-        world.playSound(null, caster.getBlockPos(), SoundEvents.BLOCK_STONE_PLACE, SoundCategory.PLAYERS, 1.0f, 1.0f);
-        world.spawnParticles(ParticleTypes.CLOUD, caster.getX(), caster.getBodyY(0.5), caster.getZ(), 25, 1.0, 0.6, 1.0,
-                0.02);
+        List<BlockPos> wallBlocks = new ArrayList<>();
+        for (int x = -1; x <= 1; x++) {
+            for (int y = -1; y <= 1; y++) {
+                wallBlocks.add(center.add((int) (right.x * x), y, (int) (right.z * x)));
+            }
+        }
+
+        TemporaryBlockManager.placeTemporaryBlocks(world, wallBlocks, Blocks.STONE.getDefaultState(),
+                TECTONIC_BLOCK_DURATION, state -> state.isAir() || state.isReplaceable());
+        ACTIVE_WALLS.put(caster.getUuid(), new WallData(center, world.getServer().getTicks()));
+
+        world.playSound(null, center, SoundEvents.BLOCK_STONE_PLACE, SoundCategory.PLAYERS, 1.0f, 1.0f);
+        world.spawnParticles(ParticleTypes.CLOUD, center.getX(), center.getY(), center.getZ(), 25, 1.0, 1.0, 1.0, 0.02);
     }
 
     @Override
@@ -150,33 +196,100 @@ public class StoneWandItem extends AbstractWandItem {
     private static boolean isGroundCandidate(ServerWorld world, int x, int y, int z) {
         BlockPos groundPos = new BlockPos(x, y, z);
         BlockState ground = world.getBlockState(groundPos);
-        if (ground.isAir() || !ground.isSolidBlock(world, groundPos))
+
+        // Count as ground if it has a solid collision shape, or if it's already a solid
+        // block
+        boolean isSolidGround = !ground.getCollisionShape(world, groundPos).isEmpty()
+                || ground.isSolidBlock(world, groundPos);
+        if (!isSolidGround)
             return false;
 
         BlockState above = world.getBlockState(groundPos.up());
-        return (above.isAir() || above.isReplaceable()) && above.getFluidState().isEmpty();
+        return (above.getCollisionShape(world, groundPos.up()).isEmpty() || above.isReplaceable())
+                && above.getFluidState().isEmpty();
     }
 
-    private void applyTectonicSpikeHits(ServerWorld world, PlayerEntity caster, List<BlockPos> spikes) {
-        Set<UUID> hitTargets = new HashSet<>();
-        for (BlockPos spikePos : spikes) {
-            Box hitBox = new Box(
-                    spikePos.getX() - TECTONIC_HITBOX_EXPAND_XZ,
-                    spikePos.getY() - TECTONIC_VERTICAL_SCAN_DOWN,
-                    spikePos.getZ() - TECTONIC_HITBOX_EXPAND_XZ,
-                    spikePos.getX() + 1.0 + TECTONIC_HITBOX_EXPAND_XZ,
-                    spikePos.getY() + 1.0 + TECTONIC_VERTICAL_SCAN_UP,
-                    spikePos.getZ() + 1.0 + TECTONIC_HITBOX_EXPAND_XZ);
-            List<LivingEntity> targets = world.getEntitiesByClass(LivingEntity.class, hitBox,
-                    e -> e.isAlive() && !e.isSpectator() && e != caster);
+    private static void applyDamageAtSpike(ServerWorld world, PlayerEntity caster, BlockPos spikePos,
+            Set<UUID> hitTargets) {
+        Box hitBox = new Box(
+                spikePos.getX() - TECTONIC_HITBOX_EXPAND_XZ,
+                spikePos.getY() - TECTONIC_VERTICAL_SCAN_DOWN,
+                spikePos.getZ() - TECTONIC_HITBOX_EXPAND_XZ,
+                spikePos.getX() + 1.0 + TECTONIC_HITBOX_EXPAND_XZ,
+                spikePos.getY() + 1.0 + TECTONIC_VERTICAL_SCAN_UP,
+                spikePos.getZ() + 1.0 + TECTONIC_HITBOX_EXPAND_XZ);
+        List<LivingEntity> targets = world.getEntitiesByClass(LivingEntity.class, hitBox,
+                e -> e.isAlive() && !e.isSpectator() && e != caster);
 
-            for (LivingEntity target : targets) {
-                if (!hitTargets.add(target.getUuid()))
-                    continue;
-                applyDamage(world, caster, target, TECTONIC_DAMAGE);
-                target.addVelocity(0.0, TECTONIC_VERTICAL_KNOCKBACK, 0.0);
-                target.velocityModified = true;
+        for (LivingEntity target : targets) {
+            if (!hitTargets.add(target.getUuid()))
+                continue;
+
+            target.damage(world, world.getDamageSources().magic(), TECTONIC_DAMAGE);
+            target.addVelocity(0.0, TECTONIC_VERTICAL_KNOCKBACK, 0.0);
+            target.velocityModified = true;
+        }
+    }
+
+    // Scheduler for Stone Wand Earthen Maw
+    public static class TectonicSchedulerEntity extends net.minecraft.entity.decoration.ArmorStandEntity {
+        private final List<BlockPos> path;
+        private final PlayerEntity caster;
+        private int tickCounter = 0;
+        private final Set<UUID> hitTargets = new HashSet<>();
+
+        public TectonicSchedulerEntity(ServerWorld world, PlayerEntity caster, List<BlockPos> path) {
+            super(net.minecraft.entity.EntityType.ARMOR_STAND, world);
+            this.caster = caster;
+            this.path = path;
+
+            this.setPosition(caster.getX(), caster.getY(), caster.getZ());
+            this.setInvisible(true);
+            this.setNoGravity(true);
+            this.setInvulnerable(true);
+        }
+
+        @Override
+        public void tick() {
+            super.tick();
+            if (!(getEntityWorld() instanceof ServerWorld sw))
+                return;
+
+            int maxTick = path.size() + 5;
+            if (tickCounter > maxTick) {
+                discard();
+                return;
             }
+
+            // Wind-up (1 tick per step instead of 2)
+            int windUpIndex = tickCounter;
+            if (windUpIndex < path.size()) {
+                BlockPos pos = path.get(windUpIndex);
+                sw.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, Blocks.STONE.getDefaultState()),
+                        pos.getX() + 0.5, pos.getY() + 0.1, pos.getZ() + 0.5, 10, 0.3, 0.1, 0.3, 0.05);
+                sw.playSound(null, pos, SoundEvents.BLOCK_STONE_STEP, SoundCategory.PLAYERS, 0.8f, 0.6f);
+            }
+
+            // Erupt (delay of 5 ticks instead of 10)
+            if (tickCounter >= 5) {
+                int eruptIndex = tickCounter - 5;
+                if (eruptIndex < path.size()) {
+                    BlockPos pos = path.get(eruptIndex);
+
+                    TemporaryBlockManager.placeTemporaryBlocks(sw, List.of(pos), Blocks.STONE.getDefaultState(),
+                            TECTONIC_BLOCK_DURATION,
+                            state -> (state.getCollisionShape(sw, pos).isEmpty() || state.isReplaceable())
+                                    && state.getFluidState().isEmpty());
+
+                    applyDamageAtSpike(sw, caster, pos, hitTargets);
+
+                    sw.playSound(null, pos, SoundEvents.BLOCK_STONE_BREAK, SoundCategory.PLAYERS, 1.0f, 0.8f);
+                    sw.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, Blocks.STONE.getDefaultState()),
+                            pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 20, 0.4, 0.4, 0.4, 0.15);
+                }
+            }
+
+            tickCounter++;
         }
     }
 }

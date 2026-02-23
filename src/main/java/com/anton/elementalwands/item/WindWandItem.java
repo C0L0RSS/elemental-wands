@@ -8,6 +8,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -35,6 +36,11 @@ public class WindWandItem extends AbstractWandItem {
     private static final String NBT_LAST_DASH_TICK = "LastDashTick";
     private static final String NBT_CHAIN_COUNT = "ChainCount";
     private static final String NBT_RECHARGE_TICKS = "RechargeTicks";
+
+    // Ultimate: Zephyr Strike
+    private static final String NBT_ZEPHYR_ACTIVE = "ZephyrStrikeActive";
+    private static final String NBT_ZEPHYR_TICK = "ZephyrStrikeTick";
+    private static final int ZEPHYR_MAX_DURATION = 100; // 5 seconds maximum flight time before auto-reset
 
     public WindWandItem(Settings settings) {
         super(settings);
@@ -126,6 +132,40 @@ public class WindWandItem extends AbstractWandItem {
             data.putInt(NBT_RECHARGE_TICKS, 0);
             saveDashData(stack, data);
         }
+
+        // Zephyr Strike Logic
+        if (entity instanceof PlayerEntity player && !world.isClient()
+                && (slot == EquipmentSlot.MAINHAND || slot == EquipmentSlot.OFFHAND)) {
+            if (data.getBoolean(NBT_ZEPHYR_ACTIVE).orElse(false)) {
+                player.fallDistance = 0; // Immune to fall damage
+
+                int startTick = data.getInt(NBT_ZEPHYR_TICK, 0);
+                int currentTick = world.getServer().getTicks();
+
+                if (currentTick - startTick > 10) {
+                    if (player.isOnGround() || player.horizontalCollision) {
+                        // Impact!
+                        Vec3d vel = player.getVelocity();
+                        float power = 3.0f + (float) vel.length() * 2.0f;
+                        if (power < 3.0f)
+                            power = 4.0f;
+
+                        world.createExplosion(player, player.getX(), player.getY(), player.getZ(), power, false,
+                                net.minecraft.world.World.ExplosionSourceType.NONE);
+
+                        // Reset
+                        data.putBoolean(NBT_ZEPHYR_ACTIVE, false);
+                        unquipElytra(player);
+                        saveDashData(stack, data);
+                    } else if (currentTick - startTick > ZEPHYR_MAX_DURATION) {
+                        // Timeout
+                        data.putBoolean(NBT_ZEPHYR_ACTIVE, false);
+                        unquipElytra(player);
+                        saveDashData(stack, data);
+                    }
+                }
+            }
+        }
     }
 
     @Override
@@ -209,17 +249,49 @@ public class WindWandItem extends AbstractWandItem {
         if (!tryStartCooldown(world, caster, stack, Ability.ULTIMATE, getUltimateCooldownTicks()))
             return;
 
-        // Spawn Calamity Tornado
-        CalamityTornadoEntity tornado = new CalamityTornadoEntity(world, caster);
-        world.spawnEntity(tornado);
+        NbtCompound data = getDashData(stack);
+        data.putBoolean(NBT_ZEPHYR_ACTIVE, true);
+        data.putInt(NBT_ZEPHYR_TICK, world.getServer().getTicks());
+        saveDashData(stack, data);
 
-        // Dramatic sound and particles
+        equipElytra(caster);
+
+        Vec3d look = caster.getRotationVec(1.0f).normalize();
+        Vec3d horizontal = new Vec3d(look.x, 0, look.z).normalize();
+
+        Vec3d launchVel = new Vec3d(horizontal.x * 3.52, 3.52, horizontal.z * 3.52);
+
+        caster.addVelocity(launchVel.x, launchVel.y, launchVel.z);
+        caster.velocityModified = true;
+
         world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_ENDER_DRAGON_GROWL, SoundCategory.PLAYERS, 1.5f,
                 0.8f);
         world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_BREEZE_WIND_BURST.value(), SoundCategory.PLAYERS,
                 2.0f, 0.6f);
         world.spawnParticles(net.minecraft.particle.ParticleTypes.GUST_EMITTER_LARGE, caster.getX(),
                 caster.getBodyY(0.5), caster.getZ(), 3, 1.0, 1.0, 1.0, 0.0);
+    }
+
+    private void equipElytra(PlayerEntity player) {
+        ItemStack chest = player.getEquippedStack(EquipmentSlot.CHEST);
+        if (!chest.isEmpty() && !chest.isOf(Items.ELYTRA)) {
+            // Check if player has Elytra tracker tag
+            if (!player.getCommandTags().contains("has_zephyr_elytra")) {
+                if (!player.getInventory().insertStack(chest.copy())) {
+                    player.dropItem(chest.copy(), false);
+                }
+                player.getCommandTags().add("has_zephyr_elytra");
+            }
+        }
+        player.equipStack(EquipmentSlot.CHEST, new ItemStack(Items.ELYTRA));
+    }
+
+    private void unquipElytra(PlayerEntity player) {
+        ItemStack chest = player.getEquippedStack(EquipmentSlot.CHEST);
+        if (chest.isOf(Items.ELYTRA) && player.getCommandTags().contains("has_zephyr_elytra")) {
+            player.equipStack(EquipmentSlot.CHEST, ItemStack.EMPTY);
+            player.getCommandTags().remove("has_zephyr_elytra");
+        }
     }
 
     private NbtCompound getDashData(ItemStack stack) {

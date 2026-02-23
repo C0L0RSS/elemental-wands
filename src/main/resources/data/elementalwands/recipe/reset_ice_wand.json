@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    "elementalwands:ice_wand",
+    "elementalwands:reset_rune"
+  ],
+  "result": {
+    "id": "elementalwands:fractured_wand",
+    "count": 1
+  }
+}

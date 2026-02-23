@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    "elementalwands:fractured_wand",
+    "elementalwands:stone_crystal"
+  ],
+  "result": {
+    "id": "elementalwands:stone_wand",
+    "count": 1
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:smelting",
+  "ingredient": "elementalwands:raw_stone_crystal",
+  "result": {
+    "id": "elementalwands:stone_crystal"
+  },
+  "experience": 0.7,
+  "cookingtime": 200
+}

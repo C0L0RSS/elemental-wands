@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:smelting",
+  "ingredient": "elementalwands:raw_fire_crystal",
+  "result": {
+    "id": "elementalwands:fire_crystal"
+  },
+  "experience": 0.7,
+  "cookingtime": 200
+}

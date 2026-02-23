@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    "elementalwands:fractured_wand",
+    "elementalwands:fire_crystal"
+  ],
+  "result": {
+    "id": "elementalwands:fire_wand",
+    "count": 1
+  }
+}

@@ -47,6 +47,7 @@ public class StoneWandItem extends AbstractWandItem {
     private static final float TECTONIC_DAMAGE = 6.0f;
     private static final double TECTONIC_VERTICAL_KNOCKBACK = 0.5;
     private static final int TECTONIC_BLOCK_DURATION = 40;
+    private static final int WALL_DURATION = 60; // 3 seconds
     private static final int TECTONIC_TERRAIN_SCAN_RANGE = 3;
     private static final double TECTONIC_HITBOX_EXPAND_XZ = 0.7;
     private static final int TECTONIC_VERTICAL_SCAN_DOWN = 5;
@@ -116,12 +117,12 @@ public class StoneWandItem extends AbstractWandItem {
         List<BlockPos> wallBlocks = new ArrayList<>();
         for (int x = -1; x <= 1; x++) {
             for (int y = -1; y <= 1; y++) {
-                wallBlocks.add(center.add((int) (right.x * x), y, (int) (right.z * x)));
+                wallBlocks.add(center.add((int) Math.round(right.x * x), y, (int) Math.round(right.z * x)));
             }
         }
 
         TemporaryBlockManager.placeTemporaryBlocks(world, wallBlocks, Blocks.STONE.getDefaultState(),
-                TECTONIC_BLOCK_DURATION, state -> state.isAir() || state.isReplaceable());
+                WALL_DURATION, state -> state.isAir() || state.isReplaceable());
         ACTIVE_WALLS.put(caster.getUuid(), new WallData(center, world.getServer().getTicks()));
 
         world.playSound(null, center, SoundEvents.BLOCK_STONE_PLACE, SoundCategory.PLAYERS, 1.0f, 1.0f);
@@ -255,25 +256,26 @@ public class StoneWandItem extends AbstractWandItem {
             if (!(getEntityWorld() instanceof ServerWorld sw))
                 return;
 
-            int maxTick = path.size() + 5;
+            int maxTick = path.size() / 3 + 5;
             if (tickCounter > maxTick) {
                 discard();
                 return;
             }
 
-            // Wind-up (1 tick per step instead of 2)
-            int windUpIndex = tickCounter;
-            if (windUpIndex < path.size()) {
-                BlockPos pos = path.get(windUpIndex);
-                sw.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, Blocks.STONE.getDefaultState()),
-                        pos.getX() + 0.5, pos.getY() + 0.1, pos.getZ() + 0.5, 10, 0.3, 0.1, 0.3, 0.05);
-                sw.playSound(null, pos, SoundEvents.BLOCK_STONE_STEP, SoundCategory.PLAYERS, 0.8f, 0.6f);
-            }
+            // Process 3 logic steps per tick for an almost instant wave
+            for (int step = 0; step < 3; step++) {
+                int logicalIndex = tickCounter * 3 + step;
 
-            // Erupt (delay of 5 ticks instead of 10)
-            if (tickCounter >= 5) {
-                int eruptIndex = tickCounter - 5;
-                if (eruptIndex < path.size()) {
+                int windUpIndex = logicalIndex;
+                if (windUpIndex < path.size()) {
+                    BlockPos pos = path.get(windUpIndex);
+                    sw.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, Blocks.STONE.getDefaultState()),
+                            pos.getX() + 0.5, pos.getY() + 0.1, pos.getZ() + 0.5, 10, 0.3, 0.1, 0.3, 0.05);
+                    sw.playSound(null, pos, SoundEvents.BLOCK_STONE_STEP, SoundCategory.PLAYERS, 0.8f, 0.6f);
+                }
+
+                int eruptIndex = logicalIndex - 2; // Very slight stagger
+                if (eruptIndex >= 0 && eruptIndex < path.size()) {
                     BlockPos pos = path.get(eruptIndex);
 
                     TemporaryBlockManager.placeTemporaryBlocks(sw, List.of(pos), Blocks.STONE.getDefaultState(),

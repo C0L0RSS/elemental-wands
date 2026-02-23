@@ -16,6 +16,10 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.Vec3d;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
 import com.anton.elementalwands.entity.CalamityTornadoEntity;
 import com.anton.elementalwands.entity.VacuumBladeEntity;
 
@@ -40,7 +44,7 @@ public class WindWandItem extends AbstractWandItem {
     // Ultimate: Zephyr Strike
     private static final String NBT_ZEPHYR_ACTIVE = "ZephyrStrikeActive";
     private static final String NBT_ZEPHYR_TICK = "ZephyrStrikeTick";
-    private static final int ZEPHYR_MAX_DURATION = 100; // 5 seconds maximum flight time before auto-reset
+    private static final Map<UUID, ItemStack> ZEPHYR_CHESTPLATES = new HashMap<>();
 
     public WindWandItem(Settings settings) {
         super(settings);
@@ -157,11 +161,6 @@ public class WindWandItem extends AbstractWandItem {
                         data.putBoolean(NBT_ZEPHYR_ACTIVE, false);
                         unquipElytra(player);
                         saveDashData(stack, data);
-                    } else if (currentTick - startTick > ZEPHYR_MAX_DURATION) {
-                        // Timeout
-                        data.putBoolean(NBT_ZEPHYR_ACTIVE, false);
-                        unquipElytra(player);
-                        saveDashData(stack, data);
                     }
                 }
             }
@@ -275,22 +274,20 @@ public class WindWandItem extends AbstractWandItem {
     private void equipElytra(PlayerEntity player) {
         ItemStack chest = player.getEquippedStack(EquipmentSlot.CHEST);
         if (!chest.isEmpty() && !chest.isOf(Items.ELYTRA)) {
-            // Check if player has Elytra tracker tag
-            if (!player.getCommandTags().contains("has_zephyr_elytra")) {
-                if (!player.getInventory().insertStack(chest.copy())) {
-                    player.dropItem(chest.copy(), false);
-                }
-                player.getCommandTags().add("has_zephyr_elytra");
-            }
+            ZEPHYR_CHESTPLATES.put(player.getUuid(), chest.copy());
         }
         player.equipStack(EquipmentSlot.CHEST, new ItemStack(Items.ELYTRA));
     }
 
     private void unquipElytra(PlayerEntity player) {
         ItemStack chest = player.getEquippedStack(EquipmentSlot.CHEST);
-        if (chest.isOf(Items.ELYTRA) && player.getCommandTags().contains("has_zephyr_elytra")) {
-            player.equipStack(EquipmentSlot.CHEST, ItemStack.EMPTY);
-            player.getCommandTags().remove("has_zephyr_elytra");
+        if (chest.isOf(Items.ELYTRA)) {
+            ItemStack stored = ZEPHYR_CHESTPLATES.remove(player.getUuid());
+            if (stored != null) {
+                player.equipStack(EquipmentSlot.CHEST, stored);
+            } else {
+                player.equipStack(EquipmentSlot.CHEST, ItemStack.EMPTY);
+            }
         }
     }
 

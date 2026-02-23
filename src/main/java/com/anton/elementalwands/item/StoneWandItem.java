@@ -47,7 +47,7 @@ public class StoneWandItem extends AbstractWandItem {
     private static final float TECTONIC_DAMAGE = 6.0f;
     private static final double TECTONIC_VERTICAL_KNOCKBACK = 0.5;
     private static final int TECTONIC_BLOCK_DURATION = 40;
-    private static final int WALL_DURATION = 60; // 3 seconds
+    private static final int WALL_DURATION = 70; // 3.5 seconds
     private static final int TECTONIC_TERRAIN_SCAN_RANGE = 3;
     private static final double TECTONIC_HITBOX_EXPAND_XZ = 0.7;
     private static final int TECTONIC_VERTICAL_SCAN_DOWN = 5;
@@ -108,15 +108,16 @@ public class StoneWandItem extends AbstractWandItem {
         if (!tryStartCooldown(world, caster, stack, Ability.SECONDARY, getSecondaryCooldownTicks()))
             return;
 
-        // Place 3x3 vertical wall 2 blocks in front
+        // Place 4x4 vertical wall 2 blocks in front
         Vec3d forward = horizontalForward(caster);
         Vec3d right = new Vec3d(-forward.z, 0, forward.x);
         BlockPos center = BlockPos.ofFloored(caster.getX() + forward.x * 2, caster.getY() + 1,
                 caster.getZ() + forward.z * 2);
 
         List<BlockPos> wallBlocks = new ArrayList<>();
-        for (int x = -1; x <= 1; x++) {
-            for (int y = -1; y <= 1; y++) {
+        // Make it 4 blocks wide (-1 to 2) and 4 blocks high (-1 to 2)
+        for (int x = -1; x <= 2; x++) {
+            for (int y = -1; y <= 2; y++) {
                 wallBlocks.add(center.add((int) Math.round(right.x * x), y, (int) Math.round(right.z * x)));
             }
         }

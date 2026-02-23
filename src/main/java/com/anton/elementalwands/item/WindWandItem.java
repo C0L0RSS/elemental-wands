@@ -146,11 +146,27 @@ public class WindWandItem extends AbstractWandItem {
                 int startTick = data.getInt(NBT_ZEPHYR_TICK, 0);
                 int currentTick = world.getServer().getTicks();
 
+                // Spawn white particle rings when descending quickly
+                Vec3d vel = player.getVelocity();
+                if (vel.y < -0.5 && currentTick % 2 == 0) {
+                    for (int i = 0; i < 20; i++) {
+                        double angle = (2 * Math.PI * i) / 20;
+                        double radius = 1.5;
+                        double px = player.getX() + radius * Math.cos(angle);
+                        double py = player.getY() + 1.0;
+                        double pz = player.getZ() + radius * Math.sin(angle);
+                        world.spawnParticles(net.minecraft.particle.ParticleTypes.CLOUD, px, py, pz, 1, 0.0, 0.0, 0.0,
+                                0.02);
+                        world.spawnParticles(net.minecraft.particle.ParticleTypes.END_ROD, px, py, pz, 1, 0.0, 0.0, 0.0,
+                                0.0);
+                    }
+                }
+
                 if (currentTick - startTick > 10) {
                     if (player.isOnGround() || player.horizontalCollision) {
                         // Impact!
-                        Vec3d vel = player.getVelocity();
-                        float power = 3.0f + (float) vel.length() * 2.0f;
+                        Vec3d impactVel = player.getVelocity();
+                        float power = 3.0f + (float) impactVel.length() * 2.0f;
                         if (power < 3.0f)
                             power = 4.0f;
 

@@ -176,30 +176,37 @@ public class HollowPurpleOrbEntity extends ProjectileEntity {
     private void spawnOrbParticles(ServerWorld world) {
         Vec3d center = getEntityPos();
 
-        // Massive dense purple singularity
+        // Massive dense purple singularity. Using forced spawnParticles to ensure they
+        // are visible at long distances
+        // and using large counts to avoid sending hundreds of individual packets per
+        // tick, preventing particle lag.
         DustParticleEffect purpleDust = new DustParticleEffect(0x8A2BE2, 4.0f);
 
-        for (int i = 0; i < 250; i++) { // Massive particle count
+        // Solid generic spherical core
+        world.spawnParticles(purpleDust, true, true, center.x, center.y, center.z, 50, 1.5, 1.5, 1.5, 0.0);
+
+        // Calculate a few points on a sphere to maintain the hollow/dense shell look,
+        // sending just a few packets with higher counts instead of 250 packets.
+        for (int i = 0; i < 15; i++) {
             double theta = world.random.nextDouble() * Math.PI * 2.0;
             double phi = Math.acos((world.random.nextDouble() * 2.0) - 1.0);
-
-            // Concentrate heavily on the outer shell of the sphere
             double radius = ORB_RADIUS * (0.85 + world.random.nextDouble() * 0.15);
 
-            double sinPhi = Math.sin(phi);
-            double px = center.x + radius * sinPhi * Math.cos(theta);
+            double px = center.x + radius * Math.sin(phi) * Math.cos(theta);
             double py = center.y + radius * Math.cos(phi);
-            double pz = center.z + radius * sinPhi * Math.sin(theta);
+            double pz = center.z + radius * Math.sin(phi) * Math.sin(theta);
 
-            world.spawnParticles(purpleDust, px, py, pz, 1, 0.0, 0.0, 0.0, 0.0);
+            // Force spawn 5 large dust particles at this shell point
+            world.spawnParticles(purpleDust, true, true, px, py, pz, 5, 0.2, 0.2, 0.2, 0.0);
 
-            if (i % 4 == 0) {
-                world.spawnParticles(ParticleTypes.REVERSE_PORTAL, px, py, pz, 1, 0.1, 0.1, 0.1, 0.05);
+            if (i % 2 == 0) {
+                world.spawnParticles(ParticleTypes.REVERSE_PORTAL, true, true, px, py, pz, 1, 0.1, 0.1, 0.1, 0.05);
             }
         }
 
-        world.spawnParticles(ParticleTypes.WITCH, center.x, center.y, center.z, 40, 2.5, 2.5, 2.5, 0.02);
-        world.spawnParticles(ParticleTypes.PORTAL, center.x, center.y, center.z, 20, 2.0, 2.0, 2.0, 0.08);
+        // Ambient particles around the singularity
+        world.spawnParticles(ParticleTypes.WITCH, true, true, center.x, center.y, center.z, 20, 2.5, 2.5, 2.5, 0.02);
+        world.spawnParticles(ParticleTypes.PORTAL, true, true, center.x, center.y, center.z, 10, 2.0, 2.0, 2.0, 0.08);
     }
 
     @Override

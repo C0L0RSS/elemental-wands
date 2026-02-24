@@ -27,7 +27,7 @@ public class WandHudOverlay implements HudRenderCallback {
     private static final int HOTBAR_HEIGHT = 22;
     private static final int SLOT_SIZE = 36;
     private static final int SLOT_SPACING = 42;
-    private static final int SLOT_Y_OFFSET_FROM_HOTBAR_TOP = 20;
+    private static final int SLOT_Y_OFFSET_FROM_HOTBAR_TOP = 50;
     private static final int SLOT_U_STEP = 85;
     private static final int SLOT_READY_V = 0;
     private static final int SLOT_COOLDOWN_V = 80;
@@ -72,19 +72,33 @@ public class WandHudOverlay implements HudRenderCallback {
         context.getMatrices().pushMatrix();
         context.getMatrices().scale(HUD_SCALE, HUD_SCALE);
 
-        renderAbility(context, client, stack, wand, AbstractWandItem.Ability.PRIMARY, 0, slotCentersX[0], slotCenterY,
-                wand.getPrimaryCooldownTicks(), theme, accentColor);
-        renderAbility(context, client, stack, wand, AbstractWandItem.Ability.SECONDARY, 1, slotCentersX[1], slotCenterY,
-                wand.getSecondaryCooldownTicks(), theme, accentColor);
-        renderAbility(context, client, stack, wand, AbstractWandItem.Ability.ULTIMATE, 2, slotCentersX[2], slotCenterY,
-                wand.getUltimateCooldownTicks(), theme, accentColor);
+        boolean isFractured = wand instanceof com.anton.elementalwands.item.FracturedWandItem;
+
+        if (isFractured) {
+            renderAbility(context, client, stack, wand, AbstractWandItem.Ability.PRIMARY, 0, scaledCenterX, slotCenterY,
+                    wand.getPrimaryCooldownTicks(), theme, accentColor,
+                    wand.isAbilityUnlocked(client.player, AbstractWandItem.Ability.PRIMARY));
+        } else {
+            renderAbility(context, client, stack, wand, AbstractWandItem.Ability.PRIMARY, 0, slotCentersX[0],
+                    slotCenterY,
+                    wand.getPrimaryCooldownTicks(), theme, accentColor,
+                    wand.isAbilityUnlocked(client.player, AbstractWandItem.Ability.PRIMARY));
+            renderAbility(context, client, stack, wand, AbstractWandItem.Ability.SECONDARY, 1, slotCentersX[1],
+                    slotCenterY,
+                    wand.getSecondaryCooldownTicks(), theme, accentColor,
+                    wand.isAbilityUnlocked(client.player, AbstractWandItem.Ability.SECONDARY));
+            renderAbility(context, client, stack, wand, AbstractWandItem.Ability.ULTIMATE, 2, slotCentersX[2],
+                    slotCenterY,
+                    wand.getUltimateCooldownTicks(), theme, accentColor,
+                    wand.isAbilityUnlocked(client.player, AbstractWandItem.Ability.ULTIMATE));
+        }
 
         context.getMatrices().popMatrix();
     }
 
     private void renderAbility(DrawContext context, MinecraftClient client, ItemStack stack, AbstractWandItem wand,
             AbstractWandItem.Ability ability, int slotIndex, int x, int y, int maxCooldownTicks, WandTheme theme,
-            int accentColor) {
+            int accentColor, boolean isUnlocked) {
         long now = client.world.getTime();
 
         NbtCompound nbt = stack.getOrDefault(DataComponentTypes.CUSTOM_DATA, NbtComponent.DEFAULT).copyNbt();
@@ -150,12 +164,26 @@ public class WandHudOverlay implements HudRenderCallback {
         if (isWindSecondary) {
             drawWindDashPips(context, renderX, renderY, windCharges, windMaxCharges, windRechargeTicks,
                     windRechargeDurationTicks, now);
-        } else if (onCooldown && remaining > 20) {
+        } else if (onCooldown && remaining > 20 && isUnlocked) {
             String digit = String.valueOf((int) Math.ceil(remaining / 20.0));
             int txtWidth = client.textRenderer.getWidth(digit);
             int bubbleY = renderY - 8;
             context.fill(x - (txtWidth / 2) - 2, bubbleY - 1, x + (txtWidth / 2) + 2, bubbleY + 9, 0xB0000000);
             context.drawText(client.textRenderer, digit, x - (txtWidth / 2), bubbleY, 0xFFFFFFFF, true);
+        }
+
+        if (!isUnlocked) {
+            context.fill(renderX + 4, renderY + 4, renderX + frameSize - 4, renderY + frameSize - 4, 0xD0000000);
+            // Draw a simple padlock shape
+            int padX = renderX + frameSize / 2;
+            int padY = renderY + frameSize / 2;
+            context.fill(padX - 4, padY, padX + 4, padY + 6, 0xFF666666); // Body
+            context.fill(padX - 2, padY - 3, padX + 2, padY, 0x00000000); // Shackle outer
+            // Shackle inner (custom border)
+            context.fill(padX - 3, padY - 4, padX + 3, padY - 3, 0xFFAAAAAA); // Top
+            context.fill(padX - 3, padY - 3, padX - 2, padY, 0xFFAAAAAA); // Left
+            context.fill(padX + 2, padY - 3, padX + 3, padY, 0xFFAAAAAA); // Right
+            context.fill(padX - 1, padY + 2, padX + 1, padY + 4, 0xFF000000); // Keyhole
         }
     }
 
@@ -196,6 +224,9 @@ public class WandHudOverlay implements HudRenderCallback {
             case WIND -> drawWindCooldown(context, slotIndex, renderX, renderY, now, animation);
             case STONE -> drawStoneCooldown(context, slotIndex, renderX, renderY, now, animation);
             case SPACE -> drawSpaceCooldown(context, slotIndex, renderX, renderY, now, animation);
+            case MANA -> {
+                // Do nothing to simulate a broken/weak feeling without particles
+            }
             case ARCANE -> drawArcaneCooldown(context, slotIndex, renderX, renderY, now, animation);
         }
     }
@@ -208,7 +239,8 @@ public class WandHudOverlay implements HudRenderCallback {
             int rise = (int) ((now * (1.2f + animation.speed * 2.0f) + slotIndex * 11L + i * 7L) % 18L);
             int px = renderX + 8 + (int) ((now * animation.speed + i * 13L + slotIndex * 5L) % 18L);
             int py = renderY + 26 - rise;
-            int color = (i % 2 == 0) ? scaledAlpha(0xCCFF9A32, animation.alpha) : scaledAlpha(0xCCFF5A1A, animation.alpha);
+            int color = (i % 2 == 0) ? scaledAlpha(0xCCFF9A32, animation.alpha)
+                    : scaledAlpha(0xCCFF5A1A, animation.alpha);
             context.fill(px, py, px + 2, py + 2, color);
         }
 
@@ -244,7 +276,8 @@ public class WandHudOverlay implements HudRenderCallback {
         int lineCount = Math.max(2, Math.round(4 * animation.density));
         for (int i = 0; i < lineCount; i++) {
             int lineY = renderY + 10 + (int) ((now * (0.65f + animation.speed) + slotIndex * 7L + i * 4L) % 14L);
-            int color = (i % 2 == 0) ? scaledAlpha(0x77BFE9FF, animation.alpha) : scaledAlpha(0x44D8F5FF, animation.alpha);
+            int color = (i % 2 == 0) ? scaledAlpha(0x77BFE9FF, animation.alpha)
+                    : scaledAlpha(0x44D8F5FF, animation.alpha);
             context.fill(renderX + 8, lineY, renderX + 28, lineY + 1, color);
         }
 
@@ -296,7 +329,8 @@ public class WandHudOverlay implements HudRenderCallback {
 
             int px = centerX + (int) Math.round(Math.cos(theta) * radius);
             int py = centerY + (int) Math.round(Math.sin(theta * 1.2) * radius * 0.6);
-            int color = (i % 2 == 0) ? scaledAlpha(0xCCB894FF, animation.alpha) : scaledAlpha(0x889D8DFF, animation.alpha);
+            int color = (i % 2 == 0) ? scaledAlpha(0xCCB894FF, animation.alpha)
+                    : scaledAlpha(0x889D8DFF, animation.alpha);
             context.fill(px, py, px + 2, py + 2, color);
         }
 
@@ -351,6 +385,9 @@ public class WandHudOverlay implements HudRenderCallback {
         if (wand instanceof SpaceWandItem) {
             return WandTheme.SPACE;
         }
+        if (wand instanceof com.anton.elementalwands.item.FracturedWandItem) {
+            return WandTheme.MANA;
+        }
         return WandTheme.ARCANE;
     }
 
@@ -361,6 +398,7 @@ public class WandHudOverlay implements HudRenderCallback {
             case WIND -> 0xCFEBAE;
             case STONE -> 0xC6B79A;
             case SPACE -> 0xB29DFF;
+            case MANA -> 0xAAAAAA;
             case ARCANE -> 0xD9D2AF;
         };
     }
@@ -375,6 +413,7 @@ public class WandHudOverlay implements HudRenderCallback {
         WIND,
         STONE,
         SPACE,
+        MANA,
         ARCANE
     }
 

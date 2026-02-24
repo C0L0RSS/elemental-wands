@@ -26,5 +26,6 @@
   "block.elementalwands.deepslate_wind_crystal_ore": "Deepslate Wind Crystal Ore",
   "block.elementalwands.deepslate_stone_crystal_ore": "Deepslate Stone Crystal Ore",
   "block.elementalwands.deepslate_ice_crystal_ore": "Deepslate Ice Crystal Ore",
-  "block.elementalwands.deepslate_space_crystal_ore": "Deepslate Space Crystal Ore"
+  "block.elementalwands.deepslate_space_crystal_ore": "Deepslate Space Crystal Ore",
+  "hud.elementalwands.locked": "Ability Locked"
 }

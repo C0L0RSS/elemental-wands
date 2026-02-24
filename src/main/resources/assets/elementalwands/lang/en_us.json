@@ -21,5 +21,10 @@
   "block.elementalwands.wind_crystal_ore": "Wind Crystal Ore",
   "block.elementalwands.stone_crystal_ore": "Stone Crystal Ore",
   "block.elementalwands.ice_crystal_ore": "Ice Crystal Ore",
-  "block.elementalwands.space_crystal_ore": "Space Crystal Ore"
+  "block.elementalwands.space_crystal_ore": "Space Crystal Ore",
+  "block.elementalwands.deepslate_fire_crystal_ore": "Deepslate Fire Crystal Ore",
+  "block.elementalwands.deepslate_wind_crystal_ore": "Deepslate Wind Crystal Ore",
+  "block.elementalwands.deepslate_stone_crystal_ore": "Deepslate Stone Crystal Ore",
+  "block.elementalwands.deepslate_ice_crystal_ore": "Deepslate Ice Crystal Ore",
+  "block.elementalwands.deepslate_space_crystal_ore": "Deepslate Space Crystal Ore"
 }

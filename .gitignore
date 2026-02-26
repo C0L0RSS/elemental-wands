@@ -1,0 +1,18 @@
+# Build output
+build/
+bin/
+run/
+
+# Gradle caches
+.gradle/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Claude worktrees
+.claude/worktrees/
+
+# OS
+.DS_Store

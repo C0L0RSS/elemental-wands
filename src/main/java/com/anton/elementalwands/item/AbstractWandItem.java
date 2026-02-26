@@ -59,6 +59,13 @@ public abstract class AbstractWandItem extends Item {
         return DEFAULT_ULTIMATE_COOLDOWN_TICKS;
     }
 
+    public boolean isAbilityUnlocked(PlayerEntity player, Ability ability) {
+        if (this instanceof com.anton.elementalwands.item.FracturedWandItem) {
+            return ability == Ability.PRIMARY;
+        }
+        return true;
+    }
+
     @Override
     public ActionResult use(World world, PlayerEntity user, Hand hand) {
         ItemStack stack = user.getStackInHand(hand);
@@ -71,8 +78,16 @@ public abstract class AbstractWandItem extends Item {
             return ActionResult.PASS;
 
         if (user.isSneaking()) {
+            if (!isAbilityUnlocked(user, Ability.SECONDARY)) {
+                user.sendMessage(Text.translatable("hud.elementalwands.locked"), true);
+                return ActionResult.FAIL;
+            }
             castSecondary(serverWorld, user, stack);
         } else {
+            if (!isAbilityUnlocked(user, Ability.PRIMARY)) {
+                user.sendMessage(Text.translatable("hud.elementalwands.locked"), true);
+                return ActionResult.FAIL;
+            }
             castPrimary(serverWorld, user, stack);
         }
         return ActionResult.SUCCESS;

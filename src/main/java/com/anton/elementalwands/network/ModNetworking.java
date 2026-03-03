@@ -1,13 +1,16 @@
 package com.anton.elementalwands.network;
 
 import com.anton.elementalwands.ElementalWandsMod;
+import com.anton.elementalwands.data.EWAttachments;
 import com.anton.elementalwands.item.AbstractWandItem;
 
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.item.ItemStack;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.RegistryByteBuf;
 import net.minecraft.network.codec.PacketCodec;
+import net.minecraft.network.codec.PacketCodecs;
 import net.minecraft.network.packet.CustomPayload;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -24,8 +27,13 @@ public final class ModNetworking {
         if (payloadsRegistered)
             return;
         payloadsRegistered = true;
-        PayloadTypeRegistry.playC2S().register(CastPrimaryPayload.ID, CastPrimaryPayload.CODEC);
+
+        // C2S
+        PayloadTypeRegistry.playC2S().register(CastPrimaryPayload.ID,  CastPrimaryPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(CastUltimatePayload.ID, CastUltimatePayload.CODEC);
+
+        // S2C
+        PayloadTypeRegistry.playS2C().register(SyncPlayerDataPayload.ID, SyncPlayerDataPayload.CODEC);
     }
 
     public static void registerC2SReceivers() {
@@ -35,33 +43,42 @@ public final class ModNetworking {
                 (payload, context) -> handleCastUltimate(context.player()));
     }
 
+    // -----------------------------------------------------------------------
+    // Sync helper
+    // -----------------------------------------------------------------------
+
+    /**
+     * Sends the player's current unlock bitmask to their client so the HUD can
+     * render padlock/glow states correctly.
+     */
+    public static void syncPlayerData(ServerPlayerEntity player) {
+        int skills = player.getAttachedOrElse(EWAttachments.UNLOCKED_SKILLS, 0);
+        ServerPlayNetworking.send(player, new SyncPlayerDataPayload(skills));
+    }
+
+    // -----------------------------------------------------------------------
+    // Handlers
+    // -----------------------------------------------------------------------
+
     private static void handleCastPrimary(ServerPlayerEntity player) {
-        if (player.isSpectator())
-            return;
-
-        if (!(player.getEntityWorld() instanceof ServerWorld world))
-            return;
-
+        if (player.isSpectator()) return;
+        if (!(player.getEntityWorld() instanceof ServerWorld world)) return;
         ItemStack stack = player.getMainHandStack();
-        if (!(stack.getItem() instanceof AbstractWandItem wand))
-            return;
-
+        if (!(stack.getItem() instanceof AbstractWandItem wand)) return;
         wand.castPrimary(world, player, stack);
     }
 
     private static void handleCastUltimate(ServerPlayerEntity player) {
-        if (player.isSpectator())
-            return;
-
-        if (!(player.getEntityWorld() instanceof ServerWorld world))
-            return;
-
+        if (player.isSpectator()) return;
+        if (!(player.getEntityWorld() instanceof ServerWorld world)) return;
         ItemStack stack = player.getMainHandStack();
-        if (!(stack.getItem() instanceof AbstractWandItem wand))
-            return;
-
+        if (!(stack.getItem() instanceof AbstractWandItem wand)) return;
         wand.castUltimate(world, player, stack);
     }
+
+    // -----------------------------------------------------------------------
+    // Payload records
+    // -----------------------------------------------------------------------
 
     public record CastPrimaryPayload() implements CustomPayload {
         public static final Id<CastPrimaryPayload> ID = new Id<>(
@@ -70,9 +87,7 @@ public final class ModNetworking {
         public static final PacketCodec<RegistryByteBuf, CastPrimaryPayload> CODEC = PacketCodec.unit(INSTANCE);
 
         @Override
-        public Id<? extends CustomPayload> getId() {
-            return ID;
-        }
+        public Id<? extends CustomPayload> getId() { return ID; }
     }
 
     public record CastUltimatePayload() implements CustomPayload {
@@ -82,8 +97,18 @@ public final class ModNetworking {
         public static final PacketCodec<RegistryByteBuf, CastUltimatePayload> CODEC = PacketCodec.unit(INSTANCE);
 
         @Override
-        public Id<? extends CustomPayload> getId() {
-            return ID;
-        }
+        public Id<? extends CustomPayload> getId() { return ID; }
+    }
+
+    /** S2C packet carrying the server-authoritative unlocked-skills bitmask. */
+    public record SyncPlayerDataPayload(int unlockedSkills) implements CustomPayload {
+        public static final Id<SyncPlayerDataPayload> ID = new Id<>(
+                Identifier.of(ElementalWandsMod.MOD_ID, "sync_player_data"));
+        public static final PacketCodec<RegistryByteBuf, SyncPlayerDataPayload> CODEC =
+                PacketCodec.tuple(PacketCodecs.INTEGER, SyncPlayerDataPayload::unlockedSkills,
+                        SyncPlayerDataPayload::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() { return ID; }
     }
 }

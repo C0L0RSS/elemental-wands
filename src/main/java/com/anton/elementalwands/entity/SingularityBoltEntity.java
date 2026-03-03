@@ -111,7 +111,10 @@ public class SingularityBoltEntity extends ProjectileEntity {
             DamageSource source = owner instanceof LivingEntity livingOwner
                     ? world.getDamageSources().thrown(this, livingOwner)
                     : world.getDamageSources().magic();
-            living.damage(world, source, DIRECT_DAMAGE);
+            boolean damaged = living.damage(world, source, DIRECT_DAMAGE);
+            if (damaged) {
+                com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(owner, DIRECT_DAMAGE);
+            }
         }
 
         Box box = Box.of(impactPos, IMPACT_RADIUS * 2.0, IMPACT_RADIUS * 2.0, IMPACT_RADIUS * 2.0);

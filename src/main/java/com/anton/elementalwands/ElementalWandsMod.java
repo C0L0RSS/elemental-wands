@@ -1,5 +1,6 @@
 package com.anton.elementalwands;
 
+import com.anton.elementalwands.data.EWAttachments;
 import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.registry.ModBlocks;
 import com.anton.elementalwands.registry.ModItems;
@@ -19,14 +20,24 @@ import com.anton.elementalwands.util.BlazeTrailManager;
 import com.anton.elementalwands.world.ModWorldGen;
 
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
+import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.WrittenBookContentComponent;
+import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.command.CommandManager;
+import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
+import net.minecraft.text.ClickEvent;
 import net.minecraft.text.RawFilteredPair;
+import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
@@ -40,6 +51,8 @@ public class ElementalWandsMod implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        EWAttachments.init();
+
         TemporarySnowManager.init();
         TemporaryBlockManager.init();
         ChillTracker.init();
@@ -59,87 +72,194 @@ public class ElementalWandsMod implements ModInitializer {
         ModNetworking.registerC2SReceivers();
         ModWorldGen.registerAll();
 
-        // First-join starter kit
+        // ── First-join starter kit ──────────────────────────────────────
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             ServerPlayerEntity player = handler.getPlayer();
-            server.execute(() -> giveStarterKit(player));
+            server.execute(() -> {
+                giveStarterKit(player);
+                ModNetworking.syncPlayerData(player);
+            });
         });
+
+        // ── Soulbound: copy Fractured Wand + Wizard's Path on respawn ───
+        ServerPlayerEvents.COPY_FROM.register((newPlayer, original, alive) -> {
+            if (alive) return; // Alive == end-of-portal, not death
+
+            // Copy Arcane Flux and skills (handled by copyOnDeath() on attachments)
+            // Copy soulbound items from old inventory
+            for (int i = 0; i < original.getInventory().size(); i++) {
+                ItemStack stack = original.getInventory().getStack(i);
+                if (stack.isEmpty()) continue;
+
+                boolean isFracturedWand = stack.isOf(ModItems.FRACTURED_WAND);
+                boolean isWizardBook = isWizardPathBook(stack);
+
+                if (isFracturedWand || isWizardBook) {
+                    newPlayer.getInventory().insertStack(stack.copy());
+                }
+            }
+        });
+
+        // ── /ew unlock <secondary|ultimate> command ─────────────────────
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
+            dispatcher.register(
+                CommandManager.literal("ew")
+                    .then(CommandManager.literal("unlock")
+                        .then(CommandManager.literal("secondary")
+                            .executes(ctx -> handleSkillUnlock(ctx.getSource(), "secondary")))
+                        .then(CommandManager.literal("ultimate")
+                            .executes(ctx -> handleSkillUnlock(ctx.getSource(), "ultimate")))
+                    )
+            )
+        );
+    }
+
+    // ── Helpers ─────────────────────────────────────────────────────────────
+
+    private static boolean isWizardPathBook(ItemStack stack) {
+        if (!stack.isOf(Items.WRITTEN_BOOK)) return false;
+        WrittenBookContentComponent content = stack.get(DataComponentTypes.WRITTEN_BOOK_CONTENT);
+        if (content == null) return false;
+        String title = content.title().raw();
+        return "The Wizard's Path".equals(title);
     }
 
     private void giveStarterKit(ServerPlayerEntity player) {
-        NbtCompound persistent = player.getCommandTags().stream()
-                .filter(t -> t.equals(NBT_STARTER_RECEIVED))
-                .findAny()
-                .map(t -> (NbtCompound) null)
-                .orElse(null);
+        if (player.getCommandTags().contains(NBT_STARTER_RECEIVED)) return;
 
-        // Use command tags to track whether the player has received the starter
-        if (player.getCommandTags().contains(NBT_STARTER_RECEIVED)) {
-            return;
-        }
+        player.getInventory().insertStack(new ItemStack(ModItems.FRACTURED_WAND));
+        player.getInventory().insertStack(createWizardBook(player));
 
-        // Give Fractured Wand
-        ItemStack wand = new ItemStack(ModItems.FRACTURED_WAND);
-        player.getInventory().insertStack(wand);
-
-        // Give "The Wizard's Path" written book
-        ItemStack book = createWizardBook();
-        player.getInventory().insertStack(book);
-
-        // Send welcome message
         player.sendMessage(
-                Text.literal("Welcome Wizard! Your journey begins now. ✨")
-                        .formatted(Formatting.GOLD),
-                false);
+            Text.literal("Welcome Wizard! Your journey begins now.")
+                .formatted(Formatting.GOLD),
+            false);
 
-        // Mark as received
         player.addCommandTag(NBT_STARTER_RECEIVED);
     }
 
-    private ItemStack createWizardBook() {
-        ItemStack book = new ItemStack(Items.WRITTEN_BOOK);
+    // ── /ew unlock handler ──────────────────────────────────────────────────
 
+    private static int handleSkillUnlock(ServerCommandSource source, String skillName) {
+        if (!source.isExecutedByPlayer()) return 0;
+        ServerPlayerEntity player;
+        try { player = source.getPlayerOrThrow(); }
+        catch (Exception e) { return 0; }
+
+        int skillBit;
+        long fluxCost;
+        int xpCost;
+        if (skillName.equals("secondary")) {
+            skillBit = EWAttachments.SKILL_SECONDARY;
+            fluxCost = EWAttachments.SECONDARY_FLUX_COST;
+            xpCost   = EWAttachments.SECONDARY_XP_COST;
+        } else {
+            skillBit = EWAttachments.SKILL_ULTIMATE;
+            fluxCost = EWAttachments.ULTIMATE_FLUX_COST;
+            xpCost   = EWAttachments.ULTIMATE_XP_COST;
+        }
+
+        int currentSkills = player.getAttachedOrElse(EWAttachments.UNLOCKED_SKILLS, 0);
+        if ((currentSkills & skillBit) != 0) {
+            player.sendMessage(Text.literal("You have already unlocked this ability!").formatted(Formatting.YELLOW), false);
+            return 0;
+        }
+
+        long currentFlux = player.getAttachedOrElse(EWAttachments.ARCANE_FLUX, 0L);
+        if (currentFlux < fluxCost) {
+            player.sendMessage(Text.translatable("message.elementalwands.not_enough_flux").formatted(Formatting.RED), false);
+            return 0;
+        }
+
+        if (player.experienceLevel < xpCost) {
+            player.sendMessage(
+                Text.literal("You need " + xpCost + " XP levels to unlock this.").formatted(Formatting.RED), false);
+            return 0;
+        }
+
+        // Consume resources
+        player.addExperienceLevels(-xpCost);
+        player.setAttached(EWAttachments.UNLOCKED_SKILLS, currentSkills | skillBit);
+
+        // Sound + message
+        ((net.minecraft.server.world.ServerWorld) player.getEntityWorld()).playSound(null, player.getBlockPos(),
+            SoundEvents.BLOCK_ENCHANTMENT_TABLE_USE, SoundCategory.PLAYERS, 1.0f, 1.0f);
+        player.sendMessage(Text.translatable("message.elementalwands.skill_unlocked").formatted(Formatting.GOLD), false);
+
+        // Replace wizard book in inventory with updated version
+        replaceWizardBook(player);
+
+        // Sync HUD data to client
+        ModNetworking.syncPlayerData(player);
+        return 1;
+    }
+
+    /** Finds the wizard's path book in the player's inventory and refreshes its content. */
+    private static void replaceWizardBook(ServerPlayerEntity player) {
+        for (int i = 0; i < player.getInventory().size(); i++) {
+            ItemStack stack = player.getInventory().getStack(i);
+            if (isWizardPathBook(stack)) {
+                player.getInventory().setStack(i, new ElementalWandsMod().createWizardBook(player));
+                return;
+            }
+        }
+    }
+
+    // ── Dynamic Wizard's Path Book ──────────────────────────────────────────
+
+    ItemStack createWizardBook(ServerPlayerEntity player) {
+        long arcaneFlux   = player.getAttachedOrElse(EWAttachments.ARCANE_FLUX, 0L);
+        int  skills       = player.getAttachedOrElse(EWAttachments.UNLOCKED_SKILLS, 0);
+        boolean secUnlocked = (skills & EWAttachments.SKILL_SECONDARY) != 0;
+        boolean ultUnlocked = (skills & EWAttachments.SKILL_ULTIMATE)  != 0;
+
+        long nextCost = secUnlocked ? EWAttachments.ULTIMATE_FLUX_COST : EWAttachments.SECONDARY_FLUX_COST;
+        String fluxLine = (secUnlocked && ultUnlocked)
+            ? "All paths opened!"
+            : arcaneFlux + " / " + nextCost;
+
+        // Page 1 — progress + unlock buttons
         Text page1 = Text.literal("The Wizard's Path\n\n")
-                .formatted(Formatting.DARK_PURPLE, Formatting.BOLD)
-                .append(Text.literal("You hold a Fractured Wand — an empty vessel yearning for power.\n\n")
-                        .formatted(Formatting.BLACK))
-                .append(Text.literal("To awaken it, you must find ")
-                        .formatted(Formatting.BLACK))
-                .append(Text.literal("Elemental Crystal Ores ")
-                        .formatted(Formatting.DARK_AQUA, Formatting.BOLD))
-                .append(Text.literal("deep underground.")
-                        .formatted(Formatting.BLACK));
+            .formatted(Formatting.DARK_PURPLE, Formatting.BOLD)
+            .append(Text.literal("Arcane Flux: ").formatted(Formatting.DARK_AQUA))
+            .append(Text.literal(fluxLine + "\n\n").formatted(Formatting.AQUA))
+            .append(buildUnlockButton(secUnlocked, "secondary",
+                EWAttachments.SECONDARY_FLUX_COST, EWAttachments.SECONDARY_XP_COST, arcaneFlux))
+            .append(Text.literal("\n\n"))
+            .append(buildUnlockButton(ultUnlocked, "ultimate",
+                EWAttachments.ULTIMATE_FLUX_COST, EWAttachments.ULTIMATE_XP_COST, arcaneFlux));
 
+        // Page 2 — tips
         Text page2 = Text.literal("Mining & Smelting\n\n")
-                .formatted(Formatting.DARK_GREEN, Formatting.BOLD)
-                .append(Text.literal("1. Mine Crystal Ores with a pickaxe to obtain Raw Crystals.\n\n")
-                        .formatted(Formatting.BLACK))
-                .append(Text.literal("2. Smelt the Raw Crystal in a furnace to refine it.\n\n")
-                        .formatted(Formatting.BLACK))
-                .append(Text.literal("3. Combine your Fractured Wand with a Refined Crystal in a crafting table.")
-                        .formatted(Formatting.BLACK));
+            .formatted(Formatting.DARK_GREEN, Formatting.BOLD)
+            .append(Text.literal("Mine Crystal Ores to gain Arcane Flux.\n\nEvery hit on an enemy also charges your wand's Ultimate Reservoir.\n\nSmelt Raw Crystals, then craft with a Fractured Wand to awaken it.").formatted(Formatting.BLACK));
 
-        Text page3 = Text.literal("Awakening!\n\n")
-                .formatted(Formatting.GOLD, Formatting.BOLD)
-                .append(Text.literal("The element of your crystal determines your wand's power:\n\n")
-                        .formatted(Formatting.BLACK))
-                .append(Text.literal("🔥 Fire  💨 Wind\n🪨 Stone  ❄ Ice\n🌌 Space\n\n")
-                        .formatted(Formatting.DARK_PURPLE))
-                .append(Text.literal("Choose wisely — or craft a Reset Rune to try another path!")
-                        .formatted(Formatting.BLACK));
+        // Page 3 — elements
+        Text page3 = Text.literal("Elemental Paths\n\n")
+            .formatted(Formatting.GOLD, Formatting.BOLD)
+            .append(Text.literal("Fire  Wind  Stone\nIce   Space\n\nEach element has three spells:\nPrimary  Secondary  Ultimate\n\nUnlock Secondary and Ultimate via Arcane Flux.").formatted(Formatting.DARK_PURPLE));
 
-        List<RawFilteredPair<Text>> pages = List.of(
-                RawFilteredPair.of(page1),
-                RawFilteredPair.of(page2),
-                RawFilteredPair.of(page3));
-
-        WrittenBookContentComponent content = new WrittenBookContentComponent(
-                RawFilteredPair.of("The Wizard's Path"),
-                "The Ancients",
-                0,
-                pages,
-                true);
-        book.set(DataComponentTypes.WRITTEN_BOOK_CONTENT, content);
+        ItemStack book = new ItemStack(Items.WRITTEN_BOOK);
+        book.set(DataComponentTypes.WRITTEN_BOOK_CONTENT, new WrittenBookContentComponent(
+            RawFilteredPair.of("The Wizard's Path"),
+            "The Ancients",
+            0,
+            List.of(RawFilteredPair.of(page1), RawFilteredPair.of(page2), RawFilteredPair.of(page3)),
+            true));
         return book;
+    }
+
+    private static Text buildUnlockButton(boolean alreadyUnlocked, String skill,
+            long fluxCost, int xpCost, long currentFlux) {
+        if (alreadyUnlocked) {
+            return Text.literal("[" + skill.toUpperCase() + ": UNLOCKED]").formatted(Formatting.GREEN);
+        }
+        boolean ready = currentFlux >= fluxCost;
+        String label = "[ UNLOCK " + skill.toUpperCase()
+            + " (Cost: " + xpCost + " Levels) ]";
+        net.minecraft.text.MutableText btn = Text.literal(label)
+            .formatted(ready ? Formatting.GOLD : Formatting.GRAY);
+        return btn.styled(style -> style.withClickEvent(
+            new ClickEvent.RunCommand("/ew unlock " + skill)));
     }
 }

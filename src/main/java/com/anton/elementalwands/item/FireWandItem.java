@@ -180,7 +180,7 @@ public class FireWandItem extends AbstractWandItem {
 
     @Override
     public void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!tryStartCooldown(world, caster, stack, Ability.ULTIMATE, getUltimateCooldownTicks()))
+        if (!trySpendUltimateCharge(world, caster, stack))
             return;
 
         HitResult hit = raycast(world, caster, DEFAULT_RANGE);

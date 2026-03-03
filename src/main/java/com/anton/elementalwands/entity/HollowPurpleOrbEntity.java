@@ -161,7 +161,10 @@ public class HollowPurpleOrbEntity extends ProjectileEntity {
                     continue;
                 }
 
-                living.damage(world, source, MASSIVE_DAMAGE);
+                boolean damaged = living.damage(world, source, MASSIVE_DAMAGE);
+                if (damaged) {
+                    com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(getOwner(), MASSIVE_DAMAGE);
+                }
                 living.velocityModified = true;
                 living.fallDistance = 0.0f;
 

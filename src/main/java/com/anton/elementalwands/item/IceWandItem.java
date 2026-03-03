@@ -87,7 +87,7 @@ public class IceWandItem extends AbstractWandItem {
 
     @Override
     public void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!tryStartCooldown(world, caster, stack, Ability.ULTIMATE, getUltimateCooldownTicks()))
+        if (!trySpendUltimateCharge(world, caster, stack))
             return;
 
         HitResult hit = raycast(world, caster, DEFAULT_RANGE);
@@ -126,7 +126,10 @@ public class IceWandItem extends AbstractWandItem {
                     triggerShatter(sw, living);
                 } else {
                     // Normal hit - deal base damage
-                    living.damage(sw, sw.getDamageSources().thrown(this, getOwner()), SHARD_BASE_DAMAGE);
+                    boolean damaged = living.damage(sw, sw.getDamageSources().thrown(this, getOwner()), SHARD_BASE_DAMAGE);
+                    if (damaged) {
+                        AbstractWandItem.onWandDamageDealt(getOwner(), SHARD_BASE_DAMAGE);
+                    }
                 }
 
                 // Particles
@@ -140,7 +143,10 @@ public class IceWandItem extends AbstractWandItem {
 
         private void triggerShatter(ServerWorld world, LivingEntity target) {
             // Deal increased shatter damage
-            target.damage(world, world.getDamageSources().thrown(this, getOwner()), SHARD_SHATTER_DAMAGE);
+            boolean shatterDamaged = target.damage(world, world.getDamageSources().thrown(this, getOwner()), SHARD_SHATTER_DAMAGE);
+            if (shatterDamaged) {
+                AbstractWandItem.onWandDamageDealt(getOwner(), SHARD_SHATTER_DAMAGE);
+            }
 
             // Clear frost stacks
             ChillTracker.clearFrostStacks(world, target);
@@ -227,7 +233,10 @@ public class IceWandItem extends AbstractWandItem {
             for (LivingEntity target : targets) {
                 hitEntities.add(target);
 
-                target.damage(sw, sw.getDamageSources().magic(), GUST_DAMAGE);
+                boolean gustDamaged = target.damage(sw, sw.getDamageSources().magic(), GUST_DAMAGE);
+                if (gustDamaged) {
+                    AbstractWandItem.onWandDamageDealt(getOwner(), GUST_DAMAGE);
+                }
 
                 int stacks = ChillTracker.getStacks(target);
                 if (stacks >= 2) {

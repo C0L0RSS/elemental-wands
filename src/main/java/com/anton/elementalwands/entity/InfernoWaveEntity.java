@@ -125,7 +125,10 @@ public class InfernoWaveEntity extends ProjectileEntity {
                 ? serverWorld.getDamageSources().thrown(this, livingOwner)
                 : serverWorld.getDamageSources().generic();
 
-        target.damage(serverWorld, source, DAMAGE);
+        boolean damaged = target.damage(serverWorld, source, DAMAGE);
+        if (damaged) {
+            com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(getOwner(), DAMAGE);
+        }
 
         // Set target on fire
         target.setOnFireFor(3); // 3 seconds

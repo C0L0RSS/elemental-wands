@@ -267,7 +267,7 @@ public class WindWandItem extends AbstractWandItem {
 
     @Override
     public void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!tryStartCooldown(world, caster, stack, Ability.ULTIMATE, getUltimateCooldownTicks()))
+        if (!trySpendUltimateCharge(world, caster, stack))
             return;
 
         NbtCompound data = getDashData(stack);

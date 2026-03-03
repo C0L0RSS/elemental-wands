@@ -30,7 +30,7 @@ import net.minecraft.entity.Entity;
 
 public class StoneWandItem extends AbstractWandItem {
 
-    private static final int PRIMARY_COOLDOWN_TICKS = 60;
+    private static final int PRIMARY_COOLDOWN_TICKS = 40;
 
     private static class WallData {
         public final BlockPos center;
@@ -132,7 +132,7 @@ public class StoneWandItem extends AbstractWandItem {
 
     @Override
     public void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!tryStartCooldown(world, caster, stack, Ability.ULTIMATE, getUltimateCooldownTicks()))
+        if (!trySpendUltimateCharge(world, caster, stack))
             return;
 
         TitanDomeManager.startDome(world, caster);
@@ -227,7 +227,10 @@ public class StoneWandItem extends AbstractWandItem {
             if (!hitTargets.add(target.getUuid()))
                 continue;
 
-            target.damage(world, world.getDamageSources().magic(), TECTONIC_DAMAGE);
+            boolean damaged = target.damage(world, world.getDamageSources().magic(), TECTONIC_DAMAGE);
+            if (damaged) {
+                AbstractWandItem.onWandDamageDealt(caster, TECTONIC_DAMAGE);
+            }
             target.addVelocity(0.0, TECTONIC_VERTICAL_KNOCKBACK, 0.0);
             target.velocityModified = true;
         }

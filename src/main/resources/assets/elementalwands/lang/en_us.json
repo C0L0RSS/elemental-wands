@@ -27,5 +27,9 @@
   "block.elementalwands.deepslate_stone_crystal_ore": "Deepslate Stone Crystal Ore",
   "block.elementalwands.deepslate_ice_crystal_ore": "Deepslate Ice Crystal Ore",
   "block.elementalwands.deepslate_space_crystal_ore": "Deepslate Space Crystal Ore",
-  "hud.elementalwands.locked": "Ability Locked"
+  "hud.elementalwands.locked": "Ability Locked",
+  "message.elementalwands.not_enough_flux": "Your soul lacks the Arcane Flux required.",
+  "message.elementalwands.skill_unlocked": "A new path of power has opened!",
+  "message.elementalwands.insufficient_charge": "Insufficient Charge.",
+  "book.elementalwands.requirement_met": "§aReady to Unlock"
 }

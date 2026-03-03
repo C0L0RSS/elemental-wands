@@ -96,7 +96,10 @@ public class VacuumBladeEntity extends ProjectileEntity {
                 ? serverWorld.getDamageSources().thrown(this, livingOwner)
                 : serverWorld.getDamageSources().generic();
 
-        target.damage(serverWorld, source, DAMAGE);
+        boolean damaged = target.damage(serverWorld, source, DAMAGE);
+        if (damaged) {
+            com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(owner, DAMAGE);
+        }
 
         // Apply weak knockback away from caster/projectile direction
         Vec3d knockbackDir = this.getVelocity().normalize();

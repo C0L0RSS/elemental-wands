@@ -1,5 +1,6 @@
 package com.anton.elementalwands;
 
+import com.anton.elementalwands.client.ClientPlayerData;
 import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.registry.ModEntities;
@@ -27,30 +28,28 @@ public class ElementalWandsClient implements ClientModInitializer {
                 "key.elementalwands.ultimate",
                 GLFW.GLFW_KEY_X,
                 new KeyBinding.Category(Identifier.of("elementalwands", "general"))));
+
         EntityRendererRegistry.register(ModEntities.BOULDER_PROJECTILE, FlyingItemEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.CHILL_SNOWBALL, FlyingItemEntityRenderer::new);
-
-        // Register empty renderers for particle-based entities
         EntityRendererRegistry.register(ModEntities.VACUUM_BLADE, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.CALAMITY_TORNADO, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.INFERNO_WAVE, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.SINGULARITY_BOLT, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.HOLLOW_PURPLE_ORB, EmptyEntityRenderer::new);
 
+        // Receive synced player data from server
+        ClientPlayNetworking.registerGlobalReceiver(ModNetworking.SyncPlayerDataPayload.ID,
+                (payload, context) -> ClientPlayerData.setUnlockedSkills(payload.unlockedSkills()));
+
         ClientTickEvents.END_CLIENT_TICK.register(ElementalWandsClient::tickClient);
 
-        // Register HUD Overlay
         HudRenderCallback.EVENT.register(new com.anton.elementalwands.client.overlay.WandHudOverlay());
     }
 
     private static void tickClient(MinecraftClient client) {
-        if (client.player == null || client.getNetworkHandler() == null)
-            return;
-        if (client.currentScreen != null)
-            return;
-
-        if (!(client.player.getMainHandStack().getItem() instanceof AbstractWandItem))
-            return;
+        if (client.player == null || client.getNetworkHandler() == null) return;
+        if (client.currentScreen != null) return;
+        if (!(client.player.getMainHandStack().getItem() instanceof AbstractWandItem)) return;
 
         while (ultimateKey.wasPressed()) {
             ClientPlayNetworking.send(ModNetworking.CastUltimatePayload.INSTANCE);

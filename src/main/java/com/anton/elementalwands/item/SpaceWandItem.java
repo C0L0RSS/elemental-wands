@@ -109,7 +109,7 @@ public class SpaceWandItem extends AbstractWandItem {
         if (HollowPurpleChargeManager.isCharging(world, caster)) {
             return;
         }
-        if (!tryStartCooldown(world, caster, stack, Ability.ULTIMATE, getUltimateCooldownTicks())) {
+        if (!trySpendUltimateCharge(world, caster, stack)) {
             return;
         }
 

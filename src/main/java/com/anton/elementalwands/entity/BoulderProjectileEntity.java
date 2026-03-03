@@ -48,7 +48,10 @@ public class BoulderProjectileEntity extends ThrownItemEntity {
                 : getEntityWorld().getDamageSources().generic();
 
         if (getEntityWorld() instanceof ServerWorld sw) {
-            target.damage(sw, source, DAMAGE);
+            boolean damaged = target.damage(sw, source, DAMAGE);
+            if (damaged) {
+                com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(owner, DAMAGE);
+            }
         }
 
         if (target instanceof LivingEntity living) {

@@ -4,14 +4,23 @@
   "version": "${version}",
   "name": "Elemental Wands",
   "description": "Adds five combat wands (Fire/Wind/Stone/Ice/Space) with primary/secondary/ultimate spells.",
-  "authors": ["Anton (and ChatGPT)"],
+  "authors": [
+    "Anton (and ChatGPT)"
+  ],
   "contact": {},
   "license": "MIT",
   "environment": "*",
   "entrypoints": {
-    "main": ["com.anton.elementalwands.ElementalWandsMod"],
-    "client": ["com.anton.elementalwands.ElementalWandsClient"]
+    "main": [
+      "com.anton.elementalwands.ElementalWandsMod"
+    ],
+    "client": [
+      "com.anton.elementalwands.ElementalWandsClient"
+    ]
   },
+  "mixins": [
+    "elementalwands.mixins.json"
+  ],
   "depends": {
     "fabricloader": ">=0.17.2",
     "fabric-api": "*",

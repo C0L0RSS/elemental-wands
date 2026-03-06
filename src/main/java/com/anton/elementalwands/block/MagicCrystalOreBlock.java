@@ -1,5 +1,6 @@
 package com.anton.elementalwands.block;
 
+import com.anton.elementalwands.ElementalWandsMod;
 import com.anton.elementalwands.registry.ModBlocks;
 import com.mojang.serialization.MapCodec;
 
@@ -36,6 +37,7 @@ public class MagicCrystalOreBlock extends Block {
         if (!world.isClient() && player instanceof ServerPlayerEntity serverPlayer) {
             long current = serverPlayer.getAttachedOrElse(EWAttachments.ARCANE_FLUX, 0L);
             serverPlayer.setAttached(EWAttachments.ARCANE_FLUX, current + 25L);
+            ElementalWandsMod.refreshWizardBook(serverPlayer);
             ModNetworking.syncPlayerData(serverPlayer);
         }
     }

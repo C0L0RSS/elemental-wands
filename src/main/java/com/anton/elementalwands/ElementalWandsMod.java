@@ -13,6 +13,7 @@ import com.anton.elementalwands.util.EventHorizonManager;
 import com.anton.elementalwands.util.HollowPurpleChargeManager;
 import com.anton.elementalwands.util.MeteorManager;
 import com.anton.elementalwands.util.MovementDisruptManager;
+import com.anton.elementalwands.util.SoulboundInventoryCarrier;
 import com.anton.elementalwands.util.TemporaryBlockManager;
 import com.anton.elementalwands.util.TemporarySnowManager;
 import com.anton.elementalwands.util.TitanDomeManager;
@@ -21,15 +22,12 @@ import com.anton.elementalwands.world.ModWorldGen;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
-import net.minecraft.command.argument.EntityArgumentType;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.WrittenBookContentComponent;
-import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -37,21 +35,15 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.RawFilteredPair;
-import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class ElementalWandsMod implements ModInitializer {
     public static final String MOD_ID = "elementalwands";
 
     private static final String NBT_STARTER_RECEIVED = "ew_starter_received";
-    public static final Map<UUID, List<ItemStack>> soulboundStash = new ConcurrentHashMap<>();
 
     @Override
     public void onInitialize() {
@@ -86,15 +78,16 @@ public class ElementalWandsMod implements ModInitializer {
         });
 
         // ── Soulbound: copy Fractured Wand + Wizard's Path on respawn ───
-        ServerPlayerEvents.COPY_FROM.register((newPlayer, original, alive) -> {
+        ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) -> {
             if (alive)
                 return; // Alive == end-of-portal, not death
 
-            // Copy items stashed by PlayerEntityMixin which intercepted dropInventory
-            List<ItemStack> stashed = soulboundStash.remove(original.getUuid());
+            List<ItemStack> stashed = ((SoulboundInventoryCarrier) oldPlayer).elementalWands$consumeSoulboundItems();
             if (stashed != null) {
                 for (ItemStack stack : stashed) {
-                    newPlayer.getInventory().insertStack(stack);
+                    if (!newPlayer.getInventory().insertStack(stack.copy())) {
+                        newPlayer.dropItem(stack.copy(), false);
+                    }
                 }
             }
         });
@@ -110,10 +103,6 @@ public class ElementalWandsMod implements ModInitializer {
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────
-
-    public static void stashSoulboundItems(UUID uuid, List<ItemStack> items) {
-        soulboundStash.put(uuid, items);
-    }
 
     private static boolean isWizardPathBook(ItemStack stack) {
         if (!stack.isOf(Items.WRITTEN_BOOK))
@@ -196,7 +185,7 @@ public class ElementalWandsMod implements ModInitializer {
                 false);
 
         // Replace wizard book in inventory with updated version
-        replaceWizardBook(player);
+        refreshWizardBook(player);
 
         // Sync HUD data to client
         ModNetworking.syncPlayerData(player);
@@ -207,7 +196,7 @@ public class ElementalWandsMod implements ModInitializer {
      * Finds the wizard's path book in the player's inventory and refreshes its
      * content.
      */
-    private static void replaceWizardBook(ServerPlayerEntity player) {
+    public static void refreshWizardBook(ServerPlayerEntity player) {
         for (int i = 0; i < player.getInventory().size(); i++) {
             ItemStack stack = player.getInventory().getStack(i);
             if (isWizardPathBook(stack)) {

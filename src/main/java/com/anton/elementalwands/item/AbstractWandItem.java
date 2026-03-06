@@ -2,6 +2,7 @@ package com.anton.elementalwands.item;
 
 import java.util.Locale;
 
+import com.anton.elementalwands.ElementalWandsMod;
 import com.anton.elementalwands.data.EWAttachments;
 import com.anton.elementalwands.util.WandUtils;
 
@@ -229,6 +230,7 @@ public abstract class AbstractWandItem extends Item {
 
         long current = player.getAttachedOrElse(EWAttachments.ARCANE_FLUX, 0L);
         player.setAttached(EWAttachments.ARCANE_FLUX, current + Math.max(1L, Math.round(damageDealt)));
+        ElementalWandsMod.refreshWizardBook(player);
 
         ItemStack held = player.getMainHandStack();
         addUltimateCharge(held, 5);

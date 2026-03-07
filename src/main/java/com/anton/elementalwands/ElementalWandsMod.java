@@ -23,6 +23,7 @@ import com.anton.elementalwands.world.ModWorldGen;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.WrittenBookContentComponent;
@@ -44,6 +45,7 @@ public class ElementalWandsMod implements ModInitializer {
     public static final String MOD_ID = "elementalwands";
 
     private static final String NBT_STARTER_RECEIVED = "ew_starter_received";
+    private static final int BOOK_REFRESH_INTERVAL = 40; // Refresh every 2 seconds (40 ticks)
 
     @Override
     public void onInitialize() {
@@ -100,6 +102,15 @@ public class ElementalWandsMod implements ModInitializer {
                                         .executes(ctx -> handleSkillUnlock(ctx.getSource(), "secondary")))
                                 .then(CommandManager.literal("ultimate")
                                         .executes(ctx -> handleSkillUnlock(ctx.getSource(), "ultimate"))))));
+
+        // ── Periodic book refresh so flux display stays current ─────────
+        ServerTickEvents.END_SERVER_TICK.register(server -> {
+            if (server.getTicks() % BOOK_REFRESH_INTERVAL != 0)
+                return;
+            for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+                refreshWizardBook(player);
+            }
+        });
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────
@@ -175,6 +186,7 @@ public class ElementalWandsMod implements ModInitializer {
         }
 
         // Consume resources
+        player.setAttached(EWAttachments.ARCANE_FLUX, currentFlux - fluxCost);
         player.addExperienceLevels(-xpCost);
         player.setAttached(EWAttachments.UNLOCKED_SKILLS, currentSkills | skillBit);
 
@@ -200,7 +212,14 @@ public class ElementalWandsMod implements ModInitializer {
         for (int i = 0; i < player.getInventory().size(); i++) {
             ItemStack stack = player.getInventory().getStack(i);
             if (isWizardPathBook(stack)) {
-                player.getInventory().setStack(i, new ElementalWandsMod().createWizardBook(player));
+                // Only rebuild if flux or skills have changed since the book was last created
+                ItemStack updated = createWizardBook(player);
+                WrittenBookContentComponent oldContent = stack.get(DataComponentTypes.WRITTEN_BOOK_CONTENT);
+                WrittenBookContentComponent newContent = updated.get(DataComponentTypes.WRITTEN_BOOK_CONTENT);
+                if (oldContent != null && newContent != null && oldContent.equals(newContent)) {
+                    return; // No change needed
+                }
+                player.getInventory().setStack(i, updated);
                 return;
             }
         }
@@ -208,7 +227,7 @@ public class ElementalWandsMod implements ModInitializer {
 
     // ── Dynamic Wizard's Path Book ──────────────────────────────────────────
 
-    ItemStack createWizardBook(ServerPlayerEntity player) {
+    static ItemStack createWizardBook(ServerPlayerEntity player) {
         long arcaneFlux = player.getAttachedOrElse(EWAttachments.ARCANE_FLUX, 0L);
         int skills = player.getAttachedOrElse(EWAttachments.UNLOCKED_SKILLS, 0);
         boolean secUnlocked = (skills & EWAttachments.SKILL_SECONDARY) != 0;

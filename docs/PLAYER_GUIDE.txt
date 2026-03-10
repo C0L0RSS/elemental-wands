@@ -1,0 +1,178 @@
+ELEMENTAL WANDS — PLAYER GUIDE
+================================
+
+
+WHAT IS THIS MOD?
+-----------------
+Elemental Wands puts a powerful magical arsenal in your hands. Instead of swords
+and axes, you'll wield wands tied to the fundamental forces of nature — Fire, Ice,
+Wind, Stone, and Space — each with a completely unique combat style and three
+distinct abilities to master.
+
+
+GETTING STARTED
+---------------
+When you first join a world, you'll receive two things automatically:
+  - A Fractured Wand — a broken, unawakened wand that can shoot a basic soul-flame beam
+  - The Wizard's Path — a guidebook that tracks your progression
+
+The Fractured Wand is just a starting tool. Its secondary and ultimate abilities
+are locked with a message: "The core is fractured... find a Crystal to awaken it."
+Your first real goal is crafting a proper elemental wand.
+
+
+PROGRESSION: FROM FRACTURED TO ELEMENTAL
+-----------------------------------------
+
+Step 1 — Mine Crystal Ore
+Five types of crystal ore generate naturally across the world, each tied to an
+element (Fire, Wind, Stone, Ice, Space). Mine them to get raw crystals.
+
+Step 2 — Smelt & Craft
+Smelt the raw crystals into refined crystals, then combine a refined crystal with
+your Fractured Wand at a crafting table to create your chosen elemental wand.
+
+Step 3 — Deal Damage, Earn Arcane Flux
+Every point of damage you deal with a wand earns you Arcane Flux — a persistent
+magical energy that stays on your character even through death. This is your
+progression currency.
+
+Step 4 — Unlock Abilities
+Open The Wizard's Path book to see your current Flux and unlock buttons. Spending
+Flux (plus XP levels) unlocks your wand's locked abilities:
+  - Secondary ability:  500 Arcane Flux + 15 XP levels
+  - Ultimate ability:  1500 Arcane Flux + 30 XP levels
+
+Step 5 — Reset (Optional)
+Combine a Reset Rune with your elemental wand to revert it back to a Fractured
+Wand — useful if you want to switch elements.
+
+
+HOW ABILITIES WORK
+------------------
+Every wand has three abilities mapped to three controls:
+  - Right-click             → Primary ability (always available)
+  - Shift + Right-click     → Secondary ability (unlockable)
+  - X key                   → Ultimate ability (unlockable, requires charge)
+
+The HUD above your hotbar shows three slots — one per ability — with a cooldown
+indicator so you always know what's ready.
+
+THE ULTIMATE CHARGE SYSTEM
+Ultimates don't run on a timer. They use a charge bar (0–100) stored on your wand.
+Every hit you land with any wand ability adds +5 charge. When you hit 100, press X
+to unleash your ultimate — the charge resets to zero afterward. No charge, no ultimate.
+
+
+THE FIVE WANDS
+--------------
+
+FIRE WAND
+Passive: Permanent Fire Resistance while held. Standing on the fire or magma you
+create grants Regeneration II and Speed III.
+
+  Primary   — Inferno Wave
+    Launches a fast-moving wave of fire at your target.
+
+  Secondary — Dragon's Pyre
+    Exhales a cone of flame up to 40 blocks in front of you, dealing damage,
+    setting enemies on fire, and coating the ground with magma and fire for
+    5 seconds.
+
+  Ultimate  — Maximum Meteor
+    Calls down a devastating meteor from the sky that strikes the block you're
+    aiming at with a massive explosion.
+
+---
+
+ICE WAND
+The coldest wand — focuses on stacking "Frost" debuffs on enemies to trigger
+explosive combos.
+
+  Primary   — Frost-Bite Volley
+    Fires a spread of three frost shards. Each hit applies a Frost stack.
+    At 3 stacks, the enemy Shatters — dealing bonus damage, clearing their
+    stacks, and blasting nearby enemies with an icy AoE burst.
+
+  Secondary — Glacial Gust
+    Fires five ice-wave projectiles in a spread fan. They pierce enemies and
+    apply slowness. Enemies with 2+ Frost stacks get completely rooted.
+
+  Ultimate  — Blizzard
+    Calls a sustained blizzard zone centered on where you're aiming, dealing
+    ongoing cold damage to all caught inside.
+
+---
+
+WIND WAND
+
+  Primary   — Vacuum Blades
+    Fires two parallel crescent wind blades side by side.
+
+  Secondary — Waylay Dash
+    A short-range directional dash with 3 charges that regenerate over time.
+    Dashing again within 1.5 seconds of the last dash chains it — each chain
+    makes the next dash faster and stronger. Applies Slow Falling after each dash.
+
+  Ultimate  — Zephyr Strike
+    Launches you explosively into the air (equips an Elytra on you automatically).
+    While airborne you are immune to fall damage and leave swirling wind particle
+    rings when diving. When you land, you create a massive shockwave explosion
+    scaled to how fast you were falling. Your previous chestplate is restored
+    automatically.
+
+---
+
+STONE WAND
+
+  Primary   — Earthen Maw (Tectonic Spikes)
+    Summons a rapid wave of stone spikes erupting from the ground in a line ahead
+    of you, dealing damage and launching enemies upward. Follows the terrain.
+
+  Secondary — Stone Wall
+    Instantly raises a 4x4 stone wall two blocks in front of you. While standing
+    near your own wall, you gain Resistance III — use it as cover. The wall
+    crumbles after a few seconds.
+
+  Ultimate  — Titan Dome
+    Summons a massive stone dome around you, creating a fortified zone.
+
+---
+
+SPACE WAND
+
+  Primary   — Singularity Bolt
+    Fires a focused bolt of spatial energy.
+
+  Secondary — Blink
+    Teleports you up to 10 blocks in the direction you're looking, leaving a Rift
+    at your departure point. If a Rift already exists, activating this again will
+    teleport you back to it (swapping positions with the rift).
+
+  Ultimate  — Hollow Purple
+    Triggers an immense spatial compression charge — a channeled buildup that
+    releases a devastating concentrated burst of void energy.
+
+
+THE FRACTURED WAND (STARTER)
+-----------------------------
+If you don't yet have an elemental wand, the Fractured Wand fires a basic soul-fire
+beam that deals a small amount of damage. It still generates Arcane Flux, so
+fighting with it early helps you get ahead on your unlock costs.
+
+
+TIPS
+----
+  - You can hold a wand in your offhand — passive bonuses (like Fire Resistance on
+    the Fire Wand) still apply.
+
+  - Arcane Flux persists through death — you never lose your progress.
+
+  - The Wizard's Path book updates live with your current Flux amount. When the
+    unlock button turns green, you're ready.
+
+  - Frost stacks from the Ice Wand's primary and secondary both contribute to the
+    Shatter threshold — mix your abilities for faster stacks.
+
+  - Wind Wand dashes have a charge recharge that ticks even while the wand is in
+    your inventory, so they refill passively over time.

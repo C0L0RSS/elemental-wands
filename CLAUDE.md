@@ -11,6 +11,34 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 No test suite exists. After any code change, run `./gradlew build` to verify compilation.
 
+### Deploying after a build
+
+After `./gradlew build` succeeds, copy `build/libs/elementalwands-2.1.0.jar` to all three locations:
+
+```
+~/Library/Application Support/feather/mods/elementalwands-2.1.0.jar
+~/Library/Application Support/feather/user-mods/1.21.10-fabric/elementalwands-2.1.0.jar
+~/Library/Application Support/feather/player-server/servers/cb0dcfe6-44d4-4c0d-a1de-e2f201ed69cd/mods/elementalwands-2.1.0.jar
+```
+
+- `feather/mods/` — what Feather actually loads into the game client
+- `feather/user-mods/1.21.10-fabric/` — Feather's user mod list (keeps it in sync)
+- `player-server/.../mods/` — the local Feather test server
+
+Restart the game/server after replacing jars for changes to take effect. Use Python for the copy since the project directory name contains a Unicode narrow no-break space (U+202F) that breaks normal shell `cd`:
+
+```python
+import shutil, pathlib
+jar = pathlib.Path('/Users/antonlabas/Desktop/elementalwands 9.13.44\u202fAM/build/libs/elementalwands-2.1.0.jar')
+targets = [
+    '~/Library/Application Support/feather/mods/elementalwands-2.1.0.jar',
+    '~/Library/Application Support/feather/user-mods/1.21.10-fabric/elementalwands-2.1.0.jar',
+    '~/Library/Application Support/feather/player-server/servers/cb0dcfe6-44d4-4c0d-a1de-e2f201ed69cd/mods/elementalwands-2.1.0.jar',
+]
+for t in targets:
+    shutil.copy2(str(jar), str(pathlib.Path(t).expanduser()))
+```
+
 ## Package Structure
 
 ```
@@ -84,6 +112,30 @@ Three payload types in `ModNetworking`:
 2. Mine crystal ore → smelt raw crystal → craft with `fractured_wand` → elemental wand
 3. Deal wand damage → accumulate `ARCANE_FLUX` → `/ew unlock secondary|ultimate` (costs flux + XP levels)
 4. `reset_rune` + elemental wand → reverts to `fractured_wand`
+
+## Adding a Custom GeckoLib Entity
+
+The Stone Zombie (`StoneZombieEntity`) is the reference implementation for GeckoLib entities.
+
+Key files:
+- `entity/StoneZombieEntity.java` — extends `ZombieEntity`, implements `GeoEntity`
+- `client/model/StoneZombieModel.java` — extends `GeoModel`, points to geo/anim/texture
+- `client/renderer/StoneZombieRenderer.java` — extends `GeoEntityRenderer`
+- `client/renderer/StoneZombieRenderState.java` — implements `GeoRenderState`
+
+**GeckoLib 5.3-alpha-3 resource paths** (different from GeckoLib 4):
+- Models: `assets/<namespace>/geckolib/models/<name>.geo.json`
+- Animations: `assets/<namespace>/geckolib/animations/<name>.animation.json`
+- Identifiers in `GeoModel` use the full path e.g. `geckolib/models/stone_zombie.geo.json`
+
+**Geo.json format**: must be `format_version: 1.12.0` with `minecraft:geometry` array.
+`texture_width`/`texture_height` in the description **must match the actual PNG dimensions** exactly, or UV mapping will be wrong.
+
+**1.21.10 SpawnEggItem API**: use `settings.spawnEgg(entityType)` — the old 4-arg constructor is gone.
+
+**1.21.10 item model system**: every item needs both:
+- `assets/<namespace>/models/item/<name>.json`
+- `assets/<namespace>/items/<name>.json`
 
 ## Adding a New Wand Ability / Wand
 

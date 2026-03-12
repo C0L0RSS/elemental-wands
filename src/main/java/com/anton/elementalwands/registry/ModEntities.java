@@ -7,6 +7,7 @@ import com.anton.elementalwands.entity.ChillSnowballEntity;
 import com.anton.elementalwands.entity.HollowPurpleOrbEntity;
 import com.anton.elementalwands.entity.InfernoWaveEntity;
 import com.anton.elementalwands.entity.SingularityBoltEntity;
+import com.anton.elementalwands.entity.StoneZombieEntity;
 import com.anton.elementalwands.entity.VacuumBladeEntity;
 
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricEntityTypeBuilder;
@@ -47,7 +48,7 @@ public final class ModEntities {
                         Registries.ENTITY_TYPE,
                         Identifier.of(ElementalWandsMod.MOD_ID, "inferno_wave"),
                         FabricEntityTypeBuilder.<InfernoWaveEntity>create(SpawnGroup.MISC, InfernoWaveEntity::new)
-                                        .dimensions(EntityDimensions.fixed(3.0f, 2.0f)) // Wide crescent hitbox
+                                        .dimensions(EntityDimensions.fixed(3.0f, 2.0f))
                                         .trackRangeBlocks(64)
                                         .trackedUpdateRate(1)
                                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
@@ -57,7 +58,7 @@ public final class ModEntities {
                         Registries.ENTITY_TYPE,
                         Identifier.of(ElementalWandsMod.MOD_ID, "vacuum_blade"),
                         FabricEntityTypeBuilder.<VacuumBladeEntity>create(SpawnGroup.MISC, VacuumBladeEntity::new)
-                                        .dimensions(EntityDimensions.fixed(0.5f, 0.5f)) // Slim blade
+                                        .dimensions(EntityDimensions.fixed(0.5f, 0.5f))
                                         .trackRangeBlocks(64)
                                         .trackedUpdateRate(1)
                                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
@@ -69,8 +70,8 @@ public final class ModEntities {
                         FabricEntityTypeBuilder
                                         .<CalamityTornadoEntity>create(SpawnGroup.MISC,
                                                         (type, world) -> new CalamityTornadoEntity(type, world))
-                                        .dimensions(EntityDimensions.fixed(6.0f, 12.0f)) // Large tornado
-                                        .trackRangeBlocks(128) // Larger tracking range for big entity
+                                        .dimensions(EntityDimensions.fixed(6.0f, 12.0f))
+                                        .trackRangeBlocks(128)
                                         .trackedUpdateRate(1)
                                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
                                                         Identifier.of(ElementalWandsMod.MOD_ID, "calamity_tornado"))));
@@ -97,10 +98,22 @@ public final class ModEntities {
                                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
                                                         Identifier.of(ElementalWandsMod.MOD_ID, "hollow_purple_orb"))));
 
+        // 1.5x vanilla zombie: 0.8 * 1.5 = 1.2 wide, 1.9 * 1.5 = 2.85 tall
+        public static final EntityType<StoneZombieEntity> STONE_ZOMBIE = Registry.register(
+                        Registries.ENTITY_TYPE,
+                        Identifier.of(ElementalWandsMod.MOD_ID, "stone_zombie"),
+                        FabricEntityTypeBuilder
+                                        .<StoneZombieEntity>create(SpawnGroup.MONSTER, StoneZombieEntity::new)
+                                        .dimensions(EntityDimensions.fixed(1.2f, 2.85f))
+                                        .trackRangeBlocks(80)
+                                        .trackedUpdateRate(3)
+                                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
+                                                        Identifier.of(ElementalWandsMod.MOD_ID, "stone_zombie"))));
+
         private ModEntities() {
         }
 
         public static void registerAll() {
-                // classload hook
+                // classload hook — field initializers run on class load
         }
 }

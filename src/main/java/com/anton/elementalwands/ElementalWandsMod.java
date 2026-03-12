@@ -40,6 +40,17 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
 import java.util.List;
+import com.anton.elementalwands.entity.StoneZombieEntity;
+import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
+import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
+import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
+import net.minecraft.entity.SpawnGroup;
+import net.minecraft.entity.SpawnLocationTypes;
+import net.minecraft.entity.SpawnRestriction;
+import net.minecraft.entity.mob.ZombieEntity;
+import net.minecraft.util.math.random.Random;
+import net.minecraft.world.Heightmap;
+import net.minecraft.world.WorldAccess;
 
 public class ElementalWandsMod implements ModInitializer {
     public static final String MOD_ID = "elementalwands";
@@ -65,6 +76,17 @@ public class ElementalWandsMod implements ModInitializer {
         HollowPurpleChargeManager.init();
         ModBlocks.registerAll();
         ModEntities.registerAll();
+        FabricDefaultAttributeRegistry.register(ModEntities.STONE_ZOMBIE, StoneZombieEntity.createAttributes().build());
+        SpawnRestriction.register(
+                ModEntities.STONE_ZOMBIE,
+                SpawnLocationTypes.ON_GROUND,
+                Heightmap.Type.MOTION_BLOCKING_NO_LEAVES,
+                ZombieEntity::canSpawnInDark);
+        BiomeModifications.addSpawn(
+                BiomeSelectors.foundInOverworld(),
+                SpawnGroup.MONSTER,
+                ModEntities.STONE_ZOMBIE,
+                15, 1, 3);
         ModItems.registerAll();
         ModNetworking.registerPayloads();
         ModNetworking.registerC2SReceivers();

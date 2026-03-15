@@ -3,6 +3,7 @@ package com.anton.elementalwands.registry;
 import java.util.function.Function;
 
 import com.anton.elementalwands.ElementalWandsMod;
+import com.anton.elementalwands.registry.ModEntities;
 import com.anton.elementalwands.item.FireWandItem;
 import com.anton.elementalwands.item.FracturedWandItem;
 import com.anton.elementalwands.item.IceWandItem;
@@ -12,6 +13,7 @@ import com.anton.elementalwands.item.WindWandItem;
 
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.minecraft.item.Item;
+import net.minecraft.item.SpawnEggItem;
 import net.minecraft.item.ItemGroups;
 import net.minecraft.item.ToolMaterial;
 import net.minecraft.registry.Registries;
@@ -48,6 +50,8 @@ public class ModItems {
 
     // ── Misc ───────────────────────────────────────────
     public static final Item RESET_RUNE = registerSimple("reset_rune", 16);
+    public static final Item STONE_ZOMBIE_SPAWN_EGG = register("stone_zombie_spawn_egg",
+            settings -> new SpawnEggItem(settings.spawnEgg(ModEntities.STONE_ZOMBIE).maxCount(64)));
 
     public static void registerAll() {
         ItemGroupEvents.modifyEntriesEvent(ItemGroups.TOOLS).register(entries -> {
@@ -59,6 +63,7 @@ public class ModItems {
             entries.add(SPACE_WAND);
             entries.add(TITAN_SWORD);
             entries.add(RESET_RUNE);
+            entries.add(STONE_ZOMBIE_SPAWN_EGG);
         });
         ItemGroupEvents.modifyEntriesEvent(ItemGroups.INGREDIENTS).register(entries -> {
             entries.add(RAW_FIRE_CRYSTAL);

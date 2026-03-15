@@ -31,5 +31,7 @@
   "message.elementalwands.not_enough_flux": "Your soul lacks the Arcane Flux required.",
   "message.elementalwands.skill_unlocked": "A new path of power has opened!",
   "message.elementalwands.insufficient_charge": "Insufficient Charge.",
-  "book.elementalwands.requirement_met": "§aReady to Unlock"
+  "book.elementalwands.requirement_met": "§aReady to Unlock",
+  "entity.elementalwands.stone_zombie": "Stone Zombie",
+  "item.elementalwands.stone_zombie_spawn_egg": "Stone Zombie Spawn Egg"
 }

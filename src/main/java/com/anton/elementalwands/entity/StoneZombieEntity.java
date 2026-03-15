@@ -8,7 +8,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.goal.ActiveTargetGoal;
 import net.minecraft.entity.ai.goal.BreakDoorGoal;
 import net.minecraft.entity.ai.goal.Goal;
-import net.minecraft.entity.ai.pathing.PathNodeType;
+import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.mob.ZombieEntity;
@@ -51,6 +51,8 @@ public class StoneZombieEntity extends ZombieEntity implements GeoEntity {
     @Override
     protected void initGoals() {
         super.initGoals();
+        // Swim so the zombie can exit water bodies.
+        this.goalSelector.add(0, new SwimGoal(this));
         // Doors: native vanilla goal at priority 1.
         this.goalSelector.add(1, new BreakDoorGoal(this, difficulty -> difficulty != Difficulty.PEACEFUL));
         // General obstacles: breaks pickaxe-mineable blocks in the direct path to the target.
@@ -192,7 +194,10 @@ public class StoneZombieEntity extends ZombieEntity implements GeoEntity {
             Block block = state.getBlock();
             if (block == Blocks.OBSIDIAN || block == Blocks.CRYING_OBSIDIAN) return false;
             if (block.getBlastResistance() >= MAX_BLAST_RESISTANCE) return false;
-            return state.isIn(BlockTags.PICKAXE_MINEABLE);
+            // Cover stone/ore (pickaxe), dirt/gravel/sand (shovel), and wood/logs (axe).
+            return state.isIn(BlockTags.PICKAXE_MINEABLE)
+                    || state.isIn(BlockTags.SHOVEL_MINEABLE)
+                    || state.isIn(BlockTags.AXE_MINEABLE);
         }
     }
 }

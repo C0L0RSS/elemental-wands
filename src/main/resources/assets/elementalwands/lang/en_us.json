@@ -33,5 +33,7 @@
   "message.elementalwands.insufficient_charge": "Insufficient Charge.",
   "book.elementalwands.requirement_met": "§aReady to Unlock",
   "entity.elementalwands.stone_zombie": "Stone Zombie",
-  "item.elementalwands.stone_zombie_spawn_egg": "Stone Zombie Spawn Egg"
+  "item.elementalwands.stone_zombie_spawn_egg": "Stone Zombie Spawn Egg",
+  "entity.elementalwands.fire_spirit": "Fire Spirit",
+  "item.elementalwands.fire_spirit_spawn_egg": "Fire Spirit Spawn Egg"
 }

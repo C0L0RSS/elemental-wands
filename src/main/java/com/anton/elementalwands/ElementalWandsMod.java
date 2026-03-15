@@ -40,6 +40,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
 import java.util.List;
+import com.anton.elementalwands.entity.FireSpiritEntity;
 import com.anton.elementalwands.entity.StoneZombieEntity;
 import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
 import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
@@ -87,6 +88,17 @@ public class ElementalWandsMod implements ModInitializer {
                 SpawnGroup.MONSTER,
                 ModEntities.STONE_ZOMBIE,
                 15, 1, 3);
+        FabricDefaultAttributeRegistry.register(ModEntities.FIRE_SPIRIT, FireSpiritEntity.createAttributes().build());
+        SpawnRestriction.register(
+                ModEntities.FIRE_SPIRIT,
+                SpawnLocationTypes.ON_GROUND,
+                Heightmap.Type.MOTION_BLOCKING_NO_LEAVES,
+                ZombieEntity::canSpawnInDark);
+        BiomeModifications.addSpawn(
+                BiomeSelectors.foundInOverworld(),
+                SpawnGroup.MONSTER,
+                ModEntities.FIRE_SPIRIT,
+                10, 1, 3);
         ModItems.registerAll();
         ModNetworking.registerPayloads();
         ModNetworking.registerC2SReceivers();

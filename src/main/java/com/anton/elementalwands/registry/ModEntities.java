@@ -7,6 +7,7 @@ import com.anton.elementalwands.entity.ChillSnowballEntity;
 import com.anton.elementalwands.entity.HollowPurpleOrbEntity;
 import com.anton.elementalwands.entity.InfernoWaveEntity;
 import com.anton.elementalwands.entity.SingularityBoltEntity;
+import com.anton.elementalwands.entity.FireSpiritEntity;
 import com.anton.elementalwands.entity.StoneZombieEntity;
 import com.anton.elementalwands.entity.VacuumBladeEntity;
 
@@ -109,6 +110,17 @@ public final class ModEntities {
                                         .trackedUpdateRate(3)
                                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
                                                         Identifier.of(ElementalWandsMod.MOD_ID, "stone_zombie"))));
+
+        public static final EntityType<FireSpiritEntity> FIRE_SPIRIT = Registry.register(
+                        Registries.ENTITY_TYPE,
+                        Identifier.of(ElementalWandsMod.MOD_ID, "fire_spirit"),
+                        FabricEntityTypeBuilder
+                                        .<FireSpiritEntity>create(SpawnGroup.MONSTER, FireSpiritEntity::new)
+                                        .dimensions(EntityDimensions.fixed(0.8f, 0.8f))
+                                        .trackRangeBlocks(64)
+                                        .trackedUpdateRate(3)
+                                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
+                                                        Identifier.of(ElementalWandsMod.MOD_ID, "fire_spirit"))));
 
         private ModEntities() {
         }

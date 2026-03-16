@@ -5,6 +5,7 @@ import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.registry.ModEntities;
 import com.anton.elementalwands.client.renderer.EmptyEntityRenderer;
+import com.anton.elementalwands.client.renderer.FireSpiritRenderer;
 import com.anton.elementalwands.client.renderer.StoneZombieRenderer;
 
 import net.fabricmc.api.ClientModInitializer;
@@ -38,6 +39,7 @@ public class ElementalWandsClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.SINGULARITY_BOLT, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.HOLLOW_PURPLE_ORB, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.STONE_ZOMBIE, StoneZombieRenderer::new);
+        EntityRendererRegistry.register(ModEntities.FIRE_SPIRIT, FireSpiritRenderer::new);
 
         // Receive synced player data from server
         ClientPlayNetworking.registerGlobalReceiver(ModNetworking.SyncPlayerDataPayload.ID,

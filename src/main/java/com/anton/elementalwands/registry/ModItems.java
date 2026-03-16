@@ -52,6 +52,8 @@ public class ModItems {
     public static final Item RESET_RUNE = registerSimple("reset_rune", 16);
     public static final Item STONE_ZOMBIE_SPAWN_EGG = register("stone_zombie_spawn_egg",
             settings -> new SpawnEggItem(settings.spawnEgg(ModEntities.STONE_ZOMBIE).maxCount(64)));
+    public static final Item FIRE_SPIRIT_SPAWN_EGG = register("fire_spirit_spawn_egg",
+            settings -> new SpawnEggItem(settings.spawnEgg(ModEntities.FIRE_SPIRIT).maxCount(64)));
 
     public static void registerAll() {
         ItemGroupEvents.modifyEntriesEvent(ItemGroups.TOOLS).register(entries -> {
@@ -64,6 +66,7 @@ public class ModItems {
             entries.add(TITAN_SWORD);
             entries.add(RESET_RUNE);
             entries.add(STONE_ZOMBIE_SPAWN_EGG);
+            entries.add(FIRE_SPIRIT_SPAWN_EGG);
         });
         ItemGroupEvents.modifyEntriesEvent(ItemGroups.INGREDIENTS).register(entries -> {
             entries.add(RAW_FIRE_CRYSTAL);

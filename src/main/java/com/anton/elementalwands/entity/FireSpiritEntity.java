@@ -41,6 +41,7 @@ public class FireSpiritEntity extends HostileEntity implements GeoEntity {
         return HostileEntity.createHostileAttributes()
                 .add(EntityAttributes.MAX_HEALTH, 20.0)
                 .add(EntityAttributes.MOVEMENT_SPEED, 0.30)
+                .add(EntityAttributes.FLYING_SPEED, 0.6)
                 .add(EntityAttributes.ATTACK_DAMAGE, 3.0); // Normal difficulty base
     }
 
@@ -62,15 +63,15 @@ public class FireSpiritEntity extends HostileEntity implements GeoEntity {
     @Override
     public void tick() {
         super.tick();
-        // Spawn lava particles server-side — ServerWorld.spawnParticles sends the
-        // effect packet to all nearby clients, which is the correct MC paradigm.
-        if (!this.getEntityWorld().isClient() && this.getEntityWorld() instanceof ServerWorld serverWorld) {
-            int count = 2 + serverWorld.getRandom().nextInt(2); // 2 or 3 per tick
+        // Spawn lava particles every 5 ticks (4/s) — one particle per burst.
+        if (this.age % 5 == 0
+                && !this.getEntityWorld().isClient()
+                && this.getEntityWorld() instanceof ServerWorld serverWorld) {
             double halfW = this.getWidth() / 2.0;
             serverWorld.spawnParticles(
                     ParticleTypes.LAVA,
                     this.getX(), this.getY() + this.getHeight() / 2.0, this.getZ(),
-                    count,
+                    1,
                     halfW, this.getHeight() / 2.0, halfW,
                     0.0
             );

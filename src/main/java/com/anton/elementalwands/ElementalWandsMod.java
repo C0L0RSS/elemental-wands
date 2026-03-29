@@ -29,6 +29,7 @@ import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.WrittenBookContentComponent;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -129,13 +130,40 @@ public class ElementalWandsMod implements ModInitializer {
         });
 
         // ── /ew unlock <secondary|ultimate> command ─────────────────────
-        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> dispatcher.register(
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+            dispatcher.register(
                 CommandManager.literal("ew")
                         .then(CommandManager.literal("unlock")
                                 .then(CommandManager.literal("secondary")
                                         .executes(ctx -> handleSkillUnlock(ctx.getSource(), "secondary")))
                                 .then(CommandManager.literal("ultimate")
-                                        .executes(ctx -> handleSkillUnlock(ctx.getSource(), "ultimate"))))));
+                                        .executes(ctx -> handleSkillUnlock(ctx.getSource(), "ultimate")))));
+
+            // ── /ew admin unlock|unlockall <player> (op-only, no cost) ───
+            dispatcher.register(
+                CommandManager.literal("ew")
+                        .then(CommandManager.literal("admin")
+                                .requires(src -> src.hasPermissionLevel(2))
+                                .then(CommandManager.literal("unlock")
+                                        .then(CommandManager.literal("secondary")
+                                                .then(CommandManager.argument("player", EntityArgumentType.player())
+                                                        .executes(ctx -> handleAdminUnlock(
+                                                                ctx.getSource(),
+                                                                EntityArgumentType.getPlayer(ctx, "player"),
+                                                                EWAttachments.SKILL_SECONDARY))))
+                                        .then(CommandManager.literal("ultimate")
+                                                .then(CommandManager.argument("player", EntityArgumentType.player())
+                                                        .executes(ctx -> handleAdminUnlock(
+                                                                ctx.getSource(),
+                                                                EntityArgumentType.getPlayer(ctx, "player"),
+                                                                EWAttachments.SKILL_ULTIMATE)))))
+                                .then(CommandManager.literal("unlockall")
+                                        .then(CommandManager.argument("player", EntityArgumentType.player())
+                                                .executes(ctx -> handleAdminUnlock(
+                                                        ctx.getSource(),
+                                                        EntityArgumentType.getPlayer(ctx, "player"),
+                                                        EWAttachments.SKILL_SECONDARY | EWAttachments.SKILL_ULTIMATE))))));
+        });
 
         // ── Periodic book refresh so flux display stays current ─────────
         ServerTickEvents.END_SERVER_TICK.register(server -> {
@@ -172,6 +200,27 @@ public class ElementalWandsMod implements ModInitializer {
                 false);
 
         player.addCommandTag(NBT_STARTER_RECEIVED);
+    }
+
+    // ── /ew admin unlock handler (op-only, no cost) ──────────────────────────
+
+    private static int handleAdminUnlock(ServerCommandSource source, ServerPlayerEntity target, int skillBits) {
+        int currentSkills = target.getAttachedOrElse(EWAttachments.UNLOCKED_SKILLS, 0);
+        int newSkills = currentSkills | skillBits;
+
+        if (newSkills == currentSkills) {
+            source.sendFeedback(() -> Text.literal("Player already has the specified ability unlocked.")
+                    .formatted(Formatting.YELLOW), false);
+            return 0;
+        }
+
+        target.setAttached(EWAttachments.UNLOCKED_SKILLS, newSkills);
+        refreshWizardBook(target);
+        ModNetworking.syncPlayerData(target);
+
+        source.sendFeedback(() -> Text.literal("Unlocked abilities for " + target.getName().getString() + ".")
+                .formatted(Formatting.GREEN), false);
+        return 1;
     }
 
     // ── /ew unlock handler ──────────────────────────────────────────────────

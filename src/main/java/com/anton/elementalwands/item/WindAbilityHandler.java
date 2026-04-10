@@ -20,10 +20,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import com.anton.elementalwands.entity.CalamityTornadoEntity;
 import com.anton.elementalwands.entity.VacuumBladeEntity;
 
-public class WindWandItem extends AbstractWandItem {
+public final class WindAbilityHandler {
 
     // Primary: Vacuum Blades
     private static final double VACUUM_BLADE_OFFSET = 0.5; // Distance between two blades
@@ -46,8 +45,14 @@ public class WindWandItem extends AbstractWandItem {
     private static final String NBT_ZEPHYR_TICK = "ZephyrStrikeTick";
     private static final Map<UUID, ItemStack> ZEPHYR_CHESTPLATES = new HashMap<>();
 
-    public WindWandItem(Settings settings) {
-        super(settings);
+    private WindAbilityHandler() {}
+
+    public static int getPrimaryCooldownTicks() {
+        return AbstractWandItem.DEFAULT_PRIMARY_COOLDOWN_TICKS;
+    }
+
+    public static int getSecondaryCooldownTicks() {
+        return AbstractWandItem.DEFAULT_SECONDARY_COOLDOWN_TICKS;
     }
 
     public static int getDashMaxCharges() {
@@ -78,9 +83,8 @@ public class WindWandItem extends AbstractWandItem {
         return clamp(data.getInt(NBT_RECHARGE_TICKS, 0), 0, DASH_RECHARGE_TICKS);
     }
 
-    @Override
-    public void castPrimary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!tryStartCooldown(world, caster, stack, Ability.PRIMARY, getPrimaryCooldownTicks()))
+    public static void castPrimary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
+        if (!AbstractWandItem.tryStartCooldown(world, caster, stack, AbstractWandItem.Ability.PRIMARY, getPrimaryCooldownTicks()))
             return;
 
         // Get perpendicular offset to spawn two blades side-by-side
@@ -104,10 +108,7 @@ public class WindWandItem extends AbstractWandItem {
                 0.6f, 1.5f);
     }
 
-    @Override
-    public void inventoryTick(ItemStack stack, ServerWorld world, Entity entity, EquipmentSlot slot) {
-        super.inventoryTick(stack, world, entity, slot);
-
+    public static void inventoryTick(ItemStack stack, ServerWorld world, Entity entity, EquipmentSlot slot) {
         NbtCompound data = getDashData(stack);
         int charges = data.getInt(NBT_DASH_CHARGES, 0);
         int rechargeTicks = data.getInt(NBT_RECHARGE_TICKS, 0);
@@ -183,8 +184,7 @@ public class WindWandItem extends AbstractWandItem {
         }
     }
 
-    @Override
-    public void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
+    public static void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
         // Get or initialize dash data
         NbtCompound data = getDashData(stack);
 
@@ -265,9 +265,8 @@ public class WindWandItem extends AbstractWandItem {
         }
     }
 
-    @Override
-    public void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!trySpendUltimateCharge(world, caster, stack))
+    public static void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {
+        if (!AbstractWandItem.trySpendUltimateCharge(world, caster, stack))
             return;
 
         NbtCompound data = getDashData(stack);
@@ -293,7 +292,7 @@ public class WindWandItem extends AbstractWandItem {
                 caster.getBodyY(0.5), caster.getZ(), 3, 1.0, 1.0, 1.0, 0.0);
     }
 
-    private void equipElytra(PlayerEntity player) {
+    private static void equipElytra(PlayerEntity player) {
         ItemStack chest = player.getEquippedStack(EquipmentSlot.CHEST);
         if (!chest.isEmpty() && !chest.isOf(Items.ELYTRA)) {
             ZEPHYR_CHESTPLATES.put(player.getUuid(), chest.copy());
@@ -301,7 +300,7 @@ public class WindWandItem extends AbstractWandItem {
         player.equipStack(EquipmentSlot.CHEST, new ItemStack(Items.ELYTRA));
     }
 
-    private void unquipElytra(PlayerEntity player) {
+    private static void unquipElytra(PlayerEntity player) {
         ItemStack chest = player.getEquippedStack(EquipmentSlot.CHEST);
         if (chest.isOf(Items.ELYTRA)) {
             ItemStack stored = ZEPHYR_CHESTPLATES.remove(player.getUuid());
@@ -313,7 +312,7 @@ public class WindWandItem extends AbstractWandItem {
         }
     }
 
-    private NbtCompound getDashData(ItemStack stack) {
+    private static NbtCompound getDashData(ItemStack stack) {
         NbtComponent nbtComponent = stack.getOrDefault(DataComponentTypes.CUSTOM_DATA, NbtComponent.DEFAULT);
         return nbtComponent.copyNbt();
     }
@@ -322,7 +321,7 @@ public class WindWandItem extends AbstractWandItem {
         return Math.max(min, Math.min(max, value));
     }
 
-    private void saveDashData(ItemStack stack, NbtCompound data) {
+    private static void saveDashData(ItemStack stack, NbtCompound data) {
         stack.set(DataComponentTypes.CUSTOM_DATA, NbtComponent.of(data));
     }
 }

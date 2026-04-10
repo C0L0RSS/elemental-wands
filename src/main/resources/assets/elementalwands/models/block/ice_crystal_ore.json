@@ -1,6 +1,0 @@
-{
-  "parent": "minecraft:block/cube_all",
-  "textures": {
-    "all": "elementalwands:block/ice_crystal_ore"
-  }
-}

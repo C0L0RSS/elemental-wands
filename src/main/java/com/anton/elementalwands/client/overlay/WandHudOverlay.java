@@ -1,12 +1,11 @@
 package com.anton.elementalwands.client.overlay;
 
 import com.anton.elementalwands.client.ClientPlayerData;
+import com.anton.elementalwands.data.WizardAffinity;
 import com.anton.elementalwands.item.AbstractWandItem;
-import com.anton.elementalwands.item.FireWandItem;
-import com.anton.elementalwands.item.IceWandItem;
-import com.anton.elementalwands.item.SpaceWandItem;
-import com.anton.elementalwands.item.StoneWandItem;
-import com.anton.elementalwands.item.WindWandItem;
+import com.anton.elementalwands.item.SpaceAbilityHandler;
+import com.anton.elementalwands.item.StoneAbilityHandler;
+import com.anton.elementalwands.item.WindAbilityHandler;
 import com.anton.elementalwands.util.ChillTracker;
 
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
@@ -63,30 +62,46 @@ public class WandHudOverlay implements HudRenderCallback {
             scaledCenterX + SLOT_SPACING
         };
 
-        WandTheme theme      = resolveTheme(wand);
+        WizardAffinity affinity = ClientPlayerData.getAffinity();
+        WandTheme theme      = resolveTheme(affinity);
         int      accentColor = getThemeAccent(theme);
 
         context.getMatrices().pushMatrix();
         context.getMatrices().scale(HUD_SCALE, HUD_SCALE);
 
-        boolean isFractured = wand instanceof com.anton.elementalwands.item.FracturedWandItem;
+        boolean isFractured = affinity == WizardAffinity.NONE;
 
         if (isFractured) {
             renderAbility(context, client, stack, wand, AbstractWandItem.Ability.PRIMARY, 0,
-                scaledCenterX, slotCenterY, wand.getPrimaryCooldownTicks(), theme, accentColor, true);
+                scaledCenterX, slotCenterY, primaryCooldownFor(affinity), theme, accentColor, true, affinity);
         } else {
             // Use ClientPlayerData for padlock logic (synced from server)
             boolean secondaryUnlocked = ClientPlayerData.isSecondaryUnlocked();
             boolean ultimateUnlocked  = ClientPlayerData.isUltimateUnlocked();
 
             renderAbility(context, client, stack, wand, AbstractWandItem.Ability.PRIMARY, 0,
-                slotCentersX[0], slotCenterY, wand.getPrimaryCooldownTicks(), theme, accentColor, true);
+                slotCentersX[0], slotCenterY, primaryCooldownFor(affinity), theme, accentColor, true, affinity);
             renderAbility(context, client, stack, wand, AbstractWandItem.Ability.SECONDARY, 1,
-                slotCentersX[1], slotCenterY, wand.getSecondaryCooldownTicks(), theme, accentColor, secondaryUnlocked);
+                slotCentersX[1], slotCenterY, secondaryCooldownFor(affinity), theme, accentColor, secondaryUnlocked, affinity);
             renderUltimateSlot(context, client, stack, wand, slotCentersX[2], slotCenterY, theme, accentColor, ultimateUnlocked);
         }
 
         context.getMatrices().popMatrix();
+    }
+
+    private static int primaryCooldownFor(WizardAffinity affinity) {
+        return switch (affinity) {
+            case STONE -> StoneAbilityHandler.getPrimaryCooldownTicks();
+            case SPACE -> SpaceAbilityHandler.getPrimaryCooldownTicks();
+            default    -> AbstractWandItem.DEFAULT_PRIMARY_COOLDOWN_TICKS;
+        };
+    }
+
+    private static int secondaryCooldownFor(WizardAffinity affinity) {
+        return switch (affinity) {
+            case SPACE -> SpaceAbilityHandler.getSecondaryCooldownTicks();
+            default    -> AbstractWandItem.DEFAULT_SECONDARY_COOLDOWN_TICKS;
+        };
     }
 
     // -----------------------------------------------------------------------
@@ -167,7 +182,7 @@ public class WandHudOverlay implements HudRenderCallback {
 
     private void renderAbility(DrawContext context, MinecraftClient client, ItemStack stack, AbstractWandItem wand,
             AbstractWandItem.Ability ability, int slotIndex, int x, int y, int maxCooldownTicks,
-            WandTheme theme, int accentColor, boolean isUnlocked) {
+            WandTheme theme, int accentColor, boolean isUnlocked, WizardAffinity affinity) {
         long now = client.world.getTime();
 
         NbtCompound nbt = stack.getOrDefault(DataComponentTypes.CUSTOM_DATA, NbtComponent.DEFAULT).copyNbt();
@@ -187,7 +202,7 @@ public class WandHudOverlay implements HudRenderCallback {
         long remaining  = maxCooldownTicks - elapsed;
         boolean onCooldown = remaining > 0;
 
-        boolean isWindSecondary  = wand instanceof WindWandItem && ability == AbstractWandItem.Ability.SECONDARY;
+        boolean isWindSecondary  = affinity == WizardAffinity.WIND && ability == AbstractWandItem.Ability.SECONDARY;
         int windCharges          = 0;
         int windMaxCharges       = 0;
         int windRechargeTicks    = 0;
@@ -195,10 +210,10 @@ public class WandHudOverlay implements HudRenderCallback {
         boolean windPartial      = false;
 
         if (isWindSecondary) {
-            windMaxCharges    = WindWandItem.getDashMaxCharges();
-            windCharges       = WindWandItem.getDashCharges(stack);
-            windRechargeTicks = WindWandItem.getDashRechargeTicks(stack);
-            windRechargeDuration = WindWandItem.getDashRechargeDurationTicks();
+            windMaxCharges    = WindAbilityHandler.getDashMaxCharges();
+            windCharges       = WindAbilityHandler.getDashCharges(stack);
+            windRechargeTicks = WindAbilityHandler.getDashRechargeTicks(stack);
+            windRechargeDuration = WindAbilityHandler.getDashRechargeDurationTicks();
             onCooldown        = windCharges <= 0;
             windPartial       = windCharges > 0 && windCharges < windMaxCharges;
         }
@@ -436,14 +451,15 @@ public class WandHudOverlay implements HudRenderCallback {
         return Math.max(0.0f, Math.min(1.0f, value));
     }
 
-    private WandTheme resolveTheme(AbstractWandItem wand) {
-        if (wand instanceof FireWandItem)  return WandTheme.FIRE;
-        if (wand instanceof IceWandItem)   return WandTheme.ICE;
-        if (wand instanceof WindWandItem)  return WandTheme.WIND;
-        if (wand instanceof StoneWandItem) return WandTheme.STONE;
-        if (wand instanceof SpaceWandItem) return WandTheme.SPACE;
-        if (wand instanceof com.anton.elementalwands.item.FracturedWandItem) return WandTheme.MANA;
-        return WandTheme.ARCANE;
+    private WandTheme resolveTheme(WizardAffinity affinity) {
+        return switch (affinity) {
+            case FIRE  -> WandTheme.FIRE;
+            case ICE   -> WandTheme.ICE;
+            case WIND  -> WandTheme.WIND;
+            case STONE -> WandTheme.STONE;
+            case SPACE -> WandTheme.SPACE;
+            case NONE  -> WandTheme.MANA;
+        };
     }
 
     private int getThemeAccent(WandTheme theme) {

@@ -1,6 +1,0 @@
-{
-  "parent": "minecraft:item/generated",
-  "textures": {
-    "layer0": "elementalwands:item/raw_space_crystal"
-  }
-}

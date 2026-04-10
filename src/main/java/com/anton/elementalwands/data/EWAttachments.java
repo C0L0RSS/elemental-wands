@@ -3,6 +3,7 @@ package com.anton.elementalwands.data;
 import com.mojang.serialization.Codec;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Identifier;
 
 public final class EWAttachments {
@@ -23,9 +24,21 @@ public final class EWAttachments {
             Identifier.of("elementalwands", "unlocked_skills"),
             builder -> builder.initializer(() -> 0).persistent(Codec.INT).copyOnDeath());
 
+    public static final AttachmentType<String> AFFINITY = AttachmentRegistry.create(
+            Identifier.of("elementalwands", "affinity"),
+            builder -> builder.initializer(() -> "NONE").persistent(Codec.STRING).copyOnDeath());
+
     private EWAttachments() {}
 
     public static void init() {
         // Triggers class loading so attachments are registered
+    }
+
+    public static WizardAffinity getAffinity(PlayerEntity player) {
+        try {
+            return WizardAffinity.valueOf(player.getAttachedOrElse(AFFINITY, "NONE"));
+        } catch (IllegalArgumentException e) {
+            return WizardAffinity.NONE;
+        }
     }
 }

@@ -43,7 +43,7 @@ public class ElementalWandsClient implements ClientModInitializer {
 
         // Receive synced player data from server
         ClientPlayNetworking.registerGlobalReceiver(ModNetworking.SyncPlayerDataPayload.ID,
-                (payload, context) -> ClientPlayerData.setUnlockedSkills(payload.unlockedSkills()));
+                (payload, context) -> ClientPlayerData.setUnlockedSkills(payload.unlockedSkills(), payload.affinity()));
 
         ClientTickEvents.END_CLIENT_TICK.register(ElementalWandsClient::tickClient);
 

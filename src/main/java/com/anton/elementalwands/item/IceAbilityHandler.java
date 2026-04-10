@@ -1,7 +1,6 @@
 package com.anton.elementalwands.item;
 
 import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
@@ -13,7 +12,6 @@ import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
@@ -28,9 +26,8 @@ import com.anton.elementalwands.entity.ChillSnowballEntity;
 import com.anton.elementalwands.registry.ModEntities;
 import com.anton.elementalwands.util.BlizzardManager;
 import com.anton.elementalwands.util.ChillTracker;
-import com.anton.elementalwands.util.TemporaryBlockManager;
 
-public class IceWandItem extends AbstractWandItem {
+public final class IceAbilityHandler {
 
     // Primary: Frost-Bite Volley with Shatter
     private static final float SHARD_BASE_DAMAGE = 2.0f;
@@ -44,13 +41,18 @@ public class IceWandItem extends AbstractWandItem {
     private static final float GUST_DAMAGE = 4.0f;
     private static final int GUST_LIFETIME = 15; // 15 ticks ~ 0.75s
 
-    public IceWandItem(Settings settings) {
-        super(settings);
+    private IceAbilityHandler() {}
+
+    public static int getPrimaryCooldownTicks() {
+        return AbstractWandItem.DEFAULT_PRIMARY_COOLDOWN_TICKS;
     }
 
-    @Override
-    public void castPrimary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!tryStartCooldown(world, caster, stack, Ability.PRIMARY, getPrimaryCooldownTicks()))
+    public static int getSecondaryCooldownTicks() {
+        return AbstractWandItem.DEFAULT_SECONDARY_COOLDOWN_TICKS;
+    }
+
+    public static void castPrimary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
+        if (!AbstractWandItem.tryStartCooldown(world, caster, stack, AbstractWandItem.Ability.PRIMARY, getPrimaryCooldownTicks()))
             return;
 
         world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_SNOWBALL_THROW, SoundCategory.PLAYERS, 0.5F,
@@ -67,9 +69,8 @@ public class IceWandItem extends AbstractWandItem {
         }
     }
 
-    @Override
-    public void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!tryStartCooldown(world, caster, stack, Ability.SECONDARY, getSecondaryCooldownTicks()))
+    public static void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
+        if (!AbstractWandItem.tryStartCooldown(world, caster, stack, AbstractWandItem.Ability.SECONDARY, getSecondaryCooldownTicks()))
             return;
 
         world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_SNOW_GOLEM_SHOOT, SoundCategory.PLAYERS, 1.0F,
@@ -85,12 +86,11 @@ public class IceWandItem extends AbstractWandItem {
         }
     }
 
-    @Override
-    public void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!trySpendUltimateCharge(world, caster, stack))
+    public static void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {
+        if (!AbstractWandItem.trySpendUltimateCharge(world, caster, stack))
             return;
 
-        HitResult hit = raycast(world, caster, DEFAULT_RANGE);
+        HitResult hit = AbstractWandItem.raycast(world, caster, AbstractWandItem.DEFAULT_RANGE);
         Vec3d center = hit.getType() == HitResult.Type.MISS ? caster.getEntityPos() : hit.getPos();
 
         BlizzardManager.startBlizzard(world, caster, center);

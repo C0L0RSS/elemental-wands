@@ -7,7 +7,6 @@ import com.anton.elementalwands.item.AbstractWandItem;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.item.ItemStack;
-import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.RegistryByteBuf;
 import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.network.codec.PacketCodecs;
@@ -48,12 +47,13 @@ public final class ModNetworking {
     // -----------------------------------------------------------------------
 
     /**
-     * Sends the player's current unlock bitmask to their client so the HUD can
-     * render padlock/glow states correctly.
+     * Sends the player's current unlock bitmask and affinity to their client so
+     * the HUD can render padlock/glow states and themes correctly.
      */
     public static void syncPlayerData(ServerPlayerEntity player) {
         int skills = player.getAttachedOrElse(EWAttachments.UNLOCKED_SKILLS, 0);
-        ServerPlayNetworking.send(player, new SyncPlayerDataPayload(skills));
+        String affinity = player.getAttachedOrElse(EWAttachments.AFFINITY, "NONE");
+        ServerPlayNetworking.send(player, new SyncPlayerDataPayload(skills, affinity));
     }
 
     // -----------------------------------------------------------------------
@@ -100,12 +100,14 @@ public final class ModNetworking {
         public Id<? extends CustomPayload> getId() { return ID; }
     }
 
-    /** S2C packet carrying the server-authoritative unlocked-skills bitmask. */
-    public record SyncPlayerDataPayload(int unlockedSkills) implements CustomPayload {
+    /** S2C packet carrying the server-authoritative unlocked-skills bitmask and affinity. */
+    public record SyncPlayerDataPayload(int unlockedSkills, String affinity) implements CustomPayload {
         public static final Id<SyncPlayerDataPayload> ID = new Id<>(
                 Identifier.of(ElementalWandsMod.MOD_ID, "sync_player_data"));
         public static final PacketCodec<RegistryByteBuf, SyncPlayerDataPayload> CODEC =
-                PacketCodec.tuple(PacketCodecs.INTEGER, SyncPlayerDataPayload::unlockedSkills,
+                PacketCodec.tuple(
+                        PacketCodecs.INTEGER, SyncPlayerDataPayload::unlockedSkills,
+                        PacketCodecs.STRING,  SyncPlayerDataPayload::affinity,
                         SyncPlayerDataPayload::new);
 
         @Override

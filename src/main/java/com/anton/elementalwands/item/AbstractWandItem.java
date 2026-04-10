@@ -4,6 +4,7 @@ import java.util.Locale;
 
 import com.anton.elementalwands.ElementalWandsMod;
 import com.anton.elementalwands.data.EWAttachments;
+import com.anton.elementalwands.data.WizardAffinity;
 import com.anton.elementalwands.util.WandUtils;
 
 import net.minecraft.component.DataComponentTypes;
@@ -69,7 +70,7 @@ public abstract class AbstractWandItem extends Item {
     // -----------------------------------------------------------------------
 
     public boolean isAbilityUnlocked(PlayerEntity player, Ability ability) {
-        if (this instanceof FracturedWandItem) {
+        if (this instanceof UniversalWandItem && EWAttachments.getAffinity(player) == WizardAffinity.NONE) {
             return ability == Ability.PRIMARY;
         }
         return switch (ability) {
@@ -111,14 +112,14 @@ public abstract class AbstractWandItem extends Item {
     }
 
     // -----------------------------------------------------------------------
-    // Raycast / particle helpers
+    // Raycast / particle helpers (public static so ability handlers can call them)
     // -----------------------------------------------------------------------
 
-    protected final HitResult raycast(ServerWorld world, Entity caster, double range) {
+    public static HitResult raycast(ServerWorld world, Entity caster, double range) {
         return WandUtils.raycast(world, caster, range);
     }
 
-    protected final void spawnParticleLine(ServerWorld world, Vec3d start, Vec3d end, ParticleEffect particle) {
+    public static void spawnParticleLine(ServerWorld world, Vec3d start, Vec3d end, ParticleEffect particle) {
         WandUtils.spawnBeam(world, start, end, particle);
     }
 
@@ -126,7 +127,7 @@ public abstract class AbstractWandItem extends Item {
     // Cooldown system (PRIMARY / SECONDARY)
     // -----------------------------------------------------------------------
 
-    protected final boolean tryStartCooldown(ServerWorld world, PlayerEntity player, ItemStack stack,
+    public static boolean tryStartCooldown(ServerWorld world, PlayerEntity player, ItemStack stack,
             Ability ability, int abilityCooldownTicks) {
         long now = world.getTime();
 
@@ -171,14 +172,10 @@ public abstract class AbstractWandItem extends Item {
 
     /**
      * Attempts to spend 100 charge to fire the ultimate. Returns false (and
-     * shows a message) if charge is insufficient or the ability is locked.
+     * shows a message) if charge is insufficient. The unlock check is now the
+     * caller's responsibility (performed in UniversalWandItem before dispatch).
      */
-    protected final boolean trySpendUltimateCharge(ServerWorld world, PlayerEntity player, ItemStack stack) {
-        if (!isAbilityUnlocked(player, Ability.ULTIMATE)) {
-            player.sendMessage(Text.translatable("hud.elementalwands.locked"), true);
-            return false;
-        }
-
+    public static boolean trySpendUltimateCharge(ServerWorld world, PlayerEntity player, ItemStack stack) {
         long now = world.getTime();
         NbtCompound nbt = stack.getOrDefault(DataComponentTypes.CUSTOM_DATA, NbtComponent.DEFAULT).copyNbt();
 
@@ -240,7 +237,7 @@ public abstract class AbstractWandItem extends Item {
     // Direct-damage helper (used by wands that raycast)
     // -----------------------------------------------------------------------
 
-    protected final boolean applyDamage(ServerWorld world, PlayerEntity caster, Entity target, float amount) {
+    public static boolean applyDamage(ServerWorld world, PlayerEntity caster, Entity target, float amount) {
         if (!(target instanceof LivingEntity living))
             return false;
 
@@ -252,7 +249,7 @@ public abstract class AbstractWandItem extends Item {
         return damaged;
     }
 
-    protected final void sendCooldownActionbar(PlayerEntity player, Ability ability, int remainingTicks) {
+    public static void sendCooldownActionbar(PlayerEntity player, Ability ability, int remainingTicks) {
         double seconds = remainingTicks / 20.0;
         String label = ability.displayName;
         String msg = String.format(Locale.ROOT, "%s cooldown: %.1fs", label, seconds);

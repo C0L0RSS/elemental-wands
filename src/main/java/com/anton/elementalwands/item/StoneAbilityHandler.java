@@ -28,9 +28,7 @@ import java.util.Map;
 import java.util.HashMap;
 import net.minecraft.entity.Entity;
 
-public class StoneWandItem extends AbstractWandItem {
-
-    private static final int PRIMARY_COOLDOWN_TICKS = 40;
+public final class StoneAbilityHandler {
 
     private static class WallData {
         public final BlockPos center;
@@ -53,19 +51,18 @@ public class StoneWandItem extends AbstractWandItem {
     private static final int TECTONIC_VERTICAL_SCAN_DOWN = 5;
     private static final int TECTONIC_VERTICAL_SCAN_UP = 5;
 
-    public StoneWandItem(Settings settings) {
-        super(settings);
-    }
+    private StoneAbilityHandler() {}
 
-    @Override
-    public int getPrimaryCooldownTicks() {
+    public static int getPrimaryCooldownTicks() {
         return 40; // Reduced to 2s
     }
 
-    @Override
-    public void inventoryTick(ItemStack stack, ServerWorld world, Entity entity,
+    public static int getSecondaryCooldownTicks() {
+        return AbstractWandItem.DEFAULT_SECONDARY_COOLDOWN_TICKS;
+    }
+
+    public static void inventoryTick(ItemStack stack, ServerWorld world, Entity entity,
             net.minecraft.entity.EquipmentSlot slot) {
-        super.inventoryTick(stack, world, entity, slot);
         if (!world.isClient() && entity instanceof PlayerEntity player &&
                 (slot == net.minecraft.entity.EquipmentSlot.MAINHAND
                         || slot == net.minecraft.entity.EquipmentSlot.OFFHAND)) {
@@ -86,9 +83,8 @@ public class StoneWandItem extends AbstractWandItem {
         }
     }
 
-    @Override
-    public void castPrimary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!tryStartCooldown(world, caster, stack, Ability.PRIMARY, getPrimaryCooldownTicks()))
+    public static void castPrimary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
+        if (!AbstractWandItem.tryStartCooldown(world, caster, stack, AbstractWandItem.Ability.PRIMARY, getPrimaryCooldownTicks()))
             return;
 
         Vec3d forward = horizontalForward(caster);
@@ -103,9 +99,8 @@ public class StoneWandItem extends AbstractWandItem {
                 1.0f, 1.0f);
     }
 
-    @Override
-    public void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!tryStartCooldown(world, caster, stack, Ability.SECONDARY, getSecondaryCooldownTicks()))
+    public static void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
+        if (!AbstractWandItem.tryStartCooldown(world, caster, stack, AbstractWandItem.Ability.SECONDARY, getSecondaryCooldownTicks()))
             return;
 
         // Place 4x4 vertical wall 2 blocks in front
@@ -130,9 +125,8 @@ public class StoneWandItem extends AbstractWandItem {
         world.spawnParticles(ParticleTypes.CLOUD, center.getX(), center.getY(), center.getZ(), 25, 1.0, 1.0, 1.0, 0.02);
     }
 
-    @Override
-    public void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!trySpendUltimateCharge(world, caster, stack))
+    public static void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {
+        if (!AbstractWandItem.trySpendUltimateCharge(world, caster, stack))
             return;
 
         TitanDomeManager.startDome(world, caster);

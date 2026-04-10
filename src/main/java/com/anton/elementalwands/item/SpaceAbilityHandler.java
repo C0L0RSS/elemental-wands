@@ -19,7 +19,7 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.RaycastContext;
 
-public class SpaceWandItem extends AbstractWandItem {
+public final class SpaceAbilityHandler {
 
     private static final int PRIMARY_COOLDOWN_TICKS = 20;
     private static final int SECONDARY_COOLDOWN_TICKS = 120;
@@ -28,31 +28,25 @@ public class SpaceWandItem extends AbstractWandItem {
     private static final double BLINK_RANGE = 10.0;
     private static final int RIFT_DURATION_TICKS = SECONDARY_COOLDOWN_TICKS;
 
-    public SpaceWandItem(Settings settings) {
-        super(settings);
-    }
+    private SpaceAbilityHandler() {}
 
-    @Override
-    public int getPrimaryCooldownTicks() {
+    public static int getPrimaryCooldownTicks() {
         return PRIMARY_COOLDOWN_TICKS;
     }
 
-    @Override
-    public int getSecondaryCooldownTicks() {
+    public static int getSecondaryCooldownTicks() {
         return SECONDARY_COOLDOWN_TICKS;
     }
 
-    @Override
-    public int getUltimateCooldownTicks() {
+    public static int getUltimateCooldownTicks() {
         return ULTIMATE_COOLDOWN_TICKS;
     }
 
-    @Override
-    public void castPrimary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
+    public static void castPrimary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
         if (HollowPurpleChargeManager.isCharging(world, caster)) {
             return;
         }
-        if (!tryStartCooldown(world, caster, stack, Ability.PRIMARY, getPrimaryCooldownTicks())) {
+        if (!AbstractWandItem.tryStartCooldown(world, caster, stack, AbstractWandItem.Ability.PRIMARY, getPrimaryCooldownTicks())) {
             return;
         }
 
@@ -65,8 +59,7 @@ public class SpaceWandItem extends AbstractWandItem {
                 1.6f);
     }
 
-    @Override
-    public void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
+    public static void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
         if (HollowPurpleChargeManager.isCharging(world, caster)) {
             return;
         }
@@ -85,7 +78,7 @@ public class SpaceWandItem extends AbstractWandItem {
             return;
         }
 
-        if (!tryStartCooldown(world, caster, stack, Ability.SECONDARY, getSecondaryCooldownTicks())) {
+        if (!AbstractWandItem.tryStartCooldown(world, caster, stack, AbstractWandItem.Ability.SECONDARY, getSecondaryCooldownTicks())) {
             return;
         }
 
@@ -104,19 +97,18 @@ public class SpaceWandItem extends AbstractWandItem {
                 1.25f);
     }
 
-    @Override
-    public void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {
+    public static void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {
         if (HollowPurpleChargeManager.isCharging(world, caster)) {
             return;
         }
-        if (!trySpendUltimateCharge(world, caster, stack)) {
+        if (!AbstractWandItem.trySpendUltimateCharge(world, caster, stack)) {
             return;
         }
 
         HollowPurpleChargeManager.startCharge(world, caster);
     }
 
-    private Optional<Vec3d> findSafeBlinkDestination(ServerWorld world, PlayerEntity caster, double range) {
+    private static Optional<Vec3d> findSafeBlinkDestination(ServerWorld world, PlayerEntity caster, double range) {
         Vec3d eyePos = caster.getEyePos();
         Vec3d feetPos = caster.getEntityPos();
         Vec3d direction = caster.getRotationVec(1.0f).normalize();
@@ -145,7 +137,7 @@ public class SpaceWandItem extends AbstractWandItem {
         return Optional.empty();
     }
 
-    private boolean isSafeTeleportLocation(ServerWorld world, PlayerEntity caster, Vec3d targetFeetPos) {
+    private static boolean isSafeTeleportLocation(ServerWorld world, PlayerEntity caster, Vec3d targetFeetPos) {
         double minY = world.getBottomY() + 1;
         double maxY = world.getTopYInclusive() - 2;
         if (targetFeetPos.y < minY || targetFeetPos.y > maxY) {

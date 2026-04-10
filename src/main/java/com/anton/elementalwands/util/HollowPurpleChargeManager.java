@@ -5,8 +5,10 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
 
+import com.anton.elementalwands.data.EWAttachments;
+import com.anton.elementalwands.data.WizardAffinity;
 import com.anton.elementalwands.entity.HollowPurpleOrbEntity;
-import com.anton.elementalwands.item.SpaceWandItem;
+import com.anton.elementalwands.item.AbstractWandItem;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.entity.effect.StatusEffectInstance;
@@ -122,7 +124,8 @@ public final class HollowPurpleChargeManager {
     }
 
     private static boolean isHoldingSpaceWand(PlayerEntity caster) {
-        return caster.getMainHandStack().getItem() instanceof SpaceWandItem;
+        return caster.getMainHandStack().getItem() instanceof AbstractWandItem
+                && EWAttachments.getAffinity(caster) == WizardAffinity.SPACE;
     }
 
     private static void applyChargeMovementLock(ServerWorld world, PlayerEntity caster, ChargeState state, int age) {

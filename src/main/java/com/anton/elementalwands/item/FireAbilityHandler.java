@@ -9,14 +9,12 @@ import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.particle.ParticleTypes;
-import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
 
 import com.anton.elementalwands.entity.InfernoWaveEntity;
 import com.anton.elementalwands.util.TemporaryBlockManager;
@@ -28,10 +26,7 @@ import net.minecraft.nbt.NbtCompound;
 import java.util.HashSet;
 import java.util.Set;
 
-public class FireWandItem extends AbstractWandItem {
-
-    // Primary: Inferno Wave
-    private static final double INFERNO_WAVE_SPEED = 1.5;
+public final class FireAbilityHandler {
 
     // Secondary: Dragon's Pyre
     private static final int PYRE_CONE_LENGTH = 40;
@@ -42,13 +37,17 @@ public class FireWandItem extends AbstractWandItem {
     private static final int METEOR_SPAWN_HEIGHT = 35;
     private static final float METEOR_EXPLOSION_POWER = 15.0f; // Increased from 10.0
 
-    public FireWandItem(Settings settings) {
-        super(settings);
+    private FireAbilityHandler() {}
+
+    public static int getPrimaryCooldownTicks() {
+        return AbstractWandItem.DEFAULT_PRIMARY_COOLDOWN_TICKS;
     }
 
-    @Override
-    public void inventoryTick(ItemStack stack, ServerWorld world, Entity entity, EquipmentSlot slot) {
-        super.inventoryTick(stack, world, entity, slot);
+    public static int getSecondaryCooldownTicks() {
+        return AbstractWandItem.DEFAULT_SECONDARY_COOLDOWN_TICKS;
+    }
+
+    public static void inventoryTick(ItemStack stack, ServerWorld world, Entity entity, EquipmentSlot slot) {
         if ((slot == EquipmentSlot.MAINHAND || slot == EquipmentSlot.OFFHAND)
                 && entity instanceof LivingEntity living) {
             // Permanent Fire Resistance while holding
@@ -76,9 +75,8 @@ public class FireWandItem extends AbstractWandItem {
         }
     }
 
-    @Override
-    public void castPrimary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!tryStartCooldown(world, caster, stack, Ability.PRIMARY, getPrimaryCooldownTicks()))
+    public static void castPrimary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
+        if (!AbstractWandItem.tryStartCooldown(world, caster, stack, AbstractWandItem.Ability.PRIMARY, getPrimaryCooldownTicks()))
             return;
 
         // Spawn Inferno Wave projectile
@@ -90,9 +88,8 @@ public class FireWandItem extends AbstractWandItem {
         world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_BLAZE_SHOOT, SoundCategory.PLAYERS, 0.8f, 0.9f);
     }
 
-    @Override
-    public void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!tryStartCooldown(world, caster, stack, Ability.SECONDARY, getSecondaryCooldownTicks()))
+    public static void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
+        if (!AbstractWandItem.tryStartCooldown(world, caster, stack, AbstractWandItem.Ability.SECONDARY, getSecondaryCooldownTicks()))
             return;
 
         // Record cast time
@@ -178,12 +175,11 @@ public class FireWandItem extends AbstractWandItem {
                 0.8f);
     }
 
-    @Override
-    public void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!trySpendUltimateCharge(world, caster, stack))
+    public static void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {
+        if (!AbstractWandItem.trySpendUltimateCharge(world, caster, stack))
             return;
 
-        HitResult hit = raycast(world, caster, DEFAULT_RANGE);
+        HitResult hit = AbstractWandItem.raycast(world, caster, AbstractWandItem.DEFAULT_RANGE);
         Vec3d target = hit.getPos();
 
         MeteorManager.spawnMeteor(world, caster, target, METEOR_SPAWN_HEIGHT, METEOR_EXPLOSION_POWER);

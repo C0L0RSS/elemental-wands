@@ -1,9 +1,0 @@
-{
-  "type": "minecraft:smelting",
-  "ingredient": "elementalwands:raw_space_crystal",
-  "result": {
-    "id": "elementalwands:space_crystal"
-  },
-  "experience": 0.7,
-  "cookingtime": 200
-}

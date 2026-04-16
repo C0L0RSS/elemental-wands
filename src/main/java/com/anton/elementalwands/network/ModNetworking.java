@@ -28,7 +28,6 @@ public final class ModNetworking {
         payloadsRegistered = true;
 
         // C2S
-        PayloadTypeRegistry.playC2S().register(CastPrimaryPayload.ID,  CastPrimaryPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(CastUltimatePayload.ID, CastUltimatePayload.CODEC);
 
         // S2C
@@ -36,8 +35,6 @@ public final class ModNetworking {
     }
 
     public static void registerC2SReceivers() {
-        ServerPlayNetworking.registerGlobalReceiver(CastPrimaryPayload.ID,
-                (payload, context) -> handleCastPrimary(context.player()));
         ServerPlayNetworking.registerGlobalReceiver(CastUltimatePayload.ID,
                 (payload, context) -> handleCastUltimate(context.player()));
     }

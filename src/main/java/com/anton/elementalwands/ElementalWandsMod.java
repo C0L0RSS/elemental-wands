@@ -9,7 +9,6 @@ import com.anton.elementalwands.registry.ModEntities;
 import com.anton.elementalwands.util.BlizzardManager;
 import com.anton.elementalwands.util.BlinkRiftManager;
 import com.anton.elementalwands.util.ChillTracker;
-import com.anton.elementalwands.util.CycloneManager;
 import com.anton.elementalwands.util.EventHorizonManager;
 import com.anton.elementalwands.util.HollowPurpleChargeManager;
 import com.anton.elementalwands.util.MeteorManager;
@@ -68,7 +67,6 @@ public class ElementalWandsMod implements ModInitializer {
         TemporaryBlockManager.init();
         ChillTracker.init();
         BlizzardManager.init();
-        CycloneManager.init();
         MeteorManager.init();
         TitanDomeManager.init();
         BlazeTrailManager.init();

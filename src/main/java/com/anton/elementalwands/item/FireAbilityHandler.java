@@ -149,27 +149,24 @@ public final class FireAbilityHandler {
             double distRight = Math.abs(toTarget.dotProduct(rightVec));
 
             if (distForward > 0 && distForward <= PYRE_CONE_LENGTH && distRight <= 2.5) {
-                target.damage(world, world.getDamageSources().onFire(), 5.0f);
+                boolean damaged = target.damage(world, world.getDamageSources().playerAttack(caster), 5.0f);
+                if (damaged) {
+                    AbstractWandItem.onWandDamageDealt(caster, 5.0f);
+                }
                 target.setFireTicks(100);
             }
         }
 
         // Place magma/fire
         Set<BlockPos> validGround = new HashSet<>();
-        Set<BlockPos> validAbove = new HashSet<>();
 
         for (BlockPos p : groundBlocks) {
             validGround.add(p);
-            if (world.getBlockState(p.up()).isAir() || world.getBlockState(p.up()).isReplaceable()) {
-                validAbove.add(p.up());
-            }
         }
 
         TemporaryBlockManager.placeTemporaryBlocks(world, validGround, Blocks.MAGMA_BLOCK.getDefaultState(),
                 PYRE_GROUND_DURATION,
                 state -> !state.hasBlockEntity() && !state.isOf(Blocks.OBSIDIAN) && !state.isOf(Blocks.BEDROCK));
-        TemporaryBlockManager.placeTemporaryBlocks(world, validAbove, Blocks.FIRE.getDefaultState(),
-                PYRE_GROUND_DURATION, state -> state.isAir() || state.isReplaceable());
 
         world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_ENDER_DRAGON_SHOOT, SoundCategory.PLAYERS, 1.0f,
                 0.8f);

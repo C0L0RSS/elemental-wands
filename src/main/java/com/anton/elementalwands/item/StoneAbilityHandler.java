@@ -5,6 +5,8 @@ import com.anton.elementalwands.util.TitanDomeManager;
 
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.NbtComponent;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
@@ -33,23 +35,32 @@ public final class StoneAbilityHandler {
     private static class WallData {
         public final BlockPos center;
         public final int creationTick;
+        public final List<BlockPos> blockPositions;
 
-        public WallData(BlockPos center, int tick) {
+        public WallData(BlockPos center, int tick, List<BlockPos> blockPositions) {
             this.center = center;
             this.creationTick = tick;
+            this.blockPositions = List.copyOf(blockPositions);
         }
     }
 
     private static final Map<UUID, WallData> ACTIVE_WALLS = new HashMap<>();
     private static final int TECTONIC_LENGTH = 15;
-    private static final float TECTONIC_DAMAGE = 6.0f;
-    private static final double TECTONIC_VERTICAL_KNOCKBACK = 0.5;
+    private static final float TECTONIC_DAMAGE = 9.0f;
+    private static final double TECTONIC_VERTICAL_KNOCKBACK = 1.0;
     private static final int TECTONIC_BLOCK_DURATION = 40;
     private static final int WALL_DURATION = 70; // 3.5 seconds
     private static final int TECTONIC_TERRAIN_SCAN_RANGE = 3;
     private static final double TECTONIC_HITBOX_EXPAND_XZ = 0.7;
     private static final int TECTONIC_VERTICAL_SCAN_DOWN = 5;
     private static final int TECTONIC_VERTICAL_SCAN_UP = 5;
+
+    private static final double SHATTER_TRIGGER_DISTANCE = 2.0;
+    private static final double SHATTER_CONE_LENGTH = 8.0;
+    private static final double SHATTER_CONE_HALF_ANGLE_COS = Math.cos(Math.toRadians(30.0));
+    private static final float SHATTER_DAMAGE = 7.0f;
+    private static final double SHATTER_HORIZONTAL_KNOCKBACK = 0.5;
+    private static final double SHATTER_VERTICAL_KNOCKBACK = 0.1;
 
     private StoneAbilityHandler() {}
 
@@ -100,29 +111,128 @@ public final class StoneAbilityHandler {
     }
 
     public static void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
+        WallData existing = ACTIVE_WALLS.get(caster.getUuid());
+        if (existing != null
+                && world.getServer().getTicks() - existing.creationTick <= WALL_DURATION) {
+            Vec3d casterPos = caster.getEntityPos();
+            double nearest = Double.POSITIVE_INFINITY;
+            for (BlockPos pos : existing.blockPositions) {
+                double d = casterPos.distanceTo(Vec3d.ofCenter(pos));
+                if (d < nearest) nearest = d;
+            }
+            if (nearest <= SHATTER_TRIGGER_DISTANCE) {
+                executeShatter(world, caster, stack, existing);
+            }
+            return;
+        }
+
         if (!AbstractWandItem.tryStartCooldown(world, caster, stack, AbstractWandItem.Ability.SECONDARY, getSecondaryCooldownTicks()))
             return;
 
-        // Place 4x4 vertical wall 2 blocks in front
+        // Place 4-wide x 3-tall vertical wall 2 blocks in front
         Vec3d forward = horizontalForward(caster);
         Vec3d right = new Vec3d(-forward.z, 0, forward.x);
         BlockPos center = BlockPos.ofFloored(caster.getX() + forward.x * 2, caster.getY() + 1,
                 caster.getZ() + forward.z * 2);
 
         List<BlockPos> wallBlocks = new ArrayList<>();
-        // Make it 4 blocks wide (-1 to 2) and 4 blocks high (-1 to 2)
         for (int x = -1; x <= 2; x++) {
-            for (int y = -1; y <= 2; y++) {
+            for (int y = -1; y <= 1; y++) {
                 wallBlocks.add(center.add((int) Math.round(right.x * x), y, (int) Math.round(right.z * x)));
             }
         }
 
         TemporaryBlockManager.placeTemporaryBlocks(world, wallBlocks, Blocks.STONE.getDefaultState(),
                 WALL_DURATION, state -> state.isAir() || state.isReplaceable());
-        ACTIVE_WALLS.put(caster.getUuid(), new WallData(center, world.getServer().getTicks()));
+        ACTIVE_WALLS.put(caster.getUuid(), new WallData(center, world.getServer().getTicks(), wallBlocks));
 
         world.playSound(null, center, SoundEvents.BLOCK_STONE_PLACE, SoundCategory.PLAYERS, 1.0f, 1.0f);
         world.spawnParticles(ParticleTypes.CLOUD, center.getX(), center.getY(), center.getZ(), 25, 1.0, 1.0, 1.0, 0.02);
+    }
+
+    private static void executeShatter(ServerWorld world, PlayerEntity caster, ItemStack stack, WallData wall) {
+        BlockState stoneState = Blocks.STONE.getDefaultState();
+        for (BlockPos pos : wall.blockPositions) {
+            if (world.getBlockState(pos).isOf(Blocks.STONE)) {
+                world.setBlockState(pos, Blocks.AIR.getDefaultState());
+            }
+        }
+
+        ACTIVE_WALLS.remove(caster.getUuid());
+
+        Vec3d coneOrigin = Vec3d.ofCenter(wall.center);
+        Vec3d lookDir = caster.getRotationVec(1.0f).normalize();
+
+        Box searchBox = new Box(coneOrigin, coneOrigin).expand(SHATTER_CONE_LENGTH);
+        List<LivingEntity> candidates = world.getEntitiesByClass(LivingEntity.class, searchBox,
+                e -> e.isAlive() && !e.isSpectator() && e != caster);
+
+        for (LivingEntity target : candidates) {
+            Vec3d toTarget = target.getEntityPos().subtract(coneOrigin);
+            double distance = toTarget.length();
+            if (distance > SHATTER_CONE_LENGTH || distance < 1.0e-4)
+                continue;
+            if (toTarget.normalize().dotProduct(lookDir) < SHATTER_CONE_HALF_ANGLE_COS)
+                continue;
+
+            boolean damaged = target.damage(world, world.getDamageSources().playerAttack(caster), SHATTER_DAMAGE);
+            if (damaged) {
+                AbstractWandItem.onWandDamageDealt(caster, SHATTER_DAMAGE);
+            }
+            target.addVelocity(lookDir.x * SHATTER_HORIZONTAL_KNOCKBACK,
+                    SHATTER_VERTICAL_KNOCKBACK,
+                    lookDir.z * SHATTER_HORIZONTAL_KNOCKBACK);
+            target.velocityModified = true;
+        }
+
+        long now = world.getTime();
+        NbtComponent.set(DataComponentTypes.CUSTOM_DATA, stack, data -> {
+            data.putLong("ew_last_secondary", now);
+            data.putLong("ew_last_global", now);
+        });
+
+        BlockStateParticleEffect stoneParticle = new BlockStateParticleEffect(ParticleTypes.BLOCK, stoneState);
+
+        for (BlockPos pos : wall.blockPositions) {
+            world.spawnParticles(stoneParticle,
+                    pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+                    5, 0.3, 0.3, 0.3, 0.05);
+        }
+
+        // Perpendicular basis for cone-streamer spread
+        Vec3d perpA;
+        if (Math.abs(lookDir.y) < 0.99) {
+            perpA = lookDir.crossProduct(new Vec3d(0.0, 1.0, 0.0)).normalize();
+        } else {
+            perpA = lookDir.crossProduct(new Vec3d(1.0, 0.0, 0.0)).normalize();
+        }
+        Vec3d perpB = lookDir.crossProduct(perpA).normalize();
+        net.minecraft.util.math.random.Random rng = world.getRandom();
+
+        for (double d = 1.0; d <= 7.0; d += 0.5) {
+            Vec3d axisPoint = coneOrigin.add(lookDir.multiply(d));
+            for (int i = 0; i < 3; i++) {
+                double offA = (rng.nextDouble() - 0.5) * 0.6;
+                double offB = (rng.nextDouble() - 0.5) * 0.6;
+                Vec3d p = axisPoint.add(perpA.multiply(offA)).add(perpB.multiply(offB));
+                world.spawnParticles(stoneParticle,
+                        p.x, p.y, p.z,
+                        1,
+                        lookDir.x * 0.15, lookDir.y * 0.15, lookDir.z * 0.15,
+                        0.1);
+            }
+        }
+
+        for (int i = 0; i < 20; i++) {
+            double t = (i / 19.0) * 7.0 + 0.5;
+            Vec3d p = coneOrigin.add(lookDir.multiply(t));
+            world.spawnParticles(ParticleTypes.CLOUD,
+                    p.x, p.y, p.z,
+                    1, 0.2, 0.2, 0.2, 0.02);
+        }
+
+        world.playSound(null, wall.center, SoundEvents.BLOCK_STONE_BREAK, SoundCategory.PLAYERS, 1.2f, 1.0f);
+        world.playSound(null, wall.center, SoundEvents.ENTITY_RAVAGER_ROAR, SoundCategory.PLAYERS, 0.9f, 0.6f);
     }
 
     public static void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {

@@ -1,261 +1,133 @@
 package com.anton.elementalwands.item;
 
+import java.util.List;
+import java.util.UUID;
+
+import com.anton.elementalwands.entity.BrinicleShardProjectileEntity;
+import com.anton.elementalwands.util.BrinicleShardManager;
+import com.anton.elementalwands.util.TendrilBloomManager;
+import com.anton.elementalwands.util.WhiteoutManager;
+
 import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.ProjectileEntity;
+import net.minecraft.fluid.Fluids;
 import net.minecraft.item.ItemStack;
-import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.hit.HitResult;
+import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
-import com.anton.elementalwands.entity.ChillSnowballEntity;
-import com.anton.elementalwands.registry.ModEntities;
-import com.anton.elementalwands.util.BlizzardManager;
-import com.anton.elementalwands.util.ChillTracker;
-
 public final class IceAbilityHandler {
 
-    // Primary: Frost-Bite Volley with Shatter
-    private static final float SHARD_BASE_DAMAGE = 2.0f;
-    private static final float SHARD_SHATTER_DAMAGE = 4.0f;
-    private static final int SHATTER_THRESHOLD_STACKS = 3;
-    private static final int SHATTER_AOE_RADIUS = 3; // blocks
-    private static final float SHATTER_AOE_DAMAGE = 2.0f;
-    private static final int SHATTER_AOE_FROST_STACKS = 1; // Apply 1 Frost stack to AoE targets
+    private static final int PRIMARY_COOLDOWN_TICKS = 25;
+    private static final int SECONDARY_COOLDOWN_TICKS = 300;
+    private static final double TENDRIL_TARGET_RANGE = 15.0;
 
-    // Secondary: Glacial Gust
-    private static final float GUST_DAMAGE = 4.0f;
-    private static final int GUST_LIFETIME = 15; // 15 ticks ~ 0.75s
-
-    private IceAbilityHandler() {}
+    private IceAbilityHandler() {
+    }
 
     public static int getPrimaryCooldownTicks() {
-        return AbstractWandItem.DEFAULT_PRIMARY_COOLDOWN_TICKS;
+        return PRIMARY_COOLDOWN_TICKS;
     }
 
     public static int getSecondaryCooldownTicks() {
-        return AbstractWandItem.DEFAULT_SECONDARY_COOLDOWN_TICKS;
+        return SECONDARY_COOLDOWN_TICKS;
+    }
+
+    public static void inventoryTick(ItemStack stack, ServerWorld world, Entity entity, EquipmentSlot slot) {
+        if (slot != EquipmentSlot.MAINHAND && slot != EquipmentSlot.OFFHAND) return;
+        if (!(entity instanceof PlayerEntity player) || player.isSpectator()) return;
+
+        BlockPos base = player.getBlockPos().down();
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                BlockPos pos = base.add(dx, 0, dz);
+                BlockState state = world.getBlockState(pos);
+                if (!state.getFluidState().isOf(Fluids.WATER)) continue;
+                BlockState frosted = Blocks.FROSTED_ICE.getDefaultState();
+                if (!frosted.canPlaceAt(world, pos)) continue;
+                world.setBlockState(pos, frosted, 3);
+            }
+        }
     }
 
     public static void castPrimary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!AbstractWandItem.tryStartCooldown(world, caster, stack, AbstractWandItem.Ability.PRIMARY, getPrimaryCooldownTicks()))
+        if (!AbstractWandItem.tryStartCooldown(world, caster, stack,
+                AbstractWandItem.Ability.PRIMARY, getPrimaryCooldownTicks())) {
             return;
-
-        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_SNOWBALL_THROW, SoundCategory.PLAYERS, 0.5F,
-                0.4F / (world.getRandom().nextFloat() * 0.4F + 0.8F));
-
-        // Fire 3 snowballs as volley
-        for (int i = 0; i < 3; i++) {
-            // Create custom snowball that checks for shatter
-            ChillSnowballEntityWithShatter snowball = new ChillSnowballEntityWithShatter(world, caster);
-            snowball.setPosition(caster.getEyePos().x, caster.getEyePos().y, caster.getEyePos().z);
-            snowball.setVelocity(caster, caster.getPitch(), caster.getYaw(), 0.0F, 1.5F, 4.0F); // 4.0F divergence for
-                                                                                                // volley spread
-            world.spawnEntity(snowball);
         }
+
+        BrinicleShardProjectileEntity shard = new BrinicleShardProjectileEntity(world, caster);
+        world.spawnEntity(shard);
+
+        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_SNOWBALL_THROW,
+                SoundCategory.PLAYERS, 0.7f, 0.6f);
     }
 
     public static void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!AbstractWandItem.tryStartCooldown(world, caster, stack, AbstractWandItem.Ability.SECONDARY, getSecondaryCooldownTicks()))
+        UUID casterUuid = caster.getUuid();
+        List<BrinicleShardManager.ShardSnapshot> shards = BrinicleShardManager.getActiveShardsForCaster(world, casterUuid);
+        if (shards.isEmpty()) {
+            caster.sendMessage(Text.literal("No active shards."), true);
             return;
-
-        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_SNOW_GOLEM_SHOOT, SoundCategory.PLAYERS, 1.0F,
-                0.5F);
-        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 0.8F,
-                1.2F);
-
-        // Fire 5 horizontal projectiles for Glacial Gust
-        for (int i = 0; i < 5; i++) {
-            float yawOffset = (i - 2) * 15.0f; // -30, -15, 0, 15, 30 spread
-            ColdWaveProjectile projectile = new ColdWaveProjectile(world, caster, new Vec3d(0, 0, 0), yawOffset);
-            world.spawnEntity(projectile);
         }
+
+        if (!AbstractWandItem.tryStartCooldown(world, caster, stack,
+                AbstractWandItem.Ability.SECONDARY, getSecondaryCooldownTicks())) {
+            return;
+        }
+
+        int now = world.getServer().getTicks();
+
+        for (BrinicleShardManager.ShardSnapshot s : shards) {
+            LivingEntity target = findNearestTarget(world, caster, s.anchorPos());
+            if (target != null) {
+                Vec3d anchorVec = Vec3d.ofCenter(s.anchorPos());
+                TendrilBloomManager.startTendril(world, caster, s.shardId(), anchorVec, target);
+            }
+        }
+
+        BrinicleShardManager.markShardsForConsumption(world, casterUuid, now);
+
+        world.playSound(null, caster.getBlockPos(), SoundEvents.BLOCK_GLASS_BREAK,
+                SoundCategory.PLAYERS, 0.6f, 1.4f);
     }
 
     public static void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!AbstractWandItem.trySpendUltimateCharge(world, caster, stack))
+        if (!AbstractWandItem.trySpendUltimateCharge(world, caster, stack)) {
             return;
-
-        HitResult hit = AbstractWandItem.raycast(world, caster, AbstractWandItem.DEFAULT_RANGE);
-        Vec3d center = hit.getType() == HitResult.Type.MISS ? caster.getEntityPos() : hit.getPos();
-
-        BlizzardManager.startBlizzard(world, caster, center);
-        world.playSound(null, BlockPos.ofFloored(center), SoundEvents.ENTITY_ENDER_DRAGON_GROWL, SoundCategory.PLAYERS,
-                1.0f, 0.6f);
+        }
+        WhiteoutManager.startWhiteout(world, caster);
     }
 
-    // Custom snowball that implements shatter mechanic
-    private static class ChillSnowballEntityWithShatter extends ChillSnowballEntity {
-        public ChillSnowballEntityWithShatter(ServerWorld world, LivingEntity owner) {
-            super(ModEntities.CHILL_SNOWBALL, world);
-            setOwner(owner);
+    private static LivingEntity findNearestTarget(ServerWorld world, PlayerEntity caster, BlockPos anchor) {
+        Vec3d anchorCenter = Vec3d.ofCenter(anchor);
+        double rangeSq = TENDRIL_TARGET_RANGE * TENDRIL_TARGET_RANGE;
+
+        Box box = new Box(
+                anchorCenter.x - TENDRIL_TARGET_RANGE, anchorCenter.y - TENDRIL_TARGET_RANGE, anchorCenter.z - TENDRIL_TARGET_RANGE,
+                anchorCenter.x + TENDRIL_TARGET_RANGE, anchorCenter.y + TENDRIL_TARGET_RANGE, anchorCenter.z + TENDRIL_TARGET_RANGE);
+
+        List<LivingEntity> candidates = world.getEntitiesByClass(LivingEntity.class, box,
+                e -> e.isAlive() && !e.isSpectator() && !e.getUuid().equals(caster.getUuid()));
+
+        LivingEntity best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (LivingEntity e : candidates) {
+            double d = e.getEntityPos().squaredDistanceTo(anchorCenter);
+            if (d > rangeSq) continue;
+            if (d < bestDist) {
+                bestDist = d;
+                best = e;
+            }
         }
-
-        @Override
-        protected void onEntityHit(EntityHitResult entityHitResult) {
-            if (!(getEntityWorld() instanceof ServerWorld sw)) {
-                super.onEntityHit(entityHitResult);
-                return;
-            }
-
-            Entity entity = entityHitResult.getEntity();
-            if (entity instanceof LivingEntity living) {
-                // Check Frost stacks before applying new stack
-                int currentStacks = ChillTracker.getStacks(living);
-
-                // Apply frost stack first (from parent class)
-                ChillTracker.addStack(sw, living);
-
-                // Check for shatter (3+ stacks)
-                if (currentStacks >= SHATTER_THRESHOLD_STACKS) {
-                    // SHATTER!
-                    triggerShatter(sw, living);
-                } else {
-                    // Normal hit - deal base damage
-                    boolean damaged = living.damage(sw, sw.getDamageSources().thrown(this, getOwner()), SHARD_BASE_DAMAGE);
-                    if (damaged) {
-                        AbstractWandItem.onWandDamageDealt(getOwner(), SHARD_BASE_DAMAGE);
-                    }
-                }
-
-                // Particles
-                sw.spawnParticles(ParticleTypes.SNOWFLAKE, living.getX(), living.getBodyY(0.5), living.getZ(), 12, 0.35,
-                        0.35, 0.35, 0.02);
-            }
-
-            // Don't call super - we handle everything here
-            discard();
-        }
-
-        private void triggerShatter(ServerWorld world, LivingEntity target) {
-            // Deal increased shatter damage
-            boolean shatterDamaged = target.damage(world, world.getDamageSources().thrown(this, getOwner()), SHARD_SHATTER_DAMAGE);
-            if (shatterDamaged) {
-                AbstractWandItem.onWandDamageDealt(getOwner(), SHARD_SHATTER_DAMAGE);
-            }
-
-            // Clear frost stacks
-            ChillTracker.clearFrostStacks(world, target);
-
-            // AoE ice burst - damage and apply frost to nearby enemies
-            Box aoeBox = Box.of(target.getEntityPos(), SHATTER_AOE_RADIUS * 2, SHATTER_AOE_RADIUS * 2,
-                    SHATTER_AOE_RADIUS * 2);
-            List<LivingEntity> nearbyEntities = world.getEntitiesByClass(LivingEntity.class, aoeBox,
-                    e -> e != target && e.squaredDistanceTo(target) <= SHATTER_AOE_RADIUS * SHATTER_AOE_RADIUS);
-
-            for (LivingEntity nearby : nearbyEntities) {
-                // Deal AoE damage
-                nearby.damage(world, world.getDamageSources().magic(), SHATTER_AOE_DAMAGE);
-
-                // Apply Frost stack
-                for (int i = 0; i < SHATTER_AOE_FROST_STACKS; i++) {
-                    ChillTracker.addStack(world, nearby);
-                }
-            }
-
-            // Dramatic shatter particles and sound
-            world.spawnParticles(
-                    ParticleTypes.SNOWFLAKE,
-                    target.getX(), target.getBodyY(0.5), target.getZ(),
-                    50, 1.0, 1.0, 1.0, 0.15);
-            world.spawnParticles(
-                    ParticleTypes.EXPLOSION,
-                    target.getX(), target.getBodyY(0.5), target.getZ(),
-                    3, 0.2, 0.2, 0.2, 0.0);
-            world.playSound(
-                    null,
-                    target.getBlockPos(),
-                    SoundEvents.BLOCK_GLASS_BREAK,
-                    SoundCategory.PLAYERS,
-                    1.5f, 0.8f);
-        }
-    }
-
-    // Custom projectile for Glacial Gust
-    private static class ColdWaveProjectile extends ProjectileEntity {
-        private Vec3d startPos;
-        private final Set<Entity> hitEntities = new HashSet<>();
-        private int ticksAlive = 0;
-
-        public ColdWaveProjectile(ServerWorld world, LivingEntity owner, Vec3d offset, float yawOffset) {
-            super(ModEntities.VACUUM_BLADE, world);
-            setOwner(owner);
-            setNoGravity(true);
-
-            Vec3d spawnPos = owner.getEyePos().add(offset);
-            setPosition(spawnPos.x, spawnPos.y, spawnPos.z);
-            this.startPos = spawnPos;
-
-            float yaw = owner.getYaw() + yawOffset;
-            Vec3d direction = Vec3d.fromPolar(owner.getPitch(), yaw).normalize(); // Use pitch for vertical aiming
-            setVelocity(direction.multiply(1.5));
-        }
-
-        @Override
-        protected void initDataTracker(net.minecraft.entity.data.DataTracker.Builder builder) {
-        }
-
-        @Override
-        public void tick() {
-            super.tick();
-            if (!(getEntityWorld() instanceof ServerWorld sw))
-                return;
-
-            ticksAlive++;
-            if (ticksAlive > GUST_LIFETIME) {
-                discard();
-                return;
-            }
-
-            // Particles
-            sw.spawnParticles(ParticleTypes.CLOUD, getX(), getY(), getZ(), 6, 0.3, 0.3, 0.3, 0.05);
-            sw.spawnParticles(ParticleTypes.ITEM_SNOWBALL, getX(), getY(), getZ(), 3, 0.3, 0.3, 0.3, 0.05);
-
-            // Piercing collision check
-            Box hitBox = getBoundingBox().expand(0.5);
-            List<LivingEntity> targets = sw.getEntitiesByClass(LivingEntity.class, hitBox,
-                    e -> e != getOwner() && e.isAlive() && !hitEntities.contains(e));
-
-            for (LivingEntity target : targets) {
-                hitEntities.add(target);
-
-                boolean gustDamaged = target.damage(sw, sw.getDamageSources().magic(), GUST_DAMAGE);
-                if (gustDamaged) {
-                    AbstractWandItem.onWandDamageDealt(getOwner(), GUST_DAMAGE);
-                }
-
-                int stacks = ChillTracker.getStacks(target);
-                if (stacks >= 2) {
-                    target.addStatusEffect(
-                            new StatusEffectInstance(StatusEffects.SLOWNESS, 40, 255, false, true, true));
-                } else {
-                    target.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 50, 4, false, true, true));
-                }
-            }
-
-            // Block collision - ignore small blocks
-            BlockPos pos = getBlockPos();
-            BlockState state = sw.getBlockState(pos);
-            if (state.isSolidBlock(sw, pos) && state.isFullCube(sw, pos)) {
-                discard();
-            }
-
-            Vec3d vel = getVelocity();
-            setPosition(getX() + vel.x, getY() + vel.y, getZ() + vel.z);
-        }
+        return best;
     }
 }

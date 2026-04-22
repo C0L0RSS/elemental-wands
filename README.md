@@ -2,7 +2,7 @@
 
 Elemental Wands is a Fabric mod that adds five combat wands (Fire, Wind, Stone, Ice, Space) plus a Titan Sword.
 
-Current mod version: `2.1.0`
+Current mod version: `2.2.0`
 
 ## Requirements
 
@@ -42,9 +42,10 @@ All wands share a short global cooldown and individual per-ability cooldowns. A 
 
 ### Ice Wand
 
-- Primary: **Frost-Bite Volley** (3-shot spread, Frost stacks, Shatter interaction)
-- Secondary: **Permafrost Spikes** (temporary packed-ice eruptions)
-- Ultimate: **Blizzard**
+- Primary: **Brinicle Shards** (ice projectile — damage on direct hit, plants a lingering frost anchor on surface hit)
+- Secondary: **Tendril Bloom** (triggers planted shards into homing snow tendrils that bloom around targets)
+- Ultimate: **Whiteout** (stationary fog zone — Darkness inside, amplifies your nearby shards)
+- Passive while held: frostwalk
 
 ### Space Wand
 
@@ -66,8 +67,8 @@ From the project root:
 
 Build artifacts are written to:
 
-- `build/libs/elementalwands-2.1.0.jar`
-- `build/libs/elementalwands-2.1.0-sources.jar`
+- `build/libs/elementalwands-2.2.0.jar`
+- `build/libs/elementalwands-2.2.0-sources.jar`
 
 Install the mod jar by placing it in your Minecraft mods folder:
 

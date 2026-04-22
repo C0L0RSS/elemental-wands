@@ -13,30 +13,44 @@ No test suite exists. After any code change, run `./gradlew build` to verify com
 
 ### Deploying after a build
 
-After `./gradlew build` succeeds, copy `build/libs/elementalwands-2.1.0.jar` to all three locations:
+After `./gradlew build` succeeds, copy `build/libs/elementalwands-2.1.0.jar` to two locations inside the Feather data directory:
 
+1. **Feather client mod folder** — the jar Feather loads into the game:
+   - Windows: `%APPDATA%\.feather\user-mods\1.21.10-fabric\elementalwands-2.1.0.jar`
+   - macOS: `~/Library/Application Support/.feather/user-mods/1.21.10-fabric/elementalwands-2.1.0.jar`
+2. **Feather player-server mods folder** — the jar the local test server loads:
+   - Windows: `%APPDATA%\.feather\player-server\servers\<SERVER-UUID>\mods\elementalwands-2.1.0.jar`
+   - macOS: `~/Library/Application Support/.feather/player-server/servers/<SERVER-UUID>/mods/elementalwands-2.1.0.jar`
+
+**Current active player-server UUID:** `6dab8e0e-d0dd-40f4-8062-985f17cbf0ca` (Fabric 1.21.10, 7038 MB). If unsure, check `%APPDATA%\.feather\player-server\player-servers.json` — each entry's `id` is the folder name under `servers/`.
+
+Note: `%APPDATA%\.feather\mods\` only contains `feather-mods.json` (manifest) — **do not drop the jar there**. The real client jar location is `user-mods/1.21.10-fabric/`.
+
+Restart the game/server after replacing jars for changes to take effect.
+
+**Windows (bash/Git Bash) one-liner:**
+
+```bash
+SRC="build/libs/elementalwands-2.1.0.jar"
+cp "$SRC" "$APPDATA/.feather/user-mods/1.21.10-fabric/elementalwands-2.1.0.jar"
+cp "$SRC" "$APPDATA/.feather/player-server/servers/6dab8e0e-d0dd-40f4-8062-985f17cbf0ca/mods/elementalwands-2.1.0.jar"
 ```
-~/Library/Application Support/feather/mods/elementalwands-2.1.0.jar
-~/Library/Application Support/feather/user-mods/1.21.10-fabric/elementalwands-2.1.0.jar
-~/Library/Application Support/feather/player-server/servers/cb0dcfe6-44d4-4c0d-a1de-e2f201ed69cd/mods/elementalwands-2.1.0.jar
-```
 
-- `feather/mods/` — what Feather actually loads into the game client
-- `feather/user-mods/1.21.10-fabric/` — Feather's user mod list (keeps it in sync)
-- `player-server/.../mods/` — the local Feather test server
-
-Restart the game/server after replacing jars for changes to take effect. Use Python for the copy since the project directory name contains a Unicode narrow no-break space (U+202F) that breaks normal shell `cd`:
+**Cross-platform Python fallback:**
 
 ```python
-import shutil, pathlib
-jar = pathlib.Path('/Users/antonlabas/Desktop/elementalwands 9.13.44\u202fAM/build/libs/elementalwands-2.1.0.jar')
+import shutil, pathlib, os, sys
+jar = pathlib.Path('build/libs/elementalwands-2.1.0.jar').resolve()
+server_uuid = '6dab8e0e-d0dd-40f4-8062-985f17cbf0ca'
+feather = pathlib.Path(os.environ['APPDATA']) / '.feather' if sys.platform == 'win32' \
+    else pathlib.Path('~/Library/Application Support/.feather').expanduser()
 targets = [
-    '~/Library/Application Support/feather/mods/elementalwands-2.1.0.jar',
-    '~/Library/Application Support/feather/user-mods/1.21.10-fabric/elementalwands-2.1.0.jar',
-    '~/Library/Application Support/feather/player-server/servers/cb0dcfe6-44d4-4c0d-a1de-e2f201ed69cd/mods/elementalwands-2.1.0.jar',
+    feather / 'user-mods' / '1.21.10-fabric' / jar.name,
+    feather / 'player-server' / 'servers' / server_uuid / 'mods' / jar.name,
 ]
 for t in targets:
-    shutil.copy2(str(jar), str(pathlib.Path(t).expanduser()))
+    shutil.copy2(jar, t)
+    print('wrote', t)
 ```
 
 ## Package Structure

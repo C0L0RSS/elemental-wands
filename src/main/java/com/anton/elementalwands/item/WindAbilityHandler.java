@@ -28,7 +28,7 @@ public final class WindAbilityHandler {
     private static final double VACUUM_BLADE_OFFSET = 0.5; // Distance between two blades
 
     // Secondary: Waylay Dash
-    private static final int DASH_MAX_CHARGES = 3;
+    private static final int DASH_MAX_CHARGES = 2;
     private static final int DASH_RECHARGE_TICKS = 80;
     private static final int DASH_CHAIN_WINDOW_TICKS = 30; // 1.5 seconds
     private static final float DASH_BASE_STRENGTH = 2.0f;

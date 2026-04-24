@@ -13,14 +13,14 @@ No test suite exists. After any code change, run `./gradlew build` to verify com
 
 ### Deploying after a build
 
-After `./gradlew build` succeeds, copy `build/libs/elementalwands-2.1.0.jar` to two locations inside the Feather data directory:
+After `./gradlew build` succeeds, copy `build/libs/elementalwands-2.2.0.jar` to two locations inside the Feather data directory:
 
 1. **Feather client mod folder** — the jar Feather loads into the game:
-   - Windows: `%APPDATA%\.feather\user-mods\1.21.10-fabric\elementalwands-2.1.0.jar`
-   - macOS: `~/Library/Application Support/.feather/user-mods/1.21.10-fabric/elementalwands-2.1.0.jar`
+   - Windows: `%APPDATA%\.feather\user-mods\1.21.10-fabric\elementalwands-2.2.0.jar`
+   - macOS: `~/Library/Application Support/.feather/user-mods/1.21.10-fabric/elementalwands-2.2.0.jar`
 2. **Feather player-server mods folder** — the jar the local test server loads:
-   - Windows: `%APPDATA%\.feather\player-server\servers\<SERVER-UUID>\mods\elementalwands-2.1.0.jar`
-   - macOS: `~/Library/Application Support/.feather/player-server/servers/<SERVER-UUID>/mods/elementalwands-2.1.0.jar`
+   - Windows: `%APPDATA%\.feather\player-server\servers\<SERVER-UUID>\mods\elementalwands-2.2.0.jar`
+   - macOS: `~/Library/Application Support/.feather/player-server/servers/<SERVER-UUID>/mods/elementalwands-2.2.0.jar`
 
 **Current active player-server UUID:** `6dab8e0e-d0dd-40f4-8062-985f17cbf0ca` (Fabric 1.21.10, 7038 MB). If unsure, check `%APPDATA%\.feather\player-server\player-servers.json` — each entry's `id` is the folder name under `servers/`.
 
@@ -31,16 +31,16 @@ Restart the game/server after replacing jars for changes to take effect.
 **Windows (bash/Git Bash) one-liner:**
 
 ```bash
-SRC="build/libs/elementalwands-2.1.0.jar"
-cp "$SRC" "$APPDATA/.feather/user-mods/1.21.10-fabric/elementalwands-2.1.0.jar"
-cp "$SRC" "$APPDATA/.feather/player-server/servers/6dab8e0e-d0dd-40f4-8062-985f17cbf0ca/mods/elementalwands-2.1.0.jar"
+SRC="build/libs/elementalwands-2.2.0.jar"
+cp "$SRC" "$APPDATA/.feather/user-mods/1.21.10-fabric/elementalwands-2.2.0.jar"
+cp "$SRC" "$APPDATA/.feather/player-server/servers/6dab8e0e-d0dd-40f4-8062-985f17cbf0ca/mods/elementalwands-2.2.0.jar"
 ```
 
 **Cross-platform Python fallback:**
 
 ```python
 import shutil, pathlib, os, sys
-jar = pathlib.Path('build/libs/elementalwands-2.1.0.jar').resolve()
+jar = pathlib.Path('build/libs/elementalwands-2.2.0.jar').resolve()
 server_uuid = '6dab8e0e-d0dd-40f4-8062-985f17cbf0ca'
 feather = pathlib.Path(os.environ['APPDATA']) / '.feather' if sys.platform == 'win32' \
     else pathlib.Path('~/Library/Application Support/.feather').expanduser()
@@ -158,7 +158,7 @@ Key files:
 3. If the ability needs a zone effect, create a manager in `util/` and register its tick callback.
 4. If a new entity is needed, register in `ModEntities.java`.
 
-## Known Issues (as of v2.1.0)
+## Known Issues (as of v2.2.0)
 
 - `CastPrimaryPayload` is registered server-side but never sent by the client.
 - `StoneWandItem.PRIMARY_COOLDOWN_TICKS = 60` is unused; `getPrimaryCooldownTicks()` returns `40`.

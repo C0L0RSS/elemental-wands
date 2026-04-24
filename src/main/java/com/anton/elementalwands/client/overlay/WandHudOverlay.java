@@ -3,6 +3,7 @@ package com.anton.elementalwands.client.overlay;
 import com.anton.elementalwands.client.ClientPlayerData;
 import com.anton.elementalwands.data.WizardAffinity;
 import com.anton.elementalwands.item.AbstractWandItem;
+import com.anton.elementalwands.item.IceAbilityHandler;
 import com.anton.elementalwands.item.SpaceAbilityHandler;
 import com.anton.elementalwands.item.StoneAbilityHandler;
 import com.anton.elementalwands.item.WindAbilityHandler;
@@ -93,6 +94,7 @@ public class WandHudOverlay implements HudRenderCallback {
         return switch (affinity) {
             case STONE -> StoneAbilityHandler.getPrimaryCooldownTicks();
             case SPACE -> SpaceAbilityHandler.getPrimaryCooldownTicks();
+            case ICE   -> IceAbilityHandler.getPrimaryCooldownTicks();
             default    -> AbstractWandItem.DEFAULT_PRIMARY_COOLDOWN_TICKS;
         };
     }
@@ -100,6 +102,7 @@ public class WandHudOverlay implements HudRenderCallback {
     private static int secondaryCooldownFor(WizardAffinity affinity) {
         return switch (affinity) {
             case SPACE -> SpaceAbilityHandler.getSecondaryCooldownTicks();
+            case ICE   -> IceAbilityHandler.getSecondaryCooldownTicks();
             default    -> AbstractWandItem.DEFAULT_SECONDARY_COOLDOWN_TICKS;
         };
     }

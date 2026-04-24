@@ -2,8 +2,8 @@ package com.anton.elementalwands.registry;
 
 import com.anton.elementalwands.ElementalWandsMod;
 import com.anton.elementalwands.entity.BoulderProjectileEntity;
+import com.anton.elementalwands.entity.BrinicleShardProjectileEntity;
 import com.anton.elementalwands.entity.CalamityTornadoEntity;
-import com.anton.elementalwands.entity.ChillSnowballEntity;
 import com.anton.elementalwands.entity.HollowPurpleOrbEntity;
 import com.anton.elementalwands.entity.InfernoWaveEntity;
 import com.anton.elementalwands.entity.SingularityBoltEntity;
@@ -35,15 +35,18 @@ public final class ModEntities {
                                                         Identifier.of(ElementalWandsMod.MOD_ID,
                                                                         "boulder_projectile"))));
 
-        public static final EntityType<ChillSnowballEntity> CHILL_SNOWBALL = Registry.register(
+        public static final EntityType<BrinicleShardProjectileEntity> BRINICLE_SHARD_PROJECTILE = Registry.register(
                         Registries.ENTITY_TYPE,
-                        Identifier.of(ElementalWandsMod.MOD_ID, "chill_snowball"),
-                        FabricEntityTypeBuilder.<ChillSnowballEntity>create(SpawnGroup.MISC, ChillSnowballEntity::new)
+                        Identifier.of(ElementalWandsMod.MOD_ID, "brinicle_shard_projectile"),
+                        FabricEntityTypeBuilder
+                                        .<BrinicleShardProjectileEntity>create(SpawnGroup.MISC,
+                                                        BrinicleShardProjectileEntity::new)
                                         .dimensions(EntityDimensions.fixed(0.25f, 0.25f))
                                         .trackRangeBlocks(64)
                                         .trackedUpdateRate(10)
                                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
-                                                        Identifier.of(ElementalWandsMod.MOD_ID, "chill_snowball"))));
+                                                        Identifier.of(ElementalWandsMod.MOD_ID,
+                                                                        "brinicle_shard_projectile"))));
 
         public static final EntityType<InfernoWaveEntity> INFERNO_WAVE = Registry.register(
                         Registries.ENTITY_TYPE,

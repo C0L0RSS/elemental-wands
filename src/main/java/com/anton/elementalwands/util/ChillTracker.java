@@ -46,7 +46,7 @@ public final class ChillTracker {
             }
         }
 
-        int newStacks = Math.min(currentStacks + 1, 6);
+        int newStacks = Math.min(currentStacks + 1, 5);
         map.put(target.getUuid(), new ChillData(newStacks, now));
 
         applyEffects(target, newStacks);
@@ -78,21 +78,10 @@ public final class ChillTracker {
     }
 
     private static void applyEffects(LivingEntity target, int stacks) {
-        // Deep Frozen: 6 stacks
-        if (stacks >= 6) {
-            // Total Immobilization: 30 ticks (approx 1.5s), max frozen ticks
-            target.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 30, 255, false, true, true)); // 255
-                                                                                                                  // puts
-                                                                                                                  // movement
-                                                                                                                  // to
-                                                                                                                  // 0
-            target.setFrozenTicks(target.getMinFreezeDamageTicks() + 100); // instant freeze damage range
-        } else {
-            // 1 stack = Slowness I (amplifer 0), 2 stacks = Slowness II (amplifier 1), etc.
-            // Duration refreshes to 60 ticks (3s)
-            target.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 60, stacks - 1, false, true, true));
-            target.setFrozenTicks(Math.min(target.getFrozenTicks() + 40, 300));
-        }
+        // 1 stack = Slowness I (amplifier 0), 2 stacks = Slowness II (amplifier 1), up to 5 = Slowness V.
+        // Duration refreshes to 60 ticks (3s)
+        target.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 60, stacks - 1, false, true, true));
+        target.setFrozenTicks(Math.min(target.getFrozenTicks() + 40, 300));
     }
 
     private static void tickWorld(ServerWorld world) {

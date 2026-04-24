@@ -106,7 +106,9 @@ Complex zone/state effects use static manager classes that tick via world tick e
 | `BlazeTrailManager` | Fire secondary runway |
 | `BlinkRiftManager` | Space secondary rift tracking |
 | `HollowPurpleChargeManager` | Space ultimate charge visuals |
-| `BlizzardManager` | Ice ultimate zone |
+| `BrinicleShardManager` | Ice primary shard plants + pulsing zones |
+| `TendrilBloomManager` | Ice secondary tendrils + blooms |
+| `WhiteoutManager` | Ice ultimate fog + shard amplification |
 | `ChillTracker` | Frost stack state per entity |
 | `TitanDomeManager` | Stone ultimate dome |
 | `TemporaryBlockManager` | Placed-block lifecycle (spikes, walls) |

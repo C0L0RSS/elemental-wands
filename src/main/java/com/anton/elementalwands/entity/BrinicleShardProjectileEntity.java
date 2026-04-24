@@ -14,10 +14,12 @@ import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.block.BlockState;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
 
 public class BrinicleShardProjectileEntity extends ProjectileEntity {
@@ -70,6 +72,26 @@ public class BrinicleShardProjectileEntity extends ProjectileEntity {
         sw.spawnParticles(ParticleTypes.ITEM_SNOWBALL, getX(), getY(), getZ(), 1, 0.05, 0.05, 0.05, 0.01);
 
         HitResult hit = ProjectileUtil.getCollision(this, this::canHit);
+        // ProjectileUtil uses COLLIDER raycasts, which skip non-collision blocks like
+        // flowers, tall grass, and saplings. Do a secondary OUTLINE raycast so the shard
+        // also registers a hit on those blocks (and uses whichever is closer to the start).
+        if (hit.getType() != HitResult.Type.ENTITY) {
+            Vec3d start = getEntityPos();
+            Vec3d end = start.add(getVelocity());
+            BlockHitResult outlineHit = sw.raycast(new RaycastContext(start, end,
+                    RaycastContext.ShapeType.OUTLINE,
+                    RaycastContext.FluidHandling.NONE, this));
+            if (outlineHit.getType() == HitResult.Type.BLOCK) {
+                BlockState outlineState = sw.getBlockState(outlineHit.getBlockPos());
+                if (!outlineState.isAir() && outlineState.getFluidState().isEmpty()) {
+                    if (hit.getType() == HitResult.Type.MISS
+                            || outlineHit.getPos().squaredDistanceTo(start)
+                                    < hit.getPos().squaredDistanceTo(start)) {
+                        hit = outlineHit;
+                    }
+                }
+            }
+        }
         if (hit.getType() != HitResult.Type.MISS) {
             onCollision(hit);
             return;

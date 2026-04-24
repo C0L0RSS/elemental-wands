@@ -30,6 +30,15 @@ public final class IceAbilityHandler {
     private static final int SECONDARY_COOLDOWN_TICKS = 300;
     private static final double TENDRIL_TARGET_RANGE = 15.0;
 
+    // Frost-walk freeze radius. The wider the area, the more headroom a sprinting
+    // (or boost-jumping) player has before they can outrun ice formation.
+    private static final int FROST_WALK_RADIUS = 4;
+    // Velocity multiplier used to bias the freeze area in the direction the player
+    // is moving. At sprint speed (~0.28 b/t) this leads ~1 block; with bigger boosts
+    // (riptide, elytra) it scales up to keep ice ahead of the player.
+    private static final double FROST_WALK_LEAD_TICKS = 4.0;
+    private static final int FROST_WALK_MAX_LEAD = 4;
+
     private IceAbilityHandler() {
     }
 
@@ -45,17 +54,30 @@ public final class IceAbilityHandler {
         if (slot != EquipmentSlot.MAINHAND && slot != EquipmentSlot.OFFHAND) return;
         if (!(entity instanceof PlayerEntity player) || player.isSpectator()) return;
 
-        BlockPos base = player.getBlockPos().down();
-        for (int dx = -2; dx <= 2; dx++) {
-            for (int dz = -2; dz <= 2; dz++) {
+        // Bias the freeze area in the player's horizontal travel direction so that ice
+        // forms ahead of a sprinting player and they don't briefly drop into water at
+        // the leading edge (the source of the rubber-banding).
+        Vec3d vel = player.getVelocity();
+        int leadX = clampLead((int) Math.round(vel.x * FROST_WALK_LEAD_TICKS));
+        int leadZ = clampLead((int) Math.round(vel.z * FROST_WALK_LEAD_TICKS));
+
+        BlockPos base = player.getBlockPos().add(leadX, 0, leadZ).down();
+        BlockState frosted = Blocks.FROSTED_ICE.getDefaultState();
+        for (int dx = -FROST_WALK_RADIUS; dx <= FROST_WALK_RADIUS; dx++) {
+            for (int dz = -FROST_WALK_RADIUS; dz <= FROST_WALK_RADIUS; dz++) {
                 BlockPos pos = base.add(dx, 0, dz);
                 BlockState state = world.getBlockState(pos);
                 if (!state.getFluidState().isOf(Fluids.WATER)) continue;
-                BlockState frosted = Blocks.FROSTED_ICE.getDefaultState();
                 if (!frosted.canPlaceAt(world, pos)) continue;
                 world.setBlockState(pos, frosted, 3);
             }
         }
+    }
+
+    private static int clampLead(int v) {
+        if (v > FROST_WALK_MAX_LEAD) return FROST_WALK_MAX_LEAD;
+        if (v < -FROST_WALK_MAX_LEAD) return -FROST_WALK_MAX_LEAD;
+        return v;
     }
 
     public static void castPrimary(ServerWorld world, PlayerEntity caster, ItemStack stack) {

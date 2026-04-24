@@ -294,7 +294,7 @@ public final class BrinicleShardManager {
                 int y = yCenter + dir * offset;
                 BlockPos pos = new BlockPos(x, y, z);
                 BlockState state = world.getBlockState(pos);
-                if (!state.isSolidBlock(world, pos)) continue;
+                if (!hasFloorTop(world, pos, state)) continue;
                 BlockState above = world.getBlockState(pos.up());
                 if (above.isAir() || above.isReplaceable()) {
                     return pos;
@@ -314,7 +314,7 @@ public final class BrinicleShardManager {
                 if (!state.getFluidState().isEmpty()) {
                     return y;
                 }
-                if (!state.isSolidBlock(world, pos)) continue;
+                if (!hasFloorTop(world, pos, state)) continue;
                 BlockState above = world.getBlockState(pos.up());
                 if (above.isAir() || above.isReplaceable()) {
                     return y;
@@ -322,6 +322,18 @@ public final class BrinicleShardManager {
             }
         }
         return Integer.MIN_VALUE;
+    }
+
+    /**
+     * Treats blocks with a flat solid top surface (dirt path, farmland, slabs, snow layers, etc.)
+     * as a valid floor in addition to ordinary full opaque cubes. {@code isSolidBlock} alone
+     * rejects partial-collision blocks like dirt path, which made the shard fail to plant on them.
+     */
+    private static boolean hasFloorTop(ServerWorld world, BlockPos pos, BlockState state) {
+        if (state.isAir()) return false;
+        if (!state.getFluidState().isEmpty()) return false;
+        if (state.isSolidBlock(world, pos)) return true;
+        return state.isSideSolidFullSquare(world, pos, Direction.UP);
     }
 
     private static void tickWorld(ServerWorld world) {

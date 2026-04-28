@@ -259,7 +259,7 @@ public final class WindAbilityHandler {
         // Display charge count and chain info to player
         if (caster instanceof ServerPlayerEntity) {
             String message = charges > 0
-                    ? String.format("§bDashes: %d/3 §7| §eChain: x%d", charges, chainCount + 1)
+                    ? String.format("§bDashes: %d/2 §7| §eChain: x%d", charges, chainCount + 1)
                     : "§cDash charges depleted!";
             caster.sendMessage(net.minecraft.text.Text.literal(message), true); // action bar
         }

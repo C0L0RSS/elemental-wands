@@ -192,7 +192,7 @@ Ability lock support:
 - Primary:
   - Dual `VacuumBladeEntity` projectiles with side offsets
 - Secondary (Waylay Dash):
-  - Charge system: 3 max, 80 ticks recharge each, chain window 30 ticks
+  - Charge system: 2 max, 80 ticks recharge each, chain window 30 ticks
   - Not using `tryStartCooldown` (charge-based logic)
   - Disabled while Zephyr Strike active
 - Ultimate (Zephyr Strike):

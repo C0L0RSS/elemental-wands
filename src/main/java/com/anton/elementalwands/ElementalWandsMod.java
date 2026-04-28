@@ -154,11 +154,11 @@ public class ElementalWandsMod implements ModInitializer {
                                 .then(CommandManager.literal("reset")
                                         .executes(ctx -> handleAffinityReset(ctx.getSource())))));
 
-            // ── /ew admin unlock|unlockall <player> (op-only, no cost) ───
+            // ── /ew admin unlock|unlockall <player> (cheats-on, no cost) ───
             dispatcher.register(
                 CommandManager.literal("ew")
                         .then(CommandManager.literal("admin")
-                                .requires(src -> src.hasPermissionLevel(2))
+                                .requires(src -> src.hasPermissionLevel(0))
                                 .then(CommandManager.literal("unlock")
                                         .then(CommandManager.literal("secondary")
                                                 .then(CommandManager.argument("player", EntityArgumentType.player())
@@ -433,7 +433,7 @@ public class ElementalWandsMod implements ModInitializer {
         MutableText page = Text.literal("Choose Your Path\n\n")
                 .formatted(Formatting.DARK_PURPLE, Formatting.BOLD);
         page.append(Text.literal(
-                "You are an unawakened wizard. Choose your elemental affinity below. This choice defines your magic.\n\n")
+                "Choose your elemental affinity:\n\n")
                 .formatted(Formatting.BLACK));
         page.append(buildAffinityButton("FIRE",  Formatting.RED));
         page.append(Text.literal("\n"));

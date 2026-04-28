@@ -21,7 +21,7 @@ public class VacuumBladeEntity extends ProjectileEntity {
 
     private static final float DAMAGE = 5.0f;
     private static final double PROJECTILE_SPEED = 2.5;
-    private static final int MAX_TRAVEL_DISTANCE = 20;
+    private static final int MAX_TRAVEL_DISTANCE = 5;
 
     private Vec3d startPos;
 

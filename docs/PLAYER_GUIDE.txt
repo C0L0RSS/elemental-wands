@@ -110,7 +110,7 @@ WIND WAND
     Fires two parallel crescent wind blades side by side.
 
   Secondary — Waylay Dash
-    A short-range directional dash with 3 charges that regenerate over time.
+    A short-range directional dash with 2 charges that regenerate over time.
     Dashing again within 1.5 seconds of the last dash chains it — each chain
     makes the next dash faster and stronger. Applies Slow Falling after each dash.
 

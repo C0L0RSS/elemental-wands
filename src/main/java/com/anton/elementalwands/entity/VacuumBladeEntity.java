@@ -19,9 +19,10 @@ import net.minecraft.world.World;
 
 public class VacuumBladeEntity extends ProjectileEntity {
 
-    private static final float DAMAGE = 5.0f;
+    private static final float MAX_DAMAGE = 5.0f;
+    private static final float MIN_DAMAGE = 1.5f;
     private static final double PROJECTILE_SPEED = 2.5;
-    private static final int MAX_TRAVEL_DISTANCE = 5;
+    private static final int MAX_TRAVEL_DISTANCE = 20;
 
     private Vec3d startPos;
 
@@ -91,14 +92,18 @@ public class VacuumBladeEntity extends ProjectileEntity {
         Entity target = entityHitResult.getEntity();
         Entity owner = getOwner();
 
-        // Deal damage
+        // Deal damage with linear falloff: MAX_DAMAGE at point-blank, MIN_DAMAGE at MAX_TRAVEL_DISTANCE
+        double traveled = startPos != null ? getEntityPos().distanceTo(startPos) : 0.0;
+        float t = (float) Math.min(1.0, traveled / MAX_TRAVEL_DISTANCE);
+        float damage = MAX_DAMAGE + (MIN_DAMAGE - MAX_DAMAGE) * t;
+
         DamageSource source = (owner instanceof LivingEntity livingOwner)
                 ? serverWorld.getDamageSources().thrown(this, livingOwner)
                 : serverWorld.getDamageSources().generic();
 
-        boolean damaged = target.damage(serverWorld, source, DAMAGE);
+        boolean damaged = target.damage(serverWorld, source, damage);
         if (damaged) {
-            com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(owner, DAMAGE);
+            com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(owner, damage);
         }
 
         // Apply weak knockback away from caster/projectile direction

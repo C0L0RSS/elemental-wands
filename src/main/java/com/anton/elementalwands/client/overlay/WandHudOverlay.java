@@ -4,11 +4,11 @@ import com.anton.elementalwands.client.ClientPlayerData;
 import com.anton.elementalwands.data.WizardAffinity;
 import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.item.FireAbilityHandler;
-import com.anton.elementalwands.item.IceAbilityHandler;
+import com.anton.elementalwands.item.NatureAbilityHandler;
 import com.anton.elementalwands.item.SpaceAbilityHandler;
 import com.anton.elementalwands.item.StoneAbilityHandler;
 import com.anton.elementalwands.item.WindAbilityHandler;
-import com.anton.elementalwands.util.ChillTracker;
+import com.anton.elementalwands.util.EntangleTracker;
 
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
@@ -95,7 +95,7 @@ public class WandHudOverlay implements HudRenderCallback {
         return switch (affinity) {
             case STONE -> StoneAbilityHandler.getPrimaryCooldownTicks();
             case SPACE -> SpaceAbilityHandler.getPrimaryCooldownTicks();
-            case ICE   -> IceAbilityHandler.getPrimaryCooldownTicks();
+            case NATURE -> NatureAbilityHandler.getPrimaryCooldownTicks();
             default    -> AbstractWandItem.DEFAULT_PRIMARY_COOLDOWN_TICKS;
         };
     }
@@ -104,7 +104,7 @@ public class WandHudOverlay implements HudRenderCallback {
         return switch (affinity) {
             case FIRE  -> FireAbilityHandler.getSecondaryCooldownTicks();
             case SPACE -> SpaceAbilityHandler.getSecondaryCooldownTicks();
-            case ICE   -> IceAbilityHandler.getSecondaryCooldownTicks();
+            case NATURE -> NatureAbilityHandler.getSecondaryCooldownTicks();
             default    -> AbstractWandItem.DEFAULT_SECONDARY_COOLDOWN_TICKS;
         };
     }
@@ -200,7 +200,7 @@ public class WandHudOverlay implements HudRenderCallback {
         long last    = nbt.getLong(key).orElse(-1_000_000_000L);
         long elapsed = now - last;
 
-        if (ChillTracker.getStacks(client.player) > 0) {
+        if (EntangleTracker.getStacks(client.player) > 0) {
             elapsed /= 2;
         }
 
@@ -320,7 +320,7 @@ public class WandHudOverlay implements HudRenderCallback {
             int renderX, int renderY, long now, AnimationProfile animation) {
         switch (theme) {
             case FIRE  -> drawFireCooldown(context, slotIndex, renderX, renderY, now, animation);
-            case ICE   -> drawIceCooldown(context, slotIndex, renderX, renderY, now, animation);
+            case NATURE -> drawNatureCooldown(context, slotIndex, renderX, renderY, now, animation);
             case WIND  -> drawWindCooldown(context, slotIndex, renderX, renderY, now, animation);
             case STONE -> drawStoneCooldown(context, slotIndex, renderX, renderY, now, animation);
             case SPACE -> drawSpaceCooldown(context, slotIndex, renderX, renderY, now, animation);
@@ -346,24 +346,28 @@ public class WandHudOverlay implements HudRenderCallback {
         context.fill(ringX, renderY + 1, ringX + 2, renderY + 3, scaledAlpha(0xAAFF7A29, animation.alpha));
     }
 
-    private void drawIceCooldown(DrawContext context, int slotIndex, int renderX, int renderY,
+    private void drawNatureCooldown(DrawContext context, int slotIndex, int renderX, int renderY,
             long now, AnimationProfile animation) {
         int cx = renderX + 18; int cy = renderY + 18;
-        int frost = scaledAlpha(0xAACCF6FF, animation.alpha);
-        context.fill(cx - 1, cy - 6, cx + 1, cy + 7, frost);
-        context.fill(cx - 6, cy - 1, cx + 7, cy + 1, frost);
-        context.fill(cx - 4, cy - 4, cx - 3, cy - 3, frost);
-        context.fill(cx + 3, cy + 3, cx + 4, cy + 4, frost);
-        context.fill(cx - 4, cy + 3, cx - 3, cy + 4, frost);
-        context.fill(cx + 3, cy - 4, cx + 4, cy - 3, frost);
-        int flakeCount = Math.max(2, Math.round(5 * animation.density));
-        for (int i = 0; i < flakeCount; i++) {
+        int leaf = scaledAlpha(0xCCA8E063, animation.alpha);
+        int stem = scaledAlpha(0xCC6FB23B, animation.alpha);
+        // Central stem rising up.
+        context.fill(cx, cy - 2, cx + 1, cy + 7, stem);
+        // Left leaf, angling up and out.
+        context.fill(cx - 5, cy - 1, cx - 2, cy + 1, leaf);
+        context.fill(cx - 4, cy - 4, cx - 1, cy - 1, leaf);
+        // Right leaf, mirrored.
+        context.fill(cx + 1, cy - 1, cx + 4, cy + 1, leaf);
+        context.fill(cx + 1, cy - 4, cx + 4, cy - 1, leaf);
+        // Drifting spores.
+        int sporeCount = Math.max(2, Math.round(5 * animation.density));
+        for (int i = 0; i < sporeCount; i++) {
             int px = renderX + 8 + (int) ((now * animation.speed + slotIndex * 9L + i * 11L) % 18L);
             int py = renderY + 9 + (int) (((now * (0.4f + animation.speed * 0.7f)) + i * 5L) % 16L);
-            context.fill(px, py, px + 1, py + 1, scaledAlpha(0xCCEAFCFF, animation.alpha));
+            context.fill(px, py, px + 1, py + 1, scaledAlpha(0xCCCFF0A0, animation.alpha));
         }
         int edge = renderY + 2 + (int) ((now * (0.45f + animation.speed * 0.8f)) % 30L);
-        context.fill(renderX + 1, edge, renderX + 3, edge + 1, scaledAlpha(0x99D6F5FF, animation.alpha));
+        context.fill(renderX + 1, edge, renderX + 3, edge + 1, scaledAlpha(0x99A8E063, animation.alpha));
     }
 
     private void drawWindCooldown(DrawContext context, int slotIndex, int renderX, int renderY,
@@ -459,7 +463,7 @@ public class WandHudOverlay implements HudRenderCallback {
     private WandTheme resolveTheme(WizardAffinity affinity) {
         return switch (affinity) {
             case FIRE  -> WandTheme.FIRE;
-            case ICE   -> WandTheme.ICE;
+            case NATURE -> WandTheme.NATURE;
             case WIND  -> WandTheme.WIND;
             case STONE -> WandTheme.STONE;
             case SPACE -> WandTheme.SPACE;
@@ -470,7 +474,7 @@ public class WandHudOverlay implements HudRenderCallback {
     private int getThemeAccent(WandTheme theme) {
         return switch (theme) {
             case FIRE  -> 0xE0842C;
-            case ICE   -> 0x8EDCF8;
+            case NATURE -> 0x7FD36B;
             case WIND  -> 0xCFEBAE;
             case STONE -> 0xC6B79A;
             case SPACE -> 0xB29DFF;
@@ -483,7 +487,7 @@ public class WandHudOverlay implements HudRenderCallback {
         return (alpha << 24) | (rgb & 0x00FFFFFF);
     }
 
-    private enum WandTheme { FIRE, ICE, WIND, STONE, SPACE, MANA, ARCANE }
+    private enum WandTheme { FIRE, NATURE, WIND, STONE, SPACE, MANA, ARCANE }
 
     private record AnimationProfile(float alpha, float speed, float density) {}
 }

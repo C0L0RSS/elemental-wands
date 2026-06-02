@@ -31,7 +31,7 @@ public class UniversalWandItem extends AbstractWandItem {
             case FIRE  -> FireAbilityHandler.castPrimary(world, caster, stack);
             case WIND  -> WindAbilityHandler.castPrimary(world, caster, stack);
             case STONE -> StoneAbilityHandler.castPrimary(world, caster, stack);
-            case ICE   -> IceAbilityHandler.castPrimary(world, caster, stack);
+            case NATURE -> NatureAbilityHandler.castPrimary(world, caster, stack);
             case SPACE -> SpaceAbilityHandler.castPrimary(world, caster, stack);
             case NONE  -> castFracturedPrimary(world, caster, stack);
         }
@@ -43,7 +43,7 @@ public class UniversalWandItem extends AbstractWandItem {
             case FIRE  -> FireAbilityHandler.castSecondary(world, caster, stack);
             case WIND  -> WindAbilityHandler.castSecondary(world, caster, stack);
             case STONE -> StoneAbilityHandler.castSecondary(world, caster, stack);
-            case ICE   -> IceAbilityHandler.castSecondary(world, caster, stack);
+            case NATURE -> NatureAbilityHandler.castSecondary(world, caster, stack);
             case SPACE -> SpaceAbilityHandler.castSecondary(world, caster, stack);
             case NONE  -> sendInertMessage(caster);
         }
@@ -62,7 +62,7 @@ public class UniversalWandItem extends AbstractWandItem {
             case FIRE  -> FireAbilityHandler.castUltimate(world, caster, stack);
             case WIND  -> WindAbilityHandler.castUltimate(world, caster, stack);
             case STONE -> StoneAbilityHandler.castUltimate(world, caster, stack);
-            case ICE   -> IceAbilityHandler.castUltimate(world, caster, stack);
+            case NATURE -> NatureAbilityHandler.castUltimate(world, caster, stack);
             case SPACE -> SpaceAbilityHandler.castUltimate(world, caster, stack);
             case NONE  -> sendInertMessage(caster);
         }
@@ -109,7 +109,7 @@ public class UniversalWandItem extends AbstractWandItem {
             case FIRE  -> FireAbilityHandler.inventoryTick(stack, world, entity, slot);
             case WIND  -> WindAbilityHandler.inventoryTick(stack, world, entity, slot);
             case STONE -> StoneAbilityHandler.inventoryTick(stack, world, entity, slot);
-            case ICE   -> IceAbilityHandler.inventoryTick(stack, world, entity, slot);
+            case NATURE -> NatureAbilityHandler.inventoryTick(stack, world, entity, slot);
             default    -> {}
         }
     }

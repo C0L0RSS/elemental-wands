@@ -10,10 +10,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import com.anton.elementalwands.item.AbstractWandItem;
+
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.block.SnowBlock;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
@@ -32,11 +33,17 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
-public final class BrinicleShardManager {
+/**
+ * Tracks the Nature wand's planted seedlings. A seed projectile sprouts a moss anchor; the
+ * seedling then periodically pulses verdant growth (moss carpet on land, lily pads over water)
+ * outward in rings, slowing, entangling and thorn-damaging any enemy caught in the thicket.
+ * Seedlings inside an {@link OvergrowthManager} cloud spread faster and farther.
+ */
+public final class SeedlingManager {
 
-    public static final int SHARD_LIFESPAN_TICKS = 600;
+    public static final int SEEDLING_LIFESPAN_TICKS = 600;
 
-    private static final int MAX_SHARDS_PER_CASTER = 5;
+    private static final int MAX_SEEDLINGS_PER_CASTER = 5;
     private static final int NORMAL_PULSE_INTERVAL = 30;
     private static final int AMPLIFIED_PULSE_INTERVAL = 10;
     private static final int NORMAL_MAX_RADIUS = 3;
@@ -44,10 +51,11 @@ public final class BrinicleShardManager {
 
     private static final int CONSUMPTION_TAIL_TICKS = 310;
 
-    private static final int ZONE_FROST_STACK_INTERVAL = 20;
+    private static final int ZONE_ENTANGLE_INTERVAL = 20;
+    private static final float THORN_DAMAGE = 1.0f;
 
-    static final class Shard {
-        final UUID shardId;
+    static final class Seedling {
+        final UUID seedlingId;
         final UUID casterUuid;
         final BlockPos anchorPos;
         final BlockPos floorPos;
@@ -56,15 +64,15 @@ public final class BrinicleShardManager {
         int expiryTick;
         int lastPulseTick;
         int currentRadius;
-        boolean amplifiedByFog;
+        boolean amplifiedByOvergrowth;
         boolean active;
         final Set<BlockPos> placedPositions = new HashSet<>();
         final Map<BlockPos, BlockState> originals = new HashMap<>();
-        final Map<UUID, Integer> lastFrostTickByEntity = new HashMap<>();
+        final Map<UUID, Integer> lastEntangleTickByEntity = new HashMap<>();
 
-        Shard(UUID shardId, UUID casterUuid, BlockPos anchorPos, BlockPos floorPos,
+        Seedling(UUID seedlingId, UUID casterUuid, BlockPos anchorPos, BlockPos floorPos,
               RegistryKey<World> worldKey, int plantTick, int lifespanTicks) {
-            this.shardId = shardId;
+            this.seedlingId = seedlingId;
             this.casterUuid = casterUuid;
             this.anchorPos = anchorPos;
             this.floorPos = floorPos;
@@ -73,27 +81,27 @@ public final class BrinicleShardManager {
             this.expiryTick = plantTick + lifespanTicks;
             this.lastPulseTick = plantTick;
             this.currentRadius = 0;
-            this.amplifiedByFog = false;
+            this.amplifiedByOvergrowth = false;
             this.active = true;
         }
     }
 
-    public record ShardSnapshot(UUID shardId, BlockPos anchorPos, int plantTick) {
+    public record SeedlingSnapshot(UUID seedlingId, BlockPos anchorPos, int plantTick) {
     }
 
     public record PlacementResult(Set<BlockPos> placed, Map<BlockPos, BlockState> originals) {
     }
 
-    private static final Map<RegistryKey<World>, List<Shard>> ACTIVE = new HashMap<>();
+    private static final Map<RegistryKey<World>, List<Seedling>> ACTIVE = new HashMap<>();
 
-    private BrinicleShardManager() {
+    private SeedlingManager() {
     }
 
     public static void init() {
-        ServerTickEvents.END_WORLD_TICK.register(BrinicleShardManager::tickWorld);
+        ServerTickEvents.END_WORLD_TICK.register(SeedlingManager::tickWorld);
     }
 
-    public static boolean tryPlantShard(ServerWorld world, PlayerEntity caster, BlockHitResult hit) {
+    public static boolean tryPlantSeedling(ServerWorld world, PlayerEntity caster, BlockHitResult hit) {
         BlockPos hitPos = hit.getBlockPos();
         Direction face = hit.getSide();
 
@@ -109,83 +117,83 @@ public final class BrinicleShardManager {
             return dudAt(world, hit.getPos());
         }
 
-        List<Shard> forCaster = activeForCaster(world, caster.getUuid());
-        if (forCaster.size() >= MAX_SHARDS_PER_CASTER) {
-            Shard oldest = forCaster.stream().min(Comparator.comparingInt(s -> s.plantTick)).orElse(null);
-            if (oldest != null) cleanupShard(world, oldest);
+        List<Seedling> forCaster = activeForCaster(world, caster.getUuid());
+        if (forCaster.size() >= MAX_SEEDLINGS_PER_CASTER) {
+            Seedling oldest = forCaster.stream().min(Comparator.comparingInt(s -> s.plantTick)).orElse(null);
+            if (oldest != null) cleanupSeedling(world, oldest);
         }
 
         int placed = TemporaryBlockManager.placeTemporaryBlocks(world,
                 List.of(anchorPos),
-                Blocks.PACKED_ICE.getDefaultState(),
-                SHARD_LIFESPAN_TICKS,
+                Blocks.MOSS_BLOCK.getDefaultState(),
+                SEEDLING_LIFESPAN_TICKS,
                 s -> s.isAir() || s.isReplaceable());
         if (placed == 0) {
             return dudAt(world, hit.getPos());
         }
 
         int now = world.getServer().getTicks();
-        Shard shard = new Shard(UUID.randomUUID(), caster.getUuid(), anchorPos, floorPos,
-                world.getRegistryKey(), now, SHARD_LIFESPAN_TICKS);
-        shard.placedPositions.add(anchorPos);
-        shard.originals.put(anchorPos, anchorOriginal);
+        Seedling seedling = new Seedling(UUID.randomUUID(), caster.getUuid(), anchorPos, floorPos,
+                world.getRegistryKey(), now, SEEDLING_LIFESPAN_TICKS);
+        seedling.placedPositions.add(anchorPos);
+        seedling.originals.put(anchorPos, anchorOriginal);
 
-        ACTIVE.computeIfAbsent(world.getRegistryKey(), _k -> new ArrayList<>()).add(shard);
+        ACTIVE.computeIfAbsent(world.getRegistryKey(), _k -> new ArrayList<>()).add(seedling);
 
         if (face != Direction.UP) {
             spawnVerticalFlourish(world, hit.getPos(), floorPos);
         }
 
-        world.playSound(null, anchorPos, SoundEvents.BLOCK_GLASS_PLACE, SoundCategory.PLAYERS, 0.6f, 1.6f);
-        world.spawnParticles(ParticleTypes.SNOWFLAKE,
+        world.playSound(null, anchorPos, SoundEvents.BLOCK_AZALEA_PLACE, SoundCategory.PLAYERS, 0.7f, 1.1f);
+        world.spawnParticles(ParticleTypes.HAPPY_VILLAGER,
                 anchorPos.getX() + 0.5, anchorPos.getY() + 0.5, anchorPos.getZ() + 0.5,
                 12, 0.3, 0.3, 0.3, 0.02);
         return true;
     }
 
-    public static List<ShardSnapshot> getActiveShardsForCaster(ServerWorld world, UUID casterUuid) {
-        List<Shard> shards = activeForCaster(world, casterUuid);
-        List<ShardSnapshot> out = new ArrayList<>(shards.size());
-        for (Shard s : shards) {
-            out.add(new ShardSnapshot(s.shardId, s.anchorPos, s.plantTick));
+    public static List<SeedlingSnapshot> getActiveSeedlingsForCaster(ServerWorld world, UUID casterUuid) {
+        List<Seedling> seedlings = activeForCaster(world, casterUuid);
+        List<SeedlingSnapshot> out = new ArrayList<>(seedlings.size());
+        for (Seedling s : seedlings) {
+            out.add(new SeedlingSnapshot(s.seedlingId, s.anchorPos, s.plantTick));
         }
         return out;
     }
 
-    public static void markShardsForConsumption(ServerWorld world, UUID casterUuid, int castTick) {
+    public static void markSeedlingsForConsumption(ServerWorld world, UUID casterUuid, int castTick) {
         int cap = castTick + CONSUMPTION_TAIL_TICKS;
-        for (Shard s : activeForCaster(world, casterUuid)) {
+        for (Seedling s : activeForCaster(world, casterUuid)) {
             if (s.expiryTick > cap) s.expiryTick = cap;
         }
     }
 
-    public static boolean isShardAlive(ServerWorld world, UUID shardId) {
-        List<Shard> list = ACTIVE.get(world.getRegistryKey());
+    public static boolean isSeedlingAlive(ServerWorld world, UUID seedlingId) {
+        List<Seedling> list = ACTIVE.get(world.getRegistryKey());
         if (list == null) return false;
-        for (Shard s : list) {
-            if (s.shardId.equals(shardId) && s.active) return true;
+        for (Seedling s : list) {
+            if (s.seedlingId.equals(seedlingId) && s.active) return true;
         }
         return false;
     }
 
-    public static boolean destroyShardAtAnchor(ServerWorld world, BlockPos anchorPos) {
-        List<Shard> list = ACTIVE.get(world.getRegistryKey());
+    public static boolean destroySeedlingAtAnchor(ServerWorld world, BlockPos anchorPos) {
+        List<Seedling> list = ACTIVE.get(world.getRegistryKey());
         if (list == null) return false;
-        for (Shard s : list) {
+        for (Seedling s : list) {
             if (s.active && s.anchorPos.equals(anchorPos)) {
-                cleanupShardInternal(world, s);
+                cleanupSeedlingInternal(world, s);
                 return true;
             }
         }
         return false;
     }
 
-    public static PlacementResult placeTerrainSnow(ServerWorld world,
+    public static PlacementResult placeVerdantGrowth(ServerWorld world,
                                                     Iterable<BlockPos> columnAnchors,
                                                     Set<BlockPos> alreadyPlaced,
                                                     int lifespanTicks) {
-        List<BlockPos> snowTargets = new ArrayList<>();
-        List<BlockPos> iceTargets = new ArrayList<>();
+        List<BlockPos> mossTargets = new ArrayList<>();
+        List<BlockPos> lilyTargets = new ArrayList<>();
         Map<BlockPos, BlockState> originalsOut = new HashMap<>();
 
         for (BlockPos col : columnAnchors) {
@@ -201,42 +209,46 @@ public final class BrinicleShardManager {
             }
 
             if (surfaceState.getFluidState().isOf(Fluids.WATER)) {
-                if (alreadyPlaced.contains(surfacePos)) continue;
-                if (world.getBlockState(surfacePos).isOf(Blocks.PACKED_ICE)) continue;
-                iceTargets.add(surfacePos);
-                originalsOut.put(surfacePos, surfaceState);
+                // Float a lily pad on the air directly above the water surface.
+                BlockPos padPos = surfacePos.up();
+                BlockState padState = world.getBlockState(padPos);
+                if (padState.isOf(Blocks.LILY_PAD)) continue;
+                if (!padState.isAir() && !padState.isReplaceable()) continue;
+                if (alreadyPlaced.contains(padPos)) continue;
+                lilyTargets.add(padPos);
+                originalsOut.put(padPos, padState);
                 continue;
             }
 
-            BlockPos snowPos = surfacePos.up();
-            BlockState aboveState = world.getBlockState(snowPos);
-            if (aboveState.isOf(Blocks.SNOW)) continue;
+            BlockPos mossPos = surfacePos.up();
+            BlockState aboveState = world.getBlockState(mossPos);
+            if (aboveState.isOf(Blocks.MOSS_CARPET)) continue;
             if (!aboveState.isAir() && !aboveState.isReplaceable()) continue;
-            if (alreadyPlaced.contains(snowPos)) continue;
+            if (alreadyPlaced.contains(mossPos)) continue;
 
-            snowTargets.add(snowPos);
-            originalsOut.put(snowPos, aboveState);
+            mossTargets.add(mossPos);
+            originalsOut.put(mossPos, aboveState);
         }
 
         Set<BlockPos> actuallyPlaced = new HashSet<>();
 
-        if (!snowTargets.isEmpty()) {
-            BlockState snowState = Blocks.SNOW.getDefaultState().with(SnowBlock.LAYERS, 1);
-            TemporaryBlockManager.placeTemporaryBlocks(world, snowTargets, snowState, lifespanTicks,
+        if (!mossTargets.isEmpty()) {
+            BlockState mossState = Blocks.MOSS_CARPET.getDefaultState();
+            TemporaryBlockManager.placeTemporaryBlocks(world, mossTargets, mossState, lifespanTicks,
                     s -> s.isAir() || s.isReplaceable());
-            for (BlockPos p : snowTargets) {
-                if (world.getBlockState(p).isOf(Blocks.SNOW)) {
+            for (BlockPos p : mossTargets) {
+                if (world.getBlockState(p).isOf(Blocks.MOSS_CARPET)) {
                     actuallyPlaced.add(p);
                 }
             }
         }
 
-        if (!iceTargets.isEmpty()) {
-            BlockState iceState = Blocks.PACKED_ICE.getDefaultState();
-            TemporaryBlockManager.placeTemporaryBlocks(world, iceTargets, iceState, lifespanTicks,
-                    s -> s.isAir() || s.isReplaceable() || !s.getFluidState().isEmpty());
-            for (BlockPos p : iceTargets) {
-                if (world.getBlockState(p).isOf(Blocks.PACKED_ICE)) {
+        if (!lilyTargets.isEmpty()) {
+            BlockState lilyState = Blocks.LILY_PAD.getDefaultState();
+            TemporaryBlockManager.placeTemporaryBlocks(world, lilyTargets, lilyState, lifespanTicks,
+                    s -> s.isAir() || s.isReplaceable());
+            for (BlockPos p : lilyTargets) {
+                if (world.getBlockState(p).isOf(Blocks.LILY_PAD)) {
                     actuallyPlaced.add(p);
                 }
             }
@@ -254,26 +266,26 @@ public final class BrinicleShardManager {
         for (Map.Entry<BlockPos, BlockState> entry : originals.entrySet()) {
             BlockPos pos = entry.getKey();
             BlockState current = world.getBlockState(pos);
-            if (current.isOf(Blocks.SNOW) || current.isOf(Blocks.PACKED_ICE)) {
+            if (current.isOf(Blocks.MOSS_CARPET) || current.isOf(Blocks.LILY_PAD) || current.isOf(Blocks.MOSS_BLOCK)) {
                 world.setBlockState(pos, entry.getValue(), 3);
             }
         }
     }
 
-    private static List<Shard> activeForCaster(ServerWorld world, UUID casterUuid) {
-        List<Shard> list = ACTIVE.get(world.getRegistryKey());
+    private static List<Seedling> activeForCaster(ServerWorld world, UUID casterUuid) {
+        List<Seedling> list = ACTIVE.get(world.getRegistryKey());
         if (list == null) return new ArrayList<>();
-        List<Shard> out = new ArrayList<>();
-        for (Shard s : list) {
+        List<Seedling> out = new ArrayList<>();
+        for (Seedling s : list) {
             if (s.active && s.casterUuid.equals(casterUuid)) out.add(s);
         }
         return out;
     }
 
     private static boolean dudAt(ServerWorld world, Vec3d pos) {
-        world.spawnParticles(ParticleTypes.SNOWFLAKE, pos.x, pos.y, pos.z, 6, 0.1, 0.1, 0.1, 0.01);
-        world.playSound(null, BlockPos.ofFloored(pos), SoundEvents.ENTITY_SNOWBALL_THROW,
-                SoundCategory.PLAYERS, 0.4f, 0.6f);
+        world.spawnParticles(ParticleTypes.SPORE_BLOSSOM_AIR, pos.x, pos.y, pos.z, 6, 0.1, 0.1, 0.1, 0.01);
+        world.playSound(null, BlockPos.ofFloored(pos), SoundEvents.ENTITY_EGG_THROW,
+                SoundCategory.PLAYERS, 0.4f, 0.8f);
         return false;
     }
 
@@ -283,7 +295,7 @@ public final class BrinicleShardManager {
         for (int i = 0; i <= steps; i++) {
             double t = i / (double) steps;
             double y = hitPos.y + (floorTopY - hitPos.y) * t;
-            world.spawnParticles(ParticleTypes.SNOWFLAKE, hitPos.x, y, hitPos.z, 1, 0.04, 0.04, 0.04, 0.0);
+            world.spawnParticles(ParticleTypes.HAPPY_VILLAGER, hitPos.x, y, hitPos.z, 1, 0.04, 0.04, 0.04, 0.0);
         }
     }
 
@@ -325,9 +337,9 @@ public final class BrinicleShardManager {
     }
 
     /**
-     * Treats blocks with a flat solid top surface (dirt path, farmland, slabs, snow layers, etc.)
+     * Treats blocks with a flat solid top surface (dirt path, farmland, slabs, carpets, etc.)
      * as a valid floor in addition to ordinary full opaque cubes. {@code isSolidBlock} alone
-     * rejects partial-collision blocks like dirt path, which made the shard fail to plant on them.
+     * rejects partial-collision blocks like dirt path, which made the seedling fail to plant on them.
      */
     private static boolean hasFloorTop(ServerWorld world, BlockPos pos, BlockState state) {
         if (state.isAir()) return false;
@@ -337,41 +349,41 @@ public final class BrinicleShardManager {
     }
 
     private static void tickWorld(ServerWorld world) {
-        List<Shard> list = ACTIVE.get(world.getRegistryKey());
+        List<Seedling> list = ACTIVE.get(world.getRegistryKey());
         if (list == null || list.isEmpty()) return;
 
         int now = world.getServer().getTicks();
 
-        Iterator<Shard> it = list.iterator();
+        Iterator<Seedling> it = list.iterator();
         while (it.hasNext()) {
-            Shard shard = it.next();
-            if (!shard.active) {
+            Seedling seedling = it.next();
+            if (!seedling.active) {
                 it.remove();
                 continue;
             }
 
-            shard.amplifiedByFog = WhiteoutManager.isInFog(world, shard.anchorPos);
+            seedling.amplifiedByOvergrowth = OvergrowthManager.isInOvergrowth(world, seedling.anchorPos);
 
-            if (now >= shard.expiryTick) {
-                cleanupShardInternal(world, shard);
+            if (now >= seedling.expiryTick) {
+                cleanupSeedlingInternal(world, seedling);
                 it.remove();
                 continue;
             }
 
-            if (!world.getBlockState(shard.anchorPos).isOf(Blocks.PACKED_ICE)) {
-                cleanupShardInternal(world, shard);
+            if (!world.getBlockState(seedling.anchorPos).isOf(Blocks.MOSS_BLOCK)) {
+                cleanupSeedlingInternal(world, seedling);
                 it.remove();
                 continue;
             }
 
-            if (anyProjectileAt(world, shard.anchorPos)) {
-                cleanupShardInternal(world, shard);
+            if (anyProjectileAt(world, seedling.anchorPos)) {
+                cleanupSeedlingInternal(world, seedling);
                 it.remove();
                 continue;
             }
 
-            pulseIfDue(world, shard, now);
-            applyZoneEffects(world, shard, now);
+            pulseIfDue(world, seedling, now);
+            applyZoneEffects(world, seedling, now);
         }
 
         if (list.isEmpty()) {
@@ -385,22 +397,22 @@ public final class BrinicleShardManager {
         return !list.isEmpty();
     }
 
-    private static void pulseIfDue(ServerWorld world, Shard shard, int now) {
-        int interval = shard.amplifiedByFog ? AMPLIFIED_PULSE_INTERVAL : NORMAL_PULSE_INTERVAL;
-        int maxRadius = shard.amplifiedByFog ? AMPLIFIED_MAX_RADIUS : NORMAL_MAX_RADIUS;
+    private static void pulseIfDue(ServerWorld world, Seedling seedling, int now) {
+        int interval = seedling.amplifiedByOvergrowth ? AMPLIFIED_PULSE_INTERVAL : NORMAL_PULSE_INTERVAL;
+        int maxRadius = seedling.amplifiedByOvergrowth ? AMPLIFIED_MAX_RADIUS : NORMAL_MAX_RADIUS;
 
-        if (now - shard.lastPulseTick < interval) return;
-        if (shard.currentRadius >= maxRadius) return;
+        if (now - seedling.lastPulseTick < interval) return;
+        if (seedling.currentRadius >= maxRadius) return;
 
-        shard.currentRadius++;
-        shard.lastPulseTick = now;
+        seedling.currentRadius++;
+        seedling.lastPulseTick = now;
 
-        List<BlockPos> ringCols = chebyshevRingColumns(shard.floorPos, shard.currentRadius);
-        int remainingLife = Math.max(20, shard.expiryTick - now);
-        PlacementResult result = placeTerrainSnow(world, ringCols, shard.placedPositions, remainingLife);
-        shard.placedPositions.addAll(result.placed());
+        List<BlockPos> ringCols = chebyshevRingColumns(seedling.floorPos, seedling.currentRadius);
+        int remainingLife = Math.max(20, seedling.expiryTick - now);
+        PlacementResult result = placeVerdantGrowth(world, ringCols, seedling.placedPositions, remainingLife);
+        seedling.placedPositions.addAll(result.placed());
         for (Map.Entry<BlockPos, BlockState> e : result.originals().entrySet()) {
-            shard.originals.putIfAbsent(e.getKey(), e.getValue());
+            seedling.originals.putIfAbsent(e.getKey(), e.getValue());
         }
     }
 
@@ -419,55 +431,67 @@ public final class BrinicleShardManager {
         return out;
     }
 
-    private static void applyZoneEffects(ServerWorld world, Shard shard, int now) {
-        if (shard.placedPositions.isEmpty()) return;
+    private static void applyZoneEffects(ServerWorld world, Seedling seedling, int now) {
+        if (seedling.placedPositions.isEmpty()) return;
 
-        int maxRadius = shard.amplifiedByFog ? AMPLIFIED_MAX_RADIUS : NORMAL_MAX_RADIUS;
-        int r = Math.max(shard.currentRadius, maxRadius) + 1;
+        int maxRadius = seedling.amplifiedByOvergrowth ? AMPLIFIED_MAX_RADIUS : NORMAL_MAX_RADIUS;
+        int r = Math.max(seedling.currentRadius, maxRadius) + 1;
         Box box = new Box(
-                shard.floorPos.getX() - r, shard.floorPos.getY() - 0.5, shard.floorPos.getZ() - r,
-                shard.floorPos.getX() + r + 1, shard.floorPos.getY() + 3.5, shard.floorPos.getZ() + r + 1);
+                seedling.floorPos.getX() - r, seedling.floorPos.getY() - 0.5, seedling.floorPos.getZ() - r,
+                seedling.floorPos.getX() + r + 1, seedling.floorPos.getY() + 3.5, seedling.floorPos.getZ() + r + 1);
 
         List<LivingEntity> entities = world.getEntitiesByClass(LivingEntity.class, box,
                 e -> e.isAlive() && !e.isSpectator());
 
         for (LivingEntity e : entities) {
             BlockPos feet = e.getBlockPos();
-            boolean inZone = shard.placedPositions.contains(feet) || shard.placedPositions.contains(feet.down());
+            boolean inZone = seedling.placedPositions.contains(feet) || seedling.placedPositions.contains(feet.down());
             if (!inZone) continue;
 
-            if (e.getUuid().equals(shard.casterUuid)) {
+            if (e.getUuid().equals(seedling.casterUuid)) {
                 e.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 10, 0, false, false, true));
                 continue;
             }
 
             e.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 40, 3, false, false, true));
 
-            Integer lastFrost = shard.lastFrostTickByEntity.get(e.getUuid());
-            if (lastFrost == null || now - lastFrost >= ZONE_FROST_STACK_INTERVAL) {
-                ChillTracker.addStack(world, e);
-                shard.lastFrostTickByEntity.put(e.getUuid(), now);
+            Integer lastTick = seedling.lastEntangleTickByEntity.get(e.getUuid());
+            if (lastTick == null || now - lastTick >= ZONE_ENTANGLE_INTERVAL) {
+                EntangleTracker.addStack(world, e);
+                applyThorns(world, e, seedling.casterUuid);
+                seedling.lastEntangleTickByEntity.put(e.getUuid(), now);
             }
         }
     }
 
-    private static void cleanupShard(ServerWorld world, Shard shard) {
-        if (!shard.active) return;
-        cleanupShardInternal(world, shard);
-        List<Shard> list = ACTIVE.get(world.getRegistryKey());
-        if (list != null) list.remove(shard);
+    /** Periodic bramble damage from standing in the thicket, credited to the caster's wand. */
+    static void applyThorns(ServerWorld world, LivingEntity target, UUID casterUuid) {
+        boolean hurt = target.damage(world, world.getDamageSources().sweetBerryBush(), THORN_DAMAGE);
+        if (hurt) {
+            PlayerEntity caster = world.getPlayerByUuid(casterUuid);
+            if (caster != null) {
+                AbstractWandItem.onWandDamageDealt(caster, THORN_DAMAGE);
+            }
+        }
     }
 
-    private static void cleanupShardInternal(ServerWorld world, Shard shard) {
-        if (!shard.active) return;
-        shard.active = false;
+    private static void cleanupSeedling(ServerWorld world, Seedling seedling) {
+        if (!seedling.active) return;
+        cleanupSeedlingInternal(world, seedling);
+        List<Seedling> list = ACTIVE.get(world.getRegistryKey());
+        if (list != null) list.remove(seedling);
+    }
 
-        restoreBlocks(world, shard.originals);
+    private static void cleanupSeedlingInternal(ServerWorld world, Seedling seedling) {
+        if (!seedling.active) return;
+        seedling.active = false;
 
-        world.spawnParticles(ParticleTypes.SNOWFLAKE,
-                shard.anchorPos.getX() + 0.5, shard.anchorPos.getY() + 0.5, shard.anchorPos.getZ() + 0.5,
+        restoreBlocks(world, seedling.originals);
+
+        world.spawnParticles(ParticleTypes.HAPPY_VILLAGER,
+                seedling.anchorPos.getX() + 0.5, seedling.anchorPos.getY() + 0.5, seedling.anchorPos.getZ() + 0.5,
                 20, 0.6, 0.6, 0.6, 0.05);
-        world.playSound(null, shard.anchorPos, SoundEvents.BLOCK_GLASS_BREAK,
-                SoundCategory.PLAYERS, 0.9f, 0.7f);
+        world.playSound(null, seedling.anchorPos, SoundEvents.BLOCK_GRASS_BREAK,
+                SoundCategory.PLAYERS, 0.9f, 0.8f);
     }
 }

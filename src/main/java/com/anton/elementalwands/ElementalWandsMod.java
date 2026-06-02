@@ -7,18 +7,17 @@ import com.anton.elementalwands.registry.ModBlocks;
 import com.anton.elementalwands.registry.ModItems;
 import com.anton.elementalwands.registry.ModEntities;
 import com.anton.elementalwands.util.BlinkRiftManager;
-import com.anton.elementalwands.util.BrinicleShardManager;
-import com.anton.elementalwands.util.ChillTracker;
+import com.anton.elementalwands.util.SeedlingManager;
+import com.anton.elementalwands.util.EntangleTracker;
 import com.anton.elementalwands.util.EventHorizonManager;
 import com.anton.elementalwands.util.HollowPurpleChargeManager;
 import com.anton.elementalwands.util.MeteorManager;
 import com.anton.elementalwands.util.MovementDisruptManager;
 import com.anton.elementalwands.util.SoulboundInventoryCarrier;
 import com.anton.elementalwands.util.TemporaryBlockManager;
-import com.anton.elementalwands.util.TemporarySnowManager;
 import com.anton.elementalwands.util.TendrilBloomManager;
 import com.anton.elementalwands.util.TitanDomeManager;
-import com.anton.elementalwands.util.WhiteoutManager;
+import com.anton.elementalwands.util.OvergrowthManager;
 import com.anton.elementalwands.util.BlazeTrailManager;
 import com.anton.elementalwands.world.ModWorldGen;
 
@@ -65,11 +64,10 @@ public class ElementalWandsMod implements ModInitializer {
     public void onInitialize() {
         EWAttachments.init();
 
-        TemporarySnowManager.init();
         TemporaryBlockManager.init();
-        ChillTracker.init();
-        WhiteoutManager.init();
-        BrinicleShardManager.init();
+        EntangleTracker.init();
+        OvergrowthManager.init();
+        SeedlingManager.init();
         TendrilBloomManager.init();
         MeteorManager.init();
         TitanDomeManager.init();
@@ -147,8 +145,8 @@ public class ElementalWandsMod implements ModInitializer {
                                         .executes(ctx -> handleAffinitySet(ctx.getSource(), WizardAffinity.WIND)))
                                 .then(CommandManager.literal("stone")
                                         .executes(ctx -> handleAffinitySet(ctx.getSource(), WizardAffinity.STONE)))
-                                .then(CommandManager.literal("ice")
-                                        .executes(ctx -> handleAffinitySet(ctx.getSource(), WizardAffinity.ICE)))
+                                .then(CommandManager.literal("nature")
+                                        .executes(ctx -> handleAffinitySet(ctx.getSource(), WizardAffinity.NATURE)))
                                 .then(CommandManager.literal("space")
                                         .executes(ctx -> handleAffinitySet(ctx.getSource(), WizardAffinity.SPACE)))
                                 .then(CommandManager.literal("reset")
@@ -416,7 +414,7 @@ public class ElementalWandsMod implements ModInitializer {
         Text page3 = Text.literal("Elemental Paths\n\n")
                 .formatted(Formatting.GOLD, Formatting.BOLD)
                 .append(Text.literal(
-                        "Fire  Wind  Stone\nIce   Space\n\nEach element has three spells:\nPrimary  Secondary  Ultimate\n\nUnlock Secondary and Ultimate via Arcane Flux.")
+                        "Fire  Wind  Stone\nNature  Space\n\nEach element has three spells:\nPrimary  Secondary  Ultimate\n\nUnlock Secondary and Ultimate via Arcane Flux.")
                         .formatted(Formatting.DARK_PURPLE));
 
         ItemStack book = new ItemStack(Items.WRITTEN_BOOK);
@@ -441,7 +439,7 @@ public class ElementalWandsMod implements ModInitializer {
         page.append(Text.literal("\n"));
         page.append(buildAffinityButton("STONE", Formatting.GOLD));
         page.append(Text.literal("\n"));
-        page.append(buildAffinityButton("ICE",   Formatting.AQUA));
+        page.append(buildAffinityButton("NATURE", Formatting.DARK_GREEN));
         page.append(Text.literal("\n"));
         page.append(buildAffinityButton("SPACE", Formatting.LIGHT_PURPLE));
         return page;

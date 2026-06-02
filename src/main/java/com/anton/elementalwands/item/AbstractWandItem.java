@@ -149,7 +149,7 @@ public abstract class AbstractWandItem extends Item {
         long last    = nbt.getLong(key).orElse(-1_000_000_000L);
         long elapsed = now - last;
 
-        if (com.anton.elementalwands.util.ChillTracker.getStacks(player) > 0) {
+        if (com.anton.elementalwands.util.EntangleTracker.getStacks(player) > 0) {
             elapsed /= 2;
         }
 

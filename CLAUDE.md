@@ -13,44 +13,23 @@ No test suite exists. After any code change, run `./gradlew build` to verify com
 
 ### Deploying after a build
 
-After `./gradlew build` succeeds, copy `build/libs/elementalwands-2.2.0.jar` to two locations inside the Feather data directory:
+After `./gradlew build` succeeds, copy `build/libs/elementalwands-2.2.0.jar` into the Lunar Client Fabric mods folder for 1.21:
 
-1. **Feather client mod folder** — the jar Feather loads into the game:
-   - Windows: `%APPDATA%\.feather\user-mods\1.21.10-fabric\elementalwands-2.2.0.jar`
-   - macOS: `~/Library/Application Support/.feather/user-mods/1.21.10-fabric/elementalwands-2.2.0.jar`
-2. **Feather player-server mods folder** — the jar the local test server loads:
-   - Windows: `%APPDATA%\.feather\player-server\servers\<SERVER-UUID>\mods\elementalwands-2.2.0.jar`
-   - macOS: `~/Library/Application Support/.feather/player-server/servers/<SERVER-UUID>/mods/elementalwands-2.2.0.jar`
+- macOS: `~/.lunarclient/profiles/lunar/1.21/mods/fabric-1.21.10/elementalwands-2.2.0.jar`
+- Windows: `%USERPROFILE%\.lunarclient\profiles\lunar\1.21\mods\fabric-1.21.10\elementalwands-2.2.0.jar`
 
-**Current active player-server UUID:** `6dab8e0e-d0dd-40f4-8062-985f17cbf0ca` (Fabric 1.21.10, 7038 MB). If unsure, check `%APPDATA%\.feather\player-server\player-servers.json` — each entry's `id` is the folder name under `servers/`.
+Restart Lunar Client after replacing the jar for changes to take effect.
 
-Note: `%APPDATA%\.feather\mods\` only contains `feather-mods.json` (manifest) — **do not drop the jar there**. The real client jar location is `user-mods/1.21.10-fabric/`.
-
-Restart the game/server after replacing jars for changes to take effect.
-
-**Windows (bash/Git Bash) one-liner:**
+**macOS / bash one-liner:**
 
 ```bash
-SRC="build/libs/elementalwands-2.2.0.jar"
-cp "$SRC" "$APPDATA/.feather/user-mods/1.21.10-fabric/elementalwands-2.2.0.jar"
-cp "$SRC" "$APPDATA/.feather/player-server/servers/6dab8e0e-d0dd-40f4-8062-985f17cbf0ca/mods/elementalwands-2.2.0.jar"
+cp build/libs/elementalwands-2.2.0.jar "$HOME/.lunarclient/profiles/lunar/1.21/mods/fabric-1.21.10/elementalwands-2.2.0.jar"
 ```
 
-**Cross-platform Python fallback:**
+**Windows / Git Bash one-liner:**
 
-```python
-import shutil, pathlib, os, sys
-jar = pathlib.Path('build/libs/elementalwands-2.2.0.jar').resolve()
-server_uuid = '6dab8e0e-d0dd-40f4-8062-985f17cbf0ca'
-feather = pathlib.Path(os.environ['APPDATA']) / '.feather' if sys.platform == 'win32' \
-    else pathlib.Path('~/Library/Application Support/.feather').expanduser()
-targets = [
-    feather / 'user-mods' / '1.21.10-fabric' / jar.name,
-    feather / 'player-server' / 'servers' / server_uuid / 'mods' / jar.name,
-]
-for t in targets:
-    shutil.copy2(jar, t)
-    print('wrote', t)
+```bash
+cp build/libs/elementalwands-2.2.0.jar "$USERPROFILE/.lunarclient/profiles/lunar/1.21/mods/fabric-1.21.10/elementalwands-2.2.0.jar"
 ```
 
 ## Package Structure
@@ -88,7 +67,7 @@ All wands extend `AbstractWandItem`. Abilities are dispatched via:
 
 Each wand overrides `castPrimary`, `castSecondary`, `castUltimate`, and can override cooldown getters (`getPrimaryCooldownTicks`, etc.).
 
-**Cooldowns** are stored in ItemStack `CUSTOM_DATA` under NBT keys `ew_last_global`, `ew_last_primary`, `ew_last_secondary`. Frost stacks on the caster halve elapsed cooldown time (2× slower recovery). Always guard server-only logic with `world.isClient()` check.
+**Cooldowns** are stored in ItemStack `CUSTOM_DATA` under NBT keys `ew_last_global`, `ew_last_primary`, `ew_last_secondary`. Entangle stacks on the caster halve elapsed cooldown time (2× slower recovery). Always guard server-only logic with `world.isClient()` check.
 
 **Ability locking**: `isAbilityUnlocked(player, ability)` checks the `UNLOCKED_SKILLS` bitmask attachment. Override this in a wand to restrict abilities (e.g., `FracturedWandItem` locks secondary and ultimate).
 
@@ -106,10 +85,10 @@ Complex zone/state effects use static manager classes that tick via world tick e
 | `BlazeTrailManager` | Fire secondary runway |
 | `BlinkRiftManager` | Space secondary rift tracking |
 | `HollowPurpleChargeManager` | Space ultimate charge visuals |
-| `BrinicleShardManager` | Ice primary shard plants + pulsing zones |
-| `TendrilBloomManager` | Ice secondary tendrils + blooms |
-| `WhiteoutManager` | Ice ultimate fog + shard amplification |
-| `ChillTracker` | Frost stack state per entity |
+| `SeedlingManager` | Nature primary seedling plants + pulsing verdant zones |
+| `TendrilBloomManager` | Nature secondary tendrils + blooms |
+| `OvergrowthManager` | Nature ultimate pollen cloud + seedling amplification |
+| `EntangleTracker` | Entangle/root stack state per entity |
 | `TitanDomeManager` | Stone ultimate dome |
 | `TemporaryBlockManager` | Placed-block lifecycle (spikes, walls) |
 | `CycloneManager` | Wind ultimate |

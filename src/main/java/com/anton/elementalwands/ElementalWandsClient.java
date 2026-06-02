@@ -32,7 +32,7 @@ public class ElementalWandsClient implements ClientModInitializer {
                 new KeyBinding.Category(Identifier.of("elementalwands", "general"))));
 
         EntityRendererRegistry.register(ModEntities.BOULDER_PROJECTILE, FlyingItemEntityRenderer::new);
-        EntityRendererRegistry.register(ModEntities.BRINICLE_SHARD_PROJECTILE, EmptyEntityRenderer::new);
+        EntityRendererRegistry.register(ModEntities.SEED_PROJECTILE, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.VACUUM_BLADE, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.CALAMITY_TORNADO, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.INFERNO_WAVE, EmptyEntityRenderer::new);

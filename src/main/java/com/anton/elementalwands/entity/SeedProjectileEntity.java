@@ -2,8 +2,8 @@ package com.anton.elementalwands.entity;
 
 import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.registry.ModEntities;
-import com.anton.elementalwands.util.BrinicleShardManager;
-import com.anton.elementalwands.util.ChillTracker;
+import com.anton.elementalwands.util.SeedlingManager;
+import com.anton.elementalwands.util.EntangleTracker;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -22,10 +22,15 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
 
-public class BrinicleShardProjectileEntity extends ProjectileEntity {
+/**
+ * The Nature wand's primary projectile: a thrown seed that sprouts a {@link SeedlingManager}
+ * anchor where it lands, or bites into an enemy. Thorns dig harder into entangled prey, so the
+ * impact damage scales with the target's current {@link EntangleTracker} stacks.
+ */
+public class SeedProjectileEntity extends ProjectileEntity {
 
     private static final float BASE_DAMAGE = 4.0f;
-    private static final float DAMAGE_PER_FROST_STACK = 1.0f;
+    private static final float DAMAGE_PER_ENTANGLE_STACK = 1.0f;
     private static final float MAX_DAMAGE = 10.0f;
     private static final double INITIAL_SPEED = 1.5;
     private static final double GRAVITY = 0.03;
@@ -34,13 +39,13 @@ public class BrinicleShardProjectileEntity extends ProjectileEntity {
 
     private int ticksAlive;
 
-    public BrinicleShardProjectileEntity(EntityType<? extends BrinicleShardProjectileEntity> type, World world) {
+    public SeedProjectileEntity(EntityType<? extends SeedProjectileEntity> type, World world) {
         super(type, world);
         setNoGravity(true);
     }
 
-    public BrinicleShardProjectileEntity(ServerWorld world, LivingEntity owner) {
-        super(ModEntities.BRINICLE_SHARD_PROJECTILE, world);
+    public SeedProjectileEntity(ServerWorld world, LivingEntity owner) {
+        super(ModEntities.SEED_PROJECTILE, world);
         setOwner(owner);
         setNoGravity(true);
 
@@ -68,12 +73,12 @@ public class BrinicleShardProjectileEntity extends ProjectileEntity {
             return;
         }
 
-        sw.spawnParticles(ParticleTypes.SNOWFLAKE, getX(), getY(), getZ(), 3, 0.08, 0.08, 0.08, 0.01);
-        sw.spawnParticles(ParticleTypes.ITEM_SNOWBALL, getX(), getY(), getZ(), 1, 0.05, 0.05, 0.05, 0.01);
+        sw.spawnParticles(ParticleTypes.SPORE_BLOSSOM_AIR, getX(), getY(), getZ(), 3, 0.08, 0.08, 0.08, 0.01);
+        sw.spawnParticles(ParticleTypes.COMPOSTER, getX(), getY(), getZ(), 1, 0.05, 0.05, 0.05, 0.01);
 
         HitResult hit = ProjectileUtil.getCollision(this, this::canHit);
         // ProjectileUtil uses COLLIDER raycasts, which skip non-collision blocks like
-        // flowers, tall grass, and saplings. Do a secondary OUTLINE raycast so the shard
+        // flowers, tall grass, and saplings. Do a secondary OUTLINE raycast so the seed
         // also registers a hit on those blocks (and uses whichever is closer to the start).
         if (hit.getType() != HitResult.Type.ENTITY) {
             Vec3d start = getEntityPos();
@@ -113,8 +118,8 @@ public class BrinicleShardProjectileEntity extends ProjectileEntity {
         Entity owner = getOwner();
 
         if (target instanceof LivingEntity living) {
-            int stacks = ChillTracker.getStacks(living);
-            float damage = Math.min(MAX_DAMAGE, BASE_DAMAGE + DAMAGE_PER_FROST_STACK * stacks);
+            int stacks = EntangleTracker.getStacks(living);
+            float damage = Math.min(MAX_DAMAGE, BASE_DAMAGE + DAMAGE_PER_ENTANGLE_STACK * stacks);
 
             DamageSource source = (owner instanceof PlayerEntity caster)
                     ? sw.getDamageSources().playerAttack(caster)
@@ -127,7 +132,7 @@ public class BrinicleShardProjectileEntity extends ProjectileEntity {
                 AbstractWandItem.onWandDamageDealt(owner, damage);
             }
 
-            sw.spawnParticles(ParticleTypes.SNOWFLAKE,
+            sw.spawnParticles(ParticleTypes.HAPPY_VILLAGER,
                     living.getX(), living.getBodyY(0.5), living.getZ(),
                     15, 0.4, 0.4, 0.4, 0.03);
         }
@@ -143,12 +148,12 @@ public class BrinicleShardProjectileEntity extends ProjectileEntity {
 
         Entity owner = getOwner();
         if (owner instanceof PlayerEntity caster) {
-            if (!BrinicleShardManager.destroyShardAtAnchor(sw, blockHitResult.getBlockPos())) {
-                BrinicleShardManager.tryPlantShard(sw, caster, blockHitResult);
+            if (!SeedlingManager.destroySeedlingAtAnchor(sw, blockHitResult.getBlockPos())) {
+                SeedlingManager.tryPlantSeedling(sw, caster, blockHitResult);
             }
         } else {
             Vec3d p = blockHitResult.getPos();
-            sw.spawnParticles(ParticleTypes.SNOWFLAKE, p.x, p.y, p.z, 6, 0.1, 0.1, 0.1, 0.01);
+            sw.spawnParticles(ParticleTypes.SPORE_BLOSSOM_AIR, p.x, p.y, p.z, 6, 0.1, 0.1, 0.1, 0.01);
         }
 
         discard();

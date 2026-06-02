@@ -26,19 +26,24 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
+/**
+ * The Nature wand's secondary: from each planted seedling a strangling vine (the tendril) snakes
+ * along the ground to the nearest enemy, then erupts into a spreading bloom of moss that slows,
+ * entangles and thorn-damages anything standing in it.
+ */
 public final class TendrilBloomManager {
 
     private static final int TENDRIL_MAX_TICKS = 24;
     private static final double TENDRIL_SPEED_PER_TICK = 0.625;
-    private static final int TENDRIL_SNOW_LIFESPAN = 260;
+    private static final int TENDRIL_GROWTH_LIFESPAN = 260;
 
     private static final int BLOOM_LIFESPAN = 260;
     private static final int BLOOM_GROWTH_INTERVAL = 20;
     private static final int BLOOM_MAX_RADIUS = 3;
-    private static final int BLOOM_FROST_STACK_INTERVAL = 20;
+    private static final int BLOOM_ENTANGLE_INTERVAL = 20;
 
     private static final class Tendril {
-        final UUID shardId;
+        final UUID seedlingId;
         final UUID casterUuid;
         final UUID targetUuid;
         Vec3d currentHead;
@@ -47,8 +52,8 @@ public final class TendrilBloomManager {
         final Set<BlockPos> placedPositions = new HashSet<>();
         final Map<BlockPos, BlockState> originals = new HashMap<>();
 
-        Tendril(UUID shardId, UUID casterUuid, UUID targetUuid, Vec3d start, Vec3d lastKnown, int startTick) {
-            this.shardId = shardId;
+        Tendril(UUID seedlingId, UUID casterUuid, UUID targetUuid, Vec3d start, Vec3d lastKnown, int startTick) {
+            this.seedlingId = seedlingId;
             this.casterUuid = casterUuid;
             this.targetUuid = targetUuid;
             this.currentHead = start;
@@ -65,7 +70,7 @@ public final class TendrilBloomManager {
         int lastGrowthTick;
         final Set<BlockPos> placedPositions = new HashSet<>();
         final Map<BlockPos, BlockState> originals = new HashMap<>();
-        final Map<UUID, Integer> lastFrostTickByEntity = new HashMap<>();
+        final Map<UUID, Integer> lastEntangleTickByEntity = new HashMap<>();
 
         Bloom(UUID casterUuid, BlockPos center, int startTick) {
             this.casterUuid = casterUuid;
@@ -86,15 +91,15 @@ public final class TendrilBloomManager {
         ServerTickEvents.END_WORLD_TICK.register(TendrilBloomManager::tickWorld);
     }
 
-    public static void startTendril(ServerWorld world, PlayerEntity caster, UUID shardId,
-                                     Vec3d shardAnchor, LivingEntity target) {
+    public static void startTendril(ServerWorld world, PlayerEntity caster, UUID seedlingId,
+                                     Vec3d seedlingAnchor, LivingEntity target) {
         int now = world.getServer().getTicks();
         Vec3d targetPos = target.getEntityPos().add(0, target.getHeight() * 0.5, 0);
-        Tendril t = new Tendril(shardId, caster.getUuid(), target.getUuid(), shardAnchor, targetPos, now);
+        Tendril t = new Tendril(seedlingId, caster.getUuid(), target.getUuid(), seedlingAnchor, targetPos, now);
         TENDRILS.computeIfAbsent(world.getRegistryKey(), _k -> new ArrayList<>()).add(t);
 
-        world.playSound(null, BlockPos.ofFloored(shardAnchor), SoundEvents.ENTITY_SNOW_GOLEM_SHOOT,
-                SoundCategory.PLAYERS, 0.7f, 1.2f);
+        world.playSound(null, BlockPos.ofFloored(seedlingAnchor), SoundEvents.ITEM_BONE_MEAL_USE,
+                SoundCategory.PLAYERS, 0.8f, 0.9f);
     }
 
     private static void tickWorld(ServerWorld world) {
@@ -124,7 +129,7 @@ public final class TendrilBloomManager {
     }
 
     private static boolean tickTendril(ServerWorld world, Tendril t, int now) {
-        if (!BrinicleShardManager.isShardAlive(world, t.shardId)) {
+        if (!SeedlingManager.isSeedlingAlive(world, t.seedlingId)) {
             return true;
         }
 
@@ -158,14 +163,14 @@ public final class TendrilBloomManager {
             newColumns.add(BlockPos.ofFloored(p));
         }
 
-        BrinicleShardManager.PlacementResult result = BrinicleShardManager.placeTerrainSnow(
-                world, newColumns, t.placedPositions, TENDRIL_SNOW_LIFESPAN);
+        SeedlingManager.PlacementResult result = SeedlingManager.placeVerdantGrowth(
+                world, newColumns, t.placedPositions, TENDRIL_GROWTH_LIFESPAN);
         t.placedPositions.addAll(result.placed());
         for (Map.Entry<BlockPos, BlockState> e : result.originals().entrySet()) {
             t.originals.putIfAbsent(e.getKey(), e.getValue());
         }
 
-        world.spawnParticles(ParticleTypes.SNOWFLAKE,
+        world.spawnParticles(ParticleTypes.HAPPY_VILLAGER,
                 t.currentHead.x, t.currentHead.y, t.currentHead.z,
                 4, 0.15, 0.15, 0.15, 0.02);
         return false;
@@ -183,24 +188,24 @@ public final class TendrilBloomManager {
             }
         }
 
-        BrinicleShardManager.PlacementResult result = BrinicleShardManager.placeTerrainSnow(
+        SeedlingManager.PlacementResult result = SeedlingManager.placeVerdantGrowth(
                 world, diskCols, b.placedPositions, BLOOM_LIFESPAN);
         b.placedPositions.addAll(result.placed());
         b.originals.putAll(result.originals());
 
         BLOOMS.computeIfAbsent(world.getRegistryKey(), _k -> new ArrayList<>()).add(b);
 
-        world.spawnParticles(ParticleTypes.SNOWFLAKE,
+        world.spawnParticles(ParticleTypes.SPORE_BLOSSOM_AIR,
                 center.getX() + 0.5, center.getY() + 0.5, center.getZ() + 0.5,
                 30, 0.8, 0.4, 0.8, 0.05);
-        world.playSound(null, center, SoundEvents.BLOCK_GLASS_PLACE,
-                SoundCategory.PLAYERS, 0.8f, 1.3f);
+        world.playSound(null, center, SoundEvents.ITEM_BONE_MEAL_USE,
+                SoundCategory.PLAYERS, 1.0f, 1.1f);
     }
 
     private static boolean tickBloom(ServerWorld world, Bloom b, int now) {
         int age = now - b.startTick;
         if (age >= BLOOM_LIFESPAN) {
-            BrinicleShardManager.restoreBlocks(world, b.originals);
+            SeedlingManager.restoreBlocks(world, b.originals);
             return true;
         }
 
@@ -208,9 +213,9 @@ public final class TendrilBloomManager {
             b.currentRadius++;
             b.lastGrowthTick = now;
 
-            List<BlockPos> ringCols = BrinicleShardManager.chebyshevRingColumns(b.center, b.currentRadius);
+            List<BlockPos> ringCols = SeedlingManager.chebyshevRingColumns(b.center, b.currentRadius);
             int remainingLife = Math.max(20, BLOOM_LIFESPAN - age);
-            BrinicleShardManager.PlacementResult result = BrinicleShardManager.placeTerrainSnow(
+            SeedlingManager.PlacementResult result = SeedlingManager.placeVerdantGrowth(
                     world, ringCols, b.placedPositions, remainingLife);
             b.placedPositions.addAll(result.placed());
             for (Map.Entry<BlockPos, BlockState> e : result.originals().entrySet()) {
@@ -245,10 +250,11 @@ public final class TendrilBloomManager {
 
             e.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 40, 3, false, false, true));
 
-            Integer lastFrost = b.lastFrostTickByEntity.get(e.getUuid());
-            if (lastFrost == null || now - lastFrost >= BLOOM_FROST_STACK_INTERVAL) {
-                ChillTracker.addStack(world, e);
-                b.lastFrostTickByEntity.put(e.getUuid(), now);
+            Integer lastTick = b.lastEntangleTickByEntity.get(e.getUuid());
+            if (lastTick == null || now - lastTick >= BLOOM_ENTANGLE_INTERVAL) {
+                EntangleTracker.addStack(world, e);
+                SeedlingManager.applyThorns(world, e, b.casterUuid);
+                b.lastEntangleTickByEntity.put(e.getUuid(), now);
             }
         }
     }

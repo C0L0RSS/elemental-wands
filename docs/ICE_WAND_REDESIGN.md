@@ -291,7 +291,7 @@ These are intentionally deferred — they should be clarified during or after in
 
 ## 13. Testing Priorities (Post-Implementation)
 
-When testing on the Feather server, focus on these in order:
+When testing on a test server, focus on these in order:
 
 1. **Compile success** — run `./gradlew build` before any in-game testing
 2. **Basic primary functionality** — does direct hit deal correct damage, does surface hit plant shards, does terrain scanning work on flat/hilly/cave/wall surfaces

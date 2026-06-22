@@ -1,6 +1,6 @@
 # Elemental Wands (Fabric) - Minecraft 1.21.10
 
-Elemental Wands is a Fabric mod that adds five combat wands (Fire, Wind, Stone, Ice, Space) plus a Titan Sword.
+Elemental Wands is a Fabric mod that adds five combat wands (Fire, Wind, Stone, Nature, Space) plus a Titan Sword.
 
 Current mod version: `2.2.0`
 
@@ -40,12 +40,12 @@ All wands share a short global cooldown and individual per-ability cooldowns. A 
 - Secondary: **Aegis** defensive earth ability
 - Ultimate: **Titan Dome**
 
-### Ice Wand
+### Nature Wand
 
-- Primary: **Brinicle Shards** (ice projectile — damage on direct hit, plants a lingering frost anchor on surface hit)
-- Secondary: **Tendril Bloom** (triggers planted shards into homing snow tendrils that bloom around targets)
-- Ultimate: **Whiteout** (stationary fog zone — Darkness inside, amplifies your nearby shards)
-- Passive while held: frostwalk
+- Primary: **Seedling Shot** (thrown seed — deals impact damage on a direct hit and plants a lingering seedling where it lands; hit damage scales with the target's Entangle stacks)
+- Secondary: **Tendril Bloom** (sends homing tendrils from your planted seedlings toward nearby enemies, blooming around them)
+- Ultimate: **Overgrowth** (pollen cloud that amplifies your nearby seedlings)
+- Passive while held: **Verdant Step** (lily pads bloom across water as you walk, letting you cross ponds)
 
 ### Space Wand
 

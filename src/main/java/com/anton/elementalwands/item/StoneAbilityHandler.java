@@ -48,8 +48,8 @@ public final class StoneAbilityHandler {
 
     private static final Map<UUID, WallData> ACTIVE_WALLS = new HashMap<>();
     private static final int TECTONIC_LENGTH = 15;
-    private static final float TECTONIC_DAMAGE = 9.0f;
-    private static final double TECTONIC_VERTICAL_KNOCKBACK = 1.0;
+    private static final float TECTONIC_DAMAGE = 6.0f;
+    private static final double TECTONIC_VERTICAL_KNOCKBACK = 0.45;
     private static final int TECTONIC_BLOCK_DURATION = 40;
     private static final int WALL_DURATION = 70; // 3.5 seconds
     private static final int WALL_GROUND_SEARCH_MAX = 16;
@@ -69,7 +69,7 @@ public final class StoneAbilityHandler {
     private StoneAbilityHandler() {}
 
     public static int getPrimaryCooldownTicks() {
-        return 40; // Reduced to 2s
+        return 55;
     }
 
     public static int getSecondaryCooldownTicks() {
@@ -403,7 +403,7 @@ public final class StoneAbilityHandler {
             if (!hitTargets.add(target.getUuid()))
                 continue;
 
-            boolean damaged = target.damage(world, world.getDamageSources().magic(), TECTONIC_DAMAGE);
+            boolean damaged = target.damage(world, world.getDamageSources().playerAttack(caster), TECTONIC_DAMAGE);
             if (damaged) {
                 AbstractWandItem.onWandDamageDealt(caster, TECTONIC_DAMAGE);
             }

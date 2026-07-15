@@ -23,7 +23,8 @@ import net.minecraft.world.World;
 
 public class SingularityBoltEntity extends ProjectileEntity {
 
-    private static final float DIRECT_DAMAGE = 4.0f;
+    private static final float DIRECT_DAMAGE = 7.0f;
+    private static final float SPLASH_DAMAGE = 2.5f;
     private static final double PROJECTILE_SPEED = 0.9;
     private static final int MAX_TRAVEL_DISTANCE = 24;
     private static final double IMPACT_RADIUS = 3.0;
@@ -124,6 +125,16 @@ public class SingularityBoltEntity extends ProjectileEntity {
         for (LivingEntity living : affected) {
             if (living.squaredDistanceTo(impactPos) > IMPACT_RADIUS * IMPACT_RADIUS) {
                 continue;
+            }
+
+            if (living != directHit) {
+                DamageSource splashSource = owner instanceof LivingEntity livingOwner
+                        ? world.getDamageSources().thrown(this, livingOwner)
+                        : world.getDamageSources().magic();
+                boolean damaged = living.damage(world, splashSource, SPLASH_DAMAGE);
+                if (damaged) {
+                    com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(owner, SPLASH_DAMAGE);
+                }
             }
 
             pullTowardImpact(world, living, impactPos);

@@ -43,6 +43,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
 import java.util.List;
+import com.anton.elementalwands.entity.AwakenedTreeEntity;
 import com.anton.elementalwands.entity.FireSpiritEntity;
 import com.anton.elementalwands.entity.StoneZombieEntity;
 import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
@@ -78,6 +79,7 @@ public class ElementalWandsMod implements ModInitializer {
         HollowPurpleChargeManager.init();
         ModBlocks.registerAll();
         ModEntities.registerAll();
+        FabricDefaultAttributeRegistry.register(ModEntities.AWAKENED_TREE, AwakenedTreeEntity.createAttributes().build());
         FabricDefaultAttributeRegistry.register(ModEntities.STONE_ZOMBIE, StoneZombieEntity.createAttributes().build());
         SpawnRestriction.register(
                 ModEntities.STONE_ZOMBIE,
@@ -111,6 +113,8 @@ public class ElementalWandsMod implements ModInitializer {
             server.execute(() -> {
                 giveStarterKit(player);
                 ModNetworking.syncPlayerData(player);
+                SeedlingManager.syncActiveSeedlings(player);
+                EntangleTracker.syncPlayer(player);
             });
         });
 

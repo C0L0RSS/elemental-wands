@@ -9,11 +9,19 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import com.anton.elementalwands.entity.AwakenedTreeEntity;
+import com.anton.elementalwands.item.AbstractWandItem;
+import com.anton.elementalwands.registry.ModEntities;
+import com.anton.elementalwands.util.TemporaryBlockManager.TemporaryPlacement;
+
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.particle.BlockStateParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.world.ServerWorld;
@@ -25,37 +33,39 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
 /**
- * The Nature wand's ultimate: Overgrowth. A roiling cloud of pollen and spores erupts around the
- * caster, choking enemies with poison and slowing them, while any {@link SeedlingManager} seedlings
- * caught inside spread their thickets faster and farther.
+ * Nature ultimate manager. The public name is kept so existing seedling amplification hooks can
+ * continue to ask whether a position is inside the active Nature ultimate.
  */
 public final class OvergrowthManager {
 
-    private static final int DURATION_TICKS = 240;
-    private static final double RADIUS = 12.0;
-    private static final double RADIUS_SQ = RADIUS * RADIUS;
-    private static final double Y_BELOW = 8.0;
-    private static final double Y_ABOVE = 16.0;
-    private static final int POLLEN_PARTICLES_PER_TICK = 40;
-    private static final int ENTANGLE_INTERVAL = 40;
+    private static final int TREE_DURATION_TICKS = 300;
+    private static final double TREE_RADIUS = 10.0;
+    private static final double TREE_RADIUS_SQ = TREE_RADIUS * TREE_RADIUS;
+    private static final double TREE_Y_BELOW = 4.0;
+    private static final double TREE_Y_ABOVE = 8.0;
+    private static final float BASE_CRUSH_DAMAGE = 14.0f;
+    private static final float MAX_CRUSH_DAMAGE = 18.0f;
+    private static final int ROOT_CRUSH_SLOW_TICKS = 30;
+    private static final int ROOT_CRUSH_SLOW_AMPLIFIER = 6;
 
-    private static final class Overgrowth {
+    private static final class AwakenedTree {
+        final int entityId;
         final UUID casterUuid;
-        final Vec3d center;
-        final int castTick;
+        final BlockPos center;
         final int expiryTick;
-        final Set<UUID> recentlyPresent = new HashSet<>();
-        final Map<UUID, Integer> firstSeenTick = new HashMap<>();
+        final List<TemporaryPlacement> blockPlacements;
 
-        Overgrowth(UUID casterUuid, Vec3d center, int castTick, int expiryTick) {
+        AwakenedTree(int entityId, UUID casterUuid, BlockPos center, int expiryTick,
+                List<TemporaryPlacement> blockPlacements) {
+            this.entityId = entityId;
             this.casterUuid = casterUuid;
             this.center = center;
-            this.castTick = castTick;
             this.expiryTick = expiryTick;
+            this.blockPlacements = List.copyOf(blockPlacements);
         }
     }
 
-    private static final Map<RegistryKey<World>, List<Overgrowth>> ACTIVE = new HashMap<>();
+    private static final Map<RegistryKey<World>, List<AwakenedTree>> ACTIVE = new HashMap<>();
 
     private OvergrowthManager() {
     }
@@ -64,124 +74,240 @@ public final class OvergrowthManager {
         ServerTickEvents.END_WORLD_TICK.register(OvergrowthManager::tickWorld);
     }
 
-    public static void startOvergrowth(ServerWorld world, PlayerEntity caster) {
+    public static void startOvergrowth(ServerWorld world, PlayerEntity caster, BlockPos seedlingPos,
+            int consumedSeedlings) {
         int now = world.getServer().getTicks();
-        Vec3d center = caster.getEntityPos();
-        Overgrowth w = new Overgrowth(caster.getUuid(), center, now, now + DURATION_TICKS);
-        ACTIVE.computeIfAbsent(world.getRegistryKey(), _k -> new ArrayList<>()).add(w);
+        BlockPos center = seedlingPos.toImmutable();
 
-        BlockPos soundPos = BlockPos.ofFloored(center);
-        world.playSound(null, soundPos, SoundEvents.BLOCK_BEACON_ACTIVATE, SoundCategory.PLAYERS, 1.2f, 0.55f);
-        world.playSound(null, soundPos, SoundEvents.ENTITY_RAVAGER_ROAR, SoundCategory.PLAYERS, 1.0f, 0.8f);
+        AwakenedTreeEntity tree = new AwakenedTreeEntity(ModEntities.AWAKENED_TREE, world);
+        tree.initialize(caster.getUuid());
+        tree.refreshPositionAndAngles(center.getX() + 0.5, center.getY(), center.getZ() + 0.5, caster.getYaw(), 0.0f);
+        world.spawnEntity(tree);
+
+        List<TemporaryPlacement> blockPlacements = placeTreeBlocks(world, center);
+        ACTIVE.computeIfAbsent(world.getRegistryKey(), _k -> new ArrayList<>())
+                .add(new AwakenedTree(tree.getId(), caster.getUuid(), center, now + TREE_DURATION_TICKS,
+                        blockPlacements));
+
+        float damage = Math.min(MAX_CRUSH_DAMAGE, BASE_CRUSH_DAMAGE + Math.max(0, consumedSeedlings - 1));
+        applyRootCrush(world, caster, center, damage);
+        spawnTreeBirthEffects(world, center);
+
+        world.playSound(null, center, SoundEvents.BLOCK_AZALEA_PLACE, SoundCategory.PLAYERS, 1.4f, 0.55f);
+        world.playSound(null, center, SoundEvents.ENTITY_RAVAGER_ROAR, SoundCategory.PLAYERS, 0.9f, 0.75f);
     }
 
     public static boolean isInOvergrowth(ServerWorld world, BlockPos pos) {
-        List<Overgrowth> list = ACTIVE.get(world.getRegistryKey());
-        if (list == null || list.isEmpty()) return false;
-        for (Overgrowth w : list) {
-            if (containsPos(w, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5)) {
+        List<AwakenedTree> trees = ACTIVE.get(world.getRegistryKey());
+        if (trees == null || trees.isEmpty()) return false;
+
+        for (AwakenedTree tree : trees) {
+            if (containsPos(tree, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5)) {
                 return true;
             }
         }
         return false;
     }
 
-    private static boolean containsPos(Overgrowth w, double x, double y, double z) {
-        double dx = x - w.center.x;
-        double dz = z - w.center.z;
-        if (dx * dx + dz * dz > RADIUS_SQ) return false;
-        double dy = y - w.center.y;
-        return dy >= -Y_BELOW && dy < Y_ABOVE;
+    public static void onTreeDamaged(ServerWorld world, AwakenedTreeEntity treeEntity) {
+        Vec3d pos = treeEntity.getEntityPos().add(0.0, treeEntity.getHeight() * 0.5, 0.0);
+        world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, Blocks.OAK_LOG.getDefaultState()),
+                pos.x, pos.y, pos.z, 18, 0.9, 1.2, 0.9, 0.08);
+        world.playSound(null, treeEntity.getBlockPos(), SoundEvents.BLOCK_WOOD_HIT, SoundCategory.PLAYERS, 1.0f, 0.75f);
     }
 
-    private static void tickWorld(ServerWorld world) {
-        List<Overgrowth> list = ACTIVE.get(world.getRegistryKey());
-        if (list == null || list.isEmpty()) return;
+    public static void destroyTree(ServerWorld world, AwakenedTreeEntity treeEntity) {
+        List<AwakenedTree> trees = ACTIVE.get(world.getRegistryKey());
+        if (trees == null || trees.isEmpty()) return;
 
-        int now = world.getServer().getTicks();
-        Iterator<Overgrowth> it = list.iterator();
+        Iterator<AwakenedTree> it = trees.iterator();
         while (it.hasNext()) {
-            Overgrowth w = it.next();
-            if (now >= w.expiryTick) {
-                it.remove();
-                continue;
-            }
-            tickOvergrowth(world, w, now);
+            AwakenedTree tree = it.next();
+            if (tree.entityId != treeEntity.getId()) continue;
+
+            cleanupTree(world, tree, treeEntity, true);
+            it.remove();
+            break;
         }
 
-        if (list.isEmpty()) {
+        if (trees.isEmpty()) {
             ACTIVE.remove(world.getRegistryKey());
         }
     }
 
-    private static void tickOvergrowth(ServerWorld world, Overgrowth w, int now) {
-        spawnPollenParticles(world, w);
+    private static void tickWorld(ServerWorld world) {
+        List<AwakenedTree> trees = ACTIVE.get(world.getRegistryKey());
+        if (trees == null || trees.isEmpty()) return;
 
-        Box box = new Box(
-                w.center.x - RADIUS, w.center.y - Y_BELOW, w.center.z - RADIUS,
-                w.center.x + RADIUS, w.center.y + Y_ABOVE, w.center.z + RADIUS);
-        List<LivingEntity> entities = world.getEntitiesByClass(LivingEntity.class, box,
-                e -> e.isAlive() && !e.isSpectator());
+        int now = world.getServer().getTicks();
+        Iterator<AwakenedTree> it = trees.iterator();
+        while (it.hasNext()) {
+            AwakenedTree tree = it.next();
+            AwakenedTreeEntity entity = world.getEntityById(tree.entityId) instanceof AwakenedTreeEntity awakened
+                    ? awakened
+                    : null;
 
-        Set<UUID> nowPresent = new HashSet<>();
-        for (LivingEntity entity : entities) {
-            if (!containsPos(w, entity.getX(), entity.getY() + 0.1, entity.getZ())) continue;
-            nowPresent.add(entity.getUuid());
-
-            boolean isCaster = entity.getUuid().equals(w.casterUuid);
-            if (isCaster) {
-                entity.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 10, 0, false, false, true));
+            if (entity == null || entity.isRemoved() || !entity.isAlive() || now >= tree.expiryTick) {
+                cleanupTree(world, tree, entity, false);
+                it.remove();
                 continue;
             }
 
-            // Choking spores: poison + slow while inside the cloud.
-            entity.addStatusEffect(new StatusEffectInstance(StatusEffects.POISON, 40, 0, false, false, true));
-            entity.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 40, 0, false, false, true));
+            tickHealingBeacon(world, tree, now);
+            if (now % 5 == 0) {
+                spawnAmbientTreeParticles(world, tree, now);
+            }
+        }
 
-            Integer firstSeen = w.firstSeenTick.get(entity.getUuid());
-            if (firstSeen == null) {
-                w.firstSeenTick.put(entity.getUuid(), now);
-            } else {
-                int age = now - firstSeen;
-                if (age > 0 && age % ENTANGLE_INTERVAL == 0) {
-                    EntangleTracker.addStack(world, entity);
-                    SeedlingManager.applyThorns(world, entity, w.casterUuid);
+        if (trees.isEmpty()) {
+            ACTIVE.remove(world.getRegistryKey());
+        }
+    }
+
+    private static boolean containsPos(AwakenedTree tree, double x, double y, double z) {
+        double dx = x - (tree.center.getX() + 0.5);
+        double dz = z - (tree.center.getZ() + 0.5);
+        if (dx * dx + dz * dz > TREE_RADIUS_SQ) return false;
+
+        double dy = y - tree.center.getY();
+        return dy >= -TREE_Y_BELOW && dy <= TREE_Y_ABOVE;
+    }
+
+    private static void applyRootCrush(ServerWorld world, PlayerEntity caster, BlockPos center, float damage) {
+        Vec3d centerVec = Vec3d.ofCenter(center);
+        Box box = new Box(
+                centerVec.x - TREE_RADIUS, centerVec.y - TREE_Y_BELOW, centerVec.z - TREE_RADIUS,
+                centerVec.x + TREE_RADIUS, centerVec.y + TREE_Y_ABOVE, centerVec.z + TREE_RADIUS);
+        List<LivingEntity> targets = world.getEntitiesByClass(LivingEntity.class, box,
+                e -> e.isAlive() && !e.isSpectator() && !e.getUuid().equals(caster.getUuid())
+                        && !(e instanceof AwakenedTreeEntity));
+
+        for (LivingEntity target : targets) {
+            double dx = target.getX() - centerVec.x;
+            double dz = target.getZ() - centerVec.z;
+            if (dx * dx + dz * dz > TREE_RADIUS_SQ) continue;
+
+            boolean damaged = target.damage(world, world.getDamageSources().playerAttack(caster), damage);
+            if (damaged) {
+                AbstractWandItem.onWandDamageDealt(caster, damage);
+            }
+
+            target.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS,
+                    ROOT_CRUSH_SLOW_TICKS, ROOT_CRUSH_SLOW_AMPLIFIER, false, true, true));
+            target.addVelocity(0.0, -0.65, 0.0);
+            target.velocityModified = true;
+            target.fallDistance = 0.0f;
+
+            world.spawnParticles(ParticleTypes.SPORE_BLOSSOM_AIR,
+                    target.getX(), target.getY() + 0.2, target.getZ(), 18, 0.45, 0.08, 0.45, 0.02);
+            world.spawnParticles(ParticleTypes.HAPPY_VILLAGER,
+                    target.getX(), target.getBodyY(0.45), target.getZ(), 12, 0.35, 0.4, 0.35, 0.02);
+        }
+    }
+
+    private static void tickHealingBeacon(ServerWorld world, AwakenedTree tree, int now) {
+        PlayerEntity caster = world.getPlayerByUuid(tree.casterUuid);
+        if (caster == null || !caster.isAlive()) return;
+        if (!containsPos(tree, caster.getX(), caster.getY() + 0.1, caster.getZ())) return;
+
+        caster.addStatusEffect(new StatusEffectInstance(StatusEffects.REGENERATION, 40, 0, false, false, true));
+        if (now % 20 == 0) {
+            world.spawnParticles(ParticleTypes.HAPPY_VILLAGER,
+                    caster.getX(), caster.getBodyY(0.5), caster.getZ(), 8, 0.35, 0.45, 0.35, 0.02);
+        }
+    }
+
+    private static List<TemporaryPlacement> placeTreeBlocks(ServerWorld world, BlockPos center) {
+        List<TemporaryPlacement> placements = new ArrayList<>();
+
+        Set<BlockPos> trunk = new HashSet<>();
+        for (int y = 0; y <= 5; y++) {
+            trunk.add(center.up(y));
+        }
+        trunk.add(center.north());
+        trunk.add(center.south());
+        trunk.add(center.east());
+        trunk.add(center.west());
+        placements.add(TemporaryBlockManager.placeTrackedTemporaryBlocks(world, trunk,
+                Blocks.OAK_LOG.getDefaultState(), TREE_DURATION_TICKS, OvergrowthManager::canReplaceTreeBlock));
+
+        Set<BlockPos> leaves = new HashSet<>();
+        for (int y = 3; y <= 7; y++) {
+            int radius = y == 7 ? 1 : (y <= 4 ? 2 : 3);
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    if (Math.abs(dx) + Math.abs(dz) > radius + 1) continue;
+                    if (dx == 0 && dz == 0 && y <= 5) continue;
+                    leaves.add(center.add(dx, y, dz));
                 }
             }
         }
+        placements.add(TemporaryBlockManager.placeTrackedTemporaryBlocks(world, leaves,
+                Blocks.OAK_LEAVES.getDefaultState(), TREE_DURATION_TICKS, OvergrowthManager::canReplaceTreeBlock));
 
-        for (UUID prev : w.recentlyPresent) {
-            if (nowPresent.contains(prev)) continue;
-            if (prev.equals(w.casterUuid)) continue;
-            LivingEntity exited = findLivingByUuid(world, prev);
-            if (exited != null && exited.isAlive()) {
-                // Lingering spores in the lungs after stumbling out of the cloud.
-                exited.addStatusEffect(new StatusEffectInstance(StatusEffects.POISON, 60, 0, false, false, true));
+        Set<BlockPos> moss = new HashSet<>();
+        for (int dx = -4; dx <= 4; dx++) {
+            for (int dz = -4; dz <= 4; dz++) {
+                if (dx * dx + dz * dz > 16) continue;
+                BlockPos p = center.add(dx, 0, dz);
+                BlockState below = world.getBlockState(p.down());
+                BlockState at = world.getBlockState(p);
+                if ((at.isAir() || at.isReplaceable()) && below.isSolidBlock(world, p.down())) {
+                    moss.add(p);
+                }
             }
-            w.firstSeenTick.remove(prev);
+        }
+        placements.add(TemporaryBlockManager.placeTrackedTemporaryBlocks(world, moss,
+                Blocks.MOSS_CARPET.getDefaultState(), TREE_DURATION_TICKS, state -> state.isAir() || state.isReplaceable()));
+
+        return placements;
+    }
+
+    private static boolean canReplaceTreeBlock(BlockState state) {
+        return state.isAir()
+                || state.isReplaceable()
+                || state.isOf(Blocks.MOSS_BLOCK)
+                || state.isOf(Blocks.MOSS_CARPET)
+                || state.isOf(Blocks.OAK_LOG)
+                || state.isOf(Blocks.OAK_LEAVES);
+    }
+
+    private static void spawnTreeBirthEffects(ServerWorld world, BlockPos center) {
+        Vec3d c = Vec3d.ofCenter(center);
+        world.spawnParticles(ParticleTypes.SPORE_BLOSSOM_AIR, c.x, c.y + 1.5, c.z, 80, 2.5, 1.6, 2.5, 0.05);
+        world.spawnParticles(ParticleTypes.HAPPY_VILLAGER, c.x, c.y + 2.5, c.z, 60, 2.0, 2.4, 2.0, 0.08);
+        world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, Blocks.OAK_LOG.getDefaultState()),
+                c.x, c.y + 0.5, c.z, 60, 1.5, 0.8, 1.5, 0.18);
+    }
+
+    private static void spawnAmbientTreeParticles(ServerWorld world, AwakenedTree tree, int now) {
+        Vec3d c = Vec3d.ofCenter(tree.center);
+        double angle = now * 0.18;
+        for (int i = 0; i < 8; i++) {
+            double a = angle + i * (Math.PI * 2.0 / 8.0);
+            double r = 1.4 + (i % 3) * 0.5;
+            double x = c.x + Math.cos(a) * r;
+            double z = c.z + Math.sin(a) * r;
+            double y = c.y + 1.0 + (i % 4) * 0.9;
+            world.spawnParticles(ParticleTypes.HAPPY_VILLAGER, x, y, z, 1, 0.05, 0.05, 0.05, 0.0);
+        }
+    }
+
+    private static void cleanupTree(ServerWorld world, AwakenedTree tree, AwakenedTreeEntity entity, boolean destroyed) {
+        for (TemporaryPlacement placement : tree.blockPlacements) {
+            TemporaryBlockManager.restoreTemporaryBlocks(world, placement);
         }
 
-        w.recentlyPresent.clear();
-        w.recentlyPresent.addAll(nowPresent);
-    }
+        Vec3d c = Vec3d.ofCenter(tree.center);
+        world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, Blocks.OAK_LEAVES.getDefaultState()),
+                c.x, c.y + 3.0, c.z, destroyed ? 70 : 35, 2.0, 2.0, 2.0, 0.12);
+        world.spawnParticles(ParticleTypes.SPORE_BLOSSOM_AIR, c.x, c.y + 1.0, c.z, destroyed ? 35 : 18,
+                1.2, 0.7, 1.2, 0.03);
+        world.playSound(null, tree.center, destroyed ? SoundEvents.BLOCK_WOOD_BREAK : SoundEvents.BLOCK_GRASS_BREAK,
+                SoundCategory.PLAYERS, 1.0f, destroyed ? 0.75f : 1.05f);
 
-    private static LivingEntity findLivingByUuid(ServerWorld world, UUID uuid) {
-        return world.getEntity(uuid) instanceof LivingEntity living ? living : null;
-    }
-
-    private static void spawnPollenParticles(ServerWorld world, Overgrowth w) {
-        for (int i = 0; i < POLLEN_PARTICLES_PER_TICK; i++) {
-            double angle = world.random.nextDouble() * Math.PI * 2.0;
-            double dist = Math.sqrt(world.random.nextDouble()) * RADIUS;
-            double px = w.center.x + Math.cos(angle) * dist;
-            double pz = w.center.z + Math.sin(angle) * dist;
-            double py = w.center.y + (world.random.nextDouble() * (Y_BELOW + Y_ABOVE) - Y_BELOW);
-            int roll = i % 3;
-            switch (roll) {
-                case 0 -> world.spawnParticles(ParticleTypes.SPORE_BLOSSOM_AIR, px, py, pz, 1, 0.15, 0.15, 0.15, 0.005);
-                case 1 -> world.spawnParticles(ParticleTypes.HAPPY_VILLAGER, px, py, pz, 1, 0.2, 0.2, 0.2, 0.01);
-                default -> world.spawnParticles(ParticleTypes.FALLING_SPORE_BLOSSOM, px, py, pz, 1, 0.15, 0.15, 0.15, 0.01);
-            }
+        if (entity != null && !entity.isRemoved()) {
+            entity.discard();
         }
     }
 }

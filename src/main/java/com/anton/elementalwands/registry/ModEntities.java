@@ -1,6 +1,7 @@
 package com.anton.elementalwands.registry;
 
 import com.anton.elementalwands.ElementalWandsMod;
+import com.anton.elementalwands.entity.AwakenedTreeEntity;
 import com.anton.elementalwands.entity.BoulderProjectileEntity;
 import com.anton.elementalwands.entity.SeedProjectileEntity;
 import com.anton.elementalwands.entity.CalamityTornadoEntity;
@@ -101,6 +102,17 @@ public final class ModEntities {
                                         .trackedUpdateRate(1)
                                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
                                                         Identifier.of(ElementalWandsMod.MOD_ID, "hollow_purple_orb"))));
+
+        public static final EntityType<AwakenedTreeEntity> AWAKENED_TREE = Registry.register(
+                        Registries.ENTITY_TYPE,
+                        Identifier.of(ElementalWandsMod.MOD_ID, "awakened_tree"),
+                        FabricEntityTypeBuilder
+                                        .<AwakenedTreeEntity>create(SpawnGroup.MISC, AwakenedTreeEntity::new)
+                                        .dimensions(EntityDimensions.fixed(3.5f, 6.0f))
+                                        .trackRangeBlocks(96)
+                                        .trackedUpdateRate(3)
+                                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
+                                                        Identifier.of(ElementalWandsMod.MOD_ID, "awakened_tree"))));
 
         // 1.5x vanilla zombie: 0.8 * 1.5 = 1.2 wide, 1.9 * 1.5 = 2.85 tall
         public static final EntityType<StoneZombieEntity> STONE_ZOMBIE = Registry.register(

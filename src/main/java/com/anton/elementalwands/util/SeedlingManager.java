@@ -7,10 +7,12 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
 import com.anton.elementalwands.item.AbstractWandItem;
+import com.anton.elementalwands.network.ModNetworking;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.block.BlockState;
@@ -23,14 +25,17 @@ import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.fluid.Fluids;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryKey;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
 
 /**
@@ -52,7 +57,7 @@ public final class SeedlingManager {
     private static final int CONSUMPTION_TAIL_TICKS = 310;
 
     private static final int ZONE_ENTANGLE_INTERVAL = 20;
-    private static final float THORN_DAMAGE = 1.0f;
+    private static final float THORN_DAMAGE = 1.5f;
 
     static final class Seedling {
         final UUID seedlingId;
@@ -139,6 +144,7 @@ public final class SeedlingManager {
         seedling.originals.put(anchorPos, anchorOriginal);
 
         ACTIVE.computeIfAbsent(world.getRegistryKey(), _k -> new ArrayList<>()).add(seedling);
+        syncActiveSeedlings(world, caster.getUuid());
 
         if (face != Direction.UP) {
             spawnVerticalFlourish(world, hit.getPos(), floorPos);
@@ -158,6 +164,84 @@ public final class SeedlingManager {
             out.add(new SeedlingSnapshot(s.seedlingId, s.anchorPos, s.plantTick));
         }
         return out;
+    }
+
+    public static List<BlockPos> getActiveSeedlingPositionsForCaster(ServerWorld world, UUID casterUuid) {
+        List<Seedling> seedlings = activeForCaster(world, casterUuid);
+        List<BlockPos> out = new ArrayList<>(seedlings.size());
+        for (Seedling s : seedlings) {
+            out.add(s.anchorPos.toImmutable());
+        }
+        return out;
+    }
+
+    public static Optional<SeedlingSnapshot> findTargetedSeedling(ServerWorld world, PlayerEntity caster, double range) {
+        List<Seedling> seedlings = activeForCaster(world, caster.getUuid());
+        if (seedlings.isEmpty()) return Optional.empty();
+
+        Vec3d start = caster.getEyePos();
+        Vec3d direction = caster.getRotationVec(1.0f).normalize();
+        Vec3d end = start.add(direction.multiply(range));
+
+        BlockHitResult blockHit = world.raycast(new RaycastContext(start, end,
+                RaycastContext.ShapeType.OUTLINE,
+                RaycastContext.FluidHandling.NONE,
+                caster));
+        double blockLimitSq = blockHit.getType() == HitResult.Type.MISS
+                ? range * range
+                : start.squaredDistanceTo(blockHit.getPos()) + 0.25;
+
+        Seedling best = null;
+        double bestDistSq = Double.MAX_VALUE;
+        for (Seedling seedling : seedlings) {
+            Optional<Vec3d> hit = new Box(seedling.anchorPos).expand(0.2).raycast(start, end);
+            if (hit.isEmpty()) continue;
+
+            double distSq = start.squaredDistanceTo(hit.get());
+            if (distSq > blockLimitSq || distSq >= bestDistSq) continue;
+
+            best = seedling;
+            bestDistSq = distSq;
+        }
+
+        return best == null
+                ? Optional.empty()
+                : Optional.of(new SeedlingSnapshot(best.seedlingId, best.anchorPos, best.plantTick));
+    }
+
+    public static int consumeAllSeedlingsForCaster(ServerWorld world, UUID casterUuid) {
+        List<Seedling> seedlings = activeForCaster(world, casterUuid);
+        if (seedlings.isEmpty()) {
+            syncActiveSeedlings(world, casterUuid);
+            return 0;
+        }
+
+        for (Seedling seedling : seedlings) {
+            cleanupSeedlingInternal(world, seedling);
+        }
+
+        List<Seedling> list = ACTIVE.get(world.getRegistryKey());
+        if (list != null) {
+            list.removeIf(s -> s.casterUuid.equals(casterUuid));
+            if (list.isEmpty()) {
+                ACTIVE.remove(world.getRegistryKey());
+            }
+        }
+
+        syncActiveSeedlings(world, casterUuid);
+        return seedlings.size();
+    }
+
+    public static void syncActiveSeedlings(ServerPlayerEntity player) {
+        if (player.getEntityWorld() instanceof ServerWorld world) {
+            ModNetworking.syncNatureSeedlings(player, getActiveSeedlingPositionsForCaster(world, player.getUuid()));
+        }
+    }
+
+    private static void syncActiveSeedlings(ServerWorld world, UUID casterUuid) {
+        if (world.getPlayerByUuid(casterUuid) instanceof ServerPlayerEntity player) {
+            ModNetworking.syncNatureSeedlings(player, getActiveSeedlingPositionsForCaster(world, casterUuid));
+        }
     }
 
     public static void markSeedlingsForConsumption(ServerWorld world, UUID casterUuid, int castTick) {
@@ -182,6 +266,7 @@ public final class SeedlingManager {
         for (Seedling s : list) {
             if (s.active && s.anchorPos.equals(anchorPos)) {
                 cleanupSeedlingInternal(world, s);
+                syncActiveSeedlings(world, s.casterUuid);
                 return true;
             }
         }
@@ -353,11 +438,13 @@ public final class SeedlingManager {
         if (list == null || list.isEmpty()) return;
 
         int now = world.getServer().getTicks();
+        Set<UUID> changedCasters = new HashSet<>();
 
         Iterator<Seedling> it = list.iterator();
         while (it.hasNext()) {
             Seedling seedling = it.next();
             if (!seedling.active) {
+                changedCasters.add(seedling.casterUuid);
                 it.remove();
                 continue;
             }
@@ -366,18 +453,21 @@ public final class SeedlingManager {
 
             if (now >= seedling.expiryTick) {
                 cleanupSeedlingInternal(world, seedling);
+                changedCasters.add(seedling.casterUuid);
                 it.remove();
                 continue;
             }
 
             if (!world.getBlockState(seedling.anchorPos).isOf(Blocks.MOSS_BLOCK)) {
                 cleanupSeedlingInternal(world, seedling);
+                changedCasters.add(seedling.casterUuid);
                 it.remove();
                 continue;
             }
 
             if (anyProjectileAt(world, seedling.anchorPos)) {
                 cleanupSeedlingInternal(world, seedling);
+                changedCasters.add(seedling.casterUuid);
                 it.remove();
                 continue;
             }
@@ -388,6 +478,10 @@ public final class SeedlingManager {
 
         if (list.isEmpty()) {
             ACTIVE.remove(world.getRegistryKey());
+        }
+
+        for (UUID casterUuid : changedCasters) {
+            syncActiveSeedlings(world, casterUuid);
         }
     }
 
@@ -480,6 +574,7 @@ public final class SeedlingManager {
         cleanupSeedlingInternal(world, seedling);
         List<Seedling> list = ACTIVE.get(world.getRegistryKey());
         if (list != null) list.remove(seedling);
+        syncActiveSeedlings(world, seedling.casterUuid);
     }
 
     private static void cleanupSeedlingInternal(ServerWorld world, Seedling seedling) {

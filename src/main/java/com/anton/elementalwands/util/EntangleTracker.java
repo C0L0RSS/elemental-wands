@@ -1,16 +1,23 @@
 package com.anton.elementalwands.util;
 
+import com.anton.elementalwands.network.ModNetworking;
+
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
 
+import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.networking.v1.EntityTrackingEvents;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryKey;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.world.World;
 
@@ -24,7 +31,7 @@ import net.minecraft.world.World;
 public final class EntangleTracker {
 
     /** Stack count at which the target is fully rooted (cannot walk). */
-    private static final int MAX_STACKS = 5;
+    public static final int MAX_STACKS = 5;
 
     private record EntangleData(int stacks, int lastHitTick) {
     }
@@ -37,6 +44,30 @@ public final class EntangleTracker {
 
     public static void init() {
         ServerTickEvents.END_WORLD_TICK.register(EntangleTracker::tickWorld);
+        ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
+            if (entity.getEntityWorld() instanceof ServerWorld world) {
+                clearStacks(world, entity);
+            }
+        });
+        ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> {
+            if (oldPlayer.getEntityWorld() instanceof ServerWorld world) {
+                clearStacks(world, oldPlayer);
+            }
+            syncPlayer(newPlayer);
+        });
+        EntityTrackingEvents.START_TRACKING.register((entity, player) -> {
+            if (entity instanceof LivingEntity living) {
+                int stacks = getStacks(living);
+                if (stacks > 0) {
+                    ModNetworking.syncEntangleStacks(player, living, stacks);
+                }
+            }
+        });
+        EntityTrackingEvents.STOP_TRACKING.register((entity, player) -> {
+            if (entity instanceof LivingEntity living) {
+                ModNetworking.syncEntangleStacks(player, living, 0);
+            }
+        });
     }
 
     public static void addStack(ServerWorld world, LivingEntity target) {
@@ -62,6 +93,7 @@ public final class EntangleTracker {
 
         applyEffects(target, newStacks);
         spawnVineParticles(world, target, newStacks);
+        ModNetworking.syncEntangleStacks(target, newStacks);
     }
 
     public static int getStacks(LivingEntity entity) {
@@ -84,9 +116,20 @@ public final class EntangleTracker {
 
     public static void clearStacks(ServerWorld world, LivingEntity entity) {
         Map<UUID, EntangleData> map = ENTANGLED.get(world.getRegistryKey());
+        boolean removed = false;
         if (map != null) {
-            map.remove(entity.getUuid());
+            removed = map.remove(entity.getUuid()) != null;
+            if (map.isEmpty()) {
+                ENTANGLED.remove(world.getRegistryKey());
+            }
         }
+        if (removed) {
+            ModNetworking.syncEntangleStacks(entity, 0);
+        }
+    }
+
+    public static void syncPlayer(ServerPlayerEntity player) {
+        ModNetworking.syncEntangleStacks(player, player, getStacks(player));
     }
 
     private static void applyEffects(LivingEntity target, int stacks) {
@@ -128,6 +171,10 @@ public final class EntangleTracker {
 
             // Auto-clear if no hits for 100 ticks
             if (now - data.lastHitTick >= CLEAR_DELAY) {
+                Entity entity = world.getEntityAnyDimension(entry.getKey());
+                if (entity instanceof LivingEntity living) {
+                    ModNetworking.syncEntangleStacks(living, 0);
+                }
                 it.remove();
             }
         }

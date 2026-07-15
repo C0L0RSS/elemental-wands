@@ -29,9 +29,9 @@ import net.minecraft.world.World;
  */
 public class SeedProjectileEntity extends ProjectileEntity {
 
-    private static final float BASE_DAMAGE = 4.0f;
-    private static final float DAMAGE_PER_ENTANGLE_STACK = 1.0f;
-    private static final float MAX_DAMAGE = 10.0f;
+    private static final float BASE_DAMAGE = 5.5f;
+    private static final float DAMAGE_PER_ENTANGLE_STACK = 1.25f;
+    private static final float MAX_DAMAGE = 11.0f;
     private static final double INITIAL_SPEED = 1.5;
     private static final double GRAVITY = 0.03;
     private static final double DRAG = 0.99;
@@ -118,6 +118,7 @@ public class SeedProjectileEntity extends ProjectileEntity {
         Entity owner = getOwner();
 
         if (target instanceof LivingEntity living) {
+            EntangleTracker.addStack(sw, living);
             int stacks = EntangleTracker.getStacks(living);
             float damage = Math.min(MAX_DAMAGE, BASE_DAMAGE + DAMAGE_PER_ENTANGLE_STACK * stacks);
 

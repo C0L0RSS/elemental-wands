@@ -4,8 +4,13 @@ import com.anton.elementalwands.ElementalWandsMod;
 import com.anton.elementalwands.data.EWAttachments;
 import com.anton.elementalwands.item.AbstractWandItem;
 
+import java.util.Collection;
+import java.util.List;
+
+import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.RegistryByteBuf;
 import net.minecraft.network.codec.PacketCodec;
@@ -14,6 +19,7 @@ import net.minecraft.network.packet.CustomPayload;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.BlockPos;
 
 public final class ModNetworking {
 
@@ -32,6 +38,8 @@ public final class ModNetworking {
 
         // S2C
         PayloadTypeRegistry.playS2C().register(SyncPlayerDataPayload.ID, SyncPlayerDataPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(SyncNatureSeedlingsPayload.ID, SyncNatureSeedlingsPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(SyncEntangleStacksPayload.ID, SyncEntangleStacksPayload.CODEC);
     }
 
     public static void registerC2SReceivers() {
@@ -51,6 +59,27 @@ public final class ModNetworking {
         int skills = player.getAttachedOrElse(EWAttachments.UNLOCKED_SKILLS, 0);
         String affinity = player.getAttachedOrElse(EWAttachments.AFFINITY, "NONE");
         ServerPlayNetworking.send(player, new SyncPlayerDataPayload(skills, affinity));
+    }
+
+    public static void syncNatureSeedlings(ServerPlayerEntity player, List<BlockPos> positions) {
+        ServerPlayNetworking.send(player, new SyncNatureSeedlingsPayload(List.copyOf(positions)));
+    }
+
+    public static void syncEntangleStacks(ServerPlayerEntity player, LivingEntity target, int stacks) {
+        ServerPlayNetworking.send(player, new SyncEntangleStacksPayload(target.getId(), stacks));
+    }
+
+    /** Sends a target's Entangle state to every client that can currently see it. */
+    public static void syncEntangleStacks(LivingEntity target, int stacks) {
+        Collection<ServerPlayerEntity> trackingPlayers = PlayerLookup.tracking(target);
+        for (ServerPlayerEntity player : trackingPlayers) {
+            syncEntangleStacks(player, target, stacks);
+        }
+
+        // PlayerLookup does not guarantee that a tracked player includes themselves.
+        if (target instanceof ServerPlayerEntity player && !trackingPlayers.contains(player)) {
+            syncEntangleStacks(player, target, stacks);
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -106,6 +135,33 @@ public final class ModNetworking {
                         PacketCodecs.INTEGER, SyncPlayerDataPayload::unlockedSkills,
                         PacketCodecs.STRING,  SyncPlayerDataPayload::affinity,
                         SyncPlayerDataPayload::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() { return ID; }
+    }
+
+    /** S2C packet carrying the caster's current active Nature seedling anchors. */
+    public record SyncNatureSeedlingsPayload(List<BlockPos> positions) implements CustomPayload {
+        public static final Id<SyncNatureSeedlingsPayload> ID = new Id<>(
+                Identifier.of(ElementalWandsMod.MOD_ID, "sync_nature_seedlings"));
+        public static final PacketCodec<RegistryByteBuf, SyncNatureSeedlingsPayload> CODEC =
+                BlockPos.PACKET_CODEC.<RegistryByteBuf>cast()
+                        .collect(PacketCodecs.toList(32))
+                        .xmap(SyncNatureSeedlingsPayload::new, SyncNatureSeedlingsPayload::positions);
+
+        @Override
+        public Id<? extends CustomPayload> getId() { return ID; }
+    }
+
+    /** S2C packet carrying one visible entity's current Entangle stack count. */
+    public record SyncEntangleStacksPayload(int entityId, int stacks) implements CustomPayload {
+        public static final Id<SyncEntangleStacksPayload> ID = new Id<>(
+                Identifier.of(ElementalWandsMod.MOD_ID, "sync_entangle_stacks"));
+        public static final PacketCodec<RegistryByteBuf, SyncEntangleStacksPayload> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.INTEGER, SyncEntangleStacksPayload::entityId,
+                        PacketCodecs.INTEGER, SyncEntangleStacksPayload::stacks,
+                        SyncEntangleStacksPayload::new);
 
         @Override
         public Id<? extends CustomPayload> getId() { return ID; }

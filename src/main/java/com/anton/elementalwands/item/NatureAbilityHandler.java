@@ -27,7 +27,7 @@ import net.minecraft.util.math.Vec3d;
 
 public final class NatureAbilityHandler {
 
-    private static final int PRIMARY_COOLDOWN_TICKS = 25;
+    private static final int PRIMARY_COOLDOWN_TICKS = 20;
     private static final int SECONDARY_COOLDOWN_TICKS = 300;
     private static final double TENDRIL_TARGET_RANGE = 15.0;
 
@@ -129,10 +129,23 @@ public final class NatureAbilityHandler {
     }
 
     public static void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {
+        var targetedSeedling = SeedlingManager.findTargetedSeedling(world, caster, AbstractWandItem.DEFAULT_RANGE);
+        if (targetedSeedling.isEmpty()) {
+            caster.sendMessage(Text.literal("Target one of your seedlings."), true);
+            return;
+        }
+
         if (!AbstractWandItem.trySpendUltimateCharge(world, caster, stack)) {
             return;
         }
-        OvergrowthManager.startOvergrowth(world, caster);
+
+        int consumedSeedlings = SeedlingManager.consumeAllSeedlingsForCaster(world, caster.getUuid());
+        if (consumedSeedlings <= 0) {
+            caster.sendMessage(Text.literal("No active seedlings."), true);
+            return;
+        }
+
+        OvergrowthManager.startOvergrowth(world, caster, targetedSeedling.get().anchorPos(), consumedSeedlings);
     }
 
     private static LivingEntity findNearestTarget(ServerWorld world, PlayerEntity caster, BlockPos anchor) {

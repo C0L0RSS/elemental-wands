@@ -9,5 +9,6 @@
   "entity.elementalwands.stone_zombie": "Stone Zombie",
   "item.elementalwands.stone_zombie_spawn_egg": "Stone Zombie Spawn Egg",
   "entity.elementalwands.fire_spirit": "Fire Spirit",
-  "item.elementalwands.fire_spirit_spawn_egg": "Fire Spirit Spawn Egg"
+  "item.elementalwands.fire_spirit_spawn_egg": "Fire Spirit Spawn Egg",
+  "entity.elementalwands.awakened_tree": "Awakened Tree"
 }

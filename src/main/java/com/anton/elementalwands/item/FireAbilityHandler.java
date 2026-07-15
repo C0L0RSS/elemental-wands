@@ -205,9 +205,9 @@ public final class FireAbilityHandler {
                 if (distForward >= currentDistance - WAVE_FRONT_DEPTH
                         && distForward <= currentDistance + WAVE_FRONT_DEPTH
                         && distRight <= WAVE_HALF_WIDTH) {
-                    boolean damaged = target.damage(sw, sw.getDamageSources().playerAttack(caster), 5.0f);
+                    boolean damaged = target.damage(sw, sw.getDamageSources().playerAttack(caster), 8.0f);
                     if (damaged) {
-                        AbstractWandItem.onWandDamageDealt(caster, 5.0f);
+                        AbstractWandItem.onWandDamageDealt(caster, 8.0f);
                     }
                     target.setFireTicks(100);
                     hitTargets.add(target.getUuid());

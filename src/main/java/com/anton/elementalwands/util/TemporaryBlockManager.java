@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Predicate;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -18,7 +19,14 @@ import net.minecraft.world.World;
 
 public final class TemporaryBlockManager {
 
-    private record TempBlocks(Long2ObjectMap<BlockState> originalByPos, BlockState placedState, int expiryTick) {
+    public record TemporaryPlacement(UUID id, int placedCount) {
+        public boolean isEmpty() {
+            return placedCount <= 0;
+        }
+    }
+
+    private record TempBlocks(UUID id, Long2ObjectMap<BlockState> originalByPos, BlockState placedState,
+            int expiryTick) {
     }
 
     private static final Map<RegistryKey<World>, List<TempBlocks>> TEMP = new HashMap<>();
@@ -32,6 +40,11 @@ public final class TemporaryBlockManager {
 
     public static int placeTemporaryBlocks(ServerWorld world, Iterable<BlockPos> positions, BlockState placedState,
             int durationTicks, Predicate<BlockState> canReplace) {
+        return placeTrackedTemporaryBlocks(world, positions, placedState, durationTicks, canReplace).placedCount();
+    }
+
+    public static TemporaryPlacement placeTrackedTemporaryBlocks(ServerWorld world, Iterable<BlockPos> positions,
+            BlockState placedState, int durationTicks, Predicate<BlockState> canReplace) {
         int now = world.getServer().getTicks();
         int expiryTick = now + durationTicks;
 
@@ -44,12 +57,36 @@ public final class TemporaryBlockManager {
             world.setBlockState(pos, placedState, 3);
         }
 
-        if (originalByPos.isEmpty()) return 0;
+        if (originalByPos.isEmpty()) {
+            return new TemporaryPlacement(new UUID(0L, 0L), 0);
+        }
 
         RegistryKey<World> key = world.getRegistryKey();
+        UUID id = UUID.randomUUID();
         TEMP.computeIfAbsent(key, _k -> new ArrayList<>())
-                .add(new TempBlocks(originalByPos, placedState, expiryTick));
-        return originalByPos.size();
+                .add(new TempBlocks(id, originalByPos, placedState, expiryTick));
+        return new TemporaryPlacement(id, originalByPos.size());
+    }
+
+    public static void restoreTemporaryBlocks(ServerWorld world, TemporaryPlacement placement) {
+        if (placement == null || placement.isEmpty()) return;
+
+        List<TempBlocks> temp = TEMP.get(world.getRegistryKey());
+        if (temp == null || temp.isEmpty()) return;
+
+        Iterator<TempBlocks> it = temp.iterator();
+        while (it.hasNext()) {
+            TempBlocks blocks = it.next();
+            if (!blocks.id().equals(placement.id())) continue;
+
+            restore(world, blocks);
+            it.remove();
+            break;
+        }
+
+        if (temp.isEmpty()) {
+            TEMP.remove(world.getRegistryKey());
+        }
     }
 
     private static void tickWorld(ServerWorld world) {
@@ -83,4 +120,3 @@ public final class TemporaryBlockManager {
         }
     }
 }
-

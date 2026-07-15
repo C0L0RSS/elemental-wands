@@ -25,7 +25,7 @@ import java.util.Set;
 
 public class InfernoWaveEntity extends ProjectileEntity {
 
-    private static final float DAMAGE = 6.0f;
+    private static final float DAMAGE = 8.0f;
     private static final int MAX_TRAVEL_DISTANCE = 15; // blocks
     private static final double PROJECTILE_SPEED = 1.5;
     private static final int FIRE_TRAIL_DURATION_TICKS = 40; // 2 seconds

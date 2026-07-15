@@ -8,7 +8,6 @@ import com.anton.elementalwands.item.NatureAbilityHandler;
 import com.anton.elementalwands.item.SpaceAbilityHandler;
 import com.anton.elementalwands.item.StoneAbilityHandler;
 import com.anton.elementalwands.item.WindAbilityHandler;
-import com.anton.elementalwands.util.EntangleTracker;
 
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
@@ -200,7 +199,7 @@ public class WandHudOverlay implements HudRenderCallback {
         long last    = nbt.getLong(key).orElse(-1_000_000_000L);
         long elapsed = now - last;
 
-        if (EntangleTracker.getStacks(client.player) > 0) {
+        if (ClientPlayerData.getEntangleStacks(client.player.getId()) > 0) {
             elapsed /= 2;
         }
 

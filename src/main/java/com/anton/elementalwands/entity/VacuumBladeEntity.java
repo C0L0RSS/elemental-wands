@@ -19,8 +19,8 @@ import net.minecraft.world.World;
 
 public class VacuumBladeEntity extends ProjectileEntity {
 
-    private static final float MAX_DAMAGE = 5.0f;
-    private static final float MIN_DAMAGE = 1.5f;
+    private static final float MAX_DAMAGE = 7.0f;
+    private static final float MIN_DAMAGE = 4.0f;
     private static final double PROJECTILE_SPEED = 2.5;
     private static final int MAX_TRAVEL_DISTANCE = 20;
 

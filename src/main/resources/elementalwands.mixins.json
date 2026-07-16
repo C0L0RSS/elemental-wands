@@ -4,7 +4,8 @@
     "package": "com.anton.elementalwands.mixin",
     "compatibilityLevel": "JAVA_21",
     "mixins": [
-        "PlayerEntityMixin"
+        "PlayerEntityMixin",
+        "ScreenHandlerMixin"
     ],
     "injectors": {
         "defaultRequire": 1

@@ -1,6 +1,7 @@
 package com.anton.elementalwands.entity;
 
 import com.anton.elementalwands.registry.ModEntities;
+import com.anton.elementalwands.registry.ModParticles;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -8,7 +9,6 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.projectile.ProjectileUtil;
-import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
@@ -60,15 +60,22 @@ public class VacuumBladeEntity extends ProjectileEntity {
                 return;
             }
 
-            // Spawn wind particles
+            // The projectile texture carries the readable crescent silhouette;
+            // keep the trail restrained so two blades remain easy to track.
             serverWorld.spawnParticles(
-                    ParticleTypes.CLOUD,
+                    ModParticles.WIND_AIR_RIBBON,
                     getX(), getY(), getZ(),
-                    4, 0.2, 0.2, 0.2, 0.01);
+                    2, 0.08, 0.08, 0.08, 0.01);
             serverWorld.spawnParticles(
-                    ParticleTypes.GUST,
+                    ModParticles.WIND_MOTE,
                     getX(), getY(), getZ(),
-                    2, 0.1, 0.1, 0.1, 0.0);
+                    2, 0.12, 0.12, 0.12, 0.015);
+            if ((age & 1) == 0) {
+                serverWorld.spawnParticles(
+                        ModParticles.WIND_CRESCENT,
+                        getX(), getY(), getZ(),
+                        1, 0.025, 0.025, 0.025, 0.0);
+            }
 
             // Check for entity collisions
             HitResult hitResult = ProjectileUtil.getCollision(this, this::canHit);
@@ -114,11 +121,19 @@ public class VacuumBladeEntity extends ProjectileEntity {
                 knockbackDir.z * 0.5);
         target.velocityModified = true;
 
-        // Spawn impact particles
+        // Compact custom pressure burst; no vanilla cloud or gust texture.
         serverWorld.spawnParticles(
-                ParticleTypes.CLOUD,
+                ModParticles.WIND_BURST_RING,
                 target.getX(), target.getBodyY(0.5), target.getZ(),
-                12, 0.3, 0.3, 0.3, 0.05);
+                1, 0.0, 0.0, 0.0, 0.0);
+        serverWorld.spawnParticles(
+                ModParticles.WIND_MOTE,
+                target.getX(), target.getBodyY(0.5), target.getZ(),
+                8, 0.28, 0.28, 0.28, 0.06);
+        serverWorld.spawnParticles(
+                ModParticles.WIND_CRESCENT,
+                target.getX(), target.getBodyY(0.5), target.getZ(),
+                3, 0.24, 0.24, 0.24, 0.035);
 
         serverWorld.playSound(
                 null,
@@ -142,9 +157,17 @@ public class VacuumBladeEntity extends ProjectileEntity {
         // Despawn on block collision
         if (getEntityWorld() instanceof ServerWorld serverWorld) {
             serverWorld.spawnParticles(
-                    ParticleTypes.CLOUD,
+                    ModParticles.WIND_BURST_RING,
                     getX(), getY(), getZ(),
-                    8, 0.2, 0.2, 0.2, 0.03);
+                    1, 0.0, 0.0, 0.0, 0.0);
+            serverWorld.spawnParticles(
+                    ModParticles.WIND_MOTE,
+                    getX(), getY(), getZ(),
+                    6, 0.2, 0.2, 0.2, 0.04);
+            serverWorld.spawnParticles(
+                    ModParticles.WIND_CRESCENT,
+                    getX(), getY(), getZ(),
+                    2, 0.18, 0.18, 0.18, 0.025);
         }
         discard();
     }

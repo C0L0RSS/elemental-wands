@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import com.anton.elementalwands.client.ClientPlayerData;
 import com.anton.elementalwands.client.EntangleClientEffects;
+import com.anton.elementalwands.client.particle.ModParticleFactories;
 import com.anton.elementalwands.client.overlay.EntangleHudOverlay;
 import com.anton.elementalwands.data.WizardAffinity;
 import com.anton.elementalwands.item.AbstractWandItem;
@@ -11,7 +12,9 @@ import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.registry.ModEntities;
 import com.anton.elementalwands.client.renderer.EmptyEntityRenderer;
 import com.anton.elementalwands.client.renderer.FireSpiritRenderer;
+import com.anton.elementalwands.client.renderer.SpellBillboardRenderer;
 import com.anton.elementalwands.client.renderer.StoneZombieRenderer;
+import com.anton.elementalwands.registry.ModSpellBlocks;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -20,7 +23,9 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientWorldEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.BlockRenderLayerMap;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.render.BlockRenderLayer;
 import net.minecraft.client.render.entity.FlyingItemEntityRenderer;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.particle.ParticleTypes;
@@ -41,6 +46,9 @@ public class ElementalWandsClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        ModParticleFactories.registerAll();
+        BlockRenderLayerMap.putBlock(ModSpellBlocks.INFERNO_FLAME, BlockRenderLayer.TRANSLUCENT);
+
         ultimateKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.elementalwands.ultimate",
                 GLFW.GLFW_KEY_X,
@@ -48,9 +56,15 @@ public class ElementalWandsClient implements ClientModInitializer {
 
         EntityRendererRegistry.register(ModEntities.BOULDER_PROJECTILE, FlyingItemEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.SEED_PROJECTILE, EmptyEntityRenderer::new);
-        EntityRendererRegistry.register(ModEntities.VACUUM_BLADE, EmptyEntityRenderer::new);
+        EntityRendererRegistry.register(ModEntities.VACUUM_BLADE,
+                context -> new SpellBillboardRenderer<>(context,
+                        Identifier.of("elementalwands", "textures/entity/vacuum_blade.png"),
+                        1.1f, 0.55f, 0.0f, true));
         EntityRendererRegistry.register(ModEntities.CALAMITY_TORNADO, EmptyEntityRenderer::new);
-        EntityRendererRegistry.register(ModEntities.INFERNO_WAVE, EmptyEntityRenderer::new);
+        EntityRendererRegistry.register(ModEntities.INFERNO_WAVE,
+                context -> new SpellBillboardRenderer<>(context,
+                        Identifier.of("elementalwands", "textures/entity/inferno_wave.png"),
+                        3.2f, 2.0f, 0.0f, true));
         EntityRendererRegistry.register(ModEntities.SINGULARITY_BOLT, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.HOLLOW_PURPLE_ORB, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.AWAKENED_TREE, EmptyEntityRenderer::new);

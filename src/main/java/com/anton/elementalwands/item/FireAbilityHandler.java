@@ -8,7 +8,6 @@ import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
@@ -17,6 +16,8 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 
 import com.anton.elementalwands.entity.InfernoWaveEntity;
+import com.anton.elementalwands.registry.ModParticles;
+import com.anton.elementalwands.registry.ModSpellBlocks;
 import com.anton.elementalwands.util.TemporaryBlockManager;
 import com.anton.elementalwands.util.MeteorManager;
 import net.minecraft.component.DataComponentTypes;
@@ -66,7 +67,8 @@ public final class FireAbilityHandler {
                 if (world.getServer().getTicks() - lastCast <= PYRE_GROUND_DURATION) {
                     BlockPos groundPos = player.getBlockPos().down();
                     net.minecraft.block.BlockState groundState = world.getBlockState(groundPos);
-                    if (groundState.isOf(Blocks.FIRE) || groundState.isOf(Blocks.MAGMA_BLOCK)) {
+                    if (groundState.isOf(ModSpellBlocks.INFERNO_FLAME)
+                            || groundState.isOf(ModSpellBlocks.PYRE_COALS)) {
                         player.addStatusEffect(
                                 new StatusEffectInstance(StatusEffects.REGENERATION, 20, 0, false, false, true)); // Regen
                                                                                                                   // I
@@ -169,13 +171,16 @@ public final class FireAbilityHandler {
             int currentDistance = tickCounter + 1;
             Vec3d frontCenter = origin.add(forward.multiply(currentDistance));
 
-            // Place magma + spawn particles for the current wave-front slice
+            // Place the custom pyre surface and draw its advancing front with the
+            // Elemental Wands Fire particle family.
             Set<BlockPos> sliceBlocks = new HashSet<>();
             for (double w = -2.0; w <= 2.0; w += 0.5) {
                 Vec3d target = frontCenter.add(right.multiply(w));
-                sw.spawnParticles(ParticleTypes.FLAME, target.x, target.y, target.z, 1, 0.1, 0.1, 0.1, 0.05);
-                if (sw.getRandom().nextFloat() < 0.1f) {
-                    sw.spawnParticles(ParticleTypes.LAVA, target.x, target.y, target.z, 1, 0.0, 0.0, 0.0, 0.0);
+                sw.spawnParticles(ModParticles.FIRE_FLAME_RIBBON,
+                        target.x, target.y, target.z, 1, 0.08, 0.08, 0.08, 0.025);
+                if (sw.getRandom().nextFloat() < 0.22f) {
+                    sw.spawnParticles(ModParticles.FIRE_EMBER,
+                            target.x, target.y, target.z, 2, 0.12, 0.08, 0.12, 0.035);
                 }
                 BlockPos targetPos = BlockPos.ofFloored(target);
                 for (int yOffset = 0; yOffset >= -3; yOffset--) {
@@ -186,7 +191,8 @@ public final class FireAbilityHandler {
                     }
                 }
             }
-            TemporaryBlockManager.placeTemporaryBlocks(sw, sliceBlocks, Blocks.MAGMA_BLOCK.getDefaultState(),
+            TemporaryBlockManager.placeTemporaryBlocks(sw, sliceBlocks,
+                    ModSpellBlocks.PYRE_COALS.getDefaultState(),
                     PYRE_GROUND_DURATION,
                     state -> !state.hasBlockEntity() && !state.isOf(Blocks.OBSIDIAN) && !state.isOf(Blocks.BEDROCK));
 

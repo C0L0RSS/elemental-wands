@@ -84,7 +84,11 @@ public class WandUtils {
 
         Vec3d p = start;
         for (int i = 0; i < steps; i++) {
-            world.spawnParticles(particle, p.x, p.y, p.z, 1, 0.02, 0.02, 0.02, 0.0);
+            // Beam particles are targeting information. Mark their packets as
+            // important; critical beam particle types may additionally opt into
+            // always-spawn registration to remain continuous on Minimal.
+            world.spawnParticles(particle, false, true,
+                    p.x, p.y, p.z, 1, 0.02, 0.02, 0.02, 0.0);
             p = p.add(step);
         }
     }

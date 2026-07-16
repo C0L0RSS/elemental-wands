@@ -9,19 +9,23 @@ import java.util.UUID;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.FallingBlockEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.particle.ParticleTypes;
+import net.minecraft.particle.BlockParticleEffect;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.util.collection.Pool;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
+import net.minecraft.world.explosion.Explosion;
+
+import com.anton.elementalwands.registry.ModParticles;
+import com.anton.elementalwands.registry.ModSpellBlocks;
 
 public final class MeteorManager {
 
@@ -53,8 +57,7 @@ public final class MeteorManager {
 
     public static void spawnMeteor(ServerWorld world, PlayerEntity caster, Vec3d targetPos, int spawnHeight,
             float explosionPower) {
-        BlockState meteorState = world.random.nextBoolean() ? Blocks.OBSIDIAN.getDefaultState()
-                : Blocks.MAGMA_BLOCK.getDefaultState();
+        BlockState meteorState = ModSpellBlocks.METEOR_CORE.getDefaultState();
 
         BlockPos spawnBlockPos = BlockPos.ofFloored(targetPos).add(0, spawnHeight, 0);
         FallingBlockEntity meteor = FallingBlockEntity.spawnFromBlock(world, spawnBlockPos, meteorState);
@@ -81,11 +84,10 @@ public final class MeteorManager {
             }
         }
 
-        // Significantly increased particle count for "larger" feel
-        world.spawnParticles(ParticleTypes.FLAME, meteor.getX(), meteor.getY(), meteor.getZ(), 200, 1.0, 1.0, 1.0,
-                0.08);
-        world.spawnParticles(ParticleTypes.SMOKE, meteor.getX(), meteor.getY(), meteor.getZ(), 100, 1.0, 1.0, 1.0,
-                0.05);
+        world.spawnParticles(ModParticles.FIRE_METEOR,
+                meteor.getX(), meteor.getY(), meteor.getZ(), 12, 0.8, 0.8, 0.8, 0.05);
+        world.spawnParticles(ModParticles.FIRE_ASH,
+                meteor.getX(), meteor.getY(), meteor.getZ(), 18, 0.9, 0.9, 0.9, 0.035);
     }
 
     private static void tickWorld(ServerWorld world) {
@@ -113,12 +115,12 @@ public final class MeteorManager {
 
             meteor.lastPos = falling.getEntityPos();
 
-            world.spawnParticles(ParticleTypes.FLAME, meteor.lastPos.x, meteor.lastPos.y, meteor.lastPos.z, 20, 0.5,
-                    0.5,
-                    0.5, 0.03);
-            world.spawnParticles(ParticleTypes.SMOKE, meteor.lastPos.x, meteor.lastPos.y, meteor.lastPos.z, 10, 0.4,
-                    0.4,
-                    0.4, 0.02);
+            world.spawnParticles(ModParticles.FIRE_METEOR,
+                    meteor.lastPos.x, meteor.lastPos.y, meteor.lastPos.z,
+                    6, 0.45, 0.45, 0.45, 0.025);
+            world.spawnParticles(ModParticles.FIRE_ASH,
+                    meteor.lastPos.x, meteor.lastPos.y, meteor.lastPos.z,
+                    4, 0.4, 0.4, 0.4, 0.018);
 
             if (falling.isOnGround()) {
                 explode(world, meteor);
@@ -135,13 +137,35 @@ public final class MeteorManager {
     private static void explode(ServerWorld world, Meteor meteor) {
         PlayerEntity caster = world.getPlayerByUuid(meteor.casterUuid);
 
-        world.createExplosion(caster, meteor.lastPos.x, meteor.lastPos.y, meteor.lastPos.z, meteor.explosionPower, true,
-                World.ExplosionSourceType.MOB);
+        // Use the full explosion API so the vanilla explosion/emitter textures and
+        // destroyed-block debris are not authored into this spell. ExplosionImpl
+        // still performs the same damage, knockback, fire, terrain, and gamerule
+        // handling as the old convenience overload.
+        world.createExplosion(
+                caster,
+                Explosion.createDamageSource(world, caster),
+                null,
+                meteor.lastPos.x,
+                meteor.lastPos.y,
+                meteor.lastPos.z,
+                meteor.explosionPower,
+                true,
+                World.ExplosionSourceType.MOB,
+                ModParticles.FIRE_IMPACT_RING,
+                ModParticles.FIRE_IMPACT_RING,
+                Pool.<BlockParticleEffect>empty(),
+                SoundEvents.ENTITY_GENERIC_EXPLODE);
         world.playSound(null, BlockPos.ofFloored(meteor.lastPos), SoundEvents.ENTITY_GENERIC_EXPLODE.value(),
                 SoundCategory.PLAYERS,
                 1.8f, 0.9f);
-        world.spawnParticles(ParticleTypes.EXPLOSION_EMITTER, meteor.lastPos.x, meteor.lastPos.y, meteor.lastPos.z, 1,
-                0, 0, 0,
-                0);
+        world.spawnParticles(ModParticles.FIRE_IMPACT_RING,
+                meteor.lastPos.x, meteor.lastPos.y, meteor.lastPos.z,
+                4, 0.8, 0.2, 0.8, 0.0);
+        world.spawnParticles(ModParticles.FIRE_EMBER,
+                meteor.lastPos.x, meteor.lastPos.y, meteor.lastPos.z,
+                48, 2.0, 1.4, 2.0, 0.14);
+        world.spawnParticles(ModParticles.FIRE_ASH,
+                meteor.lastPos.x, meteor.lastPos.y, meteor.lastPos.z,
+                20, 1.7, 1.0, 1.7, 0.06);
     }
 }

@@ -23,7 +23,17 @@ import net.minecraft.util.math.MathHelper;
 
 public class WandHudOverlay implements HudRenderCallback {
 
-    private static final Identifier HUD_TEXTURE = Identifier.of("elementalwands", "textures/gui/wand_hud.png");
+    private static final Identifier HUD_TEXTURE = Identifier.of("elementalwands", "textures/gui/wand_hud_v2.png");
+    private static final Identifier[] FIRE_ABILITY_TEXTURES = {
+        Identifier.of("elementalwands", "textures/gui/ability/fire_primary.png"),
+        Identifier.of("elementalwands", "textures/gui/ability/fire_secondary.png"),
+        Identifier.of("elementalwands", "textures/gui/ability/fire_ultimate.png")
+    };
+    private static final Identifier[] WIND_ABILITY_TEXTURES = {
+        Identifier.of("elementalwands", "textures/gui/ability/wind_primary.png"),
+        Identifier.of("elementalwands", "textures/gui/ability/wind_secondary.png"),
+        Identifier.of("elementalwands", "textures/gui/ability/wind_ultimate.png")
+    };
 
     private static final float HUD_SCALE = 0.56f;
     private static final int HOTBAR_HEIGHT = 22;
@@ -330,19 +340,18 @@ public class WandHudOverlay implements HudRenderCallback {
 
     private void drawFireCooldown(DrawContext context, int slotIndex, int renderX, int renderY,
             long now, AnimationProfile animation) {
-        context.fill(renderX + 7, renderY + 26, renderX + 29, renderY + 28,
-            scaledAlpha(0x66461908, animation.alpha));
-        int emberCount = Math.max(2, Math.round(6 * animation.density));
-        for (int i = 0; i < emberCount; i++) {
-            int rise = (int) ((now * (1.2f + animation.speed * 2.0f) + slotIndex * 11L + i * 7L) % 18L);
-            int px   = renderX + 8 + (int) ((now * animation.speed + i * 13L + slotIndex * 5L) % 18L);
-            int py   = renderY + 26 - rise;
-            int color = (i % 2 == 0) ? scaledAlpha(0xCCFF9A32, animation.alpha)
-                                     : scaledAlpha(0xCCFF5A1A, animation.alpha);
-            context.fill(px, py, px + 2, py + 2, color);
-        }
-        int ringX = renderX + 2 + (int) ((now * (0.65f + animation.speed)) % 28L);
-        context.fill(ringX, renderY + 1, ringX + 2, renderY + 3, scaledAlpha(0xAAFF7A29, animation.alpha));
+        Identifier glyph = FIRE_ABILITY_TEXTURES[Math.max(0, Math.min(slotIndex,
+                FIRE_ABILITY_TEXTURES.length - 1))];
+        context.drawTexture(RenderPipelines.GUI_TEXTURED, glyph,
+                renderX + 4, renderY + 4, 0.0f, 0.0f,
+                28, 28, 32, 32, 32, 32);
+
+        // A restrained two-pixel pulse keeps a ready Fire slot alive without
+        // obscuring its spell-specific glyph.
+        int pulse = (int) ((now * (0.55f + animation.speed)) % 24L);
+        int emberX = renderX + 6 + pulse;
+        context.fill(emberX, renderY + 30, emberX + 2, renderY + 32,
+                scaledAlpha(0xCCFF9A32, animation.alpha));
     }
 
     private void drawNatureCooldown(DrawContext context, int slotIndex, int renderX, int renderY,
@@ -371,18 +380,18 @@ public class WandHudOverlay implements HudRenderCallback {
 
     private void drawWindCooldown(DrawContext context, int slotIndex, int renderX, int renderY,
             long now, AnimationProfile animation) {
-        int lineCount = Math.max(2, Math.round(4 * animation.density));
-        for (int i = 0; i < lineCount; i++) {
-            int lineY = renderY + 10 + (int) ((now * (0.65f + animation.speed) + slotIndex * 7L + i * 4L) % 14L);
-            int color = (i % 2 == 0) ? scaledAlpha(0x77BFE9FF, animation.alpha)
-                                     : scaledAlpha(0x44D8F5FF, animation.alpha);
-            context.fill(renderX + 8, lineY, renderX + 28, lineY + 1, color);
-        }
-        int gustX = renderX + 8 + (int) ((now * (1.0f + animation.speed * 2.0f) + slotIndex * 13L) % 18L);
-        context.fill(gustX,     renderY + 13, gustX + 2,     renderY + 15, scaledAlpha(0xAAC9F6FF, animation.alpha));
-        context.fill(gustX - 3, renderY + 20, gustX - 1,     renderY + 22, scaledAlpha(0x88C9F6FF, animation.alpha));
-        context.fill(renderX + 1,  renderY + 4,  renderX + 3,  renderY + 7,  scaledAlpha(0x66CFF0FF, animation.alpha));
-        context.fill(renderX + 33, renderY + 27, renderX + 35, renderY + 30, scaledAlpha(0x66CFF0FF, animation.alpha));
+        Identifier glyph = WIND_ABILITY_TEXTURES[Math.max(0, Math.min(slotIndex,
+                WIND_ABILITY_TEXTURES.length - 1))];
+        context.drawTexture(RenderPipelines.GUI_TEXTURED, glyph,
+                renderX + 4, renderY + 4, 0.0f, 0.0f,
+                28, 28, 32, 32, 32, 32);
+
+        // A single pearl-white streamline supplies motion without turning the
+        // icon cyan or covering the charge pips used by Waylay Dash.
+        int streamX = renderX + 5
+                + (int) ((now * (0.7f + animation.speed)) % 23L);
+        context.fill(streamX, renderY + 29, streamX + 3, renderY + 30,
+                scaledAlpha(0xB8F4F2EC, animation.alpha));
     }
 
     private void drawStoneCooldown(DrawContext context, int slotIndex, int renderX, int renderY,
@@ -474,7 +483,7 @@ public class WandHudOverlay implements HudRenderCallback {
         return switch (theme) {
             case FIRE  -> 0xE0842C;
             case NATURE -> 0x7FD36B;
-            case WIND  -> 0xCFEBAE;
+            case WIND  -> 0xEEEDE7;
             case STONE -> 0xC6B79A;
             case SPACE -> 0xB29DFF;
             case MANA  -> 0xAAAAAA;

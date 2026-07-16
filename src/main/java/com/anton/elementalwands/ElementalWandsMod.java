@@ -6,6 +6,8 @@ import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.registry.ModBlocks;
 import com.anton.elementalwands.registry.ModItems;
 import com.anton.elementalwands.registry.ModEntities;
+import com.anton.elementalwands.registry.ModParticles;
+import com.anton.elementalwands.registry.ModSpellBlocks;
 import com.anton.elementalwands.util.BlinkRiftManager;
 import com.anton.elementalwands.util.SeedlingManager;
 import com.anton.elementalwands.util.EntangleTracker;
@@ -17,6 +19,7 @@ import com.anton.elementalwands.util.SoulboundInventoryCarrier;
 import com.anton.elementalwands.util.TemporaryBlockManager;
 import com.anton.elementalwands.util.TendrilBloomManager;
 import com.anton.elementalwands.util.TitanDomeManager;
+import com.anton.elementalwands.util.ZephyrStrikeManager;
 import com.anton.elementalwands.util.OvergrowthManager;
 import com.anton.elementalwands.util.BlazeTrailManager;
 import com.anton.elementalwands.world.ModWorldGen;
@@ -63,6 +66,8 @@ public class ElementalWandsMod implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        ModParticles.registerAll();
+        ModSpellBlocks.registerAll();
         EWAttachments.init();
 
         TemporaryBlockManager.init();
@@ -103,6 +108,7 @@ public class ElementalWandsMod implements ModInitializer {
                 ModEntities.FIRE_SPIRIT,
                 10, 1, 3);
         ModItems.registerAll();
+        ZephyrStrikeManager.init();
         ModNetworking.registerPayloads();
         ModNetworking.registerC2SReceivers();
         ModWorldGen.registerAll();

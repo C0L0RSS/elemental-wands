@@ -1,6 +1,7 @@
 {
   "item.elementalwands.fractured_wand": "Wizard's Wand",
   "item.elementalwands.titan_sword": "Titan Sword",
+  "item.elementalwands.zephyr_wings": "Zephyr Wings",
   "hud.elementalwands.locked": "Ability Locked",
   "message.elementalwands.not_enough_flux": "Your soul lacks the Arcane Flux required.",
   "message.elementalwands.skill_unlocked": "A new path of power has opened!",

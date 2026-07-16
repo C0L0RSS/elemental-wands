@@ -2,13 +2,13 @@ package com.anton.elementalwands.item;
 
 import com.anton.elementalwands.data.EWAttachments;
 import com.anton.elementalwands.data.WizardAffinity;
+import com.anton.elementalwands.registry.ModParticles;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -91,8 +91,8 @@ public class UniversalWandItem extends AbstractWandItem {
             end = hit.getPos();
         }
 
-        // Spawn soul fire flame particles along the beam
-        spawnParticleLine(world, start, end, ParticleTypes.SOUL_FIRE_FLAME);
+        // Draw the fractured beam with the shared original arcane texture family.
+        spawnParticleLine(world, start, end, ModParticles.ARCANE_THREAD);
 
         // Apply damage if we hit an entity
         if (hit instanceof EntityHitResult entityHit) {

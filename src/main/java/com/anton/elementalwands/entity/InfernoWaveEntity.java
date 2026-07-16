@@ -1,16 +1,16 @@
 package com.anton.elementalwands.entity;
 
 import com.anton.elementalwands.registry.ModEntities;
+import com.anton.elementalwands.registry.ModParticles;
+import com.anton.elementalwands.registry.ModSpellBlocks;
 import com.anton.elementalwands.util.TemporaryBlockManager;
 
-import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.projectile.ProjectileUtil;
-import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
@@ -77,20 +77,21 @@ public class InfernoWaveEntity extends ProjectileEntity {
                 TemporaryBlockManager.placeTemporaryBlocks(
                         serverWorld,
                         positions,
-                        Blocks.FIRE.getDefaultState(),
+                        ModSpellBlocks.INFERNO_FLAME.getDefaultState(),
                         FIRE_TRAIL_DURATION_TICKS,
                         state -> state.isAir());
             }
 
-            // Spawn flame particles
+            // The projectile renderer supplies the readable flame crest; these
+            // custom motes sell its heat and movement without vanilla textures.
             serverWorld.spawnParticles(
-                    ParticleTypes.FLAME,
+                    ModParticles.FIRE_FLAME_RIBBON,
                     getX(), getY(), getZ(),
-                    8, 0.5, 0.5, 0.5, 0.02);
+                    3, 0.35, 0.3, 0.35, 0.015);
             serverWorld.spawnParticles(
-                    ParticleTypes.SMALL_FLAME,
+                    ModParticles.FIRE_EMBER,
                     getX(), getY(), getZ(),
-                    4, 0.3, 0.3, 0.3, 0.01);
+                    5, 0.4, 0.35, 0.4, 0.025);
 
             // Check for entity collisions
             HitResult hitResult = ProjectileUtil.getCollision(this, this::canHit);
@@ -133,11 +134,15 @@ public class InfernoWaveEntity extends ProjectileEntity {
         // Set target on fire
         target.setOnFireFor(3); // 3 seconds
 
-        // Spawn impact particles
+        // Spawn the custom impact ring plus a short ember burst.
         serverWorld.spawnParticles(
-                ParticleTypes.FLAME,
+                ModParticles.FIRE_IMPACT_RING,
                 target.getX(), target.getBodyY(0.5), target.getZ(),
-                15, 0.3, 0.3, 0.3, 0.05);
+                1, 0.0, 0.0, 0.0, 0.0);
+        serverWorld.spawnParticles(
+                ModParticles.FIRE_EMBER,
+                target.getX(), target.getBodyY(0.5), target.getZ(),
+                10, 0.35, 0.35, 0.35, 0.08);
 
         serverWorld.playSound(
                 null,
@@ -160,9 +165,13 @@ public class InfernoWaveEntity extends ProjectileEntity {
         // Inferno Wave stops on block collision
         if (getEntityWorld() instanceof ServerWorld serverWorld) {
             serverWorld.spawnParticles(
-                    ParticleTypes.FLAME,
+                    ModParticles.FIRE_IMPACT_RING,
                     getX(), getY(), getZ(),
-                    20, 0.4, 0.4, 0.4, 0.08);
+                    2, 0.15, 0.15, 0.15, 0.0);
+            serverWorld.spawnParticles(
+                    ModParticles.FIRE_EMBER,
+                    getX(), getY(), getZ(),
+                    14, 0.5, 0.4, 0.5, 0.09);
         }
         discard();
     }

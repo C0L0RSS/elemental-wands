@@ -19,7 +19,7 @@ the mod still compiles and packages.
 After `./gradlew build` succeeds, copy `build/libs/elementalwands-2.2.0.jar`
 into the Lunar Client Fabric mods folder for 1.21:
 
-- macOS: `~/.lunarclient/profiles/lunar/1.21/mods/fabric-1.21.10/elementalwands-2.2.0.jar`
+- macOS (verified on this machine): `~/.lunarclient/profiles/1.21/mods/fabric-1.21.10/elementalwands-2.2.0.jar`
 - Windows: `%USERPROFILE%\.lunarclient\profiles\lunar\1.21\mods\fabric-1.21.10\elementalwands-2.2.0.jar`
 
 Restart Lunar Client after replacing the jar.
@@ -27,8 +27,12 @@ Restart Lunar Client after replacing the jar.
 macOS / bash:
 
 ```bash
-cp build/libs/elementalwands-2.2.0.jar "$HOME/.lunarclient/profiles/lunar/1.21/mods/fabric-1.21.10/elementalwands-2.2.0.jar"
+cp build/libs/elementalwands-2.2.0.jar "$HOME/.lunarclient/profiles/1.21/mods/fabric-1.21.10/elementalwands-2.2.0.jar"
+shasum -a 256 build/libs/elementalwands-2.2.0.jar "$HOME/.lunarclient/profiles/1.21/mods/fabric-1.21.10/elementalwands-2.2.0.jar"
 ```
+
+The two SHA-256 values must match. Do not report deployment complete from a
+filename match alone.
 
 Windows / Git Bash:
 
@@ -196,7 +200,16 @@ Admin helpers:
 
 ### Space
 
-- Primary: `SingularityBoltEntity`.
+- Primary: `SingularityBoltEntity` launches a 0.9-block/tick black star with a
+  24-block range. On its first tick it can acquire one combat target inside a
+  16-block, 12-degree aim cone, then steer by at most 1 degree per tick and 16
+  degrees total. It never retargets or U-turns, permanently drops guidance when
+  the target is obstructed, behind, invalid, or outside the 30-degree leash, and
+  ignores passive mobs, teammates, spectators, and caster-owned pets for aim
+  assist. Impact deals 7 direct damage plus 2.5 splash damage within 3 blocks;
+  it applies no pull, teleport, knockback, sprint lock, or mobility disruption.
+  `space_expansion_ring` reuses the implosion-ring frames in reverse for the
+  outward damage wave; range-expiry misses retain the inward implosion.
 - Secondary: Blink Rift. The first cast blinks to a safe destination and leaves a
   rift; a later cast can swap back if the rift is usable.
 - Ultimate: Hollow Purple charge sequence via `HollowPurpleChargeManager`.

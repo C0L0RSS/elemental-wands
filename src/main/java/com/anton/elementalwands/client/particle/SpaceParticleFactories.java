@@ -51,6 +51,15 @@ public final class SpaceParticleFactories {
             0xFFFFFF, 0xF0E8F5,
             SpriteMode.BY_AGE, false, true);
 
+    private static final Profile SPACE_EXPANSION_RING = new Profile(
+            0.58f, 0.68f, 4.6f,
+            8, 10,
+            0.96f, 0.0f, 0.58f,
+            0.0f, 1.0f,
+            -0.02f, 0.02f,
+            0xFFFFFF, 0xF0E8F5,
+            SpriteMode.BY_AGE, false, true);
+
     private static final Profile SPACE_RIFT = new Profile(
             1.15f, 1.42f, 0.72f,
             5, 8,
@@ -136,6 +145,8 @@ public final class SpaceParticleFactories {
                 sprites -> new ElementalParticleFactory(sprites, SPACE_BROKEN_ORBIT));
         factories.register(ModParticles.SPACE_IMPLOSION_RING,
                 sprites -> new ElementalParticleFactory(sprites, SPACE_IMPLOSION_RING, false));
+        factories.register(ModParticles.SPACE_EXPANSION_RING,
+                sprites -> new ElementalParticleFactory(sprites, SPACE_EXPANSION_RING, false));
         factories.register(ModParticles.SPACE_RIFT,
                 sprites -> new ElementalParticleFactory(sprites, SPACE_RIFT, false, false));
         factories.register(ModParticles.SPACE_DYING_STAR_CYAN,

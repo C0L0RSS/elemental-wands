@@ -101,8 +101,9 @@ directly as a game texture.
 - Space is Eldritch Horizon rather than generic purple magic: near-black cores,
   bruised violet, cold cyan, magenta, sparse bone-white stars, warped rings, and
   light visibly moving inward.
-- Singularity Bolt is a compact black star. Its travel wake and contracting
-  impact ring point toward the pull center instead of reading as an explosion.
+- Singularity Bolt is a compact black star whose wake bends only inside a shallow
+  launch cone. Its impact breaks gravity outward through a ragged expansion ring
+  and radial starlight, with no suction tether or displaced targets.
 - Blink Rift leaves a standing eclipse slit whose six orbit fragments disappear
   over its six-second return window. Return, blocked return, and expiry each have
   distinct closure beats.

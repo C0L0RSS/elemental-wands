@@ -4,12 +4,15 @@ import java.util.List;
 
 import com.anton.elementalwands.registry.ModEntities;
 import com.anton.elementalwands.registry.ModParticles;
-import com.anton.elementalwands.util.MovementDisruptManager;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.mob.HostileEntity;
+import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.entity.passive.TameableEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.server.world.ServerWorld;
@@ -19,6 +22,7 @@ import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
 
 public class SingularityBoltEntity extends ProjectileEntity {
@@ -28,9 +32,18 @@ public class SingularityBoltEntity extends ProjectileEntity {
     private static final double PROJECTILE_SPEED = 0.9;
     private static final int MAX_TRAVEL_DISTANCE = 24;
     private static final double IMPACT_RADIUS = 3.0;
-    private static final int SPRINT_LOCK_TICKS = 15;
+
+    private static final double GUIDANCE_ACQUISITION_RANGE = 16.0;
+    private static final double GUIDANCE_ACQUISITION_ALIGNMENT = Math.cos(Math.toRadians(12.0));
+    private static final double GUIDANCE_LEASH_ALIGNMENT = Math.cos(Math.toRadians(30.0));
+    private static final double GUIDANCE_TURN_RADIANS = Math.toRadians(1.0);
+    private static final double GUIDANCE_TOTAL_RADIANS = Math.toRadians(16.0);
 
     private Vec3d startPos;
+    private Vec3d launchDirection;
+    private LivingEntity guidanceTarget;
+    private boolean guidanceAttempted;
+    private boolean guidanceFinished;
 
     public SingularityBoltEntity(EntityType<? extends SingularityBoltEntity> type, World world) {
         super(type, world);
@@ -47,6 +60,7 @@ public class SingularityBoltEntity extends ProjectileEntity {
         startPos = spawnPos;
 
         Vec3d direction = owner.getRotationVec(1.0f).normalize();
+        launchDirection = direction;
         setVelocity(direction.multiply(PROJECTILE_SPEED));
     }
 
@@ -66,6 +80,11 @@ public class SingularityBoltEntity extends ProjectileEntity {
         if (startPos == null) {
             startPos = getEntityPos();
         }
+        if (launchDirection == null || launchDirection.lengthSquared() < 0.0001) {
+            launchDirection = getVelocity().lengthSquared() > 0.0001
+                    ? getVelocity().normalize()
+                    : new Vec3d(0.0, 0.0, 1.0);
+        }
 
         if (getEntityPos().distanceTo(startPos) > MAX_TRAVEL_DISTANCE) {
             spawnCollapsedMiss(serverWorld);
@@ -73,6 +92,7 @@ public class SingularityBoltEntity extends ProjectileEntity {
             return;
         }
 
+        applyCappedGuidance(serverWorld);
         spawnTravelVisuals(serverWorld);
 
         HitResult hitResult = ProjectileUtil.getCollision(this, this::canHit);
@@ -112,7 +132,7 @@ public class SingularityBoltEntity extends ProjectileEntity {
             DamageSource source = owner instanceof LivingEntity livingOwner
                     ? world.getDamageSources().thrown(this, livingOwner)
                     : world.getDamageSources().magic();
-            boolean damaged = living.damage(world, source, DIRECT_DAMAGE);
+            boolean damaged = damageWithoutKnockback(world, living, source, DIRECT_DAMAGE);
             if (damaged) {
                 com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(owner, DIRECT_DAMAGE);
             }
@@ -131,36 +151,198 @@ public class SingularityBoltEntity extends ProjectileEntity {
                 DamageSource splashSource = owner instanceof LivingEntity livingOwner
                         ? world.getDamageSources().thrown(this, livingOwner)
                         : world.getDamageSources().magic();
-                boolean damaged = living.damage(world, splashSource, SPLASH_DAMAGE);
+                boolean damaged = damageWithoutKnockback(world, living, splashSource, SPLASH_DAMAGE);
                 if (damaged) {
                     com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(owner, SPLASH_DAMAGE);
+                    world.spawnParticles(ModParticles.SPACE_PINPOINT,
+                            living.getX(), living.getBodyY(0.5), living.getZ(),
+                            1, 0.0, 0.0, 0.0, 0.0);
                 }
             }
-
-            Vec3d pullOrigin = living.getEntityPos().add(0.0, living.getHeight() * 0.5, 0.0);
-            pullTowardImpact(world, living, impactPos);
-            MovementDisruptManager.applySprintLock(world, living, SPRINT_LOCK_TICKS);
-            MovementDisruptManager.disruptMobility(living);
-            spawnPullTether(world, pullOrigin, impactPos);
         }
 
         world.spawnParticles(ModParticles.SPACE_SINGULARITY,
-                impactPos.x, impactPos.y, impactPos.z, 2, 0.05, 0.05, 0.05, 0.0);
-        world.spawnParticles(ModParticles.SPACE_IMPLOSION_RING,
-                impactPos.x, impactPos.y, impactPos.z, 3, 0.08, 0.08, 0.08, 0.0);
-        for (int i = 0; i < 24; i++) {
-            double angle = i * (Math.PI * 2.0 / 24.0);
-            double radius = IMPACT_RADIUS * (0.72 + (i % 3) * 0.11);
-            Vec3d point = impactPos.add(Math.cos(angle) * radius,
-                    ((i % 5) - 2) * 0.18,
-                    Math.sin(angle) * radius);
-            Vec3d inward = impactPos.subtract(point).normalize().multiply(0.16);
-            spawnDirected(world, ModParticles.SPACE_CONSUMPTION, point, inward);
+                impactPos.x, impactPos.y, impactPos.z, 1, 0.02, 0.02, 0.02, 0.0);
+        world.spawnParticles(ModParticles.SPACE_PINPOINT,
+                impactPos.x, impactPos.y, impactPos.z, 1, 0.0, 0.0, 0.0, 0.0);
+        world.spawnParticles(ModParticles.SPACE_EXPANSION_RING,
+                impactPos.x, impactPos.y, impactPos.z, 1, 0.0, 0.0, 0.0, 0.0);
+        for (int i = 0; i < 16; i++) {
+            double angle = i * (Math.PI * 2.0 / 16.0);
+            double vertical = ((i % 5) - 2) * 0.12;
+            Vec3d outward = new Vec3d(Math.cos(angle), vertical, Math.sin(angle)).normalize();
+            Vec3d point = impactPos.add(outward.multiply(0.18));
+            double speed = 0.18 + (i % 4) * 0.025;
+            spawnDirected(world, ModParticles.SPACE_MOTE, point, outward.multiply(speed));
         }
         world.playSound(null, net.minecraft.util.math.BlockPos.ofFloored(impactPos),
-                SoundEvents.BLOCK_RESPAWN_ANCHOR_DEPLETE.value(), SoundCategory.PLAYERS, 0.85f, 1.65f);
+                SoundEvents.BLOCK_RESPAWN_ANCHOR_DEPLETE.value(), SoundCategory.PLAYERS, 0.82f, 1.35f);
         world.playSound(null, net.minecraft.util.math.BlockPos.ofFloored(impactPos),
-                SoundEvents.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 0.55f, 0.65f);
+                SoundEvents.ENTITY_SHULKER_BULLET_HIT, SoundCategory.PLAYERS, 0.72f, 1.12f);
+    }
+
+    private static boolean damageWithoutKnockback(
+            ServerWorld world, LivingEntity target, DamageSource source, float amount) {
+        Vec3d velocityBeforeDamage = target.getVelocity();
+        boolean damaged = target.damage(world, source, amount);
+        if (target.getVelocity().squaredDistanceTo(velocityBeforeDamage) > 1.0e-12) {
+            // Projectile damage can apply vanilla knockback even when a shield blocks
+            // all damage. Restore the exact incoming motion while preserving attribution.
+            target.setVelocity(velocityBeforeDamage);
+            target.velocityModified = true;
+        }
+        return damaged;
+    }
+
+    private void applyCappedGuidance(ServerWorld world) {
+        if (!guidanceAttempted) {
+            guidanceAttempted = true;
+            guidanceTarget = acquireGuidanceTarget(world);
+            guidanceFinished = guidanceTarget == null;
+        }
+        if (guidanceFinished || guidanceTarget == null) {
+            return;
+        }
+
+        if (!isCombatTarget(world, guidanceTarget)) {
+            finishGuidance();
+            return;
+        }
+
+        Vec3d targetCenter = bodyCenter(guidanceTarget);
+        Vec3d toTarget = targetCenter.subtract(getEntityPos());
+        if (toTarget.lengthSquared() < 0.0001) {
+            return;
+        }
+
+        Vec3d desiredDirection = toTarget.normalize();
+        Vec3d currentDirection = getVelocity().lengthSquared() > 0.0001
+                ? getVelocity().normalize()
+                : launchDirection;
+        if (currentDirection.dotProduct(desiredDirection) <= 0.0
+                || launchDirection.dotProduct(desiredDirection) < GUIDANCE_LEASH_ALIGNMENT
+                || !hasClearLineOfSight(world, targetCenter)) {
+            finishGuidance();
+            return;
+        }
+
+        Vec3d steeredDirection = rotateToward(currentDirection, desiredDirection, GUIDANCE_TURN_RADIANS);
+        double totalAngle = angleBetween(launchDirection, steeredDirection);
+        if (totalAngle > GUIDANCE_TOTAL_RADIANS) {
+            steeredDirection = rotateToward(launchDirection, steeredDirection, GUIDANCE_TOTAL_RADIANS);
+        }
+        setVelocity(steeredDirection.multiply(PROJECTILE_SPEED));
+    }
+
+    private LivingEntity acquireGuidanceTarget(ServerWorld world) {
+        Entity owner = getOwner();
+        Box searchBox = getBoundingBox().expand(GUIDANCE_ACQUISITION_RANGE);
+        List<LivingEntity> candidates = world.getEntitiesByClass(LivingEntity.class, searchBox,
+                target -> target != owner && isCombatTarget(world, target) && canHit(target));
+
+        LivingEntity best = null;
+        double bestAlignment = -1.0;
+        double bestDistanceSquared = Double.MAX_VALUE;
+        int bestEntityId = Integer.MAX_VALUE;
+        double rangeSquared = GUIDANCE_ACQUISITION_RANGE * GUIDANCE_ACQUISITION_RANGE;
+
+        for (LivingEntity candidate : candidates) {
+            Vec3d targetCenter = bodyCenter(candidate);
+            Vec3d toTarget = targetCenter.subtract(getEntityPos());
+            double distanceSquared = toTarget.lengthSquared();
+            if (distanceSquared < 0.0001 || distanceSquared > rangeSquared) {
+                continue;
+            }
+
+            double alignment = launchDirection.dotProduct(toTarget.normalize());
+            if (alignment < GUIDANCE_ACQUISITION_ALIGNMENT || !hasClearLineOfSight(world, targetCenter)) {
+                continue;
+            }
+
+            boolean betterAngle = alignment > bestAlignment + 1.0e-7;
+            boolean sameAngle = Math.abs(alignment - bestAlignment) <= 1.0e-7;
+            boolean betterDistance = distanceSquared < bestDistanceSquared - 1.0e-7;
+            boolean sameDistance = Math.abs(distanceSquared - bestDistanceSquared) <= 1.0e-7;
+            if (betterAngle
+                    || (sameAngle && betterDistance)
+                    || (sameAngle && sameDistance && candidate.getId() < bestEntityId)) {
+                best = candidate;
+                bestAlignment = alignment;
+                bestDistanceSquared = distanceSquared;
+                bestEntityId = candidate.getId();
+            }
+        }
+
+        return best;
+    }
+
+    private boolean isCombatTarget(ServerWorld world, LivingEntity target) {
+        if (target.getEntityWorld() != world || target.isRemoved()
+                || !target.isAlive() || target.isSpectator() || target == getOwner()) {
+            return false;
+        }
+
+        Entity owner = getOwner();
+        if (!(owner instanceof LivingEntity livingOwner)) {
+            return false;
+        }
+
+        if (target instanceof TameableEntity tameable && tameable.isOwner(livingOwner)) {
+            return false;
+        }
+        if (target instanceof PlayerEntity player) {
+            if (!(livingOwner instanceof PlayerEntity caster)) {
+                return false;
+            }
+            return world.getServer().isPvpEnabled()
+                    && !caster.isTeammate(player)
+                    && caster.shouldDamagePlayer(player);
+        }
+        if (target instanceof HostileEntity) {
+            return true;
+        }
+        return target instanceof MobEntity mob && mob.getTarget() == livingOwner;
+    }
+
+    private boolean hasClearLineOfSight(ServerWorld world, Vec3d targetCenter) {
+        return world.raycast(new RaycastContext(
+                getEntityPos(), targetCenter,
+                RaycastContext.ShapeType.COLLIDER,
+                RaycastContext.FluidHandling.NONE,
+                this)).getType() == HitResult.Type.MISS;
+    }
+
+    private void finishGuidance() {
+        guidanceFinished = true;
+        guidanceTarget = null;
+    }
+
+    private static Vec3d bodyCenter(LivingEntity target) {
+        return new Vec3d(target.getX(), target.getBodyY(0.5), target.getZ());
+    }
+
+    private static Vec3d rotateToward(Vec3d from, Vec3d to, double maxAngle) {
+        Vec3d start = from.normalize();
+        Vec3d end = to.normalize();
+        double angle = angleBetween(start, end);
+        if (angle <= maxAngle) {
+            return end;
+        }
+
+        double sinAngle = Math.sin(angle);
+        if (Math.abs(sinAngle) < 1.0e-7) {
+            return start;
+        }
+
+        double progress = maxAngle / angle;
+        double startWeight = Math.sin((1.0 - progress) * angle) / sinAngle;
+        double endWeight = Math.sin(progress * angle) / sinAngle;
+        return start.multiply(startWeight).add(end.multiply(endWeight)).normalize();
+    }
+
+    private static double angleBetween(Vec3d first, Vec3d second) {
+        double dot = first.normalize().dotProduct(second.normalize());
+        return Math.acos(Math.max(-1.0, Math.min(1.0, dot)));
     }
 
     private void spawnTravelVisuals(ServerWorld world) {
@@ -186,20 +368,6 @@ public class SingularityBoltEntity extends ProjectileEntity {
         }
     }
 
-    private static void spawnPullTether(ServerWorld world, Vec3d from, Vec3d impactPos) {
-        Vec3d delta = impactPos.subtract(from);
-        int steps = Math.max(3, Math.min(9, (int) Math.ceil(delta.length() * 2.0)));
-        for (int i = 0; i <= steps; i++) {
-            double progress = i / (double) steps;
-            Vec3d point = from.add(delta.multiply(progress));
-            Vec3d inward = impactPos.subtract(point);
-            if (inward.lengthSquared() > 0.0001) {
-                inward = inward.normalize().multiply(0.14);
-            }
-            spawnDirected(world, ModParticles.SPACE_CONSUMPTION, point, inward);
-        }
-    }
-
     private void spawnCollapsedMiss(ServerWorld world) {
         Vec3d center = getEntityPos();
         world.spawnParticles(ModParticles.SPACE_IMPLOSION_RING,
@@ -215,37 +383,14 @@ public class SingularityBoltEntity extends ProjectileEntity {
                 velocity.x, velocity.y, velocity.z, 1.0);
     }
 
-    private void pullTowardImpact(ServerWorld world, LivingEntity living, Vec3d impactPos) {
-        Vec3d toCenter = impactPos.subtract(living.getEntityPos());
-        if (toCenter.lengthSquared() < 0.0001) {
-            return;
-        }
-
-        double distance = toCenter.length();
-        double pullDistance = Math.min(2.5, distance);
-        Vec3d pullStep = toCenter.normalize().multiply(pullDistance);
-        Vec3d from = living.getEntityPos();
-        Vec3d to = from.add(pullStep);
-        Box movedBox = living.getBoundingBox().offset(to.subtract(from));
-
-        if (world.isSpaceEmpty(living, movedBox)) {
-            living.requestTeleport(to.x, to.y, to.z);
-            living.setVelocity(0.0, Math.max(living.getVelocity().y, 0.08), 0.0);
-            living.velocityModified = true;
-            living.fallDistance = 0.0f;
-            return;
-        }
-
-        Vec3d pullDirection = toCenter.normalize();
-        Vec3d current = living.getVelocity().multiply(0.20);
-        Vec3d pullVelocity = pullDirection.multiply(1.65);
-        living.setVelocity(current.x + pullVelocity.x, Math.max(current.y, 0.0) + 0.12, current.z + pullVelocity.z);
-        living.velocityModified = true;
-        living.fallDistance = 0.0f;
-    }
-
     @Override
     protected boolean canHit(Entity entity) {
         return super.canHit(entity) && !entity.equals(getOwner());
+    }
+
+    @Override
+    public boolean shouldSave() {
+        // Guidance and range state are intentionally transient for this short-lived spell.
+        return false;
     }
 }

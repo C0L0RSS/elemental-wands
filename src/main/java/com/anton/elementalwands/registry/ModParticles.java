@@ -45,6 +45,8 @@ public final class ModParticles {
     public static final SimpleParticleType SPACE_SINGULARITY = register("space_singularity", true);
     public static final SimpleParticleType SPACE_BROKEN_ORBIT = register("space_broken_orbit");
     public static final SimpleParticleType SPACE_IMPLOSION_RING = register("space_implosion_ring", true);
+    // The primary's three-block damage boundary remains readable on Minimal particles.
+    public static final SimpleParticleType SPACE_EXPANSION_RING = register("space_expansion_ring", true);
     public static final SimpleParticleType SPACE_RIFT = register("space_rift", true);
     public static final SimpleParticleType SPACE_DYING_STAR_CYAN = register("space_dying_star_cyan");
     public static final SimpleParticleType SPACE_DYING_STAR_MAGENTA = register("space_dying_star_magenta");

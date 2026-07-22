@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "stage=0": { "model": "elementalwands:block/stone_spike_fault" },
+    "stage=1": { "model": "elementalwands:block/stone_spike_short" },
+    "stage=2": { "model": "elementalwands:block/stone_spike_medium" },
+    "stage=3": { "model": "elementalwands:block/stone_spike_tall" }
+  }
+}

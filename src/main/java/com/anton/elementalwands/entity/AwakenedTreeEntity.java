@@ -73,6 +73,21 @@ public class AwakenedTreeEntity extends HostileEntity {
     }
 
     @Override
+    public boolean isInsideWall() {
+        // The damageable heart intentionally occupies the low-poly trunk volume.
+        // It must not interpret its own staged shell as suffocation damage.
+        return false;
+    }
+
+    @Override
+    public boolean shouldSave() {
+        // Overgrowth and its terrain restoration are short-lived server state.
+        // Clean shutdown restores the shell; persisting only this entity would
+        // reload an orphan without its caster or manager state.
+        return false;
+    }
+
+    @Override
     public boolean damage(ServerWorld world, DamageSource source, float amount) {
         boolean damaged = super.damage(world, source, amount);
         if (damaged) {

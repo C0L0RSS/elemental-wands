@@ -3,6 +3,7 @@ package com.anton.elementalwands.entity;
 import java.util.List;
 
 import com.anton.elementalwands.registry.ModEntities;
+import com.anton.elementalwands.registry.ModParticles;
 import com.anton.elementalwands.util.MovementDisruptManager;
 
 import net.minecraft.entity.Entity;
@@ -11,7 +12,6 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.projectile.ProjectileUtil;
-import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
@@ -68,12 +68,12 @@ public class SingularityBoltEntity extends ProjectileEntity {
         }
 
         if (getEntityPos().distanceTo(startPos) > MAX_TRAVEL_DISTANCE) {
+            spawnCollapsedMiss(serverWorld);
             discard();
             return;
         }
 
-        serverWorld.spawnParticles(ParticleTypes.PORTAL, getX(), getY(), getZ(), 4, 0.08, 0.08, 0.08, 0.03);
-        serverWorld.spawnParticles(ParticleTypes.WITCH, getX(), getY(), getZ(), 1, 0.04, 0.04, 0.04, 0.0);
+        spawnTravelVisuals(serverWorld);
 
         HitResult hitResult = ProjectileUtil.getCollision(this, this::canHit);
         if (hitResult.getType() != HitResult.Type.MISS) {
@@ -137,18 +137,82 @@ public class SingularityBoltEntity extends ProjectileEntity {
                 }
             }
 
+            Vec3d pullOrigin = living.getEntityPos().add(0.0, living.getHeight() * 0.5, 0.0);
             pullTowardImpact(world, living, impactPos);
             MovementDisruptManager.applySprintLock(world, living, SPRINT_LOCK_TICKS);
             MovementDisruptManager.disruptMobility(living);
-
-            world.spawnParticles(ParticleTypes.PORTAL, living.getX(), living.getBodyY(0.5), living.getZ(), 10, 0.25,
-                    0.4, 0.25, 0.06);
+            spawnPullTether(world, pullOrigin, impactPos);
         }
 
-        world.spawnParticles(ParticleTypes.EXPLOSION, impactPos.x, impactPos.y, impactPos.z, 2, 0.15, 0.15, 0.15, 0.0);
-        world.spawnParticles(ParticleTypes.PORTAL, impactPos.x, impactPos.y, impactPos.z, 24, 0.4, 0.4, 0.4, 0.15);
+        world.spawnParticles(ModParticles.SPACE_SINGULARITY,
+                impactPos.x, impactPos.y, impactPos.z, 2, 0.05, 0.05, 0.05, 0.0);
+        world.spawnParticles(ModParticles.SPACE_IMPLOSION_RING,
+                impactPos.x, impactPos.y, impactPos.z, 3, 0.08, 0.08, 0.08, 0.0);
+        for (int i = 0; i < 24; i++) {
+            double angle = i * (Math.PI * 2.0 / 24.0);
+            double radius = IMPACT_RADIUS * (0.72 + (i % 3) * 0.11);
+            Vec3d point = impactPos.add(Math.cos(angle) * radius,
+                    ((i % 5) - 2) * 0.18,
+                    Math.sin(angle) * radius);
+            Vec3d inward = impactPos.subtract(point).normalize().multiply(0.16);
+            spawnDirected(world, ModParticles.SPACE_CONSUMPTION, point, inward);
+        }
         world.playSound(null, net.minecraft.util.math.BlockPos.ofFloored(impactPos),
-                SoundEvents.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 0.8f, 1.4f);
+                SoundEvents.BLOCK_RESPAWN_ANCHOR_DEPLETE.value(), SoundCategory.PLAYERS, 0.85f, 1.65f);
+        world.playSound(null, net.minecraft.util.math.BlockPos.ofFloored(impactPos),
+                SoundEvents.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 0.55f, 0.65f);
+    }
+
+    private void spawnTravelVisuals(ServerWorld world) {
+        Vec3d center = getEntityPos();
+        Vec3d direction = getVelocity().lengthSquared() > 0.0001
+                ? getVelocity().normalize()
+                : new Vec3d(0.0, 0.0, 1.0);
+
+        Vec3d velocity = getVelocity();
+        spawnDirected(world, ModParticles.SPACE_SINGULARITY, center, velocity);
+        if (age % 2 == 0) {
+            spawnDirected(world, ModParticles.SPACE_BROKEN_ORBIT, center, velocity);
+        }
+
+        for (int i = 0; i < 5; i++) {
+            double distance = 0.75 + i * 0.38;
+            double phase = age * 0.7 + i * 2.19;
+            Vec3d point = center.subtract(direction.multiply(distance))
+                    .add(Math.cos(phase) * 0.20, Math.sin(phase * 1.3) * 0.20, Math.sin(phase) * 0.20);
+            Vec3d inward = center.subtract(point).normalize().multiply(0.13 + i * 0.012);
+            spawnDirected(world, i % 2 == 0 ? ModParticles.SPACE_CONSUMPTION : ModParticles.SPACE_MOTE,
+                    point, inward);
+        }
+    }
+
+    private static void spawnPullTether(ServerWorld world, Vec3d from, Vec3d impactPos) {
+        Vec3d delta = impactPos.subtract(from);
+        int steps = Math.max(3, Math.min(9, (int) Math.ceil(delta.length() * 2.0)));
+        for (int i = 0; i <= steps; i++) {
+            double progress = i / (double) steps;
+            Vec3d point = from.add(delta.multiply(progress));
+            Vec3d inward = impactPos.subtract(point);
+            if (inward.lengthSquared() > 0.0001) {
+                inward = inward.normalize().multiply(0.14);
+            }
+            spawnDirected(world, ModParticles.SPACE_CONSUMPTION, point, inward);
+        }
+    }
+
+    private void spawnCollapsedMiss(ServerWorld world) {
+        Vec3d center = getEntityPos();
+        world.spawnParticles(ModParticles.SPACE_IMPLOSION_RING,
+                center.x, center.y, center.z, 1, 0.0, 0.0, 0.0, 0.0);
+        world.spawnParticles(ModParticles.SPACE_PINPOINT,
+                center.x, center.y, center.z, 1, 0.0, 0.0, 0.0, 0.0);
+    }
+
+    private static void spawnDirected(ServerWorld world, net.minecraft.particle.SimpleParticleType particle,
+            Vec3d position, Vec3d velocity) {
+        world.spawnParticles(particle,
+                position.x, position.y, position.z, 0,
+                velocity.x, velocity.y, velocity.z, 1.0);
     }
 
     private void pullTowardImpact(ServerWorld world, LivingEntity living, Vec3d impactPos) {

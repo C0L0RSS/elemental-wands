@@ -1,0 +1,10 @@
+{
+  "layers": {
+    "humanoid": [
+      { "texture": "elementalwands:titan_armor" }
+    ],
+    "humanoid_leggings": [
+      { "texture": "elementalwands:titan_armor" }
+    ]
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "variants": {
+    "shatter_ready=false": { "model": "elementalwands:block/stone_wall" },
+    "shatter_ready=true": { "model": "elementalwands:block/stone_wall_ready" }
+  }
+}

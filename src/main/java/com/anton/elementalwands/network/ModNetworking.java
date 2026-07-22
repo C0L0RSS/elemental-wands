@@ -65,20 +65,22 @@ public final class ModNetworking {
         ServerPlayNetworking.send(player, new SyncNatureSeedlingsPayload(List.copyOf(positions)));
     }
 
-    public static void syncEntangleStacks(ServerPlayerEntity player, LivingEntity target, int stacks) {
-        ServerPlayNetworking.send(player, new SyncEntangleStacksPayload(target.getId(), stacks));
+    public static void syncEntangleStacks(ServerPlayerEntity player, LivingEntity target, int stacks,
+            int rootVisualTicks) {
+        ServerPlayNetworking.send(player,
+                new SyncEntangleStacksPayload(target.getId(), stacks, Math.max(0, rootVisualTicks)));
     }
 
     /** Sends a target's Entangle state to every client that can currently see it. */
-    public static void syncEntangleStacks(LivingEntity target, int stacks) {
+    public static void syncEntangleStacks(LivingEntity target, int stacks, int rootVisualTicks) {
         Collection<ServerPlayerEntity> trackingPlayers = PlayerLookup.tracking(target);
         for (ServerPlayerEntity player : trackingPlayers) {
-            syncEntangleStacks(player, target, stacks);
+            syncEntangleStacks(player, target, stacks, rootVisualTicks);
         }
 
         // PlayerLookup does not guarantee that a tracked player includes themselves.
         if (target instanceof ServerPlayerEntity player && !trackingPlayers.contains(player)) {
-            syncEntangleStacks(player, target, stacks);
+            syncEntangleStacks(player, target, stacks, rootVisualTicks);
         }
     }
 
@@ -154,13 +156,15 @@ public final class ModNetworking {
     }
 
     /** S2C packet carrying one visible entity's current Entangle stack count. */
-    public record SyncEntangleStacksPayload(int entityId, int stacks) implements CustomPayload {
+    public record SyncEntangleStacksPayload(int entityId, int stacks, int rootVisualTicks)
+            implements CustomPayload {
         public static final Id<SyncEntangleStacksPayload> ID = new Id<>(
                 Identifier.of(ElementalWandsMod.MOD_ID, "sync_entangle_stacks"));
         public static final PacketCodec<RegistryByteBuf, SyncEntangleStacksPayload> CODEC =
                 PacketCodec.tuple(
                         PacketCodecs.INTEGER, SyncEntangleStacksPayload::entityId,
                         PacketCodecs.INTEGER, SyncEntangleStacksPayload::stacks,
+                        PacketCodecs.INTEGER, SyncEntangleStacksPayload::rootVisualTicks,
                         SyncEntangleStacksPayload::new);
 
         @Override

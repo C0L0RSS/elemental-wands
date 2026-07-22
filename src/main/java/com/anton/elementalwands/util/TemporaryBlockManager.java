@@ -10,6 +10,7 @@ import java.util.function.Predicate;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.block.BlockState;
 import net.minecraft.registry.RegistryKey;
@@ -36,6 +37,12 @@ public final class TemporaryBlockManager {
 
     public static void init() {
         ServerTickEvents.END_WORLD_TICK.register(TemporaryBlockManager::tickWorld);
+        ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+            for (ServerWorld world : server.getWorlds()) {
+                restoreAll(world);
+            }
+            TEMP.clear();
+        });
     }
 
     public static int placeTemporaryBlocks(ServerWorld world, Iterable<BlockPos> positions, BlockState placedState,
@@ -106,6 +113,17 @@ public final class TemporaryBlockManager {
 
         if (temp.isEmpty()) {
             TEMP.remove(world.getRegistryKey());
+        }
+    }
+
+    private static void restoreAll(ServerWorld world) {
+        List<TempBlocks> temp = TEMP.remove(world.getRegistryKey());
+        if (temp == null || temp.isEmpty()) return;
+
+        // Later placements may temporarily cover earlier ones. Reverse order
+        // reconstructs that stack before the oldest placement restores terrain.
+        for (int index = temp.size() - 1; index >= 0; index--) {
+            restore(world, temp.get(index));
         }
     }
 

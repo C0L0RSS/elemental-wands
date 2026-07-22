@@ -1,6 +1,7 @@
 package com.anton.elementalwands.mixin;
 
 import com.anton.elementalwands.util.SoulboundInventoryCarrier;
+import com.anton.elementalwands.util.TitanDomeManager;
 import com.anton.elementalwands.util.ZephyrStrikeManager;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.WrittenBookContentComponent;
@@ -35,6 +36,7 @@ public abstract class PlayerEntityMixin implements SoulboundInventoryCarrier {
         // pass sees the inventory. This runs only for a finalized death, unlike
         // ALLOW_DEATH, which fires before a Totem of Undying can save a player.
         ZephyrStrikeManager.onPlayerDeath(serverPlayer);
+        TitanDomeManager.onPlayerDeath(serverPlayer);
 
         List<ItemStack> soulboundItems = new ArrayList<>();
 

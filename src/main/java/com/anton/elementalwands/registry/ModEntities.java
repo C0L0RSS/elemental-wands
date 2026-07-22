@@ -44,7 +44,7 @@ public final class ModEntities {
                                                         SeedProjectileEntity::new)
                                         .dimensions(EntityDimensions.fixed(0.25f, 0.25f))
                                         .trackRangeBlocks(64)
-                                        .trackedUpdateRate(10)
+                                        .trackedUpdateRate(1)
                                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
                                                         Identifier.of(ElementalWandsMod.MOD_ID,
                                                                         "seed_projectile"))));

@@ -13,7 +13,10 @@ import java.util.UUID;
 
 import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.network.ModNetworking;
+import com.anton.elementalwands.registry.ModParticles;
 
+import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -23,7 +26,6 @@ import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.fluid.Fluids;
-import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -39,7 +41,7 @@ import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
 
 /**
- * Tracks the Nature wand's planted seedlings. A seed projectile sprouts a moss anchor; the
+ * Tracks the Nature wand's planted seedlings. A seed projectile sprouts a flowering anchor; the
  * seedling then periodically pulses verdant growth (moss carpet on land, lily pads over water)
  * outward in rings, slowing, entangling and thorn-damaging any enemy caught in the thicket.
  * Seedlings inside an {@link OvergrowthManager} cloud spread faster and farther.
@@ -104,6 +106,9 @@ public final class SeedlingManager {
 
     public static void init() {
         ServerTickEvents.END_WORLD_TICK.register(SeedlingManager::tickWorld);
+        ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register((player, origin, destination) ->
+                syncActiveSeedlings(player));
+        ServerLifecycleEvents.SERVER_STOPPING.register(server -> ACTIVE.clear());
     }
 
     public static boolean tryPlantSeedling(ServerWorld world, PlayerEntity caster, BlockHitResult hit) {
@@ -130,7 +135,7 @@ public final class SeedlingManager {
 
         int placed = TemporaryBlockManager.placeTemporaryBlocks(world,
                 List.of(anchorPos),
-                Blocks.MOSS_BLOCK.getDefaultState(),
+                Blocks.FLOWERING_AZALEA.getDefaultState(),
                 SEEDLING_LIFESPAN_TICKS,
                 s -> s.isAir() || s.isReplaceable());
         if (placed == 0) {
@@ -151,9 +156,15 @@ public final class SeedlingManager {
         }
 
         world.playSound(null, anchorPos, SoundEvents.BLOCK_AZALEA_PLACE, SoundCategory.PLAYERS, 0.7f, 1.1f);
-        world.spawnParticles(ParticleTypes.HAPPY_VILLAGER,
+        world.spawnParticles(ModParticles.NATURE_BLOOM,
+                anchorPos.getX() + 0.5, anchorPos.getY() + 0.82, anchorPos.getZ() + 0.5,
+                1, 0.0, 0.0, 0.0, 0.0);
+        world.spawnParticles(ModParticles.NATURE_LEAF,
                 anchorPos.getX() + 0.5, anchorPos.getY() + 0.5, anchorPos.getZ() + 0.5,
-                12, 0.3, 0.3, 0.3, 0.02);
+                10, 0.3, 0.3, 0.3, 0.02);
+        world.spawnParticles(ModParticles.NATURE_POLLEN,
+                anchorPos.getX() + 0.5, anchorPos.getY() + 0.7, anchorPos.getZ() + 0.5,
+                14, 0.32, 0.24, 0.32, 0.018);
         return true;
     }
 
@@ -351,7 +362,8 @@ public final class SeedlingManager {
         for (Map.Entry<BlockPos, BlockState> entry : originals.entrySet()) {
             BlockPos pos = entry.getKey();
             BlockState current = world.getBlockState(pos);
-            if (current.isOf(Blocks.MOSS_CARPET) || current.isOf(Blocks.LILY_PAD) || current.isOf(Blocks.MOSS_BLOCK)) {
+            if (current.isOf(Blocks.MOSS_CARPET) || current.isOf(Blocks.LILY_PAD)
+                    || current.isOf(Blocks.FLOWERING_AZALEA)) {
                 world.setBlockState(pos, entry.getValue(), 3);
             }
         }
@@ -368,7 +380,8 @@ public final class SeedlingManager {
     }
 
     private static boolean dudAt(ServerWorld world, Vec3d pos) {
-        world.spawnParticles(ParticleTypes.SPORE_BLOSSOM_AIR, pos.x, pos.y, pos.z, 6, 0.1, 0.1, 0.1, 0.01);
+        world.spawnParticles(ModParticles.NATURE_POLLEN,
+                pos.x, pos.y, pos.z, 6, 0.1, 0.1, 0.1, 0.01);
         world.playSound(null, BlockPos.ofFloored(pos), SoundEvents.ENTITY_EGG_THROW,
                 SoundCategory.PLAYERS, 0.4f, 0.8f);
         return false;
@@ -380,7 +393,8 @@ public final class SeedlingManager {
         for (int i = 0; i <= steps; i++) {
             double t = i / (double) steps;
             double y = hitPos.y + (floorTopY - hitPos.y) * t;
-            world.spawnParticles(ParticleTypes.HAPPY_VILLAGER, hitPos.x, y, hitPos.z, 1, 0.04, 0.04, 0.04, 0.0);
+            world.spawnParticles(i % 2 == 0 ? ModParticles.NATURE_VINE : ModParticles.NATURE_POLLEN,
+                    hitPos.x, y, hitPos.z, 1, 0.04, 0.04, 0.04, 0.0);
         }
     }
 
@@ -458,7 +472,7 @@ public final class SeedlingManager {
                 continue;
             }
 
-            if (!world.getBlockState(seedling.anchorPos).isOf(Blocks.MOSS_BLOCK)) {
+            if (!world.getBlockState(seedling.anchorPos).isOf(Blocks.FLOWERING_AZALEA)) {
                 cleanupSeedlingInternal(world, seedling);
                 changedCasters.add(seedling.casterUuid);
                 it.remove();
@@ -474,6 +488,15 @@ public final class SeedlingManager {
 
             pulseIfDue(world, seedling, now);
             applyZoneEffects(world, seedling, now);
+
+            // The physical azalea is intentionally vanilla-scale; the pulsing particle crown
+            // conveys growth level, amplification, and the fully-active state at a glance.
+            int phase = Math.floorMod(seedling.anchorPos.getX() * 3
+                    + seedling.anchorPos.getZ() * 5, 6);
+            if ((now + phase) % 6 == 0) {
+                NatureVfx.seedlingPulse(world, seedling.anchorPos,
+                        Math.max(1, seedling.currentRadius), seedling.amplifiedByOvergrowth, now);
+            }
         }
 
         if (list.isEmpty()) {
@@ -508,6 +531,13 @@ public final class SeedlingManager {
         for (Map.Entry<BlockPos, BlockState> e : result.originals().entrySet()) {
             seedling.originals.putIfAbsent(e.getKey(), e.getValue());
         }
+
+        NatureVfx.growthRing(world, seedling.floorPos, seedling.currentRadius, now);
+        NatureVfx.seedlingPulse(world, seedling.anchorPos, seedling.currentRadius,
+                seedling.amplifiedByOvergrowth, now);
+        world.playSound(null, seedling.anchorPos, SoundEvents.ITEM_BONE_MEAL_USE,
+                SoundCategory.PLAYERS, 0.32f,
+                1.1f + Math.min(0.35f, seedling.currentRadius * 0.05f));
     }
 
     static List<BlockPos> chebyshevRingColumns(BlockPos center, int radius) {
@@ -583,9 +613,12 @@ public final class SeedlingManager {
 
         restoreBlocks(world, seedling.originals);
 
-        world.spawnParticles(ParticleTypes.HAPPY_VILLAGER,
+        world.spawnParticles(ModParticles.NATURE_PETAL,
                 seedling.anchorPos.getX() + 0.5, seedling.anchorPos.getY() + 0.5, seedling.anchorPos.getZ() + 0.5,
-                20, 0.6, 0.6, 0.6, 0.05);
+                16, 0.6, 0.6, 0.6, 0.04);
+        world.spawnParticles(ModParticles.NATURE_POLLEN,
+                seedling.anchorPos.getX() + 0.5, seedling.anchorPos.getY() + 0.68, seedling.anchorPos.getZ() + 0.5,
+                10, 0.42, 0.42, 0.42, 0.025);
         world.playSound(null, seedling.anchorPos, SoundEvents.BLOCK_GRASS_BREAK,
                 SoundCategory.PLAYERS, 0.9f, 0.8f);
     }

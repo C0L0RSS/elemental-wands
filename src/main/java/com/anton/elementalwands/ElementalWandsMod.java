@@ -2,6 +2,7 @@ package com.anton.elementalwands;
 
 import com.anton.elementalwands.data.EWAttachments;
 import com.anton.elementalwands.data.WizardAffinity;
+import com.anton.elementalwands.item.StoneAbilityHandler;
 import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.registry.ModBlocks;
 import com.anton.elementalwands.registry.ModItems;
@@ -71,6 +72,7 @@ public class ElementalWandsMod implements ModInitializer {
         EWAttachments.init();
 
         TemporaryBlockManager.init();
+        StoneAbilityHandler.init();
         EntangleTracker.init();
         OvergrowthManager.init();
         SeedlingManager.init();

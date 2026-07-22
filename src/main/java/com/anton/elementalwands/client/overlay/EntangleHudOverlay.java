@@ -20,7 +20,13 @@ import net.minecraft.util.math.MathHelper;
 public final class EntangleHudOverlay implements HudRenderCallback {
 
     private static final Identifier VIGNETTE_SPRITE =
-            Identifier.of("elementalwands", "hud/entangle_vignette");
+            Identifier.of("elementalwands", "hud/entangle_vignette_v2");
+    private static final Identifier BUD_EMPTY_TEXTURE =
+            Identifier.of("elementalwands", "textures/gui/entangle_bud_empty.png");
+    private static final Identifier BUD_FILLED_TEXTURE =
+            Identifier.of("elementalwands", "textures/gui/entangle_bud_filled.png");
+    private static final Identifier BUD_BLOOM_TEXTURE =
+            Identifier.of("elementalwands", "textures/gui/entangle_bud_bloom.png");
     private static final int HOTBAR_CLEAR_HALF_WIDTH = 112;
 
     private float displayedLocalStacks;
@@ -106,39 +112,40 @@ public final class EntangleHudOverlay implements HudRenderCallback {
         EntangleState state = ClientPlayerData.getEntangleState(targeted.getId());
         if (state == null || state.stacks() <= 0) return;
 
-        int budWidth = 6;
-        int gap = 2;
+        int budWidth = 12;
+        int gap = 1;
         int totalWidth = EntangleTracker.MAX_STACKS * budWidth
                 + (EntangleTracker.MAX_STACKS - 1) * gap;
         int startX = (context.getScaledWindowWidth() - totalWidth) / 2;
         int y = context.getScaledWindowHeight() / 2 - 18;
         float pulse = getRecentStackPulse(client, state, tickCounter);
+        boolean visiblyRooted = state.stacks() >= EntangleTracker.MAX_STACKS
+                && client.world.getTime() < state.rootVisualUntilTick();
 
         for (int i = 0; i < EntangleTracker.MAX_STACKS; i++) {
             boolean filled = i < state.stacks();
             boolean newest = filled && i == state.stacks() - 1;
-            boolean maxPulse = state.stacks() >= EntangleTracker.MAX_STACKS;
+            boolean maxPulse = visiblyRooted;
             drawBud(context, startX + i * (budWidth + gap), y,
-                    filled, pulse * ((newest || maxPulse) ? 1.0f : 0.0f));
+                    filled, maxPulse,
+                    pulse * ((newest || maxPulse) ? 1.0f : 0.0f));
         }
     }
 
-    private void drawBud(DrawContext context, int x, int y, boolean filled, float pulse) {
-        int stem = filled ? 0xFF79552E : 0x88413425;
-        int darkLeaf = filled ? 0xFF3E7134 : 0x88404E3B;
-        int lightLeaf = filled ? 0xFF71A94C : 0x88606B58;
-
-        if (pulse > 0.0f) {
-            int boost = MathHelper.clamp(Math.round(pulse * 70), 0, 70);
-            darkLeaf = brighten(darkLeaf, boost);
-            lightLeaf = brighten(lightLeaf, boost);
+    private void drawBud(DrawContext context, int x, int y, boolean filled,
+            boolean bloomed, float pulse) {
+        Identifier texture = bloomed ? BUD_BLOOM_TEXTURE
+                : (filled ? BUD_FILLED_TEXTURE : BUD_EMPTY_TEXTURE);
+        context.drawTexture(RenderPipelines.GUI_TEXTURED, texture,
+                x, y, 0.0f, 0.0f, 12, 12, 16, 16, 16, 16);
+        if (pulse > 0.22f) {
+            int glint = MathHelper.clamp(Math.round(pulse * 220.0f), 0, 220);
+            int color = (glint << 24) | 0xFFF0A2;
+            context.fill(x + 10, y, x + 11, y + 1, color);
+            if (bloomed) {
+                context.fill(x, y + 2, x + 1, y + 3, color);
+            }
         }
-
-        context.fill(x + 2, y + 3, x + 4, y + 8, stem);
-        context.fill(x, y + 2, x + 3, y + 5, darkLeaf);
-        context.fill(x + 3, y + 1, x + 6, y + 4, lightLeaf);
-        context.fill(x + 1, y + 1, x + 2, y + 2, darkLeaf);
-        context.fill(x + 4, y, x + 5, y + 1, lightLeaf);
     }
 
     private float getRecentStackPulse(MinecraftClient client, EntangleState state,
@@ -150,11 +157,4 @@ public final class EntangleHudOverlay implements HudRenderCallback {
         return (float) (Math.sin(age / 8.0 * Math.PI) * (1.0 - age / 8.0));
     }
 
-    private int brighten(int color, int amount) {
-        int alpha = color >>> 24;
-        int red = Math.min(255, ((color >>> 16) & 0xFF) + amount);
-        int green = Math.min(255, ((color >>> 8) & 0xFF) + amount);
-        int blue = Math.min(255, (color & 0xFF) + amount / 2);
-        return (alpha << 24) | (red << 16) | (green << 8) | blue;
-    }
 }

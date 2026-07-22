@@ -9,6 +9,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import com.anton.elementalwands.registry.ModParticles;
+
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
@@ -16,7 +19,6 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
@@ -89,6 +91,10 @@ public final class TendrilBloomManager {
 
     public static void init() {
         ServerTickEvents.END_WORLD_TICK.register(TendrilBloomManager::tickWorld);
+        ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+            TENDRILS.clear();
+            BLOOMS.clear();
+        });
     }
 
     public static void startTendril(ServerWorld world, PlayerEntity caster, UUID seedlingId,
@@ -97,6 +103,13 @@ public final class TendrilBloomManager {
         Vec3d targetPos = target.getEntityPos().add(0, target.getHeight() * 0.5, 0);
         Tendril t = new Tendril(seedlingId, caster.getUuid(), target.getUuid(), seedlingAnchor, targetPos, now);
         TENDRILS.computeIfAbsent(world.getRegistryKey(), _k -> new ArrayList<>()).add(t);
+
+        world.spawnParticles(ModParticles.NATURE_BLOOM,
+                seedlingAnchor.x, seedlingAnchor.y + 0.52, seedlingAnchor.z,
+                1, 0.0, 0.0, 0.0, 0.0);
+        world.spawnParticles(ModParticles.NATURE_POLLEN,
+                seedlingAnchor.x, seedlingAnchor.y + 0.42, seedlingAnchor.z,
+                10, 0.3, 0.26, 0.3, 0.018);
 
         world.playSound(null, BlockPos.ofFloored(seedlingAnchor), SoundEvents.ITEM_BONE_MEAL_USE,
                 SoundCategory.PLAYERS, 0.8f, 0.9f);
@@ -170,9 +183,10 @@ public final class TendrilBloomManager {
             t.originals.putIfAbsent(e.getKey(), e.getValue());
         }
 
-        world.spawnParticles(ParticleTypes.HAPPY_VILLAGER,
-                t.currentHead.x, t.currentHead.y, t.currentHead.z,
-                4, 0.15, 0.15, 0.15, 0.02);
+        NatureVfx.pairedTendril(world, prevHead, t.currentHead, age);
+        world.spawnParticles(ModParticles.NATURE_POLLEN,
+                t.currentHead.x, t.currentHead.y + 0.14, t.currentHead.z,
+                3, 0.13, 0.08, 0.13, 0.01);
         return false;
     }
 
@@ -195,9 +209,16 @@ public final class TendrilBloomManager {
 
         BLOOMS.computeIfAbsent(world.getRegistryKey(), _k -> new ArrayList<>()).add(b);
 
-        world.spawnParticles(ParticleTypes.SPORE_BLOSSOM_AIR,
+        world.spawnParticles(ModParticles.NATURE_BLOOM,
+                center.getX() + 0.5, center.getY() + 0.55, center.getZ() + 0.5,
+                3, 0.35, 0.08, 0.35, 0.0);
+        world.spawnParticles(ModParticles.NATURE_PETAL,
                 center.getX() + 0.5, center.getY() + 0.5, center.getZ() + 0.5,
-                30, 0.8, 0.4, 0.8, 0.05);
+                26, 0.8, 0.4, 0.8, 0.05);
+        world.spawnParticles(ModParticles.NATURE_POLLEN,
+                center.getX() + 0.5, center.getY() + 0.65, center.getZ() + 0.5,
+                30, 0.8, 0.52, 0.8, 0.04);
+        NatureVfx.growthRing(world, center, 1, now);
         world.playSound(null, center, SoundEvents.ITEM_BONE_MEAL_USE,
                 SoundCategory.PLAYERS, 1.0f, 1.1f);
     }
@@ -206,6 +227,10 @@ public final class TendrilBloomManager {
         int age = now - b.startTick;
         if (age >= BLOOM_LIFESPAN) {
             SeedlingManager.restoreBlocks(world, b.originals);
+            Vec3d center = Vec3d.ofCenter(b.center);
+            world.spawnParticles(ModParticles.NATURE_PETAL,
+                    center.x, center.y + 0.4, center.z,
+                    18, b.currentRadius * 0.5, 0.24, b.currentRadius * 0.5, 0.025);
             return true;
         }
 
@@ -221,6 +246,22 @@ public final class TendrilBloomManager {
             for (Map.Entry<BlockPos, BlockState> e : result.originals().entrySet()) {
                 b.originals.putIfAbsent(e.getKey(), e.getValue());
             }
+
+            NatureVfx.growthRing(world, b.center, b.currentRadius, now);
+            world.playSound(null, b.center, SoundEvents.BLOCK_FLOWERING_AZALEA_BREAK,
+                    SoundCategory.PLAYERS, 0.38f, 1.25f + b.currentRadius * 0.05f);
+        }
+
+        if ((now + b.center.getX() * 3 + b.center.getZ() * 5) % 10 == 0) {
+            Vec3d center = Vec3d.ofCenter(b.center);
+            double radius = Math.max(1.0, b.currentRadius - 0.15);
+            NatureVfx.ring(world, ModParticles.NATURE_VINE, center,
+                    radius, 6, -0.36, now * 0.025);
+            NatureVfx.ring(world, ModParticles.NATURE_BLOOM, center,
+                    radius * 0.78, 4, -0.24, now * -0.035);
+            world.spawnParticles(ModParticles.NATURE_POLLEN,
+                    center.x, center.y + 0.12, center.z,
+                    5, radius * 0.45, 0.18, radius * 0.45, 0.008);
         }
 
         applyBloomEffects(world, b, now);

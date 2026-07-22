@@ -5,11 +5,15 @@ import java.util.Optional;
 import com.anton.elementalwands.client.ClientPlayerData;
 import com.anton.elementalwands.client.EntangleClientEffects;
 import com.anton.elementalwands.client.particle.ModParticleFactories;
+import com.anton.elementalwands.client.particle.NatureParticleFactories;
+import com.anton.elementalwands.client.particle.SpaceParticleFactories;
+import com.anton.elementalwands.client.particle.StoneParticleFactories;
 import com.anton.elementalwands.client.overlay.EntangleHudOverlay;
 import com.anton.elementalwands.data.WizardAffinity;
 import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.registry.ModEntities;
+import com.anton.elementalwands.registry.ModParticles;
 import com.anton.elementalwands.client.renderer.EmptyEntityRenderer;
 import com.anton.elementalwands.client.renderer.FireSpiritRenderer;
 import com.anton.elementalwands.client.renderer.SpellBillboardRenderer;
@@ -28,7 +32,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.BlockRenderLayer;
 import net.minecraft.client.render.entity.FlyingItemEntityRenderer;
 import net.minecraft.client.option.KeyBinding;
-import net.minecraft.particle.ParticleTypes;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
@@ -47,7 +50,11 @@ public class ElementalWandsClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         ModParticleFactories.registerAll();
+        StoneParticleFactories.registerAll();
+        NatureParticleFactories.registerAll();
+        SpaceParticleFactories.registerAll();
         BlockRenderLayerMap.putBlock(ModSpellBlocks.INFERNO_FLAME, BlockRenderLayer.TRANSLUCENT);
+        BlockRenderLayerMap.putBlock(ModSpellBlocks.STONE_SPIKE, BlockRenderLayer.CUTOUT);
 
         ultimateKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.elementalwands.ultimate",
@@ -55,7 +62,10 @@ public class ElementalWandsClient implements ClientModInitializer {
                 new KeyBinding.Category(Identifier.of("elementalwands", "general"))));
 
         EntityRendererRegistry.register(ModEntities.BOULDER_PROJECTILE, FlyingItemEntityRenderer::new);
-        EntityRendererRegistry.register(ModEntities.SEED_PROJECTILE, EmptyEntityRenderer::new);
+        EntityRendererRegistry.register(ModEntities.SEED_PROJECTILE,
+                context -> new SpellBillboardRenderer<>(context,
+                        Identifier.of("elementalwands", "textures/entity/winged_seed.png"),
+                        0.72f, 0.46f, 0.0f, true));
         EntityRendererRegistry.register(ModEntities.VACUUM_BLADE,
                 context -> new SpellBillboardRenderer<>(context,
                         Identifier.of("elementalwands", "textures/entity/vacuum_blade.png"),
@@ -79,12 +89,15 @@ public class ElementalWandsClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(ModNetworking.SyncEntangleStacksPayload.ID,
                 (payload, context) -> {
                     long now = context.client().world != null ? context.client().world.getTime() : 0L;
-                    ClientPlayerData.setEntangleStacks(payload.entityId(), payload.stacks(), now);
+                    ClientPlayerData.setEntangleStacks(payload.entityId(), payload.stacks(), now,
+                            payload.rootVisualTicks());
                 });
 
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientPlayerData.reset());
-        ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE.register((client, world) ->
-                ClientPlayerData.clearEntangleStates());
+        ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE.register((client, world) -> {
+            ClientPlayerData.clearEntangleStates();
+            ClientPlayerData.clearNatureSeedlings();
+        });
         ClientEntityEvents.ENTITY_UNLOAD.register((entity, world) ->
                 ClientPlayerData.clearEntangleState(entity.getId()));
 
@@ -126,9 +139,9 @@ public class ElementalWandsClient implements ClientModInitializer {
             double angle = (time * 0.22) + i * (Math.PI * 2.0 / 8.0);
             double x = cx + Math.cos(angle) * 0.42;
             double z = cz + Math.sin(angle) * 0.42;
-            client.world.addParticleClient(ParticleTypes.HAPPY_VILLAGER, x, cy, z, 0.0, 0.02, 0.0);
+            client.world.addParticleClient(ModParticles.NATURE_POLLEN, x, cy, z, 0.0, 0.02, 0.0);
         }
-        client.world.addParticleClient(ParticleTypes.SPORE_BLOSSOM_AIR, cx, cy + 0.35, cz, 0.0, 0.01, 0.0);
+        client.world.addParticleClient(ModParticles.NATURE_BLOOM, cx, cy + 0.35, cz, 0.0, 0.0, 0.0);
     }
 
     private static Optional<BlockPos> findTargetedSyncedSeedling(MinecraftClient client, double range) {

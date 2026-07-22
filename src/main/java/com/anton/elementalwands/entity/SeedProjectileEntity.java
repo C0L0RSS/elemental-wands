@@ -2,6 +2,7 @@ package com.anton.elementalwands.entity;
 
 import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.registry.ModEntities;
+import com.anton.elementalwands.registry.ModParticles;
 import com.anton.elementalwands.util.SeedlingManager;
 import com.anton.elementalwands.util.EntangleTracker;
 
@@ -12,7 +13,6 @@ import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.projectile.ProjectileUtil;
-import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.block.BlockState;
 import net.minecraft.util.hit.BlockHitResult;
@@ -73,8 +73,14 @@ public class SeedProjectileEntity extends ProjectileEntity {
             return;
         }
 
-        sw.spawnParticles(ParticleTypes.SPORE_BLOSSOM_AIR, getX(), getY(), getZ(), 3, 0.08, 0.08, 0.08, 0.01);
-        sw.spawnParticles(ParticleTypes.COMPOSTER, getX(), getY(), getZ(), 1, 0.05, 0.05, 0.05, 0.01);
+        // The renderer supplies the readable winged-seed silhouette. These restrained custom
+        // motes make its direction legible without hiding the detailed sprite in a vanilla cloud.
+        sw.spawnParticles(ModParticles.NATURE_POLLEN,
+                getX(), getY(), getZ(), 3, 0.09, 0.07, 0.09, 0.008);
+        if ((ticksAlive & 1) == 0) {
+            sw.spawnParticles(ModParticles.NATURE_LEAF,
+                    getX(), getY(), getZ(), 1, 0.035, 0.035, 0.035, 0.0);
+        }
 
         HitResult hit = ProjectileUtil.getCollision(this, this::canHit);
         // ProjectileUtil uses COLLIDER raycasts, which skip non-collision blocks like
@@ -133,7 +139,10 @@ public class SeedProjectileEntity extends ProjectileEntity {
                 AbstractWandItem.onWandDamageDealt(owner, damage);
             }
 
-            sw.spawnParticles(ParticleTypes.HAPPY_VILLAGER,
+            sw.spawnParticles(ModParticles.NATURE_BLOOM,
+                    living.getX(), living.getBodyY(0.5), living.getZ(),
+                    1, 0.0, 0.0, 0.0, 0.0);
+            sw.spawnParticles(ModParticles.NATURE_PETAL,
                     living.getX(), living.getBodyY(0.5), living.getZ(),
                     15, 0.4, 0.4, 0.4, 0.03);
         }
@@ -154,7 +163,10 @@ public class SeedProjectileEntity extends ProjectileEntity {
             }
         } else {
             Vec3d p = blockHitResult.getPos();
-            sw.spawnParticles(ParticleTypes.SPORE_BLOSSOM_AIR, p.x, p.y, p.z, 6, 0.1, 0.1, 0.1, 0.01);
+            sw.spawnParticles(ModParticles.NATURE_POLLEN, p.x, p.y, p.z,
+                    8, 0.12, 0.12, 0.12, 0.01);
+            sw.spawnParticles(ModParticles.NATURE_LEAF, p.x, p.y, p.z,
+                    4, 0.1, 0.1, 0.1, 0.015);
         }
 
         discard();

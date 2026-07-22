@@ -53,14 +53,21 @@ public final class ClientPlayerData {
         return natureSeedlings;
     }
 
-    public static void setEntangleStacks(int entityId, int stacks, long changedAtTick) {
+    public static void clearNatureSeedlings() {
+        natureSeedlings = List.of();
+    }
+
+    public static void setEntangleStacks(int entityId, int stacks, long changedAtTick,
+            int rootVisualTicks) {
         if (stacks <= 0) {
             entangledEntities.remove(entityId);
             return;
         }
 
         int clampedStacks = Math.min(5, stacks);
-        entangledEntities.put(entityId, new EntangleState(clampedStacks, changedAtTick));
+        long rootVisualUntilTick = changedAtTick + Math.max(0, rootVisualTicks);
+        entangledEntities.put(entityId,
+                new EntangleState(clampedStacks, changedAtTick, rootVisualUntilTick));
     }
 
     public static EntangleState getEntangleState(int entityId) {
@@ -91,5 +98,5 @@ public final class ClientPlayerData {
         entangledEntities.clear();
     }
 
-    public record EntangleState(int stacks, long changedAtTick) {}
+    public record EntangleState(int stacks, long changedAtTick, long rootVisualUntilTick) {}
 }

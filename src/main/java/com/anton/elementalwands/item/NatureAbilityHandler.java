@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.UUID;
 
 import com.anton.elementalwands.entity.SeedProjectileEntity;
+import com.anton.elementalwands.registry.ModParticles;
+import com.anton.elementalwands.util.NatureVfx;
 import com.anton.elementalwands.util.OvergrowthManager;
 import com.anton.elementalwands.util.SeedlingManager;
 import com.anton.elementalwands.util.TemporaryBlockManager;
@@ -64,6 +66,7 @@ public final class NatureAbilityHandler {
         int leadZ = clampLead((int) Math.round(vel.z * VERDANT_STEP_LEAD_TICKS));
 
         BlockPos base = player.getBlockPos().add(leadX, 0, leadZ);
+        int newPadFlourishes = 0;
         for (int dx = -VERDANT_STEP_RADIUS; dx <= VERDANT_STEP_RADIUS; dx++) {
             for (int dz = -VERDANT_STEP_RADIUS; dz <= VERDANT_STEP_RADIUS; dz++) {
                 BlockPos padPos = base.add(dx, 0, dz);
@@ -71,12 +74,29 @@ public final class NatureAbilityHandler {
                 if (!world.getBlockState(padPos.down()).getFluidState().isOf(Fluids.WATER)) continue;
                 BlockState padState = world.getBlockState(padPos);
                 if (!padState.isAir() && !padState.isReplaceable()) continue;
-                TemporaryBlockManager.placeTemporaryBlocks(world,
+                int placed = TemporaryBlockManager.placeTemporaryBlocks(world,
                         List.of(padPos),
                         Blocks.LILY_PAD.getDefaultState(),
                         VERDANT_STEP_PAD_LIFESPAN,
                         s -> s.isAir() || s.isReplaceable());
+                // Only newly unfurled pads receive a flourish, and cap the initial burst so
+                // stepping into a large lake stays network-friendly.
+                if (placed > 0 && newPadFlourishes++ < 10) {
+                    Vec3d padCenter = Vec3d.ofCenter(padPos).add(0.0, -0.38, 0.0);
+                    world.spawnParticles(ModParticles.NATURE_LEAF,
+                            padCenter.x, padCenter.y + 0.06, padCenter.z,
+                            2, 0.18, 0.04, 0.18, 0.01);
+                    world.spawnParticles(ModParticles.NATURE_POLLEN,
+                            padCenter.x, padCenter.y + 0.14, padCenter.z,
+                            2, 0.14, 0.05, 0.14, 0.006);
+                }
             }
+        }
+
+        int now = world.getServer().getTicks();
+        if (newPadFlourishes > 0 && (now + player.getId()) % 6 == 0) {
+            NatureVfx.fairyRipple(world,
+                    player.getEntityPos().add(0.0, 0.08, 0.0), 0.72, now);
         }
     }
 
@@ -139,13 +159,15 @@ public final class NatureAbilityHandler {
             return;
         }
 
+        List<SeedlingManager.SeedlingSnapshot> sources =
+                SeedlingManager.getActiveSeedlingsForCaster(world, caster.getUuid());
         int consumedSeedlings = SeedlingManager.consumeAllSeedlingsForCaster(world, caster.getUuid());
         if (consumedSeedlings <= 0) {
             caster.sendMessage(Text.literal("No active seedlings."), true);
             return;
         }
 
-        OvergrowthManager.startOvergrowth(world, caster, targetedSeedling.get().anchorPos(), consumedSeedlings);
+        OvergrowthManager.startOvergrowth(world, caster, targetedSeedling.get().anchorPos(), sources);
     }
 
     private static LivingEntity findNearestTarget(ServerWorld world, PlayerEntity caster, BlockPos anchor) {

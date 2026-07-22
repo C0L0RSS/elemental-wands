@@ -1,0 +1,38 @@
+{
+  "ambientocclusion": true,
+  "textures": {
+    "stone": "elementalwands:block/stone_spike",
+    "particle": "elementalwands:block/stone_spike"
+  },
+  "elements": [
+    {
+      "from": [2, 0, 2],
+      "to": [14, 3, 14],
+      "faces": {
+        "down": { "texture": "#stone" }, "up": { "texture": "#stone" },
+        "north": { "texture": "#stone" }, "south": { "texture": "#stone" },
+        "west": { "texture": "#stone" }, "east": { "texture": "#stone" }
+      }
+    },
+    {
+      "from": [5, 2, 5],
+      "to": [11, 10, 11],
+      "rotation": { "origin": [8, 3, 8], "axis": "z", "angle": -22.5, "rescale": false },
+      "faces": {
+        "down": { "texture": "#stone" }, "up": { "texture": "#stone" },
+        "north": { "texture": "#stone" }, "south": { "texture": "#stone" },
+        "west": { "texture": "#stone" }, "east": { "texture": "#stone" }
+      }
+    },
+    {
+      "from": [10, 1, 7],
+      "to": [14, 6, 12],
+      "rotation": { "origin": [11, 2, 9], "axis": "x", "angle": 22.5, "rescale": false },
+      "faces": {
+        "down": { "texture": "#stone" }, "up": { "texture": "#stone" },
+        "north": { "texture": "#stone" }, "south": { "texture": "#stone" },
+        "west": { "texture": "#stone" }, "east": { "texture": "#stone" }
+      }
+    }
+  ]
+}

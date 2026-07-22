@@ -1,0 +1,17 @@
+{
+  "ambientocclusion": false,
+  "textures": {
+    "fault": "elementalwands:block/stone_fault",
+    "particle": "elementalwands:block/stone_spike"
+  },
+  "elements": [
+    {
+      "from": [0, 0.01, 0],
+      "to": [16, 0.04, 16],
+      "faces": {
+        "up": { "texture": "#fault" },
+        "down": { "texture": "#fault" }
+      }
+    }
+  ]
+}

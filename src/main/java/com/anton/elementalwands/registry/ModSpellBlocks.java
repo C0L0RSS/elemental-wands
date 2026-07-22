@@ -4,6 +4,8 @@ import java.util.function.Function;
 
 import com.anton.elementalwands.ElementalWandsMod;
 import com.anton.elementalwands.block.InfernoFlameBlock;
+import com.anton.elementalwands.block.StoneSpikeBlock;
+import com.anton.elementalwands.block.StoneWallBlock;
 
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
@@ -53,6 +55,31 @@ public final class ModSpellBlocks {
                     .strength(4.0f, 30.0f)
                     .luminance(state -> 15)
                     .sounds(BlockSoundGroup.NETHERITE)
+                    .pistonBehavior(PistonBehavior.BLOCK)
+                    .dropsNothing());
+
+    public static final Block STONE_SPIKE = register("stone_spike", StoneSpikeBlock::new,
+            AbstractBlock.Settings.create()
+                    .mapColor(MapColor.STONE_GRAY)
+                    .nonOpaque()
+                    .strength(1.5f, 6.0f)
+                    .sounds(BlockSoundGroup.DEEPSLATE)
+                    .pistonBehavior(PistonBehavior.DESTROY)
+                    .dropsNothing());
+
+    public static final Block STONE_WALL = register("stone_wall", StoneWallBlock::new,
+            AbstractBlock.Settings.create()
+                    .mapColor(MapColor.STONE_GRAY)
+                    .strength(3.0f, 12.0f)
+                    .sounds(BlockSoundGroup.DEEPSLATE)
+                    .pistonBehavior(PistonBehavior.BLOCK)
+                    .dropsNothing());
+
+    public static final Block TITAN_DOME = register("titan_dome", settings -> new Block(settings),
+            AbstractBlock.Settings.create()
+                    .mapColor(MapColor.BLACK)
+                    .strength(6.0f, 30.0f)
+                    .sounds(BlockSoundGroup.DEEPSLATE)
                     .pistonBehavior(PistonBehavior.BLOCK)
                     .dropsNothing());
 

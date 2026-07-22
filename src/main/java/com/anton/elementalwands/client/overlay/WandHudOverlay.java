@@ -34,6 +34,21 @@ public class WandHudOverlay implements HudRenderCallback {
         Identifier.of("elementalwands", "textures/gui/ability/wind_secondary.png"),
         Identifier.of("elementalwands", "textures/gui/ability/wind_ultimate.png")
     };
+    private static final Identifier[] STONE_ABILITY_TEXTURES = {
+        Identifier.of("elementalwands", "textures/gui/ability/stone_primary.png"),
+        Identifier.of("elementalwands", "textures/gui/ability/stone_secondary.png"),
+        Identifier.of("elementalwands", "textures/gui/ability/stone_ultimate.png")
+    };
+    private static final Identifier[] NATURE_ABILITY_TEXTURES = {
+        Identifier.of("elementalwands", "textures/gui/ability/nature_primary.png"),
+        Identifier.of("elementalwands", "textures/gui/ability/nature_secondary.png"),
+        Identifier.of("elementalwands", "textures/gui/ability/nature_ultimate.png")
+    };
+    private static final Identifier[] SPACE_ABILITY_TEXTURES = {
+        Identifier.of("elementalwands", "textures/gui/ability/space_primary.png"),
+        Identifier.of("elementalwands", "textures/gui/ability/space_secondary.png"),
+        Identifier.of("elementalwands", "textures/gui/ability/space_ultimate.png")
+    };
 
     private static final float HUD_SCALE = 0.56f;
     private static final int HOTBAR_HEIGHT = 22;
@@ -356,26 +371,18 @@ public class WandHudOverlay implements HudRenderCallback {
 
     private void drawNatureCooldown(DrawContext context, int slotIndex, int renderX, int renderY,
             long now, AnimationProfile animation) {
-        int cx = renderX + 18; int cy = renderY + 18;
-        int leaf = scaledAlpha(0xCCA8E063, animation.alpha);
-        int stem = scaledAlpha(0xCC6FB23B, animation.alpha);
-        // Central stem rising up.
-        context.fill(cx, cy - 2, cx + 1, cy + 7, stem);
-        // Left leaf, angling up and out.
-        context.fill(cx - 5, cy - 1, cx - 2, cy + 1, leaf);
-        context.fill(cx - 4, cy - 4, cx - 1, cy - 1, leaf);
-        // Right leaf, mirrored.
-        context.fill(cx + 1, cy - 1, cx + 4, cy + 1, leaf);
-        context.fill(cx + 1, cy - 4, cx + 4, cy - 1, leaf);
-        // Drifting spores.
-        int sporeCount = Math.max(2, Math.round(5 * animation.density));
-        for (int i = 0; i < sporeCount; i++) {
+        Identifier glyph = NATURE_ABILITY_TEXTURES[Math.max(0, Math.min(slotIndex,
+                NATURE_ABILITY_TEXTURES.length - 1))];
+        context.drawTexture(RenderPipelines.GUI_TEXTURED, glyph,
+                renderX + 4, renderY + 4, 0.0f, 0.0f,
+                28, 28, 32, 32, 32, 32);
+
+        int pollenCount = Math.max(2, Math.round(4 * animation.density));
+        for (int i = 0; i < pollenCount; i++) {
             int px = renderX + 8 + (int) ((now * animation.speed + slotIndex * 9L + i * 11L) % 18L);
             int py = renderY + 9 + (int) (((now * (0.4f + animation.speed * 0.7f)) + i * 5L) % 16L);
-            context.fill(px, py, px + 1, py + 1, scaledAlpha(0xCCCFF0A0, animation.alpha));
+            context.fill(px, py, px + 1, py + 1, scaledAlpha(0xCCDDBD57, animation.alpha));
         }
-        int edge = renderY + 2 + (int) ((now * (0.45f + animation.speed * 0.8f)) % 30L);
-        context.fill(renderX + 1, edge, renderX + 3, edge + 1, scaledAlpha(0x99A8E063, animation.alpha));
     }
 
     private void drawWindCooldown(DrawContext context, int slotIndex, int renderX, int renderY,
@@ -396,17 +403,18 @@ public class WandHudOverlay implements HudRenderCallback {
 
     private void drawStoneCooldown(DrawContext context, int slotIndex, int renderX, int renderY,
             long now, AnimationProfile animation) {
-        context.fill(renderX + 10, renderY + 10, renderX + 11, renderY + 26, scaledAlpha(0xAA7E7568, animation.alpha));
-        context.fill(renderX + 20, renderY + 9,  renderX + 21, renderY + 24, scaledAlpha(0xAA6D6459, animation.alpha));
-        context.fill(renderX + 11, renderY + 15, renderX + 20, renderY + 16, scaledAlpha(0x886F675C, animation.alpha));
-        context.fill(renderX + 16, renderY + 16, renderX + 17, renderY + 24, scaledAlpha(0x886F675C, animation.alpha));
-        int dustCount = Math.max(2, Math.round(4 * animation.density));
+        Identifier glyph = STONE_ABILITY_TEXTURES[Math.max(0, Math.min(slotIndex,
+                STONE_ABILITY_TEXTURES.length - 1))];
+        context.drawTexture(RenderPipelines.GUI_TEXTURED, glyph,
+                renderX + 4, renderY + 4, 0.0f, 0.0f,
+                28, 28, 32, 32, 32, 32);
+
+        int dustCount = Math.max(2, Math.round(3 * animation.density));
         for (int i = 0; i < dustCount; i++) {
             int px = renderX + 9 + (int) ((now * (0.4f + animation.speed * 0.8f) + slotIndex * 5L + i * 9L) % 16L);
             int py = renderY + 23 + (i % 2);
-            context.fill(px, py, px + 1, py + 1, scaledAlpha(0xB0AAA08F, animation.alpha));
+            context.fill(px, py, px + 1, py + 1, scaledAlpha(0xB0B69E83, animation.alpha));
         }
-        context.fill(renderX + 2, renderY + 3, renderX + 4, renderY + 5, scaledAlpha(0x7F988E7C, animation.alpha));
     }
 
     private void drawArcaneCooldown(DrawContext context, int slotIndex, int renderX, int renderY,
@@ -423,24 +431,24 @@ public class WandHudOverlay implements HudRenderCallback {
 
     private void drawSpaceCooldown(DrawContext context, int slotIndex, int renderX, int renderY,
             long now, AnimationProfile animation) {
+        Identifier glyph = SPACE_ABILITY_TEXTURES[Math.max(0, Math.min(slotIndex,
+                SPACE_ABILITY_TEXTURES.length - 1))];
+        context.drawTexture(RenderPipelines.GUI_TEXTURED, glyph,
+                renderX + 4, renderY + 4, 0.0f, 0.0f,
+                28, 28, 32, 32, 32, 32);
+
         int centerX = renderX + (SLOT_SIZE / 2);
         int centerY = renderY + (SLOT_SIZE / 2);
-        int orbitMotes = Math.max(3, Math.round(6 * animation.density));
+        int orbitMotes = Math.max(2, Math.round(4 * animation.density));
         for (int i = 0; i < orbitMotes; i++) {
             double theta  = (now * (0.07 + animation.speed * 0.07)) + slotIndex * 0.9 + i * (Math.PI * 2.0 / orbitMotes);
-            double radius = 5.0 + (i % 3) * 2.5;
+            double radius = 12.0 + (i % 2) * 2.0;
             int px = centerX + (int) Math.round(Math.cos(theta) * radius);
             int py = centerY + (int) Math.round(Math.sin(theta * 1.2) * radius * 0.6);
             int color = (i % 2 == 0) ? scaledAlpha(0xCCB894FF, animation.alpha)
                                      : scaledAlpha(0x889D8DFF, animation.alpha);
-            context.fill(px, py, px + 2, py + 2, color);
+            context.fill(px, py, px + 1, py + 1, color);
         }
-        int ringOffset = (int) ((now * (0.9f + animation.speed)) % 10L);
-        context.fill(centerX - 5 + ringOffset, centerY - 6, centerX - 4 + ringOffset, centerY + 7,
-            scaledAlpha(0x66B89DFF, animation.alpha));
-        context.fill(centerX - 6, centerY - 1 + ringOffset, centerX + 7, centerY + ringOffset,
-            scaledAlpha(0x55CAB5FF, animation.alpha));
-        context.fill(centerX - 1, centerY - 1, centerX + 1, centerY + 1, scaledAlpha(0xE0E2DDFF, animation.alpha));
     }
 
     // -----------------------------------------------------------------------

@@ -15,53 +15,98 @@
   briefly dominate the scene.
 - Particle animation frames live as individual PNGs and are ordered by each
   `assets/elementalwands/particles/*.json` file.
-- Custom spell blocks use ordinary Minecraft block geometry in this pass so a
-  later Blockbench model can replace the model without changing gameplay code.
-  Stone is the exception: its gameplay depends on a jagged eruption silhouette,
-  so its spike uses a compact low-poly block model while retaining Minecraft's
-  stepped geometry and pixel density.
+- Custom spell blocks keep Minecraft's stepped geometry and pixel density.
+  Stone spikes and the Fire meteor use compact low-poly models because their
+  silhouettes carry gameplay readability; temporary ground surfaces remain
+  ordinary blocks with weighted texture variants where repetition is visible.
 
 ## Shared palettes and shape language
 
 | Affinity | Palette | Primary shapes |
 | --- | --- | --- |
 | Fractured | ivory, pale cyan, muted blue-gray | unstable motes and broken threads |
-| Fire | ivory, gold, orange, crimson, charcoal | embers, forked ribbons, ash, molten rings |
-| Wind | pearl white, silver, cool gray, tiny blue-gray shadows | crescents, streamlines, feathers, burst rings |
+| Fire | charcoal, oxblood, molten orange, rare ivory-hot cores | clinker, fractured seams, ash, furnace fronts |
+| Wind | pearl, silver, storm slate, tiny blue-gray shadows | pressure planes, shear edges, torn wakes, vanes |
 | Stone | ochre, slate, warm gray, pale rune light | shards, dust, cracks, angular runes |
 | Nature | chartreuse, emerald, bark brown, pollen gold | leaves, thorns, roots, blossoms |
 | Space | violet, magenta, cyan, near-black | stars, orbit rings, streaks, void cores |
 
-## Fire vertical slice
+## Shared wand and HUD
 
-- `fire_ember`: tiny angular hot fragments with a short upward drift.
-- `fire_flame_ribbon`: stepped forked flame used for travel and ground fronts.
-- `fire_ash`: dark cooling fragments with low gravity and a soft alpha fade.
-- `fire_impact_ring`: age-animated broken circular ring used at hits and impacts.
-- `fire_meteor`: age-animated hot fragments used around the custom meteor core.
-- Inferno Wave uses a full-bright billboard crest plus restrained motes.
-- Dragon's Pyre uses `pyre_coals` for its surface and custom flame/ember fronts.
-- Maximum Meteor uses `meteor_core`, meteor fragments, ash, and impact rings.
+- The universal 16x16 wand is deliberately affinity-neutral: dark wood, aged
+  iron bindings, and fractured bone-white crystal prongs. It is the one held
+  wand texture for every affinity; unused legacy per-affinity wand textures do
+  not define the in-game appearance.
+- `wand_hud_v2` uses neutral charcoal, iron, and bone. Affinity-colored ability
+  overlays, padlocks, cooldown masks, ultimate charge, fractured-state cues,
+  and Wind dash pips remain separate and retain their behavior.
+- Shared gear is generated independently from affinity assets so Fire/Wind
+  replacement passes cannot touch Arcane, Stone, Nature, or Space artwork.
 
-The approved concept board establishes visual direction only. Production PNGs
-must be rebuilt at exact game resolutions and validated for RGBA transparency.
-The combined reference for the second phase lives at
-`docs/vfx-concepts/stone-nature-space-concept.png`; it is likewise never used
-directly as a game texture.
+## Fire — Cinderforge Cataclysm
 
-## Wind vertical slice
+- Fire is a material effect first: charcoal crust, oxblood recesses, molten
+  seams, irregular clinker, hanging ash, and very sparse ivory-hot fractures.
+  Avoid clean flame emblems, smooth orange gradients, and perfect circles.
+- `fire_ember`, `fire_ash`, `fire_flame_ribbon`, and `fire_impact_ring` use
+  clustered shading and broken silhouettes. `fire_meteor` is directional crust
+  debris rather than a collection of miniature meteor balls.
+- Inferno Wave is a six-frame 64x64 Cinder Maw. Layered clinker teeth close
+  around a molten throat seam while rare white fracture points spall outward.
+  Its particle wake is interpolated between ticks so it reads as one advancing
+  front at full projectile speed.
+- Dragon's Pyre uses six `fire_pyre_fissure` frames below an eight-frame
+  `fire_pyre_front`. Four weighted coal variants carry branching molten seams
+  across the runway without repeated ribbon tiling.
+- Maximum Meteor uses an irregular multi-cuboid basalt core, an eight-frame
+  landing brand, and a twelve-frame impact sequence: ivory contact, molten
+  shockwave, basalt debris, embers, then ash. The stored target is visual-only;
+  its brand is projected to the landing surface, and the existing explosion
+  remains the sole source of gameplay behavior.
+- `inferno_flame` is a four-frame vertical block animation. Fire Spirit and all
+  of its assets are explicitly outside this redesign.
 
-- Wind must read pearl-white first. Desaturated blue-gray is limited to edge
-  separation and shadow pixels so the affinity cannot be mistaken for Ice.
-- `wind_mote`: tiny pressure glints used as restrained travel and impact detail.
-- `wind_crescent`: thin compressed-air arcs for blade and landing accents.
-- `wind_air_ribbon`: stepped streamlines used for projectiles, dashes, and dives.
-- `wind_burst_ring`: age-animated pressure rings for casts and compact impacts.
-- `wind_zephyr_impact`: 64px hero sequence reserved for Zephyr launch/landing.
-- Vacuum Blades use a full-bright crescent billboard with short ribbon trails.
-- Waylay Dash keeps its two-charge HUD pips and gains a directional ribbon burst.
-- Zephyr Strike uses hidden custom wings, descending pressure rings, and a
-  custom landing impact while leaving its launch and explosion mechanics intact.
+The approved concept boards establish visual direction only. Production PNGs
+are rebuilt at exact game resolutions and validated for RGBA transparency.
+The Fire/Wind reference lives at
+`docs/vfx-concepts/fire-wind-second-generation-concept.png`; the Stone/Nature/
+Space reference lives at `docs/vfx-concepts/stone-nature-space-concept.png`.
+Neither concept image is ever used directly as a game texture.
+
+## Wind — Sky Shear
+
+- Wind reads pearl-white first. Silver edges and storm-slate seams separate its
+  layered pressure planes; saturated cyan is excluded so it cannot resemble Ice.
+- `wind_mote` is a pressure chip, `wind_crescent` a faceted cut,
+  `wind_air_ribbon` a broken directional plane, and `wind_burst_ring` an
+  asymmetric pressure tear rather than a perfect ring.
+- Vacuum Blades are six-frame 64x64 shear assemblies with layered plates and
+  serrated edges. One tracked mirror flag makes the pair oppose each other.
+  Their torn wake is interpolated between ticks and impacts originate at the
+  collision point, while speed, damage, range, and targeting stay unchanged.
+- Waylay Dash emits a five-tick `wind_slipstream` tracer from the player's real
+  movement. A chained dash adds a second outer shear lane; recharge, charge
+  consumption, and movement remain unchanged.
+- Zephyr's item and worn wings retain vanilla Elytra geometry but become layered
+  pearl shear vanes. `wind_shear_feather` fragments, ascent streams, descent
+  compression circles, and the dense eight-frame landing disc/strike column
+  are presentation only; launch, fall detection, impact, and armor restoration
+  remain the existing gameplay sequence.
+- Calamity Tornado and its assets are explicitly outside this redesign.
+
+## Production ownership and counts
+
+- `tools/generate_fire_vfx_assets.py` owns only the 77 Fire production PNGs:
+  62 particle frames, six Cinder Maw frames, five block textures (including the
+  four-frame flame sheet as one PNG), the meteor core, and three HUD icons.
+- `tools/generate_wind_vfx_assets.py` owns only the 53 Wind production PNGs:
+  42 particle frames, six Vacuum Blade frames, item/worn wings, and three icons.
+- The shared generator owns only `wizard_wand.png` and `wand_hud_v2.png`.
+  Safe replacement never regenerates Arcane, Fire Spirit, Calamity Tornado,
+  Stone, Nature, or Space assets.
+- The validated affinity package is Fire 77, Wind 53, Stone 41, Nature 44,
+  Space 81: 296 affinity PNGs plus two shared presentation PNGs and 42 particle
+  definitions.
 
 ## Stone vertical slice
 

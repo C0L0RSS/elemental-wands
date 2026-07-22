@@ -14,6 +14,23 @@ Universal Wand / affinity architecture.
 There is no test suite. After any code change, run `./gradlew build` to verify
 the mod still compiles and packages.
 
+For VFX work, the required repository checks are:
+
+```bash
+./gradlew clean build
+git diff --check
+python3 tools/validate_remaining_vfx_assets.py
+unzip -t build/libs/elementalwands-2.2.0.jar
+```
+
+The validator covers JSON and texture references, RGBA/power-of-two rules,
+material depth, unique animation frames, model references, the six registered
+Fire/Wind particle additions, and exact production counts. Asset generators
+must only be run with `--replace` when intentionally replacing the families
+owned by that generator; never use a Fire/Wind pass to regenerate Arcane.
+The exact package contract is Fire 77, Wind 53, Stone 41, Nature 44, Space 81
+(296 affinity PNGs), plus two shared gear/HUD PNGs and 42 particle definitions.
+
 ### Deploying After A Build
 
 After `./gradlew build` succeeds, copy `build/libs/elementalwands-2.2.0.jar`
@@ -66,6 +83,11 @@ Important resources:
 - `src/main/resources/assets/elementalwands/items/*.json` - 1.21.10 item model definitions
 - `src/main/resources/assets/elementalwands/models/item/*.json` - item model JSONs
 - `src/main/resources/assets/elementalwands/geckolib/**` - GeckoLib models and animations
+- `tools/generate_fire_vfx_assets.py` - deterministic Cinderforge Fire assets
+- `tools/generate_wind_vfx_assets.py` - deterministic Sky Shear Wind assets
+- `tools/generate_shared_vfx_assets.py` - neutral universal wand and HUD frame only
+- `tools/validate_remaining_vfx_assets.py` - all-affinity/shared VFX audit
+- `docs/vfx-style-guide.md` - palettes, family ownership, exclusions, and counts
 
 Crystal ore blocks, crystal crafting recipes, and ore worldgen were removed in
 the Universal Wand refactor. `ModBlocks.registerAll()` and `ModWorldGen.registerAll()`
@@ -171,17 +193,37 @@ Admin helpers:
 ### Fire
 
 - Passive: fire resistance while the wand is held.
-- Primary: `InfernoWaveEntity`.
+- Primary: `InfernoWaveEntity`, presented as the six-frame Cinder Maw with an
+  interpolated clinker/ember wake. Projectile speed, range, damage, piercing,
+  block collision, burning, and temporary ground-fire behavior are unchanged.
 - Secondary: Dragon's Pyre, a 40-block propagating magma/fire runway. Standing on
-  the pyre shortly after casting grants regeneration and speed.
-- Ultimate: Maximum Meteor via `MeteorManager`.
+  the pyre shortly after casting grants regeneration and speed. The visual front
+  uses grounded `fire_pyre_fissure` seams and `fire_pyre_front` furnace frames;
+  four weighted coal textures prevent obvious runway tiling.
+- Ultimate: Maximum Meteor via `MeteorManager`. A surface point projected from
+  the target X/Z is stored only for `fire_meteor_warning`; the irregular meteor
+  core and `fire_meteor_impact` sequence do not change explosion behavior.
+- Fire Spirit, Fire Spirit assets, ores/crystals, and unused `fire_wand.png` are
+  excluded from the second-generation VFX pass.
 
 ### Wind
 
-- Primary: two `VacuumBladeEntity` projectiles with side offsets.
+- Primary: two `VacuumBladeEntity` projectiles with side offsets. Their only new
+  tracked state is a mirror boolean for opposing six-frame Sky Shear sprites;
+  wakes are interpolated and collision VFX use the actual hit position.
 - Secondary: Waylay Dash with 2 charges, passive recharge, and chain scaling.
+  A short-lived visual tracer follows real player movement, with an outer lane
+  on chained casts; charge and movement logic stay authoritative and unchanged.
+  `WaylayDashVfxManager` expires each trace after five ticks and also clears it
+  on death, leave, world change, server stop, or replacement by a newer dash.
 - Ultimate: Zephyr Strike. It equips a temporary Elytra, launches the player, and
-  creates a landing/impact explosion before restoring the old chest item.
+  creates a landing/impact explosion before restoring the old chest item. Its
+  pearl vane wings, ascent streams, descent compression, shear feathers, and
+  denser landing sequence are visual-only and retain vanilla Elytra geometry.
+  Its post-impact visual burst self-removes after eight ticks and is cleared on
+  server stop along with the existing active-strike state.
+- Calamity Tornado, ores/crystals, and unused `wind_wand.png` are excluded from
+  the second-generation VFX pass.
 
 ### Stone
 
@@ -228,6 +270,7 @@ registered from `ElementalWandsMod.onInitialize()`.
 | `TendrilBloomManager` | Nature secondary tendrils and blooms |
 | `MeteorManager` | Fire ultimate |
 | `TitanDomeManager` | Stone ultimate |
+| `WaylayDashVfxManager` | five-tick visual-only Wind dash tracer |
 | `BlazeTrailManager` | retained fire manager |
 | `MovementDisruptManager` | movement disruption effects |
 | `BlinkRiftManager` | Space secondary rift tracking |

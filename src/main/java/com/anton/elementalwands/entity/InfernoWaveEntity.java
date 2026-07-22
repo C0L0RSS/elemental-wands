@@ -14,6 +14,7 @@ import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
@@ -29,6 +30,7 @@ public class InfernoWaveEntity extends ProjectileEntity {
     private static final int MAX_TRAVEL_DISTANCE = 15; // blocks
     private static final double PROJECTILE_SPEED = 1.5;
     private static final int FIRE_TRAIL_DURATION_TICKS = 40; // 2 seconds
+    private static final double WAKE_SPACING = 0.42;
 
     private Vec3d startPos;
     private Set<Integer> hitEntities = new HashSet<>();
@@ -82,28 +84,48 @@ public class InfernoWaveEntity extends ProjectileEntity {
                         state -> state.isAir());
             }
 
-            // The projectile renderer supplies the readable flame crest; these
-            // custom motes sell its heat and movement without vanilla textures.
-            serverWorld.spawnParticles(
-                    ModParticles.FIRE_FLAME_RIBBON,
-                    getX(), getY(), getZ(),
-                    3, 0.35, 0.3, 0.35, 0.015);
-            serverWorld.spawnParticles(
-                    ModParticles.FIRE_EMBER,
-                    getX(), getY(), getZ(),
-                    5, 0.4, 0.35, 0.4, 0.025);
-
             // Check for entity collisions
             HitResult hitResult = ProjectileUtil.getCollision(this, this::canHit);
+            Vec3d segmentStart = getEntityPos();
+            Vec3d segmentEnd = hitResult.getType() == HitResult.Type.BLOCK
+                    ? hitResult.getPos()
+                    : segmentStart.add(getVelocity());
+
+            // Fill the distance between server ticks so the clinker wake reads as
+            // one moving front instead of a row of disconnected particle clumps.
+            // Collision still uses the original projectile path and mechanics.
+            emitInterpolatedWake(serverWorld, segmentStart, segmentEnd);
 
             if (hitResult.getType() != HitResult.Type.MISS) {
                 onCollision(hitResult);
+                if (isRemoved()) {
+                    return;
+                }
             }
         }
 
         // Update position
         Vec3d velocity = getVelocity();
         setPosition(getX() + velocity.x, getY() + velocity.y, getZ() + velocity.z);
+    }
+
+    private void emitInterpolatedWake(ServerWorld world, Vec3d start, Vec3d end) {
+        double distance = start.distanceTo(end);
+        int samples = Math.max(1, (int) Math.ceil(distance / WAKE_SPACING));
+        for (int i = 0; i <= samples; i++) {
+            Vec3d point = start.lerp(end, (double) i / samples);
+            world.spawnParticles(ModParticles.FIRE_FLAME_RIBBON,
+                    point.x, point.y, point.z,
+                    1, 0.08, 0.06, 0.08, 0.008);
+            world.spawnParticles(ModParticles.FIRE_EMBER,
+                    point.x, point.y, point.z,
+                    1, 0.1, 0.08, 0.1, 0.018);
+            if (world.getRandom().nextFloat() < 0.22f) {
+                world.spawnParticles(ModParticles.FIRE_ASH,
+                        point.x, point.y, point.z,
+                        1, 0.06, 0.04, 0.06, 0.008);
+            }
+        }
     }
 
     @Override
@@ -161,16 +183,17 @@ public class InfernoWaveEntity extends ProjectileEntity {
     }
 
     @Override
-    protected void onBlockHit(net.minecraft.util.hit.BlockHitResult blockHitResult) {
+    protected void onBlockHit(BlockHitResult blockHitResult) {
         // Inferno Wave stops on block collision
         if (getEntityWorld() instanceof ServerWorld serverWorld) {
+            Vec3d impact = blockHitResult.getPos();
             serverWorld.spawnParticles(
                     ModParticles.FIRE_IMPACT_RING,
-                    getX(), getY(), getZ(),
+                    impact.x, impact.y, impact.z,
                     2, 0.15, 0.15, 0.15, 0.0);
             serverWorld.spawnParticles(
                     ModParticles.FIRE_EMBER,
-                    getX(), getY(), getZ(),
+                    impact.x, impact.y, impact.z,
                     14, 0.5, 0.4, 0.5, 0.09);
         }
         discard();

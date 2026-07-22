@@ -172,24 +172,40 @@ public final class FireAbilityHandler {
             Vec3d frontCenter = origin.add(forward.multiply(currentDistance));
 
             // Place the custom pyre surface and draw its advancing front with the
-            // Elemental Wands Fire particle family.
+            // Cinderforge fissures below one heavy advancing furnace face.
             Set<BlockPos> sliceBlocks = new HashSet<>();
+            Vec3d frontVisualPos = null;
+            int widthSample = 0;
             for (double w = -2.0; w <= 2.0; w += 0.5) {
                 Vec3d target = frontCenter.add(right.multiply(w));
-                sw.spawnParticles(ModParticles.FIRE_FLAME_RIBBON,
-                        target.x, target.y, target.z, 1, 0.08, 0.08, 0.08, 0.025);
-                if (sw.getRandom().nextFloat() < 0.22f) {
-                    sw.spawnParticles(ModParticles.FIRE_EMBER,
-                            target.x, target.y, target.z, 2, 0.12, 0.08, 0.12, 0.035);
-                }
                 BlockPos targetPos = BlockPos.ofFloored(target);
                 for (int yOffset = 0; yOffset >= -3; yOffset--) {
                     BlockPos p = targetPos.add(0, yOffset, 0);
                     if (sw.getBlockState(p).isSolidBlock(sw, p)) {
                         sliceBlocks.add(p);
+                        Vec3d surface = new Vec3d(p.getX() + 0.5, p.getY() + 1.03, p.getZ() + 0.5);
+                        if (Math.abs(w) < 0.01) {
+                            frontVisualPos = surface;
+                        }
+                        if ((widthSample + tickCounter) % 2 == 0) {
+                            sw.spawnParticles(ModParticles.FIRE_PYRE_FISSURE,
+                                    surface.x, surface.y, surface.z,
+                                    1, 0.0, 0.0, 0.0, 0.0);
+                        }
+                        if (sw.getRandom().nextFloat() < 0.18f) {
+                            sw.spawnParticles(ModParticles.FIRE_EMBER,
+                                    surface.x, surface.y + 0.1, surface.z,
+                                    2, 0.1, 0.04, 0.1, 0.025);
+                        }
                         break;
                     }
                 }
+                widthSample++;
+            }
+            if (frontVisualPos != null) {
+                sw.spawnParticles(ModParticles.FIRE_PYRE_FRONT,
+                        frontVisualPos.x, frontVisualPos.y + 0.35, frontVisualPos.z,
+                        1, 0.0, 0.0, 0.0, 0.0);
             }
             TemporaryBlockManager.placeTemporaryBlocks(sw, sliceBlocks,
                     ModSpellBlocks.PYRE_COALS.getDefaultState(),

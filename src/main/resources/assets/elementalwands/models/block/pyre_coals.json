@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:block/cube_all",
   "textures": {
-    "all": "elementalwands:block/pyre_coals"
+    "all": "elementalwands:block/pyre_coals_0"
   }
 }

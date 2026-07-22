@@ -20,6 +20,7 @@ import com.anton.elementalwands.util.SoulboundInventoryCarrier;
 import com.anton.elementalwands.util.TemporaryBlockManager;
 import com.anton.elementalwands.util.TendrilBloomManager;
 import com.anton.elementalwands.util.TitanDomeManager;
+import com.anton.elementalwands.util.WaylayDashVfxManager;
 import com.anton.elementalwands.util.ZephyrStrikeManager;
 import com.anton.elementalwands.util.OvergrowthManager;
 import com.anton.elementalwands.util.BlazeTrailManager;
@@ -110,6 +111,7 @@ public class ElementalWandsMod implements ModInitializer {
                 ModEntities.FIRE_SPIRIT,
                 10, 1, 3);
         ModItems.registerAll();
+        WaylayDashVfxManager.init();
         ZephyrStrikeManager.init();
         ModNetworking.registerPayloads();
         ModNetworking.registerC2SReceivers();

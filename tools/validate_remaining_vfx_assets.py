@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the Stone, Nature, and Space production VFX package.
-
-This complements Gradle's resource packaging check with constraints that matter
-for authored pixel art: exact JSON references, alpha-capable PNGs, useful color
-depth, power-of-two dimensions, and non-duplicated animation frames.
-"""
+"""Validate the exact five-affinity and shared production VFX package."""
 
 from __future__ import annotations
 
@@ -18,79 +13,287 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "src/main/resources/assets/elementalwands"
-ELEMENTS = ("stone", "nature", "space")
-STATIC_TEXTURE_ELEMENTS = {
-    "textures/block/stone_spike.png": "stone",
-    "textures/block/stone_fault.png": "stone",
-    "textures/block/stone_wall.png": "stone",
-    "textures/block/stone_wall_ready.png": "stone",
-    "textures/block/titan_dome.png": "stone",
-    "textures/item/titan_sword.png": "stone",
-    "textures/entity/equipment/humanoid/titan_armor.png": "stone",
-    "textures/entity/equipment/humanoid_leggings/titan_armor.png": "stone",
-    "textures/gui/ability/stone_primary.png": "stone",
-    "textures/gui/ability/stone_secondary.png": "stone",
-    "textures/gui/ability/stone_ultimate.png": "stone",
-    "textures/entity/winged_seed.png": "nature",
-    "textures/gui/ability/nature_primary.png": "nature",
-    "textures/gui/ability/nature_secondary.png": "nature",
-    "textures/gui/ability/nature_ultimate.png": "nature",
-    "textures/gui/entangle_bud_empty.png": "nature",
-    "textures/gui/entangle_bud_filled.png": "nature",
-    "textures/gui/entangle_bud_bloom.png": "nature",
-    "textures/gui/sprites/hud/entangle_vignette_v2.png": "nature",
-    "textures/gui/ability/space_primary.png": "space",
-    "textures/gui/ability/space_secondary.png": "space",
-    "textures/gui/ability/space_ultimate.png": "space",
+ELEMENTS = ("fire", "wind", "stone", "nature", "space")
+EXPECTED_ELEMENT_COUNTS = {"fire": 77, "wind": 53, "stone": 41, "nature": 44, "space": 81}
+
+# family -> (frame count, exact square dimensions)
+PARTICLE_FAMILIES: dict[str, dict[str, tuple[int, int]]] = {
+    "fire": {
+        "ember": (4, 16), "ash": (4, 16), "flame_ribbon": (6, 32),
+        "impact_ring": (6, 32), "meteor": (8, 64), "pyre_fissure": (6, 32),
+        "pyre_front": (8, 64), "meteor_warning": (8, 64), "meteor_impact": (12, 64),
+    },
+    "wind": {
+        "mote": (4, 16), "crescent": (6, 32), "air_ribbon": (6, 32),
+        "burst_ring": (6, 32), "zephyr_impact": (8, 64),
+        "slipstream": (6, 32), "shear_feather": (6, 32),
+    },
+    "stone": {
+        "dust": (4, 16), "shard": (6, 16), "fault": (6, 32),
+        "shockwave": (6, 32), "titan": (8, 64),
+    },
+    "nature": {
+        "pollen": (4, 16), "leaf": (4, 16), "petal": (6, 16),
+        "vine": (6, 32), "bloom": (8, 32), "heart": (8, 64),
+    },
+    "space": {
+        "mote": (4, 16), "pinpoint": (4, 16), "singularity": (6, 32),
+        "broken_orbit": (6, 32), "implosion_ring": (6, 32), "rift": (6, 32),
+        "dying_star_cyan": (6, 32), "dying_star_magenta": (6, 32),
+        "consumption": (6, 32), "eclipse": (8, 64), "gravity_lens": (8, 64),
+        "final_collapse": (12, 64),
+    },
 }
 
+# relative texture path -> (owner, exact dimensions)
+STATIC_TEXTURES: dict[str, tuple[str, tuple[int, int]]] = {
+    # Fire: 15 static PNGs + 62 particles = 77.
+    **{f"textures/entity/inferno_wave_{frame}.png": ("fire", (64, 64)) for frame in range(6)},
+    "textures/block/inferno_flame.png": ("fire", (16, 64)),
+    **{f"textures/block/pyre_coals_{frame}.png": ("fire", (16, 16)) for frame in range(4)},
+    "textures/block/meteor_core.png": ("fire", (16, 16)),
+    "textures/gui/ability/fire_primary.png": ("fire", (32, 32)),
+    "textures/gui/ability/fire_secondary.png": ("fire", (32, 32)),
+    "textures/gui/ability/fire_ultimate.png": ("fire", (32, 32)),
+    # Wind: 11 static PNGs + 42 particles = 53.
+    **{f"textures/entity/vacuum_blade_{frame}.png": ("wind", (64, 64)) for frame in range(6)},
+    "textures/item/zephyr_wings.png": ("wind", (32, 32)),
+    "textures/entity/equipment/wings/zephyr_wings.png": ("wind", (64, 32)),
+    "textures/gui/ability/wind_primary.png": ("wind", (32, 32)),
+    "textures/gui/ability/wind_secondary.png": ("wind", (32, 32)),
+    "textures/gui/ability/wind_ultimate.png": ("wind", (32, 32)),
+    # Stone.
+    "textures/block/stone_spike.png": ("stone", (16, 16)),
+    "textures/block/stone_fault.png": ("stone", (16, 16)),
+    "textures/block/stone_wall.png": ("stone", (16, 16)),
+    "textures/block/stone_wall_ready.png": ("stone", (16, 16)),
+    "textures/block/titan_dome.png": ("stone", (16, 16)),
+    "textures/item/titan_sword.png": ("stone", (32, 32)),
+    "textures/entity/equipment/humanoid/titan_armor.png": ("stone", (64, 32)),
+    "textures/entity/equipment/humanoid_leggings/titan_armor.png": ("stone", (64, 32)),
+    "textures/gui/ability/stone_primary.png": ("stone", (32, 32)),
+    "textures/gui/ability/stone_secondary.png": ("stone", (32, 32)),
+    "textures/gui/ability/stone_ultimate.png": ("stone", (32, 32)),
+    # Nature.
+    "textures/entity/winged_seed.png": ("nature", (64, 64)),
+    "textures/gui/ability/nature_primary.png": ("nature", (32, 32)),
+    "textures/gui/ability/nature_secondary.png": ("nature", (32, 32)),
+    "textures/gui/ability/nature_ultimate.png": ("nature", (32, 32)),
+    "textures/gui/entangle_bud_empty.png": ("nature", (16, 16)),
+    "textures/gui/entangle_bud_filled.png": ("nature", (16, 16)),
+    "textures/gui/entangle_bud_bloom.png": ("nature", (16, 16)),
+    "textures/gui/sprites/hud/entangle_vignette_v2.png": ("nature", (320, 180)),
+    # Space.
+    "textures/gui/ability/space_primary.png": ("space", (32, 32)),
+    "textures/gui/ability/space_secondary.png": ("space", (32, 32)),
+    "textures/gui/ability/space_ultimate.png": ("space", (32, 32)),
+}
 
-def particle_pngs() -> list[Path]:
-    files: list[Path] = []
-    for element in ELEMENTS:
-        files.extend(sorted((ASSETS / "textures/particle" / element).glob("**/*.png")))
-    return files
+SHARED_TEXTURES = {
+    "textures/item/wizard_wand.png": (16, 16),
+    "textures/gui/wand_hud_v2.png": (256, 256),
+}
+
+OBSOLETE_TEXTURES = (
+    "textures/entity/inferno_wave.png",
+    "textures/entity/vacuum_blade.png",
+    "textures/block/pyre_coals.png",
+)
 
 
-def production_pngs() -> list[Path]:
-    files = set(particle_pngs())
-    files.update(ASSETS / relative for relative in STATIC_TEXTURE_ELEMENTS)
-    return sorted(files)
+def family_ids(element: str, family: str, count: int, reverse: bool = False) -> list[str]:
+    frames = range(count - 1, -1, -1) if reverse else range(count)
+    return [f"elementalwands:{element}/{family}_{frame}" for frame in frames]
+
+
+EXPECTED_PARTICLE_DEFINITIONS: dict[str, list[str]] = {
+    "arcane_mote": family_ids("arcane", "mote", 4),
+    "arcane_thread": family_ids("arcane", "thread", 6),
+}
+for _element, _families in PARTICLE_FAMILIES.items():
+    for _family, (_count, _size) in _families.items():
+        EXPECTED_PARTICLE_DEFINITIONS[f"{_element}_{_family}"] = family_ids(_element, _family, _count)
+EXPECTED_PARTICLE_DEFINITIONS["space_expansion_ring"] = family_ids(
+    "space", "implosion_ring", 6, reverse=True
+)
+
+NEW_PARTICLE_CONSTANTS = (
+    "FIRE_PYRE_FISSURE", "FIRE_PYRE_FRONT", "FIRE_METEOR_WARNING",
+    "FIRE_METEOR_IMPACT", "WIND_SLIPSTREAM", "WIND_SHEAR_FEATHER",
+)
+
+
+def expected_particle_paths() -> dict[Path, tuple[str, tuple[int, int]]]:
+    paths: dict[Path, tuple[str, tuple[int, int]]] = {}
+    for element, families in PARTICLE_FAMILIES.items():
+        for family, (count, size) in families.items():
+            for frame in range(count):
+                path = ASSETS / f"textures/particle/{element}/{family}_{frame}.png"
+                paths[path] = (element, (size, size))
+    return paths
+
+
+def expected_production_paths() -> dict[Path, tuple[str, tuple[int, int]]]:
+    paths = expected_particle_paths()
+    paths.update({ASSETS / relative: spec for relative, spec in STATIC_TEXTURES.items()})
+    return paths
 
 
 def validate_json() -> list[str]:
     errors: list[str] = []
-    for path in sorted(ASSETS.rglob("*.json")):
+    json_paths = sorted(ASSETS.rglob("*.json"))
+    json_paths.extend(sorted(ASSETS.rglob("*.png.mcmeta")))
+    for path in json_paths:
         try:
             json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
             errors.append(f"invalid JSON {path.relative_to(ROOT)}: {exc}")
 
-    for element in ELEMENTS:
-        definitions = sorted((ASSETS / "particles").glob(f"{element}_*.json"))
-        if not definitions:
-            errors.append(f"no particle definitions found for {element}")
+    definitions = {path.stem: path for path in sorted((ASSETS / "particles").glob("*.json"))}
+    expected_names = set(EXPECTED_PARTICLE_DEFINITIONS)
+    actual_names = set(definitions)
+    for missing in sorted(expected_names - actual_names):
+        errors.append(f"missing particle definition: assets/elementalwands/particles/{missing}.json")
+    for extra in sorted(actual_names - expected_names):
+        errors.append(f"unexpected particle definition: {definitions[extra].relative_to(ROOT)}")
+    if len(definitions) != 42:
+        errors.append(f"particle definition count {len(definitions)}, expected 42")
+
+    for name, expected_textures in EXPECTED_PARTICLE_DEFINITIONS.items():
+        path = definitions.get(name)
+        if path is None:
             continue
-        for definition in definitions:
-            try:
-                payload = json.loads(definition.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError):
-                continue
-            textures = payload.get("textures")
-            if not isinstance(textures, list) or not textures:
-                errors.append(f"particle definition has no textures: {definition.relative_to(ROOT)}")
-                continue
-            for identifier in textures:
-                if not isinstance(identifier, str) or ":" not in identifier:
-                    errors.append(f"invalid particle texture id {identifier!r} in {definition.relative_to(ROOT)}")
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        textures = payload.get("textures")
+        if textures != expected_textures:
+            errors.append(
+                f"particle texture order mismatch in {path.relative_to(ROOT)}: "
+                f"expected {expected_textures}, got {textures}"
+            )
+            continue
+        for identifier in textures:
+            namespace, texture_path = identifier.split(":", 1)
+            png = ASSETS / "textures/particle" / f"{texture_path}.png"
+            if namespace != "elementalwands" or not png.is_file():
+                errors.append(f"missing particle texture for {identifier} in {path.relative_to(ROOT)}")
+    return errors
+
+
+def validate_exact_inventory() -> list[str]:
+    errors: list[str] = []
+    expected = expected_production_paths()
+    for path in expected:
+        if not path.is_file():
+            errors.append(f"missing production PNG: {path.relative_to(ROOT)}")
+
+    expected_particles = set(expected_particle_paths())
+    actual_particles: set[Path] = set()
+    for element in ELEMENTS:
+        actual_particles.update((ASSETS / "textures/particle" / element).glob("*.png"))
+    for path in sorted(actual_particles - expected_particles):
+        errors.append(f"unexpected affinity particle PNG: {path.relative_to(ROOT)}")
+
+    for relative in SHARED_TEXTURES:
+        if not (ASSETS / relative).is_file():
+            errors.append(f"missing shared PNG: {(ASSETS / relative).relative_to(ROOT)}")
+    if len(SHARED_TEXTURES) != 2:
+        errors.append(f"shared texture contract contains {len(SHARED_TEXTURES)} entries, expected 2")
+
+    for relative in OBSOLETE_TEXTURES:
+        path = ASSETS / relative
+        if path.exists():
+            errors.append(f"obsolete replaced texture still present: {path.relative_to(ROOT)}")
+    return errors
+
+
+def validate_pngs() -> tuple[list[str], dict[str, int]]:
+    errors: list[str] = []
+    counts = {element: 0 for element in ELEMENTS}
+    paths = expected_production_paths()
+    all_specs: dict[Path, tuple[str, tuple[int, int]]] = dict(paths)
+    all_specs.update({ASSETS / relative: ("shared", size) for relative, size in SHARED_TEXTURES.items()})
+    for path, (owner, expected_size) in sorted(all_specs.items()):
+        if not path.is_file():
+            continue
+        if owner in counts:
+            counts[owner] += 1
+        relative = path.relative_to(ROOT)
+        try:
+            with Image.open(path) as image:
+                image.load()
+                if image.mode != "RGBA":
+                    errors.append(f"expected RGBA image: {relative} ({image.mode})")
+                    rgba = image.convert("RGBA")
+                else:
+                    rgba = image
+                if rgba.size != expected_size:
+                    errors.append(f"wrong dimensions: {relative} ({rgba.size}, expected {expected_size})")
+                pixels = list(rgba.get_flattened_data())
+                visible = [pixel for pixel in pixels if pixel[3] > 0]
+                if not visible:
+                    errors.append(f"fully transparent image: {relative}")
                     continue
-                namespace, texture_path = identifier.split(":", 1)
-                if namespace != "elementalwands":
-                    errors.append(f"foreign texture namespace {identifier} in {definition.relative_to(ROOT)}")
-                    continue
-                png = ASSETS / "textures/particle" / f"{texture_path}.png"
-                if not png.is_file():
-                    errors.append(f"missing particle texture {png.relative_to(ROOT)}")
+                distinct_rgb = {(r, g, b) for r, g, b, _a in visible}
+                is_particle = "particle" in path.parts
+                minimum_colors = 3 if is_particle else 6
+                if owner in ("fire", "wind") and max(expected_size) >= 32:
+                    minimum_colors = max(minimum_colors, 6)
+                if len(distinct_rgb) < minimum_colors:
+                    errors.append(
+                        f"insufficient material detail: {relative} "
+                        f"({len(distinct_rgb)} colors, expected at least {minimum_colors})"
+                    )
+                requires_alpha = is_particle or any(part in path.parts for part in ("gui", "entity", "item"))
+                if requires_alpha and not any(pixel[3] == 0 for pixel in pixels):
+                    errors.append(f"missing transparent background: {relative}")
+        except OSError as exc:
+            errors.append(f"cannot read PNG {relative}: {exc}")
+
+    for element, expected_count in EXPECTED_ELEMENT_COUNTS.items():
+        if counts[element] != expected_count:
+            errors.append(f"{element} production PNG count {counts[element]}, expected {expected_count}")
+    if sum(counts.values()) != 296:
+        errors.append(f"affinity production PNG total {sum(counts.values())}, expected 296")
+    return errors, counts
+
+
+def validate_unique_frames() -> list[str]:
+    errors: list[str] = []
+    for element, families in PARTICLE_FAMILIES.items():
+        for family, (count, _size) in families.items():
+            paths = [ASSETS / f"textures/particle/{element}/{family}_{frame}.png" for frame in range(count)]
+            if any(not path.is_file() for path in paths):
+                continue
+            digests: dict[str, list[str]] = defaultdict(list)
+            richest = 0
+            for path in paths:
+                digests[hashlib.sha256(path.read_bytes()).hexdigest()].append(path.name)
+                with Image.open(path) as image:
+                    richest = max(richest, len({(r, g, b) for r, g, b, a in image.convert("RGBA").get_flattened_data() if a > 0}))
+            for names in digests.values():
+                if len(names) > 1:
+                    errors.append(f"duplicate frames in {element}/{family}: {', '.join(names)}")
+            minimum = 6 if element in ("fire", "wind") and PARTICLE_FAMILIES[element][family][1] >= 32 else 4
+            if richest < minimum:
+                errors.append(f"insufficient family detail in {element}/{family}: {richest}, expected {minimum}")
+
+    for stem, count in (("inferno_wave", 6), ("vacuum_blade", 6)):
+        paths = [ASSETS / f"textures/entity/{stem}_{frame}.png" for frame in range(count)]
+        if all(path.is_file() for path in paths) and len({path.read_bytes() for path in paths}) != count:
+            errors.append(f"duplicate entity animation frames in {stem}")
+
+    sheet = ASSETS / "textures/block/inferno_flame.png"
+    if sheet.is_file():
+        with Image.open(sheet) as image:
+            cells = [image.crop((0, frame * 16, 16, (frame + 1) * 16)).tobytes() for frame in range(4)]
+            if len(set(cells)) != 4:
+                errors.append("duplicate cells in inferno_flame animation sheet")
+    coals = [ASSETS / f"textures/block/pyre_coals_{frame}.png" for frame in range(4)]
+    if all(path.is_file() for path in coals) and len({path.read_bytes() for path in coals}) != 4:
+        errors.append("duplicate pyre_coals material variants")
     return errors
 
 
@@ -110,18 +313,14 @@ def validate_stone_model_references() -> list[str]:
                         errors.append(f"missing block model {target.relative_to(ROOT)}")
 
     models = sorted((ASSETS / "models/block").glob("stone_*.json"))
-    models.extend((
-        ASSETS / "models/block/titan_dome.json",
-        ASSETS / "models/item/titan_sword.json",
-    ))
+    models.extend((ASSETS / "models/block/titan_dome.json", ASSETS / "models/item/titan_sword.json"))
     for path in models:
         payload = json.loads(path.read_text(encoding="utf-8"))
         for identifier in payload.get("textures", {}).values():
-            if not identifier.startswith("elementalwands:"):
-                continue
-            target = ASSETS / "textures" / f"{identifier.split(':', 1)[1]}.png"
-            if not target.is_file():
-                errors.append(f"missing model texture {target.relative_to(ROOT)}")
+            if isinstance(identifier, str) and identifier.startswith("elementalwands:"):
+                target = ASSETS / "textures" / f"{identifier.split(':', 1)[1]}.png"
+                if not target.is_file():
+                    errors.append(f"missing model texture {target.relative_to(ROOT)}")
 
     item_definition = json.loads((ASSETS / "items/titan_sword.json").read_text(encoding="utf-8"))
     item_model = item_definition["model"]["model"]
@@ -133,131 +332,107 @@ def validate_stone_model_references() -> list[str]:
     for layer, entries in equipment.get("layers", {}).items():
         for entry in entries:
             identifier = entry.get("texture", "")
-            if not identifier.startswith("elementalwands:"):
+            if identifier.startswith("elementalwands:"):
+                target = ASSETS / "textures/entity/equipment" / layer / f"{identifier.split(':', 1)[1]}.png"
+                if not target.is_file():
+                    errors.append(f"missing equipment texture {target.relative_to(ROOT)}")
+    return errors
+
+
+def validate_fire_resource_references() -> list[str]:
+    errors: list[str] = []
+    blockstate_path = ASSETS / "blockstates/pyre_coals.json"
+    blockstate = json.loads(blockstate_path.read_text(encoding="utf-8"))
+    variants = blockstate.get("variants", {}).get("", [])
+    if not isinstance(variants, list) or len(variants) != 4:
+        errors.append("pyre_coals blockstate must contain exactly four weighted variants")
+    else:
+        model_ids = [entry.get("model") for entry in variants]
+        if len(set(model_ids)) != 4:
+            errors.append("pyre_coals blockstate model variants are not unique")
+        weights = [entry.get("weight") for entry in variants]
+        if weights != [3, 3, 2, 2] or any(not isinstance(weight, int) or weight <= 0 for weight in weights):
+            errors.append(f"pyre_coals weights must be positive [3, 3, 2, 2], got {weights}")
+        for index, identifier in enumerate(model_ids):
+            if not isinstance(identifier, str) or not identifier.startswith("elementalwands:"):
+                errors.append(f"invalid pyre_coals model id: {identifier!r}")
                 continue
-            target = (ASSETS / "textures/entity/equipment" / layer
-                      / f"{identifier.split(':', 1)[1]}.png")
-            if not target.is_file():
-                errors.append(f"missing equipment texture {target.relative_to(ROOT)}")
+            model_path = ASSETS / "models" / f"{identifier.split(':', 1)[1]}.json"
+            if not model_path.is_file():
+                errors.append(f"missing pyre_coals model: {model_path.relative_to(ROOT)}")
+                continue
+            model = json.loads(model_path.read_text(encoding="utf-8"))
+            texture_id = model.get("textures", {}).get("all")
+            expected_id = f"elementalwands:block/pyre_coals_{index}"
+            if texture_id != expected_id:
+                errors.append(f"{model_path.relative_to(ROOT)} uses {texture_id}, expected {expected_id}")
+
+    mcmeta_path = ASSETS / "textures/block/inferno_flame.png.mcmeta"
+    if not mcmeta_path.is_file():
+        errors.append(f"missing animation metadata: {mcmeta_path.relative_to(ROOT)}")
+    else:
+        animation = json.loads(mcmeta_path.read_text(encoding="utf-8")).get("animation", {})
+        if animation.get("frames") != [0, 1, 2, 3] or animation.get("frametime") != 2:
+            errors.append("inferno_flame animation metadata must use frames 0..3 at frametime 2")
+
+    meteor_model_path = ASSETS / "models/block/meteor_core.json"
+    meteor_model = json.loads(meteor_model_path.read_text(encoding="utf-8"))
+    if meteor_model.get("textures", {}).get("all") != "elementalwands:block/meteor_core":
+        errors.append("meteor_core model does not reference its production texture")
+    elements = meteor_model.get("elements")
+    if not isinstance(elements, list) or len(elements) < 4:
+        errors.append("meteor_core model must use at least four irregular cuboids")
+    else:
+        extents = set()
+        for index, element in enumerate(elements):
+            start, end = element.get("from"), element.get("to")
+            if not (isinstance(start, list) and isinstance(end, list) and len(start) == len(end) == 3):
+                errors.append(f"meteor_core element {index} has invalid bounds")
+                continue
+            if any(not isinstance(value, (int, float)) or value < 0 or value > 16 for value in start + end):
+                errors.append(f"meteor_core element {index} exceeds 0..16 model bounds")
+            if any(start[axis] >= end[axis] for axis in range(3)):
+                errors.append(f"meteor_core element {index} has non-positive extent")
+            extents.add(tuple(start + end))
+        if len(extents) < 4:
+            errors.append("meteor_core cuboids do not form an irregular silhouette")
     return errors
 
 
-def validate_pngs(paths: list[Path]) -> tuple[list[str], dict[str, int]]:
+def validate_java_particle_registration() -> list[str]:
     errors: list[str] = []
-    counts = {element: 0 for element in ELEMENTS}
-    for path in paths:
-        relative = path.relative_to(ROOT)
-        asset_relative = path.relative_to(ASSETS).as_posix()
-        element = STATIC_TEXTURE_ELEMENTS.get(asset_relative)
-        if element is None:
-            for candidate in ELEMENTS:
-                if candidate in path.parts:
-                    element = candidate
-                    break
-        if element is not None:
-            counts[element] += 1
-        try:
-            with Image.open(path) as image:
-                image.load()
-                if image.mode != "RGBA":
-                    errors.append(f"expected RGBA image: {relative} ({image.mode})")
-                    rgba = image.convert("RGBA")
-                else:
-                    rgba = image
-                width, height = rgba.size
-                if width <= 0 or height <= 0 or width > 512 or height > 512:
-                    errors.append(f"unexpected dimensions: {relative} ({width}x{height})")
-                is_screen_overlay = path.name == "entangle_vignette_v2.png" and (width, height) == (320, 180)
-                if not is_screen_overlay and (width & (width - 1) or height & (height - 1)):
-                    errors.append(f"non-power-of-two dimensions: {relative} ({width}x{height})")
+    registry_path = ROOT / "src/main/java/com/anton/elementalwands/registry/ModParticles.java"
+    factories_path = ROOT / "src/main/java/com/anton/elementalwands/client/particle/ModParticleFactories.java"
+    for path in (registry_path, factories_path):
+        if not path.is_file():
+            errors.append(f"missing particle registration source: {path.relative_to(ROOT)}")
+    if errors:
+        return errors
 
-                pixels = list(rgba.get_flattened_data())
-                visible = [pixel for pixel in pixels if pixel[3] > 0]
-                if not visible:
-                    errors.append(f"fully transparent image: {relative}")
-                    continue
-                distinct = {(r, g, b) for r, g, b, _a in visible}
-                if "gui" in path.parts or path.name == "winged_seed.png":
-                    minimum_colors = 6
-                elif "block" in path.parts or "equipment" in path.parts or "item" in path.parts:
-                    minimum_colors = 6
-                else:
-                    # A single dissipating animation frame may intentionally become
-                    # sparse; family-level depth is checked separately below.
-                    minimum_colors = 3
-                if len(distinct) < minimum_colors:
-                    errors.append(
-                        f"insufficient material detail: {relative} "
-                        f"({len(distinct)} colors, expected at least {minimum_colors})"
-                    )
-                requires_alpha = (
-                    "particle" in path.parts
-                    or "gui" in path.parts
-                    or path.name == "winged_seed.png"
-                )
-                if requires_alpha and not any(pixel[3] == 0 for pixel in pixels):
-                    errors.append(f"missing transparent background: {relative}")
-        except OSError as exc:
-            errors.append(f"cannot read PNG {relative}: {exc}")
-    for element, count in counts.items():
-        if count == 0:
-            errors.append(f"no production PNGs found for {element}")
-    return errors, counts
-
-
-def particle_family(path: Path) -> tuple[Path, str]:
-    stem, separator, suffix = path.stem.rpartition("_")
-    return path.parent, stem if separator and suffix.isdigit() else path.stem
-
-
-def validate_unique_particle_frames(paths: list[Path]) -> list[str]:
-    errors: list[str] = []
-    by_family: dict[tuple[Path, str], dict[str, list[Path]]] = defaultdict(lambda: defaultdict(list))
-    for path in paths:
-        digest = hashlib.sha256(path.read_bytes()).hexdigest()
-        by_family[particle_family(path)][digest].append(path)
-    for (directory, family), digests in sorted(by_family.items()):
-        for duplicate_paths in digests.values():
-            if len(duplicate_paths) > 1:
-                names = ", ".join(path.name for path in duplicate_paths)
-                errors.append(f"duplicate frames in {(directory / family).relative_to(ROOT)}: {names}")
-    return errors
-
-
-def validate_particle_family_detail(paths: list[Path]) -> list[str]:
-    errors: list[str] = []
-    families: dict[tuple[Path, str], list[Path]] = defaultdict(list)
-    for path in paths:
-        families[particle_family(path)].append(path)
-
-    for (directory, family), frames in sorted(families.items()):
-        richest_frame = 0
-        for path in frames:
-            with Image.open(path) as image:
-                rgba = image.convert("RGBA")
-                visible_rgb = {
-                    (r, g, b)
-                    for r, g, b, alpha_value in rgba.get_flattened_data()
-                    if alpha_value > 0
-                }
-                richest_frame = max(richest_frame, len(visible_rgb))
-        minimum_colors = 4
-        if richest_frame < minimum_colors:
-            errors.append(
-                f"insufficient family material detail: {(directory / family).relative_to(ROOT)} "
-                f"({richest_frame} colors in richest frame, expected at least {minimum_colors})"
-            )
+    registry_source = registry_path.read_text(encoding="utf-8")
+    factories_source = factories_path.read_text(encoding="utf-8")
+    for constant in NEW_PARTICLE_CONSTANTS:
+        registry_declaration = f"public static final SimpleParticleType {constant} = register("
+        profile_declaration = f"private static final Profile {constant} = new Profile("
+        factory_registration = f"factories.register(ModParticles.{constant},"
+        if registry_declaration not in registry_source:
+            errors.append(f"missing registry declaration for {constant}")
+        if profile_declaration not in factories_source:
+            errors.append(f"missing client profile for {constant}")
+        if factory_registration not in factories_source:
+            errors.append(f"missing client factory registration for {constant}")
     return errors
 
 
 def main() -> int:
-    pngs = production_pngs()
     errors = validate_json()
-    errors.extend(validate_stone_model_references())
-    png_errors, counts = validate_pngs(pngs)
+    errors.extend(validate_exact_inventory())
+    png_errors, counts = validate_pngs()
     errors.extend(png_errors)
-    errors.extend(validate_unique_particle_frames(particle_pngs()))
-    errors.extend(validate_particle_family_detail(particle_pngs()))
+    errors.extend(validate_unique_frames())
+    errors.extend(validate_stone_model_references())
+    errors.extend(validate_fire_resource_references())
+    errors.extend(validate_java_particle_registration())
 
     if errors:
         print("VFX validation failed:")
@@ -268,7 +443,9 @@ def main() -> int:
     print(
         "VFX validation passed: "
         + ", ".join(f"{element}={counts[element]} PNGs" for element in ELEMENTS)
-        + f", total={len(pngs)}"
+        + f", affinities={sum(counts.values())}, shared={len(SHARED_TEXTURES)}, "
+          f"production_total={sum(counts.values()) + len(SHARED_TEXTURES)}, "
+          f"particle_definitions={len(EXPECTED_PARTICLE_DEFINITIONS)}"
     )
     return 0
 

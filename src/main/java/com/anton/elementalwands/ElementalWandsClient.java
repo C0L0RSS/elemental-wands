@@ -14,6 +14,7 @@ import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.registry.ModEntities;
 import com.anton.elementalwands.registry.ModParticles;
+import com.anton.elementalwands.client.renderer.AnimatedSpellBillboardRenderer;
 import com.anton.elementalwands.client.renderer.EmptyEntityRenderer;
 import com.anton.elementalwands.client.renderer.FireSpiritRenderer;
 import com.anton.elementalwands.client.renderer.SpellBillboardRenderer;
@@ -67,14 +68,15 @@ public class ElementalWandsClient implements ClientModInitializer {
                         Identifier.of("elementalwands", "textures/entity/winged_seed.png"),
                         0.72f, 0.46f, 0.0f, true));
         EntityRendererRegistry.register(ModEntities.VACUUM_BLADE,
-                context -> new SpellBillboardRenderer<>(context,
-                        Identifier.of("elementalwands", "textures/entity/vacuum_blade.png"),
-                        1.1f, 0.55f, 0.0f, true));
+                context -> new AnimatedSpellBillboardRenderer<>(context,
+                        Identifier.of("elementalwands", "textures/entity/vacuum_blade"),
+                        6, 1.1f, 0.55f, 0.0f, true,
+                        blade -> blade.isMirrored()));
         EntityRendererRegistry.register(ModEntities.CALAMITY_TORNADO, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.INFERNO_WAVE,
-                context -> new SpellBillboardRenderer<>(context,
-                        Identifier.of("elementalwands", "textures/entity/inferno_wave.png"),
-                        3.2f, 2.0f, 0.0f, true));
+                context -> new AnimatedSpellBillboardRenderer<>(context,
+                        Identifier.of("elementalwands", "textures/entity/inferno_wave"),
+                        6, 3.2f, 2.0f, 0.0f, true));
         EntityRendererRegistry.register(ModEntities.SINGULARITY_BOLT, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.HOLLOW_PURPLE_ORB, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.AWAKENED_TREE, EmptyEntityRenderer::new);

@@ -19,6 +19,11 @@ public final class ModParticles {
     public static final SimpleParticleType FIRE_ASH = register("fire_ash");
     public static final SimpleParticleType FIRE_IMPACT_RING = register("fire_impact_ring");
     public static final SimpleParticleType FIRE_METEOR = register("fire_meteor", true);
+    public static final SimpleParticleType FIRE_PYRE_FISSURE = register("fire_pyre_fissure");
+    public static final SimpleParticleType FIRE_PYRE_FRONT = register("fire_pyre_front", true);
+    // The landing brand and contact sequence remain visible on Minimal particles.
+    public static final SimpleParticleType FIRE_METEOR_WARNING = register("fire_meteor_warning", true);
+    public static final SimpleParticleType FIRE_METEOR_IMPACT = register("fire_meteor_impact", true);
 
     public static final SimpleParticleType WIND_MOTE = register("wind_mote");
     public static final SimpleParticleType WIND_CRESCENT = register("wind_crescent");
@@ -26,6 +31,8 @@ public final class ModParticles {
     public static final SimpleParticleType WIND_BURST_RING = register("wind_burst_ring");
     // The ultimate landing burst is the Wind hero effect and remains visible on Minimal.
     public static final SimpleParticleType WIND_ZEPHYR_IMPACT = register("wind_zephyr_impact", true);
+    public static final SimpleParticleType WIND_SLIPSTREAM = register("wind_slipstream");
+    public static final SimpleParticleType WIND_SHEAR_FEATHER = register("wind_shear_feather");
 
     public static final SimpleParticleType STONE_DUST = register("stone_dust");
     public static final SimpleParticleType STONE_SHARD = register("stone_shard");

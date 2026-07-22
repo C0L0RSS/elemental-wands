@@ -17,6 +17,7 @@ import net.minecraft.util.math.Vec3d;
 
 import com.anton.elementalwands.entity.VacuumBladeEntity;
 import com.anton.elementalwands.registry.ModParticles;
+import com.anton.elementalwands.util.WaylayDashVfxManager;
 import com.anton.elementalwands.util.ZephyrStrikeManager;
 
 public final class WindAbilityHandler {
@@ -87,8 +88,8 @@ public final class WindAbilityHandler {
         Vec3d offset2 = right.multiply(-VACUUM_BLADE_OFFSET);
 
         // Spawn two vacuum blades
-        VacuumBladeEntity blade1 = new VacuumBladeEntity(world, caster, offset1);
-        VacuumBladeEntity blade2 = new VacuumBladeEntity(world, caster, offset2);
+        VacuumBladeEntity blade1 = new VacuumBladeEntity(world, caster, offset1, false);
+        VacuumBladeEntity blade2 = new VacuumBladeEntity(world, caster, offset2, true);
 
         world.spawnEntity(blade1);
         world.spawnEntity(blade2);
@@ -198,6 +199,7 @@ public final class WindAbilityHandler {
         if (caster instanceof ServerPlayerEntity serverPlayer) {
             serverPlayer.networkHandler
                     .sendPacket(new net.minecraft.network.packet.s2c.play.EntityVelocityUpdateS2CPacket(caster));
+            WaylayDashVfxManager.start(serverPlayer, chainCount);
         }
         caster.velocityModified = true;
 

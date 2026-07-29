@@ -16,6 +16,7 @@ import com.anton.elementalwands.registry.ModEntities;
 import com.anton.elementalwands.registry.ModParticles;
 import com.anton.elementalwands.client.renderer.AnimatedSpellBillboardRenderer;
 import com.anton.elementalwands.client.renderer.EmptyEntityRenderer;
+import com.anton.elementalwands.client.renderer.FireWaveRenderer;
 import com.anton.elementalwands.client.renderer.FireSpiritRenderer;
 import com.anton.elementalwands.client.renderer.SpellBillboardRenderer;
 import com.anton.elementalwands.client.renderer.StoneZombieRenderer;
@@ -54,7 +55,8 @@ public class ElementalWandsClient implements ClientModInitializer {
         StoneParticleFactories.registerAll();
         NatureParticleFactories.registerAll();
         SpaceParticleFactories.registerAll();
-        BlockRenderLayerMap.putBlock(ModSpellBlocks.INFERNO_FLAME, BlockRenderLayer.TRANSLUCENT);
+        BlockRenderLayerMap.putBlock(ModSpellBlocks.INFERNO_FLAME, BlockRenderLayer.CUTOUT);
+        BlockRenderLayerMap.putBlock(ModSpellBlocks.PYRE_FLAME, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModSpellBlocks.STONE_SPIKE, BlockRenderLayer.CUTOUT);
 
         ultimateKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
@@ -73,10 +75,7 @@ public class ElementalWandsClient implements ClientModInitializer {
                         6, 1.1f, 0.55f, 0.0f, true,
                         blade -> blade.isMirrored()));
         EntityRendererRegistry.register(ModEntities.CALAMITY_TORNADO, EmptyEntityRenderer::new);
-        EntityRendererRegistry.register(ModEntities.INFERNO_WAVE,
-                context -> new AnimatedSpellBillboardRenderer<>(context,
-                        Identifier.of("elementalwands", "textures/entity/inferno_wave"),
-                        6, 3.2f, 2.0f, 0.0f, true));
+        EntityRendererRegistry.register(ModEntities.INFERNO_WAVE, FireWaveRenderer::new);
         EntityRendererRegistry.register(ModEntities.SINGULARITY_BOLT, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.HOLLOW_PURPLE_ORB, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.AWAKENED_TREE, EmptyEntityRenderer::new);

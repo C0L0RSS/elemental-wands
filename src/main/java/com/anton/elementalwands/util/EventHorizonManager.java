@@ -9,6 +9,7 @@ import java.util.UUID;
 
 import com.anton.elementalwands.entity.CalamityTornadoEntity;
 
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
@@ -56,6 +57,9 @@ public final class EventHorizonManager {
 
     public static void init() {
         ServerTickEvents.END_WORLD_TICK.register(EventHorizonManager::tickWorld);
+        // Dropping these on shutdown keeps a pending implosion from firing at the
+        // previous save's coordinates once another world reuses the same world key.
+        ServerLifecycleEvents.SERVER_STOPPING.register(server -> HORIZONS.clear());
     }
 
     public static void startEventHorizon(ServerWorld world, PlayerEntity caster, Vec3d center) {

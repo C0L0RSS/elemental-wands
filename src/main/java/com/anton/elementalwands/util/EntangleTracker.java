@@ -97,7 +97,9 @@ public final class EntangleTracker {
         map.put(target.getUuid(), new EntangleData(newStacks, now));
 
         applyEffects(target, newStacks);
-        spawnVineParticles(world, target, newStacks);
+        if (newStacks > currentStacks) {
+            spawnVineParticles(world, target, newStacks);
+        }
         ModNetworking.syncEntangleStacks(target, newStacks,
                 newStacks >= MAX_STACKS ? ROOT_DURATION_TICKS : 0);
     }
@@ -157,9 +159,10 @@ public final class EntangleTracker {
         if (stacks >= MAX_STACKS) {
             // Refresh on a shorter window so the root holds only while vines keep biting.
             target.addStatusEffect(new StatusEffectInstance(
-                    StatusEffects.SLOWNESS, ROOT_DURATION_TICKS, 6, false, true, true));
+                    StatusEffects.SLOWNESS, ROOT_DURATION_TICKS, 6, false, false, true));
         } else {
-            target.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 60, stacks - 1, false, true, true));
+            target.addStatusEffect(new StatusEffectInstance(
+                    StatusEffects.SLOWNESS, 60, stacks - 1, false, false, true));
         }
     }
 

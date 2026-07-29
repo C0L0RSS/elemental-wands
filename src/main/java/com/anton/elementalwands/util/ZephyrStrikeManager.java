@@ -156,9 +156,6 @@ public final class ZephyrStrikeManager {
         }
 
         float power = 3.0f + (float) velocity.length() * 2.0f;
-        if (power < 3.0f) {
-            power = 4.0f;
-        }
 
         createWindImpact(world, player, power);
         finish(player);

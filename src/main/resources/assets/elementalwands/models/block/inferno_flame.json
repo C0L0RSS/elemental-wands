@@ -1,8 +1,0 @@
-{
-  "parent": "minecraft:block/cross",
-  "ambientocclusion": false,
-  "textures": {
-    "cross": "elementalwands:block/inferno_flame",
-    "particle": "elementalwands:block/inferno_flame"
-  }
-}

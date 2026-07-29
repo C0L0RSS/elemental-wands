@@ -4,6 +4,7 @@ import java.util.function.Function;
 
 import com.anton.elementalwands.ElementalWandsMod;
 import com.anton.elementalwands.block.InfernoFlameBlock;
+import com.anton.elementalwands.block.PyreFlameBlock;
 import com.anton.elementalwands.block.StoneSpikeBlock;
 import com.anton.elementalwands.block.StoneWallBlock;
 
@@ -36,6 +37,18 @@ public final class ModSpellBlocks {
                     .replaceable()
                     .breakInstantly()
                     .luminance(state -> 12)
+                    .sounds(BlockSoundGroup.INTENTIONALLY_EMPTY)
+                    .pistonBehavior(PistonBehavior.DESTROY)
+                    .dropsNothing());
+
+    public static final Block PYRE_FLAME = register("pyre_flame", PyreFlameBlock::new,
+            AbstractBlock.Settings.create()
+                    .mapColor(MapColor.ORANGE)
+                    .noCollision()
+                    .nonOpaque()
+                    .replaceable()
+                    .breakInstantly()
+                    .luminance(state -> 0)
                     .sounds(BlockSoundGroup.INTENTIONALLY_EMPTY)
                     .pistonBehavior(PistonBehavior.DESTROY)
                     .dropsNothing());

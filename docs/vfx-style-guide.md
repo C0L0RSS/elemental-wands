@@ -25,7 +25,7 @@
 | Affinity | Palette | Primary shapes |
 | --- | --- | --- |
 | Fractured | ivory, pale cyan, muted blue-gray | unstable motes and broken threads |
-| Fire | charcoal, oxblood, molten orange, rare ivory-hot cores | clinker, fractured seams, ash, furnace fronts |
+| Fire | Minecraft flame white, yellow, orange, red | animated fire tongues, rolling fronts, burning runways |
 | Wind | pearl, silver, storm slate, tiny blue-gray shadows | pressure planes, shear edges, torn wakes, vanes |
 | Stone | ochre, slate, warm gray, pale rune light | shards, dust, cracks, angular runes |
 | Nature | chartreuse, emerald, bark brown, pollen gold | leaves, thorns, roots, blossoms |
@@ -43,28 +43,27 @@
 - Shared gear is generated independently from affinity assets so Fire/Wind
   replacement passes cannot touch Arcane, Stone, Nature, or Space artwork.
 
-## Fire — Cinderforge Cataclysm
+## Fire — Vanilla Inferno
 
-- Fire is a material effect first: charcoal crust, oxblood recesses, molten
-  seams, irregular clinker, hanging ash, and very sparse ivory-hot fractures.
-  Avoid clean flame emblems, smooth orange gradients, and perfect circles.
-- `fire_ember`, `fire_ash`, `fire_flame_ribbon`, and `fire_impact_ring` use
-  clustered shading and broken silhouettes. `fire_meteor` is directional crust
-  debris rather than a collection of miniature meteor balls.
-- Inferno Wave is a six-frame 64x64 Cinder Maw. Layered clinker teeth close
-  around a molten throat seam while rare white fracture points spall outward.
-  Its particle wake is interpolated between ticks so it reads as one advancing
-  front at full projectile speed.
-- Dragon's Pyre uses six `fire_pyre_fissure` frames below an eight-frame
-  `fire_pyre_front`. Four weighted coal variants carry branching molten seams
-  across the runway without repeated ribbon tiling.
-- Maximum Meteor uses an irregular multi-cuboid basalt core, an eight-frame
-  landing brand, and a twelve-frame impact sequence: ivory contact, molten
-  shockwave, basalt debris, embers, then ash. The stored target is visual-only;
-  its brand is projected to the landing surface, and the existing explosion
-  remains the sole source of gameplay behavior.
-- `inferno_flame` is a four-frame vertical block animation. Fire Spirit and all
-  of its assets are explicitly outside this redesign.
+- In-world Fire references Minecraft 1.21.10's own animated fire models,
+  `minecraft:flame` sprite, netherrack, and magma textures. Do not copy those
+  resources into the mod or replace them with dark crust/ring imagery.
+- `fire_inferno_flame` is the one custom Fire particle type. It keeps the
+  vanilla sprite untinted and only supplies spell-scale size, full brightness,
+  gentle rise, late fade, and always-spawn visibility.
+- Inferno Wave renders five real baked fire models across a velocity-relative
+  front. Its interpolated wake uses vanilla Flame and Small Flame particles,
+  and its damaging temporary trail uses the complete standalone fire model.
+- Dragon's Pyre retains its authoritative full-width ground and damage slice.
+  The ground renders as vanilla netherrack while visual-only fire blocks ignite
+  from the center outward over four ticks and expire with the runway.
+- Maximum Meteor keeps an irregular multi-cuboid core skinned with vanilla
+  magma. A 24-point flame ring contracts over the projected landing surface;
+  the descending shell and impact use vanilla flame, lava, smoke, and explosion
+  particles without custom warning discs or impact columns.
+- Only the three 32x32 Fire ability icons are custom PNGs. They use bright
+  clustered flame shapes for the wall, center-out pyre, and burning meteor.
+  Fire Spirit and all of its assets remain outside this redesign.
 
 The approved concept boards establish visual direction only. Production PNGs
 are rebuilt at exact game resolutions and validated for RGBA transparency.
@@ -96,16 +95,15 @@ Neither concept image is ever used directly as a game texture.
 
 ## Production ownership and counts
 
-- `tools/generate_fire_vfx_assets.py` owns only the 77 Fire production PNGs:
-  62 particle frames, six Cinder Maw frames, five block textures (including the
-  four-frame flame sheet as one PNG), the meteor core, and three HUD icons.
+- `tools/generate_fire_vfx_assets.py` owns only the three Fire ability icons.
+  Its explicit `--replace` path also removes the 74 retired Cinderforge PNGs.
 - `tools/generate_wind_vfx_assets.py` owns only the 53 Wind production PNGs:
   42 particle frames, six Vacuum Blade frames, item/worn wings, and three icons.
 - The shared generator owns only `wizard_wand.png` and `wand_hud_v2.png`.
   Safe replacement never regenerates Arcane, Fire Spirit, Calamity Tornado,
   Stone, Nature, or Space assets.
-- The validated affinity package is Fire 77, Wind 53, Stone 41, Nature 44,
-  Space 81: 296 affinity PNGs plus two shared presentation PNGs and 42 particle
+- The validated affinity package is Fire 3, Wind 53, Stone 41, Nature 44,
+  Space 81: 222 affinity PNGs plus two shared presentation PNGs and 34 particle
   definitions.
 
 ## Stone vertical slice

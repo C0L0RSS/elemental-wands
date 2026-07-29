@@ -41,6 +41,7 @@ public final class TendrilBloomManager {
 
     private static final int BLOOM_LIFESPAN = 260;
     private static final int BLOOM_GROWTH_INTERVAL = 20;
+    private static final int BLOOM_AMBIENT_INTERVAL = 15;
     private static final int BLOOM_MAX_RADIUS = 3;
     private static final int BLOOM_ENTANGLE_INTERVAL = 20;
 
@@ -186,7 +187,7 @@ public final class TendrilBloomManager {
         NatureVfx.pairedTendril(world, prevHead, t.currentHead, age);
         world.spawnParticles(ModParticles.NATURE_POLLEN,
                 t.currentHead.x, t.currentHead.y + 0.14, t.currentHead.z,
-                3, 0.13, 0.08, 0.13, 0.01);
+                2, 0.13, 0.08, 0.13, 0.01);
         return false;
     }
 
@@ -252,7 +253,8 @@ public final class TendrilBloomManager {
                     SoundCategory.PLAYERS, 0.38f, 1.25f + b.currentRadius * 0.05f);
         }
 
-        if ((now + b.center.getX() * 3 + b.center.getZ() * 5) % 10 == 0) {
+        if ((now + b.center.getX() * 3 + b.center.getZ() * 5)
+                % BLOOM_AMBIENT_INTERVAL == 0) {
             Vec3d center = Vec3d.ofCenter(b.center);
             double radius = Math.max(1.0, b.currentRadius - 0.15);
             NatureVfx.ring(world, ModParticles.NATURE_VINE, center,

@@ -24,12 +24,15 @@ unzip -t build/libs/elementalwands-2.2.0.jar
 ```
 
 The validator covers JSON and texture references, RGBA/power-of-two rules,
-material depth, unique animation frames, model references, the six registered
-Fire/Wind particle additions, and exact production counts. Asset generators
+material depth, unique animation frames, model references, the three registered
+Fire/Wind particle additions, approved vanilla Fire resource references, and
+exact production counts. Asset generators
 must only be run with `--replace` when intentionally replacing the families
 owned by that generator; never use a Fire/Wind pass to regenerate Arcane.
-The exact package contract is Fire 77, Wind 53, Stone 41, Nature 44, Space 81
-(296 affinity PNGs), plus two shared gear/HUD PNGs and 42 particle definitions.
+The exact package contract is Fire 3, Wind 53, Stone 41, Nature 44, Space 81
+(222 affinity PNGs), plus two shared gear/HUD PNGs and 34 particle definitions.
+Fire deliberately references Minecraft's own animated fire, flame, netherrack,
+and magma resources instead of packaging duplicate in-world textures.
 
 ### Deploying After A Build
 
@@ -83,7 +86,7 @@ Important resources:
 - `src/main/resources/assets/elementalwands/items/*.json` - 1.21.10 item model definitions
 - `src/main/resources/assets/elementalwands/models/item/*.json` - item model JSONs
 - `src/main/resources/assets/elementalwands/geckolib/**` - GeckoLib models and animations
-- `tools/generate_fire_vfx_assets.py` - deterministic Cinderforge Fire assets
+- `tools/generate_fire_vfx_assets.py` - deterministic Vanilla Inferno HUD icons
 - `tools/generate_wind_vfx_assets.py` - deterministic Sky Shear Wind assets
 - `tools/generate_shared_vfx_assets.py` - neutral universal wand and HUD frame only
 - `tools/validate_remaining_vfx_assets.py` - all-affinity/shared VFX audit
@@ -193,16 +196,18 @@ Admin helpers:
 ### Fire
 
 - Passive: fire resistance while the wand is held.
-- Primary: `InfernoWaveEntity`, presented as the six-frame Cinder Maw with an
-  interpolated clinker/ember wake. Projectile speed, range, damage, piercing,
-  block collision, burning, and temporary ground-fire behavior are unchanged.
+- Primary: `InfernoWaveEntity`, presented by `FireWaveRenderer` as five baked
+  vanilla fire models across one rolling front, with an interpolated vanilla
+  flame wake. Projectile speed, range, damage, piercing, block collision,
+  burning, and temporary ground-fire behavior are unchanged.
 - Secondary: Dragon's Pyre, a 40-block propagating magma/fire runway. Standing on
-  the pyre shortly after casting grants regeneration and speed. The visual front
-  uses grounded `fire_pyre_fissure` seams and `fire_pyre_front` furnace frames;
-  four weighted coal textures prevent obvious runway tiling.
+  the pyre shortly after casting grants regeneration and speed. Its internal
+  magma-backed blocks render as vanilla netherrack, while non-damaging vanilla
+  fire models fan outward from each slice's center over four visual-only ticks.
 - Ultimate: Maximum Meteor via `MeteorManager`. A surface point projected from
-  the target X/Z is stored only for `fire_meteor_warning`; the irregular meteor
-  core and `fire_meteor_impact` sequence do not change explosion behavior.
+  the target X/Z drives a closing vanilla-flame warning ring; the irregular
+  magma-skinned core and vanilla explosion/flame/lava/smoke impact do not change
+  explosion behavior.
 - Fire Spirit, Fire Spirit assets, ores/crystals, and unused `fire_wand.png` are
   excluded from the second-generation VFX pass.
 
@@ -348,8 +353,8 @@ For a new element:
 
 ## Current Cleanup Candidates
 
-- `CLAUDE.md`, `docs/MOD_HANDOFF.md`, and `docs/PLAYER_GUIDE.txt` still contain
-  older crystal/Ice-era information.
+- `docs/MOD_HANDOFF.md` and `docs/PLAYER_GUIDE.txt` still contain older
+  crystal/Ice-era information. `CLAUDE.md` is now just a pointer to this file.
 - `CastPrimaryPayload` remains as dead or future-facing networking code.
 - Some removed content assets remain in `src/main/resources/assets/elementalwands/textures`
   even though the related registered items/blocks no longer exist.

@@ -76,7 +76,7 @@ public class SeedProjectileEntity extends ProjectileEntity {
         // The renderer supplies the readable winged-seed silhouette. These restrained custom
         // motes make its direction legible without hiding the detailed sprite in a vanilla cloud.
         sw.spawnParticles(ModParticles.NATURE_POLLEN,
-                getX(), getY(), getZ(), 3, 0.09, 0.07, 0.09, 0.008);
+                getX(), getY(), getZ(), 2, 0.09, 0.07, 0.09, 0.008);
         if ((ticksAlive & 1) == 0) {
             sw.spawnParticles(ModParticles.NATURE_LEAF,
                     getX(), getY(), getZ(), 1, 0.035, 0.035, 0.035, 0.0);

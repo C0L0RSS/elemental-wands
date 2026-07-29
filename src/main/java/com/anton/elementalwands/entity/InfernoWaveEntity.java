@@ -11,6 +11,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.projectile.ProjectileUtil;
+import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
@@ -91,8 +92,8 @@ public class InfernoWaveEntity extends ProjectileEntity {
                     ? hitResult.getPos()
                     : segmentStart.add(getVelocity());
 
-            // Fill the distance between server ticks so the clinker wake reads as
-            // one moving front instead of a row of disconnected particle clumps.
+            // Fill the distance between server ticks so the vanilla flame wake
+            // reads as one moving front instead of disconnected particle clumps.
             // Collision still uses the original projectile path and mechanics.
             emitInterpolatedWake(serverWorld, segmentStart, segmentEnd);
 
@@ -114,16 +115,13 @@ public class InfernoWaveEntity extends ProjectileEntity {
         int samples = Math.max(1, (int) Math.ceil(distance / WAKE_SPACING));
         for (int i = 0; i <= samples; i++) {
             Vec3d point = start.lerp(end, (double) i / samples);
-            world.spawnParticles(ModParticles.FIRE_FLAME_RIBBON,
+            world.spawnParticles(ParticleTypes.FLAME,
                     point.x, point.y, point.z,
                     1, 0.08, 0.06, 0.08, 0.008);
-            world.spawnParticles(ModParticles.FIRE_EMBER,
-                    point.x, point.y, point.z,
-                    1, 0.1, 0.08, 0.1, 0.018);
-            if (world.getRandom().nextFloat() < 0.22f) {
-                world.spawnParticles(ModParticles.FIRE_ASH,
+            if ((i + age) % 2 == 0) {
+                world.spawnParticles(ParticleTypes.SMALL_FLAME,
                         point.x, point.y, point.z,
-                        1, 0.06, 0.04, 0.06, 0.008);
+                        1, 0.1, 0.08, 0.1, 0.018);
             }
         }
     }
@@ -156,15 +154,18 @@ public class InfernoWaveEntity extends ProjectileEntity {
         // Set target on fire
         target.setOnFireFor(3); // 3 seconds
 
-        // Spawn the custom impact ring plus a short ember burst.
         serverWorld.spawnParticles(
-                ModParticles.FIRE_IMPACT_RING,
+                ModParticles.FIRE_INFERNO_FLAME,
                 target.getX(), target.getBodyY(0.5), target.getZ(),
-                1, 0.0, 0.0, 0.0, 0.0);
+                12, 0.42, 0.38, 0.42, 0.08);
         serverWorld.spawnParticles(
-                ModParticles.FIRE_EMBER,
+                ParticleTypes.LAVA,
                 target.getX(), target.getBodyY(0.5), target.getZ(),
-                10, 0.35, 0.35, 0.35, 0.08);
+                6, 0.35, 0.35, 0.35, 0.08);
+        serverWorld.spawnParticles(
+                ParticleTypes.SMOKE,
+                target.getX(), target.getBodyY(0.5), target.getZ(),
+                3, 0.3, 0.3, 0.3, 0.035);
 
         serverWorld.playSound(
                 null,
@@ -188,13 +189,17 @@ public class InfernoWaveEntity extends ProjectileEntity {
         if (getEntityWorld() instanceof ServerWorld serverWorld) {
             Vec3d impact = blockHitResult.getPos();
             serverWorld.spawnParticles(
-                    ModParticles.FIRE_IMPACT_RING,
+                    ModParticles.FIRE_INFERNO_FLAME,
                     impact.x, impact.y, impact.z,
-                    2, 0.15, 0.15, 0.15, 0.0);
+                    18, 0.5, 0.4, 0.5, 0.09);
             serverWorld.spawnParticles(
-                    ModParticles.FIRE_EMBER,
+                    ParticleTypes.LAVA,
                     impact.x, impact.y, impact.z,
-                    14, 0.5, 0.4, 0.5, 0.09);
+                    8, 0.45, 0.35, 0.45, 0.09);
+            serverWorld.spawnParticles(
+                    ParticleTypes.SMOKE,
+                    impact.x, impact.y, impact.z,
+                    4, 0.4, 0.3, 0.4, 0.04);
         }
         discard();
     }

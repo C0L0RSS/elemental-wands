@@ -2,8 +2,8 @@
   "parent": "minecraft:block/block",
   "ambientocclusion": true,
   "textures": {
-    "particle": "elementalwands:block/meteor_core",
-    "all": "elementalwands:block/meteor_core"
+    "particle": "minecraft:block/magma",
+    "all": "minecraft:block/magma"
   },
   "elements": [
     {

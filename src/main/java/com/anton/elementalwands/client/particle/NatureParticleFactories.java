@@ -46,7 +46,7 @@ public final class NatureParticleFactories {
             SpriteMode.BY_AGE, false, true);
 
     private static final Profile BLOOM = new Profile(
-            0.46f, 0.72f, 2.25f,
+            0.345f, 0.54f, 2.25f,
             10, 17,
             0.96f, 0.02f, 0.56f,
             0.0f, 0.99f,

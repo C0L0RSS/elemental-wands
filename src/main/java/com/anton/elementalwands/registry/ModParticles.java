@@ -14,16 +14,9 @@ import net.minecraft.util.Identifier;
  */
 public final class ModParticles {
 
-    public static final SimpleParticleType FIRE_EMBER = register("fire_ember");
-    public static final SimpleParticleType FIRE_FLAME_RIBBON = register("fire_flame_ribbon");
-    public static final SimpleParticleType FIRE_ASH = register("fire_ash");
-    public static final SimpleParticleType FIRE_IMPACT_RING = register("fire_impact_ring");
-    public static final SimpleParticleType FIRE_METEOR = register("fire_meteor", true);
-    public static final SimpleParticleType FIRE_PYRE_FISSURE = register("fire_pyre_fissure");
-    public static final SimpleParticleType FIRE_PYRE_FRONT = register("fire_pyre_front", true);
-    // The landing brand and contact sequence remain visible on Minimal particles.
-    public static final SimpleParticleType FIRE_METEOR_WARNING = register("fire_meteor_warning", true);
-    public static final SimpleParticleType FIRE_METEOR_IMPACT = register("fire_meteor_impact", true);
+    // Spell-scale vanilla flame used for the moving hero front and meteor
+    // telegraph. Its texture definition points to minecraft:flame.
+    public static final SimpleParticleType FIRE_INFERNO_FLAME = register("fire_inferno_flame", true);
 
     public static final SimpleParticleType WIND_MOTE = register("wind_mote");
     public static final SimpleParticleType WIND_CRESCENT = register("wind_crescent");

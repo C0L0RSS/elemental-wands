@@ -53,6 +53,7 @@ public final class SeedlingManager {
     private static final int MAX_SEEDLINGS_PER_CASTER = 5;
     private static final int NORMAL_PULSE_INTERVAL = 30;
     private static final int AMPLIFIED_PULSE_INTERVAL = 10;
+    private static final int AMBIENT_CROWN_INTERVAL = 10;
     private static final int NORMAL_MAX_RADIUS = 3;
     private static final int AMPLIFIED_MAX_RADIUS = 6;
 
@@ -486,14 +487,14 @@ public final class SeedlingManager {
                 continue;
             }
 
-            pulseIfDue(world, seedling, now);
+            boolean growthPulseSpawned = pulseIfDue(world, seedling, now);
             applyZoneEffects(world, seedling, now);
 
             // The physical azalea is intentionally vanilla-scale; the pulsing particle crown
             // conveys growth level, amplification, and the fully-active state at a glance.
             int phase = Math.floorMod(seedling.anchorPos.getX() * 3
-                    + seedling.anchorPos.getZ() * 5, 6);
-            if ((now + phase) % 6 == 0) {
+                    + seedling.anchorPos.getZ() * 5, AMBIENT_CROWN_INTERVAL);
+            if (!growthPulseSpawned && (now + phase) % AMBIENT_CROWN_INTERVAL == 0) {
                 NatureVfx.seedlingPulse(world, seedling.anchorPos,
                         Math.max(1, seedling.currentRadius), seedling.amplifiedByOvergrowth, now);
             }
@@ -514,12 +515,12 @@ public final class SeedlingManager {
         return !list.isEmpty();
     }
 
-    private static void pulseIfDue(ServerWorld world, Seedling seedling, int now) {
+    private static boolean pulseIfDue(ServerWorld world, Seedling seedling, int now) {
         int interval = seedling.amplifiedByOvergrowth ? AMPLIFIED_PULSE_INTERVAL : NORMAL_PULSE_INTERVAL;
         int maxRadius = seedling.amplifiedByOvergrowth ? AMPLIFIED_MAX_RADIUS : NORMAL_MAX_RADIUS;
 
-        if (now - seedling.lastPulseTick < interval) return;
-        if (seedling.currentRadius >= maxRadius) return;
+        if (now - seedling.lastPulseTick < interval) return false;
+        if (seedling.currentRadius >= maxRadius) return false;
 
         seedling.currentRadius++;
         seedling.lastPulseTick = now;
@@ -538,6 +539,7 @@ public final class SeedlingManager {
         world.playSound(null, seedling.anchorPos, SoundEvents.ITEM_BONE_MEAL_USE,
                 SoundCategory.PLAYERS, 0.32f,
                 1.1f + Math.min(0.35f, seedling.currentRadius * 0.05f));
+        return true;
     }
 
     static List<BlockPos> chebyshevRingColumns(BlockPos center, int radius) {

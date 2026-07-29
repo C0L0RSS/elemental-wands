@@ -58,6 +58,7 @@ public final class OvergrowthManager {
     private static final int TRUNK_STAGE_TICK = 7;
     private static final int HEART_STAGE_TICK = 14;
     private static final int CANOPY_STAGE_TICK = 22;
+    private static final int TREE_AMBIENT_INTERVAL = 6;
 
     private static final class AwakenedTree {
         final int entityId;
@@ -219,7 +220,7 @@ public final class OvergrowthManager {
             advanceTreeGrowth(world, tree, targetStage, now);
 
             tickHealingBeacon(world, tree, now);
-            if (now % 4 == 0) {
+            if (now % TREE_AMBIENT_INTERVAL == 0) {
                 spawnAmbientTreeParticles(world, tree, entity, now);
             }
         }

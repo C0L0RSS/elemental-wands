@@ -1,25 +1,7 @@
 {
   "variants": {
-    "": [
-      {
-        "model": "elementalwands:block/pyre_coals",
-        "weight": 3
-      },
-      {
-        "model": "elementalwands:block/pyre_coals_1",
-        "y": 90,
-        "weight": 3
-      },
-      {
-        "model": "elementalwands:block/pyre_coals_2",
-        "y": 180,
-        "weight": 2
-      },
-      {
-        "model": "elementalwands:block/pyre_coals_3",
-        "y": 270,
-        "weight": 2
-      }
-    ]
+    "": {
+      "model": "minecraft:block/netherrack"
+    }
   }
 }

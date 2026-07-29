@@ -14,15 +14,11 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "src/main/resources/assets/elementalwands"
 ELEMENTS = ("fire", "wind", "stone", "nature", "space")
-EXPECTED_ELEMENT_COUNTS = {"fire": 77, "wind": 53, "stone": 41, "nature": 44, "space": 81}
+EXPECTED_ELEMENT_COUNTS = {"fire": 3, "wind": 53, "stone": 41, "nature": 44, "space": 81}
 
 # family -> (frame count, exact square dimensions)
 PARTICLE_FAMILIES: dict[str, dict[str, tuple[int, int]]] = {
-    "fire": {
-        "ember": (4, 16), "ash": (4, 16), "flame_ribbon": (6, 32),
-        "impact_ring": (6, 32), "meteor": (8, 64), "pyre_fissure": (6, 32),
-        "pyre_front": (8, 64), "meteor_warning": (8, 64), "meteor_impact": (12, 64),
-    },
+    "fire": {},
     "wind": {
         "mote": (4, 16), "crescent": (6, 32), "air_ribbon": (6, 32),
         "burst_ring": (6, 32), "zephyr_impact": (8, 64),
@@ -47,11 +43,8 @@ PARTICLE_FAMILIES: dict[str, dict[str, tuple[int, int]]] = {
 
 # relative texture path -> (owner, exact dimensions)
 STATIC_TEXTURES: dict[str, tuple[str, tuple[int, int]]] = {
-    # Fire: 15 static PNGs + 62 particles = 77.
-    **{f"textures/entity/inferno_wave_{frame}.png": ("fire", (64, 64)) for frame in range(6)},
-    "textures/block/inferno_flame.png": ("fire", (16, 64)),
-    **{f"textures/block/pyre_coals_{frame}.png": ("fire", (16, 16)) for frame in range(4)},
-    "textures/block/meteor_core.png": ("fire", (16, 16)),
+    # Fire uses Minecraft's own flame, fire, netherrack, and magma resources.
+    # Only the three ability-specific HUD icons are packaged.
     "textures/gui/ability/fire_primary.png": ("fire", (32, 32)),
     "textures/gui/ability/fire_secondary.png": ("fire", (32, 32)),
     "textures/gui/ability/fire_ultimate.png": ("fire", (32, 32)),
@@ -98,6 +91,19 @@ OBSOLETE_TEXTURES = (
     "textures/entity/inferno_wave.png",
     "textures/entity/vacuum_blade.png",
     "textures/block/pyre_coals.png",
+) + tuple(
+    f"textures/entity/inferno_wave_{frame}.png" for frame in range(6)
+) + (
+    "textures/block/inferno_flame.png",
+    "textures/block/inferno_flame.png.mcmeta",
+    "textures/block/meteor_core.png",
+    "models/block/inferno_flame.json",
+    "models/block/pyre_coals.json",
+    "models/block/pyre_coals_1.json",
+    "models/block/pyre_coals_2.json",
+    "models/block/pyre_coals_3.json",
+) + tuple(
+    f"textures/block/pyre_coals_{frame}.png" for frame in range(4)
 )
 
 
@@ -109,6 +115,7 @@ def family_ids(element: str, family: str, count: int, reverse: bool = False) -> 
 EXPECTED_PARTICLE_DEFINITIONS: dict[str, list[str]] = {
     "arcane_mote": family_ids("arcane", "mote", 4),
     "arcane_thread": family_ids("arcane", "thread", 6),
+    "fire_inferno_flame": ["minecraft:flame"],
 }
 for _element, _families in PARTICLE_FAMILIES.items():
     for _family, (_count, _size) in _families.items():
@@ -118,8 +125,7 @@ EXPECTED_PARTICLE_DEFINITIONS["space_expansion_ring"] = family_ids(
 )
 
 NEW_PARTICLE_CONSTANTS = (
-    "FIRE_PYRE_FISSURE", "FIRE_PYRE_FRONT", "FIRE_METEOR_WARNING",
-    "FIRE_METEOR_IMPACT", "WIND_SLIPSTREAM", "WIND_SHEAR_FEATHER",
+    "FIRE_INFERNO_FLAME", "WIND_SLIPSTREAM", "WIND_SHEAR_FEATHER",
 )
 
 
@@ -156,8 +162,8 @@ def validate_json() -> list[str]:
         errors.append(f"missing particle definition: assets/elementalwands/particles/{missing}.json")
     for extra in sorted(actual_names - expected_names):
         errors.append(f"unexpected particle definition: {definitions[extra].relative_to(ROOT)}")
-    if len(definitions) != 42:
-        errors.append(f"particle definition count {len(definitions)}, expected 42")
+    if len(definitions) != 34:
+        errors.append(f"particle definition count {len(definitions)}, expected 34")
 
     for name, expected_textures in EXPECTED_PARTICLE_DEFINITIONS.items():
         path = definitions.get(name)
@@ -176,6 +182,12 @@ def validate_json() -> list[str]:
             continue
         for identifier in textures:
             namespace, texture_path = identifier.split(":", 1)
+            if namespace == "minecraft":
+                if name != "fire_inferno_flame" or identifier != "minecraft:flame":
+                    errors.append(
+                        f"unapproved external particle texture {identifier} in {path.relative_to(ROOT)}"
+                    )
+                continue
             png = ASSETS / "textures/particle" / f"{texture_path}.png"
             if namespace != "elementalwands" or not png.is_file():
                 errors.append(f"missing particle texture for {identifier} in {path.relative_to(ROOT)}")
@@ -255,8 +267,8 @@ def validate_pngs() -> tuple[list[str], dict[str, int]]:
     for element, expected_count in EXPECTED_ELEMENT_COUNTS.items():
         if counts[element] != expected_count:
             errors.append(f"{element} production PNG count {counts[element]}, expected {expected_count}")
-    if sum(counts.values()) != 296:
-        errors.append(f"affinity production PNG total {sum(counts.values())}, expected 296")
+    if sum(counts.values()) != 222:
+        errors.append(f"affinity production PNG total {sum(counts.values())}, expected 222")
     return errors, counts
 
 
@@ -280,20 +292,10 @@ def validate_unique_frames() -> list[str]:
             if richest < minimum:
                 errors.append(f"insufficient family detail in {element}/{family}: {richest}, expected {minimum}")
 
-    for stem, count in (("inferno_wave", 6), ("vacuum_blade", 6)):
+    for stem, count in (("vacuum_blade", 6),):
         paths = [ASSETS / f"textures/entity/{stem}_{frame}.png" for frame in range(count)]
         if all(path.is_file() for path in paths) and len({path.read_bytes() for path in paths}) != count:
             errors.append(f"duplicate entity animation frames in {stem}")
-
-    sheet = ASSETS / "textures/block/inferno_flame.png"
-    if sheet.is_file():
-        with Image.open(sheet) as image:
-            cells = [image.crop((0, frame * 16, 16, (frame + 1) * 16)).tobytes() for frame in range(4)]
-            if len(set(cells)) != 4:
-                errors.append("duplicate cells in inferno_flame animation sheet")
-    coals = [ASSETS / f"textures/block/pyre_coals_{frame}.png" for frame in range(4)]
-    if all(path.is_file() for path in coals) and len({path.read_bytes() for path in coals}) != 4:
-        errors.append("duplicate pyre_coals material variants")
     return errors
 
 
@@ -341,44 +343,51 @@ def validate_stone_model_references() -> list[str]:
 
 def validate_fire_resource_references() -> list[str]:
     errors: list[str] = []
-    blockstate_path = ASSETS / "blockstates/pyre_coals.json"
-    blockstate = json.loads(blockstate_path.read_text(encoding="utf-8"))
-    variants = blockstate.get("variants", {}).get("", [])
-    if not isinstance(variants, list) or len(variants) != 4:
-        errors.append("pyre_coals blockstate must contain exactly four weighted variants")
-    else:
-        model_ids = [entry.get("model") for entry in variants]
-        if len(set(model_ids)) != 4:
-            errors.append("pyre_coals blockstate model variants are not unique")
-        weights = [entry.get("weight") for entry in variants]
-        if weights != [3, 3, 2, 2] or any(not isinstance(weight, int) or weight <= 0 for weight in weights):
-            errors.append(f"pyre_coals weights must be positive [3, 3, 2, 2], got {weights}")
-        for index, identifier in enumerate(model_ids):
-            if not isinstance(identifier, str) or not identifier.startswith("elementalwands:"):
-                errors.append(f"invalid pyre_coals model id: {identifier!r}")
-                continue
-            model_path = ASSETS / "models" / f"{identifier.split(':', 1)[1]}.json"
-            if not model_path.is_file():
-                errors.append(f"missing pyre_coals model: {model_path.relative_to(ROOT)}")
-                continue
-            model = json.loads(model_path.read_text(encoding="utf-8"))
-            texture_id = model.get("textures", {}).get("all")
-            expected_id = f"elementalwands:block/pyre_coals_{index}"
-            if texture_id != expected_id:
-                errors.append(f"{model_path.relative_to(ROOT)} uses {texture_id}, expected {expected_id}")
+    pyre_coals = json.loads(
+        (ASSETS / "blockstates/pyre_coals.json").read_text(encoding="utf-8")
+    )
+    if pyre_coals.get("variants", {}).get("") != {"model": "minecraft:block/netherrack"}:
+        errors.append("pyre_coals must render with minecraft:block/netherrack")
 
-    mcmeta_path = ASSETS / "textures/block/inferno_flame.png.mcmeta"
-    if not mcmeta_path.is_file():
-        errors.append(f"missing animation metadata: {mcmeta_path.relative_to(ROOT)}")
-    else:
-        animation = json.loads(mcmeta_path.read_text(encoding="utf-8")).get("animation", {})
-        if animation.get("frames") != [0, 1, 2, 3] or animation.get("frametime") != 2:
-            errors.append("inferno_flame animation metadata must use frames 0..3 at frametime 2")
+    floor_models = {
+        "minecraft:block/fire_floor0",
+        "minecraft:block/fire_floor1",
+    }
+    side_models = {
+        "minecraft:block/fire_side0",
+        "minecraft:block/fire_side1",
+        "minecraft:block/fire_side_alt0",
+        "minecraft:block/fire_side_alt1",
+    }
+    for name in ("inferno_flame", "pyre_flame"):
+        path = ASSETS / f"blockstates/{name}.json"
+        if not path.is_file():
+            errors.append(f"missing vanilla-fire blockstate: {path.relative_to(ROOT)}")
+            continue
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        multipart = payload.get("multipart")
+        if not isinstance(multipart, list) or len(multipart) != 5:
+            errors.append(f"{name} must contain five unconditional vanilla-fire model groups")
+            continue
+        if any("when" in group for group in multipart):
+            errors.append(f"{name} vanilla-fire model groups must be unconditional")
+        floor = multipart[0].get("apply", [])
+        if {entry.get("model") for entry in floor} != floor_models:
+            errors.append(f"{name} must reference both vanilla fire floor models")
+        for rotation, group in zip((0, 90, 180, 270), multipart[1:]):
+            entries = group.get("apply", [])
+            if {entry.get("model") for entry in entries} != side_models:
+                errors.append(f"{name} rotation {rotation} has incomplete vanilla fire side models")
+            if any(entry.get("y", 0) != rotation for entry in entries):
+                errors.append(f"{name} fire-side model rotation mismatch at {rotation} degrees")
 
     meteor_model_path = ASSETS / "models/block/meteor_core.json"
     meteor_model = json.loads(meteor_model_path.read_text(encoding="utf-8"))
-    if meteor_model.get("textures", {}).get("all") != "elementalwands:block/meteor_core":
-        errors.append("meteor_core model does not reference its production texture")
+    meteor_textures = meteor_model.get("textures", {})
+    if meteor_textures.get("all") != "minecraft:block/magma":
+        errors.append("meteor_core model must use minecraft:block/magma")
+    if meteor_textures.get("particle") != "minecraft:block/magma":
+        errors.append("meteor_core particle texture must use minecraft:block/magma")
     elements = meteor_model.get("elements")
     if not isinstance(elements, list) or len(elements) < 4:
         errors.append("meteor_core model must use at least four irregular cuboids")

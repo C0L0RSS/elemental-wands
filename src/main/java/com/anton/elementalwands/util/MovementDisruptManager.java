@@ -5,6 +5,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
 
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
@@ -27,6 +28,9 @@ public final class MovementDisruptManager {
 
     public static void init() {
         ServerTickEvents.END_WORLD_TICK.register(MovementDisruptManager::tickWorld);
+        // Expiry ticks are absolute server ticks, which reset on the next server, so
+        // stale locks would linger for their full duration in an unrelated world.
+        ServerLifecycleEvents.SERVER_STOPPING.register(server -> SPRINT_LOCKS.clear());
     }
 
     public static void applySprintLock(ServerWorld world, LivingEntity target, int durationTicks) {

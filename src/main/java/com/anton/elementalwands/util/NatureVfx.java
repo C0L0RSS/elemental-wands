@@ -61,9 +61,9 @@ public final class NatureVfx {
         Vec3d first = to.add(side).subtract(swayOffset).add(0.0, 0.08, 0.0);
         Vec3d second = to.subtract(side).add(swayOffset).add(0.0, 0.1, 0.0);
         world.spawnParticles(ModParticles.NATURE_VINE,
-                first.x, first.y, first.z, 2, 0.035, 0.025, 0.035, 0.0);
+                first.x, first.y, first.z, 1, 0.035, 0.025, 0.035, 0.0);
         world.spawnParticles(ModParticles.NATURE_VINE,
-                second.x, second.y, second.z, 2, 0.035, 0.025, 0.035, 0.0);
+                second.x, second.y, second.z, 1, 0.035, 0.025, 0.035, 0.0);
 
         world.spawnParticles(age % 3 == 0 ? ModParticles.NATURE_BLOOM : ModParticles.NATURE_LEAF,
                 to.x, to.y + 0.16, to.z, 1, 0.06, 0.03, 0.06, 0.0);

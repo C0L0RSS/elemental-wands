@@ -25,7 +25,9 @@ import net.minecraft.component.type.NbtComponent;
 import net.minecraft.nbt.NbtCompound;
 
 import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -131,11 +133,13 @@ public final class FireAbilityHandler {
         private static final int WAVE_LENGTH = 40;
         private static final double WAVE_HALF_WIDTH = 2.5;
         private static final double WAVE_FRONT_DEPTH = 0.5;
+        private static final int MAX_VISUAL_DELAY = 4;
 
         private final PlayerEntity caster;
         private final Vec3d origin;
         private final Vec3d forward;
         private final Vec3d right;
+        private final Map<Integer, Map<BlockPos, Integer>> pendingFlames = new HashMap<>();
         private int tickCounter = 0;
         private final Set<UUID> hitTargets = new HashSet<>();
 
@@ -163,80 +167,102 @@ public final class FireAbilityHandler {
             super.tick();
             if (!(getEntityWorld() instanceof ServerWorld sw))
                 return;
-            if (tickCounter >= WAVE_LENGTH) {
+            if (tickCounter >= WAVE_LENGTH + MAX_VISUAL_DELAY) {
                 discard();
                 return;
             }
 
-            int currentDistance = tickCounter + 1;
-            Vec3d frontCenter = origin.add(forward.multiply(currentDistance));
+            if (tickCounter < WAVE_LENGTH) {
+                int currentDistance = tickCounter + 1;
+                Vec3d frontCenter = origin.add(forward.multiply(currentDistance));
 
-            // Place the custom pyre surface and draw its advancing front with the
-            // Cinderforge fissures below one heavy advancing furnace face.
-            Set<BlockPos> sliceBlocks = new HashSet<>();
-            Vec3d frontVisualPos = null;
-            int widthSample = 0;
-            for (double w = -2.0; w <= 2.0; w += 0.5) {
-                Vec3d target = frontCenter.add(right.multiply(w));
-                BlockPos targetPos = BlockPos.ofFloored(target);
-                for (int yOffset = 0; yOffset >= -3; yOffset--) {
-                    BlockPos p = targetPos.add(0, yOffset, 0);
-                    if (sw.getBlockState(p).isSolidBlock(sw, p)) {
-                        sliceBlocks.add(p);
-                        Vec3d surface = new Vec3d(p.getX() + 0.5, p.getY() + 1.03, p.getZ() + 0.5);
-                        if (Math.abs(w) < 0.01) {
-                            frontVisualPos = surface;
+                Set<BlockPos> sliceBlocks = new HashSet<>();
+                Map<BlockPos, Integer> flameDelayByPos = new HashMap<>();
+                for (double w = -2.0; w <= 2.0; w += 0.5) {
+                    Vec3d target = frontCenter.add(right.multiply(w));
+                    BlockPos targetPos = BlockPos.ofFloored(target);
+                    for (int yOffset = 0; yOffset >= -3; yOffset--) {
+                        BlockPos p = targetPos.add(0, yOffset, 0);
+                        if (sw.getBlockState(p).isSolidBlock(sw, p)) {
+                            sliceBlocks.add(p);
+                            net.minecraft.block.BlockState groundState = sw.getBlockState(p);
+                            if (!groundState.hasBlockEntity()
+                                    && !groundState.isOf(Blocks.OBSIDIAN)
+                                    && !groundState.isOf(Blocks.BEDROCK)) {
+                                int delay = Math.min(MAX_VISUAL_DELAY,
+                                        (int) Math.round(Math.abs(w) * 2.0));
+                                flameDelayByPos.merge(p.up(), delay, Math::min);
+                            }
+                            break;
                         }
-                        if ((widthSample + tickCounter) % 2 == 0) {
-                            sw.spawnParticles(ModParticles.FIRE_PYRE_FISSURE,
-                                    surface.x, surface.y, surface.z,
-                                    1, 0.0, 0.0, 0.0, 0.0);
-                        }
-                        if (sw.getRandom().nextFloat() < 0.18f) {
-                            sw.spawnParticles(ModParticles.FIRE_EMBER,
-                                    surface.x, surface.y + 0.1, surface.z,
-                                    2, 0.1, 0.04, 0.1, 0.025);
-                        }
-                        break;
                     }
                 }
-                widthSample++;
-            }
-            if (frontVisualPos != null) {
-                sw.spawnParticles(ModParticles.FIRE_PYRE_FRONT,
-                        frontVisualPos.x, frontVisualPos.y + 0.35, frontVisualPos.z,
-                        1, 0.0, 0.0, 0.0, 0.0);
-            }
-            TemporaryBlockManager.placeTemporaryBlocks(sw, sliceBlocks,
-                    ModSpellBlocks.PYRE_COALS.getDefaultState(),
-                    PYRE_GROUND_DURATION,
-                    state -> !state.hasBlockEntity() && !state.isOf(Blocks.OBSIDIAN) && !state.isOf(Blocks.BEDROCK));
 
-            // Damage entities currently in the wave-front slice (each entity hit at most once)
-            List<LivingEntity> targets = sw.getEntitiesByClass(LivingEntity.class,
-                    caster.getBoundingBox().expand(WAVE_LENGTH),
-                    e -> e != caster && e.isAlive());
-            for (LivingEntity target : targets) {
-                if (hitTargets.contains(target.getUuid()))
-                    continue;
+                TemporaryBlockManager.placeTemporaryBlocks(sw, sliceBlocks,
+                        ModSpellBlocks.PYRE_COALS.getDefaultState(),
+                        PYRE_GROUND_DURATION,
+                        state -> !state.hasBlockEntity() && !state.isOf(Blocks.OBSIDIAN)
+                                && !state.isOf(Blocks.BEDROCK));
 
-                Vec3d toTarget = target.getEntityPos().subtract(origin);
-                double distForward = toTarget.dotProduct(forward);
-                double distRight = Math.abs(toTarget.dotProduct(right));
+                for (Map.Entry<BlockPos, Integer> entry : flameDelayByPos.entrySet()) {
+                    int delay = entry.getValue();
+                    pendingFlames.computeIfAbsent(tickCounter + delay, _tick -> new HashMap<>())
+                            .merge(entry.getKey(), PYRE_GROUND_DURATION - delay, Math::max);
+                }
 
-                if (distForward >= currentDistance - WAVE_FRONT_DEPTH
-                        && distForward <= currentDistance + WAVE_FRONT_DEPTH
-                        && distRight <= WAVE_HALF_WIDTH) {
-                    boolean damaged = target.damage(sw, sw.getDamageSources().playerAttack(caster), 8.0f);
-                    if (damaged) {
-                        AbstractWandItem.onWandDamageDealt(caster, 8.0f);
+                // Damage remains authoritative at the original full-width front;
+                // only the fire model fan-out is delayed.
+                List<LivingEntity> targets = sw.getEntitiesByClass(LivingEntity.class,
+                        caster.getBoundingBox().expand(WAVE_LENGTH),
+                        e -> e != caster && e.isAlive());
+                for (LivingEntity target : targets) {
+                    if (hitTargets.contains(target.getUuid()))
+                        continue;
+
+                    Vec3d toTarget = target.getEntityPos().subtract(origin);
+                    double distForward = toTarget.dotProduct(forward);
+                    double distRight = Math.abs(toTarget.dotProduct(right));
+
+                    if (distForward >= currentDistance - WAVE_FRONT_DEPTH
+                            && distForward <= currentDistance + WAVE_FRONT_DEPTH
+                            && distRight <= WAVE_HALF_WIDTH) {
+                        boolean damaged = target.damage(sw, sw.getDamageSources().playerAttack(caster), 8.0f);
+                        if (damaged) {
+                            AbstractWandItem.onWandDamageDealt(caster, 8.0f);
+                        }
+                        target.setFireTicks(100);
+                        hitTargets.add(target.getUuid());
                     }
-                    target.setFireTicks(100);
-                    hitTargets.add(target.getUuid());
                 }
             }
 
+            igniteScheduledFlames(sw);
             tickCounter++;
+        }
+
+        private void igniteScheduledFlames(ServerWorld world) {
+            Map<BlockPos, Integer> due = pendingFlames.remove(tickCounter);
+            if (due == null || due.isEmpty()) {
+                return;
+            }
+
+            for (Map.Entry<BlockPos, Integer> entry : due.entrySet()) {
+                BlockPos pos = entry.getKey();
+                int placed = TemporaryBlockManager.placeTemporaryBlocks(
+                        world,
+                        List.of(pos),
+                        ModSpellBlocks.PYRE_FLAME.getDefaultState(),
+                        entry.getValue(),
+                        state -> state.isAir()
+                                || (state.isReplaceable()
+                                        && !state.isOf(ModSpellBlocks.INFERNO_FLAME)
+                                        && !state.isOf(ModSpellBlocks.PYRE_FLAME)));
+                if (placed > 0) {
+                    world.spawnParticles(ModParticles.FIRE_INFERNO_FLAME,
+                            pos.getX() + 0.5, pos.getY() + 0.35, pos.getZ() + 0.5,
+                            1, 0.0, 0.05, 0.0, 0.01);
+                }
+            }
         }
     }
 }

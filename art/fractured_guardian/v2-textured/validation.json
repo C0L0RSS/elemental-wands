@@ -1,0 +1,45 @@
+{
+  "cubes": 132,
+  "bones": 38,
+  "mapped_faces": 792,
+  "geometry_preserved": true,
+  "uv_bounds_and_tile_padding": true,
+  "embedded_texture_matches_file": true,
+  "atlas_size": [
+    1254,
+    1254
+  ],
+  "atlas_mode": "RGB",
+  "atlas_sha256": "59bb8d75a6acd4c34ac9a22d13f89f2e3725fc649cba61c7b21dd6197ca6669c",
+  "material_face_counts": {
+    "shadow_stone": 111,
+    "deep_crevice": 48,
+    "stone_variant": 122,
+    "stone": 118,
+    "chipped_stone": 111,
+    "moss_sparse": 77,
+    "strata": 107,
+    "moss_ledge": 18,
+    "magic_fracture": 2,
+    "broken_carving": 3,
+    "core_light": 6,
+    "face_stone": 55,
+    "eye_light": 2,
+    "spiral_carving": 2,
+    "knot_carving": 2,
+    "moss_crevice": 8
+  },
+  "production_prep": [
+    "Normalize original 1254x1254 RGB atlas to a power-of-two RGBA texture and scale UVs before runtime packaging.",
+    "Create and verify a runtime emissive layer; current glow is preview lighting."
+  ],
+  "blockbench_import": {
+    "version": "5.1.3",
+    "geckolib_format_recognized": true,
+    "recognized_cubes": 132,
+    "recognized_texture_size": [
+      1254,
+      1254
+    ]
+  }
+}

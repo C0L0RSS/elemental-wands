@@ -63,3 +63,17 @@ publishing {
     }
     repositories {}
 }
+
+// Executable checks stay separate from JUnit discovery and never enter the mod JAR.
+sourceSets {
+    guardianTest {
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += output + compileClasspath
+    }
+}
+tasks.register('checkGuardianBeam', JavaExec) {
+    dependsOn guardianTestClasses
+    classpath = sourceSets.guardianTest.runtimeClasspath
+    mainClass = 'com.anton.elementalwands.entity.GuardianBeamContractTest'
+}
+check.dependsOn checkGuardianBeam

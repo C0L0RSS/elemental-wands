@@ -9,6 +9,8 @@ import com.anton.elementalwands.entity.HollowPurpleOrbEntity;
 import com.anton.elementalwands.entity.InfernoWaveEntity;
 import com.anton.elementalwands.entity.SingularityBoltEntity;
 import com.anton.elementalwands.entity.FireSpiritEntity;
+import com.anton.elementalwands.entity.FracturedGuardianEntity;
+import com.anton.elementalwands.entity.GuardianRockEntity;
 import com.anton.elementalwands.entity.StoneZombieEntity;
 import com.anton.elementalwands.entity.VacuumBladeEntity;
 
@@ -136,6 +138,27 @@ public final class ModEntities {
                                         .trackedUpdateRate(3)
                                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
                                                         Identifier.of(ElementalWandsMod.MOD_ID, "fire_spirit"))));
+
+        public static final EntityType<GuardianRockEntity> GUARDIAN_ROCK = Registry.register(
+                        Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "guardian_rock"),
+                        FabricEntityTypeBuilder.<GuardianRockEntity>create(SpawnGroup.MISC, GuardianRockEntity::new)
+                                        .dimensions(EntityDimensions.fixed(1.4f, 1.4f))
+                                        .trackRangeBlocks(96).trackedUpdateRate(1)
+                                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
+                                                        Identifier.of(ElementalWandsMod.MOD_ID, "guardian_rock"))));
+
+        // Core-sized provisional hitbox; the long hands reach beyond it.
+        // Summon-only boss; its encounter controller disables aggression in Peaceful.
+        public static final EntityType<FracturedGuardianEntity> FRACTURED_GUARDIAN = Registry.register(
+                        Registries.ENTITY_TYPE,
+                        Identifier.of(ElementalWandsMod.MOD_ID, "fractured_guardian"),
+                        FabricEntityTypeBuilder
+                                        .<FracturedGuardianEntity>create(SpawnGroup.MISC, FracturedGuardianEntity::new)
+                                        .dimensions(EntityDimensions.fixed(3.2f, 5.2f))
+                                        .trackRangeBlocks(96)
+                                        .trackedUpdateRate(1)
+                                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
+                                                        Identifier.of(ElementalWandsMod.MOD_ID, "fractured_guardian"))));
 
         private ModEntities() {
         }

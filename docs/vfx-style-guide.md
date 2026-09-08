@@ -43,27 +43,26 @@
 - Shared gear is generated independently from affinity assets so Fire/Wind
   replacement passes cannot touch Arcane, Stone, Nature, or Space artwork.
 
-## Fire — Vanilla Inferno
+## Fire — Kinetic Inferno
 
-- In-world Fire references Minecraft 1.21.10's own animated fire models,
-  `minecraft:flame` sprite, netherrack, and magma textures. Do not copy those
-  resources into the mod or replace them with dark crust/ring imagery.
-- `fire_inferno_flame` is the one custom Fire particle type. It keeps the
-  vanilla sprite untinted and only supplies spell-scale size, full brightness,
-  gentle rise, late fade, and always-spawn visibility.
-- Inferno Wave renders five real baked fire models across a velocity-relative
-  front. Its interpolated wake uses vanilla Flame and Small Flame particles,
-  and its damaging temporary trail uses the complete standalone fire model.
+- Fire uses crisp custom animation frames in Minecraft's white-yellow-orange-red
+  flame language. Shadows are hue-shifted oxblood and ember brown, never opaque
+  pure black; large shapes use interlocking clusters rather than flat fills or
+  cartoon outlines.
+- Inferno Wave plays one ten-frame compression, extension, turbulent peak, and
+  breakup sequence. Its renderer combines a velocity-aligned stream with a
+  perpendicular expanding front, while animated ribbons and embers bridge the
+  distance travelled between ticks.
 - Dragon's Pyre retains its authoritative full-width ground and damage slice.
-  The ground renders as vanilla netherrack while visual-only fire blocks ignite
-  from the center outward over four ticks and expire with the runway.
-- Maximum Meteor keeps an irregular multi-cuboid core skinned with vanilla
-  magma. A 24-point flame ring contracts over the projected landing surface;
-  the descending shell and impact use vanilla flame, lava, smoke, and explosion
-  particles without custom warning discs or impact columns.
-- Only the three 32x32 Fire ability icons are custom PNGs. They use bright
-  clustered flame shapes for the wall, center-out pyre, and burning meteor.
-  Fire Spirit and all of its assets remain outside this redesign.
+  Vanilla netherrack remains the base; a moving hero front leads two weighted,
+  eight-frame flame-block variants that ignite center-out over four ticks.
+- Maximum Meteor retains its irregular vanilla-magma core. Animated shell
+  sprites orbit the descent, the projected warning flames rotate as they close,
+  and a dedicated ten-frame crown leads the restrained lava/smoke impact.
+- Fire owns seven particle families: ember, flame ribbon, impact ring, Pyre
+  front, meteor shell, meteor warning, and meteor impact. Hero fronts and
+  telegraphs remain visible on Minimal; recurring supporting particles do not.
+- Fire Spirit and all of its assets remain outside this redesign.
 
 The approved concept boards establish visual direction only. Production PNGs
 are rebuilt at exact game resolutions and validated for RGBA transparency.
@@ -95,15 +94,17 @@ Neither concept image is ever used directly as a game texture.
 
 ## Production ownership and counts
 
-- `tools/generate_fire_vfx_assets.py` owns only the three Fire ability icons.
-  Its explicit `--replace` path also removes the 74 retired Cinderforge PNGs.
+- `tools/generate_fire_vfx_assets.py` owns the complete 77-PNG Kinetic Inferno
+  package, its particle definitions, block animation metadata, and contact sheet.
+  Its explicit `--replace` path removes retired Fire assets without touching
+  another affinity.
 - `tools/generate_wind_vfx_assets.py` owns only the 53 Wind production PNGs:
   42 particle frames, six Vacuum Blade frames, item/worn wings, and three icons.
 - The shared generator owns only `wizard_wand.png` and `wand_hud_v2.png`.
   Safe replacement never regenerates Arcane, Fire Spirit, Calamity Tornado,
   Stone, Nature, or Space assets.
-- The validated affinity package is Fire 3, Wind 53, Stone 41, Nature 44,
-  Space 81: 222 affinity PNGs plus two shared presentation PNGs and 34 particle
+- The validated affinity package is Fire 77, Wind 53, Stone 41, Nature 44,
+  Space 81: 296 affinity PNGs plus two shared presentation PNGs and 40 particle
   definitions.
 
 ## Stone vertical slice

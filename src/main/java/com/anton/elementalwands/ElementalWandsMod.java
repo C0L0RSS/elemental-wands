@@ -50,6 +50,8 @@ import net.minecraft.util.Formatting;
 import java.util.List;
 import com.anton.elementalwands.entity.AwakenedTreeEntity;
 import com.anton.elementalwands.entity.FireSpiritEntity;
+import com.anton.elementalwands.entity.FracturedGuardianEntity;
+import com.anton.elementalwands.command.GuardianCommands;
 import com.anton.elementalwands.entity.StoneZombieEntity;
 import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
 import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
@@ -87,6 +89,7 @@ public class ElementalWandsMod implements ModInitializer {
         HollowPurpleChargeManager.init();
         ModBlocks.registerAll();
         ModEntities.registerAll();
+        FabricDefaultAttributeRegistry.register(ModEntities.FRACTURED_GUARDIAN, FracturedGuardianEntity.createAttributes().build());
         FabricDefaultAttributeRegistry.register(ModEntities.AWAKENED_TREE, AwakenedTreeEntity.createAttributes().build());
         FabricDefaultAttributeRegistry.register(ModEntities.STONE_ZOMBIE, StoneZombieEntity.createAttributes().build());
         SpawnRestriction.register(
@@ -145,6 +148,7 @@ public class ElementalWandsMod implements ModInitializer {
 
         // ── /ew unlock + /ew affinity + /ew admin commands ──────────────
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+            GuardianCommands.register(dispatcher);
             dispatcher.register(
                 CommandManager.literal("ew")
                         .then(CommandManager.literal("unlock")

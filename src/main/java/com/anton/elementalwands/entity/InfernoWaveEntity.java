@@ -92,8 +92,8 @@ public class InfernoWaveEntity extends ProjectileEntity {
                     ? hitResult.getPos()
                     : segmentStart.add(getVelocity());
 
-            // Fill the distance between server ticks so the vanilla flame wake
-            // reads as one moving front instead of disconnected particle clumps.
+            // Fill the distance between server ticks so animated ribbons read
+            // as a continuous driven stream instead of disconnected clumps.
             // Collision still uses the original projectile path and mechanics.
             emitInterpolatedWake(serverWorld, segmentStart, segmentEnd);
 
@@ -115,13 +115,13 @@ public class InfernoWaveEntity extends ProjectileEntity {
         int samples = Math.max(1, (int) Math.ceil(distance / WAKE_SPACING));
         for (int i = 0; i <= samples; i++) {
             Vec3d point = start.lerp(end, (double) i / samples);
-            world.spawnParticles(ParticleTypes.FLAME,
+            world.spawnParticles(ModParticles.FIRE_FLAME_RIBBON,
                     point.x, point.y, point.z,
-                    1, 0.08, 0.06, 0.08, 0.008);
+                    1, 0.055, 0.045, 0.055, 0.012);
             if ((i + age) % 2 == 0) {
-                world.spawnParticles(ParticleTypes.SMALL_FLAME,
+                world.spawnParticles(ModParticles.FIRE_EMBER,
                         point.x, point.y, point.z,
-                        1, 0.1, 0.08, 0.1, 0.018);
+                        1, 0.09, 0.08, 0.09, 0.028);
             }
         }
     }
@@ -155,9 +155,17 @@ public class InfernoWaveEntity extends ProjectileEntity {
         target.setOnFireFor(3); // 3 seconds
 
         serverWorld.spawnParticles(
-                ModParticles.FIRE_INFERNO_FLAME,
+                ModParticles.FIRE_IMPACT_RING,
                 target.getX(), target.getBodyY(0.5), target.getZ(),
-                12, 0.42, 0.38, 0.42, 0.08);
+                1, 0.0, 0.0, 0.0, 0.0);
+        serverWorld.spawnParticles(
+                ModParticles.FIRE_FLAME_RIBBON,
+                target.getX(), target.getBodyY(0.5), target.getZ(),
+                7, 0.42, 0.38, 0.42, 0.075);
+        serverWorld.spawnParticles(
+                ModParticles.FIRE_EMBER,
+                target.getX(), target.getBodyY(0.5), target.getZ(),
+                12, 0.42, 0.38, 0.42, 0.10);
         serverWorld.spawnParticles(
                 ParticleTypes.LAVA,
                 target.getX(), target.getBodyY(0.5), target.getZ(),
@@ -189,9 +197,17 @@ public class InfernoWaveEntity extends ProjectileEntity {
         if (getEntityWorld() instanceof ServerWorld serverWorld) {
             Vec3d impact = blockHitResult.getPos();
             serverWorld.spawnParticles(
-                    ModParticles.FIRE_INFERNO_FLAME,
+                    ModParticles.FIRE_IMPACT_RING,
                     impact.x, impact.y, impact.z,
-                    18, 0.5, 0.4, 0.5, 0.09);
+                    1, 0.0, 0.0, 0.0, 0.0);
+            serverWorld.spawnParticles(
+                    ModParticles.FIRE_FLAME_RIBBON,
+                    impact.x, impact.y, impact.z,
+                    10, 0.5, 0.4, 0.5, 0.09);
+            serverWorld.spawnParticles(
+                    ModParticles.FIRE_EMBER,
+                    impact.x, impact.y, impact.z,
+                    16, 0.55, 0.45, 0.55, 0.12);
             serverWorld.spawnParticles(
                     ParticleTypes.LAVA,
                     impact.x, impact.y, impact.z,

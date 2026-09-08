@@ -15,8 +15,8 @@ import net.minecraft.world.BlockView;
  *
  * <p>The block deliberately has no entity-collision callback: the authoritative
  * pyre front and the existing magma-backed runway remain the only gameplay
- * sources. Its model is assembled entirely from Minecraft's vanilla fire
- * models.</p>
+ * sources. Two weighted animated cross models keep the lingering runway alive
+ * without adding collision or per-block particle spam.</p>
  */
 public final class PyreFlameBlock extends Block {
 

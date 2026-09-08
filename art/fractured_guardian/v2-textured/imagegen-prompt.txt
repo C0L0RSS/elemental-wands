@@ -1,0 +1,24 @@
+Use case: stylized-concept. Asset type: actual flat texture atlas for a Minecraft Blockbench stone golem, not concept art. Produce ONE EXACT SQUARE 1024x1024 PNG texture atlas, a precise borderless 4 by 4 grid of SIXTEEN equal 256x256 pixel material tiles, occupying the whole canvas with no gaps, frames, labels, text, perspective, scene, objects, or shading between tiles. Every tile should look like a hand-painted 32x32 Minecraft pixel texture enlarged exactly 8x with sharp nearest-neighbor pixel edges. Straight square pixel clusters with a restrained palette, small irregular mineral facets, detailed clustered shading, no blur or photographic surfaces.
+Reference image: the approved golem provides material/color direction ONLY. Do not depict the golem. Palette medium neutral weathered gray stone with charcoal fissures, pale warm gray chips, a little desaturated olive moss, and extremely sparse pale icy-ivory magic.
+Tile order, read left to right then next row, must be exact:
+ROW 1:
+1. neutral medium gray rocky stone, irregular light mineral clusters, restrained tiny cracks, uniform all-over texture;
+2. slightly warmer gray weathered stone with irregular stratified pixel clusters, uniform all-over texture;
+3. dark gray shadow stone for recesses, subtle mineral texture, no pure black;
+4. medium gray stone with a SMALL sparse olive moss patch near upper-left and lower-right corners, 15 percent moss.
+ROW 2:
+5. medium gray stone with restrained moss gathered along the top and left edges, 25 percent moss maximum;
+6. light weathered chipped gray stone, pixel clusters suggesting worn corners, no frame;
+7. dark cool gray crevice stone, low contrast, no pure black;
+8. medium gray stone alternative, scattered warm pale chips, modest cracks.
+ROW 3:
+9. a single weathered angular square-spiral Ancient carving incised into medium gray stone, centered, large readable symbol occupying central 70 percent, gray carved shading not luminous, full stone around it;
+10. a single worn angular chevron/knot Ancient carving incised into medium gray stone, centered central 70 percent, no color, no luminosity, full stone around it;
+11. a single broken stepped angular Ancient rune incised into medium gray stone, centered central 70 percent, no color, no luminosity;
+12. medium gray stone with ONE narrow irregular branching pale ivory-cyan magical fracture crossing diagonally, thin light seam only, no circular core or bloom.
+ROW 4:
+13. ordinary fine weathered gray stone for face details, low contrast but irregular mineral clusters;
+14. recessed eye texture: dark gray stone outside, one small horizontal pale ivory-cyan eye slit centered within middle 50 percent width and 25 percent height, sharp stepped corners, no gradients, no bloom;
+15. dark cracked mineral with a small pale ivory-cyan fractured crystal patch in the center, angular, no circular reactor, no bloom;
+16. dark gray stone with a tiny olive moss cluster, mostly dark stone.
+All sixteen tiles are flat material swatches with consistent pixel scale. The stone must stay gray, not brown. Moss must be olive, not lime. Carvings should be readable and understated. Tile grid alignment is critical: rows and columns at exactly one quarter, one half, and three quarters. No gutters. Crisp Minecraft-like pixel art suitable for a UV texture atlas.

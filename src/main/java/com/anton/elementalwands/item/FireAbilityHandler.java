@@ -90,6 +90,19 @@ public final class FireAbilityHandler {
         InfernoWaveEntity infernoWave = new InfernoWaveEntity(world, caster);
         world.spawnEntity(infernoWave);
 
+        // A compressed ignition establishes the source of the forceful stream.
+        Vec3d direction = caster.getRotationVec(1.0f).normalize();
+        Vec3d ignition = caster.getEyePos().add(direction.multiply(0.75));
+        world.spawnParticles(ModParticles.FIRE_IMPACT_RING,
+                ignition.x, ignition.y, ignition.z,
+                1, 0.0, 0.0, 0.0, 0.0);
+        world.spawnParticles(ModParticles.FIRE_FLAME_RIBBON,
+                ignition.x, ignition.y, ignition.z,
+                3, 0.16, 0.13, 0.16, 0.025);
+        world.spawnParticles(ModParticles.FIRE_EMBER,
+                ignition.x, ignition.y, ignition.z,
+                6, 0.20, 0.16, 0.20, 0.055);
+
         // Sound effects
         world.playSound(null, caster.getBlockPos(), SoundEvents.ITEM_FIRECHARGE_USE, SoundCategory.PLAYERS, 1.0f, 0.7f);
         world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_BLAZE_SHOOT, SoundCategory.PLAYERS, 0.8f, 0.9f);
@@ -178,6 +191,9 @@ public final class FireAbilityHandler {
 
                 Set<BlockPos> sliceBlocks = new HashSet<>();
                 Map<BlockPos, Integer> flameDelayByPos = new HashMap<>();
+                Vec3d centerSurface = null;
+                Vec3d leftSurface = null;
+                Vec3d rightSurface = null;
                 for (double w = -2.0; w <= 2.0; w += 0.5) {
                     Vec3d target = frontCenter.add(right.multiply(w));
                     BlockPos targetPos = BlockPos.ofFloored(target);
@@ -192,6 +208,14 @@ public final class FireAbilityHandler {
                                 int delay = Math.min(MAX_VISUAL_DELAY,
                                         (int) Math.round(Math.abs(w) * 2.0));
                                 flameDelayByPos.merge(p.up(), delay, Math::min);
+                            }
+                            Vec3d surface = new Vec3d(p.getX() + 0.5, p.getY() + 1.22, p.getZ() + 0.5);
+                            if (Math.abs(w) < 0.01) {
+                                centerSurface = surface;
+                            } else if (Math.abs(w + 1.5) < 0.01) {
+                                leftSurface = surface;
+                            } else if (Math.abs(w - 1.5) < 0.01) {
+                                rightSurface = surface;
                             }
                             break;
                         }
@@ -208,6 +232,27 @@ public final class FireAbilityHandler {
                     int delay = entry.getValue();
                     pendingFlames.computeIfAbsent(tickCounter + delay, _tick -> new HashMap<>())
                             .merge(entry.getKey(), PYRE_GROUND_DURATION - delay, Math::max);
+                }
+
+                if (centerSurface != null) {
+                    sw.spawnParticles(ModParticles.FIRE_PYRE_FRONT,
+                            centerSurface.x, centerSurface.y + 0.28, centerSurface.z,
+                            1, 0.0, 0.0, 0.0, 0.0);
+                    if ((tickCounter & 1) == 0) {
+                        sw.spawnParticles(ModParticles.FIRE_EMBER,
+                                centerSurface.x, centerSurface.y + 0.45, centerSurface.z,
+                                3, 0.32, 0.18, 0.32, 0.04);
+                    }
+                }
+                if (leftSurface != null) {
+                    sw.spawnParticles(ModParticles.FIRE_FLAME_RIBBON,
+                            leftSurface.x, leftSurface.y, leftSurface.z,
+                            1, 0.04, 0.05, 0.04, 0.018);
+                }
+                if (rightSurface != null) {
+                    sw.spawnParticles(ModParticles.FIRE_FLAME_RIBBON,
+                            rightSurface.x, rightSurface.y, rightSurface.z,
+                            1, 0.04, 0.05, 0.04, 0.018);
                 }
 
                 // Damage remains authoritative at the original full-width front;
@@ -232,6 +277,12 @@ public final class FireAbilityHandler {
                         }
                         target.setFireTicks(100);
                         hitTargets.add(target.getUuid());
+                        sw.spawnParticles(ModParticles.FIRE_IMPACT_RING,
+                                target.getX(), target.getBodyY(0.45), target.getZ(),
+                                1, 0.0, 0.0, 0.0, 0.0);
+                        sw.spawnParticles(ModParticles.FIRE_EMBER,
+                                target.getX(), target.getBodyY(0.5), target.getZ(),
+                                7, 0.36, 0.34, 0.36, 0.07);
                     }
                 }
             }
@@ -248,7 +299,7 @@ public final class FireAbilityHandler {
 
             for (Map.Entry<BlockPos, Integer> entry : due.entrySet()) {
                 BlockPos pos = entry.getKey();
-                int placed = TemporaryBlockManager.placeTemporaryBlocks(
+                TemporaryBlockManager.placeTemporaryBlocks(
                         world,
                         List.of(pos),
                         ModSpellBlocks.PYRE_FLAME.getDefaultState(),
@@ -257,11 +308,6 @@ public final class FireAbilityHandler {
                                 || (state.isReplaceable()
                                         && !state.isOf(ModSpellBlocks.INFERNO_FLAME)
                                         && !state.isOf(ModSpellBlocks.PYRE_FLAME)));
-                if (placed > 0) {
-                    world.spawnParticles(ModParticles.FIRE_INFERNO_FLAME,
-                            pos.getX() + 0.5, pos.getY() + 0.35, pos.getZ() + 0.5,
-                            1, 0.0, 0.05, 0.0, 0.01);
-                }
             }
         }
     }

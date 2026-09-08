@@ -100,8 +100,12 @@ public final class MeteorManager {
             }
         }
 
-        world.spawnParticles(ModParticles.FIRE_INFERNO_FLAME,
-                meteor.getX(), meteor.getY(), meteor.getZ(), 16, 0.8, 0.8, 0.8, 0.05);
+        world.spawnParticles(ModParticles.FIRE_METEOR_SHELL,
+                meteor.getX(), meteor.getY(), meteor.getZ(), 2, 0.18, 0.18, 0.18, 0.01);
+        world.spawnParticles(ModParticles.FIRE_FLAME_RIBBON,
+                meteor.getX(), meteor.getY() + 0.3, meteor.getZ(), 6, 0.42, 0.6, 0.42, 0.06);
+        world.spawnParticles(ModParticles.FIRE_EMBER,
+                meteor.getX(), meteor.getY(), meteor.getZ(), 12, 0.55, 0.55, 0.55, 0.08);
         world.spawnParticles(ParticleTypes.LARGE_SMOKE,
                 meteor.getX(), meteor.getY(), meteor.getZ(), 4, 0.65, 0.65, 0.65, 0.025);
         spawnLandingRing(world, landingBrandPos, 0.0);
@@ -141,9 +145,21 @@ public final class MeteorManager {
                 spawnLandingRing(world, meteor.landingBrandPos, descentProgress);
             }
 
-            world.spawnParticles(ModParticles.FIRE_INFERNO_FLAME,
-                    meteor.lastPos.x, meteor.lastPos.y, meteor.lastPos.z,
-                    8, 0.55, 0.55, 0.55, 0.035);
+            double orbitPhase = now * 0.34;
+            for (int side = 0; side < 2; side++) {
+                double angle = orbitPhase + side * Math.PI;
+                double shellX = meteor.lastPos.x + Math.cos(angle) * 0.22;
+                double shellZ = meteor.lastPos.z + Math.sin(angle) * 0.22;
+                world.spawnParticles(ModParticles.FIRE_METEOR_SHELL,
+                        shellX, meteor.lastPos.y, shellZ,
+                        1, 0.0, 0.0, 0.0, 0.0);
+            }
+            world.spawnParticles(ModParticles.FIRE_FLAME_RIBBON,
+                    meteor.lastPos.x, meteor.lastPos.y + 0.45, meteor.lastPos.z,
+                    2, 0.28, 0.36, 0.28, 0.045);
+            world.spawnParticles(ModParticles.FIRE_EMBER,
+                    meteor.lastPos.x, meteor.lastPos.y + 0.2, meteor.lastPos.z,
+                    3, 0.32, 0.4, 0.32, 0.06);
             if (now % 2 == 0) {
                 world.spawnParticles(ParticleTypes.LARGE_SMOKE,
                         meteor.lastPos.x, meteor.lastPos.y, meteor.lastPos.z,
@@ -187,24 +203,34 @@ public final class MeteorManager {
         world.playSound(null, BlockPos.ofFloored(meteor.lastPos), SoundEvents.ENTITY_GENERIC_EXPLODE.value(),
                 SoundCategory.PLAYERS,
                 1.8f, 0.9f);
-        world.spawnParticles(ModParticles.FIRE_INFERNO_FLAME,
+        world.spawnParticles(ModParticles.FIRE_METEOR_IMPACT,
                 meteor.lastPos.x, meteor.lastPos.y + 0.35, meteor.lastPos.z,
-                64, 2.0, 1.4, 2.0, 0.18);
+                1, 0.0, 0.0, 0.0, 0.0);
+        world.spawnParticles(ModParticles.FIRE_IMPACT_RING,
+                meteor.lastPos.x, meteor.lastPos.y + 0.22, meteor.lastPos.z,
+                3, 0.45, 0.10, 0.45, 0.0);
+        world.spawnParticles(ModParticles.FIRE_FLAME_RIBBON,
+                meteor.lastPos.x, meteor.lastPos.y + 0.4, meteor.lastPos.z,
+                18, 1.6, 1.05, 1.6, 0.16);
+        world.spawnParticles(ModParticles.FIRE_EMBER,
+                meteor.lastPos.x, meteor.lastPos.y + 0.25, meteor.lastPos.z,
+                36, 2.0, 1.4, 2.0, 0.18);
         world.spawnParticles(ParticleTypes.LAVA,
                 meteor.lastPos.x, meteor.lastPos.y, meteor.lastPos.z,
-                24, 1.8, 1.25, 1.8, 0.14);
+                12, 1.8, 1.25, 1.8, 0.14);
         world.spawnParticles(ParticleTypes.LARGE_SMOKE,
                 meteor.lastPos.x, meteor.lastPos.y, meteor.lastPos.z,
-                12, 1.7, 1.0, 1.7, 0.06);
+                8, 1.7, 1.0, 1.7, 0.06);
     }
 
     private static void spawnLandingRing(ServerWorld world, Vec3d targetPos, double descentProgress) {
         double radius = 7.0 + (2.25 - 7.0) * descentProgress;
-        for (int index = 0; index < 24; index++) {
-            double angle = Math.PI * 2.0 * index / 24.0;
+        double phase = world.getServer().getTicks() * 0.18;
+        for (int index = 0; index < 18; index++) {
+            double angle = phase + Math.PI * 2.0 * index / 18.0;
             double x = targetPos.x + Math.cos(angle) * radius;
             double z = targetPos.z + Math.sin(angle) * radius;
-            world.spawnParticles(ModParticles.FIRE_INFERNO_FLAME,
+            world.spawnParticles(ModParticles.FIRE_METEOR_WARNING,
                     x, targetPos.y + 0.08, z,
                     1, 0.0, 0.0, 0.0, 0.0);
         }

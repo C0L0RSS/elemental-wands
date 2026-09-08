@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fractured Guardian · Geometry review</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#efede8;color:#303731;font:15px system-ui,sans-serif}header{position:absolute;top:30px;left:38px;z-index:2;pointer-events:none}small{font-size:11px;letter-spacing:2px;color:#747b71}h1{margin:8px 0;font-size:30px;font-weight:600;letter-spacing:-1px}header p{color:#747b71;max-width:390px;font-size:13px;line-height:1.6}canvas{display:block;width:100vw;height:100vh;touch-action:none;cursor:grab}canvas:active{cursor:grabbing}nav{position:absolute;bottom:32px;left:50%;transform:translateX(-50%);display:flex;gap:6px;padding:7px;background:#fff9;border:1px solid #d4d8cf;border-radius:14px;backdrop-filter:blur(10px)}button{background:transparent;border:0;padding:11px 16px;border-radius:8px;color:#414a40;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}button:hover,button.active{background:#344b3b;color:white}aside{position:absolute;right:35px;top:36px;text-align:right;color:#778074;font-size:12px;line-height:1.8}a{color:inherit}.hint{position:absolute;bottom:104px;left:50%;transform:translateX(-50%);color:#788074;font-size:12px;white-space:nowrap}@media(max-width:650px){header{left:20px;top:18px}h1{font-size:23px}aside{display:none}header p{max-width:250px}nav{bottom:20px;gap:0}button{padding:10px}.hint{bottom:86px;font-size:10px}}
+</style>
+<header><small>ELEMENTAL WANDS / MODEL STUDY 01</small><h1>Fractured Guardian</h1><p>Actual editable geometry in neutral clay.<br>Review the shape before textures and animation.</p></header>
+<aside>__CUBE_COUNT__ stone pieces · 38 bone groups<br>5.19 blocks tall<br><a href="fractured_guardian.bbmodel" download>Download Blockbench source ↗</a><br><a href="approved-concept.png">Approved concept ↗</a></aside>
+<canvas id="view" aria-label="Interactive 3D model of the Fractured Guardian"></canvas>
+<div class="hint">Drag to rotate · Scroll to zoom · Arrow keys to orbit</div>
+<nav aria-label="Camera views"><button data-view="hero" class="active">¾ View</button><button data-view="front">Front</button><button data-view="side">Side</button><button data-view="back">Back</button><button id="spin">Turntable</button></nav>
+<script>
+'use strict';
+const mesh=__MESH_DATA__;
+const canvas=document.querySelector('canvas'),gl=canvas.getContext('webgl',{antialias:true});
+if(!gl){document.querySelector('.hint').textContent='WebGL unavailable. Open model-review.png for all four views.';throw Error('WebGL unavailable')}
+const vert=`attribute vec3 pos;attribute vec3 normal;uniform mat3 camera;uniform vec2 extent;varying vec3 n;void main(){vec3 p=camera*(pos-vec3(0.,40.,0.));gl_Position=vec4(p.x/extent.x,p.y/extent.y,-p.z/250.,1.);n=camera*normal;}`;
+const frag=`precision mediump float;varying vec3 n;uniform float wire;void main(){if(wire>.5){gl_FragColor=vec4(.39,.39,.37,1.);return;}vec3 light=normalize(vec3(-.55,.8,.65));float shade=.49+.46*max(0.,dot(normalize(n),light))+.07*max(0.,n.y);gl_FragColor=vec4(vec3(.729,.722,.694)*shade,1.);}`;
+function shader(type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s}
+const program=gl.createProgram();gl.attachShader(program,shader(gl.VERTEX_SHADER,vert));gl.attachShader(program,shader(gl.FRAGMENT_SHADER,frag));gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));gl.useProgram(program);
+const vertices=[];
+function sub(a,b){return a.map((x,i)=>x-b[i])}function cross(a,b){return[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]]}
+for(const cube of mesh)for(const face of cube.faces){const q=face.map(i=>cube.vertices[i]),n=cross(sub(q[1],q[0]),sub(q[2],q[0])),length=Math.hypot(...n),normal=n.map(x=>x/length);for(const i of [0,1,2,0,2,3])vertices.push(...q[i],...normal)}
+const triangleCount=vertices.length/6;for(const cube of mesh)for(const [a,b] of [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]])for(const i of [a,b])vertices.push(...cube.vertices[i],0,0,0);const lineCount=vertices.length/6-triangleCount;const wireLocation=gl.getUniformLocation(program,'wire');const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(vertices),gl.STATIC_DRAW);
+for(const [name,offset] of [['pos',0],['normal',12]]){const a=gl.getAttribLocation(program,name);gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,3,gl.FLOAT,false,24,offset)}
+const cameraLocation=gl.getUniformLocation(program,'camera'),extentLocation=gl.getUniformLocation(program,'extent');
+gl.enable(gl.DEPTH_TEST);gl.clearColor(239/255,237/255,232/255,1);
+let yaw=-32*Math.PI/180,pitch=14*Math.PI/180,zoom=1,spinning=false,last=0;
+function draw(){const dpr=Math.min(devicePixelRatio,2),w=Math.round(innerWidth*dpr),h=Math.round(innerHeight*dpr);if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}gl.viewport(0,0,w,h);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);const a=yaw,b=pitch,ca=Math.cos(a),sa=Math.sin(a),cb=Math.cos(b),sb=Math.sin(b);gl.uniformMatrix3fv(cameraLocation,false,new Float32Array([ca,-sa*sb,sa*cb,0,cb,sb,sa,ca*sb,-ca*cb]));const extent=Math.max(70,70*h/w)/zoom;gl.uniform2f(extentLocation,extent*w/h,extent);gl.uniform1f(wireLocation,0);gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,1);gl.drawArrays(gl.TRIANGLES,0,triangleCount);gl.disable(gl.POLYGON_OFFSET_FILL);gl.uniform1f(wireLocation,1);gl.drawArrays(gl.LINES,triangleCount,lineCount)}
+function active(name){document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===name))}
+function stop(){spinning=false;document.querySelector('#spin').classList.remove('active')}
+document.querySelectorAll('[data-view]').forEach(button=>button.onclick=()=>{stop();const v=button.dataset.view;[yaw,pitch]=({hero:[-32,14],front:[0,0],side:[90,0],back:[180,0]})[v].map(x=>x*Math.PI/180);zoom=1;active(v);draw()});
+document.querySelector('#spin').onclick=()=>{spinning=!spinning;document.querySelector('#spin').classList.toggle('active',spinning);active('');last=0;if(spinning)requestAnimationFrame(tick)};
+function tick(t){if(!spinning)return;if(last)yaw+=(t-last)*.00022;last=t;draw();requestAnimationFrame(tick)}
+let drag=null;canvas.onpointerdown=e=>{stop();active('');drag=[e.clientX,e.clientY];canvas.setPointerCapture(e.pointerId)};canvas.onpointermove=e=>{if(!drag)return;yaw-=(e.clientX-drag[0])*.008;pitch=Math.max(-1.1,Math.min(1.1,pitch+(e.clientY-drag[1])*.008));drag=[e.clientX,e.clientY];draw()};canvas.onpointerup=canvas.onpointercancel=()=>drag=null;canvas.onwheel=e=>{e.preventDefault();zoom=Math.max(.55,Math.min(2.4,zoom*Math.exp(-e.deltaY*.001)));draw()};addEventListener('keydown',e=>{if(!e.key.startsWith('Arrow'))return;e.preventDefault();stop();active('');if(e.key==='ArrowLeft')yaw-=.1;if(e.key==='ArrowRight')yaw+=.1;if(e.key==='ArrowUp')pitch=Math.min(1.1,pitch+.1);if(e.key==='ArrowDown')pitch=Math.max(-1.1,pitch-.1);draw()});addEventListener('resize',draw);draw();
+</script></html>

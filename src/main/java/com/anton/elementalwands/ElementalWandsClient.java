@@ -18,6 +18,7 @@ import com.anton.elementalwands.client.renderer.AnimatedSpellBillboardRenderer;
 import com.anton.elementalwands.client.renderer.EmptyEntityRenderer;
 import com.anton.elementalwands.client.renderer.FireWaveRenderer;
 import com.anton.elementalwands.client.renderer.FireSpiritRenderer;
+import com.anton.elementalwands.client.renderer.FracturedGuardianRenderer;
 import com.anton.elementalwands.client.renderer.SpellBillboardRenderer;
 import com.anton.elementalwands.client.renderer.StoneZombieRenderer;
 import com.anton.elementalwands.registry.ModSpellBlocks;
@@ -81,6 +82,8 @@ public class ElementalWandsClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.AWAKENED_TREE, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.STONE_ZOMBIE, StoneZombieRenderer::new);
         EntityRendererRegistry.register(ModEntities.FIRE_SPIRIT, FireSpiritRenderer::new);
+        EntityRendererRegistry.register(ModEntities.FRACTURED_GUARDIAN, FracturedGuardianRenderer::new);
+        EntityRendererRegistry.register(ModEntities.GUARDIAN_ROCK, com.anton.elementalwands.client.renderer.GuardianRockRenderer::new);
 
         // Receive synced player data from server
         ClientPlayNetworking.registerGlobalReceiver(ModNetworking.SyncPlayerDataPayload.ID,

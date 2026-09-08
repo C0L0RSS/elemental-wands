@@ -1,0 +1,32 @@
+{
+  "animation.fractured_guardian.idle": {
+    "lowest_vertex": 0.0,
+    "lowest_support_foot": 0.0,
+    "highest_support_foot": 0.0
+  },
+  "animation.fractured_guardian.walk": {
+    "lowest_vertex": -0.0008,
+    "lowest_support_foot": -0.0008,
+    "highest_support_foot": 0.0
+  },
+  "animation.fractured_guardian.awaken": {
+    "lowest_vertex": 0.0,
+    "lowest_support_foot": 0.0,
+    "highest_support_foot": 0.0
+  },
+  "animation.fractured_guardian.slam": {
+    "lowest_vertex": 0.0,
+    "lowest_support_foot": 0.0,
+    "highest_support_foot": 0.0
+  },
+  "animation.fractured_guardian.throw": {
+    "lowest_vertex": 0.0,
+    "lowest_support_foot": 0.0,
+    "highest_support_foot": 0.0
+  },
+  "animation.fractured_guardian.beam": {
+    "lowest_vertex": 0.0,
+    "lowest_support_foot": 0.0,
+    "highest_support_foot": 0.0
+  }
+}

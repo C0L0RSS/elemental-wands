@@ -1,315 +1,161 @@
-# Elemental Wands (Fabric) - Current Handoff
-
-Last verified against code at commit `48d3dcc` (`gui fixes`).
-
-## What Changed Recently (Since Previous Handoff Baseline `12e6998`)
-
-Major additions and behavior changes:
-
-- Added a full progression loop:
-  - New starter item: `fractured_wand`
-  - New resources: raw + refined elemental crystals (fire/wind/stone/ice/space)
-  - New block set: crystal ores + deepslate variants
-  - New worldgen for all 5 crystal ore families
-  - New crafting/smelting/reset recipes
-- Added first-join onboarding:
-  - Players receive `fractured_wand` + a written guide book (`The Wizard's Path`)
-  - Guarded by command tag `ew_starter_received`
-- Added `ModBlocks` + `ModWorldGen` registration in common init.
-- Added ability lock support in `AbstractWandItem` and HUD lock rendering.
-  - Fractured Wand only unlocks PRIMARY.
-- HUD updates:
-  - HUD moved higher above hotbar
-  - Fractured Wand uses a single centered slot and gray "MANA" theme
-  - Locked slots draw a padlock overlay
-- Fire wand secondary reworked into a long runway-style "Dragon's Pyre".
-- Wind wand Zephyr Strike updated:
-  - Dash disabled while Zephyr is active
-  - Elytra equipment restore now preserves/re-equips old chestplate
-  - Added descent ring particles
-  - Removed old max-duration timeout logic
-- Stone wand pacing and wall behavior updated:
-  - Primary eruptions execute much faster
-  - Secondary wall changed to 4x4, 70-tick duration
-- Ice secondary gust now respects player pitch for vertical aiming.
-- Space ultimate visuals and orb tuning updated:
-  - Charge visuals now red/blue orb convergence
-  - Hollow Purple orb increased to radius 5 and 60 damage
-
----
-
-## Mod Metadata
-
-- Mod ID: `elementalwands`
-- Version: `2.1.0`
-- Minecraft: `1.21.10`
-- Java: `21`
-- Loader/API: Fabric Loader + Fabric API
-
----
-
-## Player Controls
-
-- Primary: right click (not sneaking)
-- Secondary: shift + right click (sneaking)
-- Ultimate: `X` (client keybind -> C2S payload -> server cast)
-
-Entrypoints:
-
-- Primary/Secondary: `AbstractWandItem.use(...)`
-- Ultimate: `ElementalWandsClient` sends `CastUltimatePayload` -> `ModNetworking.handleCastUltimate(...)`
-
----
-
-## Progression and Content Loop (Current)
-
-### First join starter flow
-
-Implemented in `ElementalWandsMod` via `ServerPlayConnectionEvents.JOIN`.
-
-On first join per player (command tag check):
-
-- Gives `elementalwands:fractured_wand`
-- Gives written book (`The Wizard's Path`)
-- Sends welcome message
-- Adds command tag `ew_starter_received`
-
-### Crystal ore mining pipeline
-
-1. Mine elemental crystal ore blocks (normal/deepslate variants).
-2. Loot table behavior:
-   - Silk Touch -> ore block drops
-   - Otherwise -> corresponding raw crystal (fortune-aware)
-3. Smelt raw crystal -> refined crystal (`minecraft:smelting`, 200 ticks, 0.7 xp).
-4. Craft `fractured_wand + refined crystal` (shapeless) to awaken into elemental wand.
-5. Use `reset_rune` + elemental wand (shapeless) to revert back to `fractured_wand`.
-
-### New blocks/items
-
-Registered in:
-
-- `src/main/java/com/anton/elementalwands/registry/ModBlocks.java`
-- `src/main/java/com/anton/elementalwands/registry/ModItems.java`
-
-Blocks:
-
-- `fire_crystal_ore`, `wind_crystal_ore`, `stone_crystal_ore`, `ice_crystal_ore`, `space_crystal_ore`
-- `deepslate_*` variants for each above
-
-Items:
-
-- `fractured_wand`
-- `raw_*_crystal` (5)
-- `*_crystal` refined (5)
-- `reset_rune`
-
-Creative tabs:
-
-- Tools: all wands + fractured wand + titan sword + reset rune
-- Ingredients: all raw + refined crystals
-- Building blocks: all ore blocks
-
----
-
-## World Generation
-
-Registration path:
-
-- `ElementalWandsMod.onInitialize()` -> `ModWorldGen.registerAll()`
-- `ModWorldGen` adds placed feature keys to overworld biome modifications.
-
-Data-driven feature files:
-
-- Configured features: `data/elementalwands/worldgen/configured_feature/*.json`
-- Placed features: `data/elementalwands/worldgen/placed_feature/*.json`
-
-Current ore settings (all five ore types):
-
-- Vein size: `6`
-- Count per placement: `8`
-- Height range: trapezoid `-60` to `70`
-- Targets:
-  - `minecraft:stone_ore_replaceables` -> normal ore
-  - `minecraft:deepslate_ore_replaceables` -> deepslate ore
-
-Tool tags:
-
-- `data/minecraft/tags/block/mineable/pickaxe.json`
-- `data/minecraft/tags/block/needs_stone_tool.json`
-
----
-
-## Core Wand System
-
-Base class: `AbstractWandItem`
-
-- Default cooldowns:
-  - Primary: 20 ticks
-  - Secondary: 120 ticks
-  - Ultimate: 800 ticks
-  - Global: 6 ticks
-- Cooldown storage keys in `CUSTOM_DATA`:
-  - `ew_last_global`, `ew_last_primary`, `ew_last_secondary`, `ew_last_ultimate`
-- Chill interaction:
-  - If caster has frost stacks, cooldown elapsed time is halved (cooldowns recover 2x slower).
-
-Ability lock support:
-
-- `AbstractWandItem.isAbilityUnlocked(...)` introduced.
-- Default: all unlocked.
-- Fractured Wand: PRIMARY only.
-- Locked casts show `hud.elementalwands.locked` actionbar text.
-
----
-
-## Wand-by-Wand Current Behavior
-
-### Fractured Wand (`FracturedWandItem`)
-
-- Primary:
-  - 20-range beam style hit via raycast
-  - Soul fire particle line
-  - 3.0 damage on entity hit
-- Secondary/Ultimate:
-  - Locked behavior message: "The core is fractured... find a Crystal to awaken it."
-
-### Fire Wand (`FireWandItem`)
-
-- Passive while held:
-  - Constant fire resistance refresh
-  - If player stands on pyre ground shortly after cast, gains regen + speed boost
-- Primary:
-  - Spawns `InfernoWaveEntity`
-- Secondary (reworked Dragon's Pyre runway):
-  - Creates ~40-block forward runway, ~5-block width
-  - Applies fire damage and ignite in the runway lane
-  - Places temporary magma below and fire above for 100 ticks
-- Ultimate:
-  - Meteor strike (`MeteorManager`) from +35 height, explosion power 15
-
-### Wind Wand (`WindWandItem`)
-
-- Primary:
-  - Dual `VacuumBladeEntity` projectiles with side offsets
-- Secondary (Waylay Dash):
-  - Charge system: 2 max, 80 ticks recharge each, chain window 30 ticks
-  - Not using `tryStartCooldown` (charge-based logic)
-  - Disabled while Zephyr Strike active
-- Ultimate (Zephyr Strike):
-  - Activates airborne state, equips temporary Elytra, launches player
-  - On impact after short grace, triggers explosion scaled by impact velocity
-  - Stores/restores previous chest armor in memory map (`ZEPHYR_CHESTPLATES`)
-
-### Stone Wand (`StoneWandItem`)
-
-- Primary (Earthen Maw / Tectonic wave):
-  - Cooldown override currently returns 40 ticks
-  - Builds 15-block spike path
-  - Scheduler now processes 3 logic steps per tick (faster eruption)
-  - Spike damage: 6.0 magic + vertical knockback
-- Secondary:
-  - 4x4 stone wall 2 blocks in front of caster
-  - Temporary duration 70 ticks
-  - Active wall grants nearby resistance buff while tracked
-- Ultimate:
-  - Titan Dome via `TitanDomeManager.startDome(...)`
-
-### Ice Wand (`IceWandItem`)
-
-- Primary:
-  - 3-shot frost volley with shatter logic (`ChillSnowballEntityWithShatter`)
-- Secondary (Glacial Gust):
-  - Fires 5 piercing short-lived wave projectiles
-  - Now uses player pitch in directional calculation (vertical aiming supported)
-- Ultimate:
-  - Starts Blizzard zone (`BlizzardManager`)
-
-### Space Wand (`SpaceWandItem`)
-
-- Primary:
-  - `SingularityBoltEntity`
-- Secondary:
-  - Blink forward + persistent rift swapback flow (`BlinkRiftManager`)
-- Ultimate:
-  - Hollow Purple charge sequence (`HollowPurpleChargeManager`)
-  - Charge: 60 ascent + 10 hold ticks
-  - Visuals: converging red/blue orb system
-  - Orb (`HollowPurpleOrbEntity`) currently tuned to:
-    - Radius: 5.0
-    - Damage: 60.0
-    - Speed: 1.3
-    - Lifetime: 65 ticks or 90 blocks travel
-    - Terrain erasure in spherical volume each tick
-
----
-
-## HUD and UX
-
-File: `src/main/java/com/anton/elementalwands/client/overlay/WandHudOverlay.java`
-
-Current behavior:
-
-- HUD vertical offset increased (`SLOT_Y_OFFSET_FROM_HOTBAR_TOP = 50`)
-- Fractured wand renders one centered ability slot (primary only)
-- Locked abilities show dark overlay + padlock icon
-- Added `MANA` theme/accent for fractured state
-
-Localization updates in `assets/elementalwands/lang/en_us.json` include:
-
-- Names for fractured wand/crystals/ores/reset rune
-- `hud.elementalwands.locked`
-
----
-
-## Key File Map
-
-Core init and registration:
-
-- `src/main/java/com/anton/elementalwands/ElementalWandsMod.java`
-- `src/main/java/com/anton/elementalwands/registry/ModItems.java`
-- `src/main/java/com/anton/elementalwands/registry/ModBlocks.java`
-- `src/main/java/com/anton/elementalwands/world/ModWorldGen.java`
-
-Wands:
-
-- `src/main/java/com/anton/elementalwands/item/AbstractWandItem.java`
-- `src/main/java/com/anton/elementalwands/item/FracturedWandItem.java`
-- `src/main/java/com/anton/elementalwands/item/FireWandItem.java`
-- `src/main/java/com/anton/elementalwands/item/WindWandItem.java`
-- `src/main/java/com/anton/elementalwands/item/StoneWandItem.java`
-- `src/main/java/com/anton/elementalwands/item/IceWandItem.java`
-- `src/main/java/com/anton/elementalwands/item/SpaceWandItem.java`
-
-Space ultimate internals:
-
-- `src/main/java/com/anton/elementalwands/util/HollowPurpleChargeManager.java`
-- `src/main/java/com/anton/elementalwands/entity/HollowPurpleOrbEntity.java`
-
-Data and assets:
-
-- `src/main/resources/data/elementalwands/recipe/*.json`
-- `src/main/resources/data/elementalwands/loot_table/blocks/*.json`
-- `src/main/resources/data/elementalwands/worldgen/**/*`
-- `src/main/resources/assets/elementalwands/lang/en_us.json`
-
----
-
-## Known Technical Notes
-
-- `ModNetworking.CastPrimaryPayload` is still registered server-side, but client currently only sends `CastUltimatePayload`.
-- `StoneWandItem` has an unused constant `PRIMARY_COOLDOWN_TICKS = 60`, while `getPrimaryCooldownTicks()` returns `40`.
-- `ElementalWandsMod.giveStarterKit(...)` includes an unused local variable (`persistent`).
-
----
-
-## Dev Quickstart
-
-- Build: `./gradlew build`
-- Run dev client: `./gradlew runClient`
-
-Recommended balance edit points:
-
-- Ability logic: each `*WandItem.java`
-- Projectile tuning: `entity/*`
-- Zone/ultimate managers: `util/*Manager.java`
-- Progression economy: `data/elementalwands/recipe/*` + loot tables + worldgen json
+# Elemental Wands — session handoff
+
+Updated September 8, 2026, at the user's requested stopping point. Read
+[AGENT.md](../AGENT.md) for authoritative architecture, build, and deployment rules;
+[the Guardian guide](fractured-guardian.md) has combat details and draft lore.
+This replaces the obsolete crystal/Ice/per-element-wand handoff.
+
+## Resume here
+
+**The latest Guardian takeoff fix is installed, but has not yet been confirmed by
+the user in Minecraft.** Stopping the session is not confirmation that the leap
+works in-game. Resume with that playtest before adding more boss features.
+
+The user's last bug report: a yellow landing circle appeared, the Guardian raised
+its arms for about half a second, then cancelled the leap and chose another attack.
+Two potential cancellation causes were fixed:
+
+1. A frozen windup can clear Minecraft's cached `onGround` flag. Leap start,
+   takeoff, and landing now probe physical block support beneath the feet.
+2. Immediate diagonal travel could make the full-body route check hit adjacent
+   steps. Horizontal travel now eases in after the first 10% of flight and ends
+   before the last 10%, allowing vertical departure and arrival. A complete route
+   is validated before showing the marker; blocked predicted updates keep the
+   previous valid landing instead of replacing it.
+
+`/ew guardian status` now reports the last leap state/cancellation reason. If the
+bug persists, capture that output after `/ew guardian leap`; investigate the actual
+reason rather than removing wall/ceiling checks or blindly increasing clearances.
+
+## User decisions and priorities
+
+- This is intended as a cooperative spell-combat game. The boss must pressure a
+  group, rotate targets, and commit visibly to attacks rather than chase one player.
+- Approved look: hulking, hunched stone Guardian, oversized arms, shorter legs,
+  weathered Minecraft-style cuboids, sparse moss, and pale cyan magic.
+- Full-body animation matters: anticipation, torso/chest motion, knees, shoulders,
+  hands, and recovery. Avoid returning to isolated limb swings.
+- Earlier solo fights were too easy with only Fire primary and ordinary sideways
+  walking. Prediction, a visible stone wave, and the leap were added in response.
+  Overall solo and co-op balance remain open; do not claim they are solved.
+- The leap must use both fists to strike the ground, create a first shockwave,
+  propel the body upward, then land with a smash and a second shockwave.
+- The user explicitly requested longer reaction time: **1.8 seconds airborne and
+  an 11-block arc**, replacing the original 1 second / 7.5 blocks.
+- Use Lunar for the user's playtests; the user normally plays and shares feedback.
+  Prefer discussing substantial new designs before changing them.
+- Preserve the approved model/texture. Multipart hitboxes and general jerky follow
+  pathing were deferred. Do not expand either project merely during a handoff.
+
+## Current implemented checkpoint
+
+Fabric Minecraft 1.21.10, Java 21, mod 2.2.0, GeckoLib 5.3-alpha-3. The broader mod
+uses one Wizard's Wand (`fractured_wand`) with FIRE/WIND/STONE/NATURE/SPACE affinities.
+Crystal ore progression and separate elemental wand classes are retired.
+
+The Guardian is summon-only, persistent, and automatically aggressive toward nearby
+eligible Survival/Adventure players. It has a shared boss bar and health scaling
+(200 solo, +100 per additional player, capped at 600). Creative/Spectator players
+are excluded from automatic targeting/damage; automatic combat is off in Peaceful.
+
+| Attack | Current behavior |
+| --- | --- |
+| Mouth beam | Cyan, 1.6s charge, 0.4s committed aim window, 0.6s hazardous pulse. Movement prediction before lock; 8 damage at most once per victim per cast, including late entrants; cover checked. |
+| Rubble throw | A 1.4-block stone attaches to the live hand; corrected mirrored server socket. Predicted aim locks at tick 36; release at tick 44; faster ballistic travel. 8 direct or 4 splash, never both. |
+| Shockwave | Visible rendered stone ridge, cyan crest, dust; radius 18, speed .65 blocks/tick, .75-block-high jumpable band; 6 damage once per victim. No world block placement. |
+| Close slam | Full-body two-handed slam, frontal radius 4.5, 6 damage, cover/arc checks. A separate one-arm swat is not implemented. |
+| Leap | Targets visible players 12–30 blocks away. Lock tick 10; fist strike/takeoff/first wave tick 14; flight 36 ticks; landing tick 50; second wave tick 56; recovery ends tick 94. Center radius 3 does 16 damage, outer radius 6 does 10, before armor. Landing victims are excluded from that landing's follow-up wave. |
+
+Leap movement respects collision and does not teleport or break blocks. Two wave
+slots retain independent world-space origins/hit sets. With the current longer
+flight the waves are separated in time, although the rendering supports overlap.
+Stop/death/removal/empty encounter cancels pending effects and restores gravity.
+The saved internal leap-gravity tag is cleared on reload so an interrupted airborne
+Guardian can fall normally without resuming stale damage.
+
+## Quick playtest commands
+
+Cheats/operator permission required. Controls select the nearest living Guardian
+within 32 blocks in the current dimension.
+
+```mcfunction
+/summon elementalwands:fractured_guardian ~ ~ ~10
+```
+
+| Command | Purpose |
+| --- | --- |
+| `/ew guardian leap` | One leap; test 12–25 blocks away on open ground first. |
+| `/ew guardian status` | Read the last leap state or cancellation reason. |
+| `/ew guardian fight` | Enable automatic group combat. |
+| `/ew guardian stop` | Cancel combat/effects and persist passive mode across reloads. |
+| `/ew guardian beam`, `rock`, `shockwave`, `melee` | Separate real-attack tests. |
+| `/ew guardian awaken`, `slam`, `throw`, `follow` | Cosmetic/movement review; these pause automatic combat. |
+
+A restart of Minecraft through Lunar is required to load an updated JAR. Do not
+mistake a world reload or browser refresh for loading new Java classes.
+
+## Installed build and evidence
+
+At this documentation checkpoint, the local build and Lunar JAR were checksum-
+matched again:
+
+- Build: `build/libs/elementalwands-2.2.0.jar`
+- Installed: `/Users/antonlabas/.lunarclient/profiles/1.21/mods/fabric-1.21.10/elementalwands-2.2.0.jar`
+- SHA-256: `595edfd15651e5b2c49215d0d4a7536eb5c9026a16bcfe30f410a7e9893e9357`
+- Previous-build backup: `/Users/antonlabas/.lunarclient/profiles/1.21/mod-backups/elementalwands-before-takeoff-fix-20260908-104116.jar`
+- Optional temporary receipt: `/private/tmp/guardian-takeoff-fix-install.json`
+
+These are dated records, not a substitute for checking the current JAR after future
+edits. Temporary files may disappear. No restart or successful in-game leap after
+this installation was confirmed before stopping.
+
+The last implementation pass passed clean Gradle build, Guardian regression suites,
+asset and socket validators, `git diff --check`, and JAR integrity checks. Tests
+cover targeting/cooldowns, trajectories, marked AoE bounds, wave timings, physical
+support geometry, step-route rejection, retained walls/ceilings, animation duration,
+and 180 GeckoLib hand/socket pose comparisons. **They do not launch a world or prove
+live terrain collision, multiplayer behavior, or encounter balance.**
+
+## Assets, preview, and code map
+
+- Approved geometry/texture: `art/fractured_guardian/v2-textured/` (132 cubes, 38 bones).
+- Six approved full-body clips: `art/fractured_guardian/v4-expressive/`.
+- Current nine-clip package, editable Blockbench project, leap generators and pose
+  review: `art/fractured_guardian/v5-leap/`. Its generator copies the six V4 clips
+  unchanged and adds launch (.7s), air (1.8s), and landing (2.2s).
+- Current preview: [V5 full jump](http://127.0.0.1:8767/v5-leap/preview.html), default
+  **Full jump + both waves**. It illustrates a 16-block leap on a flat grid using
+  the arc/timing and separate wave origins. It does not simulate live collision or
+  damage. The V4 URL cannot show the new jump. Refresh stale tabs after regeneration.
+- Preview generation: `preview_leap.py` plus `sequence_preview.py` in V5. Flight and
+  preview timing/height currently appear in both Java and Python/JS; keep them in
+  sync when tuning. The airborne pose generator stretches a normalized pose profile.
+- If the preview server is absent, run from the repo:
+  `python3 -m http.server 8767 --bind 127.0.0.1 --directory art/fractured_guardian`.
+  Check existing listener ownership first; preserve an existing preview process.
+- Runtime: `entity/GuardianBossCombat.java`, `GuardianLeapAttack.java`,
+  `GuardianLeapRules.java`, `GuardianCombatRules.java`, `FracturedGuardianEntity.java`.
+- Effects: `client/renderer/GuardianLeapVisual.java`, `GuardianWaveVisual.java`,
+  `GuardianHeldRockLayer.java`, `GuardianRockRenderer.java`; ground/cover sampling
+  is shared through `entity/GuardianWaveSurface.java`.
+- Commands: `command/GuardianCommands.java`. Tests: `src/guardianTest/java/`.
+- Packaging: `tools/prepare_guardian_assets.py`; socket source/check:
+  `tools/prepare_guardian_throw_socket.py`. Regenerate V5 after changing V4 and before
+  packaging. Do not accidentally package only the old six-clip file.
+
+## Deferred work and repository caution
+
+First confirm the takeoff fix. Then assess the complete solo fight with Fire primary,
+co-op target rotation, rough terrain, and stop/death/reload cleanup. Tune from those
+results before adding further attacks, phases, rewards, or weak points.
+
+The planned lore is a broken sanctuary statue repaired/charged by players, awakening
+an ancient keeper whose duty outlived its memory. Ruin generation, repair ritual,
+full summoning reveal, rewards, and an exposed core are still proposals, not implemented.
+
+Work is on `main` with substantial uncommitted/untracked changes. Guardian code and
+art coexist with earlier Fire/Kinetic Inferno work. No commit or push was made in
+this session. Preserve all of it; do not reset, clean, or overwrite unrelated changes.
+The spell/HUD asset contract remains 298 PNGs and 40 particle definitions; the two
+Guardian textures are separate. `docs/PLAYER_GUIDE.txt` and the Ice redesign document
+remain historical and must not override AGENT.md's current architecture.

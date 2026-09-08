@@ -9,11 +9,65 @@ import net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry;
 /** Client-only factory registration and visual tuning for custom spell particles. */
 public final class ModParticleFactories {
 
-    private static final Profile FIRE_INFERNO_FLAME = new Profile(
-            0.48f, 0.72f, 0.20f,
-            10, 16,
+    private static final Profile FIRE_EMBER = new Profile(
+            0.05f, 0.09f, 0.28f,
+            10, 18,
+            1.0f, 0.0f, 0.65f,
+            -0.055f, 0.95f,
+            -0.16f, 0.16f,
+            0xFFFFFF, 0xFFF4D8,
+            SpriteMode.BY_AGE, false, true);
+
+    private static final Profile FIRE_FLAME_RIBBON = new Profile(
+            0.17f, 0.29f, 0.46f,
+            8, 13,
+            0.96f, 0.0f, 0.62f,
+            -0.025f, 0.91f,
+            -0.065f, 0.065f,
+            0xFFFFFF, 0xFFF7E0,
+            SpriteMode.BY_AGE, false, true);
+
+    private static final Profile FIRE_IMPACT_RING = new Profile(
+            0.36f, 0.50f, 2.85f,
+            6, 9,
+            1.0f, 0.0f, 0.42f,
+            0.0f, 1.0f,
+            0.0f, 0.0f,
+            0xFFFFFF, 0xFFF9E8,
+            SpriteMode.BY_AGE, false, true);
+
+    private static final Profile FIRE_PYRE_FRONT = new Profile(
+            1.08f, 1.30f, 1.12f,
+            8, 12,
             1.0f, 0.0f, 0.70f,
-            -0.025f, 0.94f,
+            -0.012f, 0.97f,
+            0.0f, 0.0f,
+            0xFFFFFF, 0xFFFFFF,
+            SpriteMode.BY_AGE, false, true);
+
+    private static final Profile FIRE_METEOR_SHELL = new Profile(
+            1.20f, 1.48f, 0.82f,
+            9, 14,
+            1.0f, 0.0f, 0.72f,
+            -0.015f, 0.96f,
+            -0.075f, 0.075f,
+            0xFFFFFF, 0xFFFFFF,
+            SpriteMode.BY_AGE, false, true);
+
+    private static final Profile FIRE_METEOR_WARNING = new Profile(
+            0.28f, 0.42f, 0.54f,
+            8, 12,
+            0.96f, 0.0f, 0.66f,
+            -0.018f, 0.96f,
+            -0.025f, 0.025f,
+            0xFFFFFF, 0xFFF7E0,
+            SpriteMode.BY_AGE, false, true);
+
+    private static final Profile FIRE_METEOR_IMPACT = new Profile(
+            1.75f, 2.10f, 2.70f,
+            16, 20,
+            1.0f, 0.0f, 0.72f,
+            -0.014f, 0.975f,
             0.0f, 0.0f,
             0xFFFFFF, 0xFFFFFF,
             SpriteMode.BY_AGE, false, true);
@@ -104,8 +158,20 @@ public final class ModParticleFactories {
 
     public static void registerAll() {
         ParticleFactoryRegistry factories = ParticleFactoryRegistry.getInstance();
-        factories.register(ModParticles.FIRE_INFERNO_FLAME,
-                sprites -> new ElementalParticleFactory(sprites, FIRE_INFERNO_FLAME, true, false));
+        factories.register(ModParticles.FIRE_EMBER,
+                sprites -> new ElementalParticleFactory(sprites, FIRE_EMBER));
+        factories.register(ModParticles.FIRE_FLAME_RIBBON,
+                sprites -> new ElementalParticleFactory(sprites, FIRE_FLAME_RIBBON));
+        factories.register(ModParticles.FIRE_IMPACT_RING,
+                sprites -> new ElementalParticleFactory(sprites, FIRE_IMPACT_RING, false, false));
+        factories.register(ModParticles.FIRE_PYRE_FRONT,
+                sprites -> new ElementalParticleFactory(sprites, FIRE_PYRE_FRONT, false, false));
+        factories.register(ModParticles.FIRE_METEOR_SHELL,
+                sprites -> new ElementalParticleFactory(sprites, FIRE_METEOR_SHELL, false));
+        factories.register(ModParticles.FIRE_METEOR_WARNING,
+                sprites -> new ElementalParticleFactory(sprites, FIRE_METEOR_WARNING, false, false));
+        factories.register(ModParticles.FIRE_METEOR_IMPACT,
+                sprites -> new ElementalParticleFactory(sprites, FIRE_METEOR_IMPACT, false, false));
         factories.register(ModParticles.WIND_MOTE,
                 sprites -> new ElementalParticleFactory(sprites, WIND_MOTE));
         factories.register(ModParticles.WIND_CRESCENT,

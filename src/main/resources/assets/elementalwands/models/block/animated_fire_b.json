@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cross",
+  "ambientocclusion": false,
+  "textures": {
+    "cross": "elementalwands:block/fire_ground_b"
+  }
+}

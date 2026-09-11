@@ -260,11 +260,14 @@ public final class OvergrowthManager {
                 AbstractWandItem.onWandDamageDealt(caster, damage);
             }
 
-            target.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS,
-                    ROOT_CRUSH_SLOW_TICKS, ROOT_CRUSH_SLOW_AMPLIFIER, false, true, true));
-            target.addVelocity(0.0, -0.65, 0.0);
-            target.velocityModified = true;
-            target.fallDistance = 0.0f;
+            EntangleTracker.applyNatureSlow(target, ROOT_CRUSH_SLOW_TICKS, ROOT_CRUSH_SLOW_AMPLIFIER);
+            if (target instanceof com.anton.elementalwands.entity.FracturedGuardianEntity guardian) {
+                guardian.onNatureEntangle(EntangleTracker.MAX_STACKS);
+            } else {
+                target.addVelocity(0.0, -0.65, 0.0);
+                target.velocityModified = true;
+                target.fallDistance = 0.0f;
+            }
 
             world.spawnParticles(ModParticles.NATURE_VINE,
                     target.getX(), target.getY() + 0.16, target.getZ(),
@@ -283,8 +286,7 @@ public final class OvergrowthManager {
         if (caster == null || !caster.isAlive()) return;
         if (!containsPos(tree, caster.getX(), caster.getY() + 0.1, caster.getZ())) return;
 
-        caster.addStatusEffect(new StatusEffectInstance(StatusEffects.REGENERATION,
-                40, 0, false, false, true));
+        SpellBuffs.regeneration(caster);
         if (now % 20 == 0) {
             world.spawnParticles(ModParticles.NATURE_HEART,
                     caster.getX(), caster.getBodyY(0.52), caster.getZ(),

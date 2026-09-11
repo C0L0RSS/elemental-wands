@@ -9,8 +9,12 @@ public final class GuardianBeamContractTest {
         if (!condition) throw new AssertionError(message);
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
+        com.anton.elementalwands.arena.GuardianArenaContractTest.run();
         GuardianBossContractTest.run();
+        GuardianGuardContractTest.run();
+        GuardianPhaseContractTest.run();
+        GuardianNatureContractTest.run();
         GuardianLeapContractTest.run();
         GuardianSocketContractTest.run();
         Vec3d start = new Vec3d(0,1,0), end = new Vec3d(0,1,24);

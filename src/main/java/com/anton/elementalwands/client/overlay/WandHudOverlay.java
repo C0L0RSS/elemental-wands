@@ -112,7 +112,26 @@ public class WandHudOverlay implements HudRenderCallback {
             renderUltimateSlot(context, client, stack, wand, slotCentersX[2], slotCenterY, theme, accentColor, ultimateUnlocked);
         }
 
+        if (affinity == WizardAffinity.STONE) {
+            drawStoneReserve(context, scaledCenterX, slotCenterY - SLOT_SIZE / 2 - 13,
+                    ClientPlayerData.stoneMass());
+        }
         context.getMatrices().popMatrix();
+    }
+
+    private void drawStoneReserve(DrawContext context, int centerX, int y, int mass) {
+        int x=centerX-60;
+        context.drawTexture(RenderPipelines.GUI_TEXTURED, HUD_TEXTURE, x,y,
+                0,160,120,10,256,256);
+        int filled=Math.round(106*MathHelper.clamp(mass,0,100)/100f);
+        if(filled>0) context.drawTexture(RenderPipelines.GUI_TEXTURED, HUD_TEXTURE,x+7,y+3,
+                0,mass>=75?180:176,filled,4,256,256);
+        // Three subtle notches mark the four pulls; the third also marks heavy-hit readiness.
+        for(int step=1;step<=3;step++) {
+            int notch=x+7+Math.round(106*step/4f);
+            context.fill(notch,y+3,notch+1,y+4,0xB03B382D);
+            context.fill(notch,y+6,notch+1,y+7,0xB03B382D);
+        }
     }
 
     private static int primaryCooldownFor(WizardAffinity affinity) {
@@ -148,20 +167,20 @@ public class WandHudOverlay implements HudRenderCallback {
         int renderY   = y - (frameSize / 2);
 
         // Frame texture — use ready variant when charged
-        float v = isReady ? SLOT_READY_V : SLOT_COOLDOWN_V;
+        float v = isReady && isUnlocked ? SLOT_READY_V : SLOT_COOLDOWN_V;
         float u = (float) (2 * SLOT_U_STEP); // slot index 2
         context.drawTexture(RenderPipelines.GUI_TEXTURED, HUD_TEXTURE, renderX, renderY,
             u, v, frameSize, frameSize, 256, 256);
 
         // Background fill
         if (!isUnlocked) {
-            context.fill(renderX + 4, renderY + 4, renderX + frameSize - 4, renderY + frameSize - 4, 0xD0000000);
+            context.fill(renderX + 6, renderY + 6, renderX + frameSize - 6, renderY + frameSize - 6, 0xD0000000);
         } else if (charge == 0) {
             // Grayscale empty
-            context.fill(renderX + 4, renderY + 4, renderX + frameSize - 4, renderY + frameSize - 4,
-                withAlpha(0x646464, 0x64));
+            context.fill(renderX + 6, renderY + 6, renderX + frameSize - 6, renderY + frameSize - 6,
+                withAlpha(0x403B32, 0x64));
         } else {
-            context.fill(renderX + 4, renderY + 4, renderX + frameSize - 4, renderY + frameSize - 4, 0x8A000000);
+            context.fill(renderX + 6, renderY + 6, renderX + frameSize - 6, renderY + frameSize - 6, 0x8A000000);
         }
 
         // Draw theme motif
@@ -172,7 +191,7 @@ public class WandHudOverlay implements HudRenderCallback {
 
         // Charge fill bar (bottom-to-top vertical fill)
         if (isUnlocked && charge > 0 && charge < 100) {
-            int barInset = 5;
+            int barInset = 6;
             int barX = renderX + barInset;
             int barW = frameSize - barInset * 2;
             int barMaxH = frameSize - barInset * 2;
@@ -182,12 +201,12 @@ public class WandHudOverlay implements HudRenderCallback {
             context.fill(barX, barTop, barX + barW, barBottom, withAlpha(accentColor, 0x70));
         }
 
-        // Charge percentage label
+        // Keep the charge label inside its slot, leaving the reserve bar unobstructed.
         if (isUnlocked && !isReady && charge > 0) {
             String label = charge + "%";
             int tw = client.textRenderer.getWidth(label);
-            int bubbleY = renderY - 8;
-            context.fill(x - tw / 2 - 2, bubbleY - 1, x + tw / 2 + 2, bubbleY + 9, 0xB0000000);
+            int bubbleY = renderY + 21;
+            context.fill(x - tw / 2 - 2, bubbleY - 1, x + tw / 2 + 2, bubbleY + 9, 0xD026201C);
             context.drawText(client.textRenderer, label, x - tw / 2, bubbleY, 0xFFFFFFFF, true);
         }
 
@@ -195,7 +214,7 @@ public class WandHudOverlay implements HudRenderCallback {
         if (isUnlocked && isReady) {
             float pulse = 0.5f + 0.5f * MathHelper.sin((float)(now * 0.4));
             int glowAlpha = (int)(pulse * 0x80);
-            context.fill(renderX + 2, renderY + 2, renderX + frameSize - 2, renderY + frameSize - 2,
+            context.fill(renderX + 6, renderY + 6, renderX + frameSize - 6, renderY + frameSize - 6,
                 withAlpha(accentColor, glowAlpha));
         }
 
@@ -229,6 +248,10 @@ public class WandHudOverlay implements HudRenderCallback {
         }
 
         long remaining  = maxCooldownTicks - elapsed;
+        if (affinity == WizardAffinity.STONE && ability == AbstractWandItem.Ability.PRIMARY) {
+            maxCooldownTicks = ClientPlayerData.stoneDuration();
+            remaining = ClientPlayerData.stoneRemaining(now);
+        }
         boolean onCooldown = remaining > 0;
 
         boolean isWindSecondary  = affinity == WizardAffinity.WIND && ability == AbstractWandItem.Ability.SECONDARY;
@@ -251,7 +274,7 @@ public class WandHudOverlay implements HudRenderCallback {
         int renderX   = x - (frameSize / 2);
         int renderY   = y - (frameSize / 2);
 
-        float v = onCooldown ? SLOT_COOLDOWN_V : SLOT_READY_V;
+        float v = onCooldown || !isUnlocked ? SLOT_COOLDOWN_V : SLOT_READY_V;
         float u = (float) (slotIndex * SLOT_U_STEP);
         context.drawTexture(RenderPipelines.GUI_TEXTURED, HUD_TEXTURE, renderX, renderY,
             u, v, frameSize, frameSize, 256, 256);
@@ -261,12 +284,12 @@ public class WandHudOverlay implements HudRenderCallback {
             : animationProfileForState(onCooldown);
 
         if (onCooldown) {
-            context.fill(renderX + 4, renderY + 4, renderX + frameSize - 4, renderY + frameSize - 4, 0x8A000000);
+            context.fill(renderX + 6, renderY + 6, renderX + frameSize - 6, renderY + frameSize - 6, 0x8A000000);
         } else if (windPartial) {
-            context.fill(renderX + 5, renderY + 5, renderX + frameSize - 5, renderY + frameSize - 5,
+            context.fill(renderX + 6, renderY + 6, renderX + frameSize - 6, renderY + frameSize - 6,
                 withAlpha(accentColor, 0x48));
         } else {
-            context.fill(renderX + 5, renderY + 5, renderX + frameSize - 5, renderY + frameSize - 5,
+            context.fill(renderX + 6, renderY + 6, renderX + frameSize - 6, renderY + frameSize - 6,
                 withAlpha(accentColor, 0x32));
         }
 
@@ -278,13 +301,13 @@ public class WandHudOverlay implements HudRenderCallback {
         } else if (onCooldown && remaining > 20 && isUnlocked) {
             String digit  = String.valueOf((int) Math.ceil(remaining / 20.0));
             int txtWidth  = client.textRenderer.getWidth(digit);
-            int bubbleY   = renderY - 8;
-            context.fill(x - (txtWidth / 2) - 2, bubbleY - 1, x + (txtWidth / 2) + 2, bubbleY + 9, 0xB0000000);
+            int bubbleY   = renderY + 21;
+            context.fill(x - (txtWidth / 2) - 2, bubbleY - 1, x + (txtWidth / 2) + 2, bubbleY + 9, 0xD026201C);
             context.drawText(client.textRenderer, digit, x - (txtWidth / 2), bubbleY, 0xFFFFFFFF, true);
         }
 
         if (!isUnlocked) {
-            context.fill(renderX + 4, renderY + 4, renderX + frameSize - 4, renderY + frameSize - 4, 0xD0000000);
+            context.fill(renderX + 6, renderY + 6, renderX + frameSize - 6, renderY + frameSize - 6, 0xD0000000);
             drawPadlock(context, x, y, frameSize, renderX, renderY);
         }
     }
@@ -296,11 +319,11 @@ public class WandHudOverlay implements HudRenderCallback {
     private void drawPadlock(DrawContext context, int x, int y, int frameSize, int renderX, int renderY) {
         int padX = renderX + frameSize / 2;
         int padY = renderY + frameSize / 2;
-        context.fill(padX - 4, padY,     padX + 4, padY + 6, 0xFF666666); // body
-        context.fill(padX - 3, padY - 4, padX + 3, padY - 3, 0xFFAAAAAA); // shackle top
-        context.fill(padX - 3, padY - 3, padX - 2, padY,     0xFFAAAAAA); // shackle left
-        context.fill(padX + 2, padY - 3, padX + 3, padY,     0xFFAAAAAA); // shackle right
-        context.fill(padX - 1, padY + 2, padX + 1, padY + 4, 0xFF000000); // keyhole
+        context.fill(padX - 4, padY,     padX + 4, padY + 6, 0xFFAF8145); // body
+        context.fill(padX - 3, padY - 4, padX + 3, padY - 3, 0xFFE2C18A); // shackle top
+        context.fill(padX - 3, padY - 3, padX - 2, padY,     0xFFE2C18A); // shackle left
+        context.fill(padX + 2, padY - 3, padX + 3, padY,     0xFFE2C18A); // shackle right
+        context.fill(padX - 1, padY + 2, padX + 1, padY + 4, 0xFF30251E); // keyhole
     }
 
     // -----------------------------------------------------------------------
@@ -358,14 +381,14 @@ public class WandHudOverlay implements HudRenderCallback {
         Identifier glyph = FIRE_ABILITY_TEXTURES[Math.max(0, Math.min(slotIndex,
                 FIRE_ABILITY_TEXTURES.length - 1))];
         context.drawTexture(RenderPipelines.GUI_TEXTURED, glyph,
-                renderX + 4, renderY + 4, 0.0f, 0.0f,
-                28, 28, 32, 32, 32, 32);
+                renderX + 6, renderY + 6, 0.0f, 0.0f,
+                24, 24, 32, 32, 32, 32);
 
         // A restrained two-pixel pulse keeps a ready Fire slot alive without
         // obscuring its spell-specific glyph.
-        int pulse = (int) ((now * (0.55f + animation.speed)) % 24L);
+        int pulse = (int) ((now * (0.55f + animation.speed)) % 21L);
         int emberX = renderX + 6 + pulse;
-        context.fill(emberX, renderY + 30, emberX + 2, renderY + 32,
+        context.fill(emberX, renderY + 28, emberX + 2, renderY + 29,
                 scaledAlpha(0xCCFF9A32, animation.alpha));
     }
 
@@ -374,8 +397,8 @@ public class WandHudOverlay implements HudRenderCallback {
         Identifier glyph = NATURE_ABILITY_TEXTURES[Math.max(0, Math.min(slotIndex,
                 NATURE_ABILITY_TEXTURES.length - 1))];
         context.drawTexture(RenderPipelines.GUI_TEXTURED, glyph,
-                renderX + 4, renderY + 4, 0.0f, 0.0f,
-                28, 28, 32, 32, 32, 32);
+                renderX + 6, renderY + 6, 0.0f, 0.0f,
+                24, 24, 32, 32, 32, 32);
 
         int pollenCount = Math.max(2, Math.round(4 * animation.density));
         for (int i = 0; i < pollenCount; i++) {
@@ -390,13 +413,13 @@ public class WandHudOverlay implements HudRenderCallback {
         Identifier glyph = WIND_ABILITY_TEXTURES[Math.max(0, Math.min(slotIndex,
                 WIND_ABILITY_TEXTURES.length - 1))];
         context.drawTexture(RenderPipelines.GUI_TEXTURED, glyph,
-                renderX + 4, renderY + 4, 0.0f, 0.0f,
-                28, 28, 32, 32, 32, 32);
+                renderX + 6, renderY + 6, 0.0f, 0.0f,
+                24, 24, 32, 32, 32, 32);
 
         // A single pearl-white streamline supplies motion without turning the
         // icon cyan or covering the charge pips used by Waylay Dash.
-        int streamX = renderX + 5
-                + (int) ((now * (0.7f + animation.speed)) % 23L);
+        int streamX = renderX + 7
+                + (int) ((now * (0.7f + animation.speed)) % 20L);
         context.fill(streamX, renderY + 29, streamX + 3, renderY + 30,
                 scaledAlpha(0xB8F4F2EC, animation.alpha));
     }
@@ -406,14 +429,14 @@ public class WandHudOverlay implements HudRenderCallback {
         Identifier glyph = STONE_ABILITY_TEXTURES[Math.max(0, Math.min(slotIndex,
                 STONE_ABILITY_TEXTURES.length - 1))];
         context.drawTexture(RenderPipelines.GUI_TEXTURED, glyph,
-                renderX + 4, renderY + 4, 0.0f, 0.0f,
-                28, 28, 32, 32, 32, 32);
+                renderX + 6, renderY + 6, 0.0f, 0.0f,
+                24, 24, 32, 32, 32, 32);
 
         int dustCount = Math.max(2, Math.round(3 * animation.density));
         for (int i = 0; i < dustCount; i++) {
             int px = renderX + 9 + (int) ((now * (0.4f + animation.speed * 0.8f) + slotIndex * 5L + i * 9L) % 16L);
             int py = renderY + 23 + (i % 2);
-            context.fill(px, py, px + 1, py + 1, scaledAlpha(0xB0B69E83, animation.alpha));
+            context.fill(px, py, px + 1, py + 1, scaledAlpha(0xB0BDC8C4, animation.alpha));
         }
     }
 
@@ -434,15 +457,15 @@ public class WandHudOverlay implements HudRenderCallback {
         Identifier glyph = SPACE_ABILITY_TEXTURES[Math.max(0, Math.min(slotIndex,
                 SPACE_ABILITY_TEXTURES.length - 1))];
         context.drawTexture(RenderPipelines.GUI_TEXTURED, glyph,
-                renderX + 4, renderY + 4, 0.0f, 0.0f,
-                28, 28, 32, 32, 32, 32);
+                renderX + 6, renderY + 6, 0.0f, 0.0f,
+                24, 24, 32, 32, 32, 32);
 
         int centerX = renderX + (SLOT_SIZE / 2);
         int centerY = renderY + (SLOT_SIZE / 2);
         int orbitMotes = Math.max(2, Math.round(4 * animation.density));
         for (int i = 0; i < orbitMotes; i++) {
             double theta  = (now * (0.07 + animation.speed * 0.07)) + slotIndex * 0.9 + i * (Math.PI * 2.0 / orbitMotes);
-            double radius = 12.0 + (i % 2) * 2.0;
+            double radius = 10.0 + (i % 2);
             int px = centerX + (int) Math.round(Math.cos(theta) * radius);
             int py = centerY + (int) Math.round(Math.sin(theta * 1.2) * radius * 0.6);
             int color = (i % 2 == 0) ? scaledAlpha(0xCCB894FF, animation.alpha)
@@ -492,7 +515,7 @@ public class WandHudOverlay implements HudRenderCallback {
             case FIRE  -> 0xE0842C;
             case NATURE -> 0x7FD36B;
             case WIND  -> 0xEEEDE7;
-            case STONE -> 0xC6B79A;
+            case STONE -> 0xBCC7C3;
             case SPACE -> 0xB29DFF;
             case MANA  -> 0xAAAAAA;
             case ARCANE -> 0xD9D2AF;

@@ -76,6 +76,7 @@ public class ElementalWandsMod implements ModInitializer {
 
         TemporaryBlockManager.init();
         StoneAbilityHandler.init();
+        com.anton.elementalwands.util.StoneClusterManager.init();
         EntangleTracker.init();
         OvergrowthManager.init();
         SeedlingManager.init();
@@ -119,6 +120,8 @@ public class ElementalWandsMod implements ModInitializer {
         ModNetworking.registerPayloads();
         ModNetworking.registerC2SReceivers();
         ModWorldGen.registerAll();
+        com.anton.elementalwands.arena.GuardianArenaManager.init();
+        com.anton.elementalwands.church.GuardianChurchManager.init();
 
         // ── First-join starter kit ──────────────────────────────────────
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {

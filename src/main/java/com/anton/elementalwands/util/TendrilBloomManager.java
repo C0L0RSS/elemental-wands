@@ -68,6 +68,7 @@ public final class TendrilBloomManager {
     private static final class Bloom {
         final UUID casterUuid;
         final BlockPos center;
+        final Set<BlockPos> crushed = new HashSet<>();
         final int startTick;
         int currentRadius;
         int lastGrowthTick;
@@ -192,6 +193,9 @@ public final class TendrilBloomManager {
     }
 
     private static void spawnBloom(ServerWorld world, UUID casterUuid, BlockPos center, int now) {
+        BlockPos floor = SeedlingManager.findFloorNearY(world, center.getX(), center.getY(), center.getZ());
+        if (floor == null) return;
+        center = floor;
         Bloom b = new Bloom(casterUuid, center, now);
         b.currentRadius = 1;
         b.lastGrowthTick = now;
@@ -242,7 +246,7 @@ public final class TendrilBloomManager {
             List<BlockPos> ringCols = SeedlingManager.chebyshevRingColumns(b.center, b.currentRadius);
             int remainingLife = Math.max(20, BLOOM_LIFESPAN - age);
             SeedlingManager.PlacementResult result = SeedlingManager.placeVerdantGrowth(
-                    world, ringCols, b.placedPositions, remainingLife);
+                    world, ringCols.stream().filter(p -> !b.crushed.contains(p.up())).toList(), b.placedPositions, remainingLife);
             b.placedPositions.addAll(result.placed());
             for (Map.Entry<BlockPos, BlockState> e : result.originals().entrySet()) {
                 b.originals.putIfAbsent(e.getKey(), e.getValue());
@@ -270,6 +274,24 @@ public final class TendrilBloomManager {
         return false;
     }
 
+    public static void crushGrowth(ServerWorld world, java.util.function.Predicate<BlockPos> hit) {
+        List<Bloom> blooms = BLOOMS.get(world.getRegistryKey());
+        if (blooms != null) blooms.removeIf(b -> {
+            if (hit.test(b.center.up())) {
+                SeedlingManager.restoreBlocks(world, b.originals);
+                return true;
+            }
+            SeedlingManager.crushPositions(world, b.placedPositions, b.originals, b.crushed, hit);
+            return false;
+        });
+        List<Tendril> tendrils = TENDRILS.get(world.getRegistryKey());
+        if (tendrils != null) tendrils.removeIf(t -> {
+            if (!hit.test(BlockPos.ofFloored(t.currentHead))) return false;
+            SeedlingManager.restoreBlocks(world, t.originals);
+            return true;
+        });
+    }
+
     private static void applyBloomEffects(ServerWorld world, Bloom b, int now) {
         if (b.placedPositions.isEmpty()) return;
 
@@ -291,7 +313,7 @@ public final class TendrilBloomManager {
                 continue;
             }
 
-            e.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 40, 3, false, false, true));
+            EntangleTracker.applyNatureSlow(e, 40, 3);
 
             Integer lastTick = b.lastEntangleTickByEntity.get(e.getUuid());
             if (lastTick == null || now - lastTick >= BLOOM_ENTANGLE_INTERVAL) {

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the Raw Seismic Stone VFX package at final pixel resolution.
+"""Generate the Natural Gray Stone VFX package at final pixel resolution.
 
 Every texture is authored directly on its production grid.  Clustered shading,
 broken strata, mineral seams, chipped silhouettes, and sparse edge highlights
@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import math
 from pathlib import Path
 
@@ -21,22 +22,22 @@ ROOT = Path(__file__).resolve().parents[1]
 TEXTURES = ROOT / "src/main/resources/assets/elementalwands/textures"
 
 T = (0, 0, 0, 0)
-INK = (28, 30, 30, 255)
-RIFT = (39, 38, 35, 255)
-BEDROCK = (47, 51, 51, 255)
-SLATE_DARK = (58, 63, 64, 255)
-SLATE = (75, 81, 81, 255)
-SLATE_LIGHT = (96, 101, 97, 255)
-WARM_DARK = (77, 72, 65, 255)
-WARM = (104, 96, 83, 255)
-WARM_LIGHT = (132, 121, 99, 255)
-OCHRE_DARK = (116, 82, 39, 255)
-OCHRE = (164, 123, 58, 255)
-OCHRE_LIGHT = (203, 164, 88, 255)
-DUST_DARK = (121, 111, 94, 210)
-DUST = (174, 157, 127, 205)
-DUST_LIGHT = (213, 196, 157, 220)
-PALE = (232, 216, 172, 255)
+INK = (57, 62, 65, 255)
+RIFT = (70, 76, 79, 255)
+BEDROCK = (96, 103, 106, 255)
+SLATE_DARK = (119, 127, 130, 255)
+SLATE = (145, 153, 155, 255)
+SLATE_LIGHT = (182, 189, 188, 255)
+WARM_DARK = (112, 118, 117, 255)
+WARM = (151, 155, 149, 255)
+WARM_LIGHT = (192, 195, 186, 255)
+MINERAL_DARK = (126, 141, 132, 255)
+MINERAL = (164, 180, 167, 255)
+MINERAL_LIGHT = (198, 210, 196, 255)
+DUST_DARK = (128, 137, 139, 210)
+DUST = (172, 181, 181, 205)
+DUST_LIGHT = (210, 216, 212, 220)
+PALE = (222, 228, 224, 255)
 
 
 def canvas(size: int | tuple[int, int]) -> Image.Image:
@@ -84,20 +85,91 @@ def clustered_material(size: tuple[int, int], seed: int, palette, base) -> Image
 
 
 def make_spike_material() -> Image.Image:
-    image = clustered_material((16, 16), 17, (INK, SLATE_DARK, SLATE, WARM), BEDROCK)
+    image = stone_grain(16, 16, 17)
     draw = ImageDraw.Draw(image)
-    # Geological layers continue across model faces while chipped breaks keep it rough.
+    # Unequal overlapping rock facets, with discontinuous chipped strata.
+    poly(draw, [(0,0),(4,0),(3,4),(5,7),(3,10),(4,15),(0,15)], (108,114,113,255))
+    poly(draw, [(5,0),(10,0),(8,3),(9,6),(7,9),(8,12),(6,15),(4,15),(5,10),(4,6)], (163,168,164,255))
+    poly(draw, [(12,0),(15,0),(15,15),(11,15),(12,11),(10,8),(12,5)], (127,132,129,255))
     for points in (
-        [(0, 4), (4, 3), (8, 5), (12, 4), (15, 5)],
-        [(0, 9), (3, 10), (7, 8), (11, 10), (15, 9)],
-        [(0, 14), (5, 13), (10, 15), (15, 13)],
+        [(0,3),(2,3),(3,2),(5,2)], [(5,7),(7,7),(8,6),(10,6)],
+        [(0,12),(2,12),(3,11),(5,11)], [(9,13),(11,13),(12,12),(15,12)],
     ):
-        draw.line(points, fill=WARM_DARK, width=1)
-    draw.line([(2, 1), (5, 4), (4, 7), (8, 10), (7, 14)], fill=RIFT, width=2)
-    draw.line([(3, 1), (6, 4), (5, 7), (9, 10)], fill=OCHRE_DARK, width=1)
-    for x, y in ((1, 7), (11, 2), (13, 11), (4, 12), (9, 6)):
-        draw.rectangle((x, y, x + 1, y + 1), fill=OCHRE if (x + y) % 2 else WARM_LIGHT)
+        chipped_seam(draw, points)
+    draw.line([(10,0),(9,3),(10,5),(9,8),(10,10)], fill=(91,99,97,255))
+    draw.line([(11,1),(10,3),(11,5)], fill=(196,199,189,255))
+    draw.line((1,7,2,8), fill=(183,186,178,255))
+    draw.point((6,3), fill=MINERAL_LIGHT)
     return image
+
+
+def stone_grain(width: int, height: int, seed: int) -> Image.Image:
+    """Irregular, interlocking mineral grains on the native Minecraft pixel grid."""
+    image = canvas((width, height))
+    for y in range(height):
+        for x in range(width):
+            relief = rock_relief(x, y, seed)
+            image.putpixel((x, y), (141 + relief, 145 + relief, 141 + relief, 255))
+    return image
+
+
+# Hand-authored, offset clusters: varied widths and stepped boundaries replace
+# the previous repeated 3x2 rectangles. This is original artwork, not vanilla data.
+ROCK_GRAIN = (
+    "3344322333443223",
+    "4333223444332234",
+    "3322133453322344",
+    "2211233443223443",
+    "3223344332234332",
+    "4334433223343322",
+    "3443322134432213",
+    "3332211233321344",
+    "2233432232213443",
+    "2344433322344332",
+    "3343322443443223",
+    "4432213444332334",
+    "3322344333223444",
+    "2213443221334332",
+    "2334432212333221",
+    "3443322333442232",
+)
+
+
+def rock_relief(x: int, y: int, seed: int) -> int:
+    sx, sy = (x + seed * 7) % 16, (y + seed * 3) % 16
+    level = int(ROCK_GRAIN[sy][sx])
+    # Rare small pits and a contrasting lip give the mineral clusters depth.
+    value = pixel_hash(sx, sy, seed)
+    pit = -7 if value < 16 else 5 if value > 233 else 0
+    return (-36, -27, -13, 7, 25, 33)[level] + pit
+
+
+def chipped_seam(draw: ImageDraw.ImageDraw, points) -> None:
+    """Rock crevice with an irregular lower lip rather than an outlined rectangle."""
+    draw.line([(x, y + 1) for x, y in points], fill=(182,187,180,255))
+    draw.line(points, fill=(92,100,97,255))
+    x, y = points[len(points) // 2]
+    draw.point((x, y), fill=(116,124,120,255))
+
+
+def texture_carved_faces(image: Image.Image, seed: int) -> Image.Image:
+    """Grain within authored stone faces, preserving silhouettes and armor alpha."""
+    result = image.copy()
+    # Mineral glints, deepest joints, and dust retain their distinct purpose.
+    surfaces = {c[:3] for c in (BEDROCK, SLATE_DARK, SLATE, SLATE_LIGHT,
+                                 WARM_DARK, WARM, WARM_LIGHT)}
+    surfaces.update(((108,114,113),(163,168,164),(127,132,129)))
+    for y in range(image.height):
+        for x in range(image.width):
+            r, g, b, a = image.getpixel((x, y))
+            if a == 0 or (r, g, b) not in surfaces:
+                continue
+            relief = rock_relief(x, y, seed)
+            # Bevel highlights receive quieter wear; broad faces carry the grain.
+            if (r, g, b) in (SLATE_LIGHT[:3], WARM_LIGHT[:3]):
+                relief = round(relief * .55)
+            result.putpixel((x, y), (r + relief, g + relief, b + relief, a))
+    return result
 
 
 def make_fault_block() -> Image.Image:
@@ -111,8 +183,8 @@ def make_fault_block() -> Image.Image:
     )
     for crack in cracks:
         draw.line(crack, fill=alpha(INK, 225), width=3)
-        draw.line(crack[1:-1] if len(crack) > 2 else crack, fill=alpha(OCHRE_DARK, 240), width=1)
-    for x, y, color in ((8, 7, PALE), (5, 6, OCHRE), (10, 4, OCHRE_LIGHT), (3, 9, WARM_LIGHT)):
+        draw.line(crack[1:-1] if len(crack) > 2 else crack, fill=alpha(MINERAL_DARK, 240), width=1)
+    for x, y, color in ((8, 7, PALE), (5, 6, MINERAL), (10, 4, MINERAL_LIGHT), (3, 9, WARM_LIGHT)):
         draw.point((x, y), fill=alpha(color, 225))
     # Loose gravel clusters sit beside the crack instead of a flat glowing decal.
     for x, y in ((1, 8), (3, 12), (7, 12), (12, 10), (14, 6)):
@@ -122,25 +194,21 @@ def make_fault_block() -> Image.Image:
 
 
 def make_wall_material(ready: bool) -> Image.Image:
-    image = clustered_material((16, 16), 41 if ready else 37,
-                               (INK, SLATE_DARK, WARM_DARK, WARM), BEDROCK)
+    image = stone_grain(16, 16, 37)
     draw = ImageDraw.Draw(image)
-    # Three offset courses of broad interlocking slabs.
-    seams = [4, 9, 13]
-    for y in seams:
-        wobble = [(0, y), (4, y + (y % 2)), (8, y - 1), (12, y), (15, y - (y % 3 == 0))]
-        draw.line(wobble, fill=INK, width=1)
-        if y != 13:
-            draw.line([(x, min(15, py + 1)) for x, py in wobble[1:-1]], fill=SLATE_LIGHT, width=1)
-    for x, y0, y1 in ((5, 0, 4), (11, 4, 9), (3, 9, 13), (12, 13, 15)):
-        draw.line((x, y0, x + ((x + y0) % 2), y1), fill=RIFT, width=1)
-    # Material inclusions and chipped corners give the 16px tile a newer-block density.
-    for x, y, color in (
-        (1, 2, WARM_LIGHT), (2, 2, WARM), (8, 1, SLATE_LIGHT), (13, 3, OCHRE_DARK),
-        (7, 7, WARM_LIGHT), (14, 6, SLATE), (1, 11, SLATE_LIGHT), (8, 12, WARM),
-        (5, 15, OCHRE_DARK), (14, 14, WARM_LIGHT),
-    ):
-        draw.point((x, y), fill=color)
+    # Two hand-laid courses: chipped corners and unequal stone edges.
+    chipped_seam(draw, [(0,0),(4,0),(5,1),(8,1),(9,0),(15,0)])
+    chipped_seam(draw, [(0,8),(2,8),(3,7),(7,7),(8,8),(11,8),(12,7),(15,8)])
+    draw.line([(4,1),(4,4),(5,5),(5,6)], fill=(86,94,92,255))
+    draw.line([(5,2),(5,3),(6,5)], fill=(184,190,181,255))
+    draw.line([(12,9),(11,10),(11,13),(12,14),(12,15)], fill=(89,98,94,255))
+    draw.line([(13,9),(12,11),(12,12)], fill=(180,185,177,255))
+    # Broken internal ledges and small shadows are visible on each broad face.
+    chipped_seam(draw, [(7,4),(9,4),(10,3),(12,3)])
+    chipped_seam(draw, [(1,12),(3,12),(4,11),(6,11)])
+    draw.line((7,13,9,13), fill=(176,180,172,255))
+    draw.line((1,4,2,4), fill=(111,118,113,255))
+    draw.point((9,5), fill=MINERAL_LIGHT)
     if ready:
         cracks = (
             [(2, 0), (4, 3), (3, 6), (7, 8), (6, 12), (9, 15)],
@@ -148,30 +216,27 @@ def make_wall_material(ready: bool) -> Image.Image:
             [(7, 8), (11, 9), (13, 12), (15, 12)],
         )
         for crack in cracks:
-            draw.line(crack, fill=INK, width=2)
-            draw.line(crack[1:-1], fill=OCHRE_DARK, width=1)
+            draw.line([(x + 1, y) for x, y in crack], fill=SLATE_LIGHT, width=1)
+            draw.line(crack, fill=RIFT, width=1)
         for x, y in ((4, 3), (7, 8), (11, 9), (6, 12)):
-            draw.point((x, y), fill=OCHRE_LIGHT)
+            draw.point((x, y), fill=MINERAL_LIGHT)
     return image
 
 
 def make_titan_dome_material() -> Image.Image:
-    image = clustered_material((16, 16), 83, (INK, BEDROCK, SLATE_DARK, WARM_DARK), RIFT)
+    image = stone_grain(16, 16, 83)
     draw = ImageDraw.Draw(image)
-    plates = (
-        [(0, 0), (7, 0), (6, 5), (1, 6)],
-        [(8, 0), (15, 0), (15, 5), (11, 6), (7, 4)],
-        [(0, 7), (5, 5), (10, 7), (9, 12), (3, 11)],
-        [(11, 7), (15, 6), (15, 14), (10, 12)],
-        [(0, 12), (6, 11), (10, 15), (0, 15)],
-    )
-    for plate in plates:
-        draw.line(plate + [plate[0]], fill=INK, width=1)
-    draw.line([(0, 8), (4, 9), (7, 7), (10, 10), (15, 9)], fill=OCHRE_DARK, width=1)
-    for x, y in ((1, 1), (5, 2), (10, 2), (13, 4), (3, 8), (7, 9), (12, 9), (5, 13), (13, 14)):
-        draw.rectangle((x, y, min(15, x + 1), y), fill=SLATE_LIGHT if (x + y) % 3 else WARM_LIGHT)
-    for x, y in ((4, 9), (7, 7), (10, 10)):
-        draw.point((x, y), fill=OCHRE)
+    # A weathered dressed block: broken rim and deep, layered natural stone face.
+    draw.line([(0,14),(0,3),(1,2),(1,0),(10,0),(11,1),(14,1)], fill=(189,193,184,255))
+    draw.line([(1,15),(7,15),(8,14),(13,14),(14,13),(15,13),(15,2)], fill=(85,94,90,255))
+    draw.line([(2,3),(4,2),(8,2),(9,3)], fill=(171,177,167,255))
+    chipped_seam(draw, [(2,6),(4,6),(5,5),(8,5),(9,6),(12,6)])
+    chipped_seam(draw, [(3,11),(5,10),(8,10),(9,11),(12,10)])
+    draw.line([(11,0),(10,2),(11,4),(10,6),(11,8)], fill=(91,100,95,255))
+    draw.line([(12,2),(12,4),(11,5)], fill=(186,191,180,255))
+    draw.line((3,8,4,8), fill=(193,197,186,255))
+    draw.line((7,12,9,12), fill=(117,126,118,255))
+    draw.point((6,4), fill=MINERAL_LIGHT)
     return image
 
 
@@ -208,14 +273,14 @@ def make_shard(frame: int) -> Image.Image:
         [(5, 2), (12, 2), (14, 9), (9, 15), (3, 12), (2, 6)],
         [(4, 1), (10, 3), (14, 8), (11, 14), (5, 15), (1, 8)],
     )[frame]
-    poly(draw, shapes, alpha(INK, 245 - frame * 8))
+    poly(draw, shapes, alpha(SLATE_DARK, 245 - frame * 8))
     inset = [(round(8 + (x - 8) * 0.72), round(8 + (y - 8) * 0.72)) for x, y in shapes]
-    poly(draw, inset, alpha(SLATE_DARK if frame % 2 else WARM_DARK, 250 - frame * 8))
+    poly(draw, inset, alpha(SLATE if frame % 2 else WARM, 250 - frame * 8))
     light_face = [inset[0], inset[1], inset[2], (8, 8)]
     poly(draw, light_face, alpha(SLATE_LIGHT, 235 - frame * 8))
-    draw.line((inset[0], (8, 8), inset[3]), fill=alpha(RIFT, 245 - frame * 8), width=1)
-    draw.line((inset[5], (8, 8), inset[2]), fill=alpha(OCHRE_DARK, 225 - frame * 8), width=1)
-    draw.point((8, 8), fill=alpha(OCHRE_LIGHT, 235 - frame * 8))
+    draw.line((inset[0], (8, 8), inset[3]), fill=alpha(BEDROCK, 245 - frame * 8), width=1)
+    draw.line((inset[5], (8, 8), inset[2]), fill=alpha(SLATE_DARK, 225 - frame * 8), width=1)
+    draw.point((8, 8), fill=alpha(MINERAL_LIGHT, 235 - frame * 8))
     for x, y in ((2 + frame, 13 - frame // 2), (13 - frame // 2, 2 + frame)):
         if 0 <= x < 16 and 0 <= y < 16:
             draw.point((x, y), fill=alpha(DUST_LIGHT, 160))
@@ -233,13 +298,13 @@ def radial_crack(draw: ImageDraw.ImageDraw, center, angle: float, length: float,
         points.append((round(cx + math.cos(local_angle) * distance),
                        round(cy + math.sin(local_angle) * distance)))
     draw.line(points, fill=alpha(INK, 230 - frame * 14), width=3 if frame < 3 else 2)
-    draw.line(points[1:-1], fill=alpha(OCHRE_DARK, 230 - frame * 16), width=1)
+    draw.line(points[1:-1], fill=alpha(MINERAL_DARK, 230 - frame * 16), width=1)
     if len(points) > 3:
         bx, by = points[len(points) // 2]
         branch_angle = angle + (-1 if branch % 2 else 1) * 0.7
         end = (round(bx + math.cos(branch_angle) * (3 + frame // 2)),
                round(by + math.sin(branch_angle) * (3 + frame // 2)))
-        draw.line((bx, by, end[0], end[1]), fill=alpha(OCHRE_DARK, 190 - frame * 10), width=1)
+        draw.line((bx, by, end[0], end[1]), fill=alpha(MINERAL_DARK, 190 - frame * 10), width=1)
 
 
 def make_fault(frame: int) -> Image.Image:
@@ -253,7 +318,7 @@ def make_fault(frame: int) -> Image.Image:
         radial_crack(draw, center, angle, length + ((branch * 3 + frame) % 4), frame, branch)
     if frame < 4:
         poly(draw, [(13, 16), (16, 12), (19, 16), (16, 20)], alpha(RIFT, 230 - frame * 25))
-        draw.rectangle((15, 14, 16, 17), fill=alpha(OCHRE_LIGHT, 225 - frame * 22))
+        draw.rectangle((15, 14, 16, 17), fill=alpha(MINERAL_LIGHT, 225 - frame * 22))
         draw.point((15, 15), fill=alpha(PALE, 220 - frame * 22))
     for index in range(7):
         angle = index / 7 * math.tau + frame * 0.4
@@ -262,7 +327,7 @@ def make_fault(frame: int) -> Image.Image:
         y = round(16 + math.sin(angle) * radius)
         if 1 <= x < 31 and 1 <= y < 31:
             draw.rectangle((x, y, x + (index % 2), y + ((index + 1) % 2)),
-                           fill=alpha(WARM_LIGHT if index % 3 else OCHRE, 190 - frame * 15))
+                           fill=alpha(WARM_LIGHT if index % 3 else MINERAL, 190 - frame * 15))
     return image
 
 
@@ -304,237 +369,167 @@ def make_shockwave(frame: int) -> Image.Image:
 def make_titan(frame: int) -> Image.Image:
     image = canvas(64)
     draw = ImageDraw.Draw(image)
-    fade = 255 if frame < 5 else 255 - (frame - 4) * 42
-    cx = 31.5
-    ground = 54
-    # A broad mountain silhouette forms from separate strata and becomes a horned helm.
-    silhouette = [
-        (5, ground), (8, 45), (15, 42), (18, 31), (24, 34), (28, 17),
-        (32, 9), (36, 18), (40, 31), (46, 27), (49, 40), (57, 44), (60, ground),
-    ]
-    assembly = min(1.0, (frame + 1) / 4.0)
-    formed = []
-    for index, (x, y) in enumerate(silhouette):
-        drift = (1.0 - assembly) * (10 + (index * 7 % 12))
-        direction = -1 if x < cx else 1
-        formed.append((x + direction * drift, y + (1.0 - assembly) * (index % 4) * 3))
-    poly(draw, formed + [(60, 58), (4, 58)], alpha(INK, fade))
-    inner = [(9, 53), (13, 46), (20, 43), (22, 34), (28, 37), (31, 18),
-             (34, 24), (38, 37), (45, 33), (47, 44), (55, 47), (57, 53)]
-    inner_formed = []
-    for index, (x, y) in enumerate(inner):
-        drift = (1.0 - assembly) * (7 + (index * 5 % 9))
-        inner_formed.append((x + (-drift if x < cx else drift), y))
-    poly(draw, inner_formed + [(56, 56), (8, 56)], alpha(BEDROCK, fade))
-    # Layered basalt armor plates.
-    for y, left, right, offset in ((46, 10, 55, 0), (39, 17, 49, 2), (33, 22, 44, -1), (27, 26, 39, 1)):
-        if assembly < 0.35 and y < 40:
-            continue
-        draw.line((left + offset, y, right + offset, y + (frame + y) % 2),
-                  fill=alpha(WARM_DARK, fade), width=3)
-        draw.line((left + offset + 2, y - 1, right + offset - 3, y),
-                  fill=alpha(SLATE_LIGHT, fade), width=1)
-    # Helm brow, cheek plates, and narrow ochre fault visor.
-    if frame >= 2:
-        poly(draw, [(24, 24), (31, 19), (40, 25), (37, 34), (32, 38), (26, 34)], alpha(RIFT, fade))
-        poly(draw, [(26, 25), (31, 22), (38, 26), (35, 31), (32, 34), (28, 31)], alpha(SLATE_DARK, fade))
-        draw.line((27, 28, 31, 27, 36, 29), fill=alpha(OCHRE_DARK, fade), width=3)
-        draw.line((29, 28, 31, 28, 35, 29), fill=alpha(OCHRE_LIGHT, fade), width=1)
-        poly(draw, [(24, 26), (19, 18), (20, 31)], alpha(WARM_DARK, fade))
-        poly(draw, [(39, 27), (45, 18), (43, 32)], alpha(WARM_DARK, fade))
-    # Fractures and mineral inclusions stay sparse so Stone never looks like a glowing spell.
-    cracks = (
-        [(14, 49), (21, 46), (24, 40), (30, 38)],
-        [(50, 47), (45, 43), (42, 37), (36, 35)],
-        [(31, 53), (29, 47), (33, 43), (31, 38)],
-    )
-    for index, crack in enumerate(cracks):
-        shifted = [(x + ((frame + index) % 3) - 1, y) for x, y in crack]
-        draw.line(shifted, fill=alpha(RIFT, fade), width=2)
-        draw.line(shifted[1:-1], fill=alpha(OCHRE_DARK, max(0, fade - 20)), width=1)
-    # Detached slabs move inward during assembly and outward during the final crumble.
-    for index in range(12):
-        angle = index / 12 * math.tau + frame * 0.23
-        if frame < 4:
-            radius = 25 - frame * 4 + index % 3
-        else:
-            radius = 9 + (frame - 4) * 5 + index % 4
-        x = round(cx + math.cos(angle) * radius)
-        y = round(35 + math.sin(angle) * radius * 0.65)
-        size = 2 + (index + frame) % 3
-        poly(draw, [(x - size, y), (x, y - size), (x + size, y - 1), (x + 1, y + size)],
-             alpha(INK, max(45, fade - 20)))
-        poly(draw, [(x - size + 1, y), (x, y - size + 1), (x + size - 1, y - 1), (x, y + size - 1)],
-             alpha(WARM if index % 2 else SLATE, max(40, fade - 25)))
+    fade = 250 if frame < 4 else 250 - (frame - 3) * 43
+    # Separate carved fragments converge, then crumble outward. No floating face icon.
+    for index in range(9):
+        angle = index / 9 * math.tau + frame * .13
+        radius = 24 - frame * 3 if frame < 4 else 14 + (frame - 4) * 4
+        x = round(31 + math.cos(angle) * radius)
+        y = round(32 + math.sin(angle) * radius * .68 - (index % 3) * 3)
+        w = 4 + index % 3
+        h = 5 + (index * 3) % 5
+        poly(draw, [(x-w,y-h), (x+w-2,y-h-2), (x+w,y-h), (x,y-h+2)], alpha(SLATE_LIGHT, fade))
+        poly(draw, [(x-w,y-h), (x,y-h+2), (x,y+h), (x-w,y+h-2)], alpha(SLATE, fade))
+        poly(draw, [(x,y-h+2), (x+w,y-h), (x+w-1,y+h-2), (x,y+h)], alpha(SLATE_DARK, fade))
+        draw.line((x-w+1,y-h+2,x-w+1,y+h-3), fill=alpha(WARM_LIGHT, fade))
+        draw.line([(x+1,y-1), (x+3,y), (x+2,y+2)], fill=alpha(BEDROCK, fade))
         if index % 3 == 0:
-            draw.point((x, y - 1), fill=alpha(OCHRE, max(35, fade - 10)))
+            draw.point((x-2,y-1), fill=alpha(MINERAL_LIGHT, fade))
+        draw.point((max(0,x-w-2),min(63,y+h+3)), fill=alpha(DUST_LIGHT, max(0,fade-60)))
     return image
 
 
 def make_titan_sword() -> Image.Image:
     image = canvas(32)
     draw = ImageDraw.Draw(image)
-    # Massive asymmetrical slab blade, broad enough to read as a transformed weapon.
-    outline = [(4, 28), (7, 31), (11, 26), (15, 25), (28, 9), (29, 3), (24, 2),
-               (9, 17), (8, 22), (3, 26)]
-    poly(draw, outline, INK)
-    blade = [(9, 25), (14, 23), (27, 8), (27, 4), (24, 4), (11, 18), (10, 22)]
-    poly(draw, blade, SLATE_DARK)
-    poly(draw, [(12, 22), (16, 21), (26, 8), (26, 5), (23, 7), (13, 19)], SLATE)
-    draw.line((14, 22, 25, 7), fill=SLATE_LIGHT, width=2)
-    draw.line((12, 23, 24, 8), fill=WARM_LIGHT, width=1)
-    draw.line((22, 5, 26, 6), fill=OCHRE_DARK, width=2)
-    draw.line((17, 15, 20, 16, 22, 12), fill=RIFT, width=2)
-    draw.line((18, 15, 20, 16, 22, 13), fill=OCHRE, width=1)
-    # Tiered stone guard and wrapped grip use multiple clusters at item scale.
-    poly(draw, [(6, 19), (10, 17), (16, 23), (14, 27)], INK)
-    poly(draw, [(8, 20), (10, 19), (14, 23), (13, 25)], WARM)
-    draw.line((7, 21, 13, 26), fill=OCHRE_DARK, width=1)
-    draw.line((6, 24, 10, 28), fill=WARM_DARK, width=4)
-    draw.line((6, 24, 9, 27), fill=WARM_LIGHT, width=1)
-    poly(draw, [(3, 26), (6, 24), (10, 28), (8, 31), (5, 31)], INK)
-    draw.rectangle((5, 27, 7, 29), fill=OCHRE_DARK)
-    draw.point((6, 27), fill=OCHRE_LIGHT)
-    for x, y in ((21, 9), (17, 18), (12, 21), (25, 6)):
-        draw.point((x, y), fill=PALE if (x + y) % 2 else WARM_LIGHT)
+    # Honed broad stone blade, stepped chips, shaded ridge and a distinct grip.
+    blade = [(10, 18), (24, 3), (30, 1), (29, 7), (24, 12),
+             (23, 12), (23, 14), (16, 21), (13, 21)]
+    poly(draw, blade, BEDROCK)
+    poly(draw, [(11, 18), (24, 4), (29, 2), (27, 7), (14, 20)], SLATE)
+    poly(draw, [(14, 20), (27, 7), (28, 6), (27, 9), (16, 21)], SLATE_DARK)
+    draw.line([(11, 18), (24, 4), (29, 2)], fill=SLATE_LIGHT, width=1)
+    draw.line([(13, 18), (26, 5)], fill=(166, 175, 175, 255), width=1)
+    draw.line([(18, 13), (20, 13), (20, 15)], fill=BEDROCK)
+    draw.point((19, 12), fill=MINERAL_LIGHT)
+    draw.line((23, 7, 24, 7), fill=MINERAL_DARK)
+    draw.line((25, 5, 27, 3), fill=PALE)
+    # Wide facets and interrupted chips keep the blade stone instead of steel.
+    draw.line([(14,17),(16,17),(17,15),(19,15),(20,13),(22,11),(23,11)],
+              fill=(101,110,104,255))
+    draw.line([(15,16),(17,14),(19,14)], fill=(185,191,180,255))
+    draw.line([(21,8),(23,8),(24,6)], fill=(114,123,114,255))
+    draw.line((12,18,13,19), fill=(95,105,97,255))
+    draw.point((17,11), fill=(122,131,121,255))
+    poly(draw, [(7, 17), (9, 16), (18, 25), (17, 27), (14, 24), (12, 23), (9, 20)], BEDROCK)
+    draw.line([(8, 17), (11, 19), (14, 22), (17, 25)], fill=SLATE_LIGHT, width=2)
+    draw.line((5, 28, 11, 22), fill=INK, width=4)
+    draw.line((5, 27, 10, 22), fill=SLATE_DARK, width=1)
+    for x, y in ((6, 27), (8, 25), (10, 23)):
+        draw.line((x - 1, y - 1, x + 1, y + 1), fill=BEDROCK)
+    poly(draw, [(2, 28), (4, 26), (8, 30), (6, 31), (4, 31)], SLATE_DARK)
+    draw.line((3, 28, 5, 30), fill=SLATE_LIGHT)
     return image
 
 
-HUMANOID_MASK = (
-    "........########................................................",
-    "........########................................................",
-    "........########................................................",
-    "........########................................................",
-    "........########................................................",
-    "........########................................................",
-    "........########................................................",
-    "........########................................................",
-    "################################................................",
-    "################################................................",
-    "################################................................",
-    "#########..##..#################................................",
-    "####..###..##..###..############................................",
-    ".......##......##.......########................................",
-    ".......###....###.........####..................................",
-    ".......###....###...............................................",
-    "........####................................####................",
-    "........####................................####................",
-    "........####................................####................",
-    "........####................................####................",
-    "................######....##############################........",
-    "................######....##############################........",
-    "................#######..###############################........",
-    "................########################################........",
-    "................########################################........",
-    "................#################################..#####........",
-    "...######.......########################.##.#.#......#..........",
-    "########################################........................",
-    "########################################........................",
-    "################....########....########........................",
-    "################.....######......######.........................",
-    "################......####........####..........................",
-)
-
-LEGGINGS_MASK = (
-    "................................................................",
-    "................................................................",
-    "................................................................",
-    "................................................................",
-    "................................................................",
-    "................................................................",
-    "................................................................",
-    "................................................................",
-    "................................................................",
-    "................................................................",
-    "................................................................",
-    "................................................................",
-    "................................................................",
-    "................................................................",
-    "................................................................",
-    "................................................................",
-    "....####........................................................",
-    "....####........................................................",
-    "....####........................................................",
-    "....####........................................................",
-    "################................................................",
-    "################................................................",
-    "################................................................",
-    "################................................................",
-    "################................................................",
-    "################................................................",
-    "################................................................",
-    "##################....####....##########........................",
-    "########################################........................",
-    "................########################........................",
-    "................########################........................",
-    "................########################........................",
-)
-
-
-def make_armor(mask: tuple[str, ...], seed: int) -> Image.Image:
+def make_armor(leggings: bool) -> Image.Image:
+    """Author each vanilla armor UV face separately; no random holes at seams."""
     image = canvas((64, 32))
-    pixels = image.load()
-    palette = (INK, BEDROCK, SLATE_DARK, WARM_DARK, SLATE, WARM)
-    for y, row in enumerate(mask):
-        for x, marker in enumerate(row):
-            if marker != "#":
-                continue
-            value = pixel_hash(x // 2, y // 2, seed)
-            color = palette[min(len(palette) - 1, value * len(palette) // 256)]
-            # Dark external edges give each UV island a carved plate silhouette.
-            edge = any(
-                yy < 0 or yy >= 32 or xx < 0 or xx >= 64 or mask[yy][xx] != "#"
-                for xx, yy in ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1))
-            )
-            if edge:
-                color = INK if (x + y + seed) % 5 else OCHRE_DARK
-            elif (x + y * 3 + seed) % 13 == 0:
-                color = SLATE_LIGHT
-            elif (x * 5 + y + seed) % 19 == 0:
-                color = WARM_LIGHT
-            pixels[x, y] = color
+
+    def plate(x, y, w, h, seed, edge=True):
+        face = stone_grain(w, h, seed)
+        d = ImageDraw.Draw(face)
+        if edge:
+            d.line((0, 0, w - 1, 0), fill=SLATE_LIGHT)
+            d.line((0, 1, 0, h - 1), fill=SLATE_DARK)
+            d.line((1, h - 1, w - 1, h - 1), fill=BEDROCK)
+            d.point((w - 1, 0), fill=WARM_LIGHT)
+        if w >= 4 and h >= 5:
+            # Directional face shading, chipped rim and small fracture pockets.
+            for yy in range(1,h-1):
+                for xx in range(1,w-1):
+                    r,g,b,a = face.getpixel((xx,yy))
+                    shade = -15 if xx >= w-2 else 9 if xx == 1 else 0
+                    face.putpixel((xx,yy),(r+shade,g+shade,b+shade,a))
+            d.line([(w-2,1),(w-2,2),(w-3,3),(w-3,4)], fill=(92,102,95,255))
+            d.point((w-2,3), fill=(191,197,184,255))
+            d.point((1,h-2), fill=(100,112,101,255))
+            d.point((w-1,1), fill=(121,130,120,255))
+            if w >= 8:
+                chipped_seam(d, [(2,h-4),(3,h-4),(4,h-5),(5,h-5)])
+        image.alpha_composite(face, (x, y))
+
     draw = ImageDraw.Draw(image)
-    # Sparse stratified seams and rivets are clipped back through the armor mask.
-    overlay = canvas((64, 32))
-    overlay_draw = ImageDraw.Draw(overlay)
-    for y in (3, 10, 14, 22, 26, 29):
-        overlay_draw.line((0, y, 55, y + (y % 2)), fill=OCHRE_DARK, width=1)
-    for x, y in ((9, 2), (14, 5), (3, 9), (20, 10), (27, 13), (10, 21), (24, 24),
-                 (35, 22), (49, 25), (5, 28), (18, 30), (34, 29)):
-        overlay_draw.point((x, y), fill=OCHRE_LIGHT)
-        if x + 1 < 64:
-            overlay_draw.point((x + 1, y), fill=RIFT)
-    mask_image = Image.new("L", (64, 32), 0)
-    mask_pixels = mask_image.load()
-    for y, row in enumerate(mask):
-        for x, marker in enumerate(row):
-            if marker == "#":
-                mask_pixels[x, y] = 255
-    image.alpha_composite(Image.composite(overlay, canvas((64, 32)), mask_image))
+    if leggings:
+        # Full trouser faces with aligned knee plates and darker articulated joints.
+        plate(4, 16, 4, 4, 11)
+        plate(8, 16, 4, 4, 12)
+        for i in range(4):
+            plate(i * 4, 20, 4, 12, 20 + i)
+            draw.line((i * 4, 24, i * 4 + 3, 24), fill=BEDROCK)
+            draw.line((i * 4, 28, i * 4 + 3, 28), fill=BEDROCK)
+            draw.line((i * 4 + 1, 25, i * 4 + 3, 25), fill=SLATE_LIGHT)
+        for x, w in ((16, 4), (20, 8), (28, 4), (32, 8)):
+            plate(x, 28, w, 4, 40 + x)
+        draw.line((16, 28, 39, 28), fill=RIFT)
+        draw.rectangle((23, 28, 24, 30), fill=SLATE_LIGHT)
+    else:
+        # Helmet: complete top, underside and sides, with a deliberate front visor.
+        plate(8, 0, 8, 8, 1)
+        plate(16, 0, 8, 8, 2)
+        for i in range(4):
+            plate(i * 8, 8, 8, 8, 3 + i)
+        draw.rectangle((9, 11, 14, 12), fill=T)
+        draw.rectangle((11, 13, 12, 15), fill=T)
+        draw.line((9, 10, 14, 10), fill=SLATE_LIGHT)
+        draw.line((10, 13, 10, 15), fill=SLATE_LIGHT)
+        draw.line((13, 13, 13, 15), fill=BEDROCK)
+        # Chest: shoulder deck, front breastplate, side plates and back.
+        plate(20, 16, 8, 4, 13)
+        plate(28, 16, 8, 4, 14)
+        for x, w in ((16, 4), (20, 8), (28, 4), (32, 8)):
+            plate(x, 20, w, 12, 50 + x)
+            draw.line((x, 27, x + w - 1, 27), fill=BEDROCK)
+            draw.line((x + 1, 28, x + w - 1, 28), fill=SLATE_LIGHT)
+        draw.line([(20, 20), (22, 22), (25, 22), (27, 20)], fill=BEDROCK)
+        draw.line((23, 23, 23, 26), fill=SLATE_LIGHT)
+        draw.point((24, 24), fill=MINERAL_LIGHT)
+        # Two raised breastplate facets with a recessed central join.
+        draw.line([(21,23),(22,24),(22,26)], fill=(194,200,185,255))
+        draw.line([(25,23),(25,25),(24,26)], fill=(91,104,94,255))
+        draw.point((26,25), fill=(180,189,174,255))
+        # Shoulder cap / elbow seam / gauntlet, continuous across all four faces.
+        plate(44, 16, 4, 4, 18)
+        plate(48, 16, 4, 4, 19)
+        for i in range(4):
+            x = 40 + i * 4
+            plate(x, 20, 4, 12, 70 + i)
+            draw.line((x, 24, x + 3, 24), fill=BEDROCK)
+            draw.line((x, 26, x + 3, 26), fill=RIFT)
+            draw.line((x, 27, x + 3, 27), fill=SLATE_LIGHT)
+        # Boots occupy the bottom five pixels of each leg face.
+        for i in range(4):
+            plate(i * 4, 27, 4, 5, 80 + i)
+            draw.line((i * 4, 31, i * 4 + 3, 31), fill=RIFT)
+        plate(8, 16, 4, 4, 90)
     return image
 
 
 def make_primary_icon() -> Image.Image:
+    """Render the actual gathered-mass mesh silhouette on the 32px HUD grid."""
+    data = json.loads((ROOT / "src/main/resources/assets/elementalwands/models/entity/stone_cluster.json").read_text())
     image = canvas(32)
     draw = ImageDraw.Draw(image)
-    # Cross-section of a fault with three differently tiered teeth.
-    poly(draw, [(2, 26), (5, 21), (9, 22), (12, 17), (17, 19), (21, 14),
-                (26, 17), (30, 13), (30, 29), (2, 29)], INK)
-    poly(draw, [(4, 26), (6, 23), (10, 24), (13, 20), (17, 21), (21, 17),
-                (26, 19), (28, 17), (28, 27), (4, 27)], WARM_DARK)
-    for points, face in (
-        ([(5, 23), (8, 13), (11, 8), (13, 22)], SLATE),
-        ([(13, 20), (16, 7), (19, 3), (21, 18)], WARM),
-        ([(21, 17), (24, 10), (27, 7), (28, 18)], SLATE_DARK),
-    ):
-        poly(draw, points, INK)
-        inset = [(x + (1 if x < sum(px for px, _ in points) / len(points) else -1), y + 1)
-                 for x, y in points]
-        poly(draw, inset, face)
-    draw.line((3, 25, 8, 23, 13, 25, 18, 21, 24, 23, 29, 19), fill=OCHRE_DARK, width=2)
-    draw.line((5, 25, 9, 24, 13, 25, 18, 22, 24, 23), fill=OCHRE_LIGHT, width=1)
-    for x, y in ((9, 15), (11, 20), (17, 9), (18, 15), (25, 12), (26, 16)):
-        draw.point((x, y), fill=SLATE_LIGHT if x % 2 else WARM_LIGHT)
+    faces = []
+    for part in data["parts"]:
+        for face in part["faces"]:
+            points = []
+            for x, y, z in face["positions"]:
+                x, z = x * .825 - z * .565, x * .565 + z * .825
+                y, z = y * .955 - z * .296, y * .296 + z * .955
+                points.append((x, y, z))
+            a, b, c = points[:3]
+            u = [b[i]-a[i] for i in range(3)]
+            v = [c[i]-a[i] for i in range(3)]
+            normal = (u[1]*v[2]-u[2]*v[1], u[2]*v[0]-u[0]*v[2], u[0]*v[1]-u[1]*v[0])
+            if normal[2] <= 0: continue
+            length = math.sqrt(sum(n*n for n in normal))
+            light = normal[1] / length
+            color = SLATE_LIGHT if light > .35 else SLATE if light > -.2 else BEDROCK
+            faces.append((sum(p[2] for p in points)/len(points),
+                          [(15.5+x*16,15.5-y*16) for x,y,z in points],color))
+    for _, points, color in sorted(faces, key=lambda f:f[0]):
+        poly(draw, points, color)
     return image
 
 
@@ -554,10 +549,10 @@ def make_secondary_icon() -> Image.Image:
             draw.point((x0 + 2, y1 - 1), fill=WARM_LIGHT)
     crack = [(9, 5), (12, 11), (10, 16), (16, 19), (14, 27)]
     draw.line(crack, fill=INK, width=3)
-    draw.line(crack[1:-1], fill=OCHRE_DARK, width=1)
-    draw.line((12, 11, 18, 10, 23, 12), fill=OCHRE_DARK, width=1)
+    draw.line(crack[1:-1], fill=MINERAL_DARK, width=1)
+    draw.line((12, 11, 18, 10, 23, 12), fill=MINERAL_DARK, width=1)
     for x, y in ((12, 11), (10, 16), (16, 19)):
-        draw.point((x, y), fill=OCHRE_LIGHT)
+        draw.point((x, y), fill=MINERAL_LIGHT)
     return image
 
 
@@ -575,8 +570,8 @@ def make_ultimate_icon() -> Image.Image:
     poly(draw, [(12, 16), (16, 13), (21, 17), (19, 23), (16, 26), (13, 23)], SLATE_DARK)
     poly(draw, [(10, 17), (7, 11), (8, 20)], WARM_DARK)
     poly(draw, [(22, 17), (26, 11), (24, 21)], WARM_DARK)
-    draw.line((12, 19, 16, 18, 20, 20), fill=OCHRE_DARK, width=3)
-    draw.line((14, 19, 16, 19, 19, 20), fill=OCHRE_LIGHT, width=1)
+    draw.line((12, 19, 16, 18, 20, 20), fill=MINERAL_DARK, width=3)
+    draw.line((14, 19, 16, 19, 19, 20), fill=MINERAL_LIGHT, width=1)
     for x, y in ((6, 17), (11, 12), (20, 11), (26, 17), (16, 7), (14, 24), (19, 23)):
         draw.point((x, y), fill=WARM_LIGHT if x % 2 else SLATE_LIGHT)
     return image
@@ -599,13 +594,20 @@ def output_map() -> dict[Path, Image.Image]:
         TEXTURES / "block/stone_wall_ready.png": make_wall_material(True),
         TEXTURES / "block/titan_dome.png": make_titan_dome_material(),
         TEXTURES / "item/titan_sword.png": make_titan_sword(),
-        TEXTURES / "entity/equipment/humanoid/titan_armor.png": make_armor(HUMANOID_MASK, 137),
-        TEXTURES / "entity/equipment/humanoid_leggings/titan_armor.png": make_armor(LEGGINGS_MASK, 149),
+        TEXTURES / "entity/equipment/humanoid/titan_armor.png": make_armor(False),
+        TEXTURES / "entity/equipment/humanoid_leggings/titan_armor.png": make_armor(True),
         TEXTURES / "gui/ability/stone_primary.png": make_primary_icon(),
         TEXTURES / "gui/ability/stone_secondary.png": make_secondary_icon(),
         TEXTURES / "gui/ability/stone_ultimate.png": make_ultimate_icon(),
     })
-    return generated
+    finished = {}
+    for path, image in generated.items():
+        # Ready cracks sit over the exact same textured wall; animation families
+        # use stable grain so surface detail does not randomly shimmer each frame.
+        family = path.stem.replace("_ready", "").rstrip("_0123456789")
+        seed = sum(family.encode("ascii"))
+        finished[path] = texture_carved_faces(image, seed)
+    return finished
 
 
 def validate(path: Path, expected: Image.Image) -> tuple[int, tuple[int, int, int, int], str]:

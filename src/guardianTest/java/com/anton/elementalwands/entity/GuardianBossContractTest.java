@@ -36,12 +36,12 @@ final class GuardianBossContractTest {
         var leapCooling = new EnumMap<Attack,Long>(Attack.class);
         leapCooling.put(Attack.LEAP,200L);
         require(choose(players,leapCooling,100,Attack.THROW)==Attack.SHOCKWAVE,"Wave was starved while leap cooled down");
-        var far = List.of(new Candidate(a, 30, true));
+        var far = List.of(new Candidate(a, 40, true));
         ready.put(Attack.THROW, 200L);
         ready.put(Attack.LEAP, 300L);
         require(choose(far, ready, 199, Attack.THROW) == null, "Distant throw skipped cooldown");
         require(choose(far, ready, 200, Attack.THROW) == Attack.THROW, "Distant solo encounter deadlocked");
-        require(healthForParty(1)==200 && healthForParty(3)==400 && healthForParty(8)==600, "Party scaling bounds changed");
+        require(healthForParty(1)==600 && healthForParty(3)==1500 && healthForParty(5)==2400 && healthForParty(8)==3750, "Party scaling bounds changed");
         Vec3d center = Vec3d.ZERO;
         Box grounded = new Box(5.7,0,-.3,6.3,1.8,.3);
         require(waveContact(center, grounded, 5.5, 6, 0), "Wave missed standing player");
@@ -85,9 +85,9 @@ final class GuardianBossContractTest {
         }
         require(attacks.containsAll(List.of(Attack.THROW,Attack.SHOCKWAVE,Attack.BEAM)), "Solo rotation starved an attack");
         require(decisions >= 6, "Long idle gaps returned to the encounter");
-        require(THROW_RELEASE-THROW_LOCK>=8, "Throw dodge window shrank");
+        require(THROW_RELEASE-THROW_LOCK>=4, "Throw dodge window shrank");
         require(Attack.THROW.duration-THROW_RELEASE>=20, "Throw lost recovery");
-        require(Attack.SHOCKWAVE.duration-SLAM_IMPACT >= Math.ceil(WAVE_RANGE/WAVE_SPEED), "Wave outlives its action");
+        require(GuardianPhaseRules.waveTicks(false)==38 && GuardianPhaseRules.waveTicks(true)==47, "Independent wave lifetime changed");
         System.out.println("Guardian boss checks passed: 3-player rotation, visibility/range, cluster selection, cooldowns, scaling, jumps, ballistic arcs.");
     }
 }

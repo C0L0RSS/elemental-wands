@@ -209,6 +209,7 @@ public final class BlinkRiftManager {
     }
 
     private static boolean isSafeForPlayer(ServerWorld world, PlayerEntity player, Vec3d feetPos) {
+        if (!com.anton.elementalwands.arena.GuardianArenaManager.canTeleport(player,world,feetPos)) return false;
         if (feetPos.y < world.getBottomY() + 1 || feetPos.y > world.getTopYInclusive() - 2) {
             return false;
         }

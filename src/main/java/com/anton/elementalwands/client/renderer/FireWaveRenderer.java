@@ -2,6 +2,7 @@ package com.anton.elementalwands.client.renderer;
 
 import com.anton.elementalwands.entity.InfernoWaveEntity;
 
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
@@ -123,6 +124,18 @@ public final class FireWaveRenderer
     @Override
     public void render(FireWaveRenderState state, MatrixStack matrices,
             OrderedRenderCommandQueue queue, CameraRenderState cameraState) {
+        boolean firstPerson = !MinecraftClient.getInstance().gameRenderer.getCamera().isThirdPerson();
+        Vec3d origin = new Vec3d(state.x, state.y, state.z);
+        Vec3d forward = new Vec3d(state.forwardX, state.forwardY, state.forwardZ);
+        Vec3d head = origin.add(forward.multiply(0.62));
+        Vec3d tail = origin.add(forward.multiply(0.62 - state.streamLength));
+        float ribbonOpacity = SpellViewClearance.opacity(firstPerson,
+                SpellViewClearance.distanceToSegment(cameraState.pos, tail, head), state.streamWidth * 0.5);
+        float frontOpacity = SpellViewClearance.opacity(firstPerson,
+                cameraState.pos.distanceTo(origin.add(forward.multiply(0.68))), state.frontWidth * 0.5);
+        int ribbonColor = SpellViewClearance.color(0xFFFFFFFF, ribbonOpacity);
+        int crossColor = SpellViewClearance.color(0xD8FFFFFF, ribbonOpacity);
+        int frontColor = SpellViewClearance.color(0xFFFFFFFF, frontOpacity);
         int frame = state.frame;
         RenderLayer streamLayer = streamLayers[frame];
         RenderLayer frontLayer = frontLayers[frame];
@@ -130,13 +143,13 @@ public final class FireWaveRenderer
         queue.submitCustom(matrices, streamLayer,
                 (entry, vertices) -> drawRibbon(vertices, entry, state.light,
                         state, state.upX, state.upY, state.upZ,
-                        state.streamWidth * 0.50f, 0xFFFFFFFF));
+                        state.streamWidth * 0.50f, ribbonColor));
         queue.submitCustom(matrices, streamLayer,
                 (entry, vertices) -> drawRibbon(vertices, entry, state.light,
                         state, state.rightX, state.rightY, state.rightZ,
-                        state.streamWidth * 0.36f, 0xD8FFFFFF));
+                        state.streamWidth * 0.36f, crossColor));
         queue.submitCustom(matrices, frontLayer,
-                (entry, vertices) -> drawFront(vertices, entry, state.light, state));
+                (entry, vertices) -> drawFront(vertices, entry, state.light, state, frontColor));
 
         super.render(state, matrices, queue, cameraState);
     }
@@ -169,7 +182,7 @@ public final class FireWaveRenderer
     }
 
     private static void drawFront(VertexConsumer vertices, MatrixStack.Entry entry, int light,
-            FireWaveRenderState state) {
+            FireWaveRenderState state, int color) {
         float distance = 0.68f;
         float centerX = state.forwardX * distance;
         float centerY = state.forwardY * distance;
@@ -181,22 +194,22 @@ public final class FireWaveRenderer
                 centerX - state.rightX * halfWidth - state.upX * halfHeight,
                 centerY - state.rightY * halfWidth - state.upY * halfHeight,
                 centerZ - state.rightZ * halfWidth - state.upZ * halfHeight,
-                0.0f, 1.0f, 0xFFFFFFFF);
+                0.0f, 1.0f, color);
         vertex(vertices, entry, light,
                 centerX + state.rightX * halfWidth - state.upX * halfHeight,
                 centerY + state.rightY * halfWidth - state.upY * halfHeight,
                 centerZ + state.rightZ * halfWidth - state.upZ * halfHeight,
-                1.0f, 1.0f, 0xFFFFFFFF);
+                1.0f, 1.0f, color);
         vertex(vertices, entry, light,
                 centerX + state.rightX * halfWidth + state.upX * halfHeight,
                 centerY + state.rightY * halfWidth + state.upY * halfHeight,
                 centerZ + state.rightZ * halfWidth + state.upZ * halfHeight,
-                1.0f, 0.0f, 0xFFFFFFFF);
+                1.0f, 0.0f, color);
         vertex(vertices, entry, light,
                 centerX - state.rightX * halfWidth + state.upX * halfHeight,
                 centerY - state.rightY * halfWidth + state.upY * halfHeight,
                 centerZ - state.rightZ * halfWidth + state.upZ * halfHeight,
-                0.0f, 0.0f, 0xFFFFFFFF);
+                0.0f, 0.0f, color);
     }
 
     private static void vertex(VertexConsumer vertices, MatrixStack.Entry entry, int light,

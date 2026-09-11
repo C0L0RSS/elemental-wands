@@ -17,7 +17,7 @@ import static com.anton.elementalwands.entity.GuardianLeapRules.*;
 final class GuardianLeapAttack {
     private final FracturedGuardianEntity guardian;
     private final GuardianBossCombat combat;
-    private final java.util.Set<UUID> launchHits = new java.util.HashSet<>(), landingHits = new java.util.HashSet<>();
+    private final java.util.Set<UUID> landingHits = new java.util.HashSet<>();
     private final GuardianMotionSample motion = new GuardianMotionSample();
     private Vec3d origin, landing, arena, expected;
     private UUID target;
@@ -45,7 +45,7 @@ final class GuardianLeapAttack {
         status = "Windup: route checked.";
         target = player.getUuid(); started = world.getTime(); active = true;
         motion.reset(player.getEntityPos());
-        launchHits.clear(); landingHits.clear();
+        landingHits.clear();
         faceLanding();
         guardian.showLeapMarker(started,landing);
         guardian.triggerAnim("guardian","leap_launch");
@@ -72,12 +72,13 @@ final class GuardianLeapAttack {
         if (tick == TAKEOFF) {
             if (!supported(world)) return abort("ground beneath feet changed before takeoff.");
             if (!clearRoute(world,landing)) return abort("route obstructed before takeoff.");
+            combat.crushGrowth(world, origin, 4, false, 6);
             status = "Airborne.";
             previousGravity = guardian.hasNoGravity(); flying = true;
             guardian.setNoGravity(true);
             if (!previousGravity) guardian.addCommandTag("ew_guardian_leap_gravity");
             guardian.triggerAnim("guardian","leap_air");
-            guardian.startWaveAt(world.getTime()-GuardianCombatRules.SLAM_IMPACT,origin,0);
+            combat.emitWave(world,origin,java.util.Set.of());
             world.playSound(null,guardian.getBlockPos(),SoundEvents.ENTITY_IRON_GOLEM_ATTACK,SoundCategory.HOSTILE,1.8f,.65f);
         }
         guardian.setYaw(yaw); guardian.setBodyYaw(yaw); guardian.setHeadYaw(yaw);
@@ -102,15 +103,12 @@ final class GuardianLeapAttack {
                 combat.leapLanded(world,landingHits);
             }
         }
-        if (launchWaveTick(tick) >= 0) {
-            combat.leapWave(world,launchWaveTick(tick),origin,launchHits);
+        if (tick == LAND+WAVE_DELAY) combat.emitWave(world,landing,landingHits);
+        if (tick >= LAND+RECOVERY) {
+            restoreGravity(); active=false;
+            guardian.clearLeapMarker(); guardian.stopTriggeredAnim("guardian",null);
+            status = "Last leap completed."; return true;
         }
-        if (landingWaveTick(tick) >= 0) {
-            int waveTick = landingWaveTick(tick);
-            if (waveTick == 0) guardian.startWaveAt(world.getTime()-GuardianCombatRules.SLAM_IMPACT,landing,1);
-            combat.leapWave(world,waveTick,landing,landingHits);
-        }
-        if (tick >= LAND+RECOVERY) { cancel(); status = "Last leap completed."; return true; }
         return false;
     }
 
@@ -118,7 +116,7 @@ final class GuardianLeapAttack {
         if (active) {
             status = "Stopped.";
             guardian.setVelocity(Vec3d.ZERO);
-            guardian.clearLeapMarker(); guardian.clearWave();
+            guardian.clearLeapMarker(); combat.clearWaves();
             guardian.stopTriggeredAnim("guardian",null);
         }
         restoreGravity(); active = false;
@@ -143,7 +141,7 @@ final class GuardianLeapAttack {
                     RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,guardian));
             if (floor.getType() == HitResult.Type.MISS) continue;
             Vec3d point=floor.getPos();
-            if (point.squaredDistanceTo(arena)>36*36 || point.subtract(origin).horizontalLength()>MAX_RANGE+2) continue;
+            if (!com.anton.elementalwands.arena.GuardianArenaManager.validLanding(guardian,arena,point) || point.subtract(origin).horizontalLength()>MAX_RANGE+2) continue;
             if (!world.getFluidState(BlockPos.ofFloored(point.add(0,.1,0))).isEmpty()) continue;
             if (space(world,point) && clearRoute(world,point)) return point;
         }

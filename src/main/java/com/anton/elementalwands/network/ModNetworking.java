@@ -40,6 +40,8 @@ public final class ModNetworking {
         PayloadTypeRegistry.playS2C().register(SyncPlayerDataPayload.ID, SyncPlayerDataPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncNatureSeedlingsPayload.ID, SyncNatureSeedlingsPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncEntangleStacksPayload.ID, SyncEntangleStacksPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(SyncStoneClusterPayload.ID, SyncStoneClusterPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(StoneStaggerPayload.ID, StoneStaggerPayload.CODEC);
     }
 
     public static void registerC2SReceivers() {
@@ -107,6 +109,22 @@ public final class ModNetworking {
     // -----------------------------------------------------------------------
     // Payload records
     // -----------------------------------------------------------------------
+
+    public record SyncStoneClusterPayload(int mass, int remaining, int duration) implements CustomPayload {
+        public static final Id<SyncStoneClusterPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"stone_cluster"));
+        public static final PacketCodec<RegistryByteBuf,SyncStoneClusterPayload> CODEC = PacketCodec.tuple(
+                PacketCodecs.INTEGER,SyncStoneClusterPayload::mass,
+                PacketCodecs.INTEGER,SyncStoneClusterPayload::remaining,
+                PacketCodecs.INTEGER,SyncStoneClusterPayload::duration,SyncStoneClusterPayload::new);
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
+    public record StoneStaggerPayload(int entityId, int ticks) implements CustomPayload {
+        public static final Id<StoneStaggerPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"stone_stagger"));
+        public static final PacketCodec<RegistryByteBuf,StoneStaggerPayload> CODEC = PacketCodec.tuple(
+                PacketCodecs.INTEGER,StoneStaggerPayload::entityId,
+                PacketCodecs.INTEGER,StoneStaggerPayload::ticks,StoneStaggerPayload::new);
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
 
     public record CastPrimaryPayload() implements CustomPayload {
         public static final Id<CastPrimaryPayload> ID = new Id<>(

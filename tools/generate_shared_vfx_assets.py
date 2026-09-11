@@ -59,47 +59,72 @@ def make_wizard_wand() -> Image.Image:
 
 
 def draw_slot(image: Image.Image, x: int, y: int, ready: bool, kind: int) -> None:
-    draw = ImageDraw.Draw(image)
-    frame = IRON if not ready else BONE_DARK
-    light = IRON_LIGHT if not ready else BONE_LIGHT
-    dark = CHARCOAL if not ready else IRON_DARK
-    poly(draw, [(x + 4, y), (x + 31, y), (x + 35, y + 4), (x + 35, y + 31),
-                (x + 31, y + 35), (x + 4, y + 35), (x, y + 31), (x, y + 4)], dark)
-    poly(draw, [(x + 5, y + 2), (x + 30, y + 2), (x + 33, y + 5),
-                (x + 33, y + 30), (x + 30, y + 33), (x + 5, y + 33),
-                (x + 2, y + 30), (x + 2, y + 5)], frame)
-    draw.rectangle((x + 5, y + 5, x + 30, y + 30), fill=(18, 19, 20, 215))
-    draw.line((x + 5, y + 5, x + 30, y + 5), fill=light, width=1)
-    draw.line((x + 5, y + 5, x + 5, y + 30), fill=light, width=1)
-    draw.line((x + 5, y + 30, x + 30, y + 30), fill=dark, width=2)
-    draw.line((x + 30, y + 5, x + 30, y + 30), fill=dark, width=2)
-    if kind == 0:
-        draw.rectangle((x + 15, y + 1, x + 20, y + 3), fill=light)
-    elif kind == 1:
-        draw.rectangle((x + 9, y + 1, x + 13, y + 3), fill=light)
-        draw.rectangle((x + 22, y + 1, x + 26, y + 3), fill=light)
-    else:
-        poly(draw, [(x + 12, y + 3), (x + 15, y), (x + 18, y + 3),
-                    (x + 21, y), (x + 24, y + 3)], light)
+    # Native 36px carved walnut frame: directional grain, worn bevels and brass inlay.
+    tile = canvas(36)
+    d = ImageDraw.Draw(tile)
+    d.polygon([(6,0),(29,0),(35,6),(35,29),(29,35),(6,35),(0,29),(0,6)], fill=(37,26,24,255))
+    d.polygon([(6,1),(29,1),(34,6),(34,29),(29,34),(6,34),(1,29),(1,6)], fill=(88,53,33,255))
+    palette=[(87,51,31,255),(108,65,37,255),(128,80,43,255),(151,99,53,255),(114,68,38,255)]
+    for py in range(2,34):
+        for px in range(2,34):
+            if 6<=px<=29 and 6<=py<=29: continue
+            if tile.getpixel((px,py))[3]==0: continue
+            along=px if py<6 or py>29 else py
+            across=py if py<6 or py>29 else px
+            grain=(across*3 + along//(3+(across%3)) + kind)%len(palette)
+            tile.putpixel((px,py),palette[grain])
+    d.line([(5,2),(29,2),(32,5)], fill=(182,125,69,255))
+    d.line([(2,6),(2,28)],fill=(164,106,57,255))
+    d.line([(6,33),(29,33),(33,29),(33,6)],fill=(60,36,28,255),width=1)
+    d.rectangle((5,5,30,30),fill=(48,32,28,255))
+    d.rectangle((6,6,29,29),fill=(24,29,29,235))
+    d.line((6,6,29,6),fill=(17,22,23,255))
+    d.line((6,7,6,29),fill=(17,22,23,255))
+    d.line((7,30,29,30),fill=(168,111,58,255))
+    # Hand-cut metal corner straps rather than a continuous bright outline.
+    for cx,cy,sx,sy in [(4,4,1,1),(31,4,-1,1),(4,31,1,-1),(31,31,-1,-1)]:
+        d.line((cx,cy,cx+sx*3,cy),fill=(194,153,83,255))
+        d.line((cx,cy,cx,cy+sy*3),fill=(153,111,56,255))
+        d.point((cx,cy),fill=(231,202,136,255))
+    # A tiny inset crystal and engraved slot-specific marks supply the magic.
+    d.polygon([(17,0),(20,3),(17,6),(14,3)],fill=(57,42,30,255))
+    d.polygon([(17,1),(19,3),(17,5),(15,3)],fill=(171,190,167,255) if ready else (87,100,91,255))
+    d.line((16,2,17,2),fill=(237,240,204,255) if ready else (127,134,112,255))
+    for mark in range(kind+1):
+        mx=17-kind*2+mark*4
+        d.line((mx,32,mx+1,31),fill=(208,170,103,255) if ready else (139,102,59,255))
+    for py in (12,22):
+        d.line([(3,py-1),(4,py),(3,py+1)],fill=(206,164,91,255) if ready else (134,94,50,255))
+        d.line([(32,py-1),(31,py),(32,py+1)],fill=(141,99,53,255))
+    image.alpha_composite(tile,(x,y))
 
 
 def make_wand_hud() -> Image.Image:
-    # Existing atlas dimensions and UV layout are deliberately preserved.
     image = canvas(256)
     for index, x in enumerate((0, 85, 170)):
         draw_slot(image, x, 0, True, index)
         draw_slot(image, x, 80, False, index)
-    draw = ImageDraw.Draw(image)
-    x, y, w, h = 29, 184, 201, 22
-    poly(draw, [(x + 4, y), (x + w - 5, y), (x + w - 1, y + 4),
-                (x + w - 1, y + h - 5), (x + w - 5, y + h - 1),
-                (x + 4, y + h - 1), (x, y + h - 5), (x, y + 4)], CHARCOAL)
-    draw.rectangle((x + 3, y + 3, x + w - 4, y + h - 4), fill=IRON_DARK)
-    draw.rectangle((x + 6, y + 6, x + w - 7, y + h - 7), fill=(18, 19, 20, 230))
-    for pip in range(13):
-        px = x + 10 + pip * 14
-        draw.rectangle((px, y + 9, px + 2, y + 12),
-                       fill=BONE if pip in (0, 12) else IRON_LIGHT)
+    d=ImageDraw.Draw(image)
+    # 120x10 charge trough, native HUD coordinates; unused atlas space keeps asset counts stable.
+    d.polygon([(4,160),(115,160),(119,164),(119,165),(115,169),(4,169),(0,165),(0,164)],fill=(41,29,25,255))
+    d.polygon([(4,161),(115,161),(118,164),(115,168),(4,168),(1,164)],fill=(117,72,40,255))
+    d.line((6,161,113,161),fill=(185,128,68,255))
+    for gx in range(9,111,9):
+        d.line((gx,162,gx+4,162),fill=(86,48,30,255))
+        d.line((gx+2,167,gx+6,167),fill=(154,99,51,255))
+    d.rectangle((6,162,113,167),fill=(48,34,29,255))
+    d.rectangle((7,163,112,166),fill=(24,30,30,245))
+    for cx in (3,116):
+        d.line((cx,163,cx,166),fill=(212,174,104,255))
+        d.point((cx,163),fill=(241,214,151,255))
+    # Layered mineral fill; two rows distinguish the heavy-hit threshold without text.
+    for row,colors in [(176,[(177,188,179),(123,140,132),(139,153,141),(76,94,87)]),
+                       (180,[(235,231,194),(184,194,155),(203,209,169),(123,143,109)])]:
+        for fy,color in enumerate(colors):
+            d.line((0,row+fy,105,row+fy),fill=(*color,255))
+        for fx in range(5,104,13):
+            d.point((fx,row+2),fill=(*colors[0],255))
+            d.point((fx+1,row+3),fill=(*colors[1],255))
     return image
 
 

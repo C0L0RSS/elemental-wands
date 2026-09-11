@@ -1,0 +1,66 @@
+// Optional real-server regression fixture. All worlds, players and metadata stay under build/.
+// ./gradlew -I tools/guardian_arena_smoke.init.gradle runServer --args nogui
+// ./gradlew -I tools/guardian_arena_smoke.init.gradle -ParenaRecovery runServer --args nogui
+allprojects {
+    plugins.withId('fabric-loom') {
+        def smokeRoot = layout.buildDirectory.dir('arena-smoke').get().asFile
+        def runRoot = file('build/arena-smoke-run')
+        def recovery = project.hasProperty('arenaRecovery')
+        tasks.register('arenaSmokeSetup') {
+            doLast {
+                runRoot.mkdirs()
+                def acceptedEula = file('run/eula.txt')
+                if (!acceptedEula.exists() || !acceptedEula.text.contains('eula=true')) {
+                    throw new GradleException('Accept the Minecraft EULA in run/eula.txt before using this test server.')
+                }
+                new File(runRoot, 'eula.txt').text = acceptedEula.text
+                new File(runRoot, 'server.properties').text = '''server-ip=127.0.0.1
+server-port=0
+online-mode=false
+level-type=minecraft:flat
+generate-structures=false
+level-name=arena-test
+generator-settings={"layers":[{"block":"minecraft:bedrock","height":1},{"block":"minecraft:dirt","height":2},{"block":"minecraft:grass_block","height":1}],"biome":"minecraft:plains"}
+spawn-protection=0
+view-distance=8
+simulation-distance=8
+difficulty=normal
+max-tick-time=-1
+'''
+                new File(runRoot,'SMOKE_FAILED.txt').delete()
+                new File(runRoot,recovery ? 'SMOKE_RECOVERY_PASSED.txt' : 'SMOKE_PASSED.txt').delete()
+            }
+        }
+        tasks.register('arenaSmokeMetadata') {
+            doLast {
+                def metadata = new File(smokeRoot,'metadata')
+                metadata.mkdirs()
+                new File(metadata,'fabric.mod.json').text = '''{
+  "schemaVersion": 1, "id": "guardian_arena_smoke", "version": "1.0.0", "environment": "server",
+  "entrypoints": {"main": ["com.anton.elementalwands.arena.GuardianArenaSmokeMod"]},
+  "depends": {"elementalwands": "*"}
+}'''
+            }
+        }
+        tasks.register('arenaSmokeJar', Jar) {
+            dependsOn guardianTestClasses, arenaSmokeMetadata
+            archiveFileName = 'arena-smoke.jar'
+            destinationDirectory = smokeRoot
+            from sourceSets.guardianTest.output
+            from new File(smokeRoot,'metadata')
+        }
+        loom.runs.server.runDir('build/arena-smoke-run')
+        loom.runs.server.vmArg('-Dfabric.addMods=' + new File(smokeRoot,'arena-smoke.jar').absolutePath)
+        loom.runs.server.vmArg('-Dew.arena.recovery=' + recovery)
+        tasks.named('runServer') {
+            dependsOn arenaSmokeJar, arenaSmokeSetup
+            standardInput = System.in
+            doLast {
+                def marker = new File(runRoot,recovery ? 'SMOKE_RECOVERY_PASSED.txt' : 'SMOKE_PASSED.txt')
+                if (!marker.exists() || new File(runRoot,'SMOKE_FAILED.txt').exists()) {
+                    throw new GradleException('Arena runtime checks did not pass; inspect build/arena-smoke-run/logs/latest.log')
+                }
+            }
+        }
+    }
+}

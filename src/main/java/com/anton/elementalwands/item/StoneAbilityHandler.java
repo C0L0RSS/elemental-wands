@@ -2,15 +2,11 @@ package com.anton.elementalwands.item;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
-import com.anton.elementalwands.block.StoneSpikeBlock;
 import com.anton.elementalwands.block.StoneWallBlock;
 import com.anton.elementalwands.registry.ModParticles;
 import com.anton.elementalwands.registry.ModSpellBlocks;
@@ -67,18 +63,6 @@ public final class StoneAbilityHandler {
 
     private static final Map<UUID, WallData> ACTIVE_WALLS = new HashMap<>();
 
-    private static final int TECTONIC_LENGTH = 15;
-    private static final float TECTONIC_DAMAGE = 6.0f;
-    private static final double TECTONIC_VERTICAL_KNOCKBACK = 0.45;
-    private static final int TECTONIC_BLOCK_DURATION = 40;
-    private static final int TECTONIC_STEPS_PER_TICK = 2;
-    private static final int TECTONIC_TELEGRAPH_LEAD_STEPS = 4;
-    private static final int TECTONIC_TELEGRAPH_TICKS = 2;
-    private static final int TECTONIC_TERRAIN_SCAN_RANGE = 3;
-    private static final double TECTONIC_HITBOX_EXPAND_XZ = 0.7;
-    private static final int TECTONIC_VERTICAL_SCAN_DOWN = 5;
-    private static final int TECTONIC_VERTICAL_SCAN_UP = 5;
-
     private static final int WALL_DURATION = 70;
     private static final int WALL_SETTLE_TICKS = 6;
     private static final int WALL_STRESS_FX_INTERVAL = 8;
@@ -101,7 +85,7 @@ public final class StoneAbilityHandler {
     }
 
     public static int getPrimaryCooldownTicks() {
-        return 55;
+        return 30;
     }
 
     public static int getSecondaryCooldownTicks() {
@@ -129,27 +113,7 @@ public final class StoneAbilityHandler {
     }
 
     public static void castPrimary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        if (!AbstractWandItem.tryStartCooldown(
-                world, caster, stack, AbstractWandItem.Ability.PRIMARY, getPrimaryCooldownTicks())) {
-            return;
-        }
-
-        Vec3d forward = horizontalForward(caster);
-        List<BlockPos> spikes = new ArrayList<>(new LinkedHashSet<>(buildTectonicSpikePath(world, caster, forward)));
-        if (spikes.isEmpty()) return;
-
-        TectonicSchedulerEntity scheduler = new TectonicSchedulerEntity(world, caster, spikes);
-        world.spawnEntity(scheduler);
-
-        Vec3d origin = caster.getEntityPos().add(forward.multiply(0.85)).add(0.0, 0.12, 0.0);
-        world.spawnParticles(ModParticles.STONE_FAULT,
-                origin.x, origin.y, origin.z, 2, 0.18, 0.04, 0.18, 0.0);
-        world.spawnParticles(ModParticles.STONE_DUST,
-                origin.x, origin.y, origin.z, 12, 0.55, 0.08, 0.55, 0.055);
-        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_EVOKER_PREPARE_ATTACK,
-                SoundCategory.PLAYERS, 1.0f, 0.72f);
-        world.playSound(null, caster.getBlockPos(), SoundEvents.BLOCK_DEEPSLATE_HIT,
-                SoundCategory.PLAYERS, 0.9f, 0.58f);
+        com.anton.elementalwands.util.StoneClusterManager.cast(world, caster, stack);
     }
 
     public static void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
@@ -200,10 +164,8 @@ public final class StoneAbilityHandler {
                 state -> (state.isAir() || state.isReplaceable()) && state.getFluidState().isEmpty());
         if (placement.isEmpty()) return;
 
-        List<BlockPos> placedBlocks = requestedBlocks.stream()
-                .distinct()
-                .filter(pos -> world.getBlockState(pos).isOf(ModSpellBlocks.STONE_WALL))
-                .toList();
+        // The receipt excludes another caster's wall where requested cells overlap.
+        List<BlockPos> placedBlocks = TemporaryBlockManager.placementPositions(world, placement);
         WallData wall = new WallData(center, world.getRegistryKey(), now,
                 placedBlocks, forward, placement);
         ACTIVE_WALLS.put(caster.getUuid(), wall);
@@ -329,6 +291,34 @@ public final class StoneAbilityHandler {
         TitanDomeManager.startDome(world, caster);
     }
 
+    /** Only tracked player walls are breakable; restore their original terrain, never drop loot. */
+    public static List<BlockPos> breakWallFromGuardian(ServerWorld world, BlockPos contact) {
+        if(!world.getBlockState(contact).isOf(ModSpellBlocks.STONE_WALL))return List.of();
+        var iterator=ACTIVE_WALLS.entrySet().iterator();
+        while(iterator.hasNext()) {
+            WallData wall=iterator.next().getValue();
+            if(!wall.worldKey.equals(world.getRegistryKey()) || !wall.blockPositions.contains(contact))continue;
+            List<BlockPos> standing=wall.blockPositions.stream()
+                    .filter(pos -> world.getBlockState(pos).isOf(ModSpellBlocks.STONE_WALL)).toList();
+            iterator.remove();
+            TemporaryBlockManager.restoreTemporaryBlocks(world,wall.placement);
+            for(BlockPos pos:standing) {
+                Vec3d point=pos.toCenterPos();
+                world.spawnParticles(ModParticles.STONE_SHARD,point.x,point.y,point.z,5,.3,.35,.3,.1);
+                world.spawnParticles(ModParticles.STONE_DUST,point.x,point.y,point.z,3,.3,.3,.3,.05);
+            }
+            world.playSound(null,contact,SoundEvents.BLOCK_DEEPSLATE_BRICKS_BREAK,SoundCategory.HOSTILE,1.4f,.65f);
+            return standing;
+        }
+        return List.of();
+    }
+
+    public static List<BlockPos> guardianWallBlocks(ServerWorld world) {
+        return ACTIVE_WALLS.values().stream().filter(w -> w.worldKey.equals(world.getRegistryKey()))
+                .flatMap(w -> w.blockPositions.stream())
+                .filter(pos -> world.getBlockState(pos).isOf(ModSpellBlocks.STONE_WALL)).toList();
+    }
+
     private static void markWallSettled(ServerWorld world, WallData wall) {
         for (BlockPos pos : wall.blockPositions) {
             BlockState state = world.getBlockState(pos);
@@ -435,223 +425,9 @@ public final class StoneAbilityHandler {
         return new BlockPos(forward.z >= 0.0 ? -1 : 1, 0, 0);
     }
 
-    private static List<BlockPos> buildTectonicSpikePath(ServerWorld world, PlayerEntity caster, Vec3d forward) {
-        List<BlockPos> positions = new ArrayList<>(TECTONIC_LENGTH);
-        double startX = caster.getX();
-        double startZ = caster.getZ();
-        int groundY = caster.getBlockY() - 1;
-
-        for (int step = 1; step <= TECTONIC_LENGTH; step++) {
-            int x = MathHelper.floor(startX + forward.x * step);
-            int z = MathHelper.floor(startZ + forward.z * step);
-            int sampledY = findGroundYNear(world, x, z, groundY);
-            if (sampledY != Integer.MIN_VALUE) groundY = sampledY;
-            positions.add(new BlockPos(x, groundY + 1, z));
-        }
-        return positions;
-    }
-
-    private static int findGroundYNear(ServerWorld world, int x, int z, int referenceY) {
-        int minY = world.getBottomY();
-        int maxY = world.getTopYInclusive() - 1;
-        int clampedReferenceY = MathHelper.clamp(referenceY, minY, maxY);
-
-        for (int delta = 0; delta <= TECTONIC_TERRAIN_SCAN_RANGE; delta++) {
-            int up = clampedReferenceY + delta;
-            if (up <= maxY && isGroundCandidate(world, x, up, z)) return up;
-            if (delta == 0) continue;
-
-            int down = clampedReferenceY - delta;
-            if (down >= minY && isGroundCandidate(world, x, down, z)) return down;
-        }
-
-        for (int y = clampedReferenceY; y >= minY; y--) {
-            if (isGroundCandidate(world, x, y, z)) return y;
-        }
-        return Integer.MIN_VALUE;
-    }
-
-    private static boolean isGroundCandidate(ServerWorld world, int x, int y, int z) {
-        BlockPos groundPos = new BlockPos(x, y, z);
-        BlockState ground = world.getBlockState(groundPos);
-        boolean solidGround = !ground.getCollisionShape(world, groundPos).isEmpty()
-                || ground.isSolidBlock(world, groundPos);
-        if (!solidGround) return false;
-
-        BlockPos abovePos = groundPos.up();
-        BlockState above = world.getBlockState(abovePos);
-        return (above.getCollisionShape(world, abovePos).isEmpty() || above.isReplaceable())
-                && above.getFluidState().isEmpty();
-    }
-
-    private static void applyDamageAtSpike(ServerWorld world, PlayerEntity caster, BlockPos spikePos,
-            Set<UUID> hitTargets) {
-        Box hitBox = new Box(
-                spikePos.getX() - TECTONIC_HITBOX_EXPAND_XZ,
-                spikePos.getY() - TECTONIC_VERTICAL_SCAN_DOWN,
-                spikePos.getZ() - TECTONIC_HITBOX_EXPAND_XZ,
-                spikePos.getX() + 1.0 + TECTONIC_HITBOX_EXPAND_XZ,
-                spikePos.getY() + 1.0 + TECTONIC_VERTICAL_SCAN_UP,
-                spikePos.getZ() + 1.0 + TECTONIC_HITBOX_EXPAND_XZ);
-        List<LivingEntity> targets = world.getEntitiesByClass(LivingEntity.class, hitBox,
-                target -> target.isAlive() && !target.isSpectator() && target != caster);
-
-        for (LivingEntity target : targets) {
-            if (!hitTargets.add(target.getUuid())) continue;
-
-            boolean damaged = target.damage(
-                    world, world.getDamageSources().playerAttack(caster), TECTONIC_DAMAGE);
-            if (damaged) {
-                AbstractWandItem.onWandDamageDealt(caster, TECTONIC_DAMAGE);
-            }
-            target.addVelocity(0.0, TECTONIC_VERTICAL_KNOCKBACK, 0.0);
-            target.velocityModified = true;
-        }
-    }
-
     private static void spawnMovingParticle(ServerWorld world, SimpleParticleType type, Vec3d pos, Vec3d velocity) {
         world.spawnParticles(type, pos.x, pos.y, pos.z,
                 0, velocity.x, velocity.y, velocity.z, 1.0);
     }
 
-    /** Server-side scheduler for Earthen Maw's fault, eruption, and crumble phases. */
-    public static final class TectonicSchedulerEntity extends net.minecraft.entity.decoration.ArmorStandEntity {
-        private final List<BlockPos> path;
-        private final PlayerEntity caster;
-        private final Set<UUID> hitTargets = new HashSet<>();
-        private final Set<BlockPos> telegraphed = new HashSet<>();
-        private final Map<BlockPos, Integer> eruptionTickByPos = new HashMap<>();
-        private final Map<BlockPos, Integer> stageByPos = new HashMap<>();
-        private int tickCounter;
-        private int lastEruptionTick = -1;
-
-        public TectonicSchedulerEntity(ServerWorld world, PlayerEntity caster, List<BlockPos> path) {
-            super(net.minecraft.entity.EntityType.ARMOR_STAND, world);
-            this.caster = caster;
-            this.path = path;
-
-            setPosition(caster.getX(), caster.getY(), caster.getZ());
-            setInvisible(true);
-            setNoGravity(true);
-            setInvulnerable(true);
-            setSilent(true);
-        }
-
-        @Override
-        public void tick() {
-            super.tick();
-            if (!(getEntityWorld() instanceof ServerWorld world)) return;
-
-            tickCollapsingSpikes(world);
-
-            for (int step = 0; step < TECTONIC_STEPS_PER_TICK; step++) {
-                int logicalIndex = tickCounter * TECTONIC_STEPS_PER_TICK + step;
-                if (logicalIndex < path.size()) {
-                    telegraph(world, path.get(logicalIndex));
-                }
-
-                int eruptIndex = logicalIndex - TECTONIC_TELEGRAPH_LEAD_STEPS;
-                if (eruptIndex >= 0 && eruptIndex < path.size()) {
-                    erupt(world, path.get(eruptIndex), eruptIndex);
-                }
-            }
-
-            int maxTravelTicks = MathHelper.ceil(
-                    (path.size() + TECTONIC_TELEGRAPH_LEAD_STEPS) / (double) TECTONIC_STEPS_PER_TICK);
-            if (tickCounter > maxTravelTicks + TECTONIC_BLOCK_DURATION + 6
-                    || (lastEruptionTick >= 0
-                            && tickCounter > lastEruptionTick + TECTONIC_BLOCK_DURATION + 6)) {
-                discard();
-                return;
-            }
-            tickCounter++;
-        }
-
-        @Override
-        public boolean shouldSave() {
-            // This invisible armor stand only schedules a short-lived spell wave.
-            // Reloading it as its vanilla entity type would leave an inert stand behind.
-            return false;
-        }
-
-        private void telegraph(ServerWorld world, BlockPos pos) {
-            BlockState faultState = ModSpellBlocks.STONE_SPIKE.getDefaultState()
-                    .with(StoneSpikeBlock.STAGE, 0);
-            TemporaryPlacement placement = TemporaryBlockManager.placeTrackedTemporaryBlocks(
-                    world,
-                    List.of(pos),
-                    faultState,
-                    TECTONIC_BLOCK_DURATION + TECTONIC_TELEGRAPH_TICKS + 2,
-                    state -> (state.getCollisionShape(world, pos).isEmpty() || state.isReplaceable())
-                            && state.getFluidState().isEmpty());
-            if (placement.isEmpty()) return;
-
-            telegraphed.add(pos);
-            Vec3d center = pos.toCenterPos().add(0.0, -0.36, 0.0);
-            world.spawnParticles(ModParticles.STONE_FAULT,
-                    center.x, center.y, center.z, 1, 0.08, 0.02, 0.08, 0.0);
-            world.spawnParticles(ModParticles.STONE_DUST,
-                    center.x, center.y, center.z, 5, 0.34, 0.03, 0.34, 0.025);
-            world.playSound(null, pos, SoundEvents.BLOCK_DEEPSLATE_STEP,
-                    SoundCategory.PLAYERS, 0.62f, 0.58f);
-        }
-
-        private void erupt(ServerWorld world, BlockPos pos, int pathIndex) {
-            if (!telegraphed.contains(pos)) return;
-            BlockState current = world.getBlockState(pos);
-            if (!current.isOf(ModSpellBlocks.STONE_SPIKE)) return;
-
-            int stage = 1 + Math.floorMod(pathIndex * 5 + caster.getUuid().hashCode(), 3);
-            world.setBlockState(pos,
-                    ModSpellBlocks.STONE_SPIKE.getDefaultState().with(StoneSpikeBlock.STAGE, stage), 3);
-            eruptionTickByPos.put(pos, tickCounter);
-            stageByPos.put(pos, stage);
-            lastEruptionTick = tickCounter;
-
-            applyDamageAtSpike(world, caster, pos, hitTargets);
-
-            Vec3d center = pos.toCenterPos();
-            world.spawnParticles(ModParticles.STONE_SHARD,
-                    center.x, center.y - 0.15, center.z,
-                    9 + stage * 2, 0.4, 0.42, 0.4, 0.12);
-            world.spawnParticles(ModParticles.STONE_DUST,
-                    center.x, center.y - 0.25, center.z,
-                    10 + stage * 3, 0.55, 0.16, 0.55, 0.085);
-            world.spawnParticles(ModParticles.STONE_SHOCKWAVE,
-                    center.x, center.y - 0.34, center.z,
-                    1, 0.0, 0.0, 0.0, 0.0);
-            world.playSound(null, pos, SoundEvents.BLOCK_DEEPSLATE_BREAK,
-                    SoundCategory.PLAYERS, 1.0f, 0.58f + stage * 0.06f);
-        }
-
-        private void tickCollapsingSpikes(ServerWorld world) {
-            for (Map.Entry<BlockPos, Integer> entry : eruptionTickByPos.entrySet()) {
-                BlockPos pos = entry.getKey();
-                int age = tickCounter - entry.getValue();
-                BlockState current = world.getBlockState(pos);
-                if (!current.isOf(ModSpellBlocks.STONE_SPIKE)) continue;
-
-                if (age == TECTONIC_BLOCK_DURATION - 10) {
-                    int loweredStage = Math.max(1, stageByPos.getOrDefault(pos, 1) - 1);
-                    world.setBlockState(pos, current.with(StoneSpikeBlock.STAGE, loweredStage), 3);
-                    world.spawnParticles(ModParticles.STONE_FAULT,
-                            pos.getX() + 0.5, pos.getY() + 0.45, pos.getZ() + 0.5,
-                            1, 0.12, 0.16, 0.12, 0.0);
-                    world.spawnParticles(ModParticles.STONE_DUST,
-                            pos.getX() + 0.5, pos.getY() + 0.25, pos.getZ() + 0.5,
-                            4, 0.28, 0.2, 0.28, 0.035);
-                } else if (age == TECTONIC_BLOCK_DURATION - 5) {
-                    world.setBlockState(pos, current.with(StoneSpikeBlock.STAGE, 0), 3);
-                    world.spawnParticles(ModParticles.STONE_SHARD,
-                            pos.getX() + 0.5, pos.getY() + 0.25, pos.getZ() + 0.5,
-                            6, 0.32, 0.22, 0.32, 0.07);
-                    world.spawnParticles(ModParticles.STONE_DUST,
-                            pos.getX() + 0.5, pos.getY() + 0.08, pos.getZ() + 0.5,
-                            9, 0.48, 0.12, 0.48, 0.055);
-                    world.playSound(null, pos, SoundEvents.BLOCK_DEEPSLATE_BREAK,
-                            SoundCategory.PLAYERS, 0.55f, 0.75f);
-                }
-            }
-        }
-    }
 }

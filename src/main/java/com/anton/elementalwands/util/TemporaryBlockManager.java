@@ -60,8 +60,7 @@ public final class TemporaryBlockManager {
             BlockState existing = world.getBlockState(pos);
             if (!canReplace.test(existing)) continue;
 
-            originalByPos.put(pos.asLong(), existing);
-            world.setBlockState(pos, placedState, 3);
+            if (com.anton.elementalwands.arena.GuardianArenaManager.setTemporarySpellBlock(world, pos, placedState)) originalByPos.put(pos.asLong(), existing);
         }
 
         if (originalByPos.isEmpty()) {
@@ -73,6 +72,17 @@ public final class TemporaryBlockManager {
         TEMP.computeIfAbsent(key, _k -> new ArrayList<>())
                 .add(new TempBlocks(id, originalByPos, placedState, expiryTick));
         return new TemporaryPlacement(id, originalByPos.size());
+    }
+
+    public static List<BlockPos> placementPositions(ServerWorld world, TemporaryPlacement placement) {
+        List<TempBlocks> batches=TEMP.get(world.getRegistryKey());
+        if(batches==null || placement==null)return List.of();
+        for(TempBlocks batch:batches)if(batch.id().equals(placement.id())) {
+            List<BlockPos> positions=new ArrayList<>();
+            for(long key:batch.originalByPos.keySet())positions.add(BlockPos.fromLong(key));
+            return List.copyOf(positions);
+        }
+        return List.of();
     }
 
     public static void restoreTemporaryBlocks(ServerWorld world, TemporaryPlacement placement) {
@@ -93,6 +103,17 @@ public final class TemporaryBlockManager {
 
         if (temp.isEmpty()) {
             TEMP.remove(world.getRegistryKey());
+        }
+    }
+
+    public static void forgetNaturePosition(ServerWorld world, BlockPos pos) {
+        List<TempBlocks> temp = TEMP.get(world.getRegistryKey());
+        if (temp == null) return;
+        for (TempBlocks blocks : temp) {
+            if (blocks.placedState.isOf(net.minecraft.block.Blocks.MOSS_CARPET)
+                    || blocks.placedState.isOf(net.minecraft.block.Blocks.LILY_PAD)
+                    || blocks.placedState.isOf(net.minecraft.block.Blocks.FLOWERING_AZALEA))
+                blocks.originalByPos.remove(pos.asLong());
         }
     }
 
@@ -133,7 +154,7 @@ public final class TemporaryBlockManager {
             BlockState current = world.getBlockState(pos);
 
             if (current.isOf(blocks.placedState.getBlock())) {
-                world.setBlockState(pos, entry.getValue(), 3);
+                com.anton.elementalwands.arena.GuardianArenaManager.setTemporarySpellBlock(world, pos, entry.getValue());
             }
         }
     }

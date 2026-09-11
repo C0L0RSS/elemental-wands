@@ -4,15 +4,126 @@ This file gives coding agents the current working map for the Elemental Wands
 repo. It is based on the older `CLAUDE.md`, but cleaned up for the current
 Universal Wand / affinity architecture.
 
-## Current session checkpoint — September 8, 2026
+## Current session checkpoint — September 9, 2026
 
-Read [docs/MOD_HANDOFF.md](docs/MOD_HANDOFF.md) before resuming Guardian work. It
-records the user's latest feedback, installed build/backup, source files, preview,
-and next playtest. The latest takeoff-cancellation fix is built and installed in
-Lunar, **but has not been confirmed in-game by the user**. Start with a leap test
-and `/ew guardian status` if it cancels; do not interpret the stopping point as
-confirmation that the bug or overall fight balance is resolved. Preserve the
-uncommitted Guardian and pre-existing Fire work.
+Latest spell visibility update (September 10): primary Fire/Space/Wind decorative
+bursts start forward/down with cover checks. All affinities' custom particles,
+Fire ribbons/front, Wind blades and Nature seeds fade near the first-person camera.
+Projectile origins/combat and third-person opacity are preserved. See
+[the clearance report](docs/spell-view-clearance-2026-09-10.md) for checks/install.
+Human first-person feedback pending.
+
+Latest Wind/Guardian pass (September 10): Wind primary is a centered three-blade
+fan with a strict 12-block range and one hit per enemy/cast; dash recharge is five
+seconds per charge. Guardian external push accumulation is blocked. New telegraphed
+floating-stone volleys, sustained-hover pressure, mixed phase-two sequences and
+closer pursuit are implemented. Read [the pressure report](docs/wind-guardian-pressure-2026-09-10.md)
+for validation and current installation. Human fight/appearance feedback pending.
+
+Latest Stone/Guardian balance: a contacted player Stone Wall absorbs one Guardian hit, then breaks. Beam/wave cover lasts for that hit only; later combo hits pass. See `docs/guardian-stone-wall-2026-09-10.md` for passing real-server checks and installed build. Human combat confirmation pending.
+
+Earlier combat fix: the user approved the full two-phase fight. Guardian shockwaves
+now pass through Nature flowers/growth and Stone primary spikes, clear contacted
+tracked Nature plants, and remain blocked by Stone walls and Nature ultimate trees.
+Client and server share floor/cover rules. See [the cover report](docs/guardian-wave-cover-2026-09-09.md)
+for current checks and installation. Human confirmation of this specific fix is pending.
+Latest HUD: carved wooden frames with brass/rune details, inset labels, and a text-free Stone reserve bar directly above the ability row. See `docs/wand-hud-2026-09-10.md`; user approved the design.
+Latest shared build/installed SHA-256: `6e101d6bebcd6fe7f3a9b4a2b740c03874d7af0edcd9c4d16b5382a3fd9c04e5` (September 10 spell view clearance; Wind/Guardian pressure, Stone and cover fixes preserved). See `docs/stone-gathered-mass-2026-09-10.md` for the custom model, 1.5s/2.5s recovery, stagger and validation. The user approved the new ability/model; the vegetation collision follow-up ignores low plants and retains solid cover. Confirmation of that fix is pending.
+
+Latest church locator fix: the reported vanilla command blocked the server for
+113 seconds. Church commands now schedule incremental structure-start searches,
+with cancellation and temporary ticket cleanup; terrain scoring avoids redundant
+work without changing placement rules. Read [the locator report](docs/guardian-locate-2026-09-09.md)
+for validation and installation status before using older build hashes below.
+
+Latest church placement update: statue/socket/offering moved six blocks forward,
+24-chunk spacing with 14-chunk separation, least-earthwork nearby placement, preserved
+natural side courtyards, short stone foundations and local soil/entrance steps.
+Unfinished legacy sites move only the ritual group using a durable inventory receipt;
+completed sites remain unchanged. See [the placement report](docs/guardian-placement-2026-09-09.md)
+for validation and installation. The site anchor remains the original building origin;
+use `Site.socket()` and `Site.offering()` for interaction positions.
+
+
+Latest combat pass: two phases at 60% health, with a 64-tick unstable-magic
+transition. Wider jumpable waves (32/44 blocks), phase-two triple slams and rock
+volleys, and a leap follow-up slam. Original laser logic/animation, guard opening
+and health tuning are preserved. Exact slam/leap destination markers are removed;
+the leap uses a moving body shadow. Waves finish independently of attack recovery.
+See [the phase report](docs/guardian-phases-2026-09-09.md). Preview at port 8330 now
+includes transition/fast attacks and the approved guard pose. Human playtest pending.
+
+Latest visual revision: guard wear follows dark joints/carved grooves in the original
+stone palette. The exposed stance now has a strong backward arch, bent knees,
+head tilted back and hanging arms and sustained trembling; planted-foot IK and hand clearance
+are baked into the separate guard clip. Preview refreshed at port 8330. See
+[the visual follow-up](docs/guardian-guard-visuals-2026-09-09.md). Human approval pending.
+
+Latest balance pass: separate stone guard with three crack textures, opening ribs,
+projected/shaking core and visible recovery. Main health is 600 + 450 per additional
+player; guard is 120 + 90, through 64 players. Both retain their encounter peak.
+Guarded/exposed main damage is 40%/150% after softening the portion of a hit above
+40 to 35%. Opening/full exposure/closing last 24/140/30 ticks. Teammates have separate
+hurt cooldowns; guard breaks wait for active leaps to land. One health bar only.
+Read [the guard/balance report](docs/guardian-guard-2026-09-09.md) for tuning,
+implementation, previews and checks. Human balance and animation feedback remain open.
+
+Latest wand/boss follow-up: [Nature and arena spells](docs/guardian-nature-2026-09-09.md).
+Nature earns a one-second post-attack opening with shared ten-second immunity;
+Guardian impacts crush local growth and sustained thorns bias its next slam.
+Fire coals may temporarily reskin the protected combat floor, seedlings survive
+that floor, and Fire/tree regeneration now reaches actual healing ticks.
+Human balance and appearance confirmation remain open.
+
+Read [docs/MOD_HANDOFF.md](docs/MOD_HANDOFF.md) before resuming Guardian work.
+The latest addition is the command-triggered, roofless 128-block Guardian arena:
+[docs/guardian-arena.md](docs/guardian-arena.md) records its design, commands,
+lifecycle, persistence, and validation. Death/disconnect eliminate players from
+combat; death now automatically respawns them in spectator mode inside the arena.
+They fly and see the boss bar but cannot fight/cast; all fighters dead closes the
+arena. Return coordinates and original modes persist across disconnect/restart.
+No exterior waiting-ground search is required to summon. Read
+[the spectator update](docs/guardian-spectators-2026-09-09.md). The latest user playtest approved the corrected arena/floor. The survival church
+encounter is now implemented; read [docs/guardian-church.md](docs/guardian-church.md)
+for natural generation, placement/locator commands, heart recall, victory restoration,
+loot, persistence, and offline build preview. Current Lunar build source/installed SHA-256 is
+`467cf5a41bd7100802b27e7d1a846a70f44200090375cc9012d5369d7cfb9fbc`.
+Latest follow-up: a vanilla-block Guardian effigy replaces the visible dormant
+entity. Use the existing socket at its feet. No living Guardian is present before
+the ritual; the ritual actor stays hidden during the player-only ascent. After
+formation it falls 48 blocks in 36 ticks, plays a 32-tick impact/recovery clip, then
+begins the existing awakening. Added arrival assets are separate from the approved
+attack clips. Old unfinished sites refresh only the effigy footprint on revisit.
+The real vanilla respawn lifecycle exposed an early teleport: Fabric AFTER_RESPAWN
+fires before the connection swaps away from the dead player. Returns now wait for
+the next server tick and the correct handler player. Safe-ground searches load
+chunks before heightmap reads and never use an unchecked world-spawn fallback.
+See [the arrival/respawn follow-up](docs/guardian-arrival-2026-09-09.md).
+The earlier deep audit remains recorded in [its report](docs/guardian-audit-2026-09-09.md).
+The user approved the ornate geometry, colorful glass and teal roof, then asked for
+stone instead of quartz and gold. No crosses or real-world religious symbols.
+Latest reward update: each chest independently rolls modest/better/rich treasure,
+ordinary supplies, and shuffled slots. Books choose varied enchantments up to II,
+respecting natural level-I caps. Stable per-site seeds prevent rerolls; completed
+chests do not refill. Magical rewards are deferred. See the church guide for odds.
+Latest playtest fixes: unfinished ruins blend exposed platform edges into nearby
+soil with a saved, replayable slope plan. Existing RUINED sites also receive this
+pass on revisit. Natural trees/foliage are breakable inside the ward, and valid heart
+activation clears vegetation in the Guardian/player lift shafts before admission.
+Server fixtures reproduced both the four-block ledge and tree-blocked ritual and
+passed. Human feedback on these two fixes remains open.
+The first human arena playtest exposed overlapping wall meshes and choppy carry
+teleports. The follow-up uses invisible backing blocks, synchronized passenger
+carriers/floor samples, and a church-style perimeter with ornate columns/arches.
+The user liked the revised arena, then requested regular-sized floor blocks.
+The latest floor/rim uses one-block vanilla texture repetitions in a single batched
+surface (`GuardianArenaFloor`), preserving room size, architecture and lift behavior.
+The first one-block floor playtest hit an invalid-atlas-ID crash. The fix uses
+`Atlases.BLOCKS` for `AtlasManager.getAtlasTexture`, reserving the texture-file ID
+for the render layer. A real-client asset/mesh regression is available through
+`tools/guardian_floor_client_smoke.init.gradle`; it passed with local Lunar assets.
+The user liked the corrected floor in a fresh Lunar playtest; broader fight balance is open. The earlier takeoff fix also still needs human confirmation; do not
+interpret server checks as confirmation of client visuals or overall fight balance.
 
 ## Build And Run
 
@@ -90,7 +201,8 @@ com.anton.elementalwands
 |   |-- overlay/WandHudOverlay  # 3-slot ability HUD above hotbar
 |   `-- ClientPlayerData        # client cache for synced unlocks and affinity
 |-- world/ModWorldGen.java      # currently a no-op after crystal worldgen removal
-`-- mixin/                      # PlayerEntityMixin
+|-- church/                     # persistent church sites, socket, ritual and restoration
+`-- mixin/                      # player, arena, and church protection hooks
 ```
 
 Important resources:
@@ -107,8 +219,10 @@ Important resources:
 - `docs/vfx-style-guide.md` - palettes, family ownership, exclusions, and counts
 
 Crystal ore blocks, crystal crafting recipes, and ore worldgen were removed in
-the Universal Wand refactor. `ModBlocks.registerAll()` and `ModWorldGen.registerAll()`
-are kept as no-op hooks.
+the Universal Wand refactor. `ModWorldGen.registerAll()` remains a no-op hook.
+`ModBlocks` registers the permanent church socket plus three internal Guardian arena foundation/wall blocks
+with no items or recipes. `GuardianArenaManager` owns the moving arena, membership,
+containment, temporary sky structure, return, and world-save recovery receipt.
 
 ## Core Architecture
 
@@ -229,14 +343,12 @@ Admin helpers:
 
 ### Wind
 
-- Primary: two `VacuumBladeEntity` projectiles with side offsets. Their only new
-  tracked state is a mirror boolean for opposing six-frame Sky Shear sprites;
-  wakes are interpolated and collision VFX use the actual hit position.
-- Secondary: Waylay Dash with 2 charges, passive recharge, and chain scaling.
-  A short-lived visual tracer follows real player movement, with an outer lane
-  on chained casts; charge and movement logic stay authoritative and unchanged.
-  `WaylayDashVfxManager` expires each trace after five ticks and also clears it
-  on death, leave, world change, server stop, or replacement by a newer dash.
+- Primary: three `VacuumBladeEntity` crescents in a narrow fan, centered on the
+  crosshair, 12-block range, 7-to-4 damage falloff, one hit per enemy/cast and the
+  existing 20-tick firing cooldown. Short wisps use the existing six-frame art.
+- Secondary: Waylay Dash retains two charges, strength and chaining; each missing
+  charge takes 100 ticks (five seconds) to recharge. `WaylayDashVfxManager` remains
+  a five-tick visual tracer with its existing cleanup lifecycle.
 - Ultimate: Zephyr Strike. It equips a temporary Elytra, launches the player, and
   creates a landing/impact explosion before restoring the old chest item. Its
   pearl vane wings, ascent streams, descent compression, shear feathers, and
@@ -248,10 +360,22 @@ Admin helpers:
 
 ### Stone
 
-- Primary: Tectonic Spikes, a terrain-following line of temporary stone spikes.
-- Secondary: Stone Wall. Recasting near the active wall shatters it forward for
+- Primary: Gathered Mass via `StoneClusterManager` and `StoneClusterEntity`.
+  Downward right-click on nearby solid ground gathers 25/100 material every
+  12 ticks without changing terrain. Aim elsewhere to throw: small rock 5 damage /
+  30 ticks; stored mass 14–32 damage at normal 25/50/75/100 stages / 50 ticks.
+  Weight scales to -25% movement speed; actual damage chips the reserve but keeps
+  its final point. Hits at 75+ briefly stagger ordinary targets. Water flight and
+  elevated aiming work; solid cover blocks projectiles. The old spike scheduler
+  is removed. See `docs/stone-gathered-mass-2026-09-10.md` for controls and checks.
+- Secondary: Stone Wall. Guardian hits consume the wall after it absorbs that hit; subsequent attacks are no longer blocked. Recasting near the active wall shatters it forward for
   damage and knockback.
 - Ultimate: Titan Dome via `TitanDomeManager`.
+- Natural gray Stone textures: all 41 production PNGs use gray rock and restrained
+  mineral accents, with rebuilt block surfaces, armor plates, sword and Titan debris.
+  September 10 follow-up adds finer irregular Minecraft-style grain and worn bevels
+  while preserving the approved shapes, alpha, dimensions and primary buff.
+  See `docs/stone-redesign-2026-09-10.md` for preview and verification status.
 
 ### Nature
 
@@ -285,6 +409,7 @@ registered from `ElementalWandsMod.onInitialize()`.
 | Manager | Used by |
 | --- | --- |
 | `TemporaryBlockManager` | temporary blocks for stone, fire, and nature effects |
+| `GuardianArenaManager` | sealed Guardian party, tower formation/return, protected sky structure, restart recovery |
 | `EntangleTracker` | nature entangle/root stacks and cooldown slowing |
 | `OvergrowthManager` | Nature ultimate |
 | `SeedlingManager` | Nature primary seedlings |
@@ -320,6 +445,14 @@ are not part of the current client input flow.
 
 ### Fractured Guardian cooperative boss
 
+`/ew guardian arena start|status|stop` controls the new optional arena. It gathers
+eligible players within 20 blocks, carries them through walls/floor/ascent, then
+starts the existing fight on a protected 128-by-128 floor above the terrain. The
+arena's boss-bar/participant range is 192 and movement/leap bounds cover that room;
+normal summon encounters below retain their old bounds. See `docs/guardian-arena.md`
+for the admission rules, safe abort, permanent elimination, and restart recovery.
+
+
 Spawn with `/summon elementalwands:fractured_guardian ~ ~ ~10`. It remains MISC,
 no natural spawning, persistent, with a 3.2 × 5.2 body hitbox. It automatically
 awakens over 84 ticks when a visible Survival/Adventure player is within 24 blocks.
@@ -331,9 +464,9 @@ shockwaves, close frontal slams, ranged throws/beams, and restrained repositioni
 There are no competing vanilla target goals. The boss holds a useful firing position
 and only paths when the group is out of reach or behind cover, within 14 blocks of
 its encounter origin. A blue boss bar is shared by eligible players within 48 blocks
-of the boss and encounter origin. Health is 200 + 100 per extra player, capped 600;
+of the boss and encounter origin. Health is 600 + 450 per extra player (up to 64 players);
 maximum/current rise together for late joiners and never shrink during the fight.
-After 200 ticks with no eligible participants, reset to full solo health.
+After 200 ticks with no eligible participants, reset to full solo health and guard.
 
 `/ew guardian fight` enables automatic group combat. `/ew guardian stop` cancels all
 attacks and held/flying rocks and persists passive mode with the command tag
@@ -432,7 +565,7 @@ review page; it does not prove in-game pathfinding or animation timing.
 `python3 tools/prepare_guardian_assets.py` compiles the original atlas into
 1024x1024 RGBA base/glow textures, scales UVs without changing geometry, and
 packages nine authored clips (six V4 clips plus three leap phases). `--check` validates runtime drift,
-bone references, keyframe ranges, and loop endpoints. The two creature textures
+bone references, keyframe ranges, and loop endpoints. The base/glow and six crack-variant creature textures
 are separate from the 298-PNG spell/HUD contract; do not change affinity counts.
 
 Remove nearby test Guardians with

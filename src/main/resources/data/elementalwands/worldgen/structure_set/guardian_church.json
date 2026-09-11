@@ -1,0 +1,14 @@
+{
+  "structures": [
+    {
+      "structure": "elementalwands:guardian_church",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 24,
+    "separation": 14,
+    "salt": 81746219
+  }
+}

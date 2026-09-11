@@ -1,4 +1,11 @@
+> Current balance: 600 + 450 health and 120 + 90 guard per additional player.
+> Crack materials communicate guard without another bar; breaking it opens ribs
+> and exposes the core. See [the current guard report](guardian-guard-2026-09-09.md).
+> Earlier balance numbers in historical notes below are superseded.
+
 # Fractured Guardian — cooperative boss playtest
+
+The command-triggered tower arena is now implemented. See [guardian-arena.md](guardian-arena.md) for the current formation, sealed-party rules, commands, and return/recovery workflow. The lore below is the earlier draft; the agreed ruined-church/heart/restoration direction is recorded in the arena guide.
 
 The model and earlier movement pass were approved in Lunar. The fuller V4 animations
 were approved in the HTML preview. The cooperative encounter and its visibility/

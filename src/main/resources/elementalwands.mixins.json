@@ -1,13 +1,24 @@
 {
-    "required": true,
-    "minVersion": "0.8",
-    "package": "com.anton.elementalwands.mixin",
-    "compatibilityLevel": "JAVA_21",
-    "mixins": [
-        "PlayerEntityMixin",
-        "ScreenHandlerMixin"
-    ],
-    "injectors": {
-        "defaultRequire": 1
-    }
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.anton.elementalwands.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "StoneStaggerMixin",
+    "StoneDamageMixin",
+    "PlayerEntityMixin",
+    "ScreenHandlerMixin",
+    "GuardianArenaPlayerMixin",
+    "GuardianArenaWorldMixin",
+    "GuardianSeedlingSupportMixin",
+    "GuardianLiftPassengerMixin",
+    "GuardianChurchExplosionMixin",
+    "GuardianChurchPistonMixin",
+    "GuardianChurchPlacementMixin",
+    "GuardianChurchChunkAccessor",
+    "GuardianChurchLocateMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
 }

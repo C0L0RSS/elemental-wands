@@ -2,6 +2,7 @@ package com.anton.elementalwands.client.renderer;
 
 import java.util.function.Predicate;
 
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
@@ -77,6 +78,14 @@ public final class AnimatedSpellBillboardRenderer<T extends Entity>
     @Override
     public void render(AnimatedSpellBillboardRenderState state, MatrixStack matrices,
             OrderedRenderCommandQueue queue, CameraRenderState cameraState) {
+        double dx = state.x - cameraState.pos.x;
+        double dy = state.y + yOffset - cameraState.pos.y;
+        double dz = state.z - cameraState.pos.z;
+        float visibility = SpellViewClearance.opacity(
+                !MinecraftClient.getInstance().gameRenderer.getCamera().isThirdPerson(),
+                Math.sqrt(dx * dx + dy * dy + dz * dz), Math.max(width, height) * 0.5);
+        if (visibility <= 0.0f) return;
+        int color = SpellViewClearance.color(0xFFFFFFFF, visibility);
         matrices.push();
         matrices.translate(0.0f, yOffset, 0.0f);
         matrices.multiply(cameraState.orientation);
@@ -85,25 +94,25 @@ public final class AnimatedSpellBillboardRenderer<T extends Entity>
         RenderLayer layer = layers[Math.floorMod(state.frame, layers.length)];
         boolean mirrored = state.mirrored;
         queue.submitCustom(matrices, layer,
-                (entry, vertices) -> drawQuad(vertices, entry, state.light, mirrored));
+                (entry, vertices) -> drawQuad(vertices, entry, state.light, mirrored, color));
         matrices.pop();
         super.render(state, matrices, queue, cameraState);
     }
 
     private static void drawQuad(VertexConsumer vertices, MatrixStack.Entry entry,
-            int light, boolean mirrored) {
+            int light, boolean mirrored, int color) {
         float leftU = mirrored ? 1.0f : 0.0f;
         float rightU = mirrored ? 0.0f : 1.0f;
-        vertex(vertices, entry, light, 0.0f, 0.0f, leftU, 1.0f);
-        vertex(vertices, entry, light, 1.0f, 0.0f, rightU, 1.0f);
-        vertex(vertices, entry, light, 1.0f, 1.0f, rightU, 0.0f);
-        vertex(vertices, entry, light, 0.0f, 1.0f, leftU, 0.0f);
+        vertex(vertices, entry, light, 0.0f, 0.0f, leftU, 1.0f, color);
+        vertex(vertices, entry, light, 1.0f, 0.0f, rightU, 1.0f, color);
+        vertex(vertices, entry, light, 1.0f, 1.0f, rightU, 0.0f, color);
+        vertex(vertices, entry, light, 0.0f, 1.0f, leftU, 0.0f, color);
     }
 
     private static void vertex(VertexConsumer vertices, MatrixStack.Entry entry, int light,
-            float x, float y, float u, float v) {
+            float x, float y, float u, float v, int color) {
         vertices.vertex(entry, x - 0.5f, y - 0.5f, 0.0f)
-                .color(0xFFFFFFFF)
+                .color(color)
                 .texture(u, v)
                 .overlay(OverlayTexture.DEFAULT_UV)
                 .light(light)

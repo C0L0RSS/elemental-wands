@@ -53,7 +53,7 @@ public final class SpaceAbilityHandler {
         SingularityBoltEntity bolt = new SingularityBoltEntity(world, caster);
         world.spawnEntity(bolt);
 
-        Vec3d castCenter = caster.getEyePos().add(caster.getRotationVec(1.0f).normalize().multiply(0.7));
+        Vec3d castCenter = com.anton.elementalwands.util.SpellCastVisuals.burstOrigin(caster);
         world.spawnParticles(ModParticles.SPACE_SINGULARITY,
                 castCenter.x, castCenter.y, castCenter.z, 1, 0.0, 0.0, 0.0, 0.0);
         world.spawnParticles(ModParticles.SPACE_BROKEN_ORBIT,
@@ -178,6 +178,7 @@ public final class SpaceAbilityHandler {
     }
 
     private static boolean isSafeTeleportLocation(ServerWorld world, PlayerEntity caster, Vec3d targetFeetPos) {
+        if (!com.anton.elementalwands.arena.GuardianArenaManager.canTeleport(caster,world,targetFeetPos)) return false;
         double minY = world.getBottomY() + 1;
         double maxY = world.getTopYInclusive() - 2;
         if (targetFeetPos.y < minY || targetFeetPos.y > maxY) {

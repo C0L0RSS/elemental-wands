@@ -27,6 +27,7 @@ public class UniversalWandItem extends AbstractWandItem {
 
     @Override
     public void castPrimary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
+        if (!com.anton.elementalwands.arena.GuardianArenaManager.canCast(caster)) return;
         switch (EWAttachments.getAffinity(caster)) {
             case FIRE  -> FireAbilityHandler.castPrimary(world, caster, stack);
             case WIND  -> WindAbilityHandler.castPrimary(world, caster, stack);
@@ -39,6 +40,7 @@ public class UniversalWandItem extends AbstractWandItem {
 
     @Override
     public void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
+        if (!com.anton.elementalwands.arena.GuardianArenaManager.canCast(caster)) return;
         switch (EWAttachments.getAffinity(caster)) {
             case FIRE  -> FireAbilityHandler.castSecondary(world, caster, stack);
             case WIND  -> WindAbilityHandler.castSecondary(world, caster, stack);
@@ -51,6 +53,7 @@ public class UniversalWandItem extends AbstractWandItem {
 
     @Override
     public void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {
+        if (!com.anton.elementalwands.arena.GuardianArenaManager.canCast(caster)) return;
         // The unlock gate used to live inside trySpendUltimateCharge; now that the
         // helper is static we enforce it here before dispatching to a handler.
         if (!isAbilityUnlocked(caster, Ability.ULTIMATE)) {

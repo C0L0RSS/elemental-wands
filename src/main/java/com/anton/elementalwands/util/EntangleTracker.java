@@ -97,6 +97,9 @@ public final class EntangleTracker {
         map.put(target.getUuid(), new EntangleData(newStacks, now));
 
         applyEffects(target, newStacks);
+        if (target instanceof com.anton.elementalwands.entity.FracturedGuardianEntity guardian) {
+            guardian.onNatureEntangle(newStacks);
+        }
         if (newStacks > currentStacks) {
             spawnVineParticles(world, target, newStacks);
         }
@@ -153,7 +156,16 @@ public final class EntangleTracker {
                 getRootVisualTicksRemaining(player));
     }
 
+    public static void applyNatureSlow(LivingEntity target, int ticks, int amplifier) {
+        int capped = target instanceof com.anton.elementalwands.entity.FracturedGuardianEntity ? 0 : amplifier;
+        target.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, ticks, capped, false, false, true));
+    }
+
     private static void applyEffects(LivingEntity target, int stacks) {
+        if (target instanceof com.anton.elementalwands.entity.FracturedGuardianEntity) {
+            applyNatureSlow(target, 60, 0);
+            return;
+        }
         // Stacks 1-4 ramp Slowness I..IV (amplifier = stacks - 1). At the cap the vines pin
         // the target in place: Slowness VII (amplifier 6) reduces movement speed to zero.
         if (stacks >= MAX_STACKS) {

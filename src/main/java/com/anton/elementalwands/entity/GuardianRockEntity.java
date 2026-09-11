@@ -24,14 +24,23 @@ import net.minecraft.world.World;
 /** Encounter-owned rubble. Never places blocks, explodes, or damages terrain. */
 public class GuardianRockEntity extends ProjectileEntity implements FlyingItemEntity {
     private static final TrackedData<Boolean> HELD = DataTracker.registerData(GuardianRockEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    private static final TrackedData<Boolean> SHARD = DataTracker.registerData(GuardianRockEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final ItemStack STACK = new ItemStack(Blocks.COBBLESTONE);
     private boolean loadedFromSave;
     private int flyingTicks;
+    private GuardianWallImpact walls = new GuardianWallImpact();
+    private java.util.Set<java.util.UUID> volleyHits = new java.util.HashSet<>();
 
     public GuardianRockEntity(EntityType<? extends GuardianRockEntity> type, World world) { super(type, world); }
 
-    @Override protected void initDataTracker(DataTracker.Builder builder) { builder.add(HELD, true); }
+    @Override protected void initDataTracker(DataTracker.Builder builder) { builder.add(HELD, true); builder.add(SHARD, false); }
     @Override public ItemStack getStack() { return STACK; }
+    public boolean isShard() { return dataTracker.get(SHARD); }
+    void releaseShard(Vec3d direction,java.util.Set<java.util.UUID> hits,GuardianWallImpact walls) {
+        this.volleyHits=hits;this.walls=walls;
+        dataTracker.set(SHARD,true);dataTracker.set(HELD,false);
+        setVelocity(direction.normalize().multiply(GuardianFanRules.SPEED));velocityDirty=true;
+    }
     public boolean isHeld() { return dataTracker.get(HELD); }
     @Override protected void readCustomData(ReadView view) {
         super.readCustomData(view);
@@ -50,20 +59,28 @@ public class GuardianRockEntity extends ProjectileEntity implements FlyingItemEn
             if (loadedFromSave || age > 160 || !(getOwner() instanceof FracturedGuardianEntity guardian)
                     || !guardian.isAlive() || guardian.isRemoved()) { discard(); return; }
             if (dataTracker.get(HELD)) return;
-            if (++flyingTicks > 80) { discard(); return; }
+            if (++flyingTicks > (isShard()?44:80)) { discard(); return; }
             Vec3d start = getEntityPos(), end = start.add(getVelocity());
             // Sweep the center and the cube's corners to stop its visible volume at cover.
             double fraction = 1;
             boolean blocked = false;
-            double r = GuardianCombatRules.ROCK_RADIUS;
+            net.minecraft.util.math.BlockPos blockContact = null;
+            double r = isShard()?GuardianFanRules.RADIUS:GuardianCombatRules.ROCK_RADIUS;
             for (int i = 0; i < 9; i++) {
                 Vec3d offset = i == 8 ? Vec3d.ZERO : new Vec3d((i&1)==0?-r:r, (i&2)==0?-r:r, (i&4)==0?-r:r);
+                if (isShard()) {
+                    Vec3d from=start.add(offset),to=end.add(offset);
+                    Vec3d clipped=walls.clip(world,guardian,from,to,false,false);
+                    if(clipped.squaredDistanceTo(to)>1e-10) {
+                        blocked=true;fraction=Math.min(fraction,from.distanceTo(clipped)/Math.max(1e-8,start.distanceTo(end)));
+                    }
+                }
                 var hit = world.raycast(new RaycastContext(start.add(offset), end.add(offset),
                         RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, this));
                 if (hit.getType() != HitResult.Type.MISS) {
                     blocked = true;
-                    fraction = Math.min(fraction,
-                            start.add(offset).distanceTo(hit.getPos()) / Math.max(1e-8, start.distanceTo(end)));
+                    double f=start.add(offset).distanceTo(hit.getPos()) / Math.max(1e-8, start.distanceTo(end));
+                    if(f <= fraction) { fraction=f; blockContact=hit.getBlockPos(); }
                 }
             }
             ServerPlayerEntity direct = null;
@@ -77,6 +94,7 @@ public class GuardianRockEntity extends ProjectileEntity implements FlyingItemEn
             }
             if (direct != null || blocked) {
                 setPosition(start.lerp(end, entityFraction));
+                if(direct==null && blockContact!=null)walls.breakWall(world,blockContact);
                 impact(world, guardian, direct);
                 return;
             }
@@ -85,24 +103,27 @@ public class GuardianRockEntity extends ProjectileEntity implements FlyingItemEn
         } else if (dataTracker.get(HELD)) return;
         // Same ballistic integration on both sides; server alone decides impacts and damage.
         setPosition(getEntityPos().add(getVelocity()));
-        setVelocity(getVelocity().add(0, -GuardianCombatRules.ROCK_GRAVITY, 0));
+        if (!isShard()) setVelocity(getVelocity().add(0, -GuardianCombatRules.ROCK_GRAVITY, 0));
     }
 
     private void impact(ServerWorld world, FracturedGuardianEntity guardian, ServerPlayerEntity direct) {
         Vec3d center = getEntityPos();
         for (ServerPlayerEntity player : world.getPlayers(p -> GuardianBossCombat.canDamage(guardian, p))) {
-            if (player != direct && player.squaredDistanceTo(center) > 2.25*2.25) continue;
+            if (isShard()) {
+                if (player != direct || volleyHits.contains(player.getUuid())) continue;
+            } else if (player != direct && player.squaredDistanceTo(center) > 3*3) continue;
             Vec3d contact = player.getBoundingBox().getCenter();
             // Surface-offset origin avoids a block impact's exact boundary occluding the open side.
             Vec3d from = center.subtract(getVelocity().normalize().multiply(.08));
-            if (!GuardianBossCombat.clearLine(world, guardian, from, contact)) continue;
-            if (player.damage(world, world.getDamageSources().thrown(this, guardian), player == direct ? 8 : 4)) {
+            if (!walls.clear(world, guardian, from, contact, false)) continue;
+            if (isShard()) volleyHits.add(player.getUuid());
+            if (player.damage(world, world.getDamageSources().thrown(this, guardian), isShard()?6:player == direct ? 8 : 4)) {
                 Vec3d away = player.getEntityPos().subtract(center);
                 player.takeKnockback(.6, -away.x, -away.z);
             }
         }
         world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, Blocks.STONE.getDefaultState()),
-                center.x, center.y, center.z, 35, .5, .4, .5, .12);
+                center.x, center.y, center.z, isShard()?14:48, isShard()?.3:1.2, .4, isShard()?.3:1.2, .12);
         world.playSound(null, center.x, center.y, center.z, SoundEvents.BLOCK_STONE_BREAK, SoundCategory.HOSTILE, 1.4f, .6f);
         discard();
     }

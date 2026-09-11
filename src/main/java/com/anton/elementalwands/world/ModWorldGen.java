@@ -3,6 +3,7 @@ package com.anton.elementalwands.world;
 public class ModWorldGen {
 
     public static void registerAll() {
-        // Crystal ore worldgen was removed in the Universal Wand refactor.
+        // Church generation is data-driven: worldgen/structure, structure_set and template_pool.
+        // Crystal ore worldgen remains removed.
     }
 }

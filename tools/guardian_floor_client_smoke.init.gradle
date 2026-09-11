@@ -1,0 +1,50 @@
+// Actual client asset/mesh check in an isolated game directory; does not create a world.
+// ./gradlew -I tools/guardian_floor_client_smoke.init.gradle runClient
+allprojects {
+    plugins.withId('fabric-loom') {
+        def smokeRoot=layout.buildDirectory.dir('guardian-floor-client-smoke').get().asFile
+        // Optional existing cache for offline verification (for example Lunar shared/assets).
+        def existingAssets=project.findProperty('floorClientAssets')
+        if (existingAssets) {
+            loom.runs.client.vmArg('-Dfabric.dli.config='+new File(smokeRoot,'launch.cfg').absolutePath)
+        }
+        tasks.register('floorClientMetadata') {
+            if (existingAssets) dependsOn generateDLIConfig
+            doLast {
+                def metadata=new File(smokeRoot,'metadata')
+                metadata.mkdirs()
+                new File(metadata,'fabric.mod.json').text='''{
+  "schemaVersion": 1, "id": "guardian_floor_client_smoke", "version": "1.0.0", "environment": "client",
+  "entrypoints": {"client": ["com.anton.elementalwands.client.renderer.GuardianFloorClientSmokeMod"]},
+  "depends": {"elementalwands": "*"}
+}'''
+                new File(smokeRoot,'FLOOR_CLIENT_PASSED.txt').delete()
+                new File(smokeRoot,'FLOOR_CLIENT_FAILED.txt').delete()
+                if (existingAssets) {
+                    def assets=file(existingAssets)
+                    if (!new File(assets,'indexes/27.json').exists()) throw new GradleException('Existing asset cache needs indexes/27.json')
+                    def launch=file('.gradle/loom-cache/launch.cfg').text
+                    launch=launch.replaceAll(/(?m)(\t--assetIndex\r?\n)\t[^\r\n]+/, { match, prefix -> prefix+'\t27' })
+                    launch=launch.replaceAll(/(?m)(\t--assetsDir\r?\n)\t[^\r\n]+/, { match, prefix -> prefix+'\t'+assets.absolutePath })
+                    new File(smokeRoot,'launch.cfg').text=launch
+                }
+            }
+        }
+        tasks.register('floorClientJar',Jar) {
+            dependsOn guardianTestClasses, floorClientMetadata
+            archiveFileName='floor-client-smoke.jar'
+            destinationDirectory=smokeRoot
+            from sourceSets.guardianTest.output
+            from new File(smokeRoot,'metadata')
+        }
+        loom.runs.client.runDir('build/guardian-floor-client-smoke')
+        loom.runs.client.vmArg('-Dfabric.addMods='+new File(smokeRoot,'floor-client-smoke.jar').absolutePath)
+        tasks.named('runClient') {
+            dependsOn floorClientJar
+            doLast {
+                if (!new File(smokeRoot,'FLOOR_CLIENT_PASSED.txt').exists() || new File(smokeRoot,'FLOOR_CLIENT_FAILED.txt').exists())
+                    throw new GradleException('Floor client check failed; inspect build/guardian-floor-client-smoke/logs/latest.log')
+            }
+        }
+    }
+}

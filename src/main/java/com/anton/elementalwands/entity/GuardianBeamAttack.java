@@ -8,11 +8,9 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.RaycastContext;
 
 /** One mouth pulse, with an immutable aim after the tell and at most one hit per victim during its visible pulse. */
 final class GuardianBeamAttack {
@@ -26,6 +24,7 @@ final class GuardianBeamAttack {
     private Vec3d direction = new Vec3d(0,0,1);
     private Vec3d origin = Vec3d.ZERO;
     private boolean fired;
+    private GuardianWallImpact walls = new GuardianWallImpact();
     private Vec3d anchor = Vec3d.ZERO;
 
     GuardianBeamAttack(FracturedGuardianEntity guardian) { this.guardian = guardian; }
@@ -38,6 +37,7 @@ final class GuardianBeamAttack {
         active = true;
         fired = false;
         struck.clear();
+        walls = new GuardianWallImpact();
         motion.reset(player.getEntityPos());
         anchor = guardian.getEntityPos();
         previousNoAi = guardian.isAiDisabled();
@@ -59,6 +59,7 @@ final class GuardianBeamAttack {
             guardian.stopTriggeredAnim("guardian", "beam");
         }
         target = null;
+        walls = new GuardianWallImpact();
     }
 
     void tick(ServerWorld world) {
@@ -127,9 +128,7 @@ final class GuardianBeamAttack {
 
     private Vec3d pulseEnd(ServerWorld world) {
         Vec3d end = origin.add(direction.multiply(GuardianBeamTiming.RANGE));
-        var hit = world.raycast(new RaycastContext(origin,end,RaycastContext.ShapeType.COLLIDER,
-                RaycastContext.FluidHandling.NONE,guardian));
-        return hit.getType() == HitResult.Type.MISS ? end : hit.getPos();
+        return walls.clip(world,guardian,origin,end,false,true);
     }
 
     private void fire(ServerWorld world) {
@@ -145,12 +144,12 @@ final class GuardianBeamAttack {
         Box search = new Box(origin,end).expand(GuardianBeamTiming.RADIUS);
         for (LivingEntity victim : world.getEntitiesByClass(LivingEntity.class,search,
                 e -> e != guardian && !struck.contains(e.getUuid()) && e.isAlive() && !e.isSpectator() && !guardian.isTeammate(e)
-                        && !(e instanceof PlayerEntity p && p.isCreative()))) {
+                        && !(e instanceof PlayerEntity p && p.isCreative())
+                        && !(e instanceof ServerPlayerEntity p && !com.anton.elementalwands.arena.GuardianArenaManager.eligible(guardian,p)))) {
             var hit = GuardianBeamGeometry.contact(origin,end,victim.getBoundingBox());
             if (hit.isEmpty()) continue;
             Vec3d contact = hit.get();
-            if (world.raycast(new RaycastContext(origin,contact,RaycastContext.ShapeType.COLLIDER,
-                    RaycastContext.FluidHandling.NONE,guardian)).getType() != HitResult.Type.MISS) continue;
+            if (!walls.clear(world,guardian,origin,contact,false)) continue;
             struck.add(victim.getUuid()); // A blocked hit also consumes the attempt; no repeated shield spam.
             if (victim.damage(world,world.getDamageSources().mobAttack(guardian),GuardianBeamTiming.DAMAGE)) {
                 victim.takeKnockback(.45,-direction.x,-direction.z);

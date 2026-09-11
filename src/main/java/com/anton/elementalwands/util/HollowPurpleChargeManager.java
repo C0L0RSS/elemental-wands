@@ -77,6 +77,17 @@ public final class HollowPurpleChargeManager {
         return true;
     }
 
+    public static void cancel(PlayerEntity caster) {
+        boolean removed=false;
+        for (var charges:CHARGES.values()) removed|=charges.remove(caster.getUuid())!=null;
+        CHARGES.entrySet().removeIf(e -> e.getValue().isEmpty());
+        if(removed) {
+            var effect=caster.getStatusEffect(StatusEffects.LEVITATION);
+            if(effect!=null && effect.getDuration()<=8 && effect.getAmplifier()==0) caster.removeStatusEffect(StatusEffects.LEVITATION);
+            caster.setVelocity(Vec3d.ZERO);caster.fallDistance=0;
+        }
+    }
+
     public static boolean isCharging(ServerWorld world, PlayerEntity caster) {
         Map<UUID, ChargeState> byCaster = CHARGES.get(world.getRegistryKey());
         return byCaster != null && byCaster.containsKey(caster.getUuid());

@@ -8,7 +8,7 @@ public final class GuardianLeapRules {
     public static final int LOCK = 10, TAKEOFF = 14, FLIGHT = 36;
     public static final int LAND = TAKEOFF + FLIGHT, WAVE_DELAY = 6, RECOVERY = 44;
     public static final double MIN_RANGE = 12, MAX_RANGE = 30, HEIGHT = 11;
-    public static final double CORE_RADIUS = 3, IMPACT_RADIUS = 6;
+    public static final double CORE_RADIUS = 3, IMPACT_RADIUS = 3;
     private GuardianLeapRules() {}
 
     private static int waveTick(int age) {

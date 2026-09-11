@@ -26,6 +26,13 @@ import net.minecraft.util.Identifier;
 
 public final class ModEntities {
 
+        public static final EntityType<com.anton.elementalwands.entity.StoneClusterEntity> STONE_CLUSTER = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID,"stone_cluster"),
+                EntityType.Builder.<com.anton.elementalwands.entity.StoneClusterEntity>create(
+                        com.anton.elementalwands.entity.StoneClusterEntity::new,SpawnGroup.MISC)
+                        .dimensions(2f,2f).maxTrackingRange(8).trackingTickInterval(1)
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"stone_cluster"))));
+
         public static final EntityType<BoulderProjectileEntity> BOULDER_PROJECTILE = Registry.register(
                         Registries.ENTITY_TYPE,
                         Identifier.of(ElementalWandsMod.MOD_ID, "boulder_projectile"),
@@ -155,10 +162,24 @@ public final class ModEntities {
                         FabricEntityTypeBuilder
                                         .<FracturedGuardianEntity>create(SpawnGroup.MISC, FracturedGuardianEntity::new)
                                         .dimensions(EntityDimensions.fixed(3.2f, 5.2f))
-                                        .trackRangeBlocks(96)
+                                        .trackRangeBlocks(192)
                                         .trackedUpdateRate(1)
                                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
                                                         Identifier.of(ElementalWandsMod.MOD_ID, "fractured_guardian"))));
+
+        public static final EntityType<com.anton.elementalwands.entity.GuardianArenaEntity> GUARDIAN_ARENA = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID,"guardian_arena"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.GuardianArenaEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.GuardianArenaEntity::new)
+                        .dimensions(EntityDimensions.fixed(128,1)).trackRangeBlocks(256).trackedUpdateRate(1)
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"guardian_arena"))));
+
+        public static final EntityType<com.anton.elementalwands.entity.GuardianLiftEntity> GUARDIAN_LIFT = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID,"guardian_lift"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.GuardianLiftEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.GuardianLiftEntity::new)
+                        .dimensions(EntityDimensions.fixed(.1f,.1f)).trackRangeBlocks(256).trackedUpdateRate(1)
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"guardian_lift"))));
 
         private ModEntities() {
         }

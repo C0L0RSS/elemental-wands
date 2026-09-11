@@ -46,7 +46,7 @@ final class GuardianLeapContractTest {
         }
         Vec3d landing=Vec3d.ZERO;
         require(damage(landing,new Box(-.3,0,-.3,.3,1.8,.3))==16,"Center smash must be heavy");
-        require(damage(landing,new Box(4,0,0,4.6,1.8,.6))==10,"Outer area damage missing");
+        require(damage(landing,new Box(4,0,0,4.6,1.8,.6))==0,"Outer landing must be handled by the jumpable wave");
         require(damage(landing,new Box(6.1,0,0,6.7,1.8,.6))==0,"Marked perimeter does not bound damage");
         require(damage(landing,new Box(-.3,-4,-.3,.3,-2,.3))==0,"Smash damaged a player through a lower floor");
         require(damage(landing,new Box(-.3,4,-.3,.3,6,.3))==0,"Smash reached above the impact volume");
@@ -56,7 +56,7 @@ final class GuardianLeapContractTest {
             if (landingWaveTick(tick)>=0) second++;
             if (launchWaveTick(tick)>=0 && landingWaveTick(tick)>=0) overlap++;
         }
-        require(first==28 && second==28,"One of the two shockwaves was truncated");
+        require(first==38 && second==38,"One of the two shockwaves was truncated");
         require(FLIGHT==36 && HEIGHT==11,"Longer, higher reaction window changed unexpectedly");
         require(overlap==0,"The longer airtime should separate the two waves");
         require(launchWaveTick(TAKEOFF)==0,"Push-off wave is not synchronized to the fists");

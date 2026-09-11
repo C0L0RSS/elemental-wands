@@ -1,0 +1,70 @@
+// Optional real-server regression fixture. All worlds, players and metadata stay under build/.
+// ./gradlew -I tools/guardian_church_smoke.init.gradle runServer --args nogui
+// ./gradlew -I tools/guardian_church_smoke.init.gradle -PchurchRecovery runServer --args nogui
+allprojects {
+    plugins.withId('fabric-loom') {
+        def smokeRoot = layout.buildDirectory.dir('church-smoke').get().asFile
+        def runRoot = file('build/church-smoke-run')
+        def recovery = project.hasProperty('churchRecovery')
+        tasks.register('churchSmokeSetup') {
+            doLast {
+                runRoot.mkdirs()
+                def oldWorld = new File(runRoot, 'church-test')
+                if (!recovery && oldWorld.exists() && !oldWorld.renameTo(new File(runRoot, 'church-test-before-' + System.currentTimeMillis()))) {
+                    throw new GradleException('Could not preserve the previous disposable test world.')
+                }
+                def acceptedEula = file('run/eula.txt')
+                if (!acceptedEula.exists() || !acceptedEula.text.contains('eula=true')) {
+                    throw new GradleException('Accept the Minecraft EULA in run/eula.txt before using this test server.')
+                }
+                new File(runRoot, 'eula.txt').text = acceptedEula.text
+                new File(runRoot, 'server.properties').text = '''server-ip=127.0.0.1
+server-port=0
+online-mode=false
+level-type=minecraft:flat
+generate-structures=false
+level-name=church-test
+generator-settings={"layers":[{"block":"minecraft:bedrock","height":1},{"block":"minecraft:dirt","height":2},{"block":"minecraft:grass_block","height":1}],"biome":"minecraft:plains"}
+spawn-protection=0
+view-distance=8
+simulation-distance=8
+difficulty=normal
+max-tick-time=-1
+'''
+                new File(runRoot,'CHURCH_FAILED.txt').delete()
+                new File(runRoot,recovery ? 'CHURCH_RECOVERY_PASSED.txt' : 'CHURCH_PASSED.txt').delete()
+            }
+        }
+        tasks.register('churchSmokeMetadata') {
+            doLast {
+                def metadata = new File(smokeRoot,'metadata')
+                metadata.mkdirs()
+                new File(metadata,'fabric.mod.json').text = '''{
+  "schemaVersion": 1, "id": "guardian_church_smoke", "version": "1.0.0", "environment": "server",
+  "entrypoints": {"main": ["com.anton.elementalwands.church.GuardianChurchSmokeMod"]},
+  "depends": {"elementalwands": "*"}
+}'''
+            }
+        }
+        tasks.register('churchSmokeJar', Jar) {
+            dependsOn guardianTestClasses, churchSmokeMetadata
+            archiveFileName = 'church-smoke.jar'
+            destinationDirectory = smokeRoot
+            from sourceSets.guardianTest.output
+            from new File(smokeRoot,'metadata')
+        }
+        loom.runs.server.runDir('build/church-smoke-run')
+        loom.runs.server.vmArg('-Dfabric.addMods=' + new File(smokeRoot,'church-smoke.jar').absolutePath)
+        loom.runs.server.vmArg('-Dew.church.recovery=' + recovery)
+        tasks.named('runServer') {
+            dependsOn churchSmokeJar, churchSmokeSetup
+            standardInput = System.in
+            doLast {
+                def marker = new File(runRoot,recovery ? 'CHURCH_RECOVERY_PASSED.txt' : 'CHURCH_PASSED.txt')
+                if (!marker.exists() || new File(runRoot,'CHURCH_FAILED.txt').exists()) {
+                    throw new GradleException('Church runtime checks did not pass; inspect build/church-smoke-run/logs/latest.log')
+                }
+            }
+        }
+    }
+}

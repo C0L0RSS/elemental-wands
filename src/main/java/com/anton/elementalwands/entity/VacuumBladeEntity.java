@@ -25,10 +25,9 @@ public class VacuumBladeEntity extends ProjectileEntity {
     private static final TrackedData<Boolean> MIRRORED = DataTracker.registerData(
             VacuumBladeEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
 
-    private static final float MAX_DAMAGE = 7.0f;
-    private static final float MIN_DAMAGE = 4.0f;
     private static final double PROJECTILE_SPEED = 2.5;
-    private static final int MAX_TRAVEL_DISTANCE = 20;
+    private static final double MAX_TRAVEL_DISTANCE = WindFanRules.RANGE;
+    private java.util.Set<java.util.UUID> castHits = new java.util.HashSet<>();
 
     private Vec3d startPos;
 
@@ -36,20 +35,16 @@ public class VacuumBladeEntity extends ProjectileEntity {
         super(type, world);
     }
 
-    public VacuumBladeEntity(World world, LivingEntity owner, Vec3d offset, boolean mirrored) {
+    public VacuumBladeEntity(World world, LivingEntity owner, Vec3d direction, boolean mirrored,
+            java.util.Set<java.util.UUID> castHits) {
         super(ModEntities.VACUUM_BLADE, world);
-        setOwner(owner);
+        setOwner(owner); this.castHits=castHits;
         dataTracker.set(MIRRORED, mirrored);
-
-        // Start position with offset (for dual blades)
-        Vec3d spawnPos = owner.getEyePos().add(offset);
-        setPosition(spawnPos.x, spawnPos.y, spawnPos.z);
-        this.startPos = spawnPos;
-
-        // Set velocity in owner's facing direction
-        Vec3d direction = owner.getRotationVec(1.0f).normalize();
-        setVelocity(direction.multiply(PROJECTILE_SPEED));
+        startPos = owner.getEyePos(); setPosition(startPos);
+        setVelocity(direction.normalize().multiply(PROJECTILE_SPEED));
     }
+
+    @Override public boolean shouldSave() { return false; }
 
     @Override
     protected void initDataTracker(net.minecraft.entity.data.DataTracker.Builder builder) {
@@ -63,32 +58,23 @@ public class VacuumBladeEntity extends ProjectileEntity {
     @Override
     public void tick() {
         super.tick();
-
-        if (getEntityWorld() instanceof ServerWorld serverWorld) {
-            // Check if traveled too far
-            if (startPos != null && getEntityPos().distanceTo(startPos) > MAX_TRAVEL_DISTANCE) {
-                discard();
-                return;
+        if (startPos == null) startPos = getEntityPos();
+        double remaining = MAX_TRAVEL_DISTANCE-startPos.distanceTo(getEntityPos());
+        if (remaining <= 1e-6 || age>20) { discard(); return; }
+        Vec3d step=getVelocity();
+        if (step.length()>remaining) step=step.normalize().multiply(remaining);
+        setVelocity(step); // Collision and movement share the clipped final segment.
+        if (getEntityWorld() instanceof ServerWorld world) {
+            Vec3d start=getEntityPos();
+            HitResult hit=ProjectileUtil.getCollision(this,this::canHit);
+            if (hit.getType()!=HitResult.Type.MISS) {
+                setPosition(hit.getPos());
+                spawnInterpolatedWake(world,start,hit.getPos()); onCollision(hit); return;
             }
-
-            Vec3d segmentStart = getEntityPos();
-            Vec3d segmentEnd = segmentStart.add(getVelocity());
-            HitResult hitResult = ProjectileUtil.getCollision(this, this::canHit);
-            if (hitResult.getType() != HitResult.Type.MISS) {
-                spawnInterpolatedWake(serverWorld, segmentStart, hitResult.getPos());
-                onCollision(hitResult);
-                return;
-            }
-
-            // At 2.5 blocks per tick, spawning only at the entity position leaves
-            // obvious gaps. Sample the complete motion segment so each talon has a
-            // continuous, velocity-readable wake without changing its movement.
-            spawnInterpolatedWake(serverWorld, segmentStart, segmentEnd);
+            spawnInterpolatedWake(world,start,start.add(step));
         }
-
-        // Update position
-        Vec3d velocity = getVelocity();
-        setPosition(getX() + velocity.x, getY() + velocity.y, getZ() + velocity.z);
+        setPosition(getEntityPos().add(step));
+        if (remaining <= step.length()+1e-6) discard();
     }
 
     @Override
@@ -102,8 +88,8 @@ public class VacuumBladeEntity extends ProjectileEntity {
 
         // Deal damage with linear falloff: MAX_DAMAGE at point-blank, MIN_DAMAGE at MAX_TRAVEL_DISTANCE
         double traveled = startPos != null ? getEntityPos().distanceTo(startPos) : 0.0;
-        float t = (float) Math.min(1.0, traveled / MAX_TRAVEL_DISTANCE);
-        float damage = MAX_DAMAGE + (MIN_DAMAGE - MAX_DAMAGE) * t;
+        if (!castHits.add(target.getUuid())) { discard(); return; }
+        float damage = WindFanRules.damage(traveled);
 
         DamageSource source = (owner instanceof LivingEntity livingOwner)
                 ? serverWorld.getDamageSources().thrown(this, livingOwner)
@@ -114,13 +100,11 @@ public class VacuumBladeEntity extends ProjectileEntity {
             com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(owner, damage);
         }
 
-        // Apply weak knockback away from caster/projectile direction
-        Vec3d knockbackDir = this.getVelocity().normalize();
-        target.addVelocity(
-                knockbackDir.x * 0.5,
-                0.2,
-                knockbackDir.z * 0.5);
-        target.velocityModified = true;
+        // Respect resistance and rejected damage. A resistant boss must never bank upward impulses.
+        if (damaged && target instanceof LivingEntity living) {
+            Vec3d direction=getVelocity().normalize();
+            living.takeKnockback(.5,-direction.x,-direction.z);
+        }
 
         spawnImpact(serverWorld, entityHitResult.getPos());
 
@@ -159,16 +143,16 @@ public class VacuumBladeEntity extends ProjectileEntity {
 
         Vec3d direction = delta.normalize();
         Vec3d lateral = horizontalPerpendicular(direction);
-        int samples = Math.max(1, Math.min(12, (int) Math.ceil(distance / 0.32)));
+        int samples = Math.max(1, Math.min(4, (int) Math.ceil(distance / .7)));
         double side = isMirrored() ? -1.0 : 1.0;
 
         for (int sample = 1; sample <= samples; sample++) {
             double progress = sample / (double) samples;
             Vec3d point = from.add(delta.multiply(progress));
-            Vec3d wakeVelocity = direction.multiply(-0.055);
+            Vec3d wakeVelocity = direction.multiply(-0.025);
             spawnDirected(world, ModParticles.WIND_SLIPSTREAM, point, wakeVelocity);
 
-            if (((sample + age) & 1) == 0) {
+            if (sample == samples && age % 2 == 0) {
                 Vec3d featherPoint = point.add(lateral.multiply(side * 0.11));
                 Vec3d featherVelocity = wakeVelocity.add(lateral.multiply(side * 0.035));
                 spawnDirected(world, ModParticles.WIND_SHEAR_FEATHER, featherPoint, featherVelocity);

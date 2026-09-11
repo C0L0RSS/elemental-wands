@@ -23,11 +23,10 @@ import com.anton.elementalwands.util.ZephyrStrikeManager;
 public final class WindAbilityHandler {
 
     // Primary: Vacuum Blades
-    private static final double VACUUM_BLADE_OFFSET = 0.5; // Distance between two blades
 
     // Secondary: Waylay Dash
     private static final int DASH_MAX_CHARGES = 2;
-    private static final int DASH_RECHARGE_TICKS = 80;
+    private static final int DASH_RECHARGE_TICKS = com.anton.elementalwands.entity.WindFanRules.DASH_RECHARGE_TICKS;
     private static final int DASH_CHAIN_WINDOW_TICKS = 30; // 1.5 seconds
     private static final float DASH_BASE_STRENGTH = 2.0f;
 
@@ -80,19 +79,14 @@ public final class WindAbilityHandler {
         if (!AbstractWandItem.tryStartCooldown(world, caster, stack, AbstractWandItem.Ability.PRIMARY, getPrimaryCooldownTicks()))
             return;
 
-        // Get perpendicular offset to spawn two blades side-by-side
+        // One center blade and two narrow wings, all sharing one accepted hit per enemy.
         Vec3d forward = caster.getRotationVec(1.0f).normalize();
-        Vec3d right = new Vec3d(-forward.z, 0, forward.x).normalize(); // Perpendicular horizontal vector
-
-        Vec3d offset1 = right.multiply(VACUUM_BLADE_OFFSET);
-        Vec3d offset2 = right.multiply(-VACUUM_BLADE_OFFSET);
-
-        // Spawn two vacuum blades
-        VacuumBladeEntity blade1 = new VacuumBladeEntity(world, caster, offset1, false);
-        VacuumBladeEntity blade2 = new VacuumBladeEntity(world, caster, offset2, true);
-
-        world.spawnEntity(blade1);
-        world.spawnEntity(blade2);
+        java.util.Set<java.util.UUID> hits = new java.util.HashSet<>();
+        for (int wing=-1; wing<=1; wing++) {
+            VacuumBladeEntity blade = new VacuumBladeEntity(world,caster,
+                    com.anton.elementalwands.entity.WindFanRules.direction(forward,wing),wing<0,hits);
+            world.spawnEntity(blade);
+        }
 
         // Sound effects
         world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 0.9f,
@@ -100,7 +94,7 @@ public final class WindAbilityHandler {
         world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_BREEZE_WIND_BURST.value(), SoundCategory.PLAYERS,
                 0.6f, 1.5f);
 
-        Vec3d origin = caster.getEyePos().add(forward.multiply(0.7));
+        Vec3d origin = com.anton.elementalwands.util.SpellCastVisuals.burstOrigin(caster);
         world.spawnParticles(ModParticles.WIND_BURST_RING,
                 origin.x, origin.y, origin.z,
                 1, 0.0, 0.0, 0.0, 0.0);
@@ -126,7 +120,7 @@ public final class WindAbilityHandler {
         // Passive Recharge
         if (charges < DASH_MAX_CHARGES) {
             rechargeTicks++;
-            if (rechargeTicks >= DASH_RECHARGE_TICKS) { // 4 seconds
+            if (rechargeTicks >= DASH_RECHARGE_TICKS) { // 5 seconds
                 charges++;
                 rechargeTicks = 0;
 

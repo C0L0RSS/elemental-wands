@@ -68,6 +68,7 @@ public final class SeedlingManager {
         final BlockPos anchorPos;
         final BlockPos floorPos;
         final RegistryKey<World> worldKey;
+        final Set<BlockPos> crushed = new HashSet<>();
         final int plantTick;
         int expiryTick;
         int lastPulseTick;
@@ -365,7 +366,7 @@ public final class SeedlingManager {
             BlockState current = world.getBlockState(pos);
             if (current.isOf(Blocks.MOSS_CARPET) || current.isOf(Blocks.LILY_PAD)
                     || current.isOf(Blocks.FLOWERING_AZALEA)) {
-                world.setBlockState(pos, entry.getValue(), 3);
+                if (world.setBlockState(pos, entry.getValue(), 3)) TemporaryBlockManager.forgetNaturePosition(world, pos);
             }
         }
     }
@@ -399,7 +400,7 @@ public final class SeedlingManager {
         }
     }
 
-    private static BlockPos findFloorNearY(ServerWorld world, int x, int yCenter, int z) {
+    static BlockPos findFloorNearY(ServerWorld world, int x, int yCenter, int z) {
         for (int offset = 0; offset <= 4; offset++) {
             int[] dirs = (offset == 0) ? new int[]{0} : new int[]{-1, 1};
             for (int dir : dirs) {
@@ -408,7 +409,7 @@ public final class SeedlingManager {
                 BlockState state = world.getBlockState(pos);
                 if (!hasFloorTop(world, pos, state)) continue;
                 BlockState above = world.getBlockState(pos.up());
-                if (above.isAir() || above.isReplaceable()) {
+                if (above.isAir() || above.isReplaceable() || above.isOf(Blocks.MOSS_CARPET) || above.isOf(Blocks.LILY_PAD)) {
                     return pos;
                 }
             }
@@ -428,7 +429,7 @@ public final class SeedlingManager {
                 }
                 if (!hasFloorTop(world, pos, state)) continue;
                 BlockState above = world.getBlockState(pos.up());
-                if (above.isAir() || above.isReplaceable()) {
+                if (above.isAir() || above.isReplaceable() || above.isOf(Blocks.MOSS_CARPET) || above.isOf(Blocks.LILY_PAD)) {
                     return y;
                 }
             }
@@ -527,7 +528,7 @@ public final class SeedlingManager {
 
         List<BlockPos> ringCols = chebyshevRingColumns(seedling.floorPos, seedling.currentRadius);
         int remainingLife = Math.max(20, seedling.expiryTick - now);
-        PlacementResult result = placeVerdantGrowth(world, ringCols, seedling.placedPositions, remainingLife);
+        PlacementResult result = placeVerdantGrowth(world, ringCols.stream().filter(p -> !seedling.crushed.contains(p.up())).toList(), seedling.placedPositions, remainingLife);
         seedling.placedPositions.addAll(result.placed());
         for (Map.Entry<BlockPos, BlockState> e : result.originals().entrySet()) {
             seedling.originals.putIfAbsent(e.getKey(), e.getValue());
@@ -579,7 +580,7 @@ public final class SeedlingManager {
                 continue;
             }
 
-            e.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 40, 3, false, false, true));
+            EntangleTracker.applyNatureSlow(e, 40, 3);
 
             Integer lastTick = seedling.lastEntangleTickByEntity.get(e.getUuid());
             if (lastTick == null || now - lastTick >= ZONE_ENTANGLE_INTERVAL) {
@@ -594,11 +595,35 @@ public final class SeedlingManager {
     static void applyThorns(ServerWorld world, LivingEntity target, UUID casterUuid) {
         boolean hurt = target.damage(world, world.getDamageSources().sweetBerryBush(), THORN_DAMAGE);
         if (hurt) {
+            if (target instanceof com.anton.elementalwands.entity.FracturedGuardianEntity guardian) guardian.onNatureThorns();
             PlayerEntity caster = world.getPlayerByUuid(casterUuid);
             if (caster != null) {
                 AbstractWandItem.onWandDamageDealt(caster, THORN_DAMAGE);
             }
         }
+    }
+
+    public static void crushGrowth(ServerWorld world, java.util.function.Predicate<BlockPos> hit) {
+        List<Seedling> seedlings = ACTIVE.get(world.getRegistryKey());
+        if (seedlings == null) return;
+        for (Seedling s : new ArrayList<>(seedlings)) {
+            if (hit.test(s.anchorPos)) cleanupSeedling(world, s);
+            else crushPositions(world, s.placedPositions, s.originals, s.crushed, hit);
+        }
+    }
+
+    static void crushPositions(ServerWorld world, Set<BlockPos> positions, Map<BlockPos, BlockState> originals,
+            Set<BlockPos> crushed, java.util.function.Predicate<BlockPos> hit) {
+        Map<BlockPos, BlockState> removed = new HashMap<>();
+        for (BlockPos pos : new HashSet<>(positions)) {
+            if (!hit.test(pos)) continue;
+            positions.remove(pos); crushed.add(pos);
+            BlockState original = originals.remove(pos);
+            if (original != null) removed.put(pos, original);
+            world.spawnParticles(ModParticles.NATURE_PETAL, pos.getX()+.5, pos.getY()+.2, pos.getZ()+.5,
+                    3, .2,.15,.2,.03);
+        }
+        restoreBlocks(world, removed);
     }
 
     private static void cleanupSeedling(ServerWorld world, Seedling seedling) {

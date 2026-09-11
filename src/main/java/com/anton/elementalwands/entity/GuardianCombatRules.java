@@ -10,25 +10,30 @@ import net.minecraft.util.math.Vec3d;
 /** Shared encounter decisions and geometry, independent of a running world. */
 public final class GuardianCombatRules {
     public enum Attack {
-        BEAM(72, 100), THROW(72, 80), SHOCKWAVE(56, 100), SLAM(56, 60), LEAP(GuardianLeapRules.LAND + GuardianLeapRules.RECOVERY, 180);
+        FAN(58, 120), BEAM(72, 100), THROW(72, 80), SHOCKWAVE(56, 100), SLAM(56, 60), LEAP(GuardianLeapRules.LAND + GuardianLeapRules.RECOVERY, 180);
         public final int duration, cooldown;
         Attack(int duration, int cooldown) { this.duration = duration; this.cooldown = cooldown; }
     }
     public record Candidate(UUID id, double distance, boolean visible) {}
-    public static final int THROW_LOCK = 36, THROW_RELEASE = 44, SLAM_IMPACT = 26, RECOVERY_GAP = 12;
+    public static final int THROW_LOCK = 40, THROW_RELEASE = 44, SLAM_IMPACT = 26, RECOVERY_GAP = 12;
     public static final double ROCK_GRAVITY = .035, ROCK_RADIUS = .7;
-    public static final double WAVE_SPEED = .65, WAVE_RANGE = 18, WAVE_HEIGHT = .75;
+    public static final double WAVE_SPEED = .85, WAVE_RANGE = 32, WAVE_HEIGHT = .75;
 
     private GuardianCombatRules() {}
 
-    public static int healthForParty(int players) { return 200 + 100 * (Math.clamp(players, 1, 5) - 1); }
+    public static int healthForParty(int players) { return GuardianGuardRules.health(players); }
 
     public static boolean eligible(Attack attack, Candidate player) {
+        return eligible(attack, player, false);
+    }
+
+    public static boolean eligible(Attack attack, Candidate player, boolean unstable) {
         if (!player.visible()) return false;
         return switch (attack) {
+            case FAN -> player.distance() >= 4 && player.distance() <= GuardianFanRules.RANGE;
             case BEAM -> player.distance() >= 5 && player.distance() <= 24;
-            case THROW -> player.distance() >= 6 && player.distance() <= 32;
-            case SHOCKWAVE -> player.distance() <= WAVE_RANGE;
+            case THROW -> player.distance() >= 6 && player.distance() <= 48;
+            case SHOCKWAVE -> player.distance() <= GuardianPhaseRules.waveRange(unstable);
             case LEAP -> player.distance() >= GuardianLeapRules.MIN_RANGE && player.distance() <= GuardianLeapRules.MAX_RANGE;
             case SLAM -> player.distance() <= 4.5;
         };
@@ -36,13 +41,19 @@ public final class GuardianCombatRules {
 
     /** Least recently targeted eligible player wins; distance breaks initial ties. */
     public static Candidate target(Attack attack, List<Candidate> players, Map<UUID, Long> lastTargeted) {
-        return players.stream().filter(p -> eligible(attack, p))
+        return target(attack, players, lastTargeted, false);
+    }
+    public static Candidate target(Attack attack, List<Candidate> players, Map<UUID, Long> lastTargeted, boolean unstable) {
+        return players.stream().filter(p -> eligible(attack, p, unstable))
                 .min(Comparator.<Candidate>comparingLong(p -> lastTargeted.getOrDefault(p.id(), Long.MIN_VALUE))
                         .thenComparingDouble(Candidate::distance).thenComparing(p -> p.id().toString()))
                 .orElse(null);
     }
 
     public static Attack choose(List<Candidate> players, Map<Attack, Long> ready, long now, Attack last) {
+        return choose(players, ready, now, last, false);
+    }
+    public static Attack choose(List<Candidate> players, Map<Attack, Long> ready, long now, Attack last, boolean unstable) {
         long nearby = players.stream().filter(p -> p.visible() && p.distance() <= 8).count();
         if (last != Attack.LEAP && now >= ready.getOrDefault(Attack.LEAP,0L)
                 && players.stream().anyMatch(p -> eligible(Attack.LEAP,p))) return Attack.LEAP;
@@ -54,11 +65,11 @@ public final class GuardianCombatRules {
                 : new Attack[]{Attack.SLAM, Attack.THROW, Attack.BEAM, Attack.SHOCKWAVE};
         for (Attack attack : order) {
             if (attack != last && now >= ready.getOrDefault(attack, 0L)
-                    && players.stream().anyMatch(p -> eligible(attack, p))) return attack;
+                    && players.stream().anyMatch(p -> eligible(attack, p, unstable))) return attack;
         }
         // A distant solo player may only qualify for throws. Do not deadlock after one throw.
         if (last != null && now >= ready.getOrDefault(last, 0L)
-                && players.stream().anyMatch(p -> eligible(last, p))) return last;
+                && players.stream().anyMatch(p -> eligible(last, p, unstable))) return last;
         return null;
     }
 
@@ -70,7 +81,7 @@ public final class GuardianCombatRules {
     }
 
     public static int flightTicks(Vec3d origin, Vec3d aim) {
-        return Math.clamp((int)Math.ceil(origin.distanceTo(aim) / 1.05), 12, 32);
+        return Math.clamp((int)Math.ceil(origin.distanceTo(aim) / 1.5), 8, 36);
     }
 
     /** Predict steady horizontal travel; cap prediction so dashes/teleports cannot fling aim away. */

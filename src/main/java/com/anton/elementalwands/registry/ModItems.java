@@ -30,6 +30,8 @@ public class ModItems {
             EquipmentAssetKeys.REGISTRY_KEY,
             Identifier.of(ElementalWandsMod.MOD_ID, "zephyr_wings"));
 
+    public static final Item GUARDIAN_HEART = register("guardian_heart", settings -> new Item(settings.fireproof()));
+
     // ── Wands ──────────────────────────────────────────
     public static final Item FRACTURED_WAND = register("fractured_wand", settings -> new UniversalWandItem(settings));
     public static final Item TITAN_SWORD = register("titan_sword", settings -> new Item(

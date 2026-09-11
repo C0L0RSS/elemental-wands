@@ -1,0 +1,70 @@
+// Optional real-server regression fixture. All worlds, players and metadata stay under build/.
+// ./gradlew -I tools/stone_cluster_smoke.init.gradle runServer --args nogui
+// ./gradlew -I tools/stone_cluster_smoke.init.gradle -PchurchRecovery runServer --args nogui
+allprojects {
+    plugins.withId('fabric-loom') {
+        def smokeRoot = layout.buildDirectory.dir('stone-cluster-smoke').get().asFile
+        def runRoot = file('build/stone-cluster-smoke-run')
+        def recovery = project.hasProperty('churchRecovery')
+        tasks.register('stoneClusterSmokeSetup') {
+            doLast {
+                runRoot.mkdirs()
+                def oldWorld = new File(runRoot, 'stone-test')
+                if (!recovery && oldWorld.exists() && !oldWorld.renameTo(new File(runRoot, 'stone-test-before-' + System.currentTimeMillis()))) {
+                    throw new GradleException('Could not preserve the previous disposable test world.')
+                }
+                def acceptedEula = file('run/eula.txt')
+                if (!acceptedEula.exists() || !acceptedEula.text.contains('eula=true')) {
+                    throw new GradleException('Accept the Minecraft EULA in run/eula.txt before using this test server.')
+                }
+                new File(runRoot, 'eula.txt').text = acceptedEula.text
+                new File(runRoot, 'server.properties').text = '''server-ip=127.0.0.1
+server-port=0
+online-mode=false
+level-type=minecraft:flat
+generate-structures=false
+level-name=stone-test
+generator-settings={"layers":[{"block":"minecraft:bedrock","height":1},{"block":"minecraft:dirt","height":2},{"block":"minecraft:grass_block","height":1}],"biome":"minecraft:plains"}
+spawn-protection=0
+view-distance=8
+simulation-distance=8
+difficulty=normal
+max-tick-time=-1
+'''
+                new File(runRoot,'STONE_FAILED.txt').delete()
+                new File(runRoot,'STONE_PASSED.txt').delete()
+            }
+        }
+        tasks.register('stoneClusterSmokeMetadata') {
+            doLast {
+                def metadata = new File(smokeRoot,'metadata')
+                metadata.mkdirs()
+                new File(metadata,'fabric.mod.json').text = '''{
+  "schemaVersion": 1, "id": "stone_cluster_smoke", "version": "1.0.0", "environment": "server",
+  "entrypoints": {"main": ["com.anton.elementalwands.entity.StoneClusterSmokeMod"]},
+  "depends": {"elementalwands": "*"}
+}'''
+            }
+        }
+        tasks.register('stoneClusterSmokeJar', Jar) {
+            dependsOn guardianTestClasses, stoneClusterSmokeMetadata
+            archiveFileName = 'stone-cluster-smoke.jar'
+            destinationDirectory = smokeRoot
+            from sourceSets.guardianTest.output
+            from new File(smokeRoot,'metadata')
+        }
+        loom.runs.server.runDir('build/stone-cluster-smoke-run')
+        loom.runs.server.vmArg('-Dfabric.addMods=' + new File(smokeRoot,'stone-cluster-smoke.jar').absolutePath)
+        loom.runs.server.vmArg('-Dew.church.recovery=' + recovery)
+        tasks.named('runServer') {
+            dependsOn stoneClusterSmokeJar, stoneClusterSmokeSetup
+            standardInput = System.in
+            doLast {
+                def marker = new File(runRoot,'STONE_PASSED.txt')
+                if (!marker.exists() || new File(runRoot,'STONE_FAILED.txt').exists()) {
+                    throw new GradleException('Stone runtime checks did not pass; inspect build/stone-cluster-smoke-run/logs/latest.log')
+                }
+            }
+        }
+    }
+}

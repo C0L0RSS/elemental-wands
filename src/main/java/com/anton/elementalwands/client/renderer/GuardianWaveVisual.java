@@ -27,10 +27,13 @@ final class GuardianWaveVisual {
         var result = new ArrayList<Stone>();
         for (int slot=0;slot<2;slot++) {
             float tick = entity.getWaveTime(partialTick,slot)-SLAM_IMPACT;
-            if (tick<0 || tick>=Math.ceil(WAVE_RANGE/WAVE_SPEED)) continue;
+            boolean unstable = entity.isWaveUnstable(slot);
+            double range = com.anton.elementalwands.entity.GuardianPhaseRules.waveRange(unstable);
+            double speed = com.anton.elementalwands.entity.GuardianPhaseRules.waveSpeed(unstable);
+            if (tick<0 || tick>=Math.ceil(range/speed)) continue;
             Vec3d origin=entity.getEntityPos().add(entity.getWaveOrigin(slot));
-            double front=Math.min(WAVE_RANGE,(tick+1)*WAVE_SPEED);
-            for (int row=0;row<2;row++) {
+            double front=Math.min(range,(tick+1)*speed);
+            for (int row=0;row<1;row++) {
                 double radius=front-.25-row*.8;
                 if (radius<.3) continue;
                 int count=Math.max(12,(int)Math.ceil(radius*Math.PI*2/.95));

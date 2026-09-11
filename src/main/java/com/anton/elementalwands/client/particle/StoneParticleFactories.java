@@ -15,7 +15,7 @@ public final class StoneParticleFactories {
             0.72f, 0.0f, 0.58f,
             0.09f, 0.95f,
             -0.10f, 0.10f,
-            0xD8C092, 0x766B62,
+            0xF0F3F1, 0xBEC7C8,
             SpriteMode.RANDOM, true, false);
 
     private static final Profile SHARD = new Profile(
@@ -24,7 +24,7 @@ public final class StoneParticleFactories {
             1.0f, 0.0f, 0.68f,
             0.13f, 0.96f,
             -0.22f, 0.22f,
-            0xBAA477, 0x4B5155,
+            0xEFF3F1, 0xAAB5B8,
             SpriteMode.BY_AGE, true, false);
 
     private static final Profile FAULT = new Profile(
@@ -33,7 +33,7 @@ public final class StoneParticleFactories {
             0.9f, 0.0f, 0.5f,
             0.0f, 1.0f,
             -0.02f, 0.02f,
-            0xF0D6A0, 0x9B7135,
+            0xF3F6F2, 0xB9C6BC,
             SpriteMode.BY_AGE, false, false);
 
     private static final Profile SHOCKWAVE = new Profile(
@@ -42,7 +42,7 @@ public final class StoneParticleFactories {
             0.82f, 0.0f, 0.38f,
             0.0f, 1.0f,
             0.0f, 0.0f,
-            0xE6D1AA, 0x74695F,
+            0xEDF2F0, 0xB9C3C5,
             SpriteMode.BY_AGE, false, false);
 
     private static final Profile TITAN = new Profile(
@@ -51,7 +51,7 @@ public final class StoneParticleFactories {
             0.95f, 0.05f, 0.7f,
             0.0f, 0.98f,
             0.0f, 0.0f,
-            0xD8C69A, 0x464C50,
+            0xEFF3F0, 0xADB9BA,
             SpriteMode.BY_AGE, false, false);
 
     private StoneParticleFactories() {

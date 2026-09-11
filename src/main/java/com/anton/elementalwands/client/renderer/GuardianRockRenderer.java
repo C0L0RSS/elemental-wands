@@ -13,17 +13,17 @@ import net.minecraft.client.util.math.MatrixStack;
 
 /** Full block geometry at the same size as the held stone and swept collision volume. */
 public final class GuardianRockRenderer extends EntityRenderer<GuardianRockEntity, GuardianRockRenderer.State> {
-    public static final class State extends EntityRenderState { boolean held; }
+    public static final class State extends EntityRenderState { boolean held, shard; }
     public GuardianRockRenderer(EntityRendererFactory.Context context) { super(context); }
     @Override public State createRenderState() { return new State(); }
     @Override public void updateRenderState(GuardianRockEntity entity, State state, float partialTick) {
         super.updateRenderState(entity, state, partialTick);
-        state.held = entity.isHeld();
+        state.held = entity.isHeld(); state.shard=entity.isShard();
     }
     @Override public void render(State state, MatrixStack matrices, OrderedRenderCommandQueue queue, CameraRenderState camera) {
         if (state.held || state.invisible) return;
         matrices.push();
-        float size = (float)(GuardianCombatRules.ROCK_RADIUS*2);
+        float size = (float)((state.shard?com.anton.elementalwands.entity.GuardianFanRules.RADIUS:GuardianCombatRules.ROCK_RADIUS)*2);
         matrices.scale(size,size,size);
         matrices.translate(-.5,-.5,-.5);
         queue.submitBlock(matrices, Blocks.COBBLESTONE.getDefaultState(), state.light, OverlayTexture.DEFAULT_UV, state.outlineColor);

@@ -20,6 +20,15 @@
   silhouettes carry gameplay readability; temporary ground surfaces remain
   ordinary blocks with weighted texture variants where repetition is visible.
 
+## First-person readability
+
+Custom particles and spell billboards use `SpellViewClearance` to smoothly fade
+near the first-person camera, accounting for sprite size and Fire ribbon length.
+Restore lifetime alpha after particle submission. Third-person opacity stays
+unchanged. Place decorative muzzle bursts through `SpellCastVisuals` so they start
+forward/down and stay on the near side of cover. Keep damage/projectile origins
+separate from these visual offsets. See `spell-view-clearance-2026-09-10.md`.
+
 ## Shared palettes and shape language
 
 | Affinity | Palette | Primary shapes |
@@ -27,7 +36,7 @@
 | Fractured | ivory, pale cyan, muted blue-gray | unstable motes and broken threads |
 | Fire | Minecraft flame white, yellow, orange, red | animated fire tongues, rolling fronts, burning runways |
 | Wind | pearl, silver, storm slate, tiny blue-gray shadows | pressure planes, shear edges, torn wakes, vanes |
-| Stone | ochre, slate, warm gray, pale rune light | shards, dust, cracks, angular runes |
+| Stone | natural gray, pale stone edges, subtle sage mineral flecks | carved slabs, fractured rock, dust, plated armor |
 | Nature | chartreuse, emerald, bark brown, pollen gold | leaves, thorns, roots, blossoms |
 | Space | violet, magenta, cyan, near-black | stars, orbit rings, streaks, void cores |
 
@@ -37,9 +46,11 @@
   iron bindings, and fractured bone-white crystal prongs. It is the one held
   wand texture for every affinity; unused legacy per-affinity wand textures do
   not define the in-game appearance.
-- `wand_hud_v2` uses neutral charcoal, iron, and bone. Affinity-colored ability
-  overlays, padlocks, cooldown masks, ultimate charge, fractured-state cues,
-  and Wind dash pips remain separate and retain their behavior.
+- `wand_hud_v2` uses carved walnut grain, brass corner inlays, and tiny ivory/sage
+  rune crystals. Ability glyphs sit inside a six-pixel frame. Stone reserve is a
+  matching text-free trough directly above the ability row, with four pull divisions
+  and a pale mineral fill at 75+ mass. Cooldown/ultimate numbers sit within their
+  slots. Locks use brass; Wind charge pips and all gameplay state retain their behavior.
 - Shared gear is generated independently from affinity assets so Fire/Wind
   replacement passes cannot touch Arcane, Stone, Nature, or Space artwork.
 
@@ -109,19 +120,31 @@ Neither concept image is ever used directly as a game texture.
 
 ## Stone vertical slice
 
-- Stone is Raw Seismic rather than arcane runework: charcoal slate, warm-gray
-  strata, muted ochre fracture seams, mineral highlights, and pale weighted dust.
+- Stone uses natural gray rock with restrained grain, chipped pale edges and sparse
+  desaturated mineral flecks. The September 10 redesign replaces the dark ochre
+  family across all 41 production PNGs; see `art/stone/natural-gray/before-after.png`.
+- The accepted gray design has a finer Minecraft-style material pass:
+  irregular clustered grain, tiny pits and varied bevel shading, with the same
+  native resolution and alpha silhouettes. Latest comparison is
+  `art/stone/weathered-detail/before-after.png`. The earlier grain-only pass was
+  too subtle; the current pass authors broken layers, chipped courses and stronger
+  plate shading in addition to grain.
 - `stone_fault` is the readable ground telegraph; it races ahead of the damage
   while remaining low enough not to hide targets.
 - `stone_shard` and `stone_dust` separate heavy angular debris from lingering
   atmosphere. Shards fall quickly; dust stays low and never behaves like smoke.
 - Earthen Maw grows low-poly layered teeth through multiple block states, then
   cracks and sinks instead of popping between ordinary stone cubes.
-- Stone Wall assembles from stratified slabs, shows a fractured ready state, and
+- Stone Wall uses two broad courses per tile, preserves the same base material
+  underneath its fractured ready state, and
   shatters into a forward wedge that follows its real damage volume.
 - Titan Dome is the Stone hero effect: mountain ribs close around the arena,
-  basalt armor assembles on the caster, and the shell visibly pulls, repairs,
+  gray stone plate armor assembles on the caster, and the shell visibly pulls, repairs,
   fractures, and collapses over its lifetime.
+- The dome has one dressed stone face per block; the sword has a honed chipped
+  edge and a separate charcoal grip. Armor faces are authored per vanilla UV
+  region with continuous plates and deliberate front visor openings. Titan
+  particles show converging/crumbling stone fragments. Geometry is unchanged.
 
 ## Nature vertical slice
 

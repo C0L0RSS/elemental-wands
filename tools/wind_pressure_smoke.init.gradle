@@ -1,0 +1,68 @@
+// Optional real-server regression fixture. All worlds, players and metadata stay under build/.
+// ./gradlew -I tools/wind_pressure_smoke.init.gradle runServer --args nogui
+allprojects {
+    plugins.withId('fabric-loom') {
+        def smokeRoot = layout.buildDirectory.dir('wind-pressure-smoke').get().asFile
+        def runRoot = file('build/wind-pressure-smoke-run')
+        def recovery = false
+        tasks.register('windPressureSmokeSetup') {
+            doLast {
+                runRoot.mkdirs()
+                def oldWorld = new File(runRoot, 'pressure-test')
+                if (!recovery && oldWorld.exists() && !oldWorld.renameTo(new File(runRoot, 'pressure-test-before-' + System.currentTimeMillis()))) {
+                    throw new GradleException('Could not preserve the previous disposable test world.')
+                }
+                def acceptedEula = file('run/eula.txt')
+                if (!acceptedEula.exists() || !acceptedEula.text.contains('eula=true')) {
+                    throw new GradleException('Accept the Minecraft EULA in run/eula.txt before using this test server.')
+                }
+                new File(runRoot, 'eula.txt').text = acceptedEula.text
+                new File(runRoot, 'server.properties').text = '''server-ip=127.0.0.1
+server-port=0
+online-mode=false
+level-type=minecraft:flat
+generate-structures=false
+level-name=pressure-test
+generator-settings={"layers":[{"block":"minecraft:bedrock","height":1},{"block":"minecraft:dirt","height":2},{"block":"minecraft:grass_block","height":1}],"biome":"minecraft:plains"}
+spawn-protection=0
+view-distance=8
+simulation-distance=8
+difficulty=normal
+max-tick-time=-1
+'''
+                new File(runRoot,'PRESSURE_FAILED.txt').delete()
+                new File(runRoot,'PRESSURE_PASSED.txt').delete()
+            }
+        }
+        tasks.register('windPressureSmokeMetadata') {
+            doLast {
+                def metadata = new File(smokeRoot,'metadata')
+                metadata.mkdirs()
+                new File(metadata,'fabric.mod.json').text = '''{
+  "schemaVersion": 1, "id": "wind_pressure_smoke", "version": "1.0.0", "environment": "server",
+  "entrypoints": {"main": ["com.anton.elementalwands.entity.WindPressureSmokeMod"]},
+  "depends": {"elementalwands": "*"}
+}'''
+            }
+        }
+        tasks.register('windPressureSmokeJar', Jar) {
+            dependsOn guardianTestClasses, windPressureSmokeMetadata
+            archiveFileName = 'wind-pressure-smoke.jar'
+            destinationDirectory = smokeRoot
+            from sourceSets.guardianTest.output
+            from new File(smokeRoot,'metadata')
+        }
+        loom.runs.server.runDir('build/wind-pressure-smoke-run')
+        loom.runs.server.vmArg('-Dfabric.addMods=' + new File(smokeRoot,'wind-pressure-smoke.jar').absolutePath)
+        tasks.named('runServer') {
+            dependsOn windPressureSmokeJar, windPressureSmokeSetup
+            standardInput = System.in
+            doLast {
+                def marker = new File(runRoot,'PRESSURE_PASSED.txt')
+                if (!marker.exists() || new File(runRoot,'PRESSURE_FAILED.txt').exists()) {
+                    throw new GradleException('Guard runtime checks did not pass; inspect build/wind-pressure-smoke-run/logs/latest.log')
+                }
+            }
+        }
+    }
+}

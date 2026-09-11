@@ -629,6 +629,9 @@ public final class TitanDomeManager {
         finishForPlayer(player);
     }
 
+    /** End encounter effects and restore real equipment before cinematic transport. */
+    public static void cancelForEncounter(ServerPlayerEntity player) { finishForPlayer(player); }
+
     private static void finishForPlayer(ServerPlayerEntity player) {
         MinecraftServer server = player.getEntityWorld().getServer();
         if (server == null) return;

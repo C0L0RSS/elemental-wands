@@ -70,10 +70,11 @@ public final class FireAbilityHandler {
                     BlockPos groundPos = player.getBlockPos().down();
                     net.minecraft.block.BlockState groundState = world.getBlockState(groundPos);
                     if (groundState.isOf(ModSpellBlocks.INFERNO_FLAME)
-                            || groundState.isOf(ModSpellBlocks.PYRE_COALS)) {
-                        player.addStatusEffect(
-                                new StatusEffectInstance(StatusEffects.REGENERATION, 20, 0, false, false, true)); // Regen
-                                                                                                                  // I
+                            || groundState.isOf(ModSpellBlocks.PYRE_COALS)
+                            || groundState.isOf(ModSpellBlocks.PYRE_FLAME)
+                            || world.getBlockState(player.getBlockPos()).isOf(ModSpellBlocks.INFERNO_FLAME)
+                            || world.getBlockState(player.getBlockPos()).isOf(ModSpellBlocks.PYRE_FLAME)) {
+                        com.anton.elementalwands.util.SpellBuffs.regeneration(player);
                         player.addStatusEffect(
                                 new StatusEffectInstance(StatusEffects.SPEED, 20, 2, false, false, true)); // Speed III
                     }
@@ -91,8 +92,7 @@ public final class FireAbilityHandler {
         world.spawnEntity(infernoWave);
 
         // A compressed ignition establishes the source of the forceful stream.
-        Vec3d direction = caster.getRotationVec(1.0f).normalize();
-        Vec3d ignition = caster.getEyePos().add(direction.multiply(0.75));
+        Vec3d ignition = com.anton.elementalwands.util.SpellCastVisuals.burstOrigin(caster);
         world.spawnParticles(ModParticles.FIRE_IMPACT_RING,
                 ignition.x, ignition.y, ignition.z,
                 1, 0.0, 0.0, 0.0, 0.0);

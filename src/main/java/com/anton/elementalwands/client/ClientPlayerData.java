@@ -17,6 +17,17 @@ public final class ClientPlayerData {
     private static int unlockedSkills = 0;
     private static String affinity = "NONE";
     private static List<BlockPos> natureSeedlings = List.of();
+    private static int stoneMass, stoneDuration = 30;
+    private static long stoneReadyAt;
+
+    public static void setStoneCluster(int mass, int remaining, int duration, long now) {
+        stoneMass = Math.clamp(mass,0,100); stoneDuration = Math.max(1,duration);
+        stoneReadyAt = now + Math.max(0,remaining);
+    }
+    public static int stoneMass() { return stoneMass; }
+    public static int stoneDuration() { return stoneDuration; }
+    public static long stoneRemaining(long now) { return Math.max(0,stoneReadyAt-now); }
+    public static void clearStoneCluster() { stoneMass=0; stoneDuration=30; stoneReadyAt=0; }
     private static final Map<Integer, EntangleState> entangledEntities = new HashMap<>();
 
     public static final int SKILL_SECONDARY = 1;
@@ -92,6 +103,7 @@ public final class ClientPlayerData {
     }
 
     public static void reset() {
+        clearStoneCluster();
         unlockedSkills = 0;
         affinity = "NONE";
         natureSeedlings = List.of();

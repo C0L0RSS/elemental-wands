@@ -1,5 +1,8 @@
 package com.anton.elementalwands.client.particle;
 
+import com.anton.elementalwands.client.renderer.SpellViewClearance;
+import net.minecraft.client.particle.BillboardParticleSubmittable;
+import net.minecraft.client.render.Camera;
 import net.minecraft.client.particle.BillboardParticle;
 import net.minecraft.client.particle.SpriteProvider;
 import net.minecraft.client.world.ClientWorld;
@@ -114,6 +117,24 @@ final class ElementalBillboardParticle extends BillboardParticle {
             updateSprite(spriteProvider);
         }
         updatePresentation();
+    }
+
+    @Override
+    public void render(BillboardParticleSubmittable output, Camera camera, float tickDelta) {
+        double dx = MathHelper.lerp(tickDelta, lastX, x) - camera.getPos().x;
+        double dy = MathHelper.lerp(tickDelta, lastY, y) - camera.getPos().y;
+        double dz = MathHelper.lerp(tickDelta, lastZ, z) - camera.getPos().z;
+        float visibility = SpellViewClearance.opacity(!camera.isThirdPerson(),
+                Math.sqrt(dx * dx + dy * dy + dz * dz), getSize(tickDelta));
+        if (visibility <= 0.0f) return;
+        float lifetimeAlpha = alpha;
+        try {
+            alpha = lifetimeAlpha * visibility;
+            super.render(output, camera, tickDelta);
+        } finally {
+            // Rendering must never accumulate fading or alter particle lifetime state.
+            alpha = lifetimeAlpha;
+        }
     }
 
     @Override

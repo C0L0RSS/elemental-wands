@@ -73,7 +73,7 @@ public class ElementalWandsClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.VACUUM_BLADE,
                 context -> new AnimatedSpellBillboardRenderer<>(context,
                         Identifier.of("elementalwands", "textures/entity/vacuum_blade"),
-                        6, 1.1f, 0.55f, 0.0f, true,
+                        6, .95f, .42f, 0.0f, true,
                         blade -> blade.isMirrored()));
         EntityRendererRegistry.register(ModEntities.CALAMITY_TORNADO, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.INFERNO_WAVE, FireWaveRenderer::new);
@@ -83,7 +83,10 @@ public class ElementalWandsClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.STONE_ZOMBIE, StoneZombieRenderer::new);
         EntityRendererRegistry.register(ModEntities.FIRE_SPIRIT, FireSpiritRenderer::new);
         EntityRendererRegistry.register(ModEntities.FRACTURED_GUARDIAN, FracturedGuardianRenderer::new);
+        EntityRendererRegistry.register(ModEntities.GUARDIAN_LIFT, EmptyEntityRenderer::new);
+        EntityRendererRegistry.register(ModEntities.GUARDIAN_ARENA, com.anton.elementalwands.client.renderer.GuardianArenaRenderer::new);
         EntityRendererRegistry.register(ModEntities.GUARDIAN_ROCK, com.anton.elementalwands.client.renderer.GuardianRockRenderer::new);
+        EntityRendererRegistry.register(ModEntities.STONE_CLUSTER, com.anton.elementalwands.client.renderer.StoneClusterRenderer::new);
 
         // Receive synced player data from server
         ClientPlayNetworking.registerGlobalReceiver(ModNetworking.SyncPlayerDataPayload.ID,
@@ -98,7 +101,21 @@ public class ElementalWandsClient implements ClientModInitializer {
                 });
 
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientPlayerData.reset());
+        ClientPlayNetworking.registerGlobalReceiver(ModNetworking.SyncStoneClusterPayload.ID, (payload, context) -> {
+            if (context.client().world != null) ClientPlayerData.setStoneCluster(payload.mass(),payload.remaining(),
+                    payload.duration(),context.client().world.getTime());
+        });
+        ClientPlayNetworking.registerGlobalReceiver(ModNetworking.StoneStaggerPayload.ID, (payload, context) -> {
+            if (context.client().world == null) return;
+            var target=context.client().world.getEntityById(payload.entityId());
+            if (target instanceof com.anton.elementalwands.util.StoneStaggerAccess stagger) {
+                stagger.elementalwands$staggerUntil(context.client().world.getTime()+payload.ticks());
+                target.setSprinting(false);
+                if (target instanceof net.minecraft.entity.player.PlayerEntity player) player.stopGliding();
+            }
+        });
         ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE.register((client, world) -> {
+            ClientPlayerData.clearStoneCluster();
             ClientPlayerData.clearEntangleStates();
             ClientPlayerData.clearNatureSeedlings();
         });

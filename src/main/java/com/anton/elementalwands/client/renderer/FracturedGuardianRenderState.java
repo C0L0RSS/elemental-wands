@@ -7,8 +7,13 @@ import software.bernie.geckolib.constant.dataticket.DataTicket;
 import software.bernie.geckolib.renderer.base.GeoRenderState;
 
 public class FracturedGuardianRenderState extends LivingEntityRenderState implements GeoRenderState {
+    public float fanTime=-1, fanPitch, fanYaw;
+    public boolean unstable;
+    public float phaseTime = -1, magicTime;
+    public int guardCracks;
+    public float guardTime = -1;
     public float beamTime = -1;
-    public boolean holdingRock;
+    public boolean holdingRock, arenaHidden;
     public float leapTime = -1;
     public java.util.List<GuardianLeapVisual.Mark> leapMarks = java.util.List.of();
     public java.util.List<GuardianWaveVisual.Stone> waveStones = java.util.List.of();

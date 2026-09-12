@@ -20,6 +20,7 @@ allprojects {
 }'''
                 new File(smokeRoot,'FLOOR_CLIENT_PASSED.txt').delete()
                 new File(smokeRoot,'FLOOR_CLIENT_FAILED.txt').delete()
+                new File(smokeRoot,'NATURE_WORLD_PASSED.txt').delete()
                 if (existingAssets) {
                     def assets=file(existingAssets)
                     if (!new File(assets,'indexes/27.json').exists()) throw new GradleException('Existing asset cache needs indexes/27.json')
@@ -37,6 +38,7 @@ allprojects {
             from sourceSets.guardianTest.output
             from new File(smokeRoot,'metadata')
         }
+        if (project.hasProperty('natureVisual')) loom.runs.client.vmArg('-Dew.nature.visualWorld=true')
         loom.runs.client.runDir('build/guardian-floor-client-smoke')
         loom.runs.client.vmArg('-Dfabric.addMods='+new File(smokeRoot,'floor-client-smoke.jar').absolutePath)
         tasks.named('runClient') {
@@ -44,6 +46,8 @@ allprojects {
             doLast {
                 if (!new File(smokeRoot,'FLOOR_CLIENT_PASSED.txt').exists() || new File(smokeRoot,'FLOOR_CLIENT_FAILED.txt').exists())
                     throw new GradleException('Floor client check failed; inspect build/guardian-floor-client-smoke/logs/latest.log')
+                if (project.hasProperty('natureVisual') && !new File(smokeRoot,'NATURE_WORLD_PASSED.txt').exists())
+                    throw new GradleException('Nature integrated world did not finish')
             }
         }
     }

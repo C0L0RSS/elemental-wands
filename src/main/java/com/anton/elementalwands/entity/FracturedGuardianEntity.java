@@ -29,6 +29,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 /** Summon-only cooperative boss, with explicit passive animation review controls. */
 public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntity {
+    private static final TrackedData<Long> NATURE_OPENING = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.LONG);
     private static final TrackedData<Float> GUARD = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.FLOAT);
     private static final TrackedData<Float> MAX_GUARD = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.FLOAT);
     private static final TrackedData<Long> GUARD_OPENED = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.LONG);
@@ -78,6 +79,7 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
     @Override
     protected void initDataTracker(DataTracker.Builder builder) {
         super.initDataTracker(builder);
+        builder.add(NATURE_OPENING,-1L);
         builder.add(FAN_START, -1L); builder.add(FAN_PITCH, 0f);
         builder.add(ARENA_HIDDEN, false);
         builder.add(UNSTABLE, false);
@@ -259,6 +261,8 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
     void cancelCombatBeam() { beam.cancel(); }
     public boolean isBossAggressive() { return !getCommandTags().contains(PASSIVE_TAG); }
 
+    public void setNatureOpening(long start){dataTracker.set(NATURE_OPENING,start);}
+    public boolean natureOpening(){long start=dataTracker.get(NATURE_OPENING),now=getEntityWorld().getTime();return start>=0 && now>=start && now<start+GuardianNatureResponse.EXTRA_RECOVERY;}
     public void onNatureEntangle(int stacks) { combat.entangle(stacks); }
     public void onNatureThorns() { combat.thorn(); }
 

@@ -60,7 +60,10 @@ public final class TemporaryBlockManager {
             BlockState existing = world.getBlockState(pos);
             if (!canReplace.test(existing)) continue;
 
-            if (com.anton.elementalwands.arena.GuardianArenaManager.setTemporarySpellBlock(world, pos, placedState)) originalByPos.put(pos.asLong(), existing);
+            // A cell already owned by another tracked placement inherits that placement's
+            // original, so the covered temporary block can never be written back as terrain.
+            if (com.anton.elementalwands.arena.GuardianArenaManager.setTemporarySpellBlock(world, pos, placedState))
+                originalByPos.put(pos.asLong(), claimTrackedOriginal(world, pos, existing));
         }
 
         if (originalByPos.isEmpty()) {
@@ -72,6 +75,36 @@ public final class TemporaryBlockManager {
         TEMP.computeIfAbsent(key, _k -> new ArrayList<>())
                 .add(new TempBlocks(id, originalByPos, placedState, expiryTick));
         return new TemporaryPlacement(id, originalByPos.size());
+    }
+
+    /** Transfer the underlying terrain to a new owner, only after its block write succeeds. */
+    public static BlockState claimTrackedOriginal(ServerWorld world, BlockPos pos, BlockState existing) {
+        List<TempBlocks> temp = TEMP.get(world.getRegistryKey());
+        if (temp == null) return existing;
+        long key = pos.asLong();
+        for (TempBlocks batch : temp) {
+            if (!existing.isOf(batch.placedState.getBlock())) continue;
+            BlockState original = batch.originalByPos.remove(key);
+            if (original != null) return original;
+        }
+        return existing;
+    }
+
+    /** Restore one cell only if this placement still owns it. Stale Nature cleanup is a no-op. */
+    public static void restoreTemporaryBlock(ServerWorld world, TemporaryPlacement placement, BlockPos pos) {
+        List<TempBlocks> batches = TEMP.get(world.getRegistryKey());
+        if (batches == null || placement == null) return;
+        for (TempBlocks batch : batches) {
+            if (!batch.id().equals(placement.id())) continue;
+            BlockState original = batch.originalByPos.get(pos.asLong());
+            if (original == null) return;
+            BlockState current = world.getBlockState(pos);
+            if (!current.isOf(batch.placedState.getBlock())
+                    || com.anton.elementalwands.arena.GuardianArenaManager.setTemporarySpellBlock(world, pos, original)) {
+                batch.originalByPos.remove(pos.asLong());
+            }
+            return;
+        }
     }
 
     public static List<BlockPos> placementPositions(ServerWorld world, TemporaryPlacement placement) {
@@ -110,9 +143,7 @@ public final class TemporaryBlockManager {
         List<TempBlocks> temp = TEMP.get(world.getRegistryKey());
         if (temp == null) return;
         for (TempBlocks blocks : temp) {
-            if (blocks.placedState.isOf(net.minecraft.block.Blocks.MOSS_CARPET)
-                    || blocks.placedState.isOf(net.minecraft.block.Blocks.LILY_PAD)
-                    || blocks.placedState.isOf(net.minecraft.block.Blocks.FLOWERING_AZALEA))
+            if (com.anton.elementalwands.registry.ModSpellBlocks.isNatureGrowth(blocks.placedState))
                 blocks.originalByPos.remove(pos.asLong());
         }
     }

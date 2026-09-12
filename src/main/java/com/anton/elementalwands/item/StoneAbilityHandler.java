@@ -17,7 +17,6 @@ import com.anton.elementalwands.util.TitanDomeManager;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.NbtComponent;
 import net.minecraft.entity.Entity;
@@ -287,6 +286,7 @@ public final class StoneAbilityHandler {
     }
 
     public static void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {
+        if (TitanDomeManager.hasActiveDome(caster)) return;
         if (!AbstractWandItem.trySpendUltimateCharge(world, caster, stack)) return;
         TitanDomeManager.startDome(world, caster);
     }

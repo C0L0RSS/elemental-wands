@@ -27,11 +27,12 @@ import java.util.Set;
 
 public class InfernoWaveEntity extends ProjectileEntity {
 
-    private static final float DAMAGE = 8.0f;
+    private static final float DAMAGE = 6.0f;
     private static final int MAX_TRAVEL_DISTANCE = 15; // blocks
     private static final double PROJECTILE_SPEED = 1.5;
     private static final int FIRE_TRAIL_DURATION_TICKS = 40; // 2 seconds
     private static final double WAKE_SPACING = 0.42;
+    private static final int MAX_AGE_TICKS = 60; // backstop if startPos is ever lost
 
     private Vec3d startPos;
     private Set<Integer> hitEntities = new HashSet<>();
@@ -57,12 +58,17 @@ public class InfernoWaveEntity extends ProjectileEntity {
     }
 
     @Override
+    public boolean shouldSave() {
+        return false;
+    }
+
+    @Override
     public void tick() {
         super.tick();
 
         if (getEntityWorld() instanceof ServerWorld serverWorld) {
             // Check if traveled too far
-            if (startPos != null && getEntityPos().distanceTo(startPos) > MAX_TRAVEL_DISTANCE) {
+            if (age > MAX_AGE_TICKS || (startPos != null && getEntityPos().distanceTo(startPos) > MAX_TRAVEL_DISTANCE)) {
                 discard();
                 return;
             }

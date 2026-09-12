@@ -1,0 +1,1 @@
+Integrated-world rendering completed: custom flowers, roots, water rafts, block tree and synced pig/spider/Guardian wraps. Four Minecraft screenshots saved. Human combat playtest still pending.

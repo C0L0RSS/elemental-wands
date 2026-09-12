@@ -1,4 +1,65 @@
+Latest approved combat balance (September 12): Fire primary/Pyre deal 6; meteor
+uses a capped, distance/cover-aware explosion without falling-block damage. Guardian
+fan becomes three quick aimed bursts, and a ready laser has protected priority after
+two other attacks within its existing range. Read `fire-guardian-balance-2026-09-12.md`
+for exact tuning, validation and installation status. Human playtest is pending.
+
+Installed/source SHA-256: `135618b30c832e0251a2cae0b434401571ed0352b2086352c152bb1b93b717a0`.
+All build, server and client checks passed. Restart Lunar. Earlier release hashes below are historical.
+
+# September 11 approved Nature balance
+
+## Latest — approved Fire redesign, September 12
+
+The approved workshop is implemented and installed. Fire now has original four-frame
+art, an eight-block round all-fire meteor with its full flame shell, a traveling
+Pyre wall, Pyre-only short lingering flames, and vanilla-looking primary/ultimate
+ground fire. Existing combat and first-person clearance remain. The clean build,
+asset/package checks, isolated real-server wall/cleanup checks and loaded-client
+mesh checks passed. Human playtest is pending. See
+[the Fire report](fire-redesign-2026-09-12.md) for details and backup.
+
+Latest source/installed SHA-256: `308c31471783425146f3a271992086e74082e0ba0d49c3d9e153bb2ced6c803c`.
+The current contract is 45 Fire PNGs / 266 spell-and-shared PNGs / 40 particle definitions.
+Earlier build hashes and asset counts below are historical.
+
+
+Flower-focused balance is implemented and installed: seeds deal flat 3 damage
+without Entangle; flower/secondary contact ramps 3–5 damage with one shared
+caster/target tick each second. Charge awards are player-owned (+1 seed and +3
+thorns per second at most), and the ultimate burst gives no charge. The tree
+provides Regeneration II; Fire remains I. See `docs/nature-balance-2026-09-11.md`.
+
+Clean build, asset/package checks, real-server balance tests and Guardian arena
+checks passed. The tree actually restored six hearts over 15 seconds in the
+fixture; human fight balance is pending. Lunar source/install SHA-256 match:
+`3fea911b49cc56325faf07cacc0f24651c82682aad53281f2618a8c173b4e490`.
+Restart Lunar to load. Earlier hashes below are historical.
+
 # Elemental Wands — session handoff
+
+Latest approved behavior (September 11): standing slam stays 360 degrees for
+multiplayer pressure; Hollow Purple commits for 70 ticks with free aim, locked
+movement/item use, no voluntary cancellation or refund. Build, expanded audit
+server fixture and assets pass. Installed/source SHA-256:
+`0214a7540cbacf9ee0c429002c41af58b1609a65a6eb337338376b98fca4dbac`.
+See [the follow-up](audit-fixes-2026-09-11.md#approved-hollow-purple-commitment).
+
+Latest audit follow-up (September 11): [fixes and verification](audit-fixes-2026-09-11.md).
+Meteor/temporary-block restoration, persistent gear recovery, rejected ritual
+foliage preservation and cleanup fixes passed three real-server fixtures and the
+build/asset checks. Installed SHA-256 is
+`d4a128ca40716562cbaa3dc37d1f591b970591c6aee615a390b5206774637a1f`.
+That build was superseded by the committed Hollow Purple follow-up in the same
+report. The user approved the 360-degree standing slam; Hollow Purple now commits
+without a refund or slot-switch cancellation. Human playtest is pending.
+
+Latest Nature update: [approved redesign implementation](nature-redesign-2026-09-10.md).
+Custom flowers, roots, rafts, a 3D seed, attached angular Entangle vines and the
+nine-block oak ultimate are implemented. Tree shape can be revised after playtesting.
+See the report for current verification and installation.
+Current build and installed SHA-256: `77f30d95be560f25eacaff6fafb77eb46db0058557b1c86be844e2401b3c66b0`.
+Actual client views and server checks passed; human Nature playtest is pending.
 
 Latest spell visibility: [first-person clearance](spell-view-clearance-2026-09-10.md).
 Fire/Space/Wind casting bursts now start forward/down; custom particles across all
@@ -375,7 +436,7 @@ are excluded from automatic targeting/damage; automatic combat is off in Peacefu
 | Mouth beam | Cyan, 1.6s charge, 0.4s committed aim window, 0.6s hazardous pulse. Movement prediction before lock; 8 damage at most once per victim per cast, including late entrants; cover checked. |
 | Rubble throw | A 1.4-block stone attaches to the live hand; corrected mirrored server socket. Predicted aim locks at tick 36; release at tick 44; faster ballistic travel. 8 direct or 4 splash, never both. |
 | Shockwave | Visible rendered stone ridge, cyan crest, dust; radius 18, speed .65 blocks/tick, .75-block-high jumpable band; 6 damage once per victim. No world block placement. |
-| Close slam | Full-body two-handed slam, frontal radius 4.5, 6 damage, cover/arc checks. A separate one-arm swat is not implemented. |
+| Close slam | Standing full-body two-handed slam, full 360-degree wave, 6 damage and shared wave cover/jump rules. Separate from the leap and floating-stone fan; circular shape approved for multiplayer. |
 | Leap | Targets visible players 12–30 blocks away. Lock tick 10; fist strike/takeoff/first wave tick 14; flight 36 ticks; landing tick 50; second wave tick 56; recovery ends tick 94. Center radius 3 does 16 damage, outer radius 6 does 10, before armor. Landing victims are excluded from that landing's follow-up wave. |
 
 Leap movement respects collision and does not teleport or break blocks. Two wave
@@ -556,3 +617,12 @@ roof, then requested ordinary stone instead of most quartz and all gold. The fin
 palette replaces quartz with stone bricks/polished andesite/smooth stone, gold with
 carved stone, lapis with blue terracotta, and copper inlays/ornaments with colored
 terracotta. Geometry and glass colors are preserved; rewards remain in the chests.
+# September 11 Nature playtest follow-up
+
+The user liked a full Nature/Guardian fight and reported entangle wraps on the
+ultimate tree. Fixed Nature stacks, slows, root tracking, thorn damage and attached
+wrap rendering to skip its stationary hitbox. Normal damage remains. Clean build,
+all required asset/package checks and the extended real-server Nature fixture pass.
+Installed Lunar JAR SHA-256: `546af8acd617e1ec950944fac2f6d08b027d835c8c52e17a8b2083e182d38628`.
+Source/install match verified; restart required. Client confirmation of this fix
+is pending. See `docs/nature-redesign-2026-09-10.md` for the current ability reminder.

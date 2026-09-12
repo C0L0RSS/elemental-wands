@@ -34,14 +34,13 @@ import java.util.UUID;
 public final class FireAbilityHandler {
 
     // Secondary: Dragon's Pyre
-    private static final int PYRE_CONE_LENGTH = 40;
     private static final int PYRE_GROUND_DURATION = 100; // 5 seconds
     private static final int SECONDARY_COOLDOWN_TICKS = 200; // 10 seconds
     private static final String NBT_LAST_PYRE_CAST = "LastPyreCast";
 
     // Ultimate: Maximum Meteor
     private static final int METEOR_SPAWN_HEIGHT = 35;
-    private static final float METEOR_EXPLOSION_POWER = 15.0f; // Increased from 10.0
+    private static final float METEOR_EXPLOSION_POWER = 5.0f; // Ten-block blast radius; damage is independently capped by MeteorManager.
 
     private FireAbilityHandler() {}
 
@@ -66,7 +65,8 @@ public final class FireAbilityHandler {
             NbtCompound data = nbtComponent.copyNbt();
             if (data.contains(NBT_LAST_PYRE_CAST)) {
                 long lastCast = data.getLong(NBT_LAST_PYRE_CAST).orElse(0L);
-                if (world.getServer().getTicks() - lastCast <= PYRE_GROUND_DURATION) {
+                long sincePyre = world.getTime() - lastCast;
+                if (sincePyre >= 0 && sincePyre <= PYRE_GROUND_DURATION) {
                     BlockPos groundPos = player.getBlockPos().down();
                     net.minecraft.block.BlockState groundState = world.getBlockState(groundPos);
                     if (groundState.isOf(ModSpellBlocks.INFERNO_FLAME)
@@ -115,7 +115,7 @@ public final class FireAbilityHandler {
         // Record cast time (used by self-buff in inventoryTick)
         NbtComponent nbtComponent = stack.getOrDefault(DataComponentTypes.CUSTOM_DATA, NbtComponent.DEFAULT);
         NbtCompound data = nbtComponent.copyNbt();
-        data.putLong(NBT_LAST_PYRE_CAST, world.getServer().getTicks());
+        data.putLong(NBT_LAST_PYRE_CAST, world.getTime());
         stack.set(DataComponentTypes.CUSTOM_DATA, NbtComponent.of(data));
 
         // Snapshot origin + facing at cast time and hand off to scheduler;
@@ -141,7 +141,6 @@ public final class FireAbilityHandler {
     }
 
     // Scheduler for Dragon's Pyre — wave propagates 1 block/tick across 40 ticks.
-    // Modeled after StoneAbilityHandler.TectonicSchedulerEntity.
     public static class PyreSchedulerEntity extends net.minecraft.entity.decoration.ArmorStandEntity {
         private static final int WAVE_LENGTH = 40;
         private static final double WAVE_HALF_WIDTH = 2.5;
@@ -154,6 +153,7 @@ public final class FireAbilityHandler {
         private final Vec3d right;
         private final Map<Integer, Map<BlockPos, Integer>> pendingFlames = new HashMap<>();
         private int tickCounter = 0;
+        private com.anton.elementalwands.entity.PyreFrontEntity visualFront;
         private final Set<UUID> hitTargets = new HashSet<>();
 
         public PyreSchedulerEntity(ServerWorld world, PlayerEntity caster, Vec3d origin, Vec3d forward) {
@@ -173,6 +173,17 @@ public final class FireAbilityHandler {
             this.setInvisible(true);
             this.setNoGravity(true);
             this.setInvulnerable(true);
+            visualFront = new com.anton.elementalwands.entity.PyreFrontEntity(com.anton.elementalwands.registry.ModEntities.PYRE_FRONT, world);
+            visualFront.setPosition(caster.getEntityPos());
+            visualFront.setYaw((float)Math.toDegrees(Math.atan2(-forward.x, forward.z)));
+            visualFront.setInvisible(true);
+            world.spawnEntity(visualFront);
+        }
+
+        /** Lives 44 ticks; must never be serialized or it would reload as a permanent invisible armor stand. */
+        @Override
+        public boolean shouldSave() {
+            return false;
         }
 
         @Override
@@ -180,6 +191,9 @@ public final class FireAbilityHandler {
             super.tick();
             if (!(getEntityWorld() instanceof ServerWorld sw))
                 return;
+            if (tickCounter >= WAVE_LENGTH && visualFront != null) {
+                visualFront.discard(); visualFront = null;
+            }
             if (tickCounter >= WAVE_LENGTH + MAX_VISUAL_DELAY) {
                 discard();
                 return;
@@ -192,8 +206,6 @@ public final class FireAbilityHandler {
                 Set<BlockPos> sliceBlocks = new HashSet<>();
                 Map<BlockPos, Integer> flameDelayByPos = new HashMap<>();
                 Vec3d centerSurface = null;
-                Vec3d leftSurface = null;
-                Vec3d rightSurface = null;
                 for (double w = -2.0; w <= 2.0; w += 0.5) {
                     Vec3d target = frontCenter.add(right.multiply(w));
                     BlockPos targetPos = BlockPos.ofFloored(target);
@@ -212,10 +224,6 @@ public final class FireAbilityHandler {
                             Vec3d surface = new Vec3d(p.getX() + 0.5, p.getY() + 1.22, p.getZ() + 0.5);
                             if (Math.abs(w) < 0.01) {
                                 centerSurface = surface;
-                            } else if (Math.abs(w + 1.5) < 0.01) {
-                                leftSurface = surface;
-                            } else if (Math.abs(w - 1.5) < 0.01) {
-                                rightSurface = surface;
                             }
                             break;
                         }
@@ -234,31 +242,15 @@ public final class FireAbilityHandler {
                             .merge(entry.getKey(), PYRE_GROUND_DURATION - delay, Math::max);
                 }
 
-                if (centerSurface != null) {
-                    sw.spawnParticles(ModParticles.FIRE_PYRE_FRONT,
-                            centerSurface.x, centerSurface.y + 0.28, centerSurface.z,
-                            1, 0.0, 0.0, 0.0, 0.0);
-                    if ((tickCounter & 1) == 0) {
-                        sw.spawnParticles(ModParticles.FIRE_EMBER,
-                                centerSurface.x, centerSurface.y + 0.45, centerSurface.z,
-                                3, 0.32, 0.18, 0.32, 0.04);
-                    }
-                }
-                if (leftSurface != null) {
-                    sw.spawnParticles(ModParticles.FIRE_FLAME_RIBBON,
-                            leftSurface.x, leftSurface.y, leftSurface.z,
-                            1, 0.04, 0.05, 0.04, 0.018);
-                }
-                if (rightSurface != null) {
-                    sw.spawnParticles(ModParticles.FIRE_FLAME_RIBBON,
-                            rightSurface.x, rightSurface.y, rightSurface.z,
-                            1, 0.04, 0.05, 0.04, 0.018);
+                if (visualFront != null) {
+                    visualFront.setInvisible(centerSurface == null);
+                    if (centerSurface != null) visualFront.setPosition(centerSurface.add(0, -.22, 0));
                 }
 
                 // Damage remains authoritative at the original full-width front;
                 // only the fire model fan-out is delayed.
                 List<LivingEntity> targets = sw.getEntitiesByClass(LivingEntity.class,
-                        caster.getBoundingBox().expand(WAVE_LENGTH),
+                        new net.minecraft.util.math.Box(origin, origin).expand(WAVE_LENGTH),
                         e -> e != caster && e.isAlive());
                 for (LivingEntity target : targets) {
                     if (hitTargets.contains(target.getUuid()))
@@ -271,9 +263,9 @@ public final class FireAbilityHandler {
                     if (distForward >= currentDistance - WAVE_FRONT_DEPTH
                             && distForward <= currentDistance + WAVE_FRONT_DEPTH
                             && distRight <= WAVE_HALF_WIDTH) {
-                        boolean damaged = target.damage(sw, sw.getDamageSources().playerAttack(caster), 8.0f);
+                        boolean damaged = target.damage(sw, sw.getDamageSources().playerAttack(caster), 6.0f);
                         if (damaged) {
-                            AbstractWandItem.onWandDamageDealt(caster, 8.0f);
+                            AbstractWandItem.onWandDamageDealt(caster, 6.0f);
                         }
                         target.setFireTicks(100);
                         hitTargets.add(target.getUuid());

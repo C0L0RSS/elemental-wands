@@ -2,22 +2,20 @@
   "variants": {
     "": [
       {
-        "model": "elementalwands:block/animated_fire_a",
-        "weight": 3
+        "model": "elementalwands:block/pyre_low_fire",
+        "y": 0
       },
       {
-        "model": "elementalwands:block/animated_fire_b",
-        "weight": 3
+        "model": "elementalwands:block/pyre_low_fire",
+        "y": 90
       },
       {
-        "model": "elementalwands:block/animated_fire_a",
-        "y": 90,
-        "weight": 2
+        "model": "elementalwands:block/pyre_low_fire",
+        "y": 180
       },
       {
-        "model": "elementalwands:block/animated_fire_b",
-        "y": 90,
-        "weight": 2
+        "model": "elementalwands:block/pyre_low_fire",
+        "y": 270
       }
     ]
   }

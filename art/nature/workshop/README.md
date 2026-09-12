@@ -1,5 +1,9 @@
 # Nature workshop — design preview 04
 
+**Implementation approved September 10.** Revision 04 is now exported into the mod.
+See `docs/nature-redesign-2026-09-10.md` for runtime integration and verification.
+The preview-only notes below record the earlier review stage.
+
 Requested September 10, 2026: preview the complete Nature redesign in the browser
 for live feedback **before** implementing it in Minecraft. The earlier request to
 complete the full pass is now gated on this preview review. No Nature runtime code,

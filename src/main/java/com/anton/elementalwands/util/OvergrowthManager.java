@@ -2,11 +2,9 @@ package com.anton.elementalwands.util;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 import com.anton.elementalwands.entity.AwakenedTreeEntity;
@@ -20,8 +18,6 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.particle.BlockStateParticleEffect;
 import net.minecraft.particle.ParticleTypes;
@@ -149,10 +145,10 @@ public final class OvergrowthManager {
     }
 
     public static void onTreeDamaged(ServerWorld world, AwakenedTreeEntity treeEntity) {
-        Vec3d core = treeEntity.getEntityPos().add(0.0, 4.25, 0.0);
+        Vec3d core = treeEntity.getEntityPos().add(0.0, 2.5, 0.0);
         float healthRatio = treeEntity.getHealth() / treeEntity.getMaxHealth();
         world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK,
-                        Blocks.DARK_OAK_LOG.getDefaultState()),
+                        Blocks.OAK_LOG.getDefaultState()),
                 core.x, core.y - 1.0, core.z, 14, 0.82, 1.0, 0.82, 0.075);
         world.spawnParticles(ModParticles.NATURE_LEAF,
                 core.x, core.y + 1.35, core.z,
@@ -257,13 +253,14 @@ public final class OvergrowthManager {
 
             boolean damaged = target.damage(world, world.getDamageSources().playerAttack(caster), damage);
             if (damaged) {
-                AbstractWandItem.onWandDamageDealt(caster, damage);
+                AbstractWandItem.onWandDamageDealt(caster, damage, 0);
             }
 
             EntangleTracker.applyNatureSlow(target, ROOT_CRUSH_SLOW_TICKS, ROOT_CRUSH_SLOW_AMPLIFIER);
             if (target instanceof com.anton.elementalwands.entity.FracturedGuardianEntity guardian) {
                 guardian.onNatureEntangle(EntangleTracker.MAX_STACKS);
             } else {
+                EntangleTracker.syncUltimateRoot(world,target,ROOT_CRUSH_SLOW_TICKS);
                 target.addVelocity(0.0, -0.65, 0.0);
                 target.velocityModified = true;
                 target.fallDistance = 0.0f;
@@ -286,7 +283,7 @@ public final class OvergrowthManager {
         if (caster == null || !caster.isAlive()) return;
         if (!containsPos(tree, caster.getX(), caster.getY() + 0.1, caster.getZ())) return;
 
-        SpellBuffs.regeneration(caster);
+        SpellBuffs.regeneration(caster, 1);
         if (now % 20 == 0) {
             world.spawnParticles(ModParticles.NATURE_HEART,
                     caster.getX(), caster.getBodyY(0.52), caster.getZ(),
@@ -300,7 +297,7 @@ public final class OvergrowthManager {
     private static void tickSeedConvergence(ServerWorld world, AwakenedTree tree, int age) {
         double progress = Math.min(1.0, age / (double) ENERGY_CONVERGENCE_TICKS);
         double previous = Math.max(0.0, (age - 1) / (double) ENERGY_CONVERGENCE_TICKS);
-        Vec3d heart = Vec3d.ofCenter(tree.center).add(0.0, 4.2, 0.0);
+        Vec3d heart = Vec3d.ofCenter(tree.center).add(0.0, 2.0, 0.0);
         for (int i = 0; i < tree.seedSources.size(); i++) {
             NatureVfx.convergence(world, tree.seedSources.get(i), heart, previous, progress, i);
         }
@@ -328,105 +325,19 @@ public final class OvergrowthManager {
     private static List<TemporaryPlacement> placeTreeStage(ServerWorld world,
             BlockPos center, int stage, int durationTicks) {
         List<TemporaryPlacement> placements = new ArrayList<>();
-
-        if (stage == 0) {
-            Set<BlockPos> rootBase = new HashSet<>();
-            rootBase.add(center);
-            for (int distance = 1; distance <= 2; distance++) {
-                rootBase.add(center.north(distance));
-                rootBase.add(center.south(distance));
-                rootBase.add(center.east(distance));
-                rootBase.add(center.west(distance));
-            }
-            addPlacement(placements, TemporaryBlockManager.placeTrackedTemporaryBlocks(world,
-                    rootBase, Blocks.DARK_OAK_LOG.getDefaultState(), durationTicks,
-                    OvergrowthManager::canReplaceTreeBlock));
-
-            Set<BlockPos> moss = new HashSet<>();
-            for (int dx = -4; dx <= 4; dx++) {
-                for (int dz = -4; dz <= 4; dz++) {
-                    if (dx * dx + dz * dz > 16) continue;
-                    BlockPos position = center.add(dx, 0, dz);
-                    if (rootBase.contains(position)) continue;
-                    BlockState below = world.getBlockState(position.down());
-                    BlockState at = world.getBlockState(position);
-                    if ((at.isAir() || at.isReplaceable())
-                            && below.isSolidBlock(world, position.down())) {
-                        moss.add(position);
-                    }
-                }
-            }
-            addPlacement(placements, TemporaryBlockManager.placeTrackedTemporaryBlocks(world,
-                    moss, Blocks.MOSS_CARPET.getDefaultState(), durationTicks,
-                    state -> state.isAir() || state.isReplaceable()));
-            return placements;
+        Map<BlockState,List<BlockPos>> groups = new java.util.LinkedHashMap<>();
+        for (NatureTreeLayout.Cell cell : NatureTreeLayout.cells()) {
+            if (cell.growthStage() != stage) continue;
+            BlockPos pos = center.add(cell.x(),cell.y(),cell.z());
+            // Never generate a solid block through an occupant or outside the loaded world.
+            if (!world.isInBuildLimit(pos) || !world.getWorldBorder().contains(pos) || !world.isChunkLoaded(pos)) continue;
+            if (!world.getEntitiesByClass(LivingEntity.class,new Box(pos), e -> e.isAlive()
+                    && !(e instanceof AwakenedTreeEntity) && !e.isSpectator()).isEmpty()) continue;
+            groups.computeIfAbsent(cell.state(), ignored -> new ArrayList<>()).add(pos);
         }
-
-        if (stage == 1) {
-            Set<BlockPos> lowerTrunk = new HashSet<>();
-            for (int y = 1; y <= 3; y++) {
-                lowerTrunk.add(center.up(y));
-            }
-            lowerTrunk.add(center.north().up());
-            lowerTrunk.add(center.south().up());
-            lowerTrunk.add(center.east().up());
-            lowerTrunk.add(center.west().up());
-            addPlacement(placements, TemporaryBlockManager.placeTrackedTemporaryBlocks(world,
-                    lowerTrunk, Blocks.DARK_OAK_LOG.getDefaultState(), durationTicks,
-                    OvergrowthManager::canReplaceTreeBlock));
-            return placements;
-        }
-
-        if (stage == 2) {
-            addPlacement(placements, TemporaryBlockManager.placeTrackedTemporaryBlocks(world,
-                    List.of(center.up(4)), Blocks.OCHRE_FROGLIGHT.getDefaultState(), durationTicks,
-                    OvergrowthManager::canReplaceTreeBlock));
-
-            Set<BlockPos> upperTrunk = new HashSet<>();
-            for (int y = 5; y <= 8; y++) {
-                upperTrunk.add(center.up(y));
-            }
-            for (int distance = 1; distance <= 2; distance++) {
-                upperTrunk.add(center.north(distance).up(6));
-                upperTrunk.add(center.south(distance).up(6));
-                upperTrunk.add(center.east(distance).up(7));
-                upperTrunk.add(center.west(distance).up(7));
-            }
-            addPlacement(placements, TemporaryBlockManager.placeTrackedTemporaryBlocks(world,
-                    upperTrunk, Blocks.DARK_OAK_LOG.getDefaultState(), durationTicks,
-                    OvergrowthManager::canReplaceTreeBlock));
-            return placements;
-        }
-
-        Set<BlockPos> plainLeaves = new HashSet<>();
-        Set<BlockPos> floweringLeaves = new HashSet<>();
-        for (int y = 6; y <= 10; y++) {
-            int radius = switch (y) {
-                case 6 -> 3;
-                case 7, 8 -> 4;
-                case 9 -> 3;
-                default -> 1;
-            };
-            for (int dx = -radius; dx <= radius; dx++) {
-                for (int dz = -radius; dz <= radius; dz++) {
-                    int taxi = Math.abs(dx) + Math.abs(dz);
-                    if (taxi > radius + 2) continue;
-                    BlockPos position = center.add(dx, y, dz);
-                    if (world.getBlockState(position).isOf(Blocks.DARK_OAK_LOG)) continue;
-                    if (((dx * 17 + dz * 31 + y * 13) & 3) == 0 || taxi >= radius + 1) {
-                        floweringLeaves.add(position);
-                    } else {
-                        plainLeaves.add(position);
-                    }
-                }
-            }
-        }
-        addPlacement(placements, TemporaryBlockManager.placeTrackedTemporaryBlocks(world,
-                plainLeaves, Blocks.AZALEA_LEAVES.getDefaultState(), durationTicks,
-                OvergrowthManager::canReplaceTreeBlock));
-        addPlacement(placements, TemporaryBlockManager.placeTrackedTemporaryBlocks(world,
-                floweringLeaves, Blocks.FLOWERING_AZALEA_LEAVES.getDefaultState(), durationTicks,
-                OvergrowthManager::canReplaceTreeBlock));
+        for (var group : groups.entrySet()) addPlacement(placements,
+                TemporaryBlockManager.placeTrackedTemporaryBlocks(world,group.getValue(),group.getKey(),
+                        durationTicks,OvergrowthManager::canReplaceTreeBlock));
         return placements;
     }
 
@@ -438,14 +349,8 @@ public final class OvergrowthManager {
     }
 
     private static boolean canReplaceTreeBlock(BlockState state) {
-        return state.isAir()
-                || state.isReplaceable()
-                || state.isOf(Blocks.MOSS_CARPET)
-                || state.isOf(Blocks.FLOWERING_AZALEA)
-                || state.isOf(Blocks.DARK_OAK_LOG)
-                || state.isOf(Blocks.AZALEA_LEAVES)
-                || state.isOf(Blocks.FLOWERING_AZALEA_LEAVES)
-                || state.isOf(Blocks.OCHRE_FROGLIGHT);
+        return state.isAir() || state.isReplaceable()
+                || com.anton.elementalwands.registry.ModSpellBlocks.isNatureGrowth(state);
     }
 
     private static void spawnRootAwakening(ServerWorld world, BlockPos center,
@@ -458,7 +363,7 @@ public final class OvergrowthManager {
                 c.x, c.y + 0.72, c.z,
                 30 + sourceCount * 5, 2.2, 0.9, 2.2, 0.05);
         world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK,
-                        Blocks.DARK_OAK_LOG.getDefaultState()),
+                        Blocks.OAK_LOG.getDefaultState()),
                 c.x, c.y + 0.2, c.z, 48, 1.6, 0.28, 1.6, 0.16);
     }
 
@@ -486,7 +391,7 @@ public final class OvergrowthManager {
                 0.6 + stage * 0.62, 0.035);
         if (stage >= 2) {
             world.spawnParticles(ModParticles.NATURE_HEART,
-                    c.x, c.y + 4.2, c.z, stage == 2 ? 4 : 2,
+                    c.x, c.y + 2.0, c.z, stage == 2 ? 4 : 2,
                     0.22, 0.3, 0.22, 0.0);
         }
         if (stage == 3) {
@@ -503,7 +408,7 @@ public final class OvergrowthManager {
             AwakenedTreeEntity entity, int now) {
         Vec3d c = Vec3d.ofCenter(tree.center);
         float healthRatio = entity.getHealth() / entity.getMaxHealth();
-        Vec3d heart = c.add(0.0, 4.2, 0.0);
+        Vec3d heart = c.add(0.0, 2.0, 0.0);
         NatureVfx.treeHeart(world, heart, now, healthRatio);
 
         if (tree.builtStage >= 3) {
@@ -532,13 +437,13 @@ public final class OvergrowthManager {
         Vec3d c = Vec3d.ofCenter(tree.center);
         if (destroyed) {
             world.spawnParticles(ModParticles.NATURE_HEART,
-                    c.x, c.y + 4.2, c.z, 22, 1.2, 1.5, 1.2, 0.085);
+                    c.x, c.y + 2.0, c.z, 22, 1.2, 1.5, 1.2, 0.085);
             world.spawnParticles(ModParticles.NATURE_PETAL,
                     c.x, c.y + 6.2, c.z, 95, 3.3, 2.4, 3.3, 0.12);
             world.spawnParticles(ModParticles.NATURE_LEAF,
                     c.x, c.y + 5.0, c.z, 80, 2.8, 2.5, 2.8, 0.14);
             world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK,
-                            Blocks.DARK_OAK_LOG.getDefaultState()),
+                            Blocks.OAK_LOG.getDefaultState()),
                     c.x, c.y + 3.0, c.z, 80, 1.9, 2.2, 1.9, 0.16);
             NatureVfx.ring(world, ModParticles.NATURE_BLOOM,
                     c, 5.6, 24, 0.05, 0.0);

@@ -1,0 +1,112 @@
+{
+  "revision": 3,
+  "description": "Original generated pixel art. Vanilla fire and lava inform the palette only.",
+  "textures": {
+    "custom_stream": {
+      "url": "textures/custom/fire-atlas-v2.png",
+      "atlas": {
+        "columns": 4,
+        "rows": 6,
+        "row": 0,
+        "frames": 4,
+        "fps": 8
+      },
+      "alphaCutoff": 0.5
+    },
+    "custom_floor": {
+      "url": "textures/custom/fire-atlas-v2.png",
+      "atlas": {
+        "columns": 4,
+        "rows": 6,
+        "row": 1,
+        "frames": 4,
+        "fps": 6
+      },
+      "alphaCutoff": 0.5
+    },
+    "custom_low_wisp": {
+      "url": "textures/custom/fire-atlas-v2.png",
+      "atlas": {
+        "columns": 4,
+        "rows": 6,
+        "row": 2,
+        "frames": 4,
+        "fps": 8,
+        "crop": [
+          0,
+          0.36,
+          1,
+          0.44
+        ]
+      },
+      "alphaCutoff": 0.5
+    },
+    "custom_ember": {
+      "url": "textures/custom/fire-atlas-v2.png",
+      "atlas": {
+        "columns": 4,
+        "rows": 6,
+        "row": 3,
+        "frames": 4,
+        "fps": 5
+      },
+      "alphaCutoff": 0.5
+    },
+    "custom_arc": {
+      "url": "textures/custom/fire-atlas-v2.png",
+      "atlas": {
+        "columns": 4,
+        "rows": 6,
+        "row": 4,
+        "frames": 4,
+        "fps": 7
+      },
+      "alphaCutoff": 0.5
+    },
+    "custom_plume": {
+      "url": "textures/custom/fire-atlas-v2.png",
+      "atlas": {
+        "columns": 4,
+        "rows": 6,
+        "row": 5,
+        "frames": 4,
+        "fps": 8
+      },
+      "alphaCutoff": 0.5
+    },
+    "custom_meteor_surface": {
+      "url": "textures/custom/meteor-wall-atlas-v3.png",
+      "atlas": {
+        "columns": 4,
+        "rows": 2,
+        "row": 0,
+        "frames": 4,
+        "fps": 7,
+        "crop": [
+          0.012,
+          0.012,
+          0.976,
+          0.976
+        ]
+      },
+      "alphaCutoff": 0.5
+    },
+    "custom_pyre_wall": {
+      "url": "textures/custom/meteor-wall-atlas-v3.png",
+      "atlas": {
+        "columns": 4,
+        "rows": 2,
+        "row": 1,
+        "frames": 4,
+        "fps": 8,
+        "crop": [
+          0.018,
+          0.018,
+          0.964,
+          0.964
+        ]
+      },
+      "alphaCutoff": 0.5
+    }
+  }
+}

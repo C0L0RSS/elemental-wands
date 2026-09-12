@@ -57,7 +57,7 @@ public final class GuardianCommands {
             source.sendFeedback(() -> Text.literal(result),false); return 1;
         }
         if (GuardianArenaManager.owns(guardian) && !action.equals("status")) {
-            if (action.equals("stop")) GuardianArenaManager.stop();
+            if (action.equals("stop")) { GuardianArenaManager.stop(); source.sendFeedback(() -> Text.literal("Arena encounter stopped."),false); return 1; }
             source.sendFeedback(() -> Text.literal("Use /ew guardian arena status or /ew guardian arena stop during an arena encounter."),false);
             return 1;
         }

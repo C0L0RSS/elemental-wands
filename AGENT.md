@@ -4,7 +4,57 @@ This file gives coding agents the current working map for the Elemental Wands
 repo. It is based on the older `CLAUDE.md`, but cleaned up for the current
 Universal Wand / affinity architecture.
 
-## Current session checkpoint — September 9, 2026
+## Current session checkpoint — September 12, 2026
+
+Latest approved combat balance (September 12): Fire primary/Pyre deal 6; meteor
+uses a capped, distance/cover-aware explosion without falling-block damage. Guardian
+fan becomes three quick aimed bursts, and a ready laser has protected priority after
+two other attacks within its existing range. Read `docs/fire-guardian-balance-2026-09-12.md`
+for exact tuning, validation and installation status. Human playtest is pending.
+
+Latest Fire redesign (September 12): approved workshop 05 is implemented with
+original four-frame art, an eight-block round fireball with half-block steps and
+its full flame shell, an oriented 2.8-high traveling Pyre wall, and Pyre-only
+0.075-high lingering flames. Primary/ultimate ground fire looks vanilla. Combat
+is preserved. Read `docs/fire-redesign-2026-09-12.md` for validation/install status.
+
+Latest Nature balance (September 11): approved flower-focused tuning makes seeds
+flat 3 damage without Entangle; flower/secondary thorns ramp 3–5 with shared
+one-second caster/target contact limits. Nature charge is capped per caster at
+one seed point plus three thorn points per second; ultimate damage gives none.
+The tree grants Regeneration II; Fire remains I. See
+[the balance report](docs/nature-balance-2026-09-11.md) for checks and installation.
+
+September 11 audit follow-up: [fix report](docs/audit-fixes-2026-09-11.md) covers
+non-destructive meteor spawning, Titan/Nature temporary-block ownership, durable
+equipment recovery, admission-before-vegetation mutation, and the remaining Aegis
+cleanup. The user approved the standing slam remaining 360 degrees for multiplayer.
+Hollow Purple now commits for its full 70-tick charge: no slot-switch cancellation
+or refund, movement/item-use lock with free aiming, then release. Death, world exit
+and encounter teardown clean up without a refund. See the same fix report.
+
+Latest full audit (September 11): fixed the unguarded `/ew admin` unlock commands,
+the Fire ultimate deleting the block 35 above its target, temporary spell blocks
+becoming permanent when a wall/dome/tree covered another temporary block, wand NBT
+that stored server uptime ticks instead of world time (Pyre buff, dash chaining),
+non-persistent scheduler/projectile entities that could be saved, queued ultimate
+key presses, the beam cancelling after lock when its target died, the `reviewing`
+flag surviving `/ew guardian stop`, Tendril Bloom targeting passives/teammates/own
+tree, missing lang keys, and church/arena journal parsing that could throw out of
+the tick loop. Dead code listed under Cleanup Candidates was removed. Human playtest
+of these fixes is pending.
+
+Nature playtest (September 11): user completed a full Guardian fight and liked the
+redesign. Reported entangle wraps on the ultimate's living hitbox are now excluded
+on client and server; Nature slows, stacks, root tracking and thorn damage skip
+AwakenedTreeEntity. Ordinary attack damage remains. See the Nature report for checks.
+
+Latest Nature redesign (September 10): approved workshop revision 04 is ported to
+custom flower/root/raft blocks, a 3D seed, attached angular entangle meshes and the
+9-high/11-wide oak ultimate with heartwood and flowering leaves. Guardian recovery
+cues use the real extra-opening timer. See [the Nature report](docs/nature-redesign-2026-09-10.md)
+for release verification and installation. Full-fight Nature feedback was positive;
+the tree entangle fix awaits client confirmation.
 
 Latest spell visibility update (September 10): primary Fire/Space/Wind decorative
 bursts start forward/down with cover checks. All affinities' custom particles,
@@ -28,7 +78,7 @@ tracked Nature plants, and remain blocked by Stone walls and Nature ultimate tre
 Client and server share floor/cover rules. See [the cover report](docs/guardian-wave-cover-2026-09-09.md)
 for current checks and installation. Human confirmation of this specific fix is pending.
 Latest HUD: carved wooden frames with brass/rune details, inset labels, and a text-free Stone reserve bar directly above the ability row. See `docs/wand-hud-2026-09-10.md`; user approved the design.
-Latest shared build/installed SHA-256: `6e101d6bebcd6fe7f3a9b4a2b740c03874d7af0edcd9c4d16b5382a3fd9c04e5` (September 10 spell view clearance; Wind/Guardian pressure, Stone and cover fixes preserved). See `docs/stone-gathered-mass-2026-09-10.md` for the custom model, 1.5s/2.5s recovery, stagger and validation. The user approved the new ability/model; the vegetation collision follow-up ignores low plants and retains solid cover. Confirmation of that fix is pending.
+Latest shared build/installed SHA-256: `135618b30c832e0251a2cae0b434401571ed0352b2086352c152bb1b93b717a0` (September 12 approved Fire/Guardian balance; prior Fire artwork, Nature, audit and Hollow Purple changes preserved). See `docs/stone-gathered-mass-2026-09-10.md` for the custom model, 1.5s/2.5s recovery, stagger and validation. The user approved the new ability/model; the vegetation collision follow-up ignores low plants and retains solid cover. Confirmation of that fix is pending.
 
 Latest church locator fix: the reported vanilla command blocked the server for
 113 seconds. Church commands now schedule incremental structure-start searches,
@@ -143,8 +193,10 @@ For VFX work, the required repository checks are:
 ./gradlew clean build
 git diff --check
 python3 tools/validate_remaining_vfx_assets.py
+python3 tools/prepare_fire_assets.py --check
 python3 tools/prepare_guardian_assets.py --check
 python3 tools/prepare_guardian_throw_socket.py --check
+node tools/prepare_nature_models.mjs --check
 unzip -t build/libs/elementalwands-2.2.0.jar
 ```
 
@@ -154,10 +206,10 @@ Fire/Wind particle additions, approved Fire resource references, and
 exact production counts. Asset generators
 must only be run with `--replace` when intentionally replacing the families
 owned by that generator; never use a Fire/Wind pass to regenerate Arcane.
-The exact package contract is Fire 77, Wind 53, Stone 41, Nature 44, Space 81
-(296 affinity PNGs), plus two shared gear/HUD PNGs and 40 particle definitions.
-Fire uses custom Kinetic Inferno animation frames while retaining vanilla
-netherrack for the Pyre base and vanilla magma for the meteor core.
+The exact package contract is Fire 45, Wind 53, Stone 41, Nature 44, Space 81
+(264 affinity PNGs), plus two shared gear/HUD PNGs and 40 particle definitions.
+Fire uses the approved workshop animation frames, vanilla netherrack for the Pyre
+base, vanilla-looking ordinary ground fire, and a custom all-fire meteor renderer.
 
 ### Deploying After A Build
 
@@ -212,7 +264,7 @@ Important resources:
 - `src/main/resources/assets/elementalwands/items/*.json` - 1.21.10 item model definitions
 - `src/main/resources/assets/elementalwands/models/item/*.json` - item model JSONs
 - `src/main/resources/assets/elementalwands/geckolib/**` - GeckoLib models and animations
-- `tools/generate_fire_vfx_assets.py` - deterministic Kinetic Inferno Fire package
+- `tools/prepare_fire_assets.py` - approved workshop Fire exporter (`generate_fire_vfx_assets.py` is a compatibility entry point)
 - `tools/generate_wind_vfx_assets.py` - deterministic Sky Shear Wind assets
 - `tools/generate_shared_vfx_assets.py` - neutral universal wand and HUD frame only
 - `tools/validate_remaining_vfx_assets.py` - all-affinity/shared VFX audit
@@ -275,8 +327,10 @@ Ultimate charge is stored on the wand ItemStack under:
 
 - `elementalwands:ultimate_charge`
 
-`AbstractWandItem.onWandDamageDealt(...)` grants Arcane Flux and adds +5 ultimate
-charge to the player's main-hand wand. A successful ultimate requires 100 charge
+`AbstractWandItem.onWandDamageDealt(...)` grants Arcane Flux and normally adds +5
+ultimate charge to the player's main-hand wand. Nature uses its explicit-charge
+overload and player-owned `NatureCombat` windows (seed +1/s, thorns +3/s, ultimate 0).
+A successful ultimate requires 100 charge
 and resets the reservoir to 0.
 
 ### Progression And Affinity
@@ -324,22 +378,22 @@ Admin helpers:
 ### Fire
 
 - Passive: fire resistance while the wand is held.
-- Primary: `InfernoWaveEntity`, presented by `FireWaveRenderer` as a ten-frame
-  velocity-aligned stream plus an expanding perpendicular front, with an
-  interpolated animated ribbon/ember wake. Projectile speed, range, damage,
-  piercing, block collision, burning, and temporary ground-fire behavior are
-  unchanged.
-- Secondary: Dragon's Pyre, a 40-block propagating magma/fire runway. Standing on
-  the pyre shortly after casting grants regeneration and speed. Its internal
-  magma-backed blocks render as vanilla netherrack, while custom animated flame
-  blocks fan outward from each slice's center over four visual-only ticks behind
-  an animated advancing front.
-- Ultimate: Maximum Meteor via `MeteorManager`. A surface point projected from
-  the target X/Z drives a rotating, closing animated warning ring; the irregular
-  magma-skinned core gains a flowing shell and hero impact without changing
-  explosion behavior.
-- Fire Spirit, Fire Spirit assets, ores/crystals, and unused `fire_wand.png` are
-  excluded from the second-generation VFX pass.
+- Primary: `InfernoWaveEntity`, drawn by `FireWaveRenderer` using the approved
+  four-frame stream on three velocity-aligned planes and a perpendicular curl.
+  Speed, range, damage, piercing, collision, burning and temporary ground behavior
+  are unchanged. `INFERNO_FLAME` uses vanilla fire models/textures without adding
+  vanilla fire spread to the existing temporary trail.
+- Secondary: Dragon's Pyre retains its 40-block scheduler, damage and self-buffs.
+  A nonpersistent `PyreFrontEntity` follows the sampled surface as an oriented
+  2.8-high custom fire wall; it disappears after propagation. Only `PYRE_FLAME`
+  uses the 0.075-high original animated floor carpet on vanilla netherrack.
+- Ultimate: `MeteorManager` retains the falling-block collision/explosion logic.
+  `FireMeteorRenderer` delegates normal falling blocks to vanilla, replacing only
+  `METEOR_CORE` with the eight-block sphere of half-block steps, 57 curved flame
+  strips and 78 animated embers. `FireSpellMeshes` loads the approved 1,248-face
+  model. Full-bright animation and near-camera fades preserve the visual contract.
+  The explosion's ordinary ground fires remain vanilla.
+- Original HUD icons remain; Fire Spirit is outside this pass.
 
 ### Wind
 
@@ -379,11 +433,17 @@ Admin helpers:
 
 ### Nature
 
-- Passive: Verdant Step places temporary lily pads over water near and ahead of
-  the moving player.
-- Primary: `SeedProjectileEntity`, which plants seedlings.
-- Secondary: Tendril Bloom sends tendrils from active seedlings to nearby targets.
-- Ultimate: Overgrowth via `OvergrowthManager`.
+- Passive: Verdant Step places custom temporary leaf rafts over water.
+- Primary: `SeedProjectileEntity`, rendered as a 3D winged seed, plants a four-stage
+  custom flower or deals flat 3 direct damage without Entangle. Its thickets use
+  custom roots/rafts and NatureCombat for 3–5 damage and Entangle each second.
+- Secondary: Tendril Bloom sends vines from seedlings to targets and spreads
+  brambles without another flower. Attached angular vines show Entangle state.
+- Ultimate: `OvergrowthManager` builds the approved nine-block oak tree using
+  `NatureTreeLayout`, including custom heartwood/flowering leaves. See the Nature
+  balance report for Regeneration II, amplification, damage and Guardian behavior.
+- `tools/prepare_nature_models.mjs` exports the workshop's models/mesh/layout;
+  `--check` detects drift. No PNG counts changed in this model-only pass.
 
 ### Space
 
@@ -399,7 +459,10 @@ Admin helpers:
   outward damage wave; range-expiry misses retain the inward implosion.
 - Secondary: Blink Rift. The first cast blinks to a safe destination and leaves a
   rift; a later cast can swap back if the rift is usable.
-- Ultimate: Hollow Purple charge sequence via `HollowPurpleChargeManager`.
+- Ultimate: Hollow Purple charge sequence via `HollowPurpleChargeManager`. Once
+  started it commits for 70 ticks with no voluntary cancellation/refund. The caster
+  rises in place, can aim, and cannot walk, blink or use items during the charge.
+  Switching/dropping the wand does not stop release. Death/world exit cleans up.
 
 ## Manager Singletons
 
@@ -417,10 +480,7 @@ registered from `ElementalWandsMod.onInitialize()`.
 | `MeteorManager` | Fire ultimate |
 | `TitanDomeManager` | Stone ultimate |
 | `WaylayDashVfxManager` | five-tick visual-only Wind dash tracer |
-| `BlazeTrailManager` | retained fire manager |
-| `MovementDisruptManager` | movement disruption effects |
 | `BlinkRiftManager` | Space secondary rift tracking |
-| `EventHorizonManager` | retained space manager |
 | `HollowPurpleChargeManager` | Space ultimate charge visuals and release |
 
 ## Networking
@@ -438,8 +498,7 @@ registered from `ElementalWandsMod.onInitialize()`.
 Call `ModNetworking.syncPlayerData(player)` after any server-side change to
 affinity or unlocked skills so the HUD padlocks and theme update correctly.
 
-`CastPrimaryPayload` and `handleCastPrimary(...)` still exist in the source but
-are not part of the current client input flow.
+Primary casts never go through networking; they run from item use on the server.
 
 ## GeckoLib Entity Notes
 
@@ -460,7 +519,7 @@ Creative/Spectator and teammates are excluded; automatic combat is off in Peacef
 
 `GuardianBossCombat` owns the encounter: one action at a time, ability cooldowns,
 12-tick recovery gap, least-recently-targeted eligible player selection, cluster
-shockwaves, close frontal slams, ranged throws/beams, and restrained repositioning.
+shockwaves, close circular slams, ranged throws/beams, and restrained repositioning.
 There are no competing vanilla target goals. The boss holds a useful firing position
 and only paths when the group is out of reach or behind cover, within 14 blocks of
 its encounter origin. A blue boss bar is shared by eligible players within 48 blocks
@@ -490,14 +549,15 @@ applies the renderer's 180-bodyYaw rotation (the previous socket was mirrored to
 wrong side). `GuardianRockEntity` locks a predicted landing position at tick 36,
 releases at tick 44, then flies ballistically at roughly 1.05 blocks/tick. Swept corner/
 center rays stop the rock at cover; impact gives 8 direct or 4 splash (not both),
-within 2.25 blocks with visibility checks. No explosions or block changes. It expires
+within 3 blocks with visibility checks. No explosions or block changes. It expires
 on stop/death/unload or after 80 flight ticks. `GuardianThrowSocket` is generated by
 `tools/prepare_guardian_throw_socket.py`; its `--check` detects animation drift.
 
-The full-body slam hits at tick 26: close mode deals 6 in a frontal arc within 4.5
-blocks; shockwave mode sends a 0.75-high ring to radius 18 at .65 blocks/tick, damage
-6 once per eligible player. `GuardianWaveVisual` draws two rows of temporary stone
-geometry and a bright cyan crest, with denser dust. These are render-only blocks,
+The full-body slam hits at tick 26 (21 when unstable). Both the close slam and the
+shockwave currently emit the same full ring from `GuardianPhaseRules` (radius 32 at
+.85 blocks/tick, or 44 at .95 in phase two), 0.75 high, damage 6 once per eligible
+player; there is no separate frontal-arc contact hit in the code. `GuardianWaveVisual`
+draws one row of temporary stone geometry and a bright cyan crest, with denser dust. These are render-only blocks,
 not world edits or physical obstacles; the server ring is authoritative. Shared
 `GuardianWaveSurface` checks keep visual and damage cover rules aligned. Client
 terrain sampling is capped at 80 Hz and wave state clears on cancellation. Ground sampling uses collision surfaces at -3..+2 height,
@@ -518,8 +578,8 @@ players 12–30 blocks away. It favors a ready leap with a 180-tick cooldown aft
 hit the ground at tick 14, launching the first wave. Flight lasts 36 ticks along an
 11-block-high arc with real `Entity.move` collision, not teleports. The full body
 route is checked before takeoff and again per movement segment; obstructions cancel
-without impact damage. Landing at tick 50 deals 16 within radius 3 or 10 within
-radius 6, with cover/vertical checks. Six ticks later a second 18-block wave begins.
+without impact damage. Landing at tick 50 deals 16 within radius 3, with cover/vertical
+checks; outside that radius only the follow-up wave applies. Six ticks later a second 18-block wave begins.
 Both waves use separate world origins, tracked slots, and hit sets. The current
 longer flight separates them; the renderer also supports simultaneous waves. A victim of the heavy landing is excluded from
 its follow-up wave to avoid automatic double damage. Launch-wave victims can still
@@ -566,7 +626,7 @@ review page; it does not prove in-game pathfinding or animation timing.
 1024x1024 RGBA base/glow textures, scales UVs without changing geometry, and
 packages nine authored clips (six V4 clips plus three leap phases). `--check` validates runtime drift,
 bone references, keyframe ranges, and loop endpoints. The base/glow and six crack-variant creature textures
-are separate from the 298-PNG spell/HUD contract; do not change affinity counts.
+are separate from the 266-PNG spell/HUD contract; do not change affinity counts.
 
 Remove nearby test Guardians with
 `/kill @e[type=elementalwands:fractured_guardian,distance=..32]`.
@@ -626,6 +686,9 @@ For a new element:
 - `docs/PLAYER_GUIDE.txt` and `docs/ICE_WAND_REDESIGN.md` contain historical
   crystal/Ice-era information. `docs/MOD_HANDOFF.md` is the current session checkpoint;
   `CLAUDE.md` is a pointer to this authoritative guide.
-- `CastPrimaryPayload` remains as dead or future-facing networking code.
-- Some removed content assets remain in `src/main/resources/assets/elementalwands/textures`
-  even though the related registered items/blocks no longer exist.
+- The September 11 audit removed the dead Calamity Tornado / Boulder entities,
+  `BlazeTrailManager`, `EventHorizonManager`, `MovementDisruptManager`, the Titan
+  "Aegis" wall path, `CastPrimaryPayload`, `SpellBillboardRenderer`, the azalea
+  support mixin, and the crystal-era item/ore textures. `textures/entity/winged_seed.png`
+  is no longer rendered (the seed is a mesh) but stays because the Nature PNG
+  contract in `tools/validate_remaining_vfx_assets.py` counts it.

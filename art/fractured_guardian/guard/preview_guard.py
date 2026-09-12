@@ -41,9 +41,9 @@ sheet.save(HERE/'guard-review.png')
 # Fully offline viewer, reusing the approved rig's browser renderer.
 template=(HERE.parent/'v4-expressive/viewer.template.html').read_text()
 start=template.index('<select id="clip">');end=template.index('</select>',start)
-template=template[:start]+'<select id="clip"><option value="fan">Floating-stone fan</option><option value="phase_change">Phase two eruption</option><option value="slam_fast">Fast slam</option><option value="throw_fast">Fast rock throw</option><option value="guard_break">Guard break</option>'+template[end:]
+template=template[:start]+'<select id="clip"><option value="fan">Aimed stone barrage</option><option value="phase_change">Phase two eruption</option><option value="slam_fast">Fast slam</option><option value="throw_fast">Fast rock throw</option><option value="guard_break">Guard break</option>'+template[end:]
 template=template.replace("let clipName='idle'","let clipName='fan'")
-template=template.replace('max="6"','max="2.9"').replace('zoom=1','zoom=1.45').replace('pos-vec3(0.,60.,0.)','pos-vec3(0.,42.,0.)')
+template=template.replace('max="6"','max="2.4"').replace('zoom=1','zoom=1.45').replace('pos-vec3(0.,60.,0.)','pos-vec3(0.,42.,0.)')
 template=template.replace('href="fractured_guardian.bbmodel" download>Download Blockbench source','href="guard.animation.json" download>Guard animation source')
 template=template.replace('href="../v1/approved-concept.png">Approved concept','href="guard-review.png">View crack stages')
 template=template.replace('FULL-BODY PERFORMANCE 04','FRACTURED GUARD').replace('Braced legs, opening chest, expressive hands.','Unstable magic, urgent attacks, and a suspended core.').replace('Actual animated rig · Beam effects run in Minecraft.','Actual phase and guard animations · Magic discharges and combat run in Minecraft.')

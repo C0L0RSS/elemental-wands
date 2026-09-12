@@ -28,7 +28,6 @@ final class GuardianBeamAttack {
     private Vec3d anchor = Vec3d.ZERO;
 
     GuardianBeamAttack(FracturedGuardianEntity guardian) { this.guardian = guardian; }
-    boolean isActive() { return active; }
 
     void begin(ServerPlayerEntity player) {
         cancel();
@@ -64,17 +63,23 @@ final class GuardianBeamAttack {
 
     void tick(ServerWorld world) {
         if (!active) return;
-        ServerPlayerEntity player = world.getServer().getPlayerManager().getPlayer(target);
-        if (!guardian.isAlive() || player == null || !player.isAlive() || player.isSpectator()
-                || player.getEntityWorld() != world || guardian.squaredDistanceTo(player) > 32*32
+        int tick = (int)(world.getTime()-started);
+        if (!guardian.isAlive() || tick >= GuardianBeamTiming.END
                 || guardian.getEntityPos().squaredDistanceTo(anchor) > .25*.25) {
             cancel();
             return;
         }
-        int tick = (int)(world.getTime()-started);
-        if (tick >= GuardianBeamTiming.END) { cancel(); return; }
+        // The target only matters while tracking; once locked the aim is fixed and the
+        // pulse must finish so late entrants can still be hit even if the target died.
+        ServerPlayerEntity player = world.getServer().getPlayerManager().getPlayer(target);
+        boolean tracking = GuardianBeamTiming.isTracking(tick);
+        if (tracking && (player == null || !player.isAlive() || player.isSpectator()
+                || player.getEntityWorld() != world || guardian.squaredDistanceTo(player) > 32*32)) {
+            cancel();
+            return;
+        }
         guardian.setVelocity(0, guardian.getVelocity().y, 0);
-        if (GuardianBeamTiming.isTracking(tick)) aimAt(player, GuardianBeamTiming.FIRE-tick);
+        if (tracking) aimAt(player, GuardianBeamTiming.FIRE-tick);
         float yaw = (float)Math.toDegrees(Math.atan2(-direction.x,direction.z));
         guardian.setYaw(yaw);
         guardian.setBodyYaw(yaw);

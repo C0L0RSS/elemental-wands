@@ -13,7 +13,6 @@ import com.anton.elementalwands.registry.ModParticles;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
@@ -43,7 +42,6 @@ public final class TendrilBloomManager {
     private static final int BLOOM_GROWTH_INTERVAL = 20;
     private static final int BLOOM_AMBIENT_INTERVAL = 15;
     private static final int BLOOM_MAX_RADIUS = 3;
-    private static final int BLOOM_ENTANGLE_INTERVAL = 20;
 
     private static final class Tendril {
         final UUID seedlingId;
@@ -53,7 +51,7 @@ public final class TendrilBloomManager {
         Vec3d lastKnownTarget;
         final int startTick;
         final Set<BlockPos> placedPositions = new HashSet<>();
-        final Map<BlockPos, BlockState> originals = new HashMap<>();
+        final Map<BlockPos, TemporaryBlockManager.TemporaryPlacement> placements = new HashMap<>();
 
         Tendril(UUID seedlingId, UUID casterUuid, UUID targetUuid, Vec3d start, Vec3d lastKnown, int startTick) {
             this.seedlingId = seedlingId;
@@ -73,8 +71,7 @@ public final class TendrilBloomManager {
         int currentRadius;
         int lastGrowthTick;
         final Set<BlockPos> placedPositions = new HashSet<>();
-        final Map<BlockPos, BlockState> originals = new HashMap<>();
-        final Map<UUID, Integer> lastEntangleTickByEntity = new HashMap<>();
+        final Map<BlockPos, TemporaryBlockManager.TemporaryPlacement> placements = new HashMap<>();
 
         Bloom(UUID casterUuid, BlockPos center, int startTick) {
             this.casterUuid = casterUuid;
@@ -106,7 +103,7 @@ public final class TendrilBloomManager {
         Tendril t = new Tendril(seedlingId, caster.getUuid(), target.getUuid(), seedlingAnchor, targetPos, now);
         TENDRILS.computeIfAbsent(world.getRegistryKey(), _k -> new ArrayList<>()).add(t);
 
-        world.spawnParticles(ModParticles.NATURE_BLOOM,
+        world.spawnParticles(ModParticles.NATURE_LEAF,
                 seedlingAnchor.x, seedlingAnchor.y + 0.52, seedlingAnchor.z,
                 1, 0.0, 0.0, 0.0, 0.0);
         world.spawnParticles(ModParticles.NATURE_POLLEN,
@@ -181,8 +178,8 @@ public final class TendrilBloomManager {
         SeedlingManager.PlacementResult result = SeedlingManager.placeVerdantGrowth(
                 world, newColumns, t.placedPositions, TENDRIL_GROWTH_LIFESPAN);
         t.placedPositions.addAll(result.placed());
-        for (Map.Entry<BlockPos, BlockState> e : result.originals().entrySet()) {
-            t.originals.putIfAbsent(e.getKey(), e.getValue());
+        for (Map.Entry<BlockPos, TemporaryBlockManager.TemporaryPlacement> e : result.placements().entrySet()) {
+            t.placements.putIfAbsent(e.getKey(), e.getValue());
         }
 
         NatureVfx.pairedTendril(world, prevHead, t.currentHead, age);
@@ -210,14 +207,14 @@ public final class TendrilBloomManager {
         SeedlingManager.PlacementResult result = SeedlingManager.placeVerdantGrowth(
                 world, diskCols, b.placedPositions, BLOOM_LIFESPAN);
         b.placedPositions.addAll(result.placed());
-        b.originals.putAll(result.originals());
+        b.placements.putAll(result.placements());
 
         BLOOMS.computeIfAbsent(world.getRegistryKey(), _k -> new ArrayList<>()).add(b);
 
-        world.spawnParticles(ModParticles.NATURE_BLOOM,
+        world.spawnParticles(ModParticles.NATURE_LEAF,
                 center.getX() + 0.5, center.getY() + 0.55, center.getZ() + 0.5,
                 3, 0.35, 0.08, 0.35, 0.0);
-        world.spawnParticles(ModParticles.NATURE_PETAL,
+        world.spawnParticles(ModParticles.NATURE_LEAF,
                 center.getX() + 0.5, center.getY() + 0.5, center.getZ() + 0.5,
                 26, 0.8, 0.4, 0.8, 0.05);
         world.spawnParticles(ModParticles.NATURE_POLLEN,
@@ -231,9 +228,9 @@ public final class TendrilBloomManager {
     private static boolean tickBloom(ServerWorld world, Bloom b, int now) {
         int age = now - b.startTick;
         if (age >= BLOOM_LIFESPAN) {
-            SeedlingManager.restoreBlocks(world, b.originals);
+            SeedlingManager.restoreBlocks(world, b.placements);
             Vec3d center = Vec3d.ofCenter(b.center);
-            world.spawnParticles(ModParticles.NATURE_PETAL,
+            world.spawnParticles(ModParticles.NATURE_LEAF,
                     center.x, center.y + 0.4, center.z,
                     18, b.currentRadius * 0.5, 0.24, b.currentRadius * 0.5, 0.025);
             return true;
@@ -248,8 +245,8 @@ public final class TendrilBloomManager {
             SeedlingManager.PlacementResult result = SeedlingManager.placeVerdantGrowth(
                     world, ringCols.stream().filter(p -> !b.crushed.contains(p.up())).toList(), b.placedPositions, remainingLife);
             b.placedPositions.addAll(result.placed());
-            for (Map.Entry<BlockPos, BlockState> e : result.originals().entrySet()) {
-                b.originals.putIfAbsent(e.getKey(), e.getValue());
+            for (Map.Entry<BlockPos, TemporaryBlockManager.TemporaryPlacement> e : result.placements().entrySet()) {
+                b.placements.putIfAbsent(e.getKey(), e.getValue());
             }
 
             NatureVfx.growthRing(world, b.center, b.currentRadius, now);
@@ -263,7 +260,7 @@ public final class TendrilBloomManager {
             double radius = Math.max(1.0, b.currentRadius - 0.15);
             NatureVfx.ring(world, ModParticles.NATURE_VINE, center,
                     radius, 6, -0.36, now * 0.025);
-            NatureVfx.ring(world, ModParticles.NATURE_BLOOM, center,
+            NatureVfx.ring(world, ModParticles.NATURE_LEAF, center,
                     radius * 0.78, 4, -0.24, now * -0.035);
             world.spawnParticles(ModParticles.NATURE_POLLEN,
                     center.x, center.y + 0.12, center.z,
@@ -278,16 +275,16 @@ public final class TendrilBloomManager {
         List<Bloom> blooms = BLOOMS.get(world.getRegistryKey());
         if (blooms != null) blooms.removeIf(b -> {
             if (hit.test(b.center.up())) {
-                SeedlingManager.restoreBlocks(world, b.originals);
+                SeedlingManager.restoreBlocks(world, b.placements);
                 return true;
             }
-            SeedlingManager.crushPositions(world, b.placedPositions, b.originals, b.crushed, hit);
+            SeedlingManager.crushPositions(world, b.placedPositions, b.placements, b.crushed, hit);
             return false;
         });
         List<Tendril> tendrils = TENDRILS.get(world.getRegistryKey());
         if (tendrils != null) tendrils.removeIf(t -> {
             if (!hit.test(BlockPos.ofFloored(t.currentHead))) return false;
-            SeedlingManager.restoreBlocks(world, t.originals);
+            SeedlingManager.restoreBlocks(world, t.placements);
             return true;
         });
     }
@@ -315,12 +312,7 @@ public final class TendrilBloomManager {
 
             EntangleTracker.applyNatureSlow(e, 40, 3);
 
-            Integer lastTick = b.lastEntangleTickByEntity.get(e.getUuid());
-            if (lastTick == null || now - lastTick >= BLOOM_ENTANGLE_INTERVAL) {
-                EntangleTracker.addStack(world, e);
-                SeedlingManager.applyThorns(world, e, b.casterUuid);
-                b.lastEntangleTickByEntity.put(e.getUuid(), now);
-            }
+            SeedlingManager.applyThorns(world, e, b.casterUuid);
         }
     }
 }

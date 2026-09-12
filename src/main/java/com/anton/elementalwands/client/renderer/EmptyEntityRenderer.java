@@ -15,9 +15,4 @@ public class EmptyEntityRenderer<T extends Entity> extends EntityRenderer<T, Ent
     public EntityRenderState createRenderState() {
         return new EntityRenderState();
     }
-
-    @Override
-    public void updateRenderState(T entity, EntityRenderState state, float tickDelta) {
-        super.updateRenderState(entity, state, tickDelta);
-    }
 }

@@ -42,6 +42,31 @@ final class GuardianBossContractTest {
         require(choose(far, ready, 199, Attack.THROW) == null, "Distant throw skipped cooldown");
         require(choose(far, ready, 200, Attack.THROW) == Attack.THROW, "Distant solo encounter deadlocked");
         require(healthForParty(1)==600 && healthForParty(3)==1500 && healthForParty(5)==2400 && healthForParty(8)==3750, "Party scaling bounds changed");
+        for(boolean unstable:new boolean[]{false,true}) {
+            require(choose(players,new EnumMap<>(Attack.class),100,Attack.FAN,unstable,2)==Attack.BEAM,"Due beam lost to ready leap/throw");
+            var beamCooling=new EnumMap<Attack,Long>(Attack.class);beamCooling.put(Attack.BEAM,101L);
+            require(choose(players,beamCooling,100,Attack.FAN,unstable,2)!=Attack.BEAM,"Due beam bypassed cooldown");
+            require(!beamDue(far,new EnumMap<>(Attack.class),100,Attack.FAN,2),"Due beam exceeded range");
+            require(!beamDue(List.of(new Candidate(a,10,false)),new EnumMap<>(Attack.class),100,Attack.FAN,2),"Due beam ignores cover");
+            require(!beamDue(players,new EnumMap<>(Attack.class),100,Attack.BEAM,2),"Beam repeated immediately");
+            var rotationReady=new EnumMap<Attack,Long>(Attack.class);
+            int sinceBeam=0,beamCount=0;Attack previous=null;
+            for(long now=0;now<1800;) {
+                Attack next=choose(players,rotationReady,now,previous,unstable,sinceBeam);
+                if(next==null){now++;continue;}
+                if(sinceBeam>=2 && now>=rotationReady.getOrDefault(Attack.BEAM,0L))require(next==Attack.BEAM,"Rotation starved laser");
+                sinceBeam=next==Attack.BEAM?0:sinceBeam+1;if(next==Attack.BEAM)beamCount++;
+                int duration=next==Attack.THROW?GuardianPhaseRules.throwDuration(unstable)*GuardianPhaseRules.repeats(next,unstable):next.duration;
+                rotationReady.put(next,now+duration+next.cooldown);now+=duration+GuardianPhaseRules.gap(unstable);previous=next;
+            }
+            require(beamCount>=4,"Too few laser opportunities in sustained rotation: "+beamCount);
+        }
+        for(int age=0,releases=0;age<GuardianFanRules.duration(false);age++) {
+            if(GuardianFanRules.localTime(age)==GuardianFanRules.RELEASE) {
+                require(age==18+releases*8,"Unexpected burst release cadence");releases++;
+            }
+            if(age==GuardianFanRules.duration(false)-1)require(releases==3,"Missing barrage burst");
+        }
         Vec3d center = Vec3d.ZERO;
         Box grounded = new Box(5.7,0,-.3,6.3,1.8,.3);
         require(waveContact(center, grounded, 5.5, 6, 0), "Wave missed standing player");

@@ -34,14 +34,6 @@ public final class AnimatedSpellBillboardRenderer<T extends Entity>
     public AnimatedSpellBillboardRenderer(EntityRendererFactory.Context context,
             Identifier texturePrefix, int frameCount,
             float width, float height, float yOffset,
-            boolean translucent) {
-        this(context, texturePrefix, frameCount, width, height, yOffset,
-                translucent, entity -> false);
-    }
-
-    public AnimatedSpellBillboardRenderer(EntityRendererFactory.Context context,
-            Identifier texturePrefix, int frameCount,
-            float width, float height, float yOffset,
             boolean translucent, Predicate<T> mirroredPredicate) {
         super(context);
         if (frameCount <= 0) {

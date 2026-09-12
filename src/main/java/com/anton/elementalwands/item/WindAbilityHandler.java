@@ -148,9 +148,9 @@ public final class WindAbilityHandler {
         NbtCompound data = getDashData(stack);
 
         int charges = data.getInt(NBT_DASH_CHARGES, 0);
-        int lastDashTick = data.getInt(NBT_LAST_DASH_TICK, 0);
+        long lastDashTick = data.getLong(NBT_LAST_DASH_TICK, 0L);
         int chainCount = data.getInt(NBT_CHAIN_COUNT, 0);
-        int currentTick = world.getServer().getTicks();
+        long currentTick = world.getTime();
 
         // Initialize charges if first use
         if (!data.contains(NBT_DASH_CHARGES)) {
@@ -164,7 +164,7 @@ public final class WindAbilityHandler {
         }
 
         // Check if chaining (dashed within window)
-        boolean isChaining = (currentTick - lastDashTick) <= DASH_CHAIN_WINDOW_TICKS;
+        boolean isChaining = lastDashTick > 0 && (currentTick - lastDashTick) <= DASH_CHAIN_WINDOW_TICKS;
         if (isChaining) {
             chainCount++;
         } else {
@@ -200,7 +200,7 @@ public final class WindAbilityHandler {
         // Use one charge
         charges--;
         data.putInt(NBT_DASH_CHARGES, charges);
-        data.putInt(NBT_LAST_DASH_TICK, currentTick);
+        data.putLong(NBT_LAST_DASH_TICK, currentTick);
         data.putInt(NBT_CHAIN_COUNT, chainCount);
         saveDashData(stack, data);
 

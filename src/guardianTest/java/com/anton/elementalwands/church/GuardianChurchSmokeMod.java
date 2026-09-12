@@ -9,7 +9,6 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.server.*;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
 import net.minecraft.block.*;
 import net.minecraft.block.entity.ChestBlockEntity;
 import net.minecraft.item.*;
@@ -85,6 +84,12 @@ public final class GuardianChurchSmokeMod implements ModInitializer {
                 world.setBlockState(site.at(5,-1,-4),Blocks.BIRCH_LOG.getDefaultState());
             } finally {mutation.setBoolean(null,false);}
             check(world.breakBlock(site.at(5,-1,-4),false),"Ruin protection still prevents breaking trees");
+            server.setDifficulty(net.minecraft.world.Difficulty.PEACEFUL,true);
+            check(GuardianChurchManager.interact(player,site.socket()).contains("Peaceful"),"Peaceful ritual was admitted");
+            check(world.getBlockState(site.at(0,4,-3)).isOf(Blocks.OAK_LOG)
+                    && world.getBlockState(site.at(-2,4,-8)).isOf(Blocks.OAK_LEAVES),"Rejected ritual cleared shaft vegetation");
+            check(!valid.isEmpty(),"Rejected ritual consumed heart");
+            server.setDifficulty(net.minecraft.world.Difficulty.NORMAL,true);
             String ritual=GuardianChurchManager.interact(player,site.socket());
             check(!world.getBlockState(site.at(0,4,-3)).isOf(Blocks.OAK_LOG),"Ritual did not clear the Guardian's tree obstruction");
             check(world.getBlockState(site.at(-2,4,-8)).isAir(),"Ritual did not clear the player's overhead leaves");

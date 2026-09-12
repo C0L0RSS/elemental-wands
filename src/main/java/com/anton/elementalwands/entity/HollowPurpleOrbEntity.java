@@ -46,10 +46,6 @@ public class HollowPurpleOrbEntity extends ProjectileEntity {
         setNoGravity(true);
     }
 
-    public HollowPurpleOrbEntity(ServerWorld world, LivingEntity owner, Vec3d direction) {
-        this(world, owner, owner.getEyePos().add(direction.normalize().multiply(3.0)), direction);
-    }
-
     public HollowPurpleOrbEntity(ServerWorld world, LivingEntity owner, Vec3d spawnPos, Vec3d direction) {
         super(ModEntities.HOLLOW_PURPLE_ORB, world);
         setOwner(owner);

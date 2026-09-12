@@ -39,7 +39,7 @@ public final class GuardianChurchLocator {
     public static boolean searching() { return active!=null; }
     public static String cancel() {
         if(active==null)return "No church search is running.";
-        active.release();active=null;
+        var search=active;active=null;search.release(); // clear first so a failed release cannot strand the search
         return "Church search cancelled.";
     }
     public static String start(ServerCommandSource source,int radius) {

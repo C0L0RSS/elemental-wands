@@ -65,29 +65,14 @@ public final class NatureVfx {
         world.spawnParticles(ModParticles.NATURE_VINE,
                 second.x, second.y, second.z, 1, 0.035, 0.025, 0.035, 0.0);
 
-        world.spawnParticles(age % 3 == 0 ? ModParticles.NATURE_BLOOM : ModParticles.NATURE_LEAF,
+        world.spawnParticles(ModParticles.NATURE_LEAF,
                 to.x, to.y + 0.16, to.z, 1, 0.06, 0.03, 0.06, 0.0);
     }
 
-    public static void seedlingPulse(ServerWorld world, BlockPos anchor, int stage, boolean amplified,
-            int now) {
-        Vec3d center = Vec3d.ofCenter(anchor).add(0.0, 0.42, 0.0);
-        int clampedStage = Math.max(1, Math.min(6, stage));
-        double radius = 0.18 + clampedStage * 0.055;
-        int petals = 3 + clampedStage;
-        ring(world, ModParticles.NATURE_LEAF, center, radius, petals, 0.03,
-                now * 0.12);
-        world.spawnParticles(ModParticles.NATURE_BLOOM,
-                center.x, center.y + 0.18 + clampedStage * 0.035, center.z,
-                1, 0.0, 0.0, 0.0, 0.0);
-        world.spawnParticles(ModParticles.NATURE_POLLEN,
-                center.x, center.y + 0.3, center.z,
-                amplified ? 7 : 3, radius, 0.16, radius, amplified ? 0.02 : 0.008);
-        if (clampedStage >= 3) {
-            ring(world, ModParticles.NATURE_BLOOM, center,
-                    0.38 + clampedStage * 0.035, clampedStage >= 6 ? 6 : 4,
-                    -0.12, now * -0.08);
-        }
+    public static void seedlingPulse(ServerWorld world, BlockPos anchor, int stage, boolean amplified, int now) {
+        // Geometry supplies the flower. Pollen adds life without stacking giant flower sprites.
+        world.spawnParticles(ModParticles.NATURE_POLLEN, anchor.getX()+.5, anchor.getY()+1.35,
+                anchor.getZ()+.5, amplified ? 4 : 1, .24, .12, .24, .008);
     }
 
     public static void growthRing(ServerWorld world, BlockPos center, int radius, int now) {
@@ -95,9 +80,10 @@ public final class NatureVfx {
         int points = Math.max(12, radius * 8);
         for (int i = 0; i < points; i++) {
             double angle = TAU * i / points;
-            double x = c.x + Math.cos(angle) * radius;
-            double z = c.z + Math.sin(angle) * radius;
-            ParticleEffect effect = i % 4 == 0 ? ModParticles.NATURE_BLOOM : ModParticles.NATURE_VINE;
+            double scale = radius / Math.max(Math.abs(Math.cos(angle)), Math.abs(Math.sin(angle)));
+            double x = c.x + Math.cos(angle) * scale;
+            double z = c.z + Math.sin(angle) * scale;
+            ParticleEffect effect = i % 4 == 0 ? ModParticles.NATURE_LEAF : ModParticles.NATURE_VINE;
             world.spawnParticles(effect, x, c.y + 0.08, z, 1, 0.04, 0.02, 0.04, 0.0);
         }
         world.spawnParticles(ModParticles.NATURE_POLLEN,

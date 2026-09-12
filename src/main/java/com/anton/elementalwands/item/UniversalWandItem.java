@@ -1,7 +1,6 @@
 package com.anton.elementalwands.item;
 
 import com.anton.elementalwands.data.EWAttachments;
-import com.anton.elementalwands.data.WizardAffinity;
 import com.anton.elementalwands.registry.ModParticles;
 
 import net.minecraft.entity.Entity;
@@ -126,10 +125,5 @@ public class UniversalWandItem extends AbstractWandItem {
         // default, then handlers override internally with their own getPrimaryCooldownTicks
         // when tryStartCooldown is invoked.
         return DEFAULT_PRIMARY_COOLDOWN_TICKS;
-    }
-
-    @Override
-    public int getSecondaryCooldownTicks() {
-        return DEFAULT_SECONDARY_COOLDOWN_TICKS;
     }
 }

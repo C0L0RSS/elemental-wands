@@ -138,7 +138,8 @@ public final class GuardianArenaManager {
                 forceChunks(active,true);
                 LOG.info("Recovering interrupted Guardian arena at {}, {}",saved.arena.x(),saved.arena.z());
             }
-        } catch (IOException e) { storageError=e.getMessage(); LOG.error("Arena recovery requires attention; new encounters disabled",e); }
+        } catch (Exception e) { // a corrupt receipt (bad dimension id, malformed JSON) must not abort server start
+            storageError=e.getMessage(); LOG.error("Arena recovery requires attention; new encounters disabled",e); }
     }
 
     /** Validates the complete sky footprint before sealing the party or changing any block. */
@@ -146,6 +147,11 @@ public final class GuardianArenaManager {
         return start(caller,guardian,() -> {});
     }
     public static String start(ServerPlayerEntity caller, FracturedGuardianEntity guardian,Runnable accepted) {
+        return start(caller, guardian, accepted, (entity, box) -> caller.getEntityWorld().isSpaceEmpty(entity, box));
+    }
+    /** Ritual callers may plan removable shaft vegetation without touching the world before admission. */
+    public static String start(ServerPlayerEntity caller, FracturedGuardianEntity guardian, Runnable accepted,
+            java.util.function.BiPredicate<Entity, Box> shaftClear) {
         if (storageError!=null || saved==null) return "Arena unavailable: "+(storageError==null?"world is not ready":storageError);
         if (active!=null) return "An arena is already active or recovering. Use /ew guardian arena status.";
         ServerWorld world=(ServerWorld)caller.getEntityWorld();
@@ -179,11 +185,11 @@ public final class GuardianArenaManager {
             Box box=entity.getBoundingBox();
             if (entity instanceof ServerPlayerEntity player) {
                 Vec3d seat=plannedSeats.get(players.indexOf(player));
-                if(!world.isSpaceEmpty(player,new Box(seat.x-.3,base+1,seat.z-.3,seat.x+.3,floor+7,seat.z+.3)))
+                if(!shaftClear.test(player,new Box(seat.x-.3,base+1,seat.z-.3,seat.x+.3,floor+7,seat.z+.3)))
                     return "The lift needs a clear starting position away from the Guardian. Gather in the open courtyard.";
             }
             if (!(entity==guardian && guardian.getCommandTags().contains("ew_church_keeper"))
-                    && !world.isSpaceEmpty(entity,new Box(box.minX,box.maxY,box.minZ,box.maxX,floor+7,box.maxZ)))
+                    && !shaftClear.test(entity,new Box(box.minX,box.maxY,box.minZ,box.maxX,floor+7,box.maxZ)))
                 return "The gathering spot needs open sky above each player and the Guardian. Move out from beneath roofs or trees.";
             if (entity instanceof ServerPlayerEntity p && (p.isGliding() || world.isSpaceEmpty(p,p.getBoundingBox().offset(0,-.08,0)))) return "Everyone must stand on the ground before starting.";
         }
@@ -614,7 +620,9 @@ public final class GuardianArenaManager {
     }
     private static void recoverGuardian(Session s) {
         if (s.guardian==null) {
-            Entity e=s.world.getEntity(UUID.fromString(s.receipt.guardian()));
+            Entity e=null;
+            try { e=s.world.getEntity(UUID.fromString(s.receipt.guardian())); }
+            catch (IllegalArgumentException invalid) { LOG.warn("Arena receipt holds an invalid guardian id: {}",s.receipt.guardian()); }
             if (e instanceof FracturedGuardianEntity g) s.guardian=g;
         }
         if (s.guardian!=null && s.guardian.isAlive()) {

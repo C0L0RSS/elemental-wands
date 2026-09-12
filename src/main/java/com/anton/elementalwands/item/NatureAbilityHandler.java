@@ -12,7 +12,6 @@ import com.anton.elementalwands.util.TemporaryBlockManager;
 import com.anton.elementalwands.util.TendrilBloomManager;
 
 import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
@@ -73,10 +72,11 @@ public final class NatureAbilityHandler {
                 // A lily pad floats on the air block whose neighbour below is water.
                 if (!world.getBlockState(padPos.down()).getFluidState().isOf(Fluids.WATER)) continue;
                 BlockState padState = world.getBlockState(padPos);
-                if (!padState.isAir() && !padState.isReplaceable()) continue;
+                if (padState.isOf(com.anton.elementalwands.registry.ModSpellBlocks.NATURE_RAFT)
+                        || (!padState.isAir() && !padState.isReplaceable())) continue;
                 int placed = TemporaryBlockManager.placeTemporaryBlocks(world,
                         List.of(padPos),
-                        Blocks.LILY_PAD.getDefaultState(),
+                        com.anton.elementalwands.registry.ModSpellBlocks.NATURE_RAFT.getDefaultState(),
                         VERDANT_STEP_PAD_LIFESPAN,
                         s -> s.isAir() || s.isReplaceable());
                 // Only newly unfurled pads receive a flourish, and cap the initial burst so
@@ -178,8 +178,15 @@ public final class NatureAbilityHandler {
                 anchorCenter.x - TENDRIL_TARGET_RANGE, anchorCenter.y - TENDRIL_TARGET_RANGE, anchorCenter.z - TENDRIL_TARGET_RANGE,
                 anchorCenter.x + TENDRIL_TARGET_RANGE, anchorCenter.y + TENDRIL_TARGET_RANGE, anchorCenter.z + TENDRIL_TARGET_RANGE);
 
+        // Mirror the Space primary's aim rules: no passives, teammates, own pets,
+        // decorative stands, or the caster's own Awakened Tree.
         List<LivingEntity> candidates = world.getEntitiesByClass(LivingEntity.class, box,
-                e -> e.isAlive() && !e.isSpectator() && !e.getUuid().equals(caster.getUuid()));
+                e -> e.isAlive() && !e.isSpectator() && !e.getUuid().equals(caster.getUuid())
+                        && !(e instanceof com.anton.elementalwands.entity.AwakenedTreeEntity)
+                        && !(e instanceof net.minecraft.entity.passive.PassiveEntity)
+                        && !(e instanceof net.minecraft.entity.decoration.ArmorStandEntity)
+                        && !(e instanceof net.minecraft.entity.passive.TameableEntity tameable && tameable.isOwner(caster))
+                        && !e.isTeammate(caster));
 
         LivingEntity best = null;
         double bestDist = Double.MAX_VALUE;

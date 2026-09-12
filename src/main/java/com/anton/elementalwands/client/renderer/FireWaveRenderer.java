@@ -16,39 +16,26 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 
 /**
- * Renders Inferno Wave as a one-shot, velocity-aligned firebending blast.
+ * Renders the approved four-frame, velocity-aligned original Fire stream.
  *
  * <p>A longitudinal stream supplies the compressed-to-extended motion while a
- * velocity-perpendicular front cap preserves the old broad gameplay-facing
+ * velocity-perpendicular curl completes the gameplay-facing
  * silhouette. The crossed stream planes remain legible from the side, above,
  * or below without using upright block-fire models.</p>
  */
 public final class FireWaveRenderer
         extends EntityRenderer<InfernoWaveEntity, FireWaveRenderState> {
 
-    private static final int FRAME_COUNT = 10;
-    private static final float[] STREAM_LENGTHS = {
-            1.20f, 1.75f, 2.45f, 3.20f, 3.75f,
-            4.00f, 4.00f, 3.72f, 3.20f, 2.55f
-    };
-    private static final float[] STREAM_WIDTHS = {
-            0.55f, 0.72f, 0.94f, 1.18f, 1.40f,
-            1.52f, 1.58f, 1.48f, 1.30f, 1.05f
-    };
-    private static final float[] FRONT_WIDTHS = {
-            0.85f, 1.10f, 1.48f, 1.95f, 2.45f,
-            2.90f, 3.20f, 3.12f, 2.82f, 2.30f
-    };
-
+    private static final int FRAME_COUNT = 4;
     private final RenderLayer[] streamLayers = new RenderLayer[FRAME_COUNT];
     private final RenderLayer[] frontLayers = new RenderLayer[FRAME_COUNT];
 
     public FireWaveRenderer(EntityRendererFactory.Context context) {
         super(context);
         for (int frame = 0; frame < FRAME_COUNT; frame++) {
-            streamLayers[frame] = RenderLayer.getEntityTranslucent(
+            streamLayers[frame] = RenderLayer.getEntityTranslucentEmissive(
                     Identifier.of("elementalwands", "textures/entity/inferno_stream_" + frame + ".png"));
-            frontLayers[frame] = RenderLayer.getEntityTranslucent(
+            frontLayers[frame] = RenderLayer.getEntityTranslucentEmissive(
                     Identifier.of("elementalwands", "textures/entity/inferno_front_" + frame + ".png"));
         }
         this.shadowRadius = 0.0f;
@@ -68,11 +55,11 @@ public final class FireWaveRenderer
     public void updateRenderState(InfernoWaveEntity entity, FireWaveRenderState state, float tickDelta) {
         super.updateRenderState(entity, state, tickDelta);
 
-        int frame = Math.max(0, Math.min(FRAME_COUNT - 1, (int) Math.floor(state.age)));
-        state.frame = frame;
-        state.streamLength = STREAM_LENGTHS[frame];
-        state.streamWidth = STREAM_WIDTHS[frame];
-        state.frontWidth = FRONT_WIDTHS[frame];
+        state.frame = Math.floorMod((int)Math.floor(state.age * .4f), FRAME_COUNT);
+        float growth = Math.min(1, state.age / 2.0f);
+        state.streamLength = 3.6f * growth;
+        state.streamWidth = 1.7f * growth;
+        state.frontWidth = 1.44f * growth;
 
         Vec3d velocity = entity.getVelocity();
         double length = velocity.length();
@@ -127,29 +114,29 @@ public final class FireWaveRenderer
         boolean firstPerson = !MinecraftClient.getInstance().gameRenderer.getCamera().isThirdPerson();
         Vec3d origin = new Vec3d(state.x, state.y, state.z);
         Vec3d forward = new Vec3d(state.forwardX, state.forwardY, state.forwardZ);
-        Vec3d head = origin.add(forward.multiply(0.62));
-        Vec3d tail = origin.add(forward.multiply(0.62 - state.streamLength));
+        Vec3d head = origin.add(forward.multiply(1.0));
+        Vec3d tail = origin.add(forward.multiply(1.0 - state.streamLength));
         float ribbonOpacity = SpellViewClearance.opacity(firstPerson,
                 SpellViewClearance.distanceToSegment(cameraState.pos, tail, head), state.streamWidth * 0.5);
         float frontOpacity = SpellViewClearance.opacity(firstPerson,
-                cameraState.pos.distanceTo(origin.add(forward.multiply(0.68))), state.frontWidth * 0.5);
+                cameraState.pos.distanceTo(origin.add(forward.multiply(0.32))), state.frontWidth * 0.5);
         int ribbonColor = SpellViewClearance.color(0xFFFFFFFF, ribbonOpacity);
-        int crossColor = SpellViewClearance.color(0xD8FFFFFF, ribbonOpacity);
         int frontColor = SpellViewClearance.color(0xFFFFFFFF, frontOpacity);
         int frame = state.frame;
         RenderLayer streamLayer = streamLayers[frame];
         RenderLayer frontLayer = frontLayers[frame];
 
-        queue.submitCustom(matrices, streamLayer,
-                (entry, vertices) -> drawRibbon(vertices, entry, state.light,
-                        state, state.upX, state.upY, state.upZ,
-                        state.streamWidth * 0.50f, ribbonColor));
-        queue.submitCustom(matrices, streamLayer,
-                (entry, vertices) -> drawRibbon(vertices, entry, state.light,
-                        state, state.rightX, state.rightY, state.rightZ,
-                        state.streamWidth * 0.36f, crossColor));
+        for (int plane=0; plane<3; plane++) {
+            double angle=plane*Math.PI/3;
+            float x=(float)(state.upX*Math.cos(angle)+state.rightX*Math.sin(angle));
+            float y=(float)(state.upY*Math.cos(angle)+state.rightY*Math.sin(angle));
+            float z=(float)(state.upZ*Math.cos(angle)+state.rightZ*Math.sin(angle));
+            queue.submitCustom(matrices, streamLayer,
+                    (entry, vertices) -> drawRibbon(vertices, entry, 0xF000F0,
+                            state, x, y, z, state.streamWidth*.5f, ribbonColor));
+        }
         queue.submitCustom(matrices, frontLayer,
-                (entry, vertices) -> drawFront(vertices, entry, state.light, state, frontColor));
+                (entry, vertices) -> drawFront(vertices, entry, 0xF000F0, state, frontColor));
 
         super.render(state, matrices, queue, cameraState);
     }
@@ -157,7 +144,7 @@ public final class FireWaveRenderer
     private static void drawRibbon(VertexConsumer vertices, MatrixStack.Entry entry, int light,
             FireWaveRenderState state, float crossX, float crossY, float crossZ,
             float halfWidth, int color) {
-        float headDistance = 0.62f;
+        float headDistance = 1.0f;
         float tailDistance = headDistance - state.streamLength;
 
         float tailX = state.forwardX * tailDistance;
@@ -183,12 +170,12 @@ public final class FireWaveRenderer
 
     private static void drawFront(VertexConsumer vertices, MatrixStack.Entry entry, int light,
             FireWaveRenderState state, int color) {
-        float distance = 0.68f;
+        float distance = 0.32f;
         float centerX = state.forwardX * distance;
         float centerY = state.forwardY * distance;
         float centerZ = state.forwardZ * distance;
         float halfWidth = state.frontWidth * 0.50f;
-        float halfHeight = halfWidth * 0.82f;
+        float halfHeight = halfWidth;
 
         vertex(vertices, entry, light,
                 centerX - state.rightX * halfWidth - state.upX * halfHeight,

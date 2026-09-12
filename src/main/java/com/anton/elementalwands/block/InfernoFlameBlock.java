@@ -16,7 +16,7 @@ import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 
 /**
- * An animated custom replacement for temporary vanilla fire. It keeps the old
+ * Temporary fire with vanilla fire models and textures. It keeps the old
  * trail's essential contact behavior without spreading or persisting after
  * {@code TemporaryBlockManager} restores the original block.
  */

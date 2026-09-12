@@ -1,10 +1,9 @@
 package com.anton.elementalwands.entity;
 
-import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.registry.ModEntities;
 import com.anton.elementalwands.registry.ModParticles;
 import com.anton.elementalwands.util.SeedlingManager;
-import com.anton.elementalwands.util.EntangleTracker;
+import com.anton.elementalwands.util.NatureCombat;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -24,14 +23,10 @@ import net.minecraft.world.World;
 
 /**
  * The Nature wand's primary projectile: a thrown seed that sprouts a {@link SeedlingManager}
- * anchor where it lands, or bites into an enemy. Thorns dig harder into entangled prey, so the
- * impact damage scales with the target's current {@link EntangleTracker} stacks.
+ * anchor where it lands, or deals a light direct hit. Flowers supply Entangle and sustained damage.
  */
 public class SeedProjectileEntity extends ProjectileEntity {
 
-    private static final float BASE_DAMAGE = 5.5f;
-    private static final float DAMAGE_PER_ENTANGLE_STACK = 1.25f;
-    private static final float MAX_DAMAGE = 11.0f;
     private static final double INITIAL_SPEED = 1.5;
     private static final double GRAVITY = 0.03;
     private static final double DRAG = 0.99;
@@ -124,9 +119,6 @@ public class SeedProjectileEntity extends ProjectileEntity {
         Entity owner = getOwner();
 
         if (target instanceof LivingEntity living) {
-            EntangleTracker.addStack(sw, living);
-            int stacks = EntangleTracker.getStacks(living);
-            float damage = Math.min(MAX_DAMAGE, BASE_DAMAGE + DAMAGE_PER_ENTANGLE_STACK * stacks);
 
             DamageSource source = (owner instanceof PlayerEntity caster)
                     ? sw.getDamageSources().playerAttack(caster)
@@ -134,9 +126,9 @@ public class SeedProjectileEntity extends ProjectileEntity {
                             ? sw.getDamageSources().thrown(this, livingOwner)
                             : sw.getDamageSources().magic());
 
-            boolean damaged = living.damage(sw, source, damage);
+            boolean damaged = living.damage(sw, source, NatureCombat.SEED_DAMAGE);
             if (damaged) {
-                AbstractWandItem.onWandDamageDealt(owner, damage);
+                NatureCombat.seedDamageDealt(owner);
             }
 
             sw.spawnParticles(ModParticles.NATURE_BLOOM,

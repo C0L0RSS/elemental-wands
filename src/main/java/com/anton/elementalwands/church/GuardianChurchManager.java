@@ -55,7 +55,6 @@ public final class GuardianChurchManager {
         public boolean terrainBlended;
         public List<GuardianChurchTerrain.Column> terrainPlan;
         transient int terrainCursor;
-        transient int missingKeeperTicks;
         public List<Long> forced=new ArrayList<>();
         transient int cursor;
         public BlockPos anchor() { return new BlockPos(x,y,z); }
@@ -186,6 +185,24 @@ public final class GuardianChurchManager {
                 }
         } finally { mutation=false; }
     }
+    private static boolean ritualShaftClear(ServerWorld world, net.minecraft.entity.Entity entity, Box box) {
+        if (!world.getWorldBorder().contains(box) || !world.getEntityCollisions(entity, box).isEmpty()) return false;
+        var shape = net.minecraft.util.shape.VoxelShapes.cuboid(box);
+        var context = net.minecraft.block.ShapeContext.of(entity);
+        // Include adjacent cells because fences and other collision shapes can extend outside their cell.
+        for (BlockPos pos : BlockPos.iterate(BlockPos.ofFloored(box.minX-1,box.minY-1,box.minZ-1),
+                BlockPos.ofFloored(box.maxX+1,box.maxY+1,box.maxZ+1))) {
+            var state = world.getBlockState(pos);
+            boolean insideShaft = pos.getX()>=Math.floor(box.minX) && pos.getX()<Math.ceil(box.maxX)
+                    && pos.getZ()>=Math.floor(box.minZ) && pos.getZ()<Math.ceil(box.maxZ)
+                    && pos.getY()>=Math.floor(box.minY);
+            if (insideShaft && vegetation(state) && world.getBlockEntity(pos)==null) continue;
+            if (net.minecraft.util.shape.VoxelShapes.matchesAnywhere(shape,
+                    state.getCollisionShape(world,pos,context).offset(pos.getX(),pos.getY(),pos.getZ()),
+                    net.minecraft.util.function.BooleanBiFunction.AND)) return false;
+        }
+        return true;
+    }
     public static String interact(ServerPlayerEntity player,BlockPos socket) {
         if (error!=null || state==null) return "The ritual is unavailable; check the server's church recovery log.";
         Site s=siteAt(player.getEntityWorld(),socket);
@@ -208,10 +225,13 @@ public final class GuardianChurchManager {
         ServerWorld world=(ServerWorld)player.getEntityWorld();
         var guardian=keeper(world,s);
         if (guardian==null) return "The keeper is taking shape on its plinth. Try again in a moment.";
-        clearRitualVegetation(world,guardian);
         s.phase=Phase.ACTIVE;
         if (!save()) { s.phase=Phase.RUINED; return "The ritual could not be saved. Your heart was not consumed."; }
-        String result=GuardianArenaManager.start(player,guardian,() -> held.decrement(1));
+        String result=GuardianArenaManager.start(player,guardian,() -> {
+            preparePlinth(world,s);
+            clearRitualVegetation(world,guardian);
+            held.decrement(1);
+        }, (entity, box) -> ritualShaftClear(world,entity,box));
         if (!GuardianArenaManager.owns(guardian)) { s.phase=Phase.RUINED;save();return result; }
         return "The heart answers. The keeper will test everyone gathered in the courtyard.";
     }
@@ -286,31 +306,35 @@ public final class GuardianChurchManager {
             } else if (s.phase==Phase.RUINED && !s.stocked) stock(world,s,false);
             if (s.phase==Phase.RUINED && !s.terrainBlended && !GuardianArenaManager.hasActiveArena()) blendTerrain(world,s);
             if(s.phase==Phase.RUINED && !s.statuePrepared) { preparePlinth(world,s);s.statuePrepared=true; }
-            if ((s.phase==Phase.RUINED || s.phase==Phase.RESTORED) && s.guardian!=null) {
-                var entity=world.getEntity(UUID.fromString(s.guardian));
+            UUID keeperId=uuid(s.guardian);
+            if ((s.phase==Phase.RUINED || s.phase==Phase.RESTORED) && keeperId!=null) {
+                var entity=world.getEntity(keeperId);
                 if (entity!=null && (!(entity instanceof FracturedGuardianEntity g) || !GuardianArenaManager.owns(g))) entity.discard();
             }
         }
     }
+    /** Journal strings are user-editable; a malformed id must not throw out of the tick loop. */
+    private static UUID uuid(String text) {
+        if (text==null) return null;
+        try { return UUID.fromString(text); } catch (IllegalArgumentException invalid) { return null; }
+    }
     /** Create the hidden ritual actor only after a valid heart is offered. */
     private static FracturedGuardianEntity keeper(ServerWorld world,Site s) {
         FracturedGuardianEntity guardian=null;
-        if (s.guardian!=null && world.getEntity(UUID.fromString(s.guardian)) instanceof FracturedGuardianEntity g && g.isAlive()) guardian=g;
+        UUID keeperId=uuid(s.guardian);
+        if (keeperId!=null && world.getEntity(keeperId) instanceof FracturedGuardianEntity g && g.isAlive()) guardian=g;
         if (guardian!=null && GuardianArenaManager.owns(guardian)) return guardian;
         
         if(guardian==null) {
             guardian=new FracturedGuardianEntity(ModEntities.FRACTURED_GUARDIAN,world);
             s.guardian=guardian.getUuidAsString();
             if(!save())return null;
-            preparePlinth(world,s);
             var pos=s.at(0,-1,s.layoutVersion>=2?-3:3);guardian.setPosition(pos.getX()+.5,pos.getY(),pos.getZ()+.5);
             guardian.stopReview();guardian.setAiDisabled(true);guardian.setNoGravity(true);guardian.setInvulnerable(true);
             guardian.addCommandTag("ew_church_keeper");guardian.setArenaHidden(true);world.spawnEntity(guardian);
         }
-        s.missingKeeperTicks=0;
         var pos=s.at(0,-1,s.layoutVersion>=2?-3:3);
         boolean displaced=guardian.squaredDistanceTo(pos.getX()+.5,pos.getY(),pos.getZ()+.5)>.000001;
-        if(displaced || world.getTime()%20==0)preparePlinth(world,s);
         if(displaced)guardian.setPosition(pos.getX()+.5,pos.getY(),pos.getZ()+.5);
         guardian.setArenaHidden(true);
         guardian.setVelocity(Vec3d.ZERO);

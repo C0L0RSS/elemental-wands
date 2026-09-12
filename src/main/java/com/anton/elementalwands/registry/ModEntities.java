@@ -2,9 +2,7 @@ package com.anton.elementalwands.registry;
 
 import com.anton.elementalwands.ElementalWandsMod;
 import com.anton.elementalwands.entity.AwakenedTreeEntity;
-import com.anton.elementalwands.entity.BoulderProjectileEntity;
 import com.anton.elementalwands.entity.SeedProjectileEntity;
-import com.anton.elementalwands.entity.CalamityTornadoEntity;
 import com.anton.elementalwands.entity.HollowPurpleOrbEntity;
 import com.anton.elementalwands.entity.InfernoWaveEntity;
 import com.anton.elementalwands.entity.SingularityBoltEntity;
@@ -26,24 +24,18 @@ import net.minecraft.util.Identifier;
 
 public final class ModEntities {
 
+        public static final EntityType<com.anton.elementalwands.entity.PyreFrontEntity> PYRE_FRONT = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "pyre_front"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.PyreFrontEntity>create(SpawnGroup.MISC, com.anton.elementalwands.entity.PyreFrontEntity::new)
+                        .dimensions(EntityDimensions.fixed(.1f, .1f)).trackRangeBlocks(96).trackedUpdateRate(1)
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "pyre_front"))));
+
         public static final EntityType<com.anton.elementalwands.entity.StoneClusterEntity> STONE_CLUSTER = Registry.register(
                 Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID,"stone_cluster"),
                 EntityType.Builder.<com.anton.elementalwands.entity.StoneClusterEntity>create(
                         com.anton.elementalwands.entity.StoneClusterEntity::new,SpawnGroup.MISC)
                         .dimensions(2f,2f).maxTrackingRange(8).trackingTickInterval(1)
                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"stone_cluster"))));
-
-        public static final EntityType<BoulderProjectileEntity> BOULDER_PROJECTILE = Registry.register(
-                        Registries.ENTITY_TYPE,
-                        Identifier.of(ElementalWandsMod.MOD_ID, "boulder_projectile"),
-                        FabricEntityTypeBuilder
-                                        .<BoulderProjectileEntity>create(SpawnGroup.MISC, BoulderProjectileEntity::new)
-                                        .dimensions(EntityDimensions.fixed(0.5f, 0.5f))
-                                        .trackRangeBlocks(64)
-                                        .trackedUpdateRate(10)
-                                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
-                                                        Identifier.of(ElementalWandsMod.MOD_ID,
-                                                                        "boulder_projectile"))));
 
         public static final EntityType<SeedProjectileEntity> SEED_PROJECTILE = Registry.register(
                         Registries.ENTITY_TYPE,
@@ -77,18 +69,6 @@ public final class ModEntities {
                                         .trackedUpdateRate(1)
                                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
                                                         Identifier.of(ElementalWandsMod.MOD_ID, "vacuum_blade"))));
-
-        public static final EntityType<CalamityTornadoEntity> CALAMITY_TORNADO = Registry.register(
-                        Registries.ENTITY_TYPE,
-                        Identifier.of(ElementalWandsMod.MOD_ID, "calamity_tornado"),
-                        FabricEntityTypeBuilder
-                                        .<CalamityTornadoEntity>create(SpawnGroup.MISC,
-                                                        (type, world) -> new CalamityTornadoEntity(type, world))
-                                        .dimensions(EntityDimensions.fixed(6.0f, 12.0f))
-                                        .trackRangeBlocks(128)
-                                        .trackedUpdateRate(1)
-                                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
-                                                        Identifier.of(ElementalWandsMod.MOD_ID, "calamity_tornado"))));
 
         public static final EntityType<SingularityBoltEntity> SINGULARITY_BOLT = Registry.register(
                         Registries.ENTITY_TYPE,

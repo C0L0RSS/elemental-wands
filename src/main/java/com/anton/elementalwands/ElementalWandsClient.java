@@ -19,7 +19,6 @@ import com.anton.elementalwands.client.renderer.EmptyEntityRenderer;
 import com.anton.elementalwands.client.renderer.FireWaveRenderer;
 import com.anton.elementalwands.client.renderer.FireSpiritRenderer;
 import com.anton.elementalwands.client.renderer.FracturedGuardianRenderer;
-import com.anton.elementalwands.client.renderer.SpellBillboardRenderer;
 import com.anton.elementalwands.client.renderer.StoneZombieRenderer;
 import com.anton.elementalwands.registry.ModSpellBlocks;
 
@@ -33,7 +32,6 @@ import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.BlockRenderLayerMap;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.BlockRenderLayer;
-import net.minecraft.client.render.entity.FlyingItemEntityRenderer;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
@@ -59,24 +57,30 @@ public class ElementalWandsClient implements ClientModInitializer {
         BlockRenderLayerMap.putBlock(ModSpellBlocks.INFERNO_FLAME, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModSpellBlocks.PYRE_FLAME, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModSpellBlocks.STONE_SPIKE, BlockRenderLayer.CUTOUT);
+        EntangleClientEffects.register();
+        for (var block : new net.minecraft.block.Block[]{ModSpellBlocks.NATURE_SEEDLING,
+                ModSpellBlocks.NATURE_ROOTS,ModSpellBlocks.NATURE_RAFT,
+                ModSpellBlocks.NATURE_HEARTWOOD,ModSpellBlocks.NATURE_FLOWERING_LEAVES}) {
+            BlockRenderLayerMap.putBlock(block,BlockRenderLayer.CUTOUT);
+            net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry.BLOCK.register(
+                    (state,world,pos,tint)->tint<0?-1:0xFF000000|tint,block);
+        }
+
 
         ultimateKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.elementalwands.ultimate",
                 GLFW.GLFW_KEY_X,
                 new KeyBinding.Category(Identifier.of("elementalwands", "general"))));
 
-        EntityRendererRegistry.register(ModEntities.BOULDER_PROJECTILE, FlyingItemEntityRenderer::new);
-        EntityRendererRegistry.register(ModEntities.SEED_PROJECTILE,
-                context -> new SpellBillboardRenderer<>(context,
-                        Identifier.of("elementalwands", "textures/entity/winged_seed.png"),
-                        0.72f, 0.46f, 0.0f, true));
+        EntityRendererRegistry.register(ModEntities.SEED_PROJECTILE,com.anton.elementalwands.client.renderer.NatureSeedRenderer::new);
         EntityRendererRegistry.register(ModEntities.VACUUM_BLADE,
                 context -> new AnimatedSpellBillboardRenderer<>(context,
                         Identifier.of("elementalwands", "textures/entity/vacuum_blade"),
                         6, .95f, .42f, 0.0f, true,
                         blade -> blade.isMirrored()));
-        EntityRendererRegistry.register(ModEntities.CALAMITY_TORNADO, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.INFERNO_WAVE, FireWaveRenderer::new);
+        EntityRendererRegistry.register(net.minecraft.entity.EntityType.FALLING_BLOCK, com.anton.elementalwands.client.renderer.FireMeteorRenderer::new);
+        EntityRendererRegistry.register(ModEntities.PYRE_FRONT, com.anton.elementalwands.client.renderer.PyreFrontRenderer::new);
         EntityRendererRegistry.register(ModEntities.SINGULARITY_BOLT, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.HOLLOW_PURPLE_ORB, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.AWAKENED_TREE, EmptyEntityRenderer::new);
@@ -131,14 +135,16 @@ public class ElementalWandsClient implements ClientModInitializer {
     private static void tickClient(MinecraftClient client) {
         if (client.player == null || client.getNetworkHandler() == null) return;
         EntangleClientEffects.tick(client);
+        // Drain presses every tick; otherwise taps made while holding another item
+        // queue up and fire the ultimate as soon as the wand comes into hand.
+        boolean ultimatePressed = false;
+        while (ultimateKey.wasPressed()) ultimatePressed = true;
         if (client.currentScreen != null) return;
         if (!(client.player.getMainHandStack().getItem() instanceof AbstractWandItem)) return;
 
         spawnNatureSeedlingTargetPreview(client);
 
-        while (ultimateKey.wasPressed()) {
-            ClientPlayNetworking.send(ModNetworking.CastUltimatePayload.INSTANCE);
-        }
+        if (ultimatePressed) ClientPlayNetworking.send(ModNetworking.CastUltimatePayload.INSTANCE);
     }
 
     private static void spawnNatureSeedlingTargetPreview(MinecraftClient client) {

@@ -25,6 +25,7 @@ public final class ZephyrWingsItem extends Item {
     @Override
     public void inventoryTick(ItemStack stack, ServerWorld world, Entity entity, EquipmentSlot slot) {
         if (entity instanceof ServerPlayerEntity player && !ZephyrStrikeManager.isActive(player)) {
+            ZephyrStrikeManager.cancel(player);
             stack.setCount(0);
         }
     }

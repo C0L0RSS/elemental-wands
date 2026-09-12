@@ -101,7 +101,8 @@ public final class StoneClusterEntity extends ProjectileEntity {
     // Low vegetation is not cover, even when vanilla gives it a physical shape
     // (azalea, lily pads, moss carpet). Logs, leaves and constructed defenses remain solid.
     private static boolean softVegetation(BlockState state) {
-        return state.getBlock() instanceof PlantBlock
+        return com.anton.elementalwands.registry.ModSpellBlocks.isNatureGrowth(state)
+                || state.getBlock() instanceof PlantBlock
                 || state.getBlock() instanceof AbstractPlantPartBlock
                 || state.getBlock() instanceof VineBlock
                 || state.getBlock() instanceof SugarCaneBlock

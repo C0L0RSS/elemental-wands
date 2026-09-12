@@ -13,6 +13,7 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.BlockParticleEffect;
 import net.minecraft.particle.SimpleParticleType;
 import net.minecraft.server.MinecraftServer;
@@ -86,8 +87,13 @@ public final class ZephyrStrikeManager {
             return;
         }
 
+        recoverSavedChest(player);
         ItemStack chest = player.getEquippedStack(EquipmentSlot.CHEST);
         ItemStack savedChest = chest.isOf(ModItems.ZEPHYR_WINGS) ? ItemStack.EMPTY : chest.copy();
+
+        NbtCompound receipt = new NbtCompound();
+        EquipmentReceipt.put(player, receipt, "chest", savedChest);
+        player.setAttached(EWAttachments.ZEPHYR_GEAR, receipt);
 
         // Put the session in the map before equipping so the transient item's
         // inventory guard can never mistake a legitimate wing stack for debris.
@@ -363,6 +369,8 @@ public final class ZephyrStrikeManager {
         // that live replacement before removing either orphaned wing stack.
         if (strike != null) {
             restoreChest(newPlayer, strike.savedChest());
+            oldPlayer.removeAttached(EWAttachments.ZEPHYR_GEAR);
+            newPlayer.removeAttached(EWAttachments.ZEPHYR_GEAR);
         }
 
         purgeOrphanedWings(oldPlayer);
@@ -378,6 +386,7 @@ public final class ZephyrStrikeManager {
 
         player.stopGliding();
         restoreChest(player, strike.savedChest());
+        player.removeAttached(EWAttachments.ZEPHYR_GEAR);
         purgeOrphanedWings(player);
     }
 
@@ -402,11 +411,22 @@ public final class ZephyrStrikeManager {
         player.equipStack(EquipmentSlot.CHEST, savedChest.copy());
     }
 
+    private static void recoverSavedChest(ServerPlayerEntity player) {
+        if (isActive(player)) return;
+        NbtCompound receipt = player.getAttached(EWAttachments.ZEPHYR_GEAR);
+        if (receipt == null) return;
+        ItemStack original = EquipmentReceipt.get(player, receipt, "chest");
+        player.stopGliding();
+        restoreChest(player, original);
+        player.removeAttached(EWAttachments.ZEPHYR_GEAR);
+    }
+
     private static void purgeOrphanedWings(ServerPlayerEntity player) {
         if (isActive(player)) {
             return;
         }
 
+        recoverSavedChest(player);
         if (player.getEquippedStack(EquipmentSlot.CHEST).isOf(ModItems.ZEPHYR_WINGS)) {
             player.equipStack(EquipmentSlot.CHEST, ItemStack.EMPTY);
         }

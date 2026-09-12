@@ -57,6 +57,26 @@ public final class MeteorManager {
 
     private static final Map<RegistryKey<World>, List<Meteor>> METEORS = new HashMap<>();
     private static final int WARNING_RADIUS = 60; // blocks
+    public static final float MAX_DAMAGE = 60;
+    public static final double FULL_DAMAGE_RADIUS = 3, DAMAGE_RADIUS = 10;
+    private static final net.minecraft.world.explosion.ExplosionBehavior DAMAGE =
+            new net.minecraft.world.explosion.ExplosionBehavior() {
+        @Override
+        public float calculateDamage(Explosion explosion, Entity entity, float exposure) {
+            var box = entity.getBoundingBox();
+            Vec3d center = explosion.getPosition();
+            double distance = center.distanceTo(new Vec3d(
+                    Math.clamp(center.x, box.minX, box.maxX),
+                    Math.clamp(center.y, box.minY, box.maxY),
+                    Math.clamp(center.z, box.minZ, box.maxZ)));
+            return impactDamage(distance, exposure);
+        }
+    };
+
+    public static float impactDamage(double distance, float exposure) {
+        double falloff = Math.clamp((DAMAGE_RADIUS - distance) / (DAMAGE_RADIUS - FULL_DAMAGE_RADIUS), 0, 1);
+        return (float)(MAX_DAMAGE * falloff * Math.clamp(exposure, 0, 1));
+    }
 
     private MeteorManager() {
     }
@@ -72,12 +92,15 @@ public final class MeteorManager {
             float explosionPower) {
         BlockState meteorState = ModSpellBlocks.METEOR_CORE.getDefaultState();
 
-        BlockPos spawnBlockPos = BlockPos.ofFloored(targetPos).add(0, spawnHeight, 0);
-        FallingBlockEntity meteor = FallingBlockEntity.spawnFromBlock(world, spawnBlockPos, meteorState);
-        meteor.setPosition(targetPos.x, spawnBlockPos.getY(), targetPos.z);
+        // Construct the projectile directly: even the occupied-column fallback must
+        // preserve block entities, inventories and neighboring blocks at the spawn cell.
+        BlockPos spawnBlockPos = findClearSpawnPos(world, BlockPos.ofFloored(targetPos), spawnHeight);
+        FallingBlockEntity meteor = com.anton.elementalwands.mixin.FallingBlockEntityInvoker.elementalwands$create(
+                world, targetPos.x, spawnBlockPos.getY(), targetPos.z, meteorState);
         meteor.setVelocity(0.0, -0.2, 0.0); // BUFFED: Much slower fall (was -0.3)
-        meteor.setHurtEntities(10.0f, 40);
+        // Explosion is the sole impact damage path; falling collision must not stack with it.
         meteor.setDestroyedOnLanding();
+        world.spawnEntity(meteor);
         Vec3d landingBrandPos = findLandingBrandPos(world, meteor, targetPos, spawnBlockPos);
 
         int now = world.getServer().getTicks();
@@ -100,15 +123,18 @@ public final class MeteorManager {
             }
         }
 
-        world.spawnParticles(ModParticles.FIRE_METEOR_SHELL,
-                meteor.getX(), meteor.getY(), meteor.getZ(), 2, 0.18, 0.18, 0.18, 0.01);
-        world.spawnParticles(ModParticles.FIRE_FLAME_RIBBON,
-                meteor.getX(), meteor.getY() + 0.3, meteor.getZ(), 6, 0.42, 0.6, 0.42, 0.06);
-        world.spawnParticles(ModParticles.FIRE_EMBER,
-                meteor.getX(), meteor.getY(), meteor.getZ(), 12, 0.55, 0.55, 0.55, 0.08);
-        world.spawnParticles(ParticleTypes.LARGE_SMOKE,
-                meteor.getX(), meteor.getY(), meteor.getZ(), 4, 0.65, 0.65, 0.65, 0.025);
+        // The client renderer supplies the approved continuous fireball shell and embers.
         spawnLandingRing(world, landingBrandPos, 0.0);
+    }
+
+    /** Highest air cell in the column at or below the requested height, at least four blocks above the target. */
+    private static BlockPos findClearSpawnPos(ServerWorld world, BlockPos target, int spawnHeight) {
+        BlockPos.Mutable pos = target.mutableCopy();
+        for (int y = target.getY() + spawnHeight; y >= target.getY() + 4; y--) {
+            pos.setY(y);
+            if (world.getBlockState(pos).isAir()) return pos.toImmutable();
+        }
+        return target.up(spawnHeight);
     }
 
     private static void tickWorld(ServerWorld world) {
@@ -145,31 +171,7 @@ public final class MeteorManager {
                 spawnLandingRing(world, meteor.landingBrandPos, descentProgress);
             }
 
-            double orbitPhase = now * 0.34;
-            for (int side = 0; side < 2; side++) {
-                double angle = orbitPhase + side * Math.PI;
-                double shellX = meteor.lastPos.x + Math.cos(angle) * 0.22;
-                double shellZ = meteor.lastPos.z + Math.sin(angle) * 0.22;
-                world.spawnParticles(ModParticles.FIRE_METEOR_SHELL,
-                        shellX, meteor.lastPos.y, shellZ,
-                        1, 0.0, 0.0, 0.0, 0.0);
-            }
-            world.spawnParticles(ModParticles.FIRE_FLAME_RIBBON,
-                    meteor.lastPos.x, meteor.lastPos.y + 0.45, meteor.lastPos.z,
-                    2, 0.28, 0.36, 0.28, 0.045);
-            world.spawnParticles(ModParticles.FIRE_EMBER,
-                    meteor.lastPos.x, meteor.lastPos.y + 0.2, meteor.lastPos.z,
-                    3, 0.32, 0.4, 0.32, 0.06);
-            if (now % 2 == 0) {
-                world.spawnParticles(ParticleTypes.LARGE_SMOKE,
-                        meteor.lastPos.x, meteor.lastPos.y, meteor.lastPos.z,
-                        1, 0.3, 0.3, 0.3, 0.018);
-            }
-            if (now % 3 == 0) {
-                world.spawnParticles(ParticleTypes.LAVA,
-                        meteor.lastPos.x, meteor.lastPos.y, meteor.lastPos.z,
-                        2, 0.4, 0.4, 0.4, 0.04);
-            }
+            // Attached flames live in FireMeteorRenderer; avoid a detached billboard core.
 
             if (falling.isOnGround()) {
                 explode(world, meteor);
@@ -189,7 +191,7 @@ public final class MeteorManager {
         world.createExplosion(
                 caster,
                 Explosion.createDamageSource(world, caster),
-                null,
+                DAMAGE,
                 meteor.lastPos.x,
                 meteor.lastPos.y,
                 meteor.lastPos.z,
@@ -224,10 +226,10 @@ public final class MeteorManager {
     }
 
     private static void spawnLandingRing(ServerWorld world, Vec3d targetPos, double descentProgress) {
-        double radius = 7.0 + (2.25 - 7.0) * descentProgress;
+        double radius = 5.4 - 0.8 * descentProgress;
         double phase = world.getServer().getTicks() * 0.18;
-        for (int index = 0; index < 18; index++) {
-            double angle = phase + Math.PI * 2.0 * index / 18.0;
+        for (int index = 0; index < 32; index++) {
+            double angle = phase + Math.PI * 2.0 * index / 32.0;
             double x = targetPos.x + Math.cos(angle) * radius;
             double z = targetPos.z + Math.sin(angle) * radius;
             world.spawnParticles(ModParticles.FIRE_METEOR_WARNING,

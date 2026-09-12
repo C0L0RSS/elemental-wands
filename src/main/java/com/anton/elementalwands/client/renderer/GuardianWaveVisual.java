@@ -33,17 +33,15 @@ final class GuardianWaveVisual {
             if (tick<0 || tick>=Math.ceil(range/speed)) continue;
             Vec3d origin=entity.getEntityPos().add(entity.getWaveOrigin(slot));
             double front=Math.min(range,(tick+1)*speed);
-            for (int row=0;row<1;row++) {
-                double radius=front-.25-row*.8;
-                if (radius<.3) continue;
-                int count=Math.max(12,(int)Math.ceil(radius*Math.PI*2/.95));
-                for (int i=0;i<count;i++) {
-                    double angle=(i+row*.5)*Math.PI*2/count;
-                    Vec3d p=GuardianWaveSurface.ground(entity.getEntityWorld(),entity,origin,
-                            origin.x+Math.cos(angle)*radius,origin.z+Math.sin(angle)*radius);
-                    if (p==null || !GuardianWaveSurface.visible(entity.getEntityWorld(),entity,origin,p)) continue;
-                    result.add(new Stone(p,(float)(-angle+Math.PI/2),row==0?(float)WAVE_HEIGHT:.28f,row==0));
-                }
+            double radius=front-.25;
+            if (radius<.3) continue;
+            int count=Math.max(12,(int)Math.ceil(radius*Math.PI*2/.95));
+            for (int i=0;i<count;i++) {
+                double angle=i*Math.PI*2/count;
+                Vec3d p=GuardianWaveSurface.ground(entity.getEntityWorld(),entity,origin,
+                        origin.x+Math.cos(angle)*radius,origin.z+Math.sin(angle)*radius);
+                if (p==null || !GuardianWaveSurface.visible(entity.getEntityWorld(),entity,origin,p)) continue;
+                result.add(new Stone(p,(float)(-angle+Math.PI/2),(float)WAVE_HEIGHT,true));
             }
         }
         List<Stone> stones = List.copyOf(result);

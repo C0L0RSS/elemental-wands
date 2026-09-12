@@ -10,12 +10,12 @@ import net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry;
 public final class ModParticleFactories {
 
     private static final Profile FIRE_EMBER = new Profile(
-            0.05f, 0.09f, 0.28f,
+            0.10f, 0.18f, 0.4f,
             10, 18,
             1.0f, 0.0f, 0.65f,
             -0.055f, 0.95f,
             -0.16f, 0.16f,
-            0xFFFFFF, 0xFFF4D8,
+            0xFFFFFF, 0xFFFFFF,
             SpriteMode.BY_AGE, false, true);
 
     private static final Profile FIRE_FLAME_RIBBON = new Profile(
@@ -24,7 +24,7 @@ public final class ModParticleFactories {
             0.96f, 0.0f, 0.62f,
             -0.025f, 0.91f,
             -0.065f, 0.065f,
-            0xFFFFFF, 0xFFF7E0,
+            0xFFFFFF, 0xFFFFFF,
             SpriteMode.BY_AGE, false, true);
 
     private static final Profile FIRE_IMPACT_RING = new Profile(
@@ -33,7 +33,7 @@ public final class ModParticleFactories {
             1.0f, 0.0f, 0.42f,
             0.0f, 1.0f,
             0.0f, 0.0f,
-            0xFFFFFF, 0xFFF9E8,
+            0xFFFFFF, 0xFFFFFF,
             SpriteMode.BY_AGE, false, true);
 
     private static final Profile FIRE_PYRE_FRONT = new Profile(
@@ -60,7 +60,7 @@ public final class ModParticleFactories {
             0.96f, 0.0f, 0.66f,
             -0.018f, 0.96f,
             -0.025f, 0.025f,
-            0xFFFFFF, 0xFFF7E0,
+            0xFFFFFF, 0xFFFFFF,
             SpriteMode.BY_AGE, false, true);
 
     private static final Profile FIRE_METEOR_IMPACT = new Profile(

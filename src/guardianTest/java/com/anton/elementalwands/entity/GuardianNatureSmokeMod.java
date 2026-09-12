@@ -59,6 +59,8 @@ public final class GuardianNatureSmokeMod implements ModInitializer {
             guardian.stopReview();floor=player.getBlockY()-1;
             player.setPosition(-20.5,floor+1,-20.5); player.setYaw(0);player.setPitch(0);
             wand=new ItemStack(ModItems.FRACTURED_WAND);player.equipStack(EquipmentSlot.MAINHAND,wand);
+            testRootVisualOwnership(world);
+            testWaterGrowth(world);
             FireAbilityHandler.castSecondary(world,player,wand);
             seed=new BlockPos(10,floor+1,10);remote=new BlockPos(20,floor+1,10);
             distant=new BlockPos(50,floor+1,10);
@@ -88,8 +90,8 @@ public final class GuardianNatureSmokeMod implements ModInitializer {
         if(phase==8 && tick-started==30) {
             require(player.getHealth()>10,"Pyre shows Regeneration but never heals");
             player.getHungerManager().setFoodLevel(20);
-            require(world.getBlockState(seed).isOf(Blocks.FLOWERING_AZALEA),"Seedling uprooted on artificial floor");
-            require(world.getBlockState(seed.east()).isOf(Blocks.MOSS_CARPET),"Seedling failed to grow arena thorns");
+            require(world.getBlockState(seed).isOf(ModSpellBlocks.NATURE_SEEDLING),"Seedling uprooted on artificial floor");
+            require(world.getBlockState(seed.east()).isOf(ModSpellBlocks.NATURE_ROOTS),"Seedling failed to grow arena thorns");
             guardian.setPosition(10.5,floor+1,7.5);guardian.setOnGround(true);
             player.setPosition(10.5,floor+1,18.5);
             var source = SeedlingManager.getActiveSeedlingsForCaster(world,player.getUuid()).stream().filter(s -> s.anchorPos().equals(remote)).findFirst().orElseThrow();
@@ -107,18 +109,24 @@ public final class GuardianNatureSmokeMod implements ModInitializer {
             require(!SeedlingManager.isSeedlingAlive(world,SeedlingManager.getActiveSeedlingsForCaster(world,player.getUuid()).stream().filter(s->s.anchorPos().equals(seed)).map(s->s.seedlingId()).findFirst().orElse(new UUID(0,0))),"Slam left its seedling active");
             require(world.getBlockState(seed).isAir()&&world.getBlockState(seed.east()).isAir(),"Slam did not clear seedling and owned thorns");
             require(world.getBlockState(remote).isAir(),"Traveling wave left the in-range plant intact");
-            require(world.getBlockState(distant).isOf(Blocks.FLOWERING_AZALEA),"Wave erased plants outside its range");
+            require(world.getBlockState(distant).isOf(ModSpellBlocks.NATURE_SEEDLING),"Wave erased plants outside its range");
             var next=GuardianBossCombat.class.getDeclaredField("nextAction");next.setAccessible(true);
             require(next.getLong(combat)==attackStarted+GuardianCombatRules.Attack.SHOCKWAVE.duration+GuardianCombatRules.RECOVERY_GAP+20,"Attack timing/recovery extension is wrong");
             guardian.stopReview();
             OvergrowthManager.startOvergrowth(world,player,seed,1);
             tree=world.getEntitiesByClass(AwakenedTreeEntity.class,new Box(seed).expand(10),e->e.isAlive()).getFirst();
+            testTreeRejectsEntangle(world);
             treeHealth=tree.getHealth();started=tick;phase=4;
         }
         if(phase==4 && tick-started==50) {
+            require(world.getBlockState(seed.up(2)).isOf(ModSpellBlocks.NATURE_HEARTWOOD),"Tree lost its custom heart");
+            require(world.getBlockState(seed.west(4).up(4)).isOf(Blocks.OAK_LOG),"Tree lost the approved outstretched branch");
+            require(world.getBlockState(seed.up(8)).isOf(Blocks.OAK_LEAVES),"Tree is not nine blocks tall");
+            require(com.anton.elementalwands.util.NatureTreeLayout.cells().size()==169,"Approved tree layout changed");
             combat.crushGrowth(world,guardian.getEntityPos(),6,false,6);
             require(tree.isAlive() && tree.getHealth()<treeHealth,"Guardian impact cannot damage tree through its own shell, or instantly deletes it");
             OvergrowthManager.destroyTree(world,tree);
+            require(world.getBlockState(seed.up(2)).isAir() && world.getBlockState(seed.west(4).up(4)).isAir(),"Tree custom heart/branches did not restore");
             guardian.stopReview();guardian.setPosition(-30.5,floor+1,-10.5);guardian.setVelocity(Vec3d.ZERO);guardian.setOnGround(true);
             player.setPosition(-30.5,floor+1,9.5);
             guardian.testAttack(player,GuardianCombatRules.Attack.LEAP);started=tick;phase=5;
@@ -150,6 +158,45 @@ public final class GuardianNatureSmokeMod implements ModInitializer {
             Files.writeString(Path.of("NATURE_PASSED.txt"),"Real arena: Fire coals/flames/buffs; protected tracked floor restoration; Nature planting/growth/survival; local slam destruction and distant preservation; exact extended recovery; damageable ultimate tree; uninterrupted rooted leap; arena cleanup.\n");
             System.out.println("GUARDIAN NATURE ARENA CHECK PASSED");server.stop(false);
         }
+    }
+    private void testRootVisualOwnership(ServerWorld world) throws Exception {
+        var remaining=EntangleTracker.class.getDeclaredMethod("getRootVisualTicksRemaining",net.minecraft.entity.LivingEntity.class);
+        remaining.setAccessible(true);
+        player.addStatusEffect(new net.minecraft.entity.effect.StatusEffectInstance(StatusEffects.SLOWNESS,30,6));
+        require((int)remaining.invoke(null,player)==0,"Unrelated Slowness falsely creates Nature vines");
+        EntangleTracker.syncUltimateRoot(world,player,30);
+        require((int)remaining.invoke(null,player)==30 && EntangleTracker.getStacks(player)==0,"Ultimate root lost its visual or creates gameplay stacks");
+        EntangleTracker.clearStacks(world,player);player.removeStatusEffect(StatusEffects.SLOWNESS);
+        require((int)remaining.invoke(null,player)==0,"Root-only state did not clear");
+    }
+    private void testTreeRejectsEntangle(ServerWorld world) throws Exception {
+        float health=tree.getHealth();
+        for(int i=0;i<5;i++)EntangleTracker.addStack(world,tree);
+        EntangleTracker.applyNatureSlow(tree,40,6);
+        EntangleTracker.syncUltimateRoot(world,tree,30);
+        var thorns=SeedlingManager.class.getDeclaredMethod("applyThorns",ServerWorld.class,net.minecraft.entity.LivingEntity.class,UUID.class);
+        thorns.setAccessible(true);thorns.invoke(null,world,tree,player.getUuid());
+        require(EntangleTracker.getStacks(tree)==0,"Ultimate tree received Entangle stacks");
+        require(!tree.hasStatusEffect(StatusEffects.SLOWNESS),"Ultimate tree received Nature Slowness");
+        require(tree.getHealth()==health,"Nature thorns damaged the ultimate tree");
+        var roots=EntangleTracker.class.getDeclaredField("ULTIMATE_ROOT_UNTIL");roots.setAccessible(true);
+        require(!((Map<?,?>)roots.get(null)).containsKey(tree.getUuid()),"Ultimate tree received root visual tracking");
+    }
+    private void testWaterGrowth(ServerWorld world) {
+        BlockPos water=new BlockPos(200,-61,0),pad=water.up();world.getChunk(water);
+        var oldWater=world.getBlockState(water);var oldPad=world.getBlockState(pad);
+        world.setBlockState(water,Blocks.WATER.getDefaultState(),3);world.setBlockState(pad,Blocks.AIR.getDefaultState(),3);
+        var growth=SeedlingManager.placeVerdantGrowth(world,List.of(water),java.util.Set.of(),20);
+        require(growth.placed().contains(pad) && world.getBlockState(pad).isOf(ModSpellBlocks.NATURE_RAFT),"Water growth did not use custom raft");
+        require(!world.getBlockState(pad).getCollisionShape(world,pad).isEmpty(),"Water raft is not walkable");
+        SeedlingManager.restoreBlocks(world,growth.placements());
+        require(world.getBlockState(pad).isAir() && world.getBlockState(water).isOf(Blocks.WATER),"Raft cleanup damaged water");
+        Vec3d before=player.getEntityPos();player.setPosition(200.5,-60,.5);
+        com.anton.elementalwands.item.NatureAbilityHandler.inventoryTick(wand,world,player,EquipmentSlot.MAINHAND);
+        require(world.getBlockState(pad).isOf(ModSpellBlocks.NATURE_RAFT),"Verdant Step still uses vanilla pads");
+        world.setBlockState(pad,Blocks.AIR.getDefaultState(),3);
+        TemporaryBlockManager.forgetNaturePosition(world,pad);
+        player.setPosition(before);world.setBlockState(water,oldWater,3);world.setBlockState(pad,oldPad,3);
     }
     private void plant(ServerWorld world,BlockPos pos) {
         require(SeedlingManager.tryPlantSeedling(world,player,new BlockHitResult(Vec3d.ofCenter(pos.down()).add(0,.5,0),Direction.UP,pos.down(),false)),"Arena rejected Nature seedling");

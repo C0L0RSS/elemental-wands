@@ -11,15 +11,15 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.registry.ModParticles;
+import com.anton.elementalwands.registry.ModSpellBlocks;
+import com.anton.elementalwands.block.NatureSeedlingBlock;
 
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
@@ -59,8 +59,6 @@ public final class SeedlingManager {
 
     private static final int CONSUMPTION_TAIL_TICKS = 310;
 
-    private static final int ZONE_ENTANGLE_INTERVAL = 20;
-    private static final float THORN_DAMAGE = 1.5f;
 
     static final class Seedling {
         final UUID seedlingId;
@@ -76,8 +74,7 @@ public final class SeedlingManager {
         boolean amplifiedByOvergrowth;
         boolean active;
         final Set<BlockPos> placedPositions = new HashSet<>();
-        final Map<BlockPos, BlockState> originals = new HashMap<>();
-        final Map<UUID, Integer> lastEntangleTickByEntity = new HashMap<>();
+        final Map<BlockPos, TemporaryBlockManager.TemporaryPlacement> placements = new HashMap<>();
 
         Seedling(UUID seedlingId, UUID casterUuid, BlockPos anchorPos, BlockPos floorPos,
               RegistryKey<World> worldKey, int plantTick, int lifespanTicks) {
@@ -98,7 +95,7 @@ public final class SeedlingManager {
     public record SeedlingSnapshot(UUID seedlingId, BlockPos anchorPos, int plantTick) {
     }
 
-    public record PlacementResult(Set<BlockPos> placed, Map<BlockPos, BlockState> originals) {
+    public record PlacementResult(Set<BlockPos> placed, Map<BlockPos, TemporaryBlockManager.TemporaryPlacement> placements) {
     }
 
     private static final Map<RegistryKey<World>, List<Seedling>> ACTIVE = new HashMap<>();
@@ -124,7 +121,6 @@ public final class SeedlingManager {
 
         BlockPos anchorPos = floorPos.up();
         BlockState atAnchor = world.getBlockState(anchorPos);
-        BlockState anchorOriginal = atAnchor;
         if (!atAnchor.isAir() && !atAnchor.isReplaceable()) {
             return dudAt(world, hit.getPos());
         }
@@ -135,12 +131,12 @@ public final class SeedlingManager {
             if (oldest != null) cleanupSeedling(world, oldest);
         }
 
-        int placed = TemporaryBlockManager.placeTemporaryBlocks(world,
+        var placement = TemporaryBlockManager.placeTrackedTemporaryBlocks(world,
                 List.of(anchorPos),
-                Blocks.FLOWERING_AZALEA.getDefaultState(),
+                ModSpellBlocks.NATURE_SEEDLING.getDefaultState(),
                 SEEDLING_LIFESPAN_TICKS,
                 s -> s.isAir() || s.isReplaceable());
-        if (placed == 0) {
+        if (placement.isEmpty()) {
             return dudAt(world, hit.getPos());
         }
 
@@ -148,7 +144,7 @@ public final class SeedlingManager {
         Seedling seedling = new Seedling(UUID.randomUUID(), caster.getUuid(), anchorPos, floorPos,
                 world.getRegistryKey(), now, SEEDLING_LIFESPAN_TICKS);
         seedling.placedPositions.add(anchorPos);
-        seedling.originals.put(anchorPos, anchorOriginal);
+        seedling.placements.put(anchorPos, placement);
 
         ACTIVE.computeIfAbsent(world.getRegistryKey(), _k -> new ArrayList<>()).add(seedling);
         syncActiveSeedlings(world, caster.getUuid());
@@ -292,7 +288,7 @@ public final class SeedlingManager {
                                                     int lifespanTicks) {
         List<BlockPos> mossTargets = new ArrayList<>();
         List<BlockPos> lilyTargets = new ArrayList<>();
-        Map<BlockPos, BlockState> originalsOut = new HashMap<>();
+        Map<BlockPos, TemporaryBlockManager.TemporaryPlacement> placements = new HashMap<>();
 
         for (BlockPos col : columnAnchors) {
             int surfaceY = findSurfaceY(world, col.getX(), col.getY(), col.getZ());
@@ -310,65 +306,49 @@ public final class SeedlingManager {
                 // Float a lily pad on the air directly above the water surface.
                 BlockPos padPos = surfacePos.up();
                 BlockState padState = world.getBlockState(padPos);
-                if (padState.isOf(Blocks.LILY_PAD)) continue;
+                if (padState.isOf(ModSpellBlocks.NATURE_RAFT)) continue;
                 if (!padState.isAir() && !padState.isReplaceable()) continue;
                 if (alreadyPlaced.contains(padPos)) continue;
                 lilyTargets.add(padPos);
-                originalsOut.put(padPos, padState);
                 continue;
             }
 
             BlockPos mossPos = surfacePos.up();
             BlockState aboveState = world.getBlockState(mossPos);
-            if (aboveState.isOf(Blocks.MOSS_CARPET)) continue;
+            if (aboveState.isOf(ModSpellBlocks.NATURE_ROOTS)) continue;
             if (!aboveState.isAir() && !aboveState.isReplaceable()) continue;
             if (alreadyPlaced.contains(mossPos)) continue;
 
             mossTargets.add(mossPos);
-            originalsOut.put(mossPos, aboveState);
         }
 
         Set<BlockPos> actuallyPlaced = new HashSet<>();
 
         if (!mossTargets.isEmpty()) {
-            BlockState mossState = Blocks.MOSS_CARPET.getDefaultState();
-            TemporaryBlockManager.placeTemporaryBlocks(world, mossTargets, mossState, lifespanTicks,
+            BlockState mossState = ModSpellBlocks.NATURE_ROOTS.getDefaultState();
+            var placement = TemporaryBlockManager.placeTrackedTemporaryBlocks(world, mossTargets, mossState, lifespanTicks,
                     s -> s.isAir() || s.isReplaceable());
-            for (BlockPos p : mossTargets) {
-                if (world.getBlockState(p).isOf(Blocks.MOSS_CARPET)) {
-                    actuallyPlaced.add(p);
-                }
+            for (BlockPos p : TemporaryBlockManager.placementPositions(world, placement)) {
+                actuallyPlaced.add(p);
+                placements.put(p, placement);
             }
         }
 
         if (!lilyTargets.isEmpty()) {
-            BlockState lilyState = Blocks.LILY_PAD.getDefaultState();
-            TemporaryBlockManager.placeTemporaryBlocks(world, lilyTargets, lilyState, lifespanTicks,
+            BlockState lilyState = ModSpellBlocks.NATURE_RAFT.getDefaultState();
+            var placement = TemporaryBlockManager.placeTrackedTemporaryBlocks(world, lilyTargets, lilyState, lifespanTicks,
                     s -> s.isAir() || s.isReplaceable());
-            for (BlockPos p : lilyTargets) {
-                if (world.getBlockState(p).isOf(Blocks.LILY_PAD)) {
-                    actuallyPlaced.add(p);
-                }
+            for (BlockPos p : TemporaryBlockManager.placementPositions(world, placement)) {
+                actuallyPlaced.add(p);
+                placements.put(p, placement);
             }
         }
 
-        Map<BlockPos, BlockState> finalOriginals = new HashMap<>();
-        for (BlockPos p : actuallyPlaced) {
-            BlockState orig = originalsOut.get(p);
-            if (orig != null) finalOriginals.put(p, orig);
-        }
-        return new PlacementResult(actuallyPlaced, finalOriginals);
+        return new PlacementResult(actuallyPlaced, placements);
     }
 
-    public static void restoreBlocks(ServerWorld world, Map<BlockPos, BlockState> originals) {
-        for (Map.Entry<BlockPos, BlockState> entry : originals.entrySet()) {
-            BlockPos pos = entry.getKey();
-            BlockState current = world.getBlockState(pos);
-            if (current.isOf(Blocks.MOSS_CARPET) || current.isOf(Blocks.LILY_PAD)
-                    || current.isOf(Blocks.FLOWERING_AZALEA)) {
-                if (world.setBlockState(pos, entry.getValue(), 3)) TemporaryBlockManager.forgetNaturePosition(world, pos);
-            }
-        }
+    public static void restoreBlocks(ServerWorld world, Map<BlockPos, TemporaryBlockManager.TemporaryPlacement> placements) {
+        placements.forEach((pos, placement) -> TemporaryBlockManager.restoreTemporaryBlock(world, placement, pos));
     }
 
     private static List<Seedling> activeForCaster(ServerWorld world, UUID casterUuid) {
@@ -409,7 +389,7 @@ public final class SeedlingManager {
                 BlockState state = world.getBlockState(pos);
                 if (!hasFloorTop(world, pos, state)) continue;
                 BlockState above = world.getBlockState(pos.up());
-                if (above.isAir() || above.isReplaceable() || above.isOf(Blocks.MOSS_CARPET) || above.isOf(Blocks.LILY_PAD)) {
+                if (above.isAir() || above.isReplaceable() || above.isOf(ModSpellBlocks.NATURE_ROOTS) || above.isOf(ModSpellBlocks.NATURE_RAFT)) {
                     return pos;
                 }
             }
@@ -429,7 +409,7 @@ public final class SeedlingManager {
                 }
                 if (!hasFloorTop(world, pos, state)) continue;
                 BlockState above = world.getBlockState(pos.up());
-                if (above.isAir() || above.isReplaceable() || above.isOf(Blocks.MOSS_CARPET) || above.isOf(Blocks.LILY_PAD)) {
+                if (above.isAir() || above.isReplaceable() || above.isOf(ModSpellBlocks.NATURE_ROOTS) || above.isOf(ModSpellBlocks.NATURE_RAFT)) {
                     return y;
                 }
             }
@@ -443,7 +423,7 @@ public final class SeedlingManager {
      * rejects partial-collision blocks like dirt path, which made the seedling fail to plant on them.
      */
     private static boolean hasFloorTop(ServerWorld world, BlockPos pos, BlockState state) {
-        if (state.isAir()) return false;
+        if (state.isAir() || ModSpellBlocks.isNatureGrowth(state)) return false;
         if (!state.getFluidState().isEmpty()) return false;
         if (state.isSolidBlock(world, pos)) return true;
         return state.isSideSolidFullSquare(world, pos, Direction.UP);
@@ -474,7 +454,7 @@ public final class SeedlingManager {
                 continue;
             }
 
-            if (!world.getBlockState(seedling.anchorPos).isOf(Blocks.FLOWERING_AZALEA)) {
+            if (!world.getBlockState(seedling.anchorPos).isOf(ModSpellBlocks.NATURE_SEEDLING)) {
                 cleanupSeedlingInternal(world, seedling);
                 changedCasters.add(seedling.casterUuid);
                 it.remove();
@@ -488,11 +468,15 @@ public final class SeedlingManager {
                 continue;
             }
 
+            int modelStage = Math.min(3, Math.max(0, (now - seedling.plantTick) / 10));
+            BlockState anchorState = world.getBlockState(seedling.anchorPos);
+            if (anchorState.get(NatureSeedlingBlock.STAGE) != modelStage) {
+                world.setBlockState(seedling.anchorPos, anchorState.with(NatureSeedlingBlock.STAGE, modelStage), 3);
+            }
             boolean growthPulseSpawned = pulseIfDue(world, seedling, now);
             applyZoneEffects(world, seedling, now);
 
-            // The physical azalea is intentionally vanilla-scale; the pulsing particle crown
-            // conveys growth level, amplification, and the fully-active state at a glance.
+            // The staged custom flower is the visual anchor; sparse pollen indicates amplification.
             int phase = Math.floorMod(seedling.anchorPos.getX() * 3
                     + seedling.anchorPos.getZ() * 5, AMBIENT_CROWN_INTERVAL);
             if (!growthPulseSpawned && (now + phase) % AMBIENT_CROWN_INTERVAL == 0) {
@@ -530,8 +514,8 @@ public final class SeedlingManager {
         int remainingLife = Math.max(20, seedling.expiryTick - now);
         PlacementResult result = placeVerdantGrowth(world, ringCols.stream().filter(p -> !seedling.crushed.contains(p.up())).toList(), seedling.placedPositions, remainingLife);
         seedling.placedPositions.addAll(result.placed());
-        for (Map.Entry<BlockPos, BlockState> e : result.originals().entrySet()) {
-            seedling.originals.putIfAbsent(e.getKey(), e.getValue());
+        for (Map.Entry<BlockPos, TemporaryBlockManager.TemporaryPlacement> e : result.placements().entrySet()) {
+            seedling.placements.putIfAbsent(e.getKey(), e.getValue());
         }
 
         NatureVfx.growthRing(world, seedling.floorPos, seedling.currentRadius, now);
@@ -582,25 +566,13 @@ public final class SeedlingManager {
 
             EntangleTracker.applyNatureSlow(e, 40, 3);
 
-            Integer lastTick = seedling.lastEntangleTickByEntity.get(e.getUuid());
-            if (lastTick == null || now - lastTick >= ZONE_ENTANGLE_INTERVAL) {
-                EntangleTracker.addStack(world, e);
-                applyThorns(world, e, seedling.casterUuid);
-                seedling.lastEntangleTickByEntity.put(e.getUuid(), now);
-            }
+            applyThorns(world, e, seedling.casterUuid);
         }
     }
 
     /** Periodic bramble damage from standing in the thicket, credited to the caster's wand. */
     static void applyThorns(ServerWorld world, LivingEntity target, UUID casterUuid) {
-        boolean hurt = target.damage(world, world.getDamageSources().sweetBerryBush(), THORN_DAMAGE);
-        if (hurt) {
-            if (target instanceof com.anton.elementalwands.entity.FracturedGuardianEntity guardian) guardian.onNatureThorns();
-            PlayerEntity caster = world.getPlayerByUuid(casterUuid);
-            if (caster != null) {
-                AbstractWandItem.onWandDamageDealt(caster, THORN_DAMAGE);
-            }
-        }
+        NatureCombat.thornContact(world, target, casterUuid);
     }
 
     public static void crushGrowth(ServerWorld world, java.util.function.Predicate<BlockPos> hit) {
@@ -608,17 +580,17 @@ public final class SeedlingManager {
         if (seedlings == null) return;
         for (Seedling s : new ArrayList<>(seedlings)) {
             if (hit.test(s.anchorPos)) cleanupSeedling(world, s);
-            else crushPositions(world, s.placedPositions, s.originals, s.crushed, hit);
+            else crushPositions(world, s.placedPositions, s.placements, s.crushed, hit);
         }
     }
 
-    static void crushPositions(ServerWorld world, Set<BlockPos> positions, Map<BlockPos, BlockState> originals,
+    static void crushPositions(ServerWorld world, Set<BlockPos> positions, Map<BlockPos, TemporaryBlockManager.TemporaryPlacement> placements,
             Set<BlockPos> crushed, java.util.function.Predicate<BlockPos> hit) {
-        Map<BlockPos, BlockState> removed = new HashMap<>();
+        Map<BlockPos, TemporaryBlockManager.TemporaryPlacement> removed = new HashMap<>();
         for (BlockPos pos : new HashSet<>(positions)) {
             if (!hit.test(pos)) continue;
             positions.remove(pos); crushed.add(pos);
-            BlockState original = originals.remove(pos);
+            var original = placements.remove(pos);
             if (original != null) removed.put(pos, original);
             world.spawnParticles(ModParticles.NATURE_PETAL, pos.getX()+.5, pos.getY()+.2, pos.getZ()+.5,
                     3, .2,.15,.2,.03);
@@ -638,7 +610,7 @@ public final class SeedlingManager {
         if (!seedling.active) return;
         seedling.active = false;
 
-        restoreBlocks(world, seedling.originals);
+        restoreBlocks(world, seedling.placements);
 
         world.spawnParticles(ModParticles.NATURE_PETAL,
                 seedling.anchorPos.getX() + 0.5, seedling.anchorPos.getY() + 0.5, seedling.anchorPos.getZ() + 0.5,

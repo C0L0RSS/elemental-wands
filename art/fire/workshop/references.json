@@ -1,0 +1,1136 @@
+{
+  "minecraftVersion": "1.21.10",
+  "scope": "Browser concept only; runtime and installed mod unchanged",
+  "textures": {
+    "fire0": {
+      "url": "textures/fire0.png",
+      "source": "assets/minecraft/textures/block/fire_0.png",
+      "sha256": "00cd7ff06026f0261b9d8dc4dc492e9e8abebc50b057738d0f3e4a39a3df7a09",
+      "animation": {
+        "frames": [
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31,
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ]
+      }
+    },
+    "fire1": {
+      "url": "textures/fire1.png",
+      "source": "assets/minecraft/textures/block/fire_1.png",
+      "sha256": "14f2aff3b724d5c0e015536b591d21735f4954bc04241f34f2fc2cbce2f263ec",
+      "animation": {}
+    },
+    "flame": {
+      "url": "textures/flame.png",
+      "source": "assets/minecraft/textures/particle/flame.png",
+      "sha256": "beb1b1fa93b5809b906c850fcba2cdfa65e0166fe510ed592a0510a1585c4991",
+      "animation": null
+    },
+    "lava": {
+      "url": "textures/lava.png",
+      "source": "assets/minecraft/textures/particle/lava.png",
+      "sha256": "fb663d71584c81761b453d37035cdc732375bff89a19635ada93348a7cd4d5e4",
+      "animation": null
+    },
+    "stone": {
+      "url": "textures/stone.png",
+      "source": "assets/minecraft/textures/block/stone.png",
+      "sha256": "b5e10adc72442bfb257ce7ba0b9bbe36475a0c8cdfec89b80dc9517203ff3e9f",
+      "animation": null
+    },
+    "netherrack": {
+      "url": "textures/netherrack.png",
+      "source": "assets/minecraft/textures/block/netherrack.png",
+      "sha256": "3c0208b749c5393b9bad9d57ed3d830326a02b8cbd8444e96d4d0d277f85625f",
+      "animation": null
+    },
+    "magma": {
+      "url": "textures/magma.png",
+      "source": "assets/minecraft/textures/block/magma.png",
+      "sha256": "c46011d6d4672eca674e8d0073842d5d59f980e6b39a873f3d364c71ed547b54",
+      "animation": {
+        "frametime": 8,
+        "interpolate": true,
+        "frames": [
+          0,
+          1,
+          2
+        ]
+      }
+    },
+    "smoke0": {
+      "url": "textures/smoke0.png",
+      "source": "assets/minecraft/textures/particle/generic_0.png",
+      "sha256": "cc642b3241937f32251e59b50637bcd4a175ef8ad78191d1a9c141f8611003c8",
+      "animation": null
+    },
+    "smoke1": {
+      "url": "textures/smoke1.png",
+      "source": "assets/minecraft/textures/particle/generic_1.png",
+      "sha256": "7648440152e5ed2594379df9e834eb5da66bd68accfa81d104c7d3c99256ebc8",
+      "animation": null
+    },
+    "smoke2": {
+      "url": "textures/smoke2.png",
+      "source": "assets/minecraft/textures/particle/generic_2.png",
+      "sha256": "527f27fa5735a5a7b3331a4622bb0981a0e123579a5482373e576600c8a70390",
+      "animation": null
+    },
+    "smoke3": {
+      "url": "textures/smoke3.png",
+      "source": "assets/minecraft/textures/particle/generic_3.png",
+      "sha256": "bb0e707ef151550130cdf47c4f47956e5b8109c19f1bc8ac12a108638ea2c733",
+      "animation": null
+    },
+    "smoke4": {
+      "url": "textures/smoke4.png",
+      "source": "assets/minecraft/textures/particle/generic_4.png",
+      "sha256": "5eb8b95300a6c91bf202ebf90d6e7222782f63dc3f4d036889ab60fe7e98ce24",
+      "animation": null
+    },
+    "smoke5": {
+      "url": "textures/smoke5.png",
+      "source": "assets/minecraft/textures/particle/generic_5.png",
+      "sha256": "0684cc85cabd8f53d065bdc008acb79cda18fb6c5ea051d9f07a67dcddf393c7",
+      "animation": null
+    },
+    "smoke6": {
+      "url": "textures/smoke6.png",
+      "source": "assets/minecraft/textures/particle/generic_6.png",
+      "sha256": "b72b1a12d3c5f20e19e62ff4721fbfa93300ae70ad3c9d800f426e0d4b8ecce3",
+      "animation": null
+    },
+    "smoke7": {
+      "url": "textures/smoke7.png",
+      "source": "assets/minecraft/textures/particle/generic_7.png",
+      "sha256": "dd5e66ada1b88f564eadc1a62bec3f22b132f53eef1ac1b895f3990eda42d561",
+      "animation": null
+    },
+    "old_ground0": {
+      "url": "textures/old_ground0.png",
+      "source": "src/main/resources/assets/elementalwands/textures/block/fire_ground_a.png",
+      "sha256": "a91786c46982e47c9a200655ccde3db4b95a3f9792f9e2b3718b2aaf5aae35c5",
+      "animation": {
+        "frametime": 2,
+        "interpolate": false
+      }
+    },
+    "old_ground1": {
+      "url": "textures/old_ground1.png",
+      "source": "src/main/resources/assets/elementalwands/textures/block/fire_ground_b.png",
+      "sha256": "4f43b67de00858705cd8c12b5ceea58df1c5867f230e3c514dae1984a9900d9e",
+      "animation": {
+        "frametime": 2,
+        "interpolate": false,
+        "frames": [
+          3,
+          4,
+          5,
+          6,
+          7,
+          0,
+          1,
+          2
+        ]
+      }
+    },
+    "old_inferno_stream0": {
+      "url": "textures/old_inferno_stream0.png",
+      "source": "src/main/resources/assets/elementalwands/textures/entity/inferno_stream_0.png",
+      "sha256": "f617fa49bdf1b4653ffdc12379d1cd5e350b62bbcedff9e2d8e1b45e8cf5a057",
+      "animation": null
+    },
+    "old_inferno_stream1": {
+      "url": "textures/old_inferno_stream1.png",
+      "source": "src/main/resources/assets/elementalwands/textures/entity/inferno_stream_1.png",
+      "sha256": "1b86b18cf729c9b3dc108b9e85449a22733fe9949deb7dac1d59b078c7e59ca3",
+      "animation": null
+    },
+    "old_inferno_stream2": {
+      "url": "textures/old_inferno_stream2.png",
+      "source": "src/main/resources/assets/elementalwands/textures/entity/inferno_stream_2.png",
+      "sha256": "9b202e9ec3decf8ab0fad7b4c77ddb07f41efb3330c3a17e359dbf993343af06",
+      "animation": null
+    },
+    "old_inferno_stream3": {
+      "url": "textures/old_inferno_stream3.png",
+      "source": "src/main/resources/assets/elementalwands/textures/entity/inferno_stream_3.png",
+      "sha256": "f92572de8abf88fad2ee90991a603564c5e49726e24e1a311ac6fee538ad381d",
+      "animation": null
+    },
+    "old_inferno_stream4": {
+      "url": "textures/old_inferno_stream4.png",
+      "source": "src/main/resources/assets/elementalwands/textures/entity/inferno_stream_4.png",
+      "sha256": "7fbbae7e0f67f8cbc26517175f8e82257a0d466a5db05f104126d90cd3951347",
+      "animation": null
+    },
+    "old_inferno_stream5": {
+      "url": "textures/old_inferno_stream5.png",
+      "source": "src/main/resources/assets/elementalwands/textures/entity/inferno_stream_5.png",
+      "sha256": "ba77db6e934703b0f758478d1e28c90e07865f90304b0d329b566acb9815d616",
+      "animation": null
+    },
+    "old_inferno_stream6": {
+      "url": "textures/old_inferno_stream6.png",
+      "source": "src/main/resources/assets/elementalwands/textures/entity/inferno_stream_6.png",
+      "sha256": "12ddd151ced9e2169b1fa1a17b0f2f943504e4dfa4a0f5da60f126f3ac162038",
+      "animation": null
+    },
+    "old_inferno_stream7": {
+      "url": "textures/old_inferno_stream7.png",
+      "source": "src/main/resources/assets/elementalwands/textures/entity/inferno_stream_7.png",
+      "sha256": "efd6306dbe371cec7ca077c76328aca94dcd24e6e2979f5201afb5ad7a0b6108",
+      "animation": null
+    },
+    "old_inferno_stream8": {
+      "url": "textures/old_inferno_stream8.png",
+      "source": "src/main/resources/assets/elementalwands/textures/entity/inferno_stream_8.png",
+      "sha256": "5d77418a63497b9b0bd3631099aa234bb4be364264ffc17967655c6a9d709044",
+      "animation": null
+    },
+    "old_inferno_stream9": {
+      "url": "textures/old_inferno_stream9.png",
+      "source": "src/main/resources/assets/elementalwands/textures/entity/inferno_stream_9.png",
+      "sha256": "3465e5cc166ea8ef5b6327f80555e35bdc673a913bd07538e9cb22e17d92b113",
+      "animation": null
+    },
+    "old_inferno_front0": {
+      "url": "textures/old_inferno_front0.png",
+      "source": "src/main/resources/assets/elementalwands/textures/entity/inferno_front_0.png",
+      "sha256": "ceeeb146c6b16df475371ffbce3e3331770d9858178bceab8cc8c331fc7e01ca",
+      "animation": null
+    },
+    "old_inferno_front1": {
+      "url": "textures/old_inferno_front1.png",
+      "source": "src/main/resources/assets/elementalwands/textures/entity/inferno_front_1.png",
+      "sha256": "7259dfb47b24010b5a906a4d28109bd92a66b8b72c74ac569791b591a7555b8c",
+      "animation": null
+    },
+    "old_inferno_front2": {
+      "url": "textures/old_inferno_front2.png",
+      "source": "src/main/resources/assets/elementalwands/textures/entity/inferno_front_2.png",
+      "sha256": "fe816eb7f3d046565b532060456b00020a35cf75e6d06de3ded0722731d39503",
+      "animation": null
+    },
+    "old_inferno_front3": {
+      "url": "textures/old_inferno_front3.png",
+      "source": "src/main/resources/assets/elementalwands/textures/entity/inferno_front_3.png",
+      "sha256": "774487f42e8858d686389b9b20d544e10ec8182ce04fa8f179597391aad46f83",
+      "animation": null
+    },
+    "old_inferno_front4": {
+      "url": "textures/old_inferno_front4.png",
+      "source": "src/main/resources/assets/elementalwands/textures/entity/inferno_front_4.png",
+      "sha256": "1926005d80c740f2bef9ba51fed2465d85a38800edf38e50cc89906d0373ae2a",
+      "animation": null
+    },
+    "old_inferno_front5": {
+      "url": "textures/old_inferno_front5.png",
+      "source": "src/main/resources/assets/elementalwands/textures/entity/inferno_front_5.png",
+      "sha256": "22700c699bd72a6376603dffd315fe9a7ccf7416f7ec1a95280a405a4c714784",
+      "animation": null
+    },
+    "old_inferno_front6": {
+      "url": "textures/old_inferno_front6.png",
+      "source": "src/main/resources/assets/elementalwands/textures/entity/inferno_front_6.png",
+      "sha256": "3b227954a5e0f747053a800ff3b0fe6716fa9696e7f930005f9d9238d2a6c43f",
+      "animation": null
+    },
+    "old_inferno_front7": {
+      "url": "textures/old_inferno_front7.png",
+      "source": "src/main/resources/assets/elementalwands/textures/entity/inferno_front_7.png",
+      "sha256": "50f42d59e0e38e441e84f27401b9ceab7ee490e8e295411249294481a9d9d1e1",
+      "animation": null
+    },
+    "old_inferno_front8": {
+      "url": "textures/old_inferno_front8.png",
+      "source": "src/main/resources/assets/elementalwands/textures/entity/inferno_front_8.png",
+      "sha256": "0f845263fb7bb092ebb4b318ac54221c1165b0d705b1a8dbf97f3dea8a5540df",
+      "animation": null
+    },
+    "old_inferno_front9": {
+      "url": "textures/old_inferno_front9.png",
+      "source": "src/main/resources/assets/elementalwands/textures/entity/inferno_front_9.png",
+      "sha256": "5237354d34d6753d1086ba413082e14f27c53a47e9162b4b601031e3a322a14d",
+      "animation": null
+    },
+    "old_ember0": {
+      "url": "textures/old_ember0.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/ember_0.png",
+      "sha256": "b885fa465cfda78915f9eea600893c7bafd43da234c9b7b4e91545883f19aa2e",
+      "animation": null
+    },
+    "old_ember1": {
+      "url": "textures/old_ember1.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/ember_1.png",
+      "sha256": "3d7df9cfb5b9407af78752001c6df169fe11ed3bcaf035d542203e009c56dbbb",
+      "animation": null
+    },
+    "old_ember2": {
+      "url": "textures/old_ember2.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/ember_2.png",
+      "sha256": "3791760505a8dbc59f80ac98b42cc62ce2139f4cc21747a9e93b18ac27c1ff70",
+      "animation": null
+    },
+    "old_ember3": {
+      "url": "textures/old_ember3.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/ember_3.png",
+      "sha256": "6eed1ba5c47c2d976fabddba33155ca61be541cfefb183cd332fc11235af8912",
+      "animation": null
+    },
+    "old_flame_ribbon0": {
+      "url": "textures/old_flame_ribbon0.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/flame_ribbon_0.png",
+      "sha256": "d202df083b080fe3228f3577ac7e92f7903de6b26b6a14d4ec7ad61c8f88ddd8",
+      "animation": null
+    },
+    "old_flame_ribbon1": {
+      "url": "textures/old_flame_ribbon1.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/flame_ribbon_1.png",
+      "sha256": "778437b1e9dc947ad3a750d0fd2713ade775dfd04e74e524394e317b6202022f",
+      "animation": null
+    },
+    "old_flame_ribbon2": {
+      "url": "textures/old_flame_ribbon2.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/flame_ribbon_2.png",
+      "sha256": "a46d20fd475769725233914319d035860a5010de193c2802513880bea1886595",
+      "animation": null
+    },
+    "old_flame_ribbon3": {
+      "url": "textures/old_flame_ribbon3.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/flame_ribbon_3.png",
+      "sha256": "4830e05bb895b98f554fe0ce219f7a72bc4aa3c3f4af5e6d0f8061dc670c5330",
+      "animation": null
+    },
+    "old_flame_ribbon4": {
+      "url": "textures/old_flame_ribbon4.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/flame_ribbon_4.png",
+      "sha256": "9d0cd253845f90123a13165c933e6ad7d91db70291c98740845ffd454ed4645b",
+      "animation": null
+    },
+    "old_flame_ribbon5": {
+      "url": "textures/old_flame_ribbon5.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/flame_ribbon_5.png",
+      "sha256": "f3f9aaabbdf37f4e933f311e43c9d9bc4839fb8bbc77e50c5bde8581fc3040ad",
+      "animation": null
+    },
+    "old_flame_ribbon6": {
+      "url": "textures/old_flame_ribbon6.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/flame_ribbon_6.png",
+      "sha256": "d287b53f69ea1b5d2bb2c6028b0ed0060351f4e66d5af64625421b90f8a831b8",
+      "animation": null
+    },
+    "old_flame_ribbon7": {
+      "url": "textures/old_flame_ribbon7.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/flame_ribbon_7.png",
+      "sha256": "5a603fd0aa1735756d94e08306a2fb14aac820967e30661b089f04b6fcb8b5ac",
+      "animation": null
+    },
+    "old_impact_ring0": {
+      "url": "textures/old_impact_ring0.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/impact_ring_0.png",
+      "sha256": "59a3f0100b02f8a93eab55f63762e1708dfed6b1cd23ff9b30dac5ed269464a3",
+      "animation": null
+    },
+    "old_impact_ring1": {
+      "url": "textures/old_impact_ring1.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/impact_ring_1.png",
+      "sha256": "5498a536eed17cd3cb5b37806063f7b70817ed5360578f42f436a435829283bb",
+      "animation": null
+    },
+    "old_impact_ring2": {
+      "url": "textures/old_impact_ring2.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/impact_ring_2.png",
+      "sha256": "58bccd467582ee7efc37f293f7f2c3063b00169c1d8884ff0b32ac1c728c7253",
+      "animation": null
+    },
+    "old_impact_ring3": {
+      "url": "textures/old_impact_ring3.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/impact_ring_3.png",
+      "sha256": "5cab90eee28df3e6b9d477b2697ffa000a53d7dcc09f86d1b2aa207035859234",
+      "animation": null
+    },
+    "old_impact_ring4": {
+      "url": "textures/old_impact_ring4.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/impact_ring_4.png",
+      "sha256": "4936dc40ea9b4826ba748e957aca475311ba7c3191660e5173672141a74f6fb0",
+      "animation": null
+    },
+    "old_impact_ring5": {
+      "url": "textures/old_impact_ring5.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/impact_ring_5.png",
+      "sha256": "b474794c6ff2dd446f5d27ea09825724d57d3ab0acff715dceb4fbeac6ca71de",
+      "animation": null
+    },
+    "old_pyre_front0": {
+      "url": "textures/old_pyre_front0.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/pyre_front_0.png",
+      "sha256": "8231e52df1afbd59510676516f226e640b354981197f0c2133d49e4ea9d0d6f3",
+      "animation": null
+    },
+    "old_pyre_front1": {
+      "url": "textures/old_pyre_front1.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/pyre_front_1.png",
+      "sha256": "ffe84245b0dff1e537611fa9bc5c33196a142f61359a153a17de9ca625992e94",
+      "animation": null
+    },
+    "old_pyre_front2": {
+      "url": "textures/old_pyre_front2.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/pyre_front_2.png",
+      "sha256": "89d3fd87af4575095f768f5268c65d226f8b88bb696708f3afa114e2ba614406",
+      "animation": null
+    },
+    "old_pyre_front3": {
+      "url": "textures/old_pyre_front3.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/pyre_front_3.png",
+      "sha256": "9071f16973a13ab5b7d9046549d6aa2ddba06a4f0009451d9bcaaa3a5d16a030",
+      "animation": null
+    },
+    "old_pyre_front4": {
+      "url": "textures/old_pyre_front4.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/pyre_front_4.png",
+      "sha256": "f5e94c73dfb1e585b499289df56d1d8d5b5a1157b3b2fb121e90dea0e8be0b5b",
+      "animation": null
+    },
+    "old_pyre_front5": {
+      "url": "textures/old_pyre_front5.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/pyre_front_5.png",
+      "sha256": "bfc158c7e0a75f4184503f1201689047ff4927da6792fc306ab37f71e7c17e91",
+      "animation": null
+    },
+    "old_pyre_front6": {
+      "url": "textures/old_pyre_front6.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/pyre_front_6.png",
+      "sha256": "e59a88ae00f3a9b5148e88a7687455fd9d811a4dac03205b8f72e9afb218c98f",
+      "animation": null
+    },
+    "old_pyre_front7": {
+      "url": "textures/old_pyre_front7.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/pyre_front_7.png",
+      "sha256": "1bf0ba577290cd0bd0fbf96da48c68ea0db82eb8614808446311b47ff8e13fd3",
+      "animation": null
+    },
+    "old_meteor_shell0": {
+      "url": "textures/old_meteor_shell0.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/meteor_shell_0.png",
+      "sha256": "afbd82262ee48cdecebbd1d5a006d7ffc144134207e9d2d812ab176afbdfdaf8",
+      "animation": null
+    },
+    "old_meteor_shell1": {
+      "url": "textures/old_meteor_shell1.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/meteor_shell_1.png",
+      "sha256": "2bb56bf726b62bb6911224647ce0a3cc9655e2388e7af2eef0d66f2d8408493f",
+      "animation": null
+    },
+    "old_meteor_shell2": {
+      "url": "textures/old_meteor_shell2.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/meteor_shell_2.png",
+      "sha256": "809d63a1e431bf7b8be520e083dda281d2cd01c4008a5f16832d011ac702fbae",
+      "animation": null
+    },
+    "old_meteor_shell3": {
+      "url": "textures/old_meteor_shell3.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/meteor_shell_3.png",
+      "sha256": "1f900c5d5982ab412d57a5b7260baec763da2d5b4b794f1445003230b123a857",
+      "animation": null
+    },
+    "old_meteor_shell4": {
+      "url": "textures/old_meteor_shell4.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/meteor_shell_4.png",
+      "sha256": "6fb21bca16d36d6477e469ae2a01a5387b99df98219fa49d72d7d07b66a73082",
+      "animation": null
+    },
+    "old_meteor_shell5": {
+      "url": "textures/old_meteor_shell5.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/meteor_shell_5.png",
+      "sha256": "4bb6ad72145cf3ba8e7433b2c581531b4377713bec165f22299d7faf8ca5e4b6",
+      "animation": null
+    },
+    "old_meteor_shell6": {
+      "url": "textures/old_meteor_shell6.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/meteor_shell_6.png",
+      "sha256": "646004cbeac88ebe203ad3c734ba9f1e3121b15962865f035b067469e9cb7527",
+      "animation": null
+    },
+    "old_meteor_shell7": {
+      "url": "textures/old_meteor_shell7.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/meteor_shell_7.png",
+      "sha256": "9db5cae422f04e63352220eedea59a9fe62c5160361beaea69bcd925f1ea83d0",
+      "animation": null
+    },
+    "old_meteor_warning0": {
+      "url": "textures/old_meteor_warning0.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/meteor_warning_0.png",
+      "sha256": "1257287d8055ed4d3bf5c845aab710e4168cae8950a81d13e00e5528eff2e7c4",
+      "animation": null
+    },
+    "old_meteor_warning1": {
+      "url": "textures/old_meteor_warning1.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/meteor_warning_1.png",
+      "sha256": "eff067cc9f10e97f40c3dec4e5eef207f82339bd3f5e6407b71bba5b838143c2",
+      "animation": null
+    },
+    "old_meteor_warning2": {
+      "url": "textures/old_meteor_warning2.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/meteor_warning_2.png",
+      "sha256": "9503be98efe1e7499896592e6ffd28e55c85da172ea6f71d659cf11aa0930ce8",
+      "animation": null
+    },
+    "old_meteor_warning3": {
+      "url": "textures/old_meteor_warning3.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/meteor_warning_3.png",
+      "sha256": "8250774cd6410ce99d51c711baee10a8dd28f07bd67df3bb92cb9dc944633ce8",
+      "animation": null
+    },
+    "old_meteor_warning4": {
+      "url": "textures/old_meteor_warning4.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/meteor_warning_4.png",
+      "sha256": "b2f473863f11c40839069c63481cc931527b6d86995f7be7da3adb0b4575af8b",
+      "animation": null
+    },
+    "old_meteor_warning5": {
+      "url": "textures/old_meteor_warning5.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/meteor_warning_5.png",
+      "sha256": "00f8053d391f85078b5f957eb57fc1622436abed25d760dae6d67a875bd36961",
+      "animation": null
+    },
+    "old_meteor_warning6": {
+      "url": "textures/old_meteor_warning6.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/meteor_warning_6.png",
+      "sha256": "f350bf6b2ccb288b57aac2c17bc028f8bb2fd53d083a75a0f1f31a7f5cad8b57",
+      "animation": null
+    },
+    "old_meteor_warning7": {
+      "url": "textures/old_meteor_warning7.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/meteor_warning_7.png",
+      "sha256": "350432681ecb8985ee049fbf132b34f1c14d9905b091a2bfe2a23569724884e5",
+      "animation": null
+    },
+    "old_meteor_impact0": {
+      "url": "textures/old_meteor_impact0.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/meteor_impact_0.png",
+      "sha256": "1a6df96759f99ab49ff76f096f3caed82a5cafb84bc7139953cad51c1e331acc",
+      "animation": null
+    },
+    "old_meteor_impact1": {
+      "url": "textures/old_meteor_impact1.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/meteor_impact_1.png",
+      "sha256": "d2865d495d4400716569ca98844244eb6ff4db83524debae9e4dbbcf1c2ab752",
+      "animation": null
+    },
+    "old_meteor_impact2": {
+      "url": "textures/old_meteor_impact2.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/meteor_impact_2.png",
+      "sha256": "c530f7c7b3b9dea8933b34eb6b7b85d15e2d19eb5f5766ef78db9a01dc0d859d",
+      "animation": null
+    },
+    "old_meteor_impact3": {
+      "url": "textures/old_meteor_impact3.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/meteor_impact_3.png",
+      "sha256": "fdbe762dcf06a196c7cd8dbc40e25c53ceae225c78b40917486ff59f6733628d",
+      "animation": null
+    },
+    "old_meteor_impact4": {
+      "url": "textures/old_meteor_impact4.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/meteor_impact_4.png",
+      "sha256": "6d1f8a5e256d4d1d4f989794c441b1a3c404025c494d407631f3f6736951112d",
+      "animation": null
+    },
+    "old_meteor_impact5": {
+      "url": "textures/old_meteor_impact5.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/meteor_impact_5.png",
+      "sha256": "6c380bc28ad7003eecdaff57b61688ab0ec3c805373d8d5ea78983b24beb49ff",
+      "animation": null
+    },
+    "old_meteor_impact6": {
+      "url": "textures/old_meteor_impact6.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/meteor_impact_6.png",
+      "sha256": "8970a65b7f8c5119661a1a825fa057ead508b345bff84f3e5fdc1bce0b978f77",
+      "animation": null
+    },
+    "old_meteor_impact7": {
+      "url": "textures/old_meteor_impact7.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/meteor_impact_7.png",
+      "sha256": "11abbb6f1489904e3461a4f47193bc2851db80be83342984938ebc4b301e405b",
+      "animation": null
+    },
+    "old_meteor_impact8": {
+      "url": "textures/old_meteor_impact8.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/meteor_impact_8.png",
+      "sha256": "bd2681c083764090ef9dcdc2b8a574d9a4cb820b6f12801a0b1f0bfbfd482da7",
+      "animation": null
+    },
+    "old_meteor_impact9": {
+      "url": "textures/old_meteor_impact9.png",
+      "source": "src/main/resources/assets/elementalwands/textures/particle/fire/meteor_impact_9.png",
+      "sha256": "aea8d12eb501447232159b8dbfcfafef4416b6cbb168fee0c7ed0e6ec65deb41",
+      "animation": null
+    }
+  },
+  "models": {
+    "template_fire_floor": {
+      "textures": {
+        "particle": "#fire"
+      },
+      "ambientocclusion": false,
+      "elements": [
+        {
+          "from": [
+            0,
+            0,
+            8.8
+          ],
+          "to": [
+            16,
+            22.4,
+            8.8
+          ],
+          "rotation": {
+            "origin": [
+              8,
+              8,
+              8
+            ],
+            "axis": "x",
+            "angle": -22.5,
+            "rescale": true
+          },
+          "shade": false,
+          "faces": {
+            "south": {
+              "uv": [
+                0,
+                0,
+                16,
+                16
+              ],
+              "texture": "#fire"
+            }
+          }
+        },
+        {
+          "from": [
+            0,
+            0,
+            7.2
+          ],
+          "to": [
+            16,
+            22.4,
+            7.2
+          ],
+          "rotation": {
+            "origin": [
+              8,
+              8,
+              8
+            ],
+            "axis": "x",
+            "angle": 22.5,
+            "rescale": true
+          },
+          "shade": false,
+          "faces": {
+            "north": {
+              "uv": [
+                0,
+                0,
+                16,
+                16
+              ],
+              "texture": "#fire"
+            }
+          }
+        },
+        {
+          "from": [
+            8.8,
+            0,
+            0
+          ],
+          "to": [
+            8.8,
+            22.4,
+            16
+          ],
+          "rotation": {
+            "origin": [
+              8,
+              8,
+              8
+            ],
+            "axis": "z",
+            "angle": -22.5,
+            "rescale": true
+          },
+          "shade": false,
+          "faces": {
+            "west": {
+              "uv": [
+                0,
+                0,
+                16,
+                16
+              ],
+              "texture": "#fire"
+            }
+          }
+        },
+        {
+          "from": [
+            7.2,
+            0,
+            0
+          ],
+          "to": [
+            7.2,
+            22.4,
+            16
+          ],
+          "rotation": {
+            "origin": [
+              8,
+              8,
+              8
+            ],
+            "axis": "z",
+            "angle": 22.5,
+            "rescale": true
+          },
+          "shade": false,
+          "faces": {
+            "east": {
+              "uv": [
+                0,
+                0,
+                16,
+                16
+              ],
+              "texture": "#fire"
+            }
+          }
+        }
+      ]
+    },
+    "template_fire_side": {
+      "textures": {
+        "particle": "#fire"
+      },
+      "ambientocclusion": false,
+      "elements": [
+        {
+          "from": [
+            0,
+            0,
+            0.01
+          ],
+          "to": [
+            16,
+            22.4,
+            0.01
+          ],
+          "shade": false,
+          "faces": {
+            "south": {
+              "uv": [
+                0,
+                0,
+                16,
+                16
+              ],
+              "texture": "#fire"
+            },
+            "north": {
+              "uv": [
+                0,
+                0,
+                16,
+                16
+              ],
+              "texture": "#fire"
+            }
+          }
+        }
+      ]
+    },
+    "meteor_core": {
+      "parent": "minecraft:block/block",
+      "ambientocclusion": true,
+      "textures": {
+        "particle": "minecraft:block/magma",
+        "all": "minecraft:block/magma"
+      },
+      "elements": [
+        {
+          "from": [
+            3,
+            2,
+            3
+          ],
+          "to": [
+            13,
+            14,
+            13
+          ],
+          "faces": {
+            "down": {
+              "uv": [
+                3,
+                3,
+                13,
+                13
+              ],
+              "texture": "#all"
+            },
+            "up": {
+              "uv": [
+                3,
+                3,
+                13,
+                13
+              ],
+              "texture": "#all"
+            },
+            "north": {
+              "uv": [
+                3,
+                2,
+                13,
+                14
+              ],
+              "texture": "#all"
+            },
+            "south": {
+              "uv": [
+                3,
+                2,
+                13,
+                14
+              ],
+              "texture": "#all"
+            },
+            "west": {
+              "uv": [
+                3,
+                2,
+                13,
+                14
+              ],
+              "texture": "#all"
+            },
+            "east": {
+              "uv": [
+                3,
+                2,
+                13,
+                14
+              ],
+              "texture": "#all"
+            }
+          }
+        },
+        {
+          "from": [
+            0,
+            5,
+            5
+          ],
+          "to": [
+            5,
+            12,
+            12
+          ],
+          "faces": {
+            "down": {
+              "uv": [
+                5,
+                5,
+                10,
+                12
+              ],
+              "texture": "#all"
+            },
+            "up": {
+              "uv": [
+                5,
+                5,
+                10,
+                12
+              ],
+              "texture": "#all"
+            },
+            "north": {
+              "uv": [
+                0,
+                4,
+                5,
+                11
+              ],
+              "texture": "#all"
+            },
+            "south": {
+              "uv": [
+                0,
+                5,
+                5,
+                12
+              ],
+              "texture": "#all"
+            },
+            "west": {
+              "uv": [
+                5,
+                5,
+                12,
+                12
+              ],
+              "texture": "#all"
+            },
+            "east": {
+              "uv": [
+                5,
+                5,
+                12,
+                12
+              ],
+              "texture": "#all"
+            }
+          }
+        },
+        {
+          "from": [
+            11,
+            4,
+            2
+          ],
+          "to": [
+            16,
+            13,
+            10
+          ],
+          "faces": {
+            "down": {
+              "uv": [
+                3,
+                6,
+                8,
+                14
+              ],
+              "texture": "#all"
+            },
+            "up": {
+              "uv": [
+                8,
+                2,
+                13,
+                10
+              ],
+              "texture": "#all"
+            },
+            "north": {
+              "uv": [
+                11,
+                3,
+                16,
+                12
+              ],
+              "texture": "#all"
+            },
+            "south": {
+              "uv": [
+                10,
+                4,
+                15,
+                13
+              ],
+              "texture": "#all"
+            },
+            "west": {
+              "uv": [
+                2,
+                4,
+                10,
+                13
+              ],
+              "texture": "#all"
+            },
+            "east": {
+              "uv": [
+                2,
+                4,
+                10,
+                13
+              ],
+              "texture": "#all"
+            }
+          }
+        },
+        {
+          "from": [
+            5,
+            12,
+            5
+          ],
+          "to": [
+            12,
+            16,
+            14
+          ],
+          "faces": {
+            "down": {
+              "uv": [
+                4,
+                4,
+                11,
+                13
+              ],
+              "texture": "#all"
+            },
+            "up": {
+              "uv": [
+                5,
+                5,
+                12,
+                14
+              ],
+              "texture": "#all"
+            },
+            "north": {
+              "uv": [
+                5,
+                0,
+                12,
+                4
+              ],
+              "texture": "#all"
+            },
+            "south": {
+              "uv": [
+                4,
+                1,
+                11,
+                5
+              ],
+              "texture": "#all"
+            },
+            "west": {
+              "uv": [
+                5,
+                0,
+                14,
+                4
+              ],
+              "texture": "#all"
+            },
+            "east": {
+              "uv": [
+                4,
+                1,
+                13,
+                5
+              ],
+              "texture": "#all"
+            }
+          }
+        },
+        {
+          "from": [
+            4,
+            0,
+            4
+          ],
+          "to": [
+            13,
+            5,
+            12
+          ],
+          "faces": {
+            "down": {
+              "uv": [
+                4,
+                4,
+                13,
+                12
+              ],
+              "texture": "#all"
+            },
+            "up": {
+              "uv": [
+                3,
+                5,
+                12,
+                13
+              ],
+              "texture": "#all"
+            },
+            "north": {
+              "uv": [
+                4,
+                11,
+                13,
+                16
+              ],
+              "texture": "#all"
+            },
+            "south": {
+              "uv": [
+                3,
+                10,
+                12,
+                15
+              ],
+              "texture": "#all"
+            },
+            "west": {
+              "uv": [
+                4,
+                11,
+                12,
+                16
+              ],
+              "texture": "#all"
+            },
+            "east": {
+              "uv": [
+                3,
+                10,
+                11,
+                15
+              ],
+              "texture": "#all"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

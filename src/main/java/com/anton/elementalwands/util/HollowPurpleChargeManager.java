@@ -5,14 +5,17 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
 
-import com.anton.elementalwands.data.EWAttachments;
-import com.anton.elementalwands.data.WizardAffinity;
 import com.anton.elementalwands.entity.HollowPurpleOrbEntity;
-import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.registry.ModParticles;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
+import net.fabricmc.fabric.api.event.player.UseItemCallback;
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.minecraft.entity.attribute.EntityAttributeModifier;
+import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
@@ -22,11 +25,13 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.ActionResult;
+import net.minecraft.util.Identifier;
 import net.minecraft.world.World;
 
 public final class HollowPurpleChargeManager {
 
-    private record ChargeState(int startTick, double startY, double targetY) {
+    private record ChargeState(int startTick, double startY, double targetY, double x, double z) {
     }
 
     private static final Map<RegistryKey<World>, Map<UUID, ChargeState>> CHARGES = new HashMap<>();
@@ -36,13 +41,30 @@ public final class HollowPurpleChargeManager {
     private static final int TOTAL_TICKS = ASCENT_TICKS + HOLD_TICKS;
     private static final double ASCENT_HEIGHT = 10.0;
     private static final double ORB_ANCHOR_OFFSET_Y = 3.0;
+    private static final Identifier MOVEMENT_LOCK = Identifier.of("elementalwands", "hollow_purple_charge");
+    private static final EntityAttributeModifier MOVEMENT_MODIFIER = new EntityAttributeModifier(
+            MOVEMENT_LOCK, -1.0, EntityAttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
 
     private HollowPurpleChargeManager() {
     }
 
     public static void init() {
         ServerTickEvents.END_WORLD_TICK.register(HollowPurpleChargeManager::tickWorld);
-        ServerLifecycleEvents.SERVER_STOPPING.register(server -> CHARGES.clear());
+        ServerPlayerEvents.LEAVE.register(HollowPurpleChargeManager::cancel);
+        ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer,newPlayer,alive) -> {
+            cancel(oldPlayer);
+            releaseMovementLock(newPlayer);
+        });
+        ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register((player,origin,destination) -> cancel(player));
+        ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+            for (var player : server.getPlayerManager().getPlayerList()) cancel(player);
+            CHARGES.clear();
+        });
+        // Committed casting cannot be bypassed with a pearl, food, shield or block interaction.
+        UseItemCallback.EVENT.register((player,world,hand) -> world instanceof ServerWorld serverWorld
+                && isCharging(serverWorld,player) ? ActionResult.FAIL : ActionResult.PASS);
+        UseBlockCallback.EVENT.register((player,world,hand,hit) -> world instanceof ServerWorld serverWorld
+                && isCharging(serverWorld,player) ? ActionResult.FAIL : ActionResult.PASS);
     }
 
     public static boolean startCharge(ServerWorld world, PlayerEntity caster) {
@@ -61,8 +83,11 @@ public final class HollowPurpleChargeManager {
         double targetY = MathHelper.clamp(startY + ASCENT_HEIGHT, bottomLimit, topLimit);
 
         int now = world.getServer().getTicks();
-        byCaster.put(caster.getUuid(), new ChargeState(now, startY, targetY));
+        byCaster.put(caster.getUuid(), new ChargeState(now, startY, targetY, caster.getX(), caster.getZ()));
 
+        caster.stopUsingItem();
+        caster.stopRiding();
+        lockMovementSpeed(caster);
         caster.setSprinting(false);
         caster.fallDistance = 0.0f;
         caster.addStatusEffect(new StatusEffectInstance(StatusEffects.LEVITATION, 8, 0, false, false, false));
@@ -77,13 +102,13 @@ public final class HollowPurpleChargeManager {
         return true;
     }
 
+    /** Lifecycle/encounter cleanup only; voluntary item changes never interrupt a committed cast. */
     public static void cancel(PlayerEntity caster) {
         boolean removed=false;
         for (var charges:CHARGES.values()) removed|=charges.remove(caster.getUuid())!=null;
         CHARGES.entrySet().removeIf(e -> e.getValue().isEmpty());
+        releaseMovementLock(caster);
         if(removed) {
-            var effect=caster.getStatusEffect(StatusEffects.LEVITATION);
-            if(effect!=null && effect.getDuration()<=8 && effect.getAmplifier()==0) caster.removeStatusEffect(StatusEffects.LEVITATION);
             caster.setVelocity(Vec3d.ZERO);caster.fallDistance=0;
         }
     }
@@ -108,8 +133,9 @@ public final class HollowPurpleChargeManager {
             ChargeState state = entry.getValue();
 
             PlayerEntity caster = world.getPlayerByUuid(casterUuid);
-            if (caster == null || !caster.isAlive() || caster.isSpectator() || !isHoldingSpaceWand(caster)) {
+            if (caster == null || !caster.isAlive() || caster.isSpectator()) {
                 if (caster != null) {
+                    releaseMovementLock(caster);
                     Vec3d center = caster.getEntityPos().add(0.0, 1.0, 0.0);
                     world.spawnParticles(ModParticles.SPACE_IMPLOSION_RING,
                             center.x, center.y, center.z, 1, 0.0, 0.0, 0.0, 0.0);
@@ -120,6 +146,7 @@ public final class HollowPurpleChargeManager {
 
             int age = now - state.startTick;
             if (age >= TOTAL_TICKS) {
+                releaseMovementLock(caster);
                 launchOrb(world, caster);
                 it.remove();
                 continue;
@@ -143,12 +170,26 @@ public final class HollowPurpleChargeManager {
         }
     }
 
-    private static boolean isHoldingSpaceWand(PlayerEntity caster) {
-        return caster.getMainHandStack().getItem() instanceof AbstractWandItem
-                && EWAttachments.getAffinity(caster) == WizardAffinity.SPACE;
+    private static void lockMovementSpeed(PlayerEntity caster) {
+        var speed = caster.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED);
+        if (speed != null && !speed.hasModifier(MOVEMENT_LOCK)) speed.addTemporaryModifier(MOVEMENT_MODIFIER);
+    }
+
+    private static void releaseMovementLock(PlayerEntity caster) {
+        var speed = caster.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED);
+        boolean locked = speed != null && speed.hasModifier(MOVEMENT_LOCK);
+        if (speed != null) speed.removeModifier(MOVEMENT_LOCK);
+        var effect = caster.getStatusEffect(StatusEffects.LEVITATION);
+        if (locked && effect != null && effect.getDuration() <= 8 && effect.getAmplifier() == 0)
+            caster.removeStatusEffect(StatusEffects.LEVITATION);
     }
 
     private static void applyChargeMovementLock(ServerWorld world, PlayerEntity caster, ChargeState state, int age) {
+        lockMovementSpeed(caster);
+        caster.stopGliding();
+        caster.stopRiding();
+        if (Math.abs(caster.getX()-state.x) > .001 || Math.abs(caster.getZ()-state.z) > .001)
+            caster.requestTeleport(state.x, caster.getY(), state.z);
         caster.setSprinting(false);
         caster.addStatusEffect(new StatusEffectInstance(StatusEffects.LEVITATION, 6, 0, false, false, false));
 

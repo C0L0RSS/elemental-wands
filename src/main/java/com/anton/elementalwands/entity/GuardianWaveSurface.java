@@ -21,7 +21,7 @@ public final class GuardianWaveSurface {
     // Small primary spell obstacles are not defenses against this ground wave.
     // Do not ignore tree trunks/leaves, Stone Wall, Titan Dome or ordinary terrain.
     private static boolean permeable(BlockState state) {
-        return state.isOf(ModSpellBlocks.STONE_SPIKE) || state.isOf(Blocks.FLOWERING_AZALEA)
+        return ModSpellBlocks.isNatureGrowth(state) || state.isOf(ModSpellBlocks.STONE_SPIKE) || state.isOf(Blocks.FLOWERING_AZALEA)
                 || state.isOf(Blocks.MOSS_CARPET) || state.isOf(Blocks.LILY_PAD);
     }
 

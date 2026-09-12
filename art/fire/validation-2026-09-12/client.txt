@@ -1,0 +1,2 @@
+[09:23:31] [Render thread/INFO] (Minecraft) [STDOUT]: FIRE CLIENT CHECKS PASSED: baked vanilla/low fire, both registered renderers, four-frame textures, finite bounded meteor/wall buffers.
+[09:23:31] [Render thread/INFO] (Minecraft) [STDOUT]: GUARDIAN FLOOR CLIENT CHECK PASSED

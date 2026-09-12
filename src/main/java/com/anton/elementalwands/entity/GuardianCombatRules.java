@@ -10,7 +10,7 @@ import net.minecraft.util.math.Vec3d;
 /** Shared encounter decisions and geometry, independent of a running world. */
 public final class GuardianCombatRules {
     public enum Attack {
-        FAN(58, 120), BEAM(72, 100), THROW(72, 80), SHOCKWAVE(56, 100), SLAM(56, 60), LEAP(GuardianLeapRules.LAND + GuardianLeapRules.RECOVERY, 180);
+        FAN(48, 120), BEAM(72, 100), THROW(72, 80), SHOCKWAVE(56, 100), SLAM(56, 60), LEAP(GuardianLeapRules.LAND + GuardianLeapRules.RECOVERY, 180);
         public final int duration, cooldown;
         Attack(int duration, int cooldown) { this.duration = duration; this.cooldown = cooldown; }
     }
@@ -54,6 +54,18 @@ public final class GuardianCombatRules {
         return choose(players, ready, now, last, false);
     }
     public static Attack choose(List<Candidate> players, Map<Attack, Long> ready, long now, Attack last, boolean unstable) {
+        return choose(players, ready, now, last, unstable, 0);
+    }
+
+    public static boolean beamDue(List<Candidate> players, Map<Attack, Long> ready, long now,
+            Attack last, int attacksSinceBeam) {
+        return attacksSinceBeam >= 2 && last != Attack.BEAM && now >= ready.getOrDefault(Attack.BEAM, 0L)
+                && players.stream().anyMatch(p -> eligible(Attack.BEAM, p));
+    }
+
+    public static Attack choose(List<Candidate> players, Map<Attack, Long> ready, long now,
+            Attack last, boolean unstable, int attacksSinceBeam) {
+        if (beamDue(players, ready, now, last, attacksSinceBeam)) return Attack.BEAM;
         long nearby = players.stream().filter(p -> p.visible() && p.distance() <= 8).count();
         if (last != Attack.LEAP && now >= ready.getOrDefault(Attack.LEAP,0L)
                 && players.stream().anyMatch(p -> eligible(Attack.LEAP,p))) return Attack.LEAP;

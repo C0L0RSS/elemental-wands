@@ -70,15 +70,17 @@ public final class ClientPlayerData {
 
     public static void setEntangleStacks(int entityId, int stacks, long changedAtTick,
             int rootVisualTicks) {
-        if (stacks <= 0) {
+        if (stacks <= 0 && rootVisualTicks<=0) {
             entangledEntities.remove(entityId);
             return;
         }
 
-        int clampedStacks = Math.min(5, stacks);
+        int clampedStacks = Math.clamp(stacks,0,5);
         long rootVisualUntilTick = changedAtTick + Math.max(0, rootVisualTicks);
+        EntangleState old=entangledEntities.get(entityId);
+        long visualStart=old==null?changedAtTick:old.visualStartedAtTick();
         entangledEntities.put(entityId,
-                new EntangleState(clampedStacks, changedAtTick, rootVisualUntilTick));
+                new EntangleState(clampedStacks, changedAtTick, rootVisualUntilTick,visualStart));
     }
 
     public static EntangleState getEntangleState(int entityId) {
@@ -110,5 +112,6 @@ public final class ClientPlayerData {
         entangledEntities.clear();
     }
 
-    public record EntangleState(int stacks, long changedAtTick, long rootVisualUntilTick) {}
+    public static void expireEntangles(long now){entangledEntities.values().removeIf(s->now-s.changedAtTick()>105 || (s.stacks()==0 && now>=s.rootVisualUntilTick()));}
+    public record EntangleState(int stacks, long changedAtTick, long rootVisualUntilTick,long visualStartedAtTick) {}
 }

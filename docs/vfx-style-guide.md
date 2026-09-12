@@ -54,33 +54,25 @@ separate from these visual offsets. See `spell-view-clearance-2026-09-10.md`.
 - Shared gear is generated independently from affinity assets so Fire/Wind
   replacement passes cannot touch Arcane, Stone, Nature, or Space artwork.
 
-## Fire — Kinetic Inferno
+## Fire — approved workshop 05
 
-- Fire uses crisp custom animation frames in Minecraft's white-yellow-orange-red
-  flame language. Shadows are hue-shifted oxblood and ember brown, never opaque
-  pure black; large shapes use interlocking clusters rather than flat fills or
-  cartoon outlines.
-- Inferno Wave plays one ten-frame compression, extension, turbulent peak, and
-  breakup sequence. Its renderer combines a velocity-aligned stream with a
-  perpendicular expanding front, while animated ribbons and embers bridge the
-  distance travelled between ticks.
-- Dragon's Pyre retains its authoritative full-width ground and damage slice.
-  Vanilla netherrack remains the base; a moving hero front leads two weighted,
-  eight-frame flame-block variants that ignite center-out over four ticks.
-- Maximum Meteor retains its irregular vanilla-magma core. Animated shell
-  sprites orbit the descent, the projected warning flames rotate as they close,
-  and a dedicated ten-frame crown leads the restrained lava/smoke impact.
-- Fire owns seven particle families: ember, flame ribbon, impact ring, Pyre
-  front, meteor shell, meteor warning, and meteor impact. Hero fronts and
-  telegraphs remain visible on Minimal; recurring supporting particles do not.
-- Fire Spirit and all of its assets remain outside this redesign.
+Original generated artwork in `art/fire/workshop/` is the source of truth for
+this approved pass. `tools/prepare_fire_assets.py` extracts its four-frame families
+with nearest-neighbor sizing and the preview's alpha cutoff. Vanilla fire/lava
+inform the palette; whole vanilla fire tiles appear only on ordinary ground fire.
 
-The approved concept boards establish visual direction only. Production PNGs
-are rebuilt at exact game resolutions and validated for RGBA transparency.
-The Fire/Wind reference lives at
-`docs/vfx-concepts/fire-wind-second-generation-concept.png`; the Stone/Nature/
-Space reference lives at `docs/vfx-concepts/stone-nature-space-concept.png`.
-Neither concept image is ever used directly as a game texture.
+- Primary: three aligned stream planes with a perpendicular curl, using original
+  orange/gold art. The existing camera-clearance behavior remains.
+- Pyre: original oriented traveling wall (2.8 blocks high) and a distinct lingering
+  carpet (0.075 block high) on the original netherrack runway. No standing full-height
+  fire or per-block particle wall remains behind the passing front.
+- Meteor: approved eight-block rounded sphere of half-block steps, all-fire surface,
+  46 surrounding flame strips, 11 longer crown strips, and 78 local ember sprites.
+  Ordinary falling blocks retain the vanilla renderer; meteor combat is unchanged.
+- Seven existing particle IDs retain their role, with four frames each. HUD icons
+  and Fire Spirit are unchanged.
+- Browser approval is distinct from Minecraft asset/mesh checks and a human playtest.
+  Read `fire-redesign-2026-09-12.md` for the current verification and installation.
 
 ## Wind — Sky Shear
 
@@ -105,17 +97,17 @@ Neither concept image is ever used directly as a game texture.
 
 ## Production ownership and counts
 
-- `tools/generate_fire_vfx_assets.py` owns the complete 77-PNG Kinetic Inferno
-  package, its particle definitions, block animation metadata, and contact sheet.
-  Its explicit `--replace` path removes retired Fire assets without touching
-  another affinity.
+- `tools/prepare_fire_assets.py` owns the approved 45-PNG Fire package except the
+  three retained HUD icons. `generate_fire_vfx_assets.py` forwards to it. The
+  exporter removes only superseded Fire-owned frames and models; `--check`
+  validates byte-for-byte source/production agreement.
 - `tools/generate_wind_vfx_assets.py` owns only the 53 Wind production PNGs:
   42 particle frames, six Vacuum Blade frames, item/worn wings, and three icons.
 - The shared generator owns only `wizard_wand.png` and `wand_hud_v2.png`.
   Safe replacement never regenerates Arcane, Fire Spirit, Calamity Tornado,
   Stone, Nature, or Space assets.
-- The validated affinity package is Fire 77, Wind 53, Stone 41, Nature 44,
-  Space 81: 296 affinity PNGs plus two shared presentation PNGs and 40 particle
+- The validated affinity package is Fire 45, Wind 53, Stone 41, Nature 44,
+  Space 81: 264 affinity PNGs plus two shared presentation PNGs and 40 particle
   definitions.
 
 ## Stone vertical slice
@@ -146,22 +138,24 @@ Neither concept image is ever used directly as a game texture.
   region with continuous plates and deliberate front visor openings. Titan
   particles show converging/crumbling stone fragments. Geometry is unchanged.
 
-## Nature vertical slice
+## Nature — the living grove
 
-- Nature is Fairy Bloom: emerald and mint foliage, dark bark, ivory flowers,
-  pollen gold, paired stems, unfurling buds, petals, and luminous root spokes.
-- `nature_pollen`, `nature_petal`, and `nature_leaf` provide small material
-  detail without falling back to generic Happy Villager or spore particles.
-- The primary seed is a visible winged pod. Planted seedlings advance from bud
-  to crown and make each radius pulse readable as an unfolding growth ring.
-- Tendril Bloom uses two intertwined stems with intermittent flowers; its final
-  fairy ring keeps low thorn silhouettes so enemies do not mistake it for a
-  harmless healing zone.
-- Entangle retains its synchronized border vignette. World cues add one coil and
-  bud per stack, culminating in a rooted five-stack flower crown.
-- The Awakened Tree is the Nature hero effect: consumed seedlings stream into a
-  pollen-gold heart, ten roots establish the true radius, and a dense ivory
-  canopy reflects healthy, damaged, destroyed, and naturally expired states.
+- Use vibrant green leaves/roots, bark brown, pink/violet petals and golden pollen.
+  Geometry stays stepped and angular, with Minecraft-scale pixel detail.
+- The primary is a 3D winged pod. Only planted seedling anchors carry flowers;
+  four native cuboid stages unfold inside their selectable block footprint.
+- Thickets and water walking use low custom roots and floating leaf rafts.
+  Secondary travel/destination effects are vines and leaves, without another bloom.
+- Entangle uses attached, chamfered rectangular vine strands that climb the body.
+  Active root anchors expire independently of lingering stacks. Guardian resistance
+  has no full-root timer; sap glints identify the actual extra recovery second.
+- The ultimate is a real 9-high, 11-wide oak block structure, with outstretched
+  branches, one heartwood block and a few flowering leaf blocks. Keep normal
+  Minecraft logs/leaves dominant. Do not bring back a separate smooth tree model.
+- Export with `tools/prepare_nature_models.mjs`; compare with `--check`. Existing
+  textures provide pixel grain; exact face colors preserve the approved palette.
+  The PNG/particle inventory is unchanged. See `nature-redesign-2026-09-10.md`.
+
 
 ## Space vertical slice
 

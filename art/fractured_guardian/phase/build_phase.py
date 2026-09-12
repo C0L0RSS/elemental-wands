@@ -49,8 +49,8 @@ for name,impact,new_impact,duration in [('slam',1.3,1.05,2.25),('throw',2.2,1.45
  clips['animation.fractured_guardian.'+name+'_fast']=clip
 # Separate full-body fan cast: brace, draw both hands out, then sweep to release.
 def fan_pose(t):
- a=smooth(t/.8)*(1-smooth((t-1.9)/1.0))
- sweep=smooth((t-1.25)/.35)*(1-smooth((t-1.9)/1.0))
+ a=smooth(t/.55)*(1-smooth((t-1.8)/.6))
+ sweep=sum(smooth((t-(release-.2))/.2)*(1-smooth((t-release)/.2)) for release in [.9,1.3,1.7])
  p={'pelvis':{'position':np.array([0,-3*a,0.])},
     'torso':{'rotation':[5*a,-12*a+24*sweep,0]},
     'head':{'rotation':[-5*a,8*a-16*sweep,0]}}
@@ -69,14 +69,14 @@ def fan_pose(t):
   if low<.8:p[side+'_shoulder']['position'][1]+=(.8-low)/mats['torso'][1,1]
  return p
 fan_bones={};fan_lowest=999
-for i in range(117):
+for i in range(97):
  t=round(i*.025,4);p=fan_pose(t);mats=rig['transforms'](p)
  for b,channels in p.items():
   for name,value in channels.items():fan_bones.setdefault(b,{}).setdefault(name,{})[str(t)]=[round(float(v),5) for v in value]
  for c in rig['mesh']:
   m=mats[c['bone']];v=np.array(c['vertices'])@m[:3,:3].T+m[:3,3];fan_lowest=min(fan_lowest,float(v[:,1].min()))
 assert fan_lowest>-.08,fan_lowest
-clips['animation.fractured_guardian.fan']={'loop':False,'animation_length':2.9,'bones':fan_bones}
+clips['animation.fractured_guardian.fan']={'loop':False,'animation_length':2.4,'bones':fan_bones}
 print('Fan floor clearance:',fan_lowest)
 (HERE/'phase.animation.json').write_text(json.dumps({'format_version':'1.8.0','animations':clips},indent=2)+'\n')
 (HERE/'motion-validation.json').write_text(json.dumps({'samples':129,'minimum_vertex':lowest,'phase_seconds':3.2,'slam_impact_tick':21,'throw_release_tick':29},indent=2)+'\n')

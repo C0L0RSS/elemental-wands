@@ -1,6 +1,7 @@
 package com.anton.elementalwands.util;
 
 import com.anton.elementalwands.network.ModNetworking;
+import com.anton.elementalwands.entity.AwakenedTreeEntity;
 import com.anton.elementalwands.registry.ModParticles;
 
 import java.util.HashMap;
@@ -20,7 +21,6 @@ import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
 /**
@@ -39,6 +39,7 @@ public final class EntangleTracker {
     }
 
     private static final Map<RegistryKey<World>, Map<UUID, EntangleData>> ENTANGLED = new HashMap<>();
+    private static final Map<UUID,Integer> ULTIMATE_ROOT_UNTIL = new HashMap<>();
     private static final int CLEAR_DELAY = 100;
     private static final int ROOT_DURATION_TICKS = 40;
 
@@ -47,7 +48,7 @@ public final class EntangleTracker {
 
     public static void init() {
         ServerTickEvents.END_WORLD_TICK.register(EntangleTracker::tickWorld);
-        ServerLifecycleEvents.SERVER_STOPPING.register(server -> ENTANGLED.clear());
+        ServerLifecycleEvents.SERVER_STOPPING.register(server -> { ENTANGLED.clear(); ULTIMATE_ROOT_UNTIL.clear(); });
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
             if (entity.getEntityWorld() instanceof ServerWorld world) {
                 clearStacks(world, entity);
@@ -62,7 +63,7 @@ public final class EntangleTracker {
         EntityTrackingEvents.START_TRACKING.register((entity, player) -> {
             if (entity instanceof LivingEntity living) {
                 int stacks = getStacks(living);
-                if (stacks > 0) {
+                if (stacks > 0 || getRootVisualTicksRemaining(living)>0) {
                     ModNetworking.syncEntangleStacks(player, living, stacks,
                             getRootVisualTicksRemaining(living));
                 }
@@ -76,7 +77,7 @@ public final class EntangleTracker {
     }
 
     public static void addStack(ServerWorld world, LivingEntity target) {
-        if (!target.isAlive())
+        if (!target.isAlive() || target instanceof AwakenedTreeEntity)
             return;
 
         int now = world.getServer().getTicks();
@@ -104,7 +105,7 @@ public final class EntangleTracker {
             spawnVineParticles(world, target, newStacks);
         }
         ModNetworking.syncEntangleStacks(target, newStacks,
-                newStacks >= MAX_STACKS ? ROOT_DURATION_TICKS : 0);
+                getRootVisualTicksRemaining(target));
     }
 
     public static int getStacks(LivingEntity entity) {
@@ -127,21 +128,31 @@ public final class EntangleTracker {
 
     private static int getRootVisualTicksRemaining(LivingEntity entity) {
         World world = entity.getEntityWorld();
+        if (entity instanceof com.anton.elementalwands.entity.FracturedGuardianEntity) return 0;
         if (!(world instanceof ServerWorld serverWorld)) return 0;
 
-        Map<UUID, EntangleData> map = ENTANGLED.get(serverWorld.getRegistryKey());
-        EntangleData data = map != null ? map.get(entity.getUuid()) : null;
-        if (data == null || data.stacks < MAX_STACKS) return 0;
+        int now=serverWorld.getServer().getTicks();
+        var data=ENTANGLED.getOrDefault(serverWorld.getRegistryKey(),Map.of()).get(entity.getUuid());
+        int stackRoot=data!=null && data.stacks>=MAX_STACKS ? ROOT_DURATION_TICKS-(now-data.lastHitTick) : 0;
+        int ultimateRoot=ULTIMATE_ROOT_UNTIL.getOrDefault(entity.getUuid(),now)-now;
+        var slow=entity.getStatusEffect(StatusEffects.SLOWNESS);
+        return slow!=null && slow.getAmplifier()>=6
+                ? Math.max(0,Math.min(slow.getDuration(),Math.max(stackRoot,ultimateRoot))) : 0;
+    }
 
-        int age = serverWorld.getServer().getTicks() - data.lastHitTick;
-        return Math.max(0, ROOT_DURATION_TICKS - age);
+    /** Ultimate roots are visual-only here: do not manufacture stacks or cooldown penalties. */
+    public static void syncUltimateRoot(ServerWorld world,LivingEntity target,int ticks) {
+        if(target instanceof AwakenedTreeEntity)return;
+        if(target instanceof com.anton.elementalwands.entity.FracturedGuardianEntity)return;
+        ULTIMATE_ROOT_UNTIL.put(target.getUuid(),world.getServer().getTicks()+ticks);
+        ModNetworking.syncEntangleStacks(target,getStacks(target),getRootVisualTicksRemaining(target));
     }
 
     public static void clearStacks(ServerWorld world, LivingEntity entity) {
         Map<UUID, EntangleData> map = ENTANGLED.get(world.getRegistryKey());
-        boolean removed = false;
+        boolean removed = ULTIMATE_ROOT_UNTIL.remove(entity.getUuid())!=null;
         if (map != null) {
-            removed = map.remove(entity.getUuid()) != null;
+            removed = map.remove(entity.getUuid()) != null || removed;
             if (map.isEmpty()) {
                 ENTANGLED.remove(world.getRegistryKey());
             }
@@ -157,6 +168,7 @@ public final class EntangleTracker {
     }
 
     public static void applyNatureSlow(LivingEntity target, int ticks, int amplifier) {
+        if (target instanceof AwakenedTreeEntity) return;
         int capped = target instanceof com.anton.elementalwands.entity.FracturedGuardianEntity ? 0 : amplifier;
         target.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, ticks, capped, false, false, true));
     }
@@ -187,29 +199,10 @@ public final class EntangleTracker {
         world.spawnParticles(ModParticles.NATURE_POLLEN,
                 target.getX(), target.getBodyY(0.48), target.getZ(),
                 3 + stacks, spread, target.getHeight() * 0.32, spread, 0.012);
-        if (stacks >= 3) {
-            world.spawnParticles(ModParticles.NATURE_BLOOM,
-                    target.getX(), target.getBodyY(stacks >= 5 ? 0.95 : 0.62), target.getZ(),
-                    stacks >= 5 ? 3 : 1, spread * 0.72, 0.1, spread * 0.72, 0.0);
-        }
-        if (stacks >= MAX_STACKS) {
-            // A flower crown above and a locked root ring below make the cap readable from
-            // either first-person or across a fight.
-            Vec3d base = target.getEntityPos().add(0.0, 0.06, 0.0);
-            Vec3d crown = target.getEntityPos().add(0.0, target.getHeight() + 0.18, 0.0);
-            NatureVfx.ring(world, ModParticles.NATURE_VINE, base,
-                    Math.max(0.42, target.getWidth() * 0.72), 10, 0.0, 0.0);
-            NatureVfx.ring(world, ModParticles.NATURE_BLOOM, crown,
-                    Math.max(0.34, target.getWidth() * 0.58), 5, 0.0, Math.PI / 2.0);
-            world.spawnParticles(ModParticles.NATURE_HEART,
-                    crown.x, crown.y, crown.z, 1, 0.0, 0.0, 0.0, 0.0);
-            world.spawnParticles(ModParticles.NATURE_LEAF,
-                    target.getX(), target.getY() + 0.1, target.getZ(),
-                    10, 0.34, 0.08, 0.34, 0.012);
-        }
     }
 
     private static void tickWorld(ServerWorld world) {
+        ULTIMATE_ROOT_UNTIL.values().removeIf(until->until<=world.getServer().getTicks());
         Map<UUID, EntangleData> map = ENTANGLED.get(world.getRegistryKey());
         if (map == null || map.isEmpty())
             return;

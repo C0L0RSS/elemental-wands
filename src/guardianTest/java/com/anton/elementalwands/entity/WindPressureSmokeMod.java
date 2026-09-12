@@ -89,22 +89,26 @@ public final class WindPressureSmokeMod implements ModInitializer {
         if(tick==145){boss.testAttack(player,GuardianCombatRules.Attack.FAN);shards.clear();}
         if(tick>=145 && tick<205) {
             collect(world);
-            if(tick==172) {lockedPitch=boss.getFanPitch();player.setPosition(8.5,y+6,12.5);player.setNoGravity(true);}
-            if(tick==176)require(boss.getFanPitch()==lockedPitch,"Fan changed aim after lock");
+            if(tick==162)require(shards.isEmpty(),"Barrage released before windup ended");
+            if(tick==163)require(shards.size()==3,"First burst did not release at 0.9 seconds");
+            if(tick==171)require(shards.size()==6,"Second burst did not release after 0.4 seconds");
+            if(tick==179)require(shards.size()==9,"Third burst did not release after 0.4 seconds");
+            if(tick==160) {lockedPitch=boss.getFanPitch();player.setPosition(8.5,y+6,12.5);player.setNoGravity(true);}
+            if(tick==162)require(boss.getFanPitch()==lockedPitch,"Fan changed aim after lock");
         }
         if(tick==205) {
-            require(shards.size()==5,"Phase-one fan released "+shards.size()+" projectiles");
+            require(shards.size()==9,"Phase-one fan released "+shards.size()+" projectiles");
             require(boss.getFanTime(0)<0,"Fan telegraph did not end");
             boss.stopReview();boss.beginPhase();boss.finishPhase();shards.clear();
             player.setPosition(.5,y,12.5);boss.testAttack(player,GuardianCombatRules.Attack.FAN);
         }
         if(tick>205 && tick<320)collect(world);
-        if(tick==235) {lockedPitch=boss.getFanPitch();player.setPosition(8.5,y+6,12.5);}
-        if(tick==248)require(boss.getFanPitch()==lockedPitch,"Phase-two first volley retargeted in flight");
-        if(tick==277)require(boss.getFanPitch()<lockedPitch-5,"Second volley did not visibly aim up at elevated target");
+        if(tick==220) {lockedPitch=boss.getFanPitch();player.setPosition(8.5,y+6,12.5);}
+        if(tick==222)require(boss.getFanPitch()==lockedPitch,"Phase-two first volley retargeted in flight");
+        if(tick==229)require(boss.getFanPitch()<lockedPitch-5,"Second volley did not visibly aim up at elevated target");
         if(tick==320) {
-            require(shards.size()==10,"Phase-two fan released "+shards.size()+" projectiles");
-            report.append("Fan releases 5/10 real projectiles in phases one/two; each volley commits aim, and second volley reacquires elevated target.\n");
+            require(shards.size()==9,"Phase-two fan released "+shards.size()+" projectiles");
+            report.append("Barrage releases nine real projectiles in each phase; each burst commits aim, and second burst reacquires elevated target.\n");
             boss.stopReview();boss.startFight();player.setPosition(.5,y,12.5);player.setNoGravity(false);
         }
         if(tick==325) {
@@ -165,9 +169,53 @@ public final class WindPressureSmokeMod implements ModInitializer {
         if(tick==490) {
             require(boss.getFanTime(0)>=0,"Available aerial fan was not selected against hovering");
             report.append("Normal jump height never counts as hovering; sustained airborne target selects an available fan.\n");
+            boss.stopReview(); boss.discard();
+            boss=new FracturedGuardianEntity(ModEntities.FRACTURED_GUARDIAN,world);
+            boss.setPosition(.5,y,.5);world.spawnEntity(boss);boss.startFight();
+            player.setPosition(.5,y+5,12.5);player.setNoGravity(true);player.setOnGround(false);
+        }
+        if(tick==515 || tick==535) {
+            if(tick==535){boss.beginPhase();boss.finishPhase();}
+            forceDueBeam(world);
+        }
+        // Allow normal gravity to restore support after interrupting the frozen awakening.
+        if(tick==519 || tick==539) {
+            require(boss.getBeamTime(0)>=0 && boss.getFanTime(0)<0,
+                    "Ready laser was overridden by aerial/pending fan or Nature clearing in phase "+(boss.isUnstable()?2:1)+rotationState());
+        }
+        if(tick==540) {
+            report.append("Actual director reserves a ready laser after two other attacks in BOTH phases, ahead of hover/pending fan and Nature clearing.\n");
             boss.stopReview();Files.writeString(Path.of("PRESSURE_PASSED.txt"),report);System.out.println("WIND PRESSURE PASSED\n"+report);server.stop(false);
         }
         if(tick>550)throw new AssertionError("Wind/pressure fixture timed out");
+    }
+    private String rotationState()throws Exception {
+        var field=FracturedGuardianEntity.class.getDeclaredField("combat");field.setAccessible(true);var combat=field.get(boss);
+        String state=" pos="+boss.getEntityPos()+" grounded="+boss.isOnGround()+" visible="+boss.canSee(player)+" player="+player.getEntityPos()+" guard="+boss.getGuard()+" beam="+boss.getBeamTime(0);
+        for(String key:List.of("active","last","engaged","waking","attacksSinceBeam","nextAction","pendingFan","approachUntil")) {
+            var f=GuardianBossCombat.class.getDeclaredField(key);f.setAccessible(true);state+=" "+key+"="+f.get(combat);
+        }
+        return state;
+    }
+    private void forceDueBeam(ServerWorld world)throws Exception {
+        var f=FracturedGuardianEntity.class.getDeclaredField("combat");f.setAccessible(true);
+        var combat=(GuardianBossCombat)f.get(boss);
+        var interrupt=GuardianBossCombat.class.getDeclaredMethod("interruptAction");interrupt.setAccessible(true);interrupt.invoke(combat);
+        for(String name:List.of("waking","attacksSinceBeam")) {
+            var field=GuardianBossCombat.class.getDeclaredField(name);field.setAccessible(true);field.setInt(combat,name.equals("waking")?0:2);
+        }
+        for(String name:List.of("nextAction","approachUntil")) {
+            var field=GuardianBossCombat.class.getDeclaredField(name);field.setAccessible(true);field.setLong(combat,0);
+        }
+        var readyField=GuardianBossCombat.class.getDeclaredField("ready");readyField.setAccessible(true);
+        @SuppressWarnings("unchecked") var ready=(Map<GuardianCombatRules.Attack,Long>)readyField.get(combat);ready.clear();
+        var last=GuardianBossCombat.class.getDeclaredField("last");last.setAccessible(true);last.set(combat,GuardianCombatRules.Attack.FAN);
+        var pending=GuardianBossCombat.class.getDeclaredField("pendingFan");pending.setAccessible(true);pending.setBoolean(combat,true);
+        var natureField=GuardianBossCombat.class.getDeclaredField("nature");natureField.setAccessible(true);
+        var response=(GuardianNatureResponse)natureField.get(combat);response.reset();
+        response.thorn(world.getTime()-40);response.thorn(world.getTime());
+        require(response.wantsClear(world.getTime()),"Nature clearing override fixture was not armed");
+        boss.setPosition(.5,y,.5);boss.setVelocity(Vec3d.ZERO);boss.setOnGround(true);
     }
     private int hoverTicks()throws Exception {
         var f=FracturedGuardianEntity.class.getDeclaredField("combat");f.setAccessible(true);

@@ -9,14 +9,14 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.RotationAxis;
 import net.minecraft.util.math.Vec3d;
 
-/** Five hovering, visibly charged stones; exact release sockets are shared with server projectiles. */
+/** Three reforming stones per burst; release sockets and commitment match the server. */
 final class GuardianFanVisual {
     static void submit(FracturedGuardianRenderState state,MatrixStack matrices,OrderedRenderCommandQueue queue) {
         float age=state.fanTime;
         if(age<0)return;
-        if(state.unstable && age>=GuardianFanRules.REPEAT)age-=GuardianFanRules.REPEAT;
+        age=GuardianFanRules.localTime(age);
         if(age>=GuardianFanRules.RELEASE)return;
-        float form=Math.clamp(age/12,0,1),size=(float)(GuardianFanRules.RADIUS*2)*form;
+        float form=GuardianFanRules.burst(state.fanTime)==0?Math.clamp(age/12,0,1):Math.clamp((age-10)/4,0,1),size=(float)(GuardianFanRules.RADIUS*2)*form;
         for(int i=0;i<GuardianFanRules.COUNT;i++) {
             Vec3d socket=GuardianFanRules.socket(Vec3d.ZERO,state.fanYaw,state.fanPitch,i);
             socket=socket.add(0,-.9*(1-form),0);

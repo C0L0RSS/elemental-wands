@@ -15,7 +15,7 @@ import net.minecraft.world.BlockView;
  *
  * <p>The block deliberately has no entity-collision callback: the authoritative
  * pyre front and the existing magma-backed runway remain the only gameplay
- * sources. Two weighted animated cross models keep the lingering runway alive
+ * sources. The approved 0.075-block-high animated surface and tiny flame curls keep the runway readable
  * without adding collision or per-block particle spam.</p>
  */
 public final class PyreFlameBlock extends Block {

@@ -12,9 +12,7 @@ import net.minecraft.world.Heightmap;
 /** Blends the rigid sanctuary floor into existing soil without grading buildings or water. */
 public final class GuardianChurchTerrain {
     public static final int MARGIN=14;
-    public record Column(int x,int z,int ground,int target,String stairs) {
-        public Column(int x,int z,int ground,int target) { this(x,z,ground,target,null); }
-    }
+    public record Column(int x,int z,int ground,int target,String stairs) {}
     private GuardianChurchTerrain() {}
 
     public static boolean loaded(ServerWorld world,GuardianChurchManager.Site site) {

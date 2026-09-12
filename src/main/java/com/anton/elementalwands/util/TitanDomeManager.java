@@ -5,13 +5,13 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 import com.anton.elementalwands.registry.ModItems;
+import com.anton.elementalwands.data.EWAttachments;
 import com.anton.elementalwands.registry.ModParticles;
 import com.anton.elementalwands.registry.ModSpellBlocks;
 
@@ -22,7 +22,6 @@ import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.EquippableComponent;
 import net.minecraft.component.type.NbtComponent;
@@ -59,16 +58,6 @@ public final class TitanDomeManager {
     private record ShellCandidate(BlockPos pos, int revealTick, boolean rib) {
     }
 
-    private static final class Aegis {
-        private final UUID casterUuid;
-        private final int expiryTick;
-
-        private Aegis(UUID casterUuid, int expiryTick) {
-            this.casterUuid = casterUuid;
-            this.expiryTick = expiryTick;
-        }
-    }
-
     private static final class Dome {
         private final BlockPos center;
         private final int radius;
@@ -86,6 +75,7 @@ public final class TitanDomeManager {
         private int formationIndex;
         private boolean formationCompleted;
         private boolean collapsing;
+        private boolean loadoutRestored;
         private int collapseStartedTick;
         private List<Long> collapsePositions = List.of();
         private int collapseIndex;
@@ -111,7 +101,6 @@ public final class TitanDomeManager {
     }
 
     private static final Map<RegistryKey<World>, List<Dome>> DOMES = new HashMap<>();
-    private static final Map<RegistryKey<World>, List<Aegis>> AEGISES = new HashMap<>();
 
     private static final int DURATION_TICKS = 240;
     private static final int RADIUS = 16;
@@ -123,11 +112,6 @@ public final class TitanDomeManager {
     private static final int REPAIR_INTERVAL_TICKS = 10;
     private static final int BUFF_REFRESH_INTERVAL_TICKS = 20;
     private static final int RESISTANCE_REFRESH_DURATION_TICKS = 40;
-    private static final int AEGIS_DURATION_TICKS = 80;
-    private static final int AEGIS_DISTANCE_AHEAD = 4;
-    private static final int AEGIS_HEIGHT = 3;
-    private static final int AEGIS_HALF_WIDTH = 1;
-    private static final int AEGIS_BLOCK_DURATION_TICKS = 1;
     private static final double DOMAIN_PULL_SPEED = 1.5;
 
     private static final BlockState DOME_STATE = ModSpellBlocks.TITAN_DOME.getDefaultState();
@@ -161,17 +145,30 @@ public final class TitanDomeManager {
     public static void init() {
         ServerTickEvents.END_WORLD_TICK.register(TitanDomeManager::tickWorld);
         ServerPlayerEvents.LEAVE.register(TitanDomeManager::finishForPlayer);
+        ServerPlayerEvents.JOIN.register(TitanDomeManager::recoverSavedGear);
+        ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> {
+            if (alive && newPlayer.getAttached(EWAttachments.TITAN_GEAR)==null) {
+                NbtCompound receipt = oldPlayer.getAttached(EWAttachments.TITAN_GEAR);
+                if (receipt!=null) newPlayer.setAttached(EWAttachments.TITAN_GEAR,receipt.copy());
+            }
+            finishForPlayer(newPlayer);
+            oldPlayer.removeAttached(EWAttachments.TITAN_GEAR);
+        });
         ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register((player, origin, destination) ->
                 finishForPlayer(player));
         ServerLifecycleEvents.SERVER_STOPPING.register(TitanDomeManager::finishAll);
     }
 
     public static void startDome(ServerWorld world, PlayerEntity caster) {
+        if (hasActiveDome(caster)) return;
+        recoverSavedGear(caster);
         int now = world.getServer().getTicks();
 
         BlockPos center = caster.getBlockPos();
         NbtCompound originalArmorNbt = serializeArmor(caster);
         ItemStack originalMainHand = caster.getMainHandStack().copy();
+        NbtCompound receipt = originalArmorNbt.copy();
+        EquipmentReceipt.put(caster, receipt, "main_hand", originalMainHand);
         Long2ObjectOpenHashMap<BlockState> originalByPos = new Long2ObjectOpenHashMap<>();
         List<ShellCandidate> shellCandidates = buildFormationCandidates(world, center, RADIUS);
 
@@ -192,6 +189,7 @@ public final class TitanDomeManager {
                         now));
 
         applyCasterBuffs(caster);
+        caster.setAttached(EWAttachments.TITAN_GEAR, receipt);
         equipTitanJuggernaut(caster, originalArmorNbt);
 
         spawnOpeningFaultRing(world, center, RADIUS);
@@ -200,6 +198,11 @@ public final class TitanDomeManager {
                 SoundCategory.PLAYERS, 1.35f, 0.54f);
         world.playSound(null, center, SoundEvents.ENTITY_IRON_GOLEM_REPAIR,
                 SoundCategory.PLAYERS, 0.9f, 0.48f);
+    }
+
+    public static boolean hasActiveDome(PlayerEntity player) {
+        return DOMES.values().stream().flatMap(List::stream)
+                .anyMatch(dome -> dome.casterUuid.equals(player.getUuid()));
     }
 
     private static List<ShellCandidate> buildFormationCandidates(ServerWorld world, BlockPos center, int radius) {
@@ -242,25 +245,10 @@ public final class TitanDomeManager {
         return angle;
     }
 
-    public static void startAegis(ServerWorld world, PlayerEntity caster) {
-        int now = world.getServer().getTicks();
-        List<Aegis> aegises = AEGISES.computeIfAbsent(world.getRegistryKey(), _k -> new ArrayList<>());
-        aegises.removeIf(aegis -> aegis.casterUuid.equals(caster.getUuid()));
-        aegises.add(new Aegis(caster.getUuid(), now + AEGIS_DURATION_TICKS));
-    }
-
     private static void tickWorld(ServerWorld world) {
         RegistryKey<World> key = world.getRegistryKey();
-        List<Aegis> aegises = AEGISES.get(key);
         List<Dome> domes = DOMES.get(world.getRegistryKey());
         int now = world.getServer().getTicks();
-
-        if (aegises != null && !aegises.isEmpty()) {
-            tickAegises(world, aegises, now);
-            if (aegises.isEmpty()) {
-                AEGISES.remove(key);
-            }
-        }
 
         Set<UUID> activeCasters = new HashSet<>();
 
@@ -330,8 +318,8 @@ public final class TitanDomeManager {
             BlockState current = world.getBlockState(pos);
             if (!canReplace(current)) continue;
 
-            dome.originalByPos.put(pos.asLong(), current);
-            world.setBlockState(pos, DOME_STATE, 3);
+            if (!world.setBlockState(pos, DOME_STATE, 3)) continue;
+            dome.originalByPos.put(pos.asLong(), TemporaryBlockManager.claimTrackedOriginal(world, pos, current));
             placedThisTick++;
             if (candidate.rib()) ribBlocksThisTick++;
 
@@ -442,57 +430,6 @@ public final class TitanDomeManager {
                         point.x, point.y, point.z, 0, inward.x, inward.y, inward.z, 1.0);
             }
         }
-    }
-
-    private static void tickAegises(ServerWorld world, List<Aegis> aegises, int now) {
-        Iterator<Aegis> it = aegises.iterator();
-        while (it.hasNext()) {
-            Aegis aegis = it.next();
-            if (now >= aegis.expiryTick) {
-                it.remove();
-                continue;
-            }
-
-            PlayerEntity caster = world.getPlayerByUuid(aegis.casterUuid);
-            if (caster == null || !caster.isAlive() || caster.isSpectator()) {
-                it.remove();
-                continue;
-            }
-
-            Vec3d forward = horizontalForward(caster);
-            List<BlockPos> positions = buildAegisWall(caster, forward);
-            TemporaryBlockManager.placeTemporaryBlocks(
-                    world,
-                    positions,
-                    Blocks.GLASS.getDefaultState(),
-                    AEGIS_BLOCK_DURATION_TICKS,
-                    state -> (state.isAir() || state.isReplaceable()) && state.getFluidState().isEmpty());
-        }
-    }
-
-    private static List<BlockPos> buildAegisWall(PlayerEntity caster, Vec3d forward) {
-        Vec3d left = new Vec3d(-forward.z, 0.0, forward.x);
-        double centerX = caster.getX() + forward.x * AEGIS_DISTANCE_AHEAD;
-        double centerZ = caster.getZ() + forward.z * AEGIS_DISTANCE_AHEAD;
-        int baseY = caster.getBlockY();
-
-        Set<BlockPos> dedupe = new LinkedHashSet<>();
-        for (int lateral = -AEGIS_HALF_WIDTH; lateral <= AEGIS_HALF_WIDTH; lateral++) {
-            double x = centerX + left.x * lateral;
-            double z = centerZ + left.z * lateral;
-            for (int y = 0; y < AEGIS_HEIGHT; y++) {
-                dedupe.add(BlockPos.ofFloored(x, baseY + y, z));
-            }
-        }
-        return new ArrayList<>(dedupe);
-    }
-
-    private static Vec3d horizontalForward(PlayerEntity caster) {
-        Vec3d look = caster.getRotationVec(1.0f);
-        Vec3d horizontal = new Vec3d(look.x, 0.0, look.z);
-        if (horizontal.lengthSquared() > 0.0001) return horizontal.normalize();
-        float yawRad = caster.getYaw() * (float) (Math.PI / 180.0);
-        return new Vec3d(-MathHelper.sin(yawRad), 0.0, MathHelper.cos(yawRad)).normalize();
     }
 
     private static void repairDome(ServerWorld world, Dome dome) {
@@ -650,12 +587,8 @@ public final class TitanDomeManager {
                 if (domes.isEmpty()) DOMES.remove(key);
             }
 
-            List<Aegis> aegises = AEGISES.get(key);
-            if (aegises != null) {
-                aegises.removeIf(aegis -> aegis.casterUuid.equals(player.getUuid()));
-                if (aegises.isEmpty()) AEGISES.remove(key);
-            }
         }
+        recoverSavedGear(player);
     }
 
     private static void finishAll(MinecraftServer server) {
@@ -668,7 +601,6 @@ public final class TitanDomeManager {
             }
         }
         DOMES.clear();
-        AEGISES.clear();
     }
 
     private static void finishDomeImmediately(ServerWorld world, Dome dome,
@@ -762,6 +694,7 @@ public final class TitanDomeManager {
     private static void cleanupTitanGear(ServerWorld world, Set<UUID> activeCasters) {
         for (PlayerEntity player : world.getPlayers()) {
             if (activeCasters.contains(player.getUuid())) continue;
+            recoverSavedGear(player);
             removeMarkedTitanGear(player);
         }
     }
@@ -775,7 +708,7 @@ public final class TitanDomeManager {
     private static NbtCompound serializeArmor(PlayerEntity player) {
         NbtCompound armorNbt = new NbtCompound();
         for (EquipmentSlot slot : ARMOR_SLOTS) {
-            armorNbt.put(slot.getName(), ItemStack.OPTIONAL_CODEC, player.getEquippedStack(slot).copy());
+            EquipmentReceipt.put(player, armorNbt, slot.getName(), player.getEquippedStack(slot));
         }
         return armorNbt;
     }
@@ -813,6 +746,25 @@ public final class TitanDomeManager {
     }
 
     private static void restoreJuggernautLoadout(ServerWorld world, PlayerEntity player, Dome dome) {
+        if (dome.loadoutRestored) return;
+        restoreJuggernautLoadout(player, dome.originalArmorNbt, dome.originalMainHand);
+        dome.loadoutRestored = true;
+    }
+
+    private static void recoverSavedGear(PlayerEntity player) {
+        if (DOMES.values().stream().flatMap(List::stream)
+                .anyMatch(dome -> dome.casterUuid.equals(player.getUuid()) && !dome.loadoutRestored)) return;
+        NbtCompound receipt = player.getAttached(EWAttachments.TITAN_GEAR);
+        if (receipt == null) return;
+        ItemStack wand = EquipmentReceipt.get(player, receipt, "main_hand");
+        restoreJuggernautLoadout(player, receipt, wand);
+        removeKnockbackResistance(player);
+        removeMarkedTitanGear(player);
+    }
+
+    private static void restoreJuggernautLoadout(PlayerEntity player, NbtCompound armor, ItemStack wand) {
+        Map<EquipmentSlot, ItemStack> originals = new java.util.EnumMap<>(EquipmentSlot.class);
+        for (EquipmentSlot slot : ARMOR_SLOTS) originals.put(slot, EquipmentReceipt.get(player, armor, slot.getName()));
         for (EquipmentSlot slot : ARMOR_SLOTS) {
             ItemStack equipped = player.getEquippedStack(slot);
             if (!equipped.isEmpty() && !isMarkedTitanArmor(equipped)) {
@@ -822,10 +774,7 @@ public final class TitanDomeManager {
                 player.equipStack(slot, ItemStack.EMPTY);
             }
 
-            ItemStack original = dome.originalArmorNbt.get(slot.getName(), ItemStack.OPTIONAL_CODEC)
-                    .map(ItemStack::copy)
-                    .orElse(ItemStack.EMPTY);
-            player.equipStack(slot, original);
+            player.equipStack(slot, originals.get(slot));
         }
 
         ItemStack currentMain = player.getMainHandStack();
@@ -836,7 +785,8 @@ public final class TitanDomeManager {
             player.setStackInHand(Hand.MAIN_HAND, ItemStack.EMPTY);
         }
 
-        player.setStackInHand(Hand.MAIN_HAND, dome.originalMainHand.copy());
+        player.setStackInHand(Hand.MAIN_HAND, wand.copy());
+        player.removeAttached(EWAttachments.TITAN_GEAR);
     }
 
     private static void moveToInventoryOrDrop(PlayerEntity player, ItemStack stack) {

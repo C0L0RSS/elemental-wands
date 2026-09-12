@@ -90,17 +90,10 @@ public final class ModNetworking {
     // Handlers
     // -----------------------------------------------------------------------
 
-    private static void handleCastPrimary(ServerPlayerEntity player) {
-        if (player.isSpectator()) return;
-        if (!(player.getEntityWorld() instanceof ServerWorld world)) return;
-        ItemStack stack = player.getMainHandStack();
-        if (!(stack.getItem() instanceof AbstractWandItem wand)) return;
-        wand.castPrimary(world, player, stack);
-    }
-
     private static void handleCastUltimate(ServerPlayerEntity player) {
         if (player.isSpectator()) return;
         if (!(player.getEntityWorld() instanceof ServerWorld world)) return;
+        if (com.anton.elementalwands.util.HollowPurpleChargeManager.isCharging(world, player)) return;
         ItemStack stack = player.getMainHandStack();
         if (!(stack.getItem() instanceof AbstractWandItem wand)) return;
         wand.castUltimate(world, player, stack);
@@ -124,16 +117,6 @@ public final class ModNetworking {
                 PacketCodecs.INTEGER,StoneStaggerPayload::entityId,
                 PacketCodecs.INTEGER,StoneStaggerPayload::ticks,StoneStaggerPayload::new);
         @Override public Id<? extends CustomPayload> getId() { return ID; }
-    }
-
-    public record CastPrimaryPayload() implements CustomPayload {
-        public static final Id<CastPrimaryPayload> ID = new Id<>(
-                Identifier.of(ElementalWandsMod.MOD_ID, "cast_primary"));
-        public static final CastPrimaryPayload INSTANCE = new CastPrimaryPayload();
-        public static final PacketCodec<RegistryByteBuf, CastPrimaryPayload> CODEC = PacketCodec.unit(INSTANCE);
-
-        @Override
-        public Id<? extends CustomPayload> getId() { return ID; }
     }
 
     public record CastUltimatePayload() implements CustomPayload {

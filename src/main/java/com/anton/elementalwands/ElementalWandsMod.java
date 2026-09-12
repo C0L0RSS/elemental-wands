@@ -12,10 +12,8 @@ import com.anton.elementalwands.registry.ModSpellBlocks;
 import com.anton.elementalwands.util.BlinkRiftManager;
 import com.anton.elementalwands.util.SeedlingManager;
 import com.anton.elementalwands.util.EntangleTracker;
-import com.anton.elementalwands.util.EventHorizonManager;
 import com.anton.elementalwands.util.HollowPurpleChargeManager;
 import com.anton.elementalwands.util.MeteorManager;
-import com.anton.elementalwands.util.MovementDisruptManager;
 import com.anton.elementalwands.util.SoulboundInventoryCarrier;
 import com.anton.elementalwands.util.TemporaryBlockManager;
 import com.anton.elementalwands.util.TendrilBloomManager;
@@ -23,7 +21,6 @@ import com.anton.elementalwands.util.TitanDomeManager;
 import com.anton.elementalwands.util.WaylayDashVfxManager;
 import com.anton.elementalwands.util.ZephyrStrikeManager;
 import com.anton.elementalwands.util.OvergrowthManager;
-import com.anton.elementalwands.util.BlazeTrailManager;
 import com.anton.elementalwands.world.ModWorldGen;
 
 import net.fabricmc.api.ModInitializer;
@@ -78,15 +75,13 @@ public class ElementalWandsMod implements ModInitializer {
         StoneAbilityHandler.init();
         com.anton.elementalwands.util.StoneClusterManager.init();
         EntangleTracker.init();
+        com.anton.elementalwands.util.NatureCombat.init();
         OvergrowthManager.init();
         SeedlingManager.init();
         TendrilBloomManager.init();
         MeteorManager.init();
         TitanDomeManager.init();
-        BlazeTrailManager.init();
-        MovementDisruptManager.init();
         BlinkRiftManager.init();
-        EventHorizonManager.init();
         HollowPurpleChargeManager.init();
         ModBlocks.registerAll();
         ModEntities.registerAll();
@@ -177,7 +172,7 @@ public class ElementalWandsMod implements ModInitializer {
             dispatcher.register(
                 CommandManager.literal("ew")
                         .then(CommandManager.literal("admin")
-                                .requires(src -> src.hasPermissionLevel(0))
+                                .requires(src -> src.hasPermissionLevel(2))
                                 .then(CommandManager.literal("unlock")
                                         .then(CommandManager.literal("secondary")
                                                 .then(CommandManager.argument("player", EntityArgumentType.player())

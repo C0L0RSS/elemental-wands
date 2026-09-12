@@ -372,7 +372,6 @@ public class WandHudOverlay implements HudRenderCallback {
             case STONE -> drawStoneCooldown(context, slotIndex, renderX, renderY, now, animation);
             case SPACE -> drawSpaceCooldown(context, slotIndex, renderX, renderY, now, animation);
             case MANA  -> { /* fractured — intentionally blank */ }
-            case ARCANE -> drawArcaneCooldown(context, slotIndex, renderX, renderY, now, animation);
         }
     }
 
@@ -438,18 +437,6 @@ public class WandHudOverlay implements HudRenderCallback {
             int py = renderY + 23 + (i % 2);
             context.fill(px, py, px + 1, py + 1, scaledAlpha(0xB0BDC8C4, animation.alpha));
         }
-    }
-
-    private void drawArcaneCooldown(DrawContext context, int slotIndex, int renderX, int renderY,
-            long now, AnimationProfile animation) {
-        int motes = Math.max(2, Math.round(5 * animation.density));
-        for (int i = 0; i < motes; i++) {
-            int px = renderX + 8 + (int) ((now * (0.7f + animation.speed) + slotIndex * 5L + i * 7L) % 18L);
-            int py = renderY + 8 + (int) (((now * (0.45f + animation.speed * 0.7f)) + i * 11L) % 18L);
-            context.fill(px, py, px + 2, py + 2, scaledAlpha(0x99E4DBB3, animation.alpha));
-        }
-        context.fill(renderX + 2,  renderY + 2,  renderX + 4,  renderY + 4,  scaledAlpha(0x88E4DBB3, animation.alpha));
-        context.fill(renderX + 32, renderY + 32, renderX + 34, renderY + 34, scaledAlpha(0x88E4DBB3, animation.alpha));
     }
 
     private void drawSpaceCooldown(DrawContext context, int slotIndex, int renderX, int renderY,
@@ -518,7 +505,6 @@ public class WandHudOverlay implements HudRenderCallback {
             case STONE -> 0xBCC7C3;
             case SPACE -> 0xB29DFF;
             case MANA  -> 0xAAAAAA;
-            case ARCANE -> 0xD9D2AF;
         };
     }
 
@@ -526,7 +512,7 @@ public class WandHudOverlay implements HudRenderCallback {
         return (alpha << 24) | (rgb & 0x00FFFFFF);
     }
 
-    private enum WandTheme { FIRE, NATURE, WIND, STONE, SPACE, MANA, ARCANE }
+    private enum WandTheme { FIRE, NATURE, WIND, STONE, SPACE, MANA }
 
     private record AnimationProfile(float alpha, float speed, float density) {}
 }

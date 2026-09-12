@@ -72,6 +72,8 @@ public final class GuardianFloorClientSmokeMod implements ClientModInitializer {
                 checkFan();
                 checkUnstable();
                 checkStoneCluster();
+                NatureClientChecks.check(client);
+                FireClientChecks.check(client);
                 for (float radius:new float[]{0,1.25f,4,64}) checkFloor(radius, java.util.Set.of());
                 checkFloor(64,java.util.Set.of(net.minecraft.util.math.ChunkPos.toLong(0,0)));
                 Files.writeString(Path.of("FLOOR_CLIENT_PASSED.txt"),
@@ -80,7 +82,10 @@ public final class GuardianFloorClientSmokeMod implements ClientModInitializer {
             } catch (Throwable failure) {
                 failure.printStackTrace();
                 try { Files.writeString(Path.of("FLOOR_CLIENT_FAILED.txt"),failure.toString()); } catch (Exception ignored) {}
-            } finally { client.scheduleStop(); }
+            } finally {
+                if(Boolean.getBoolean("ew.nature.visualWorld") && !Files.exists(Path.of("FLOOR_CLIENT_FAILED.txt"))) NatureVisualClientSmoke.start(client);
+                else client.scheduleStop();
+            }
         });
     }
     private static void checkFan() {
@@ -103,12 +108,16 @@ public final class GuardianFloorClientSmokeMod implements ClientModInitializer {
             }
             return null;
         });
-        state.fanTime=26;state.fanPitch=-35;GuardianFanVisual.submit(state,new MatrixStack(),queue);
-        require(blocks[0]==5 && glows[0]==5,"Fan does not display five release stones");
-        state.fanTime=32;GuardianFanVisual.submit(state,new MatrixStack(),queue);
-        require(blocks[0]==5,"Held fan stones remain after release");
-        state.unstable=true;state.fanTime=76;GuardianFanVisual.submit(state,new MatrixStack(),queue);
-        require(blocks[0]==10,"Second fan lacks a new telegraph");
+        state.fanTime=14;state.fanPitch=-35;GuardianFanVisual.submit(state,new MatrixStack(),queue);
+        require(blocks[0]==3 && glows[0]==3,"Barrage does not display three release stones");
+        state.fanTime=18;GuardianFanVisual.submit(state,new MatrixStack(),queue);
+        require(blocks[0]==3,"Held fan stones remain after release");
+        state.unstable=true;state.fanTime=22;GuardianFanVisual.submit(state,new MatrixStack(),queue);
+        require(blocks[0]==6,"Second burst lacks a new telegraph");
+        state.fanTime=30;GuardianFanVisual.submit(state,new MatrixStack(),queue);
+        require(blocks[0]==9,"Third burst lacks a new telegraph");
+        state.fanTime=34;GuardianFanVisual.submit(state,new MatrixStack(),queue);
+        require(blocks[0]==9,"Stones linger after final release");
     }
     private static void checkUnstable() {
         var state=new FracturedGuardianRenderState();

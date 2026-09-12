@@ -6,7 +6,6 @@ public final class GuardianBeamTiming {
     public static final int FIRE = 32;
     public static final int PULSE = 12;
     public static final int END = FIRE + PULSE + 28;
-    public static final int COOLDOWN = 60;
     public static final double RANGE = 24;
     public static final double RADIUS = .42;
     public static final float DAMAGE = 8;

@@ -56,7 +56,7 @@ aggressive unless they have the `ew_guardian_passive` command tag.
   player, with visibility/range checked before selection. A locked attack never
   switches to a different player partway through it.
 - Close clusters favor a shockwave; players at range receive throws and beams;
-  a close frontal slam guards its immediate space. Ability cooldowns and a
+  a close 360-degree slam pressures surrounding players. Ability cooldowns and a
   0.6-second gap after each recovery prevent overlapping actions. A different
   available attack is preferred before repeating the previous one.
 - It holds a firing position instead of continuously chasing one player. When
@@ -81,8 +81,10 @@ particle settings because the ridge is rendered independently of particles.
 
 Throws and beams predict steady horizontal travel before committing. Prediction
 is capped at six blocks and rejects teleports. Waves now enter the solo rotation
-after throws, with beams favored after waves, and cooldowns are shorter. Health and
-damage values are unchanged; these changes need a fresh live difficulty assessment.
+after throws. After two other attacks, a ready beam now has protected priority when
+someone is visible within its 5–24-block targeting range, in either phase. Hovering,
+random barrage selection and Nature clearing cannot displace that due beam. See
+[the September 12 balance report](fire-guardian-balance-2026-09-12.md).
 
 All listed damage is points before armor (two points = one heart), using normal
 Minecraft damage/shield rules. Boss attacks do not place, remove, or explode blocks.
@@ -90,9 +92,10 @@ Minecraft damage/shield rules. Boss attacks do not place, remove, or explode blo
 | Attack | Tell and behavior | Damage / counterplay |
 | --- | --- | --- |
 | Cyan mouth beam | V4 chest expansion and jaw charge; predicts movement for 1.2s, locks for 0.4s, fires at 1.6s; visible for 0.6s; 24-block range. | 8 at most once per victim throughout the visible pulse, including late entrants. It predicts steady walking before locking; reverse direction after commitment or use cover. |
+| Stone barrage | Three stones reform and fire in three aimed bursts at 0.9, 1.3 and 1.7 seconds; each locks four ticks before release. Stones fly at 1.8 blocks/tick with a tight spread. | 6 at most once per burst, with normal hurt immunity. React to each commitment or use solid cover; a Stone Wall absorbs one burst. |
 | Rubble throw | A 1.4-block cobblestone chunk attaches to the actual animated hand. Predicted aim locks at 1.8s, release at 2.2s, then a faster gravity-driven arc to the committed landing point. | 8 direct or 4 nearby splash within 2.25 blocks, never both. Change direction or use mobility after aim locks; steady sideways walking is predicted. Rock stops at solid cover. |
-| Ground shockwave | Cyan circular sparks during the overhead slam; impact at 1.3s sends a visible stone ridge with a cyan crest outward to 18 blocks at 0.65 blocks/tick. | 6, at most once per wave. Jump over the 0.75-block-high band or move beyond its range. It samples collision surfaces, stops its damage behind cover, and skips deep gaps. |
-| Close slam | Stone-dust arc in front during the full-body slam; aim stops turning 0.6s before impact. | 6 in a frontal arc within 4.5 blocks, with knockback. Step behind it, retreat, or block. It is not a 360-degree contact attack. |
+| Ground shockwave | Cyan circular sparks during the overhead slam; a full ring travels 32 blocks at 0.85 blocks/tick, or 44 at 0.95 in phase two. | 6, at most once per wave. Jump over the 0.75-block-high band or move beyond its range. It samples collision surfaces, stops its damage behind cover, and skips deep gaps. |
+| Close slam | Standing full-body slam emits the same 360-degree traveling ring as the shockwave. This is separate from the jumping attack and floating-stone fan. | 6 once per wave. Jump the ring or use valid cover; standing behind the Guardian does not avoid it. The circular shape is intentional for multiplayer pressure. |
 
 Shockwave terrain sampling supports surfaces from 3 blocks below to 2 blocks above
 the starting floor. It does not climb cliffs or pass through walls. Beam collateral
@@ -154,7 +157,7 @@ for visual review; Creative/Spectator remain immune. They leave the boss passive
 | `/ew guardian beam` | One real mouth attack. |
 | `/ew guardian rock` | One real held-rubble throw. |
 | `/ew guardian shockwave` | One real traveling shockwave. |
-| `/ew guardian melee` | One real frontal slam. |
+| `/ew guardian melee` | One real standing slam with a full-circle wave. |
 | `/ew guardian awaken` | Cosmetic awakening rehearsal. |
 | `/ew guardian slam` | Cosmetic slam rehearsal, no damage. |
 | `/ew guardian throw` | Cosmetic throwing motion, no rock or damage. |

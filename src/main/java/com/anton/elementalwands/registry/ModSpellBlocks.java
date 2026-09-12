@@ -29,6 +29,26 @@ import net.minecraft.util.Identifier;
  */
 public final class ModSpellBlocks {
 
+    public static final Block NATURE_SEEDLING=register("nature_seedling",
+            com.anton.elementalwands.block.NatureSeedlingBlock::new,natureSettings());
+    public static final Block NATURE_ROOTS=register("nature_roots",
+            com.anton.elementalwands.block.NatureGrowthBlock::new,natureSettings().replaceable());
+    public static final Block NATURE_RAFT=register("nature_raft",
+            com.anton.elementalwands.block.NatureGrowthBlock::new,natureSettings().replaceable());
+    public static final Block NATURE_HEARTWOOD=register("nature_heartwood",Block::new,
+            AbstractBlock.Settings.create().mapColor(MapColor.OAK_TAN).strength(2,3).luminance(s->7)
+                    .sounds(BlockSoundGroup.WOOD).dropsNothing().pistonBehavior(PistonBehavior.BLOCK));
+    public static final Block NATURE_FLOWERING_LEAVES=register("nature_flowering_leaves",Block::new,
+            natureSettings().strength(.2f).allowsSpawning((s,w,p,e)->false));
+
+    private static AbstractBlock.Settings natureSettings(){
+        return AbstractBlock.Settings.create().mapColor(MapColor.GREEN).nonOpaque().breakInstantly()
+                .sounds(BlockSoundGroup.AZALEA).dropsNothing().pistonBehavior(PistonBehavior.DESTROY);
+    }
+    public static boolean isNatureGrowth(net.minecraft.block.BlockState state){
+        return state.isOf(NATURE_SEEDLING)||state.isOf(NATURE_ROOTS)||state.isOf(NATURE_RAFT);
+    }
+
     public static final Block INFERNO_FLAME = register("inferno_flame", InfernoFlameBlock::new,
             AbstractBlock.Settings.create()
                     .mapColor(MapColor.ORANGE)

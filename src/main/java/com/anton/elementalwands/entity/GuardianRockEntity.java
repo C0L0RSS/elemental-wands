@@ -59,7 +59,7 @@ public class GuardianRockEntity extends ProjectileEntity implements FlyingItemEn
             if (loadedFromSave || age > 160 || !(getOwner() instanceof FracturedGuardianEntity guardian)
                     || !guardian.isAlive() || guardian.isRemoved()) { discard(); return; }
             if (dataTracker.get(HELD)) return;
-            if (++flyingTicks > (isShard()?44:80)) { discard(); return; }
+            if (++flyingTicks > (isShard()?(int)Math.ceil(GuardianFanRules.RANGE / GuardianFanRules.SPEED):80)) { discard(); return; }
             Vec3d start = getEntityPos(), end = start.add(getVelocity());
             // Sweep the center and the cube's corners to stop its visible volume at cover.
             double fraction = 1;

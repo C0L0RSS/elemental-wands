@@ -39,7 +39,7 @@ final class GuardianBossCombat {
     private final GuardianMotionSample motion = new GuardianMotionSample();
     private final List<GuardianRockEntity> rocks = new ArrayList<>();
     private Vec3d home, anchor, lockedAim;
-    private UUID target, movementTarget;
+    private UUID target;
     private Attack active, last;
     private long started, nextAction, emptySince = -1, nextMove;
     private boolean engaged, frozen, previousNoAi;
@@ -48,6 +48,7 @@ final class GuardianBossCombat {
     private float attackYaw;
     private GuardianRockEntity heldRock;
     private int comboIndex, comboCount = 1;
+    private int attacksSinceBeam;
     private boolean leapFollowup, pendingFan;
     private long approachUntil;
     private float fanPitch;
@@ -72,7 +73,7 @@ final class GuardianBossCombat {
     void thorn() { nature.thorn(guardian.getEntityWorld().getTime()); }
 
     void cancel() {
-        nature.reset(); hovering.clear(); pendingFan=false; approachUntil=0;
+        nature.reset(); guardian.setNatureOpening(-1); hovering.clear(); pendingFan=false; approachUntil=0;
         leap.cancel();
         guardian.cancelCombatBeam();
         guardian.clearFan();
@@ -81,8 +82,9 @@ final class GuardianBossCombat {
         unfreeze();
         active = null; waking = 0; engaged = false;
         guardian.finishPhase(); leapFollowup=false;
-        target = movementTarget = null;
-        ready.clear(); lastTargeted.clear(); last = null;
+        target = null;
+        reviewing = false;
+        ready.clear(); lastTargeted.clear(); last = null; attacksSinceBeam = 0;
         for (GuardianRockEntity rock : rocks) rock.discard();
         rocks.clear(); heldRock = null;
         bar.clearPlayers();
@@ -210,14 +212,15 @@ final class GuardianBossCombat {
         List<Candidate> candidates = players.stream().map(p -> new Candidate(p.getUuid(),
                 guardian.distanceTo(p), guardian.canSee(p))).toList();
         if (!pendingFan && now < approachUntil) { pursue(players,now); return; }
-        Attack choice = choose(candidates, ready, now, last, guardian.isUnstable());
+        boolean reservedBeam = beamDue(candidates, ready, now, last, attacksSinceBeam);
+        Attack choice = choose(candidates, ready, now, last, guardian.isUnstable(), attacksSinceBeam);
         Candidate aerial = target(Attack.FAN,candidates.stream()
                 .filter(p -> hovering.getOrDefault(p.id(),0)>=GuardianFanRules.HOVER_TICKS).toList(),lastTargeted,guardian.isUnstable());
-        if (now>=ready.getOrDefault(Attack.FAN,0L) && last!=Attack.FAN
+        if (!reservedBeam && now>=ready.getOrDefault(Attack.FAN,0L) && last!=Attack.FAN
                 && target(Attack.FAN,candidates,lastTargeted,guardian.isUnstable())!=null
                 && (pendingFan || aerial!=null || guardian.getRandom().nextInt(3)==0)) choice=Attack.FAN;
         Candidate clearingTarget = null;
-        if (nature.wantsClear(now)) {
+        if (!reservedBeam && nature.wantsClear(now)) {
             for (Attack clearing : new Attack[]{Attack.SLAM, Attack.SHOCKWAVE}) {
                 Candidate candidate = target(clearing, candidates, lastTargeted, guardian.isUnstable());
                 // A local clearing slam still makes sense when players stand beyond its wave.
@@ -250,7 +253,7 @@ final class GuardianBossCombat {
         ServerPlayerEntity destination=players.stream().min(java.util.Comparator.comparingDouble(guardian::squaredDistanceTo)).orElse(null);
         if(destination==null || guardian.squaredDistanceTo(destination)<6*6) { guardian.getNavigation().stop(); approachUntil=0; return; }
         if(now<nextMove)return;
-        nextMove=now+8; movementTarget=destination.getUuid();
+        nextMove=now+8;
         Vec3d delta=destination.getEntityPos().subtract(home);
         double reach=GuardianArenaManager.movementRange(guardian);
         Vec3d point=GuardianArenaManager.owns(guardian)
@@ -273,6 +276,7 @@ final class GuardianBossCombat {
         comboIndex = 0; comboCount = GuardianPhaseRules.repeats(attack, guardian.isUnstable());
         leapFollowup = attack == Attack.LEAP && guardian.isUnstable();
         active = attack; last = attack; target = player.getUuid(); started = now;
+        attacksSinceBeam = attack == Attack.BEAM ? 0 : Math.min(2, attacksSinceBeam + 1);
         anchor = guardian.getEntityPos();
         motion.reset(player.getEntityPos());
         lastTargeted.put(target, now);
@@ -320,7 +324,9 @@ final class GuardianBossCombat {
         unfreeze(); active = null; heldRock = null;
         guardian.setHoldingRock(false);
         guardian.getNavigation().stop();
-        nextAction = now + gap + nature.finishAttack(now);
+        int extraRecovery = nature.finishAttack(now);
+        guardian.setNatureOpening(extraRecovery>0?now+gap:-1);
+        nextAction = now + gap + extraRecovery;
         approachUntil = reviewing || pendingFan ? 0 : nextAction + 20;
     }
     private void tickAttack(ServerWorld world, long now) {
@@ -398,15 +404,16 @@ final class GuardianBossCombat {
         int age=(int)(now-started);
         if (age>=GuardianFanRules.duration(guardian.isUnstable())) { finishAction(now); return; }
         if (guardian.getEntityPos().squaredDistanceTo(anchor)>.75*.75) { interruptAction(); nextAction=now+20; return; }
-        int tick=guardian.isUnstable() && age>=GuardianFanRules.REPEAT?age-GuardianFanRules.REPEAT:age;
-        if (guardian.isUnstable() && age==GuardianFanRules.REPEAT) {
+        int burst = GuardianFanRules.burst(age);
+        int tick = (int)GuardianFanRules.localTime(age);
+        if (burst > 0 && burst != GuardianFanRules.burst(age - 1)) {
             var candidates=world.getPlayers(p -> reviewing ? p.isAlive() && !p.isSpectator() : canDamage(guardian,p)).stream()
                     .map(p -> new Candidate(p.getUuid(),guardian.distanceTo(p),guardian.canSee(p))).toList();
             Candidate next=target(Attack.FAN,candidates,lastTargeted,guardian.isUnstable());
             if(next==null) { finishAction(now); return; }
             target=next.id(); lastTargeted.put(target,now);
             motion.reset(world.getServer().getPlayerManager().getPlayer(target).getEntityPos());
-            guardian.stopTriggeredAnim("guardian",null);guardian.triggerAnim("guardian","fan");
+
         }
         if (tick<GuardianFanRules.LOCK) {
             ServerPlayerEntity player=world.getServer().getPlayerManager().getPlayer(target);
@@ -422,6 +429,13 @@ final class GuardianBossCombat {
         guardian.setYaw(attackYaw);guardian.setBodyYaw(attackYaw);guardian.setHeadYaw(attackYaw);
         guardian.setVelocity(0,Math.min(0,guardian.getVelocity().y),0);
         if (tick==8) world.playSound(null,guardian.getBlockPos(),SoundEvents.BLOCK_AMETHYST_BLOCK_RESONATE,SoundCategory.HOSTILE,1.6f,.6f);
+        if (tick == GuardianFanRules.LOCK) {
+            for (int i = 0; i < GuardianFanRules.COUNT; i++) {
+                Vec3d socket = GuardianFanRules.socket(guardian.getEntityPos(), attackYaw, fanPitch, i);
+                world.spawnParticles(ParticleTypes.ELECTRIC_SPARK, socket.x, socket.y, socket.z,
+                        6, .2, .2, .2, .03);
+            }
+        }
         if (tick==GuardianFanRules.RELEASE) {
             var hits=new HashSet<UUID>(); var walls=new GuardianWallImpact();
             for(int i=0;i<GuardianFanRules.COUNT;i++) {
@@ -441,8 +455,14 @@ final class GuardianBossCombat {
     /** Waves finish independently of the next action; interruption cancels every pending hazard. */
     void emitWave(ServerWorld world, Vec3d center, Set<UUID> exempt) {
         expireWaves(world);
-        int slot = waves.stream().anyMatch(w -> w.slot()==0) ? 1 : 0;
-        if (waves.stream().anyMatch(w -> w.slot()==slot)) throw new IllegalStateException("Guardian wave slots exhausted");
+        final int preferred = waves.stream().anyMatch(w -> w.slot()==0) ? 1 : 0;
+        int free = preferred;
+        if (waves.stream().anyMatch(w -> w.slot()==preferred)) {
+            // Both slots busy: retire the oldest wave instead of crashing the server tick.
+            TravelingWave oldest = waves.stream().min(java.util.Comparator.comparingLong(TravelingWave::start)).orElseThrow();
+            waves.remove(oldest); free = oldest.slot();
+        }
+        final int slot = free;
         boolean unstable = guardian.isUnstable();
         waves.add(new TravelingWave(world.getTime(), center, new HashSet<>(exempt), unstable, slot, new GuardianWallImpact()));
         guardian.startWaveAt(world.getTime()-SLAM_IMPACT, center, slot);

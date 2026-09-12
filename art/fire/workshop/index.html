@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fire workshop · Elemental Wands</title>
+  <meta name="description" content="Interactive original fire effects study for Elemental Wands.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%23ffac32' d='M14 2h6v8h5v7h4v11H3V15h5v6h6z'/%3E%3Cpath fill='%23fff3a1' d='M12 20h8v9h-8z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header><a class="brand" href="./">EW<span>ELEMENTAL WANDS</span></a><span class="edition">FIRE WORKSHOP <b>05</b></span></header>
+  <main>
+    <div class="heading"><div><p class="eyebrow">MATERIAL & MOTION STUDY</p><h1>Fire, drawn anew.</h1><p class="subtitle">Original spell textures. Familiar fire and lava colors.</p></div><div class="scope">BROWSER PREVIEW<span>Implemented · restart Lunar</span></div></div>
+    <nav aria-label="Fire effect studies" class="scenes">
+      <button data-scene="ground" aria-pressed="true"><span>01</span>Ground fire</button>
+      <button data-scene="primary" aria-pressed="false"><span>02</span>Inferno Wave</button>
+      <button data-scene="pyre" aria-pressed="false"><span>03</span>Dragon’s Pyre</button>
+      <button data-scene="meteor" aria-pressed="false"><span>04</span>Maximum Meteor</button>
+      <button data-scene="particles" aria-pressed="false"><span>05</span>Particle study</button>
+    </nav>
+    <section class="workspace" aria-label="Interactive preview">
+      <div class="preview">
+        <div class="toolbar"><span id="scene-title">Ground fire</span><div><button id="compare" aria-pressed="true">Compare</button><button id="lighting" aria-pressed="false">Daylight</button><button id="eye">Player eye</button><button id="reset">Reset view</button></div></div>
+        <div class="stages compare" id="stages">
+          <div class="stage old-stage"><div class="stage-label"><b>PREVIOUS ART</b><span>Reconstructed browser view</span></div><canvas id="old-view" tabindex="0" aria-label="Current fire effect in three dimensions. Drag or use arrow keys to orbit."></canvas><div class="particle-labels"><span>Embers</span><span>Stream</span><span>Impact</span></div></div>
+          <div class="stage"><div class="stage-label new-label"><b>PROPOSED</b><span>Original textures · custom motion</span></div><canvas id="new-view" tabindex="0" aria-label="Proposed fire effect in three dimensions. Drag or use arrow keys to orbit."></canvas><div class="particle-labels"><span>Embers</span><span>Stream</span><span>Impact</span></div></div>
+          <div id="error" role="alert" hidden></div>
+        </div>
+        <div class="view-caption"><span>Drag to orbit · Scroll to zoom · Arrow keys to rotate</span><span id="phase">Burning</span></div>
+        <div class="playback"><button id="play" aria-label="Pause animation">Pause</button><button id="replay" aria-label="Replay animation">Replay</button><label class="scrub"><span><span id="timeline-label">Flame cycle</span><output id="time">0.0 / 4.0 s</output></span><input id="timeline" type="range" min="0" max="4" step="0.01" value="0" aria-label="Animation time"></label><label class="speed"><span>Speed</span><select id="speed" aria-label="Playback speed"><option value="0.25">¼×</option><option value="0.5">½×</option><option value="1" selected>1×</option></select></label></div>
+        <div class="options"><label><input id="particles" type="checkbox" checked> Embers & smoke</label><span id="scale">Ground squares = 1 block</span></div>
+      </div>
+      <aside>
+        <p class="eyebrow">DESIGN NOTES</p><h2 id="note-title">The familiar flicker.</h2><p id="description"></p>
+        <div class="detail"><span id="detail-title">WHAT CHANGES</span><p id="detail"></p></div>
+        <div class="vanilla-reference"><div class="reference-head"><span>COLOR REFERENCE</span><span>1.21.10</span></div><canvas id="reference" width="256" height="176" aria-label="Unmodified Minecraft fire texture animation"></canvas><p>Custom spell artwork shares vanilla’s colors. Regular ground fire uses vanilla fire itself.</p></div>
+        <div id="meteor-note" hidden class="deferred"><b>Blocky shape · fully made of fire</b><p>Eight blocks across, with a rounded silhouette built from smaller half-block steps. All visible model faces use the new animated fire material.</p></div>
+      </aside>
+    </section>
+    <section class="materials" aria-label="Animated texture comparison"><div class="materials-title"><p class="eyebrow">PIXEL COMPARISON</p><h2>New textures. Related colors.</h2><p>Original spell art beside its color reference.</p></div><figure><canvas id="old-texture" width="224" height="144" aria-label="Previous mod flame texture"></canvas><figcaption>Previous custom fire<span>Dark borders · solid flame tips</span></figcaption></figure><figure><canvas id="vanilla-texture" width="224" height="144" aria-label="Vanilla Minecraft fire texture"></canvas><figcaption>Minecraft fire reference<span>Palette reference only</span></figcaption></figure><figure><canvas id="proposed-texture" width="224" height="144" aria-label="Original proposed spell texture"></canvas><figcaption><span id="proposed-label" style="display:inline;color:inherit;font-size:inherit">Original proposed texture</span><span id="custom-family">Low floor fire · four frames</span></figcaption></figure></section>
+    <footer>Visual concept only. Browser lighting, spell timing, particle placement, and current-effect reconstruction are approximations; Minecraft collision and combat are not simulated.</footer>
+  </main>
+  <script type="module" src="app.js?v=5b"></script>
+</body>
+</html>

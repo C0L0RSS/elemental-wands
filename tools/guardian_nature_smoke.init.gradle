@@ -1,11 +1,13 @@
 // Optional real-server regression fixture. All worlds, players and metadata stay under build/.
 // ./gradlew -I tools/guardian_nature_smoke.init.gradle runServer --args nogui
+// ./gradlew -I tools/guardian_nature_smoke.init.gradle -PnatureBalance runServer --args nogui
 // ./gradlew -I tools/guardian_nature_smoke.init.gradle -PchurchRecovery runServer --args nogui
 allprojects {
     plugins.withId('fabric-loom') {
         def smokeRoot = layout.buildDirectory.dir('guardian-nature-smoke').get().asFile
         def runRoot = file('build/guardian-nature-smoke-run')
         def recovery = project.hasProperty('churchRecovery')
+        def balance = project.hasProperty('natureBalance')
         tasks.register('guardianNatureSmokeSetup') {
             doLast {
                 runRoot.mkdirs()
@@ -36,6 +38,8 @@ max-tick-time=-1
             }
         }
         tasks.register('guardianNatureSmokeMetadata') {
+            inputs.property('natureBalance', balance)
+            outputs.dir(new File(smokeRoot,'metadata'))
             doLast {
                 def metadata = new File(smokeRoot,'metadata')
                 metadata.mkdirs()
@@ -44,9 +48,14 @@ max-tick-time=-1
   "entrypoints": {"main": ["com.anton.elementalwands.entity.GuardianNatureSmokeMod"]},
   "depends": {"elementalwands": "*"}
 }'''
+                if (balance) {
+                    def manifest = new File(metadata,'fabric.mod.json')
+                    manifest.text = manifest.text.replace('GuardianNatureSmokeMod', 'NatureBalanceSmokeMod')
+                }
             }
         }
         tasks.register('guardianNatureSmokeJar', Jar) {
+            inputs.property('natureBalance', balance)
             dependsOn guardianTestClasses, guardianNatureSmokeMetadata
             archiveFileName = 'guardian-nature-smoke.jar'
             destinationDirectory = smokeRoot

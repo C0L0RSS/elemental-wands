@@ -57,14 +57,6 @@ public abstract class AbstractWandItem extends Item {
         return DEFAULT_SECONDARY_COOLDOWN_TICKS;
     }
 
-    /**
-     * Legacy accessor kept for HUD rendering; returns a fixed display value since
-     * the actual system now uses the charge reservoir instead of a timer.
-     */
-    public int getUltimateCooldownTicks() {
-        return 0;
-    }
-
     // -----------------------------------------------------------------------
     // Skill gate
     // -----------------------------------------------------------------------
@@ -223,6 +215,11 @@ public abstract class AbstractWandItem extends Item {
      * ultimate charge to the owner's held wand.
      */
     public static void onWandDamageDealt(Entity owner, float damageDealt) {
+        onWandDamageDealt(owner, damageDealt, 5);
+    }
+
+    /** Preserve progression while allowing abilities to award charge at their own cadence. */
+    public static void onWandDamageDealt(Entity owner, float damageDealt, int ultimateCharge) {
         if (!(owner instanceof ServerPlayerEntity player)) return;
 
         long current = player.getAttachedOrElse(EWAttachments.ARCANE_FLUX, 0L);
@@ -230,7 +227,7 @@ public abstract class AbstractWandItem extends Item {
         ElementalWandsMod.refreshWizardBook(player);
 
         ItemStack held = player.getMainHandStack();
-        addUltimateCharge(held, 5);
+        addUltimateCharge(held, Math.max(0, ultimateCharge));
     }
 
     // -----------------------------------------------------------------------

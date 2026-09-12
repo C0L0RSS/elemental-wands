@@ -23,7 +23,6 @@ public final class SpaceAbilityHandler {
 
     private static final int PRIMARY_COOLDOWN_TICKS = 20;
     private static final int SECONDARY_COOLDOWN_TICKS = 120;
-    private static final int ULTIMATE_COOLDOWN_TICKS = 800;
 
     private static final double BLINK_RANGE = 10.0;
     private static final int RIFT_DURATION_TICKS = SECONDARY_COOLDOWN_TICKS;
@@ -36,10 +35,6 @@ public final class SpaceAbilityHandler {
 
     public static int getSecondaryCooldownTicks() {
         return SECONDARY_COOLDOWN_TICKS;
-    }
-
-    public static int getUltimateCooldownTicks() {
-        return ULTIMATE_COOLDOWN_TICKS;
     }
 
     public static void castPrimary(ServerWorld world, PlayerEntity caster, ItemStack stack) {

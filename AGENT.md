@@ -175,6 +175,17 @@ for the render layer. A real-client asset/mesh regression is available through
 The user liked the corrected floor in a fresh Lunar playtest; broader fight balance is open. The earlier takeoff fix also still needs human confirmation; do not
 interpret server checks as confirmation of client visuals or overall fight balance.
 
+## Local-only previews
+
+Browser preview pages are local testing artifacts and must not be committed.
+Create new previews under `.local-previews/` (ignored), or keep existing HTML
+pages under `art/` ignored. Small `viewer.template.html` files remain tracked
+because the preview generators require them. Keep reusable model/texture sources
+and generators tracked; extract any production art data from a preview into a
+separate source file before ignoring the page. `art/` is development material,
+excluded from GitHub language statistics; runtime assets live in
+`src/main/resources/`. The mod JAR does not include browser preview pages.
+
 ## Build And Run
 
 ```bash

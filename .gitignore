@@ -16,3 +16,8 @@ run/
 
 # OS
 .DS_Store
+
+# Browser previews stay local; retain templates used by asset tooling.
+/.local-previews/
+/art/**/*.html
+!/art/**/viewer.template.html

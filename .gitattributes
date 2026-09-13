@@ -1,0 +1,2 @@
+# Art sources and development tooling do not describe the mod runtime language.
+art/** linguist-detectable=false

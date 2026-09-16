@@ -29,7 +29,199 @@ in Git with the code; Obsidian settings are ignored. Open only the planning fold
 as the working Obsidian vault, so the app stays focused on these notes. If the
 project moves, update any machine-specific external repository links as needed.
 
-## Current session checkpoint — September 12, 2026
+## Current session checkpoint — September 14, 2026
+
+Latest throwable Overgrowth (September 14): all Nature loadouts now throw an acorn
+with the Ultimate input. Ground impact grows the existing 15-second healing oak;
+consuming only the nearest owned flower within three blocks extends it to 20
+seconds without increasing damage/healing strength. Wall/enemy impacts drop the
+seed; invalid landings restore charge to the retained casting wand. Other flowers
+and root knots are preserved. The flower-only target preview is removed. See
+`docs/overgrowth-throw-2026-09-14.md` for behavior, checks and installation.
+Clean build, required asset/export checks, server landing/flower/expiry tests and
+combined native-client Nature input/model/screenshots passed. Lunar SHA-256:
+`5dc8e17857342cbce9b56df4bc6824187dc81d6580bafd6b8506f65095ab11af`.
+Backup: `.local-backups/lunar/20260914-152158/`. Restart Lunar; human feel pending.
+
+
+Latest Nature expansion (September 14): Thorn Lash is a 500-Nature-Flux alternative
+Basic: a 4.5-block vine sweep, 6 damage, 25% actual-health-damage lifesteal capped
+at one heart per cast, and one-second cooldown. It does not plant seeds. Tendril
+Bloom now grows a custom three-tendril root knot when there are no flowers. Every
+flower/knot source owns its trails and completed patches: breaking the source ends
+its effects. Knot support loss, expiry, caster exit/death and reload-orphan cleanup
+are handled. Overgrowth is unchanged and still needs a seedling; its throwable
+version with a flower-based duration bonus is the agreed next step. See
+`docs/nature-expansion-2026-09-14.md` for behavior, checks and installation.
+Clean build, asset/export checks, real-server Nature/Guardian fixtures and native
+client input/model/screenshots passed. Lunar source/installed SHA-256:
+`3f798e617b4ed5fb386d8c784b4dfe1e0ff4b99bfafed823500a74eae4e1b468`.
+Backup: `.local-backups/lunar/20260914-145937/`. Restart Lunar; human feel pending.
+
+
+Latest Fire secondary tuning (September 14): Flashover now deals 12+8+4 (24 cap)
+per victim/sequence, uses vanilla explosion emitter particles and pops at 0/3/6
+ticks. Thrown bombs interpolate client movement over two ticks. Three persistent
+bomb slots recover independently: six seconds after that bomb explodes, two after
+loss/disarm/expiry/lifecycle dismissal. Spare bombs remain usable with the existing
+one-second throw spacing; HUD shows each slot's state/countdown. Player reloads
+recover orphaned unsaved bombs as lost slots. Fire Leap now aims/travels up to 60
+blocks with its existing flight, damage and safety rules. See
+`docs/fire-secondary-tuning-2026-09-14.md` for verification and installation.
+The initial full verification passed three server and two native client fixtures.
+The damage-only follow-up passed the focused server regression, including one bomb
+leaving a creeper alive and two killing it, plus build, whitespace and JAR integrity.
+Source/installed Lunar SHA-256: `2505ea4443ec9c6c03dcda06faae0ffe88396e904b5ead6820a19601d5b2583f`.
+Backup: `.local-backups/lunar/20260914-131051/`. Restart Lunar; human feel pending.
+
+Latest church offering (September 14): approved preview is implemented as a native
+carved pedestal, recessed bowl and matching chest rune. Both bowl/column accept
+the existing church-specific heart; a contextual Use-key hint appears while aiming
+with it. Accepted offerings seat the heart and send cyan light toward the statue;
+abort resets the recess and victory keeps a completion display. Unfinished churches
+upgrade the support/core/socket flag without replacing inventories, anchor identity
+or heart tokens; completed old sites retain their original cube. Partial chunk-save
+replay repairs missing support/rune. `tools/prepare_guardian_pedestal.py --check`
+verifies the native models; no PNG counts changed. See
+`docs/guardian-pedestal-2026-09-14.md` for checks, screenshots and release details.
+Clean build, required exporters, server lifecycle/upgrade, restart, natural worldgen
+and native client interaction/screenshots passed. Lunar source/installed SHA-256:
+`2d0b17d9bec2b179b2216f9638ff73f806df17ca496fe369ce47ddf8d0cf1731`.
+Backup: `.local-backups/lunar/20260914-093518/elementalwands-2.2.0.jar`.
+Restart Lunar and revisit an unfinished church. Human discovery feedback is pending.
+
+Latest sticky Flashover (September 13): embers now attach to enemy mobs and players
+and follow body position/rotation, while retaining wall sticking. They ignore the
+caster/allies and clear on lost host or water. Thirty-second lifetime still starts
+at throw time. Approved blast radius is now four blocks. Detonation commits the
+armed charges in placement order at 0 / 5 / 10 ticks, with separate sounds and
+current-position damage. Pending charges pulse and remain disarmable. Damage is
+capped per victim/sequence at 6+2+2 using a dedicated explosion damage type that
+bypasses hurt cooldown only, preserving armor/shields/invulnerability. Existing
+price, ownership, cap, throw recovery and detonation recovery remain.
+Read `docs/sticky-flashover-2026-09-13.md` for lifecycle and verification. Server
+attachment/delay/damage/cleanup tests, existing expiry/cooldown regression and
+native client synchronization/screenshots passed. Human combat feel pending.
+Clean release build, required asset/export validators, diff whitespace and JAR
+integrity passed. Current Lunar source/installed SHA-256: `9a64c9661a7d3d4cfcf6e73e22a69cee99c4be10d06f81b896935f2cd4c21f9b`.
+Backup: `.local-backups/lunar/20260913-143924/elementalwands-2.2.0.jar`.
+Restart Lunar to load sticky Flashover.
+
+
+Latest Fire expansion (September 13): Fire Leap now uses a custom terrain-following
+ember sigil with flame runes and drifting sparks in place of the plain circles.
+Its movement/damage/cooldown are unchanged. Flashover is a new 500-Flux Fire
+Technique: toss three harmless embers, arm after ten landed ticks, remotely
+detonate with Spell alternate (R default; new rebindable Controls row). HUD shows
+active/armed counts. Placement recovers in 20 ticks; detonation in 120; the
+player cooldown persists. Embers expire after 600 ticks, stick to solid surfaces,
+and dismiss on water/support loss/death/disconnect/unequip/world exit.
+Enemy melee and close-range wand Basic hits can safely disarm them. Blasts have
+radius 3, cover/allied protection and one combined 6/8/10-damage hit for 1/2/3
+charges. No terrain damage, ground fire, extra burn damage or chain reactions.
+`FlashoverRules`, `FlashoverManager`, `FlashoverEmberEntity` and its custom native
+renderer own the feature. No raster assets changed. Read
+`docs/flashover-2026-09-13.md` for checks and release details. Native client input,
+visuals and server lifecycle/damage checks passed; human balance testing pending.
+Clean build, required asset/export checks, diff whitespace and JAR integrity passed.
+Current source/installed Lunar SHA-256: `eb5943d9ac74c10eea9946ee7f0e26983f52c1449e4b0a91f4df52df2f64632c`.
+Backup: `.local-backups/lunar/20260913-122226/elementalwands-2.2.0.jar`.
+Restart Lunar to load this release.
+
+
+Latest Fire Leap (September 13): the old Fire Hop purchase now equips an aimed,
+committed leap; stable `fire_hop` ID and `hop_ready` key preserve progress. Hold
+Technique for a private arc/landing preview, release to launch; changing items or
+opening screens cancels preview. Committed landings are visible to nearby clients.
+Initial values: range 12, extra arc height 4.5, flight 20 ticks, cooldown 120 ticks,
+wave radius 5, jumpable .6-high band, one hit for 8 center / 4 outer damage.
+`FireLeapRules` shares full-body clearance between client/server; `FireLeapEntity`
+uses a locked invisible passenger carrier with synchronized arc and reload cleanup.
+`FireLeapManager` validates commitments and owns allied/covered wave contacts.
+`FireLeapPreview` draws private aiming geometry and public destination rings.
+No changes to approved Fire raster assets or Flamethrower tuning. Flashover deferred.
+Read `docs/fire-leap-2026-09-13.md` for verification and current installation.
+Clean build, required asset/export checks, extended server fixture, integrated
+client input/flight checks and native screenshot inspection passed. Lunar installed
+SHA-256: `7dfc9525ace9cd5a02b175edd038d495ca2bdd5eed251f127063a98d4e580a90`. Backup:
+`.local-backups/lunar/20260913-114854/elementalwands-2.2.0.jar`. Restart Lunar.
+Human Guardian fight and multiplayer latency playtesting remain pending.
+
+
+Latest Guardian visibility fix (September 12): burning now renders one short
+vanilla flame near the legs instead of a full-size fire stack. This is strictly
+client-side; fire damage/duration, hitboxes, attacks and other combat are unchanged.
+`GuardianBurnVisual` owns the bounded overlay; hidden/dead/extinguished actors omit
+it. Required build/assets, actual-client fire mesh checks and disposable-world
+screenshots passed. See `docs/guardian-burn-visibility-2026-09-12.md` for evidence.
+Current local Lunar source/installed SHA-256:
+`771c52bf1abc9ab4a9ec8222bd20903fbe0fc7af3ed978265fa9671354adba01`.
+Restart required; human fight readability feedback is pending.
+
+Latest co-op feature (September 12): player-managed `/party` and `/ew party` commands
+provide invite/accept, membership, leave, kick, leadership transfer and disband.
+Membership persists per world independently of vanilla scoreboard teams. Shared
+`WandAllies` protection now covers harmful wand contacts, Nature zones/roots, ground
+fire/coals, projectiles, explosion damage/knockback and Titan confinement. Existing
+Minecraft teammates and allied pets/Nature trees are also protected. Meteor ground
+fire is now owned, nonspreading temporary fire lasting 60 seconds. Read
+`docs/parties-2026-09-12.md` for commands, exact scope, verification and installation.
+Build, four-player server checks and a fresh-JVM restart passed; local Lunar installed
+SHA-256 is `e840821728bf8c53731cdb25a2f01529511c11c9695aa586d1d0e15999f51f57`.
+Human co-op playtest is pending.
+
+Latest Fire build expansion (September 12): Fire now sells Flamethrower (Basic) and
+Fire Hop (Technique), 500 Fire Flux each. Flamethrower is held input with server heat,
+overheat and release/timeout handling; six-block cone, no ground fire. Fire Hop is
+a directional leap usable in midair, with a light takeoff burst and cosmetic landing.
+The follow-up ramps flame damage from 0.5 to 2.5 per pulse and ignites enemies;
+Hop targets about five blocks of rise and six blocks of unsteered travel. A temporary
+five-block safe-fall allowance covers the hop's own added height. See
+`docs/fire-build-tuning-2026-09-12.md` for current checks and installation.
+`FireBuildRules` owns tuning; `FireBuildManager` owns channel/lifecycle state.
+Heat and Hop cooldown persist per player. HUD and store use exact equipped IDs,
+heat/overheat feedback, timing details and direct equip-after-purchase controls.
+Approved Fire particles and existing textures are reused; PNG counts are unchanged.
+See `docs/fire-build-2026-09-12.md` for behavior, checks and current installation.
+
+Latest categories/welcome version (September 12): loadouts now enforce one Basic,
+one Technique and one Ultimate, with store category filters and independent bindings.
+Legacy swapped slots normalize without losing purchases. A once-per-player welcome
+scroll is now one short Getting Started page: hub key, spell bindings, Flux,
+permanent purchases and an invitation to explore. The hub Guide reopens that page.
+Starter lore and the Guardian walkthrough are removed; the offering chest gives
+a brief socket-use hint in the world. See `docs/wand-guide-simple-2026-09-12.md`. Generated legacy
+guides are retired by exact title/author on join, opening the hub or offering-chest
+interaction; ordinary books remain. See `docs/wand-guide-2026-09-12.md` for behavior,
+migration, passing verification and current installation. The older two-regular-slot
+notes below describe the superseded first hub version.
+
+Latest progression/store version (September 12): each element now has separate Flux,
+permanent spell purchases and remembered loadouts. H opens native Loadout / Spell
+Store / Controls pages with a current-element balance and Change Element chooser.
+Existing secondaries cost 500 Flux; ultimates 1,500; Minecraft XP costs are removed.
+`WandProgression` migrates legacy Flux/unlock flags once into the current element.
+Damage awards name the source element so lingering effects cannot credit another wand.
+`/ew affinity reset` preserves progression; direct affinity commands now switch.
+The server owns purchases and syncs spell IDs as well as derived compatibility flags.
+Read `docs/wand-store-2026-09-12.md` for save migration, passing server/client checks,
+installation and limitations. New spell content and upgrades remain future work.
+
+Latest hub corner revision: Fire and Space now erode the paper's actual alpha
+with char/violet rims and loose fragments. Nature has torn fibers and folded lips
+with vines behind the paper and emerging through the tears. Wind has torn,
+lifted strips; Stone retains intact paper with shaded creases beneath its rock.
+`tools/wand_hub_corner_art.py` owns these physical layers; the hub exporter now
+verifies eleven UI textures and preserves the paper outside the upper-left region.
+
+Latest wand hub (September 12): the approved fine-pixel parchment menu is now a
+native Minecraft screen. H or `/ew hub` opens the current affinity; first-time
+players choose their affinity there. Two regular spell slots and one ultimate
+use saved per-player/per-affinity spell IDs. Existing spells/unlocks/cooldowns are
+preserved. Default casting is left mouse, right mouse, X; remap inside Controls.
+Sneak + right mouse performs vanilla block interaction while holding the wand.
+The HUD follows the equipped order and bindings. New spell content/upgrades remain
+future work. See `docs/wand-hub-2026-09-12.md` for architecture, checks and install status.
 
 Latest approved combat balance (September 12): Fire primary/Pyre deal 6; meteor
 uses a capped, distance/cover-aware explosion without falling-block damage. Guardian
@@ -103,7 +295,7 @@ tracked Nature plants, and remain blocked by Stone walls and Nature ultimate tre
 Client and server share floor/cover rules. See [the cover report](docs/guardian-wave-cover-2026-09-09.md)
 for current checks and installation. Human confirmation of this specific fix is pending.
 Latest HUD: carved wooden frames with brass/rune details, inset labels, and a text-free Stone reserve bar directly above the ability row. See `docs/wand-hud-2026-09-10.md`; user approved the design.
-Latest shared build/installed SHA-256: `135618b30c832e0251a2cae0b434401571ed0352b2086352c152bb1b93b717a0` (September 12 approved Fire/Guardian balance; prior Fire artwork, Nature, audit and Hollow Purple changes preserved). See `docs/stone-gathered-mass-2026-09-10.md` for the custom model, 1.5s/2.5s recovery, stagger and validation. The user approved the new ability/model; the vegetation collision follow-up ignores low plants and retains solid cover. Confirmation of that fix is pending.
+Earlier Fire build/installed SHA-256: `f19e147404844a8f82056e9bac5ce2dc28fdd13baa38f325fa6635b2234ed398` (September 12 Flamethrower and Fire Hop; approved Fire/Guardian balance, artwork, Nature, audit and Hollow Purple changes preserved). See `docs/stone-gathered-mass-2026-09-10.md` for the custom model, 1.5s/2.5s recovery, stagger and validation. The user approved the new ability/model; the vegetation collision follow-up ignores low plants and retains solid cover. Confirmation of that fix is pending.
 
 Latest church locator fix: the reported vanilla command blocked the server for
 113 seconds. Church commands now schedule incremental structure-start searches,
@@ -232,7 +424,10 @@ python3 tools/validate_remaining_vfx_assets.py
 python3 tools/prepare_fire_assets.py --check
 python3 tools/prepare_guardian_assets.py --check
 python3 tools/prepare_guardian_throw_socket.py --check
+python3 tools/prepare_guardian_pedestal.py --check
+python3 tools/prepare_nature_expansion.py --check
 node tools/prepare_nature_models.mjs --check
+python3 tools/prepare_wand_hub_assets.py --check
 unzip -t build/libs/elementalwands-2.2.0.jar
 ```
 
@@ -308,7 +503,8 @@ Important resources:
 
 Crystal ore blocks, crystal crafting recipes, and ore worldgen were removed in
 the Universal Wand refactor. `ModWorldGen.registerAll()` remains a no-op hook.
-`ModBlocks` registers the permanent church socket plus three internal Guardian arena foundation/wall blocks
+`ModBlocks` registers the permanent church socket, its modeled support and chest rune,
+plus three internal Guardian arena foundation/wall blocks
 with no items or recipes. `GuardianArenaManager` owns the moving arena, membership,
 containment, temporary sky structure, return, and world-save recovery receipt.
 
@@ -340,13 +536,22 @@ ultimate behavior.
 
 ### Controls And Dispatch Flow
 
-- Right click: primary ability through `AbstractWandItem.use(...)`
-- Shift + right click: secondary ability through `AbstractWandItem.use(...)`
-- `X`: ultimate ability through `ElementalWandsClient` -> `CastUltimatePayload`
-  -> `ModNetworking.handleCastUltimate(...)`
-
-Primary and secondary casts happen server-side from item use. The ultimate is
-client-keybound and sent to the server through C2S networking.
+- H (rebindable in Minecraft Controls) or `/ew hub`: open `WandHubScreen`.
+- Left mouse / right mouse / X: spell slots 1 / 2 / ultimate by default.
+- Rebind the three spell inputs in the hub's Controls tab; settings persist in
+  `config/elementalwands-controls.properties`. Old ultimate bindings migrate.
+- Sneak + right mouse: vanilla block interaction with the wand. Its ordinary
+  item `use` no longer casts. Putting away the wand restores vanilla input.
+- Client-only `WandMouseMixin` / `WandKeyboardMixin` capture slot input, avoiding
+  duplicate vanilla Attack/Use actions. `WandControls` clears holds on screens,
+  hotbar changes, disconnect and world changes. Primary spells can repeat on hold.
+- Every cast sends `CastSlotPayload`; `WandLoadouts.cast` resolves the saved spell
+  and validates life/spectator state, held wand, affinity/unlocks, arena admission,
+  and Hollow Purple commitment before calling the existing ability handler.
+- `WandSpells` owns stable spell IDs/metadata. `EWAttachments.WAND_LOADOUTS` persists
+  each affinity's three selections on the player and copies them on death.
+- Swaps retain all existing spell cooldown and ultimate-charge data. Ten seconds
+  after casting or damage, or throughout arena participation, loadout edits are locked.
 
 ### Cooldowns And Charge
 
@@ -371,43 +576,21 @@ and resets the reservoir to 0.
 
 ### Progression And Affinity
 
-First join gives the player `The Wizard's Path` written book and marks them with
-the `ew_starter_received` command tag.
+New players are directed to H or `/ew hub`; the NONE-affinity screen offers the
+five initial choices and the server grants a wand when the affinity is chosen.
+A chosen-affinity hub shows only that affinity. Existing Wizard's Path books are
+left in saved inventories but are no longer generated or refreshed.
 
-The book lets a new player choose an affinity with clickable commands:
+The hub unlocks existing spells through the same server resource checks:
 
-- `/ew affinity fire`
-- `/ew affinity wind`
-- `/ew affinity stone`
-- `/ew affinity nature`
-- `/ew affinity space`
+- Secondary: 500 Arcane Flux + 15 XP levels.
+- Ultimate: 1500 Arcane Flux + 30 XP levels.
 
-Choosing an affinity:
-
-- sets `EWAttachments.AFFINITY`
-- resets unlocked skills and Arcane Flux
-- grants a `fractured_wand` / Wizard's Wand if the player does not already have one
-- refreshes the book
-- syncs player data to the client HUD
-
-Ability unlocks use:
-
-- `/ew unlock secondary`
-- `/ew unlock ultimate`
-
-Costs are defined in `EWAttachments`:
-
-- Secondary: 500 Arcane Flux + 15 XP levels
-- Ultimate: 1500 Arcane Flux + 30 XP levels
-
-`/ew affinity reset` clears affinity, skills, and Arcane Flux so the player can
-choose a different element.
-
-Admin helpers:
-
-- `/ew admin unlock secondary <player>`
-- `/ew admin unlock ultimate <player>`
-- `/ew admin unlockall <player>`
+`/ew unlock secondary|ultimate` and `/ew affinity <element>|reset` remain available;
+normal progression/affinity changes enforce the same outside-combat rule. Reset
+still clears affinity, skills and Flux. Admin unlock helpers remain operator-only.
+`refreshProgression` / `ModNetworking.syncPlayerData` update the native hub/HUD,
+including after respawn. The hub polls state once per second while open.
 
 ## Element Behaviors
 
@@ -473,11 +656,15 @@ Admin helpers:
 - Primary: `SeedProjectileEntity`, rendered as a 3D winged seed, plants a four-stage
   custom flower or deals flat 3 direct damage without Entangle. Its thickets use
   custom roots/rafts and NatureCombat for 3–5 damage and Entangle each second.
-- Secondary: Tendril Bloom sends vines from seedlings to targets and spreads
-  brambles without another flower. Attached angular vines show Entangle state.
-- Ultimate: `OvergrowthManager` builds the approved nine-block oak tree using
-  `NatureTreeLayout`, including custom heartwood/flowering leaves. See the Nature
-  balance report for Regeneration II, amplification, damage and Guardian behavior.
+- Alternative Basic: Thorn Lash (`ThornLashEntity` / `ThornLashRules`) sweeps a
+  close-range vine with capped lifesteal; it never plants seedlings.
+- Secondary: Tendril Bloom sends vines from seedlings, or three from one stationary
+  root knot when no seedlings exist. Source loss removes linked trails and blooms.
+  Attached angular vines show Entangle state.
+- Ultimate: `OvergrowthSeedEntity` throws an acorn; `OvergrowthManager` grows the
+  approved nine-block oak on supported impact. It lasts 15 seconds, or 20 after
+  consuming one nearby owned flower. Existing Regeneration II and base awakening
+  damage remain. `NatureTreeLayout` owns the approved geometry.
 - `tools/prepare_nature_models.mjs` exports the workshop's models/mesh/layout;
   `--check` detects drift. No PNG counts changed in this model-only pass.
 
@@ -521,20 +708,16 @@ registered from `ElementalWandsMod.onInitialize()`.
 
 ## Networking
 
-`ModNetworking` currently registers:
+- `CastSlotPayload` (C2S): slot index, always resolved and validated by the server.
+- `CastUltimatePayload` (legacy C2S): routes through the same slot-2 validator.
+- `HubActionPayload` (C2S): refresh/equip/purchase/affinity switching, with bounded
+  action/affinity/spell strings. Equip includes the expected affinity and slot.
+- `HubFeedbackPayload` (S2C): open the hub or report an action's result.
+- `SyncPlayerDataPayload` (S2C): derived skills, affinity, element Flux, selected spell IDs, edit permission and owned spell IDs.
+- Existing Nature seedlings, Entangle, Stone reserve and stagger payloads remain.
 
-- `CastUltimatePayload` (C2S)
-- `SyncPlayerDataPayload` (S2C)
-
-`SyncPlayerDataPayload` carries:
-
-- unlocked skill bitmask
-- current affinity string
-
-Call `ModNetworking.syncPlayerData(player)` after any server-side change to
-affinity or unlocked skills so the HUD padlocks and theme update correctly.
-
-Primary casts never go through networking; they run from item use on the server.
+Call `ModNetworking.syncPlayerData(player)` after progression/loadout changes.
+Keep spell effects and validation on the server; the hub never grants itself skills.
 
 ## GeckoLib Entity Notes
 
@@ -713,7 +896,7 @@ For a new element:
 2. Add a new ability handler in `item/`.
 3. Dispatch it from `UniversalWandItem`.
 4. Add HUD cooldown/theme handling in `WandHudOverlay`.
-5. Add a clickable book button and command branch in `ElementalWandsMod`.
+5. Add spell metadata to `WandSpells` and hub artwork; the initial affinity picker follows the enum.
 6. Add lang/assets/entities/managers as needed.
 7. Run `./gradlew build`.
 

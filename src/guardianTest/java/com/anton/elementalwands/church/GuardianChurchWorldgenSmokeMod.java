@@ -33,6 +33,13 @@ public final class GuardianChurchWorldgenSmokeMod implements ModInitializer {
                 if(tick==100) {
                     var world=server.getOverworld();var s=GuardianChurchManager.sites().getFirst();
                     if(s.layoutVersion!=2 || !world.getBlockState(s.socket()).isOf(com.anton.elementalwands.registry.ModBlocks.GUARDIAN_SOCKET))throw new AssertionError("Natural socket lost its version or building origin");
+                    if(!world.getBlockState(s.socket()).get(GuardianSocketBlock.PEDESTAL)
+                            || !world.getBlockState(s.socket().down()).isOf(com.anton.elementalwands.registry.ModBlocks.GUARDIAN_PEDESTAL)
+                            || !world.getBlockState(s.at(0,3,-4)).isOf(com.anton.elementalwands.registry.ModBlocks.GUARDIAN_CHEST_RUNE))
+                        throw new AssertionError("Natural church lost pedestal support or matching rune");
+                    if(world.getBlockState(s.at(0,3,-4)).get(net.minecraft.state.property.Properties.HORIZONTAL_FACING)
+                            !=world.getBlockState(s.socket()).get(net.minecraft.state.property.Properties.HORIZONTAL_FACING))
+                        throw new AssertionError("Natural rune and socket face different directions");
                     int untouched=0;
                     for(int x:new int[]{-14,14})for(int z:new int[]{-6,-3}) {
                         var p=s.at(x,0,z);

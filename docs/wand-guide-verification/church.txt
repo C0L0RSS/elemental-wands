@@ -1,0 +1,1 @@
+Placement, worldgen resources, socket, heart/UI guide, recall invalidation, sealed admission, abort/retry, real boss death, restoration, loot, and one-time completion passed.

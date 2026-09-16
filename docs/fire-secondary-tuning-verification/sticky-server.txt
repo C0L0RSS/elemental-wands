@@ -1,0 +1,1 @@
+Sticky Flashover passed: ignore allies, attach to player/mob, follow translation/turn, wall occlusion, current-position blasts at 0/3/6 ticks, four-block splash, 20+4+4 cap through hurt immunity, mob removal, queued disarming, sequence cancellation and water extinguishing.

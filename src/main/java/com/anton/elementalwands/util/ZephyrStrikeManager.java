@@ -240,7 +240,7 @@ public final class ZephyrStrikeManager {
         world.createExplosion(
                 player,
                 Explosion.createDamageSource(world, player),
-                null,
+                new com.anton.elementalwands.party.WandExplosionBehavior(world, player.getUuid(), null),
                 player.getX(), player.getY(), player.getZ(),
                 power,
                 false,

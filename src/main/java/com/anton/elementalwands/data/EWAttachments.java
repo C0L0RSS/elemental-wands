@@ -8,15 +8,30 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.util.Identifier;
 
 public final class EWAttachments {
+    public static final AttachmentType<java.util.Map<String, java.util.List<String>>> WAND_LOADOUTS = AttachmentRegistry.create(
+            Identifier.of("elementalwands", "wand_loadouts"), builder -> builder
+                    .initializer(() -> java.util.Map.of())
+                    .persistent(Codec.unboundedMap(Codec.STRING, Codec.STRING.listOf())).copyOnDeath());
+
+    public static final AttachmentType<java.util.Map<String, ElementProgress>> ELEMENT_PROGRESS = AttachmentRegistry.create(
+            Identifier.of("elementalwands", "element_progress"), builder -> builder.initializer(() -> java.util.Map.of())
+                    .persistent(Codec.unboundedMap(Codec.STRING, ElementProgress.CODEC)).copyOnDeath());
+    public static final AttachmentType<Boolean> PROGRESSION_MIGRATED = AttachmentRegistry.create(
+            Identifier.of("elementalwands", "progression_migrated"), builder -> builder.initializer(() -> false)
+                    .persistent(Codec.BOOL).copyOnDeath());
+
+    public static final AttachmentType<Boolean> WELCOME_SEEN = AttachmentRegistry.create(
+            Identifier.of("elementalwands", "welcome_seen"), builder -> builder.initializer(() -> false)
+                    .persistent(Codec.BOOL).copyOnDeath());
+
+    public static final AttachmentType<NbtCompound> FIRE_BUILD_STATE = AttachmentRegistry.create(
+            Identifier.of("elementalwands", "fire_build_state"), builder -> builder.initializer(NbtCompound::new)
+                    .persistent(NbtCompound.CODEC).copyOnDeath());
 
     public static final int SKILL_SECONDARY = 1;
     public static final int SKILL_ULTIMATE  = 2;
 
-    public static final long SECONDARY_FLUX_COST = 500L;
-    public static final long ULTIMATE_FLUX_COST  = 1500L;
-    public static final int  SECONDARY_XP_COST   = 15;
-    public static final int  ULTIMATE_XP_COST    = 30;
-
+    // Legacy fields are retained solely for one-time migration of existing saves.
     public static final AttachmentType<Long> ARCANE_FLUX = AttachmentRegistry.create(
             Identifier.of("elementalwands", "arcane_flux"),
             builder -> builder.initializer(() -> 0L).persistent(Codec.LONG).copyOnDeath());

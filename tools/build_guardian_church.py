@@ -296,6 +296,9 @@ def build(restored, legacy=False):
         group={p:b for p,b in B.items() if p[1]>=1 and -5<=p[0]<=4 and 0<=p[2]<=6}
         for p in group: B.pop(p)
         for (x,y,z),b in group.items(): B[x,y,z-6]=b
+        # Approved offering pedestal. Legacy completed layouts keep their original stonework.
+        put(0,1,-6,'elementalwands:guardian_pedestal')
+        put(0,5,-4,'elementalwands:guardian_chest_rune')
     return {(x,y-2,z):b for (x,y,z),b in B.items()}
 RUIN=build(False);WHOLE=build(True)
 
@@ -318,7 +321,14 @@ def nbt(layout):
                 # Keep the natural courtyard terraces outside the level route/plinth.
                 if z<9 and abs(x)>3 and not (-5<=x<=4 and -6<=z<=0):
                     continue # Omit the column: jigsaw placement does not ignore structure-void blocks.
-                if b not in indices:indices[b]=len(palette);palette.append(compound(Name=(8,b),**({'Properties':(10,{'facing':(8,'north')})} if b.endswith('guardian_socket') else {})))
+                if b not in indices:
+                    indices[b]=len(palette)
+                    props={}
+                    if b.endswith(('guardian_socket','guardian_pedestal','guardian_chest_rune')):
+                        props['facing']=(8,'north')
+                    if b.endswith('guardian_socket'):props.update(pedestal=(8,'true'),ritual=(8,'0'))
+                    elif b.endswith(('guardian_pedestal','guardian_chest_rune')):props['lit']=(8,'false')
+                    palette.append(compound(Name=(8,b),**({'Properties':(10,props)} if props else {})))
                 d=compound(pos=(9,(3,[x+16,y+5,z+10])),state=(3,indices[b]))
                 if b.endswith('guardian_socket'):d['nbt']=(10,{'id':(8,'elementalwands:guardian_socket'),'layout_version':(3,2)})
                 blocks.append(d)

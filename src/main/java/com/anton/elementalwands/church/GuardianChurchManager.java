@@ -46,6 +46,7 @@ public final class GuardianChurchManager {
         public BlockRotation rotation=BlockRotation.NONE;
         public Phase phase=Phase.BUILDING;
         public transient boolean statuePrepared;
+        public transient int offeringTicks;
         public String token=UUID.randomUUID().toString(),guardian;
         public boolean stocked;
         public int layoutVersion;
@@ -82,12 +83,17 @@ public final class GuardianChurchManager {
         PlayerBlockBreakEvents.BEFORE.register((world,player,pos,block,be) -> !protectedBlock(world,pos));
         UseBlockCallback.EVENT.register((player,world,hand,hit) -> {
             if (!(world instanceof ServerWorld sw) || !(player instanceof ServerPlayerEntity p)) return ActionResult.PASS;
-            if (world.getBlockState(hit.getBlockPos()).isOf(ModBlocks.GUARDIAN_SOCKET)) {
-                discover(sw,hit.getBlockPos(),world.getBlockState(hit.getBlockPos()));
-                if (hand==Hand.MAIN_HAND) p.sendMessage(Text.literal(interact(p,hit.getBlockPos())),false);
+            var socketPos=ritualSocket(world,hit.getBlockPos());
+            if (socketPos!=null) {
+                discover(sw,socketPos,world.getBlockState(socketPos));
+                if (hand==Hand.MAIN_HAND) p.sendMessage(Text.literal(interact(p,socketPos)),false);
                 return ActionResult.SUCCESS;
             }
             Site s=siteAt(world,hit.getBlockPos());
+            if (s!=null && hit.getBlockPos().equals(s.offering()) && world.getBlockEntity(hit.getBlockPos()) instanceof ChestBlockEntity chest) {
+                com.anton.elementalwands.util.WandGuide.removeLegacyBooks(chest);
+                if (hand==Hand.MAIN_HAND && s.phase==Phase.RUINED) p.sendMessage(Text.literal("Place the Guardian Heart on the pedestal before the statue when your group is ready."), false);
+            }
             if (s!=null && s.phase!=Phase.RESTORED && (s.phase!=Phase.RUINED || !hit.getBlockPos().equals(s.offering()))) {
                 p.sendMessage(Text.literal("The church is held in a broken moment. Return the heart to its keeper."),true);
                 return ActionResult.FAIL;
@@ -147,6 +153,13 @@ public final class GuardianChurchManager {
         for (Site s:state.sites) if (s.contains(pos)) return s;
         return null;
     }
+    /** Both the bowl and its carved column are a forgiving, single ritual target. */
+    public static BlockPos ritualSocket(World world,BlockPos pos) {
+        if(world.getBlockState(pos).isOf(ModBlocks.GUARDIAN_SOCKET)) return pos;
+        if(world.getBlockState(pos).isOf(ModBlocks.GUARDIAN_PEDESTAL)
+                && world.getBlockState(pos.up()).isOf(ModBlocks.GUARDIAN_SOCKET)) return pos.up();
+        return null;
+    }
     public static boolean protectedBlock(World world,BlockPos pos) {
         if (mutation) return false;
         if (world.getBlockState(pos).isOf(ModBlocks.GUARDIAN_SOCKET)) return true;
@@ -204,6 +217,9 @@ public final class GuardianChurchManager {
         return true;
     }
     public static String interact(ServerPlayerEntity player,BlockPos socket) {
+        var target=ritualSocket(player.getEntityWorld(),socket);
+        if(target==null) return "The offering pedestal is incomplete.";
+        socket=target;
         if (error!=null || state==null) return "The ritual is unavailable; check the server's church recovery log.";
         Site s=siteAt(player.getEntityWorld(),socket);
         if (s==null) return "The keeper has not settled into this place yet.";
@@ -233,6 +249,9 @@ public final class GuardianChurchManager {
             held.decrement(1);
         }, (entity, box) -> ritualShaftClear(world,entity,box));
         if (!GuardianArenaManager.owns(guardian)) { s.phase=Phase.RUINED;save();return result; }
+        s.offeringTicks=1;
+        updateOffering(world,s);
+        world.playSound(null,s.socket(),SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME,SoundCategory.BLOCKS,.8f,.85f);
         return "The heart answers. The keeper will test everyone gathered in the courtyard.";
     }
     public static void arenaFinished(String guardianId) {
@@ -244,14 +263,6 @@ public final class GuardianChurchManager {
     private static ItemStack heart(Site s) {
         var stack=new ItemStack(ModItems.GUARDIAN_HEART);var nbt=new NbtCompound();nbt.putString("church_token",s.token);
         stack.set(DataComponentTypes.CUSTOM_DATA,NbtComponent.of(nbt));stack.set(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE,true);return stack;
-    }
-    private static ItemStack book() {
-        var book=new ItemStack(Items.WRITTEN_BOOK);
-        List<RawFilteredPair<Text>> pages=List.of(
-            RawFilteredPair.of(Text.literal("The Keeper's Promise\n\nWhen the bells fell silent, our keeper held the church within its final unbroken moment. Its heart still remembers the way home.")),
-            RawFilteredPair.of(Text.literal("Gather your companions in the open courtyard. Place the Guardian Heart into the dark socket on the empty plinth. Look to the sky when the arena is ready.\n\nOvercome the keeper, and the church will remember what it was.")),
-            RawFilteredPair.of(Text.literal("The walls seal everyone nearby into the trial. Those who fall become silent witnesses, free to watch but unable to fight. If all fall, the heart returns here.\n\nA lost heart may be recalled: sneak-use the socket with an empty hand.")));
-        book.set(DataComponentTypes.WRITTEN_BOOK_CONTENT,new WrittenBookContentComponent(RawFilteredPair.of("The Keeper's Promise"),"The Last Bellkeeper",0,pages,true));return book;
     }
     private static boolean loaded(ServerWorld world,Site s) {
         BlockPos a=s.at(-16,0,-10),b=s.at(16,0,42);
@@ -306,6 +317,8 @@ public final class GuardianChurchManager {
             } else if (s.phase==Phase.RUINED && !s.stocked) stock(world,s,false);
             if (s.phase==Phase.RUINED && !s.terrainBlended && !GuardianArenaManager.hasActiveArena()) blendTerrain(world,s);
             if(s.phase==Phase.RUINED && !s.statuePrepared) { preparePlinth(world,s);s.statuePrepared=true; }
+            if(s.phase==Phase.RUINED && !GuardianArenaManager.hasActiveArena()) upgradePedestal(world,s);
+            updateOffering(world,s);
             UUID keeperId=uuid(s.guardian);
             if ((s.phase==Phase.RUINED || s.phase==Phase.RESTORED) && keeperId!=null) {
                 var entity=world.getEntity(keeperId);
@@ -351,11 +364,64 @@ public final class GuardianChurchManager {
         try {
             for(int x=-4;x<=4;x++)for(int y=-1;y<=7;y++)for(int z=s.layoutVersion>=2?-5:1;z<=(s.layoutVersion>=2?0:6);z++) {
                 var p=s.at(x,y,z);
+                if(s.layoutVersion>=2 && x==0 && y==3 && z==-4) continue; // Transactional pedestal upgrade owns this rune.
                 if(world.getBlockEntity(p)!=null) continue;
                 var desired=ChurchLayout.state(false,new BlockPos(x,y,z),s.rotation,s.layoutVersion);
                 if(!world.getBlockState(p).equals(desired)) world.setBlockState(p,desired,Block.NOTIFY_LISTENERS);
             }
         } finally {mutation=false;}
+    }
+    /** Idempotent, inventory-free upgrade of exactly three authored ritual blocks. */
+    static boolean upgradePedestal(ServerWorld world,Site s) {
+        if(s.phase!=Phase.RUINED || s.layoutVersion<2) return false;
+        var socket=s.socket();var base=socket.down();var core=s.at(0,3,-4);
+        var state=world.getBlockState(socket);
+        if(!state.isOf(ModBlocks.GUARDIAN_SOCKET)) return false;
+        var support=world.getBlockState(base);var chest=world.getBlockState(core);
+        var facing=s.rotation.rotate(Direction.NORTH);
+        if(state.get(GuardianSocketBlock.PEDESTAL) && support.isOf(ModBlocks.GUARDIAN_PEDESTAL)
+                && chest.isOf(ModBlocks.GUARDIAN_CHEST_RUNE) && support.get(Properties.HORIZONTAL_FACING)==facing
+                && chest.get(Properties.HORIZONTAL_FACING)==facing) return true;
+        if(world.getBlockEntity(base)!=null || world.getBlockEntity(core)!=null
+                || !(support.isAir() || support.isOf(ModBlocks.GUARDIAN_PEDESTAL))
+                || !(chest.isOf(Blocks.CHISELED_DEEPSLATE) || chest.isOf(ModBlocks.GUARDIAN_CHEST_RUNE))) return false;
+        boolean previous=mutation;mutation=true;
+        try {
+            world.setBlockState(base,ModBlocks.GUARDIAN_PEDESTAL.getDefaultState().rotate(s.rotation),Block.NOTIFY_LISTENERS);
+            world.setBlockState(core,ModBlocks.GUARDIAN_CHEST_RUNE.getDefaultState().rotate(s.rotation),Block.NOTIFY_LISTENERS);
+            world.setBlockState(socket,state.with(GuardianSocketBlock.PEDESTAL,true),Block.NOTIFY_LISTENERS);
+        } finally {mutation=previous;}
+        return true;
+    }
+    private static void updateOffering(ServerWorld world,Site s) {
+        var socket=world.getBlockState(s.socket());
+        if(!socket.isOf(ModBlocks.GUARDIAN_SOCKET) || !socket.get(GuardianSocketBlock.PEDESTAL)) return;
+        int ritual=s.phase==Phase.RESTORED?2:(s.phase==Phase.ACTIVE || s.phase==Phase.RESTORING?1:0);
+        if(ritual==0)s.offeringTicks=0;
+        boolean coreLit=ritual>0 && (s.offeringTicks==0 || s.offeringTicks>=30);
+        boolean previous=mutation;mutation=true;
+        try {
+            if(socket.get(GuardianSocketBlock.RITUAL)!=ritual)
+                world.setBlockState(s.socket(),socket.with(GuardianSocketBlock.RITUAL,ritual),Block.NOTIFY_LISTENERS);
+            for(var pos:List.of(s.socket().down(),s.at(0,3,-4))) {
+                var block=world.getBlockState(pos);
+                boolean lit=pos.equals(s.socket().down())?ritual>0:coreLit;
+                if((block.isOf(ModBlocks.GUARDIAN_PEDESTAL) || block.isOf(ModBlocks.GUARDIAN_CHEST_RUNE)) && block.get(Properties.LIT)!=lit)
+                    world.setBlockState(pos,block.with(Properties.LIT,lit),Block.NOTIFY_LISTENERS);
+            }
+        } finally {mutation=previous;}
+        if(ritual>0 && s.offeringTicks>0) {
+            int tick=s.offeringTicks++;
+            if(tick<=48 && tick%2==0) {
+                double t=Math.min(1,tick/40.0);
+                Vec3d start=Vec3d.ofCenter(s.socket()).add(0,-.1,0);
+                Vec3d end=Vec3d.ofCenter(s.at(0,3,-4)).add(Vec3d.of(s.rotation.rotate(Direction.NORTH).getVector()).multiply(.53));
+                Vec3d p=start.lerp(end,t);
+                world.spawnParticles(new net.minecraft.particle.DustParticleEffect(0x72dfdf,.55f),p.x,p.y,p.z,3,.045,.045,.045,0);
+            }
+            if(tick==30)world.playSound(null,s.at(0,3,-4),SoundEvents.BLOCK_AMETHYST_BLOCK_RESONATE,SoundCategory.BLOCKS,.75f,1.1f);
+            if(tick>=64)s.offeringTicks=0;
+        }
     }
     /** Replayable upgrade: save all chest slots before moving either interactive block. */
     static boolean moveStatue(ServerWorld world,Site s) {
@@ -425,7 +491,7 @@ public final class GuardianChurchManager {
         boolean already=false;
         for(int i=0;i<chest.size();i++) if (chest.getStack(i).isOf(ModItems.GUARDIAN_HEART) && chest.getStack(i).getOrDefault(DataComponentTypes.CUSTOM_DATA,NbtComponent.DEFAULT).copyNbt().getString("church_token","").equals(s.token)) already=true;
         if (!already) for(int i=0;i<chest.size();i++) if(chest.getStack(i).isEmpty()) {chest.setStack(i,heart(s));break;}
-        if (!s.stocked && (fresh || s.guardian==null)) for(int i=0;i<chest.size();i++) if(chest.getStack(i).isEmpty()) {chest.setStack(i,book());break;}
+        com.anton.elementalwands.util.WandGuide.removeLegacyBooks(chest);
         chest.markDirty();s.stocked=true;save();
     }
     private static void rewards(ServerWorld world,Site s) {

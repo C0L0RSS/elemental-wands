@@ -32,7 +32,6 @@ import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.BlockRenderLayerMap;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.BlockRenderLayer;
-import net.minecraft.client.option.KeyBinding;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
@@ -40,13 +39,10 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.RaycastContext;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
-import org.lwjgl.glfw.GLFW;
 
 public class ElementalWandsClient implements ClientModInitializer {
 
-    private static KeyBinding ultimateKey;
 
     @Override
     public void onInitializeClient() {
@@ -59,7 +55,7 @@ public class ElementalWandsClient implements ClientModInitializer {
         BlockRenderLayerMap.putBlock(ModSpellBlocks.STONE_SPIKE, BlockRenderLayer.CUTOUT);
         EntangleClientEffects.register();
         for (var block : new net.minecraft.block.Block[]{ModSpellBlocks.NATURE_SEEDLING,
-                ModSpellBlocks.NATURE_ROOTS,ModSpellBlocks.NATURE_RAFT,
+                ModSpellBlocks.NATURE_ROOT_KNOT,ModSpellBlocks.NATURE_ROOTS,ModSpellBlocks.NATURE_RAFT,
                 ModSpellBlocks.NATURE_HEARTWOOD,ModSpellBlocks.NATURE_FLOWERING_LEAVES}) {
             BlockRenderLayerMap.putBlock(block,BlockRenderLayer.CUTOUT);
             net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry.BLOCK.register(
@@ -67,11 +63,16 @@ public class ElementalWandsClient implements ClientModInitializer {
         }
 
 
-        ultimateKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "key.elementalwands.ultimate",
-                GLFW.GLFW_KEY_X,
-                new KeyBinding.Category(Identifier.of("elementalwands", "general"))));
+        com.anton.elementalwands.client.WandControls.init();
+        com.anton.elementalwands.client.GuardianOfferingHint.init();
+        for(var block:new net.minecraft.block.Block[]{com.anton.elementalwands.registry.ModBlocks.GUARDIAN_SOCKET,
+                com.anton.elementalwands.registry.ModBlocks.GUARDIAN_PEDESTAL,
+                com.anton.elementalwands.registry.ModBlocks.GUARDIAN_CHEST_RUNE})
+            net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry.BLOCK.register(
+                    (state,world,pos,tint)->tint<0?-1:0xFF000000|tint,block);
 
+        EntityRendererRegistry.register(ModEntities.OVERGROWTH_SEED,com.anton.elementalwands.client.renderer.OvergrowthSeedRenderer::new);
+        EntityRendererRegistry.register(ModEntities.THORN_LASH,com.anton.elementalwands.client.renderer.ThornLashRenderer::new);
         EntityRendererRegistry.register(ModEntities.SEED_PROJECTILE,com.anton.elementalwands.client.renderer.NatureSeedRenderer::new);
         EntityRendererRegistry.register(ModEntities.VACUUM_BLADE,
                 context -> new AnimatedSpellBillboardRenderer<>(context,
@@ -88,13 +89,34 @@ public class ElementalWandsClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.FIRE_SPIRIT, FireSpiritRenderer::new);
         EntityRendererRegistry.register(ModEntities.FRACTURED_GUARDIAN, FracturedGuardianRenderer::new);
         EntityRendererRegistry.register(ModEntities.GUARDIAN_LIFT, EmptyEntityRenderer::new);
+        EntityRendererRegistry.register(ModEntities.FIRE_LEAP, EmptyEntityRenderer::new);
+        com.anton.elementalwands.client.FireLeapPreview.init();
+        EntityRendererRegistry.register(ModEntities.FLASHOVER_EMBER, com.anton.elementalwands.client.renderer.FlashoverEmberRenderer::new);
         EntityRendererRegistry.register(ModEntities.GUARDIAN_ARENA, com.anton.elementalwands.client.renderer.GuardianArenaRenderer::new);
         EntityRendererRegistry.register(ModEntities.GUARDIAN_ROCK, com.anton.elementalwands.client.renderer.GuardianRockRenderer::new);
         EntityRendererRegistry.register(ModEntities.STONE_CLUSTER, com.anton.elementalwands.client.renderer.StoneClusterRenderer::new);
 
         // Receive synced player data from server
         ClientPlayNetworking.registerGlobalReceiver(ModNetworking.SyncPlayerDataPayload.ID,
-                (payload, context) -> ClientPlayerData.setUnlockedSkills(payload.unlockedSkills(), payload.affinity()));
+                (payload, context) -> {
+                    ClientPlayerData.setUnlockedSkills(payload.unlockedSkills(), payload.affinity());
+                    ClientPlayerData.setHubData(payload.flux(), payload.loadout(), payload.canEdit());
+                    ClientPlayerData.setOwned(payload.owned());
+                    if (context.client().currentScreen instanceof com.anton.elementalwands.client.screen.WandHubScreen hub) hub.refresh();
+                });
+        ClientPlayNetworking.registerGlobalReceiver(ModNetworking.FlashoverStatePayload.ID,(payload,context) -> {
+            long now=context.client().world==null?0:context.client().world.getTime();
+            ClientPlayerData.setFlashover(payload.active(),payload.armed(),payload.remaining(),payload.duration(),payload.slots(),now);
+        });
+        ClientPlayNetworking.registerGlobalReceiver(ModNetworking.FireBuildPayload.ID, (payload, context) -> {
+            long now = context.client().world == null ? 0 : context.client().world.getTime();
+            ClientPlayerData.setFireBuild(payload.heat(),payload.overheated(),payload.hopRemaining(),now);
+        });
+        ClientPlayNetworking.registerGlobalReceiver(ModNetworking.WelcomePayload.ID, (payload, context) -> com.anton.elementalwands.client.WandWelcome.queue());
+        ClientPlayNetworking.registerGlobalReceiver(ModNetworking.HubFeedbackPayload.ID, (payload, context) -> {
+            if (payload.open()) context.client().setScreen(new com.anton.elementalwands.client.screen.WandHubScreen());
+            if (context.client().currentScreen instanceof com.anton.elementalwands.client.screen.WandHubScreen hub) hub.feedback(payload.message());
+        });
         ClientPlayNetworking.registerGlobalReceiver(ModNetworking.SyncNatureSeedlingsPayload.ID,
                 (payload, context) -> ClientPlayerData.setNatureSeedlings(payload.positions()));
         ClientPlayNetworking.registerGlobalReceiver(ModNetworking.SyncEntangleStacksPayload.ID,
@@ -104,7 +126,10 @@ public class ElementalWandsClient implements ClientModInitializer {
                             payload.rootVisualTicks());
                 });
 
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientPlayerData.reset());
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            com.anton.elementalwands.client.WandWelcome.reset();
+            ClientPlayerData.reset(); com.anton.elementalwands.client.WandControls.clear();
+        });
         ClientPlayNetworking.registerGlobalReceiver(ModNetworking.SyncStoneClusterPayload.ID, (payload, context) -> {
             if (context.client().world != null) ClientPlayerData.setStoneCluster(payload.mass(),payload.remaining(),
                     payload.duration(),context.client().world.getTime());
@@ -119,6 +144,7 @@ public class ElementalWandsClient implements ClientModInitializer {
             }
         });
         ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE.register((client, world) -> {
+            com.anton.elementalwands.client.WandControls.clear();
             ClientPlayerData.clearStoneCluster();
             ClientPlayerData.clearEntangleStates();
             ClientPlayerData.clearNatureSeedlings();
@@ -134,71 +160,11 @@ public class ElementalWandsClient implements ClientModInitializer {
 
     private static void tickClient(MinecraftClient client) {
         if (client.player == null || client.getNetworkHandler() == null) return;
+        com.anton.elementalwands.client.WandWelcome.tick(client);
         EntangleClientEffects.tick(client);
-        // Drain presses every tick; otherwise taps made while holding another item
-        // queue up and fire the ultimate as soon as the wand comes into hand.
-        boolean ultimatePressed = false;
-        while (ultimateKey.wasPressed()) ultimatePressed = true;
+        com.anton.elementalwands.client.WandControls.tick(client);
         if (client.currentScreen != null) return;
         if (!(client.player.getMainHandStack().getItem() instanceof AbstractWandItem)) return;
-
-        spawnNatureSeedlingTargetPreview(client);
-
-        if (ultimatePressed) ClientPlayNetworking.send(ModNetworking.CastUltimatePayload.INSTANCE);
     }
 
-    private static void spawnNatureSeedlingTargetPreview(MinecraftClient client) {
-        if (ClientPlayerData.getAffinity() != WizardAffinity.NATURE || !ClientPlayerData.isUltimateUnlocked()) {
-            return;
-        }
-
-        Optional<BlockPos> target = findTargetedSyncedSeedling(client, AbstractWandItem.DEFAULT_RANGE);
-        if (target.isEmpty()) return;
-
-        BlockPos pos = target.get();
-        long time = client.world.getTime();
-        if (time % 2 != 0) return;
-
-        double cx = pos.getX() + 0.5;
-        double cy = pos.getY() + 1.15;
-        double cz = pos.getZ() + 0.5;
-        for (int i = 0; i < 8; i++) {
-            double angle = (time * 0.22) + i * (Math.PI * 2.0 / 8.0);
-            double x = cx + Math.cos(angle) * 0.42;
-            double z = cz + Math.sin(angle) * 0.42;
-            client.world.addParticleClient(ModParticles.NATURE_POLLEN, x, cy, z, 0.0, 0.02, 0.0);
-        }
-        client.world.addParticleClient(ModParticles.NATURE_BLOOM, cx, cy + 0.35, cz, 0.0, 0.0, 0.0);
-    }
-
-    private static Optional<BlockPos> findTargetedSyncedSeedling(MinecraftClient client, double range) {
-        if (client.player == null || client.world == null) return Optional.empty();
-
-        Vec3d start = client.player.getEyePos();
-        Vec3d direction = client.player.getRotationVec(1.0f).normalize();
-        Vec3d end = start.add(direction.multiply(range));
-
-        BlockHitResult blockHit = client.world.raycast(new RaycastContext(start, end,
-                RaycastContext.ShapeType.OUTLINE,
-                RaycastContext.FluidHandling.NONE,
-                client.player));
-        double blockLimitSq = blockHit.getType() == HitResult.Type.MISS
-                ? range * range
-                : start.squaredDistanceTo(blockHit.getPos()) + 0.25;
-
-        BlockPos best = null;
-        double bestDistSq = Double.MAX_VALUE;
-        for (BlockPos pos : ClientPlayerData.getNatureSeedlings()) {
-            Optional<Vec3d> hit = new Box(pos).expand(0.2).raycast(start, end);
-            if (hit.isEmpty()) continue;
-
-            double distSq = start.squaredDistanceTo(hit.get());
-            if (distSq > blockLimitSq || distSq >= bestDistSq) continue;
-
-            best = pos;
-            bestDistSq = distSq;
-        }
-
-        return Optional.ofNullable(best);
-    }
 }

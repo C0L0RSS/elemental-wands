@@ -191,7 +191,7 @@ public final class MeteorManager {
         world.createExplosion(
                 caster,
                 Explosion.createDamageSource(world, caster),
-                DAMAGE,
+                new com.anton.elementalwands.party.WandExplosionBehavior(world, meteor.casterUuid, DAMAGE),
                 meteor.lastPos.x,
                 meteor.lastPos.y,
                 meteor.lastPos.z,

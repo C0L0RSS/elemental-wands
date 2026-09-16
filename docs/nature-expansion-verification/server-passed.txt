@@ -1,0 +1,1 @@
+Nature expansion passed: ownership, cooldown, aimed sweep, allies, cover, miss/invulnerability/overkill healing, group cap, no planting, three targets, moving/damaged caster, early/completed knot destruction, Guardian crush, enemy/allied wand disarm, support loss, source-specific flower cleanup, affinity exit, expiry and orphan cleanup.

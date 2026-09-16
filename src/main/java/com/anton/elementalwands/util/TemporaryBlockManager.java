@@ -27,7 +27,7 @@ public final class TemporaryBlockManager {
     }
 
     private record TempBlocks(UUID id, Long2ObjectMap<BlockState> originalByPos, BlockState placedState,
-            int expiryTick) {
+            int expiryTick, UUID caster) {
     }
 
     private static final Map<RegistryKey<World>, List<TempBlocks>> TEMP = new HashMap<>();
@@ -52,6 +52,11 @@ public final class TemporaryBlockManager {
 
     public static TemporaryPlacement placeTrackedTemporaryBlocks(ServerWorld world, Iterable<BlockPos> positions,
             BlockState placedState, int durationTicks, Predicate<BlockState> canReplace) {
+        return placeTrackedTemporaryBlocks(world, positions, placedState, durationTicks, canReplace, null);
+    }
+
+    public static TemporaryPlacement placeTrackedTemporaryBlocks(ServerWorld world, Iterable<BlockPos> positions,
+            BlockState placedState, int durationTicks, Predicate<BlockState> canReplace, UUID caster) {
         int now = world.getServer().getTicks();
         int expiryTick = now + durationTicks;
 
@@ -73,8 +78,16 @@ public final class TemporaryBlockManager {
         RegistryKey<World> key = world.getRegistryKey();
         UUID id = UUID.randomUUID();
         TEMP.computeIfAbsent(key, _k -> new ArrayList<>())
-                .add(new TempBlocks(id, originalByPos, placedState, expiryTick));
+                .add(new TempBlocks(id, originalByPos, placedState, expiryTick, caster));
         return new TemporaryPlacement(id, originalByPos.size());
+    }
+
+    public static UUID casterAt(ServerWorld world, BlockPos pos) {
+        for (TempBlocks batch : TEMP.getOrDefault(world.getRegistryKey(), List.of())) {
+            if (batch.originalByPos.containsKey(pos.asLong()) && world.getBlockState(pos).isOf(batch.placedState.getBlock()))
+                return batch.caster;
+        }
+        return null;
     }
 
     /** Transfer the underlying terrain to a new owner, only after its block write succeeds. */

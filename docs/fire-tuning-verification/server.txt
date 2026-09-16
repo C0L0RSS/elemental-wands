@@ -1,0 +1,1 @@
+Fire build passed: paid spell ownership/equip, cone damage and cover/range, held heat, release, heartbeat timeout, overheat/recovery, save/reload, airborne directional hop and native travel arc, diagonal normalization, cooldown and respawn persistence.

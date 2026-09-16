@@ -1,0 +1,69 @@
+// Optional real-server regression fixture. All worlds, players and metadata stay under build/.
+// ./gradlew -I tools/party_server_smoke.init.gradle runServer --args nogui
+allprojects {
+    plugins.withId('fabric-loom') {
+        def smokeRoot = layout.buildDirectory.dir('party-server-smoke').get().asFile
+        def runRoot = file('build/party-server-smoke-run')
+        tasks.register('partyServerSmokeSetup') {
+            doLast {
+                runRoot.mkdirs()
+                def oldWorld = new File(runRoot, 'hub-test')
+                if (!project.hasProperty('partyResume') && oldWorld.exists() && !oldWorld.renameTo(new File(runRoot, 'hub-test-before-' + System.currentTimeMillis()))) {
+                    throw new GradleException('Could not preserve the previous disposable test world.')
+                }
+                def acceptedEula = file('run/eula.txt')
+                if (!acceptedEula.exists() || !acceptedEula.text.contains('eula=true')) {
+                    throw new GradleException('Accept the Minecraft EULA in run/eula.txt before using this test server.')
+                }
+                new File(runRoot, 'eula.txt').text = acceptedEula.text
+                new File(runRoot, 'server.properties').text = '''server-ip=127.0.0.1
+server-port=0
+online-mode=false
+level-type=minecraft:flat
+generate-structures=false
+level-name=hub-test
+generator-settings={"layers":[{"block":"minecraft:bedrock","height":1},{"block":"minecraft:dirt","height":2},{"block":"minecraft:grass_block","height":1}],"biome":"minecraft:plains"}
+spawn-protection=0
+view-distance=8
+simulation-distance=8
+difficulty=normal
+max-tick-time=-1
+'''
+                new File(runRoot,'PARTY_FAILED.txt').delete()
+                new File(runRoot,'PARTY_PASSED.txt').delete()
+                if (!project.hasProperty('partyResume')) new File(runRoot,'PARTY_RESTART_READY.txt').delete()
+            }
+        }
+        tasks.register('partyServerSmokeMetadata') {
+            doLast {
+                def metadata = new File(smokeRoot,'metadata')
+                metadata.mkdirs()
+                new File(metadata,'fabric.mod.json').text = '''{
+  "schemaVersion": 1, "id": "party_server_smoke", "version": "1.0.0", "environment": "server",
+  "entrypoints": {"main": ["com.anton.elementalwands.party.PartyServerSmoke"]},
+  "depends": {"elementalwands": "*"}
+}'''
+            }
+        }
+        tasks.register('partyServerSmokeJar', Jar) {
+            dependsOn guardianTestClasses, partyServerSmokeMetadata
+            archiveFileName = 'party-server-smoke.jar'
+            destinationDirectory = smokeRoot
+            from sourceSets.guardianTest.output
+            from new File(smokeRoot,'metadata')
+        }
+        loom.runs.server.runDir('build/party-server-smoke-run')
+        loom.runs.server.vmArg('-Dfabric.addMods=' + new File(smokeRoot,'party-server-smoke.jar').absolutePath)
+        tasks.named('runServer') {
+            dependsOn partyServerSmokeJar, partyServerSmokeSetup
+            standardInput = System.in
+            doLast {
+                def marker = new File(runRoot,'PARTY_PASSED.txt')
+                def expected = project.hasProperty('partyResume') ? marker : new File(runRoot,'PARTY_RESTART_READY.txt')
+                if (!expected.exists() || new File(runRoot,'PARTY_FAILED.txt').exists()) {
+                    throw new GradleException('Party server checks did not pass; inspect build/party-server-smoke-run/logs/latest.log')
+                }
+            }
+        }
+    }
+}

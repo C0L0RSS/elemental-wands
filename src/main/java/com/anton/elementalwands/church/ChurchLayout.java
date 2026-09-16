@@ -28,7 +28,10 @@ public final class ChurchLayout {
             for (var value:JsonParser.parseReader(new InputStreamReader(stream,StandardCharsets.UTF_8)).getAsJsonArray()) {
                 var a=value.getAsJsonArray(); var id=Identifier.of(a.get(3).getAsString());
                 if (!Registries.BLOCK.containsId(id)) throw new IOException("Unknown church block: "+id);
-                out.put(new BlockPos(a.get(0).getAsInt(),a.get(1).getAsInt(),a.get(2).getAsInt()),Registries.BLOCK.get(id).getDefaultState());
+                var block=Registries.BLOCK.get(id).getDefaultState();
+                if(block.isOf(com.anton.elementalwands.registry.ModBlocks.GUARDIAN_SOCKET) && !name.endsWith("_legacy"))
+                    block=block.with(GuardianSocketBlock.PEDESTAL,true);
+                out.put(new BlockPos(a.get(0).getAsInt(),a.get(1).getAsInt(),a.get(2).getAsInt()),block);
             }
             return Map.copyOf(out);
         } catch (IOException e) { throw new IllegalStateException(e); }

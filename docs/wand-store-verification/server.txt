@@ -1,0 +1,1 @@
+Legacy migration, element balances, permanent purchases, duplicate/stale purchase rejection, XP preservation, damage-source currency attribution, switch restrictions, unlock gates, invalid/stale payloads, cooldown/charge retention, swapped dispatch, player serialization, respawn persistence, interaction and combat lock checks passed.

@@ -1,0 +1,1 @@
+Passed: lethal direct creeper bomb; spare throws and detonations during recovery; independent 6s blast and 2s disarm timers; throw pacing/cap; player reload and orphan recovery; wand replacement; 60-block aim, full route collision, flight and landing; existing leap safety and wave protections.

@@ -1,5 +1,7 @@
 package com.anton.elementalwands.entity;
 
+import com.anton.elementalwands.party.WandAllies;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -56,6 +58,12 @@ public class HollowPurpleOrbEntity extends ProjectileEntity {
         setPosition(spawnPos.x, spawnPos.y, spawnPos.z);
         setVelocity(dir.multiply(ORB_SPEED));
         startPos = spawnPos;
+    }
+
+    private boolean protectsAlly(Entity target) {
+        return WandAllies.protectedFrom(getOwner(), target)
+                || (getEntityWorld() instanceof ServerWorld world && owner != null
+                    && WandAllies.protectedFrom(world, owner.getUuid(), target));
     }
 
     @Override
@@ -156,7 +164,7 @@ public class HollowPurpleOrbEntity extends ProjectileEntity {
         Box box = Box.of(center, ORB_RADIUS * 2.0, ORB_RADIUS * 2.0, ORB_RADIUS * 2.0);
 
         List<Entity> entities = world.getOtherEntities(this, box,
-                entity -> entity.isAlive() && !entity.isSpectator() && !entity.equals(owner));
+                entity -> entity.isAlive() && !entity.isSpectator() && !protectsAlly(entity));
 
         DamageSource source = owner instanceof LivingEntity livingOwner
                 ? world.getDamageSources().thrown(this, livingOwner)
@@ -174,7 +182,7 @@ public class HollowPurpleOrbEntity extends ProjectileEntity {
 
                 boolean damaged = living.damage(world, source, MASSIVE_DAMAGE);
                 if (damaged) {
-                    com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(getOwner(), MASSIVE_DAMAGE);
+                    com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(getOwner(), MASSIVE_DAMAGE, com.anton.elementalwands.data.WizardAffinity.SPACE);
                 }
                 living.velocityModified = true;
                 living.fallDistance = 0.0f;

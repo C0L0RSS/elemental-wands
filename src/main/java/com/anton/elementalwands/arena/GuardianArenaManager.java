@@ -251,6 +251,10 @@ public final class GuardianArenaManager {
                 || (active.roster.alive(player.getUuid()) && active.phase==Phase.FIGHT);
     }
 
+    public static boolean isParticipant(PlayerEntity player) {
+        return active != null && active.roster.enrolled(player.getUuid());
+    }
+
     public static boolean canTeleport(PlayerEntity player, ServerWorld destination, Vec3d target) {
         if (internalTeleport || active==null || !player.isAlive()) return true;
         Session s=active; var a=s.receipt;

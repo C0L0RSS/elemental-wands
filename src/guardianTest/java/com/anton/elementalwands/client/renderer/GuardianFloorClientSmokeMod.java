@@ -35,6 +35,15 @@ public final class GuardianFloorClientSmokeMod implements ClientModInitializer {
                 }
                 var socketModel=client.getBlockRenderManager().getModel(com.anton.elementalwands.registry.ModBlocks.GUARDIAN_SOCKET.getDefaultState());
                 require(socketModel.particleSprite().getContents().getId().equals(Identifier.ofVanilla("block/chiseled_deepslate")),"Church socket model is missing");
+                for(var rotation:net.minecraft.util.BlockRotation.values())for(int ritual=0;ritual<=2;ritual++) {
+                    var state=com.anton.elementalwands.registry.ModBlocks.GUARDIAN_SOCKET.getDefaultState()
+                            .with(com.anton.elementalwands.church.GuardianSocketBlock.PEDESTAL,true)
+                            .with(com.anton.elementalwands.church.GuardianSocketBlock.RITUAL,ritual).rotate(rotation);
+                    require(client.getBlockRenderManager().getModel(state).particleSprite().getContents().getId().equals(Identifier.ofVanilla("block/polished_andesite")),"New pedestal model missing for "+state);
+                }
+                for(var block:new net.minecraft.block.Block[]{com.anton.elementalwands.registry.ModBlocks.GUARDIAN_PEDESTAL,com.anton.elementalwands.registry.ModBlocks.GUARDIAN_CHEST_RUNE})
+                    for(boolean lit:new boolean[]{false,true})for(var rotation:net.minecraft.util.BlockRotation.values())
+                        require(client.getBlockRenderManager().getModel(block.getDefaultState().with(net.minecraft.state.property.Properties.LIT,lit).rotate(rotation)).particleSprite().getContents().getId().equals(Identifier.ofVanilla("block/polished_andesite")),"Ritual support or rune model missing");
                 var heartState=new net.minecraft.client.render.item.ItemRenderState();
                 client.getItemModelManager().clearAndUpdate(heartState,new net.minecraft.item.ItemStack(com.anton.elementalwands.registry.ModItems.GUARDIAN_HEART),net.minecraft.item.ItemDisplayContext.GUI,null,null,0);
                 require(!heartState.isEmpty(),"Guardian Heart model is empty");
@@ -69,6 +78,7 @@ public final class GuardianFloorClientSmokeMod implements ClientModInitializer {
                         require(guardModel.getTextureResource(guardState).getPath().contains("cracks_"+stage),"Wrong fracture material");
                     }
                 }
+                GuardianBurnClientChecks.check(client);
                 checkFan();
                 checkUnstable();
                 checkStoneCluster();
@@ -83,7 +93,9 @@ public final class GuardianFloorClientSmokeMod implements ClientModInitializer {
                 failure.printStackTrace();
                 try { Files.writeString(Path.of("FLOOR_CLIENT_FAILED.txt"),failure.toString()); } catch (Exception ignored) {}
             } finally {
-                if(Boolean.getBoolean("ew.nature.visualWorld") && !Files.exists(Path.of("FLOOR_CLIENT_FAILED.txt"))) NatureVisualClientSmoke.start(client);
+                if(Boolean.getBoolean("ew.guardian.pedestalVisual") && !Files.exists(Path.of("FLOOR_CLIENT_FAILED.txt"))) GuardianPedestalClientSmoke.start(client);
+                else if(Boolean.getBoolean("ew.guardian.burnVisual") && !Files.exists(Path.of("FLOOR_CLIENT_FAILED.txt"))) GuardianBurnVisualClientSmoke.start(client);
+                else if(Boolean.getBoolean("ew.nature.visualWorld") && !Files.exists(Path.of("FLOOR_CLIENT_FAILED.txt"))) NatureVisualClientSmoke.start(client);
                 else client.scheduleStop();
             }
         });

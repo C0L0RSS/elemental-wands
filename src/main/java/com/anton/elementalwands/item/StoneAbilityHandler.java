@@ -1,5 +1,7 @@
 package com.anton.elementalwands.item;
 
+import com.anton.elementalwands.party.WandAllies;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -207,7 +209,7 @@ public final class StoneAbilityHandler {
                         blastHalfUp + 1.0,
                         SHATTER_BLAST_DEPTH + blastHalfRight + 1.0);
         List<LivingEntity> candidates = world.getEntitiesByClass(LivingEntity.class, searchBox,
-                target -> target.isAlive() && !target.isSpectator() && target != caster);
+                target -> target.isAlive() && !target.isSpectator() && !WandAllies.protectedFrom(caster, target));
 
         for (LivingEntity target : candidates) {
             Vec3d targetCenter = target.getEntityPos().add(0.0, target.getHeight() * 0.5, 0.0);
@@ -223,7 +225,7 @@ public final class StoneAbilityHandler {
             boolean damaged = target.damage(
                     world, world.getDamageSources().playerAttack(caster), SHATTER_DAMAGE);
             if (damaged) {
-                AbstractWandItem.onWandDamageDealt(caster, SHATTER_DAMAGE);
+                AbstractWandItem.onWandDamageDealt(caster, SHATTER_DAMAGE, com.anton.elementalwands.data.WizardAffinity.STONE);
             }
             target.addVelocity(
                     forward.x * SHATTER_HORIZONTAL_KNOCKBACK,

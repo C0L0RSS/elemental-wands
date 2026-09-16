@@ -1,0 +1,1 @@
+Integrated Minecraft client passed Fire Leap and sticky Flashover: three mob attachments, synchronized host IDs, moved/turned attachment rendering, interpolated thrown flight, delayed detonation, per-bomb cooldown and saved UI key remapping. Native screenshots captured. Human multiplayer/combat balance pending.

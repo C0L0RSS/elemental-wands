@@ -13,6 +13,7 @@
     "GuardianArenaWorldMixin",
     "GuardianLiftPassengerMixin",
     "GuardianChurchExplosionMixin",
+    "WandExplosionFireMixin",
     "GuardianChurchPistonMixin",
     "GuardianChurchPlacementMixin",
     "GuardianChurchChunkAccessor",
@@ -20,5 +21,10 @@
   ],
   "injectors": {
     "defaultRequire": 1
-  }
+  },
+  "client": [
+    "FireLeapHudMixin",
+    "WandMouseMixin",
+    "WandKeyboardMixin"
+  ]
 }

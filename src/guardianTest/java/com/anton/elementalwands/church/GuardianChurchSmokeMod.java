@@ -42,6 +42,8 @@ public final class GuardianChurchSmokeMod implements ModInitializer {
                 var chest=(ChestBlockEntity)world.getBlockEntity(site.at(-5,-1,35));
                 check(chest.isEmpty(),"Restart refilled a previously emptied reward chest");
                 check(!GuardianChurchManager.busy(),"Restart left the church active");
+                check(world.getBlockState(site.socket()).get(GuardianSocketBlock.RITUAL)==2,"Completed pedestal state lost on restart");
+                check(world.getBlockState(site.socket().down()).isOf(ModBlocks.GUARDIAN_PEDESTAL),"Completed pedestal support lost on restart");
                 Files.writeString(Path.of("CHURCH_RECOVERY_PASSED.txt"),"Completed church and collected loot survived restart without regeneration.\n");server.stop(false);
             }
             return;
@@ -62,10 +64,12 @@ public final class GuardianChurchSmokeMod implements ModInitializer {
             check(GuardianChurchManager.locate(player.getCommandSource()).contains("X 0"),"Locator cannot find the test church");
             check(world.getBlockState(site.socket()).isOf(ModBlocks.GUARDIAN_SOCKET),"Socket not built");
             check(world.getBlockEntity(site.socket()) instanceof GuardianSocketEntity,"Socket block entity missing");
+            check(world.getBlockState(site.socket()).get(GuardianSocketBlock.PEDESTAL),"New church does not use the pedestal model");
+            check(world.getBlockState(site.socket().down()).isOf(ModBlocks.GUARDIAN_PEDESTAL),"Offering pedestal floats without its support");
             check(site.guardian==null || world.getEntity(UUID.fromString(site.guardian))==null,"Living keeper is present before the ritual");
             check(world.getBlockState(site.at(0,5,-4)).isOf(Blocks.CHISELED_DEEPSLATE),"Block-built effigy is missing its recessed face");
             var chest=(ChestBlockEntity)world.getBlockEntity(site.offering());check(chest!=null,"Offering chest missing");
-            check(chest.getStack(0).isOf(ModItems.GUARDIAN_HEART),"Heart missing");check(chest.getStack(1).isOf(Items.WRITTEN_BOOK),"Lore book missing");
+            check(chest.getStack(0).isOf(ModItems.GUARDIAN_HEART),"Heart missing");check(chest.getStack(1).isEmpty(),"Retired lore book still generated");
             check(((ChestBlockEntity)world.getBlockEntity(site.at(-5,-1,35))).isEmpty(),"Reward loot available before victory");
             check(!world.breakBlock(site.at(7,0,25),true),"Ward allowed block breaking");
             check(com.anton.elementalwands.util.TemporaryBlockManager.placeTrackedTemporaryBlocks(world,java.util.List.of(site.anchor()),Blocks.COBBLESTONE.getDefaultState(),40,b -> true).isEmpty(),"Blocked spell placement was incorrectly counted as placed");
@@ -89,17 +93,20 @@ public final class GuardianChurchSmokeMod implements ModInitializer {
             check(world.getBlockState(site.at(0,4,-3)).isOf(Blocks.OAK_LOG)
                     && world.getBlockState(site.at(-2,4,-8)).isOf(Blocks.OAK_LEAVES),"Rejected ritual cleared shaft vegetation");
             check(!valid.isEmpty(),"Rejected ritual consumed heart");
+            check(world.getBlockState(site.socket()).get(GuardianSocketBlock.RITUAL)==0,"Rejected ritual displayed a seated heart");
             server.setDifficulty(net.minecraft.world.Difficulty.NORMAL,true);
-            String ritual=GuardianChurchManager.interact(player,site.socket());
+            String ritual=GuardianChurchManager.interact(player,site.socket().down());
             check(!world.getBlockState(site.at(0,4,-3)).isOf(Blocks.OAK_LOG),"Ritual did not clear the Guardian's tree obstruction");
             check(world.getBlockState(site.at(-2,4,-8)).isAir(),"Ritual did not clear the player's overhead leaves");
             System.out.println("CHURCH RITUAL: "+ritual);check(ritual.startsWith("The heart answers"),ritual);
             check(valid.isEmpty(),"Accepted heart was not consumed");guardian=(FracturedGuardianEntity)world.getEntity(UUID.fromString(site.guardian));check(guardian.isArenaHidden(),"Guardian visible during ritual ascent");
+            check(world.getBlockState(site.socket()).get(GuardianSocketBlock.RITUAL)==1,"Accepted heart was not displayed");
             check(player.getEntityPos().subtract(guardian.getEntityPos()).horizontalLength()>=9.99,"Guardian overlaps the player's lift/camera");stage=2;
         }
         if(stage==2 && status.startsWith("Arena: FIGHT")){ GuardianArenaManager.stop();stage=3; }
         if(stage==3 && !GuardianArenaManager.hasActiveArena()){
             check(site.phase==GuardianChurchManager.Phase.RUINED,"Aborted fight granted restoration");
+            check(world.getBlockState(site.socket()).get(GuardianSocketBlock.RITUAL)==0,"Aborted ritual left a seated heart");
             player.setPosition(site.x-1.5,site.y-1,site.z-7.5);player.setStackInHand(net.minecraft.util.Hand.MAIN_HAND,ItemStack.EMPTY);player.setSneaking(true);GuardianChurchManager.interact(player,site.socket());player.setSneaking(false);
             var retry=GuardianChurchManager.interact(player,site.socket());
             check(retry.startsWith("The heart answers") && GuardianArenaManager.hasActiveArena(),"Socket did not start the retry");guardian=(FracturedGuardianEntity)world.getEntity(UUID.fromString(site.guardian));stage=4;
@@ -108,6 +115,7 @@ public final class GuardianChurchSmokeMod implements ModInitializer {
         if(stage==4 && status.startsWith("Arena: FIGHT")){guardian.kill(world);check(site.phase==GuardianChurchManager.Phase.RESTORING,"Real boss death did not commit victory");stage=5;}
         if(stage==5 && !GuardianArenaManager.hasActiveArena()){
             check(site.phase==GuardianChurchManager.Phase.RESTORED,"Church was not restored before return");
+            check(world.getBlockState(site.socket()).get(GuardianSocketBlock.RITUAL)==2,"Restored offering state was not synchronized");
             for (int x:new int[]{-5,5}) {
                 var reward=(ChestBlockEntity)world.getBlockEntity(site.at(x,-1,35));
                 var expected=GuardianChurchLoot.roll(world,site.anchor(),x);
@@ -117,7 +125,7 @@ public final class GuardianChurchSmokeMod implements ModInitializer {
             check(GuardianChurchManager.interact(player,site.socket()).contains("already been restored"),"Completed church can be farmed");
             var roof=site.at(7,20,25);check(world.getBlockState(roof).isOf(Blocks.WARPED_PLANKS),"Collapsed roof was not rebuilt");
             check(!GuardianChurchManager.protectedBlock(world,site.at(7,0,25)),"Completed church is still warded");
-            Files.writeString(Path.of("CHURCH_PASSED.txt"),"Placement, worldgen resources, socket, heart/book, recall invalidation, sealed admission, abort/retry, real boss death, restoration, loot, and one-time completion passed.\n");System.out.println("CHURCH SMOKE PASSED");server.stop(false);
+            Files.writeString(Path.of("CHURCH_PASSED.txt"),"Placement, worldgen resources, socket, heart/UI guide, recall invalidation, sealed admission, abort/retry, real boss death, restoration, loot, and one-time completion passed.\n");System.out.println("CHURCH SMOKE PASSED");server.stop(false);
         }
     }
 }

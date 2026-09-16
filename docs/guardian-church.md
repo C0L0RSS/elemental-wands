@@ -1,4 +1,12 @@
+> September 12 UI update: the starter Guide is a single basic-functions page. Guardian lore and walkthrough pages have been removed from onboarding. Offering chests provide a brief socket-use hint beside the heart, without a lore book; old generated guide books are retired on interaction. See [wand-guide-simple-2026-09-12.md](wand-guide-simple-2026-09-12.md).
+
 # The Keeper's Sanctuary
+
+September 14: the approved offering pedestal replaces the floating socket in new
+and unfinished ruins. Use the heart on its bowl or carved column; aiming with the
+heart shows the actual Use-key hint. The seated heart, cyan trail and matching
+chest rune provide activation feedback. See [the pedestal report](guardian-pedestal-2026-09-14.md)
+for saved-world migration, actual Minecraft screenshots and verification.
 
 ## September 9 update — courtyard clearance and more frequent ruins
 

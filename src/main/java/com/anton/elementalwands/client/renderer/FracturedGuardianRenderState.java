@@ -13,7 +13,7 @@ public class FracturedGuardianRenderState extends LivingEntityRenderState implem
     public int guardCracks;
     public float guardTime = -1;
     public float beamTime = -1;
-    public boolean holdingRock, arenaHidden;
+    public boolean holdingRock, arenaHidden, burning;
     public float leapTime = -1;
     public java.util.List<GuardianLeapVisual.Mark> leapMarks = java.util.List.of();
     public java.util.List<GuardianWaveVisual.Stone> waveStones = java.util.List.of();

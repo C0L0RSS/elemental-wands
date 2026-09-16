@@ -1,5 +1,7 @@
 package com.anton.elementalwands.entity;
 
+import com.anton.elementalwands.party.WandAllies;
+
 import com.anton.elementalwands.registry.ModEntities;
 import com.anton.elementalwands.registry.ModParticles;
 
@@ -44,6 +46,12 @@ public class VacuumBladeEntity extends ProjectileEntity {
         setVelocity(direction.normalize().multiply(PROJECTILE_SPEED));
     }
 
+    private boolean protectsAlly(Entity target) {
+        return WandAllies.protectedFrom(getOwner(), target)
+                || (getEntityWorld() instanceof ServerWorld world && owner != null
+                    && WandAllies.protectedFrom(world, owner.getUuid(), target));
+    }
+
     @Override public boolean shouldSave() { return false; }
 
     @Override
@@ -84,6 +92,7 @@ public class VacuumBladeEntity extends ProjectileEntity {
         }
 
         Entity target = entityHitResult.getEntity();
+        if (protectsAlly(target)) return;
         Entity owner = getOwner();
 
         // Deal damage with linear falloff: MAX_DAMAGE at point-blank, MIN_DAMAGE at MAX_TRAVEL_DISTANCE
@@ -97,7 +106,7 @@ public class VacuumBladeEntity extends ProjectileEntity {
 
         boolean damaged = target.damage(serverWorld, source, damage);
         if (damaged) {
-            com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(owner, damage);
+            com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(owner, damage, com.anton.elementalwands.data.WizardAffinity.WIND);
         }
 
         // Respect resistance and rejected damage. A resistant boss must never bank upward impulses.
@@ -122,7 +131,7 @@ public class VacuumBladeEntity extends ProjectileEntity {
     @Override
     protected boolean canHit(Entity entity) {
         // Don't hit owner
-        return super.canHit(entity) && !entity.equals(getOwner());
+        return super.canHit(entity) && !protectsAlly(entity);
     }
 
     @Override

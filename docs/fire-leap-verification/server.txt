@@ -1,0 +1,1 @@
+Fire build passed: paid spell ownership/equip, cone damage and cover/range, held heat, release, heartbeat timeout, overheat/recovery, save/reload, committed leap arc, invalid destination rejection, no takeoff damage, single landing hit, cooldown and respawn persistence, full-body ceiling/water clearance, wave jump/cover/allies, midflight obstruction, orphan reload cleanup.

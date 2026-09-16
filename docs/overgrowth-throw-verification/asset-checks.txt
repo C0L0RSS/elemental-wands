@@ -1,0 +1,17 @@
+1. VFX validation passed: fire=45 PNGs, wind=53 PNGs, stone=41 PNGs, nature=44 PNGs, space=81 PNGs, affinities=264, shared=2, production_total=266, particle_definitions=40
+
+2. Approved Fire workshop assets and 1,248-face meteor mesh verified.
+
+3. Guardian assets validated: 132 cubes, 38 bones, 1024x1024 RGBA, isolated glowmask; approved geometry unchanged.
+
+4. Guardian throw socket: 45 sampled hand positions verified.
+
+5. Guardian pedestal: 10 native model/state files verified; no PNGs changed.
+
+6. Nature models verified from approved workshop; 25 render meshes; no bitmap changes.
+
+7. Root knot: 78 textured cubes, 3 branch sockets; verified
+
+8. Wand hub: 11 approved assets verified
+
+9.

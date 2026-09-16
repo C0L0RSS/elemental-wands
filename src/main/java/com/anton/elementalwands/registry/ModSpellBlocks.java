@@ -31,6 +31,9 @@ public final class ModSpellBlocks {
 
     public static final Block NATURE_SEEDLING=register("nature_seedling",
             com.anton.elementalwands.block.NatureSeedlingBlock::new,natureSettings());
+    public static final Block NATURE_ROOT_KNOT=register("nature_root_knot",
+            com.anton.elementalwands.block.NatureRootKnotBlock::new,
+            natureSettings().strength(.15f).noCollision().luminance(s->7));
     public static final Block NATURE_ROOTS=register("nature_roots",
             com.anton.elementalwands.block.NatureGrowthBlock::new,natureSettings().replaceable());
     public static final Block NATURE_RAFT=register("nature_raft",
@@ -46,7 +49,7 @@ public final class ModSpellBlocks {
                 .sounds(BlockSoundGroup.AZALEA).dropsNothing().pistonBehavior(PistonBehavior.DESTROY);
     }
     public static boolean isNatureGrowth(net.minecraft.block.BlockState state){
-        return state.isOf(NATURE_SEEDLING)||state.isOf(NATURE_ROOTS)||state.isOf(NATURE_RAFT);
+        return state.isOf(NATURE_ROOT_KNOT)||state.isOf(NATURE_SEEDLING)||state.isOf(NATURE_ROOTS)||state.isOf(NATURE_RAFT);
     }
 
     public static final Block INFERNO_FLAME = register("inferno_flame", InfernoFlameBlock::new,
@@ -73,7 +76,7 @@ public final class ModSpellBlocks {
                     .pistonBehavior(PistonBehavior.DESTROY)
                     .dropsNothing());
 
-    public static final Block PYRE_COALS = register("pyre_coals", MagmaBlock::new,
+    public static final Block PYRE_COALS = register("pyre_coals", com.anton.elementalwands.block.PyreCoalsBlock::new,
             AbstractBlock.Settings.create()
                     .mapColor(MapColor.DARK_RED)
                     .strength(1.5f, 6.0f)

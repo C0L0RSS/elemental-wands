@@ -50,6 +50,10 @@ final class GuardianChurchUpgradeChecks {
             check(s.token.equals(token) && s.layoutVersion==2 && s.statueMoveInventory==null,"Identity or migration receipt incorrect");
             check(moved.getStack(4).isOf(Items.DIAMOND) && moved.getStack(4).getCount()==7 && ItemStack.areEqual(moved.getStack(19),expected),"Inventory changed while moving the offering");
             check(world.getBlockState(s.socket()).isOf(ModBlocks.GUARDIAN_SOCKET),"New rotated socket missing");
+            check(world.getBlockState(s.socket()).get(GuardianSocketBlock.PEDESTAL),"Moved socket lacks the offering model");
+            check(world.getBlockState(s.socket().down()).isOf(ModBlocks.GUARDIAN_PEDESTAL),"Moved pedestal lacks support");
+            check(world.getBlockState(s.at(0,3,-4)).isOf(ModBlocks.GUARDIAN_CHEST_RUNE),"Moved statue lacks matching rune");
+            check(GuardianChurchManager.ritualSocket(world,s.socket().down()).equals(s.socket()),"Column click did not resolve to rotated bowl");
             check(world.getBlockState(s.anchor()).isAir() && world.getBlockState(s.at(0,5,2)).isAir(),"Old socket/statue still blocks the approach");
             check(world.getBlockState(s.at(0,5,-4)).isOf(Blocks.CHISELED_DEEPSLATE),"New statue missing");
             check(world.getBlockState(s.at(0,0,11)).isOf(Blocks.CHISELED_STONE_BRICKS),"Migration moved the church facade");
@@ -58,7 +62,35 @@ final class GuardianChurchUpgradeChecks {
             check(GuardianChurchManager.sites().size()==count,"Moved socket discovered a duplicate site");
             moved.setStack(4,ItemStack.EMPTY);
             check(GuardianChurchManager.moveStatue(world,s) && moved.getStack(4).isEmpty(),"Repeat migration duplicated collected contents");
+            // Existing version-two church, including interrupted partial upgrade and a foreign inventory.
+            var socketEntity=world.getBlockEntity(s.socket());
+            flag.setBoolean(null,true);
+            try {
+                world.setBlockState(s.socket(),world.getBlockState(s.socket()).with(GuardianSocketBlock.PEDESTAL,false));
+                world.setBlockState(s.socket().down(),Blocks.BARREL.getDefaultState());
+                world.setBlockState(s.at(0,3,-4),Blocks.CHISELED_DEEPSLATE.getDefaultState());
+            } finally {flag.setBoolean(null,false);}
+            check(!GuardianChurchManager.upgradePedestal(world,s),"Pedestal upgrade overwrote a foreign inventory");
+            check(world.getBlockState(s.at(0,3,-4)).isOf(Blocks.CHISELED_DEEPSLATE),"Blocked upgrade partially changed the statue");
+            flag.setBoolean(null,true);
+            try {world.setBlockState(s.socket().down(),ModBlocks.GUARDIAN_PEDESTAL.getDefaultState().rotate(rotation));}
+            finally {flag.setBoolean(null,false);}
+            check(GuardianChurchManager.upgradePedestal(world,s),"Partial pedestal upgrade did not resume");
+            check(world.getBlockEntity(s.socket())==socketEntity && s.token.equals(token),"Pedestal upgrade replaced anchor identity or heart token");
+            check(ItemStack.areEqual(moved.getStack(19),expected) && moved.getStack(4).isEmpty(),"Pedestal upgrade changed offering inventory");
+            check(world.getBlockState(s.at(0,3,-4)).get(net.minecraft.state.property.Properties.HORIZONTAL_FACING)==rotation.rotate(net.minecraft.util.math.Direction.NORTH),"Chest rune rotation disagrees with pedestal");
+            check(GuardianChurchManager.upgradePedestal(world,s),"Pedestal upgrade was not idempotent");
+            flag.setBoolean(null,true);
+            try {
+                // Socket chunk saved first, while the other chunk still has the previous stonework.
+                world.setBlockState(s.socket().down(),Blocks.AIR.getDefaultState());
+                world.setBlockState(s.at(0,3,-4),Blocks.CHISELED_DEEPSLATE.getDefaultState());
+            } finally {flag.setBoolean(null,false);}
+            check(GuardianChurchManager.upgradePedestal(world,s)
+                    && world.getBlockState(s.socket().down()).isOf(ModBlocks.GUARDIAN_PEDESTAL)
+                    && world.getBlockState(s.at(0,3,-4)).isOf(ModBlocks.GUARDIAN_CHEST_RUNE),"Partially saved upgrade left an unsupported bowl");
             s.phase=GuardianChurchManager.Phase.RESTORED;
+            check(!GuardianChurchManager.upgradePedestal(world,s),"Completed pedestal was upgraded again");
         }
         var finished=new GuardianChurchManager.Site();finished.phase=GuardianChurchManager.Phase.RESTORED;
         check(!GuardianChurchManager.moveStatue(world,finished),"Completed legacy site was modified");

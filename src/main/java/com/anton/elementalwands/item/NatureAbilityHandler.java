@@ -1,12 +1,11 @@
 package com.anton.elementalwands.item;
 
+
 import java.util.List;
-import java.util.UUID;
 
 import com.anton.elementalwands.entity.SeedProjectileEntity;
 import com.anton.elementalwands.registry.ModParticles;
 import com.anton.elementalwands.util.NatureVfx;
-import com.anton.elementalwands.util.OvergrowthManager;
 import com.anton.elementalwands.util.SeedlingManager;
 import com.anton.elementalwands.util.TemporaryBlockManager;
 import com.anton.elementalwands.util.TendrilBloomManager;
@@ -14,7 +13,6 @@ import com.anton.elementalwands.util.TendrilBloomManager;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.fluid.Fluids;
 import net.minecraft.item.ItemStack;
@@ -23,14 +21,12 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 
 public final class NatureAbilityHandler {
 
     private static final int PRIMARY_COOLDOWN_TICKS = 20;
     private static final int SECONDARY_COOLDOWN_TICKS = 300;
-    private static final double TENDRIL_TARGET_RANGE = 15.0;
 
     // Verdant Step: lily pads bloom across water as the wizard walks, letting them cross ponds.
     // The wider the area, the more headroom a sprinting (or boost-jumping) player has before they
@@ -119,85 +115,49 @@ public final class NatureAbilityHandler {
                 SoundCategory.PLAYERS, 0.7f, 0.9f);
     }
 
-    public static void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        UUID casterUuid = caster.getUuid();
-        List<SeedlingManager.SeedlingSnapshot> seedlings = SeedlingManager.getActiveSeedlingsForCaster(world, casterUuid);
-        if (seedlings.isEmpty()) {
-            caster.sendMessage(Text.literal("No active seedlings."), true);
-            return;
-        }
-
+    public static void castThornLash(ServerWorld world, PlayerEntity caster, ItemStack stack) {
         if (!AbstractWandItem.tryStartCooldown(world, caster, stack,
-                AbstractWandItem.Ability.SECONDARY, getSecondaryCooldownTicks())) {
+                AbstractWandItem.Ability.PRIMARY, com.anton.elementalwands.util.ThornLashRules.COOLDOWN)) return;
+        var lash = new com.anton.elementalwands.entity.ThornLashEntity(
+                com.anton.elementalwands.registry.ModEntities.THORN_LASH, world);
+        lash.initialize(caster);
+        world.spawnEntity(lash);
+        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP,
+                SoundCategory.PLAYERS, .8f, .75f);
+        world.playSound(null, caster.getBlockPos(), SoundEvents.BLOCK_AZALEA_LEAVES_BREAK,
+                SoundCategory.PLAYERS, .7f, .7f);
+    }
+
+    public static void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
+        var seedlings = SeedlingManager.getActiveSeedlingsForCaster(world, caster.getUuid());
+        BlockPos knot = seedlings.isEmpty() ? TendrilBloomManager.findKnotPosition(world, caster) : null;
+        if (seedlings.isEmpty() && knot == null) {
+            caster.sendMessage(Text.literal("Stand near clear, solid ground to grow a root knot."), true);
             return;
         }
-
-        int now = world.getServer().getTicks();
-
-        for (SeedlingManager.SeedlingSnapshot s : seedlings) {
-            LivingEntity target = findNearestTarget(world, caster, s.anchorPos());
-            if (target != null) {
-                Vec3d anchorVec = Vec3d.ofCenter(s.anchorPos());
-                TendrilBloomManager.startTendril(world, caster, s.seedlingId(), anchorVec, target);
+        if (!AbstractWandItem.tryStartCooldown(world, caster, stack,
+                AbstractWandItem.Ability.SECONDARY, getSecondaryCooldownTicks())) return;
+        if (seedlings.isEmpty()) {
+            TendrilBloomManager.startKnot(world, caster, knot);
+        } else {
+            for (var seedling : seedlings) {
+                var targets = TendrilBloomManager.findTargets(world, caster, Vec3d.ofCenter(seedling.anchorPos()));
+                if (!targets.isEmpty()) TendrilBloomManager.startTendril(world, caster,
+                        seedling.seedlingId(), Vec3d.ofCenter(seedling.anchorPos()), targets.getFirst());
             }
+            SeedlingManager.markSeedlingsForConsumption(world, caster.getUuid(), world.getServer().getTicks());
         }
-
-        SeedlingManager.markSeedlingsForConsumption(world, casterUuid, now);
-
         world.playSound(null, caster.getBlockPos(), SoundEvents.BLOCK_GRASS_BREAK,
-                SoundCategory.PLAYERS, 0.6f, 1.0f);
+                SoundCategory.PLAYERS, .6f, 1);
     }
 
     public static void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        var targetedSeedling = SeedlingManager.findTargetedSeedling(world, caster, AbstractWandItem.DEFAULT_RANGE);
-        if (targetedSeedling.isEmpty()) {
-            caster.sendMessage(Text.literal("Target one of your seedlings."), true);
-            return;
-        }
-
-        if (!AbstractWandItem.trySpendUltimateCharge(world, caster, stack)) {
-            return;
-        }
-
-        List<SeedlingManager.SeedlingSnapshot> sources =
-                SeedlingManager.getActiveSeedlingsForCaster(world, caster.getUuid());
-        int consumedSeedlings = SeedlingManager.consumeAllSeedlingsForCaster(world, caster.getUuid());
-        if (consumedSeedlings <= 0) {
-            caster.sendMessage(Text.literal("No active seedlings."), true);
-            return;
-        }
-
-        OvergrowthManager.startOvergrowth(world, caster, targetedSeedling.get().anchorPos(), sources);
-    }
-
-    private static LivingEntity findNearestTarget(ServerWorld world, PlayerEntity caster, BlockPos anchor) {
-        Vec3d anchorCenter = Vec3d.ofCenter(anchor);
-        double rangeSq = TENDRIL_TARGET_RANGE * TENDRIL_TARGET_RANGE;
-
-        Box box = new Box(
-                anchorCenter.x - TENDRIL_TARGET_RANGE, anchorCenter.y - TENDRIL_TARGET_RANGE, anchorCenter.z - TENDRIL_TARGET_RANGE,
-                anchorCenter.x + TENDRIL_TARGET_RANGE, anchorCenter.y + TENDRIL_TARGET_RANGE, anchorCenter.z + TENDRIL_TARGET_RANGE);
-
-        // Mirror the Space primary's aim rules: no passives, teammates, own pets,
-        // decorative stands, or the caster's own Awakened Tree.
-        List<LivingEntity> candidates = world.getEntitiesByClass(LivingEntity.class, box,
-                e -> e.isAlive() && !e.isSpectator() && !e.getUuid().equals(caster.getUuid())
-                        && !(e instanceof com.anton.elementalwands.entity.AwakenedTreeEntity)
-                        && !(e instanceof net.minecraft.entity.passive.PassiveEntity)
-                        && !(e instanceof net.minecraft.entity.decoration.ArmorStandEntity)
-                        && !(e instanceof net.minecraft.entity.passive.TameableEntity tameable && tameable.isOwner(caster))
-                        && !e.isTeammate(caster));
-
-        LivingEntity best = null;
-        double bestDist = Double.MAX_VALUE;
-        for (LivingEntity e : candidates) {
-            double d = e.getEntityPos().squaredDistanceTo(anchorCenter);
-            if (d > rangeSq) continue;
-            if (d < bestDist) {
-                bestDist = d;
-                best = e;
-            }
-        }
-        return best;
+        if (!AbstractWandItem.trySpendUltimateCharge(world, caster, stack)) return;
+        var seed = new com.anton.elementalwands.entity.OvergrowthSeedEntity(
+                com.anton.elementalwands.registry.ModEntities.OVERGROWTH_SEED, world);
+        seed.launch(caster, stack);
+        world.spawnEntity(seed);
+        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_EGG_THROW,
+                SoundCategory.PLAYERS, .9f, .6f);
     }
 }

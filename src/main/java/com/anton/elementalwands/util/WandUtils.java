@@ -1,5 +1,7 @@
 package com.anton.elementalwands.util;
 
+import com.anton.elementalwands.party.WandAllies;
+
 import net.minecraft.entity.Entity;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.server.world.ServerWorld;
@@ -39,7 +41,7 @@ public class WandUtils {
                 .stretch(direction.multiply(range))
                 .expand(1.0);
 
-        Predicate<Entity> predicate = (e) -> e != caster && e.isAlive() && e.canHit() && !e.isSpectator();
+        Predicate<Entity> predicate = (e) -> !WandAllies.protectedFrom(caster, e) && e.isAlive() && e.canHit() && !e.isSpectator();
 
         // 1.21.x changed ProjectileUtil#getEntityCollision to require a
         // ProjectileEntity.

@@ -1,5 +1,7 @@
 package com.anton.elementalwands.util;
 
+import com.anton.elementalwands.party.WandAllies;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -94,7 +96,7 @@ public final class OvergrowthManager {
     public static void startOvergrowth(ServerWorld world, PlayerEntity caster, BlockPos seedlingPos,
             int consumedSeedlings) {
         startOvergrowthInternal(world, caster, seedlingPos,
-                List.of(seedlingPos.toImmutable()), consumedSeedlings);
+                List.of(seedlingPos.toImmutable()), consumedSeedlings, TREE_DURATION_TICKS);
     }
 
     public static void startOvergrowth(ServerWorld world, PlayerEntity caster, BlockPos seedlingPos,
@@ -102,11 +104,31 @@ public final class OvergrowthManager {
         List<BlockPos> sources = consumedSeedlings.stream()
                 .map(snapshot -> snapshot.anchorPos().toImmutable())
                 .toList();
-        startOvergrowthInternal(world, caster, seedlingPos, sources, consumedSeedlings.size());
+        startOvergrowthInternal(world, caster, seedlingPos, sources, consumedSeedlings.size(), TREE_DURATION_TICKS);
+    }
+
+    public static boolean startThrownOvergrowth(ServerWorld world, PlayerEntity caster, BlockPos anchor) {
+        if (!OvergrowthThrowRules.validGround(world, anchor)) return false;
+        // Do not overwrite another wizard's flower when landing directly on it.
+        if (world.getBlockState(anchor).isOf(com.anton.elementalwands.registry.ModSpellBlocks.NATURE_SEEDLING)
+                && SeedlingManager.getActiveSeedlingsForCaster(world, caster.getUuid()).stream()
+                    .noneMatch(s -> s.anchorPos().equals(anchor))) return false;
+        var flower = SeedlingManager.consumeNearestForOvergrowth(world, caster.getUuid(), anchor, OvergrowthThrowRules.FLOWER_RADIUS);
+        List<BlockPos> sources = flower.map(s -> List.of(s.anchorPos())).orElse(List.of());
+        int duration = TREE_DURATION_TICKS + (flower.isPresent() ? OvergrowthThrowRules.BONUS_TICKS : 0);
+        // The optional flower changes duration only: burst damage stays at the base value.
+        startOvergrowthInternal(world, caster, anchor, sources, 0, duration);
+        return true;
+    }
+
+    public static int remainingTicks(ServerWorld world, UUID caster, BlockPos center) {
+        return ACTIVE.getOrDefault(world.getRegistryKey(), List.of()).stream()
+                .filter(tree -> tree.casterUuid.equals(caster) && tree.center.equals(center))
+                .mapToInt(tree -> Math.max(0, tree.expiryTick - world.getServer().getTicks())).max().orElse(0);
     }
 
     private static void startOvergrowthInternal(ServerWorld world, PlayerEntity caster,
-            BlockPos seedlingPos, List<BlockPos> sources, int consumedSeedlings) {
+            BlockPos seedlingPos, List<BlockPos> sources, int consumedSeedlings, int duration) {
         int now = world.getServer().getTicks();
         BlockPos center = seedlingPos.toImmutable();
 
@@ -117,7 +139,7 @@ public final class OvergrowthManager {
         world.spawnEntity(treeEntity);
 
         AwakenedTree tree = new AwakenedTree(treeEntity.getId(), caster.getUuid(), center,
-                now, now + TREE_DURATION_TICKS, sources);
+                now, now + duration, sources);
         ACTIVE.computeIfAbsent(world.getRegistryKey(), _key -> new ArrayList<>()).add(tree);
 
         advanceTreeGrowth(world, tree, 0, now);
@@ -243,7 +265,7 @@ public final class OvergrowthManager {
                 centerVec.x + TREE_RADIUS, centerVec.y + TREE_Y_ABOVE, centerVec.z + TREE_RADIUS);
         List<LivingEntity> targets = world.getEntitiesByClass(LivingEntity.class, box,
                 entity -> entity.isAlive() && !entity.isSpectator()
-                        && !entity.getUuid().equals(caster.getUuid())
+                        && !WandAllies.protectedFrom(caster, entity)
                         && !(entity instanceof AwakenedTreeEntity));
 
         for (LivingEntity target : targets) {
@@ -253,7 +275,7 @@ public final class OvergrowthManager {
 
             boolean damaged = target.damage(world, world.getDamageSources().playerAttack(caster), damage);
             if (damaged) {
-                AbstractWandItem.onWandDamageDealt(caster, damage, 0);
+                AbstractWandItem.onWandDamageDealt(caster, damage, 0, com.anton.elementalwands.data.WizardAffinity.NATURE);
             }
 
             EntangleTracker.applyNatureSlow(target, ROOT_CRUSH_SLOW_TICKS, ROOT_CRUSH_SLOW_AMPLIFIER);
@@ -349,6 +371,8 @@ public final class OvergrowthManager {
     }
 
     private static boolean canReplaceTreeBlock(BlockState state) {
+        if (state.isOf(com.anton.elementalwands.registry.ModSpellBlocks.NATURE_SEEDLING)
+                || state.isOf(com.anton.elementalwands.registry.ModSpellBlocks.NATURE_ROOT_KNOT)) return false;
         return state.isAir() || state.isReplaceable()
                 || com.anton.elementalwands.registry.ModSpellBlocks.isNatureGrowth(state);
     }

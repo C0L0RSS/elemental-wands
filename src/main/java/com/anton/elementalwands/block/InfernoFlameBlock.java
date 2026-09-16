@@ -1,5 +1,7 @@
 package com.anton.elementalwands.block;
 
+import com.anton.elementalwands.party.WandAllies;
+
 import com.mojang.serialization.MapCodec;
 
 import net.minecraft.block.AbstractBlock;
@@ -46,6 +48,9 @@ public final class InfernoFlameBlock extends Block {
     @Override
     protected void onEntityCollision(BlockState state, World world, BlockPos pos,
             Entity entity, EntityCollisionHandler handler, boolean intersects) {
+        if (world instanceof net.minecraft.server.world.ServerWorld serverWorld
+                && WandAllies.protectedFrom(serverWorld,
+                    com.anton.elementalwands.util.TemporaryBlockManager.casterAt(serverWorld, pos), entity)) return;
         handler.addEvent(CollisionEvent.CLEAR_FREEZE);
         handler.addEvent(CollisionEvent.FIRE_IGNITE);
         handler.addPostCallback(CollisionEvent.FIRE_IGNITE, colliding -> {

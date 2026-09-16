@@ -1,0 +1,1 @@
+Combined Nature native client passed: Lash purchase/equip/input/heal and model, three-tendril knot input/model/removal, spell panel text bounds, X input without seedlings, synchronized acorn flight and grown tree. Screenshots captured; human combat feel pending.

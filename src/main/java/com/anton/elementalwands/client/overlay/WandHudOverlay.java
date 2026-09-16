@@ -75,6 +75,8 @@ public class WandHudOverlay implements HudRenderCallback {
         int width  = client.getWindow().getScaledWidth();
         int height = client.getWindow().getScaledHeight();
 
+        if (com.anton.elementalwands.client.WandControls.aimingLeap())
+            context.drawCenteredTextWithShadow(client.textRenderer,"Release to leap | Change item to cancel",width/2,height/2+35,0xffffcf89);
         int centerX     = width  / 2;
         int hotbarTopY  = height - HOTBAR_HEIGHT;
 
@@ -101,22 +103,45 @@ public class WandHudOverlay implements HudRenderCallback {
             renderAbility(context, client, stack, wand, AbstractWandItem.Ability.PRIMARY, 0,
                 scaledCenterX, slotCenterY, primaryCooldownFor(affinity), theme, accentColor, true, affinity);
         } else {
-            // Use ClientPlayerData for padlock logic (synced from server)
-            boolean secondaryUnlocked = ClientPlayerData.isSecondaryUnlocked();
-            boolean ultimateUnlocked  = ClientPlayerData.isUltimateUnlocked();
-
-            renderAbility(context, client, stack, wand, AbstractWandItem.Ability.PRIMARY, 0,
-                slotCentersX[0], slotCenterY, primaryCooldownFor(affinity), theme, accentColor, true, affinity);
-            renderAbility(context, client, stack, wand, AbstractWandItem.Ability.SECONDARY, 1,
-                slotCentersX[1], slotCenterY, secondaryCooldownFor(affinity), theme, accentColor, secondaryUnlocked, affinity);
-            renderUltimateSlot(context, client, stack, wand, slotCentersX[2], slotCenterY, theme, accentColor, ultimateUnlocked);
+            for (int slot = 0; slot < 2; slot++) {
+                var spell = com.anton.elementalwands.data.WandSpells.find(ClientPlayerData.loadout().get(slot));
+                var ability = spell.ability();
+                renderAbility(context, client, stack, wand, ability, slot, slotCentersX[slot], slotCenterY,
+                        ability == AbstractWandItem.Ability.PRIMARY ? primaryCooldownFor(affinity) : secondaryCooldownFor(affinity),
+                        theme, accentColor, ClientPlayerData.owns(spell), affinity);
+            }
+            renderUltimateSlot(context, client, stack, wand, slotCentersX[2], slotCenterY, theme, accentColor, ClientPlayerData.isUltimateUnlocked());
+        }
+        for (int slot = 0; slot < (isFractured ? 1 : 3); slot++) {
+            int x = isFractured ? scaledCenterX : slotCentersX[slot];
+            String label = com.anton.elementalwands.client.WandControls.shortLabel(slot);
+            context.drawCenteredTextWithShadow(client.textRenderer, label, x, slotCenterY + 20, 0xFFE8D6AF);
         }
 
+        if (affinity == WizardAffinity.FIRE && ClientPlayerData.loadout().getFirst().equals("flamethrower")) {
+            drawFireHeat(context, client.textRenderer, scaledCenterX, slotCenterY-SLOT_SIZE/2-18,
+                    ClientPlayerData.fireHeat(), ClientPlayerData.fireOverheated());
+        }
+        if(affinity==WizardAffinity.FIRE && ClientPlayerData.loadout().contains("flashover")) {
+            int y=slotCenterY-SLOT_SIZE/2-(ClientPlayerData.loadout().getFirst().equals("flamethrower") ? 47 : 22);
+            context.drawCenteredTextWithShadow(client.textRenderer,"1: "+ClientPlayerData.flashSlotLabel(0,client.world.getTime())+" | 2: "+ClientPlayerData.flashSlotLabel(1,client.world.getTime())+" | 3: "+ClientPlayerData.flashSlotLabel(2,client.world.getTime()),scaledCenterX,y,0xFFFFCA7B);
+            context.drawCenteredTextWithShadow(client.textRenderer,com.anton.elementalwands.client.WandControls.shortLabel(3)+" : Detonate",scaledCenterX,y+10,0xFFE8D6AF);
+        }
         if (affinity == WizardAffinity.STONE) {
             drawStoneReserve(context, scaledCenterX, slotCenterY - SLOT_SIZE / 2 - 13,
                     ClientPlayerData.stoneMass());
         }
         context.getMatrices().popMatrix();
+    }
+
+    public static void drawFireHeat(DrawContext context, net.minecraft.client.font.TextRenderer font, int centerX, int y, float heat, boolean locked) {
+        int x=centerX-60;
+        context.drawTexture(RenderPipelines.GUI_TEXTURED,HUD_TEXTURE,x,y,0,160,120,10,256,256);
+        int filled=Math.round(106*MathHelper.clamp(heat,0,100)/100f);
+        int color=locked ? 0xFFDF4935 : heat>=75 ? 0xFFF77C31 : 0xFFFFBF54;
+        context.fill(x+7,y+3,x+7+filled,y+7,color);
+        String label=locked ? "OVERHEATED" : "HEAT";
+        context.drawCenteredTextWithShadow(font,label,centerX,y-10,locked?0xFFFF7862:0xFFFFDA9A);
     }
 
     private void drawStoneReserve(DrawContext context, int centerX, int y, int mass) {
@@ -252,6 +277,14 @@ public class WandHudOverlay implements HudRenderCallback {
             maxCooldownTicks = ClientPlayerData.stoneDuration();
             remaining = ClientPlayerData.stoneRemaining(now);
         }
+        var selectedSpell = com.anton.elementalwands.data.WandSpells.find(ClientPlayerData.loadout().get(slotIndex));
+        if (selectedSpell != null && selectedSpell.id().equals("fire_hop")) {
+            remaining=ClientPlayerData.hopRemaining(now);maxCooldownTicks=com.anton.elementalwands.util.FireBuildRules.HOP_COOLDOWN;
+        } else if (selectedSpell != null && selectedSpell.id().equals("flashover")) {
+            remaining=ClientPlayerData.flashRemaining(now);maxCooldownTicks=ClientPlayerData.flashDuration();
+        } else if (selectedSpell != null && selectedSpell.id().equals("flamethrower")) {
+            remaining=ClientPlayerData.fireOverheated() ? (long)Math.ceil((ClientPlayerData.fireHeat()-com.anton.elementalwands.util.FireBuildRules.UNLOCK_HEAT)/com.anton.elementalwands.util.FireBuildRules.COOL_PER_TICK) : 0;
+        }
         boolean onCooldown = remaining > 0;
 
         boolean isWindSecondary  = affinity == WizardAffinity.WIND && ability == AbstractWandItem.Ability.SECONDARY;
@@ -293,7 +326,7 @@ public class WandHudOverlay implements HudRenderCallback {
                 withAlpha(accentColor, 0x32));
         }
 
-        drawThemeCooldownMotif(context, theme, slotIndex, renderX, renderY, now, animation);
+        drawThemeCooldownMotif(context, theme, ability == AbstractWandItem.Ability.PRIMARY ? 0 : 1, renderX, renderY, now, animation);
 
         if (isWindSecondary) {
             drawWindDashPips(context, renderX, renderY, windCharges, windMaxCharges,
@@ -377,11 +410,8 @@ public class WandHudOverlay implements HudRenderCallback {
 
     private void drawFireCooldown(DrawContext context, int slotIndex, int renderX, int renderY,
             long now, AnimationProfile animation) {
-        Identifier glyph = FIRE_ABILITY_TEXTURES[Math.max(0, Math.min(slotIndex,
-                FIRE_ABILITY_TEXTURES.length - 1))];
-        context.drawTexture(RenderPipelines.GUI_TEXTURED, glyph,
-                renderX + 6, renderY + 6, 0.0f, 0.0f,
-                24, 24, 32, 32, 32, 32);
+        var spell=com.anton.elementalwands.data.WandSpells.find(ClientPlayerData.loadout().get(slotIndex));
+        com.anton.elementalwands.client.SpellIcons.draw(context,spell,renderX+6,renderY+6,24);
 
         // A restrained two-pixel pulse keeps a ready Fire slot alive without
         // obscuring its spell-specific glyph.
@@ -393,11 +423,8 @@ public class WandHudOverlay implements HudRenderCallback {
 
     private void drawNatureCooldown(DrawContext context, int slotIndex, int renderX, int renderY,
             long now, AnimationProfile animation) {
-        Identifier glyph = NATURE_ABILITY_TEXTURES[Math.max(0, Math.min(slotIndex,
-                NATURE_ABILITY_TEXTURES.length - 1))];
-        context.drawTexture(RenderPipelines.GUI_TEXTURED, glyph,
-                renderX + 6, renderY + 6, 0.0f, 0.0f,
-                24, 24, 32, 32, 32, 32);
+        var spell = com.anton.elementalwands.data.WandSpells.find(ClientPlayerData.loadout().get(slotIndex));
+        com.anton.elementalwands.client.SpellIcons.draw(context, spell, renderX + 6, renderY + 6, 24);
 
         int pollenCount = Math.max(2, Math.round(4 * animation.density));
         for (int i = 0; i < pollenCount; i++) {

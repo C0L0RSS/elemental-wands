@@ -1,0 +1,2 @@
+Vanilla locate found a church in fresh normal terrain. Generated socket, rotation, floor, and stocked heart chest verified.
+BlockPos{x=-1082, y=93, z=128} rotation CLOCKWISE_90

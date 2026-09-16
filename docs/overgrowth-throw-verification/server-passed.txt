@@ -1,0 +1,1 @@
+Throwable Overgrowth passed: real seedless cast and charge spend, grounded landing, one nearest owned flower consumed, other/foreign/distant flowers preserved, identical base/enhanced damage, 15/20-second expiry, wall and mob impacts, harmless projectile, water/ceiling rejection and charge refund, failed landing preserves flower, affinity cleanup.

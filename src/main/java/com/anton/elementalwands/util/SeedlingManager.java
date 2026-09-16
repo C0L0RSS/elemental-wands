@@ -1,5 +1,7 @@
 package com.anton.elementalwands.util;
 
+import com.anton.elementalwands.party.WandAllies;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -216,6 +218,20 @@ public final class SeedlingManager {
         return best == null
                 ? Optional.empty()
                 : Optional.of(new SeedlingSnapshot(best.seedlingId, best.anchorPos, best.plantTick));
+    }
+
+    /** Consume one owned flower at impact; distant/foreign flowers and their effects are untouched. */
+    public static java.util.Optional<SeedlingSnapshot> consumeNearestForOvergrowth(ServerWorld world,
+            UUID caster, BlockPos center, double radius) {
+        Seedling nearest = activeForCaster(world, caster).stream()
+                .filter(s -> world.isChunkLoaded(s.anchorPos) && world.getBlockState(s.anchorPos).isOf(ModSpellBlocks.NATURE_SEEDLING)
+                        && s.anchorPos.getSquaredDistance(center) <= radius * radius)
+                .min(Comparator.<Seedling>comparingDouble(s -> s.anchorPos.getSquaredDistance(center))
+                        .thenComparingInt(s -> s.plantTick)).orElse(null);
+        if (nearest == null) return java.util.Optional.empty();
+        var snapshot = new SeedlingSnapshot(nearest.seedlingId, nearest.anchorPos, nearest.plantTick);
+        cleanupSeedling(world, nearest);
+        return java.util.Optional.of(snapshot);
     }
 
     public static int consumeAllSeedlingsForCaster(ServerWorld world, UUID casterUuid) {
@@ -559,10 +575,7 @@ public final class SeedlingManager {
             boolean inZone = seedling.placedPositions.contains(feet) || seedling.placedPositions.contains(feet.down());
             if (!inZone) continue;
 
-            if (e.getUuid().equals(seedling.casterUuid)) {
-                e.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 10, 0, false, false, true));
-                continue;
-            }
+            if (WandAllies.protectedFrom(world, seedling.casterUuid, e)) continue;
 
             EntangleTracker.applyNatureSlow(e, 40, 3);
 
@@ -609,6 +622,7 @@ public final class SeedlingManager {
     private static void cleanupSeedlingInternal(ServerWorld world, Seedling seedling) {
         if (!seedling.active) return;
         seedling.active = false;
+        TendrilBloomManager.invalidateSeedling(world, seedling.seedlingId);
 
         restoreBlocks(world, seedling.placements);
 

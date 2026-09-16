@@ -1,0 +1,1 @@
+Sticky Flashover passed: ignore allies, attach to player/mob, follow translation/turn, wall occlusion, current-position blasts at 0/3/6 ticks, four-block splash, 12+8+4 cap through hurt immunity, one bomb spares and two bombs kill a creeper, mob removal, queued disarming, sequence cancellation and water extinguishing.

@@ -1,0 +1,1 @@
+Native screen rendered all affinities, production textures resolved, small-screen button hitboxes and keyboard rebinding/persistence passed. Screenshots saved.

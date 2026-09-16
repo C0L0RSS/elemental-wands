@@ -1,0 +1,4 @@
+Minecraft PlayerEntity.travel(Vec3d.ZERO), flat stone landing, no steering:
+Rise: 5.00337933373298 blocks
+Horizontal distance: 6.10166092911022 blocks
+Normal landing: no damage. A 12-block fall still dealt damage.

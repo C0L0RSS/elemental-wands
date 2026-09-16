@@ -77,3 +77,10 @@ tasks.register('checkGuardianBeam', JavaExec) {
     mainClass = 'com.anton.elementalwands.entity.GuardianBeamContractTest'
 }
 check.dependsOn checkGuardianBeam
+
+tasks.register('checkParties', JavaExec) {
+    dependsOn guardianTestClasses
+    classpath = sourceSets.guardianTest.runtimeClasspath
+    mainClass = 'com.anton.elementalwands.party.PartyStoreTest'
+}
+check.dependsOn checkParties

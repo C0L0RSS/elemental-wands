@@ -1,5 +1,7 @@
 package com.anton.elementalwands.item;
 
+import com.anton.elementalwands.party.WandAllies;
+
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EquipmentSlot;
@@ -230,11 +232,11 @@ public final class FireAbilityHandler {
                     }
                 }
 
-                TemporaryBlockManager.placeTemporaryBlocks(sw, sliceBlocks,
+                TemporaryBlockManager.placeTrackedTemporaryBlocks(sw, sliceBlocks,
                         ModSpellBlocks.PYRE_COALS.getDefaultState(),
                         PYRE_GROUND_DURATION,
                         state -> !state.hasBlockEntity() && !state.isOf(Blocks.OBSIDIAN)
-                                && !state.isOf(Blocks.BEDROCK));
+                                && !state.isOf(Blocks.BEDROCK), caster.getUuid());
 
                 for (Map.Entry<BlockPos, Integer> entry : flameDelayByPos.entrySet()) {
                     int delay = entry.getValue();
@@ -251,7 +253,7 @@ public final class FireAbilityHandler {
                 // only the fire model fan-out is delayed.
                 List<LivingEntity> targets = sw.getEntitiesByClass(LivingEntity.class,
                         new net.minecraft.util.math.Box(origin, origin).expand(WAVE_LENGTH),
-                        e -> e != caster && e.isAlive());
+                        e -> !WandAllies.protectedFrom(caster, e) && e.isAlive() && !e.isSpectator());
                 for (LivingEntity target : targets) {
                     if (hitTargets.contains(target.getUuid()))
                         continue;
@@ -265,7 +267,7 @@ public final class FireAbilityHandler {
                             && distRight <= WAVE_HALF_WIDTH) {
                         boolean damaged = target.damage(sw, sw.getDamageSources().playerAttack(caster), 6.0f);
                         if (damaged) {
-                            AbstractWandItem.onWandDamageDealt(caster, 6.0f);
+                            AbstractWandItem.onWandDamageDealt(caster, 6.0f, com.anton.elementalwands.data.WizardAffinity.FIRE);
                         }
                         target.setFireTicks(100);
                         hitTargets.add(target.getUuid());

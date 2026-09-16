@@ -1,5 +1,7 @@
 package com.anton.elementalwands.item;
 
+import com.anton.elementalwands.party.WandAllies;
+
 import java.util.Locale;
 
 import com.anton.elementalwands.ElementalWandsMod;
@@ -66,8 +68,8 @@ public abstract class AbstractWandItem extends Item {
             return ability == Ability.PRIMARY;
         }
         return switch (ability) {
-            case SECONDARY -> (player.getAttachedOrElse(EWAttachments.UNLOCKED_SKILLS, 0) & EWAttachments.SKILL_SECONDARY) != 0;
-            case ULTIMATE  -> (player.getAttachedOrElse(EWAttachments.UNLOCKED_SKILLS, 0) & EWAttachments.SKILL_ULTIMATE)  != 0;
+            case SECONDARY -> (com.anton.elementalwands.util.WandProgression.skills(player) & EWAttachments.SKILL_SECONDARY) != 0;
+            case ULTIMATE  -> (com.anton.elementalwands.util.WandProgression.skills(player) & EWAttachments.SKILL_ULTIMATE)  != 0;
             default        -> true;
         };
     }
@@ -78,29 +80,9 @@ public abstract class AbstractWandItem extends Item {
 
     @Override
     public ActionResult use(World world, PlayerEntity user, Hand hand) {
-        ItemStack stack = user.getStackInHand(hand);
-
-        if (world.isClient())
-            return ActionResult.SUCCESS;
-        if (!(world instanceof ServerWorld serverWorld))
-            return ActionResult.SUCCESS;
-        if (user.isSpectator())
-            return ActionResult.PASS;
-
-        if (user.isSneaking()) {
-            if (!isAbilityUnlocked(user, Ability.SECONDARY)) {
-                user.sendMessage(Text.translatable("hud.elementalwands.locked"), true);
-                return ActionResult.FAIL;
-            }
-            castSecondary(serverWorld, user, stack);
-        } else {
-            if (!isAbilityUnlocked(user, Ability.PRIMARY)) {
-                user.sendMessage(Text.translatable("hud.elementalwands.locked"), true);
-                return ActionResult.FAIL;
-            }
-            castPrimary(serverWorld, user, stack);
-        }
-        return ActionResult.SUCCESS;
+        // Casting uses explicit slot requests. Ordinary item use remains available
+        // for interaction (sneak + right-click bypasses the bound spell input).
+        return ActionResult.PASS;
     }
 
     // -----------------------------------------------------------------------
@@ -214,20 +196,15 @@ public abstract class AbstractWandItem extends Item {
      * a projectile entity). Grants +1 Arcane Flux per damage point and +5
      * ultimate charge to the owner's held wand.
      */
-    public static void onWandDamageDealt(Entity owner, float damageDealt) {
-        onWandDamageDealt(owner, damageDealt, 5);
+    public static void onWandDamageDealt(Entity owner, float damageDealt, WizardAffinity source) {
+        onWandDamageDealt(owner, damageDealt, 5, source);
     }
 
-    /** Preserve progression while allowing abilities to award charge at their own cadence. */
-    public static void onWandDamageDealt(Entity owner, float damageDealt, int ultimateCharge) {
-        if (!(owner instanceof ServerPlayerEntity player)) return;
-
-        long current = player.getAttachedOrElse(EWAttachments.ARCANE_FLUX, 0L);
-        player.setAttached(EWAttachments.ARCANE_FLUX, current + Math.max(1L, Math.round(damageDealt)));
-        ElementalWandsMod.refreshWizardBook(player);
-
-        ItemStack held = player.getMainHandStack();
-        addUltimateCharge(held, Math.max(0, ultimateCharge));
+    public static void onWandDamageDealt(Entity owner, float damageDealt, int ultimateCharge, WizardAffinity source) {
+        if (!(owner instanceof ServerPlayerEntity player) || !Float.isFinite(damageDealt) || damageDealt <= 0) return;
+        com.anton.elementalwands.util.WandProgression.earn(player, source, Math.max(1L, Math.round(damageDealt)));
+        ElementalWandsMod.refreshProgression(player);
+        if (EWAttachments.getAffinity(player) == source) addUltimateCharge(player.getMainHandStack(), Math.max(0, ultimateCharge));
     }
 
     // -----------------------------------------------------------------------
@@ -235,13 +212,13 @@ public abstract class AbstractWandItem extends Item {
     // -----------------------------------------------------------------------
 
     public static boolean applyDamage(ServerWorld world, PlayerEntity caster, Entity target, float amount) {
-        if (!(target instanceof LivingEntity living))
+        if (!(target instanceof LivingEntity living) || WandAllies.protectedFrom(caster, target))
             return false;
 
         DamageSource source = world.getDamageSources().playerAttack(caster);
         boolean damaged = living.damage(world, source, amount);
         if (damaged) {
-            onWandDamageDealt(caster, amount);
+            onWandDamageDealt(caster, amount, WizardAffinity.NONE);
         }
         return damaged;
     }

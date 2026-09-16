@@ -1,5 +1,7 @@
 package com.anton.elementalwands.util;
 
+import com.anton.elementalwands.party.WandAllies;
+
 import com.anton.elementalwands.entity.AwakenedTreeEntity;
 import com.anton.elementalwands.entity.FracturedGuardianEntity;
 import com.anton.elementalwands.item.AbstractWandItem;
@@ -43,7 +45,7 @@ public final class NatureCombat {
 
     public static void thornContact(ServerWorld world, LivingEntity target, UUID casterUuid) {
         if (!target.isAlive() || target.isSpectator() || target instanceof AwakenedTreeEntity
-                || target.getUuid().equals(casterUuid)) return;
+                || WandAllies.protectedFrom(world, casterUuid, target)) return;
         int now = world.getServer().getTicks();
         Contact key = new Contact(casterUuid, target.getUuid());
         if (CONTACTS.getOrDefault(key, Integer.MIN_VALUE) > now) return;
@@ -55,6 +57,10 @@ public final class NatureCombat {
             if (target instanceof FracturedGuardianEntity guardian) guardian.onNatureThorns();
             reward(world.getPlayerByUuid(casterUuid), damage, THORN_CHARGE, 3);
         }
+    }
+
+    public static void lashDamageDealt(Entity owner, float healthDamage) {
+        if (healthDamage > 0) reward(owner, healthDamage, SEED_CHARGE, 1);
     }
 
     public static void seedDamageDealt(Entity owner) {
@@ -71,6 +77,6 @@ public final class NatureCombat {
             charge = points;
         }
         // Keep Arcane Flux for every accepted hit even when the charge window is closed.
-        AbstractWandItem.onWandDamageDealt(player, damage, charge);
+        AbstractWandItem.onWandDamageDealt(player, damage, charge, com.anton.elementalwands.data.WizardAffinity.NATURE);
     }
 }

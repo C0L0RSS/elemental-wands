@@ -1,5 +1,7 @@
 package com.anton.elementalwands.entity;
 
+import com.anton.elementalwands.party.WandAllies;
+
 import java.util.List;
 
 import com.anton.elementalwands.registry.ModEntities;
@@ -62,6 +64,12 @@ public class SingularityBoltEntity extends ProjectileEntity {
         Vec3d direction = owner.getRotationVec(1.0f).normalize();
         launchDirection = direction;
         setVelocity(direction.multiply(PROJECTILE_SPEED));
+    }
+
+    private boolean protectsAlly(Entity target) {
+        return WandAllies.protectedFrom(getOwner(), target)
+                || (getEntityWorld() instanceof ServerWorld world && owner != null
+                    && WandAllies.protectedFrom(world, owner.getUuid(), target));
     }
 
     @Override
@@ -128,19 +136,19 @@ public class SingularityBoltEntity extends ProjectileEntity {
     private void applyImpact(ServerWorld world, Vec3d impactPos, Entity directHit) {
         Entity owner = getOwner();
 
-        if (directHit instanceof LivingEntity living && !directHit.equals(owner)) {
+        if (directHit instanceof LivingEntity living && !protectsAlly(directHit)) {
             DamageSource source = owner instanceof LivingEntity livingOwner
                     ? world.getDamageSources().thrown(this, livingOwner)
                     : world.getDamageSources().magic();
             boolean damaged = damageWithoutKnockback(world, living, source, DIRECT_DAMAGE);
             if (damaged) {
-                com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(owner, DIRECT_DAMAGE);
+                com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(owner, DIRECT_DAMAGE, com.anton.elementalwands.data.WizardAffinity.SPACE);
             }
         }
 
         Box box = Box.of(impactPos, IMPACT_RADIUS * 2.0, IMPACT_RADIUS * 2.0, IMPACT_RADIUS * 2.0);
         List<LivingEntity> affected = world.getEntitiesByClass(LivingEntity.class, box,
-                entity -> entity.isAlive() && !entity.isSpectator() && !entity.equals(owner));
+                entity -> entity.isAlive() && !entity.isSpectator() && !protectsAlly(entity));
 
         for (LivingEntity living : affected) {
             if (living.squaredDistanceTo(impactPos) > IMPACT_RADIUS * IMPACT_RADIUS) {
@@ -153,7 +161,7 @@ public class SingularityBoltEntity extends ProjectileEntity {
                         : world.getDamageSources().magic();
                 boolean damaged = damageWithoutKnockback(world, living, splashSource, SPLASH_DAMAGE);
                 if (damaged) {
-                    com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(owner, SPLASH_DAMAGE);
+                    com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(owner, SPLASH_DAMAGE, com.anton.elementalwands.data.WizardAffinity.SPACE);
                     world.spawnParticles(ModParticles.SPACE_PINPOINT,
                             living.getX(), living.getBodyY(0.5), living.getZ(),
                             1, 0.0, 0.0, 0.0, 0.0);
@@ -278,7 +286,7 @@ public class SingularityBoltEntity extends ProjectileEntity {
 
     private boolean isCombatTarget(ServerWorld world, LivingEntity target) {
         if (target.getEntityWorld() != world || target.isRemoved()
-                || !target.isAlive() || target.isSpectator() || target == getOwner()) {
+                || !target.isAlive() || target.isSpectator() || protectsAlly(target)) {
             return false;
         }
 
@@ -388,7 +396,7 @@ public class SingularityBoltEntity extends ProjectileEntity {
 
     @Override
     protected boolean canHit(Entity entity) {
-        return super.canHit(entity) && !entity.equals(getOwner());
+        return super.canHit(entity) && !protectsAlly(entity);
     }
 
     @Override

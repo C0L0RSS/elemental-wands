@@ -1,5 +1,7 @@
 package com.anton.elementalwands.util;
 
+import com.anton.elementalwands.party.WandAllies;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -487,7 +489,7 @@ public final class TitanDomeManager {
 
         Box trackingBox = new Box(dome.center).expand(dome.radius + 1.0);
         List<LivingEntity> inside = world.getEntitiesByClass(LivingEntity.class, trackingBox,
-                e -> e.isAlive() && !e.isSpectator() && !e.getUuid().equals(dome.casterUuid));
+                e -> e.isAlive() && !e.isSpectator() && !WandAllies.protectedFrom(world, dome.casterUuid, e));
         for (LivingEntity living : inside) {
             if (living.getEntityPos().squaredDistanceTo(center) <= radiusSq) {
                 dome.confinedEntityUuids.add(living.getUuid());
@@ -498,7 +500,8 @@ public final class TitanDomeManager {
         while (trackedIt.hasNext()) {
             UUID trackedUuid = trackedIt.next();
             Entity tracked = world.getEntity(trackedUuid);
-            if (!(tracked instanceof LivingEntity living) || !living.isAlive() || living.isSpectator()) {
+            if (!(tracked instanceof LivingEntity living) || !living.isAlive() || living.isSpectator()
+                    || WandAllies.protectedFrom(world, dome.casterUuid, living)) {
                 trackedIt.remove();
                 continue;
             }

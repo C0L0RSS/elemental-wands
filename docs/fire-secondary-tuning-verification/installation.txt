@@ -1,0 +1,3 @@
+Installed: /Users/antonlabas/.lunarclient/profiles/1.21/mods/fabric-1.21.10/elementalwands-2.2.0.jar
+Backup: /Users/antonlabas/Desktop/elementalwands/.local-backups/lunar/20260914-130449/elementalwands-2.2.0.jar
+Matching SHA-256: 62f64882f6e4e2797eb415cdee6817bfd4f38361dd091fa57fd82e0d3d831292

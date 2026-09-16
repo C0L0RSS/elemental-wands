@@ -38,6 +38,7 @@ public class FracturedGuardianRenderer extends GeoEntityRenderer<FracturedGuardi
     @Override
     public void updateRenderState(FracturedGuardianEntity entity, FracturedGuardianRenderState state, float partialTick) {
         super.updateRenderState(entity,state,partialTick);
+        GuardianBurnVisual.capture(state);
         state.arenaHidden = entity.isArenaHidden();
         if(state.arenaHidden) {state.invisible=true;state.invisibleToPlayer=true;}
         state.fanTime=entity.getFanTime(partialTick);state.fanPitch=entity.getFanPitch();state.fanYaw=entity.getYaw(partialTick);
@@ -68,6 +69,7 @@ public class FracturedGuardianRenderer extends GeoEntityRenderer<FracturedGuardi
         if (state.deathTime == 0 && !state.invisibleToPlayer) GuardianUnstableVisual.submit(state,matrices,queue);
         if (state.deathTime == 0 && !state.invisibleToPlayer) GuardianFanVisual.submit(state,matrices,queue);
         super.render(state,matrices,queue,cameraState);
+        GuardianBurnVisual.submit(state,matrices,queue,cameraState);
     }
 
     @Override

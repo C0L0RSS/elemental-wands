@@ -25,3 +25,6 @@ run/
 
 # Obsidian preferences stay local; planning Markdown stays versionable.
 .obsidian/
+
+# Python bytecode
+__pycache__/

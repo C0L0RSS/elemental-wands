@@ -1,0 +1,1 @@
+Flashover passed: purchase/equip, toss physics, harmless placement, arming delay, cap, enemy melee/wand disarm, allied protection, cover, capped combined damage, cooldown persistence, range limit, unequip cleanup and 30-second expiry.

@@ -1,0 +1,5 @@
+Source: /Users/antonlabas/Desktop/elementalwands/build/libs/elementalwands-2.2.0.jar
+Installed: /Users/antonlabas/.lunarclient/profiles/1.21/mods/fabric-1.21.10/elementalwands-2.2.0.jar
+SHA-256: 5dc8e17857342cbce9b56df4bc6824187dc81d6580bafd6b8506f65095ab11af
+Backup: /Users/antonlabas/Desktop/elementalwands/.local-backups/lunar/20260914-152158
+Restart Lunar to load the combined Nature build.

@@ -1,0 +1,1 @@
+Real server passed: non-operator party commands, consent/leadership, invitation expiry, reconnect and JVM restart, vanilla teams, PvP-disabled safety, pets/tree, all projectile contacts, Nature zones/root, Pyre coals/fire trail, Fire cone, Stone domain, Meteor/Zephyr damage and knockback, spell fire ownership.

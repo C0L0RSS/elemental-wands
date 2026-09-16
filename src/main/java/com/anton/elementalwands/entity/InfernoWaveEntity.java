@@ -1,5 +1,7 @@
 package com.anton.elementalwands.entity;
 
+import com.anton.elementalwands.party.WandAllies;
+
 import com.anton.elementalwands.registry.ModEntities;
 import com.anton.elementalwands.registry.ModParticles;
 import com.anton.elementalwands.registry.ModSpellBlocks;
@@ -52,6 +54,12 @@ public class InfernoWaveEntity extends ProjectileEntity {
         setVelocity(direction.multiply(PROJECTILE_SPEED));
     }
 
+    private boolean protectsAlly(Entity target) {
+        return WandAllies.protectedFrom(getOwner(), target)
+                || (getEntityWorld() instanceof ServerWorld world && owner != null
+                    && WandAllies.protectedFrom(world, owner.getUuid(), target));
+    }
+
     @Override
     protected void initDataTracker(net.minecraft.entity.data.DataTracker.Builder builder) {
         // Required override - no custom data to track
@@ -83,12 +91,12 @@ public class InfernoWaveEntity extends ProjectileEntity {
                 Set<BlockPos> positions = new HashSet<>();
                 positions.add(firePos);
 
-                TemporaryBlockManager.placeTemporaryBlocks(
+                TemporaryBlockManager.placeTrackedTemporaryBlocks(
                         serverWorld,
                         positions,
                         ModSpellBlocks.INFERNO_FLAME.getDefaultState(),
                         FIRE_TRAIL_DURATION_TICKS,
-                        state -> state.isAir());
+                        state -> state.isAir(), owner == null ? null : owner.getUuid());
             }
 
             // Check for entity collisions
@@ -139,6 +147,7 @@ public class InfernoWaveEntity extends ProjectileEntity {
         }
 
         Entity target = entityHitResult.getEntity();
+        if (protectsAlly(target)) return;
 
         // Pierce through - only damage each entity once
         if (hitEntities.contains(target.getId())) {
@@ -154,7 +163,7 @@ public class InfernoWaveEntity extends ProjectileEntity {
 
         boolean damaged = target.damage(serverWorld, source, DAMAGE);
         if (damaged) {
-            com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(getOwner(), DAMAGE);
+            com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(getOwner(), DAMAGE, com.anton.elementalwands.data.WizardAffinity.FIRE);
         }
 
         // Set target on fire
@@ -194,7 +203,7 @@ public class InfernoWaveEntity extends ProjectileEntity {
     @Override
     protected boolean canHit(Entity entity) {
         // Don't hit owner or already-hit entities
-        return super.canHit(entity) && !entity.equals(getOwner()) && !hitEntities.contains(entity.getId());
+        return super.canHit(entity) && !protectsAlly(entity) && !hitEntities.contains(entity.getId());
     }
 
     @Override

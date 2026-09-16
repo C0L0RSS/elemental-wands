@@ -1,5 +1,7 @@
 package com.anton.elementalwands.entity;
 
+import com.anton.elementalwands.party.WandAllies;
+
 import com.anton.elementalwands.registry.ModEntities;
 import com.anton.elementalwands.registry.ModParticles;
 import com.anton.elementalwands.util.SeedlingManager;
@@ -49,6 +51,12 @@ public class SeedProjectileEntity extends ProjectileEntity {
 
         Vec3d dir = owner.getRotationVec(1.0f).normalize();
         setVelocity(dir.multiply(INITIAL_SPEED));
+    }
+
+    private boolean protectsAlly(Entity target) {
+        return WandAllies.protectedFrom(getOwner(), target)
+                || (getEntityWorld() instanceof ServerWorld world && owner != null
+                    && WandAllies.protectedFrom(world, owner.getUuid(), target));
     }
 
     @Override
@@ -116,6 +124,7 @@ public class SeedProjectileEntity extends ProjectileEntity {
         }
 
         Entity target = entityHitResult.getEntity();
+        if (protectsAlly(target)) return;
         Entity owner = getOwner();
 
         if (target instanceof LivingEntity living) {
@@ -166,6 +175,6 @@ public class SeedProjectileEntity extends ProjectileEntity {
 
     @Override
     protected boolean canHit(Entity entity) {
-        return super.canHit(entity) && !entity.equals(getOwner());
+        return super.canHit(entity) && !protectsAlly(entity);
     }
 }

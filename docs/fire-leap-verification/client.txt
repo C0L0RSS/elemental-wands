@@ -1,0 +1,1 @@
+Actual integrated client: hold/preview, cancellation, release packet, synchronized carrier flight, apex, destination, no landing fall damage and screenshots passed. Human combat feel pending.

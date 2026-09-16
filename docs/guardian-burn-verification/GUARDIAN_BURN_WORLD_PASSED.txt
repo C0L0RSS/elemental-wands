@@ -1,0 +1,1 @@
+Live Guardian fire synchronization, render-only suppression, unchanged render dimensions, extinguish cleanup, and three real Minecraft screenshots passed. Human combat readability remains a playtest check.

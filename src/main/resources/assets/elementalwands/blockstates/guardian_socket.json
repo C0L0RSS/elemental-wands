@@ -1,7 +1,1 @@
-{
-  "variants": {
-    "": {
-      "model": "elementalwands:block/guardian_socket"
-    }
-  }
-}
+{"variants":{"facing=north,pedestal=true,ritual=0":{"model":"elementalwands:block/guardian_socket","y":0},"facing=north,pedestal=true,ritual=1":{"model":"elementalwands:block/guardian_socket_lit","y":0},"facing=north,pedestal=true,ritual=2":{"model":"elementalwands:block/guardian_socket_lit","y":0},"facing=north,pedestal=false":{"model":"elementalwands:block/guardian_socket_legacy"},"facing=east,pedestal=true,ritual=0":{"model":"elementalwands:block/guardian_socket","y":90},"facing=east,pedestal=true,ritual=1":{"model":"elementalwands:block/guardian_socket_lit","y":90},"facing=east,pedestal=true,ritual=2":{"model":"elementalwands:block/guardian_socket_lit","y":90},"facing=east,pedestal=false":{"model":"elementalwands:block/guardian_socket_legacy"},"facing=south,pedestal=true,ritual=0":{"model":"elementalwands:block/guardian_socket","y":180},"facing=south,pedestal=true,ritual=1":{"model":"elementalwands:block/guardian_socket_lit","y":180},"facing=south,pedestal=true,ritual=2":{"model":"elementalwands:block/guardian_socket_lit","y":180},"facing=south,pedestal=false":{"model":"elementalwands:block/guardian_socket_legacy"},"facing=west,pedestal=true,ritual=0":{"model":"elementalwands:block/guardian_socket","y":270},"facing=west,pedestal=true,ritual=1":{"model":"elementalwands:block/guardian_socket_lit","y":270},"facing=west,pedestal=true,ritual=2":{"model":"elementalwands:block/guardian_socket_lit","y":270},"facing=west,pedestal=false":{"model":"elementalwands:block/guardian_socket_legacy"}}}

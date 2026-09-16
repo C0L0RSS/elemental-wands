@@ -1,0 +1,1 @@
+Integrated Minecraft client passed Fire Leap hold/cancel/flight/sigil and Flashover store/equip, three throw packets, armed count sync, alternate detonation, cooldown and saved UI key remapping. Native screenshots captured. Human multiplayer/combat balance pending.

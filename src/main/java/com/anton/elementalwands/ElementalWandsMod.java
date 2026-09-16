@@ -28,19 +28,13 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.WrittenBookContentComponent;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.ClickEvent;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.RawFilteredPair;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
@@ -62,14 +56,14 @@ import net.minecraft.world.Heightmap;
 public class ElementalWandsMod implements ModInitializer {
     public static final String MOD_ID = "elementalwands";
 
-    private static final String NBT_STARTER_RECEIVED = "ew_starter_received";
-    private static final int BOOK_REFRESH_INTERVAL = 40; // Refresh every 2 seconds (40 ticks)
+    private static final int PROGRESSION_REFRESH_INTERVAL = 40; // Sync every 2 seconds (40 ticks)
 
     @Override
     public void onInitialize() {
         ModParticles.registerAll();
         ModSpellBlocks.registerAll();
         EWAttachments.init();
+        com.anton.elementalwands.party.PartyManager.init();
 
         TemporaryBlockManager.init();
         StoneAbilityHandler.init();
@@ -114,6 +108,9 @@ public class ElementalWandsMod implements ModInitializer {
         ZephyrStrikeManager.init();
         ModNetworking.registerPayloads();
         ModNetworking.registerC2SReceivers();
+        com.anton.elementalwands.util.WandLoadouts.init();
+        com.anton.elementalwands.util.FireBuildManager.init();
+        com.anton.elementalwands.util.FlashoverManager.init();
         ModWorldGen.registerAll();
         com.anton.elementalwands.arena.GuardianArenaManager.init();
         com.anton.elementalwands.church.GuardianChurchManager.init();
@@ -122,14 +119,15 @@ public class ElementalWandsMod implements ModInitializer {
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             ServerPlayerEntity player = handler.getPlayer();
             server.execute(() -> {
-                giveStarterKit(player);
+                com.anton.elementalwands.util.WandGuide.removeLegacyBooks(player.getInventory());
                 ModNetworking.syncPlayerData(player);
                 SeedlingManager.syncActiveSeedlings(player);
                 EntangleTracker.syncPlayer(player);
+                ModNetworking.welcomeIfNeeded(player);
             });
         });
 
-        // ── Soulbound: copy Fractured Wand + Wizard's Path on respawn ───
+        // ── Soulbound: recover protected gear on respawn ───
         ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) -> {
             if (alive)
                 return; // Alive == end-of-portal, not death
@@ -143,12 +141,17 @@ public class ElementalWandsMod implements ModInitializer {
                 }
             }
         });
+        ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> ModNetworking.syncPlayerData(newPlayer));
 
         // ── /ew unlock + /ew affinity + /ew admin commands ──────────────
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             GuardianCommands.register(dispatcher);
+            com.anton.elementalwands.command.PartyCommands.register(dispatcher);
             dispatcher.register(
                 CommandManager.literal("ew")
+                        .then(CommandManager.literal("hub").executes(ctx -> {
+                            ModNetworking.openHub(ctx.getSource().getPlayerOrThrow()); return 1;
+                        }))
                         .then(CommandManager.literal("unlock")
                                 .then(CommandManager.literal("secondary")
                                         .executes(ctx -> handleSkillUnlock(ctx.getSource(), "secondary")))
@@ -194,56 +197,37 @@ public class ElementalWandsMod implements ModInitializer {
                                                         EWAttachments.SKILL_SECONDARY | EWAttachments.SKILL_ULTIMATE))))));
         });
 
-        // ── Periodic book refresh so flux display stays current ─────────
+        // ── Periodic progression sync ─────────
         ServerTickEvents.END_SERVER_TICK.register(server -> {
-            if (server.getTicks() % BOOK_REFRESH_INTERVAL != 0)
+            if (server.getTicks() % PROGRESSION_REFRESH_INTERVAL != 0)
                 return;
             for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-                refreshWizardBook(player);
+                refreshProgression(player);
             }
         });
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────
 
-    private static boolean isWizardPathBook(ItemStack stack) {
-        if (!stack.isOf(Items.WRITTEN_BOOK))
-            return false;
-        WrittenBookContentComponent content = stack.get(DataComponentTypes.WRITTEN_BOOK_CONTENT);
-        if (content == null)
-            return false;
-        String title = content.title().raw();
-        return "The Wizard's Path".equals(title);
-    }
-
-    private void giveStarterKit(ServerPlayerEntity player) {
-        if (player.getCommandTags().contains(NBT_STARTER_RECEIVED))
-            return;
-
-        player.getInventory().insertStack(createWizardBook(player));
-
-        player.sendMessage(
-                Text.literal("Welcome, Wizard. Open your book and choose your path.")
-                        .formatted(Formatting.GOLD),
-                false);
-
-        player.addCommandTag(NBT_STARTER_RECEIVED);
-    }
-
     // ── /ew admin unlock handler (op-only, no cost) ──────────────────────────
 
     private static int handleAdminUnlock(ServerCommandSource source, ServerPlayerEntity target, int skillBits) {
-        int currentSkills = target.getAttachedOrElse(EWAttachments.UNLOCKED_SKILLS, 0);
+        if (EWAttachments.getAffinity(target) == WizardAffinity.NONE) {
+            source.sendFeedback(() -> Text.literal("Choose an element before granting its spells."), false);
+            return 0;
+        }
+        int currentSkills = com.anton.elementalwands.util.WandProgression.skills(target);
         int newSkills = currentSkills | skillBits;
 
-        if (newSkills == currentSkills) {
+        if (newSkills == currentSkills && com.anton.elementalwands.data.WandSpells.forAffinity(EWAttachments.getAffinity(target)).stream()
+                .filter(spell -> com.anton.elementalwands.util.WandProgression.adminMatches(spell,skillBits)).allMatch(spell -> com.anton.elementalwands.util.WandProgression.owns(target, spell))) {
             source.sendFeedback(() -> Text.literal("Player already has the specified ability unlocked.")
                     .formatted(Formatting.YELLOW), false);
             return 0;
         }
 
-        target.setAttached(EWAttachments.UNLOCKED_SKILLS, newSkills);
-        refreshWizardBook(target);
+        com.anton.elementalwands.util.WandProgression.grant(target, skillBits);
+        refreshProgression(target);
         ModNetworking.syncPlayerData(target);
 
         source.sendFeedback(() -> Text.literal("Unlocked abilities for " + target.getName().getString() + ".")
@@ -253,7 +237,7 @@ public class ElementalWandsMod implements ModInitializer {
 
     // ── /ew unlock handler ──────────────────────────────────────────────────
 
-    private static int handleSkillUnlock(ServerCommandSource source, String skillName) {
+    public static int handleSkillUnlock(ServerCommandSource source, String skillName) {
         if (!source.isExecutedByPlayer())
             return 0;
         ServerPlayerEntity player;
@@ -263,61 +247,25 @@ public class ElementalWandsMod implements ModInitializer {
             return 0;
         }
 
-        int skillBit;
-        long fluxCost;
-        int xpCost;
-        if (skillName.equals("secondary")) {
-            skillBit = EWAttachments.SKILL_SECONDARY;
-            fluxCost = EWAttachments.SECONDARY_FLUX_COST;
-            xpCost = EWAttachments.SECONDARY_XP_COST;
-        } else {
-            skillBit = EWAttachments.SKILL_ULTIMATE;
-            fluxCost = EWAttachments.ULTIMATE_FLUX_COST;
-            xpCost = EWAttachments.ULTIMATE_XP_COST;
-        }
-
-        int currentSkills = player.getAttachedOrElse(EWAttachments.UNLOCKED_SKILLS, 0);
-        if ((currentSkills & skillBit) != 0) {
-            player.sendMessage(Text.literal("You have already unlocked this ability!").formatted(Formatting.YELLOW),
-                    false);
+        if (!com.anton.elementalwands.util.WandLoadouts.canEdit(player)) {
+            player.sendMessage(Text.literal("Change spells or affinity outside combat."), false);
             return 0;
         }
 
-        long currentFlux = player.getAttachedOrElse(EWAttachments.ARCANE_FLUX, 0L);
-        if (currentFlux < fluxCost) {
-            player.sendMessage(Text.translatable("message.elementalwands.not_enough_flux").formatted(Formatting.RED),
-                    false);
-            return 0;
-        }
-
-        if (player.experienceLevel < xpCost) {
-            player.sendMessage(
-                    Text.literal("You need " + xpCost + " XP levels to unlock this.").formatted(Formatting.RED), false);
-            return 0;
-        }
-
-        // Consume resources
-        player.setAttached(EWAttachments.ARCANE_FLUX, currentFlux - fluxCost);
-        player.addExperienceLevels(-xpCost);
-        player.setAttached(EWAttachments.UNLOCKED_SKILLS, currentSkills | skillBit);
-
-        // Sound + message
-        ((net.minecraft.server.world.ServerWorld) player.getEntityWorld()).playSound(null, player.getBlockPos(),
-                SoundEvents.BLOCK_ENCHANTMENT_TABLE_USE, SoundCategory.PLAYERS, 1.0f, 1.0f);
-        player.sendMessage(Text.translatable("message.elementalwands.skill_unlocked").formatted(Formatting.GOLD),
-                false);
-
-        // Replace wizard book in inventory with updated version
-        refreshWizardBook(player);
-
-        // Sync HUD data to client
+        var spell = com.anton.elementalwands.data.WandSpells.forAffinity(EWAttachments.getAffinity(player)).stream()
+                .filter(s -> s.ability() == (skillName.equals("secondary") ? com.anton.elementalwands.item.AbstractWandItem.Ability.SECONDARY
+                        : com.anton.elementalwands.item.AbstractWandItem.Ability.ULTIMATE)).findFirst().orElse(null);
+        if (spell == null) return 0;
+        boolean alreadyOwned = com.anton.elementalwands.util.WandProgression.owns(player, spell);
+        String result = com.anton.elementalwands.util.WandProgression.purchase(player, EWAttachments.getAffinity(player).name(), spell.id());
+        player.sendMessage(Text.literal(result), false);
         ModNetworking.syncPlayerData(player);
-        return 1;
+        return !alreadyOwned && com.anton.elementalwands.util.WandProgression.owns(player, spell) ? 1 : 0;
     }
 
     // ── /ew affinity <element> handler ──────────────────────────────────────
 
-    private static int handleAffinitySet(ServerCommandSource source, WizardAffinity newAffinity) {
+    public static int handleAffinitySet(ServerCommandSource source, WizardAffinity newAffinity) {
         if (!source.isExecutedByPlayer())
             return 0;
         ServerPlayerEntity player;
@@ -327,25 +275,21 @@ public class ElementalWandsMod implements ModInitializer {
             return 0;
         }
 
-        WizardAffinity current = EWAttachments.getAffinity(player);
-        if (current != WizardAffinity.NONE) {
-            player.sendMessage(
-                    Text.literal("You must reset your affinity first via the Wizard's Path book.")
-                            .formatted(Formatting.RED),
-                    false);
+        if (!com.anton.elementalwands.util.WandLoadouts.canEdit(player)) {
+            player.sendMessage(Text.literal("Change spells or affinity outside combat."), false);
             return 0;
         }
 
+        com.anton.elementalwands.util.WandProgression.migrate(player);
         player.setAttached(EWAttachments.AFFINITY, newAffinity.name());
-        player.setAttached(EWAttachments.UNLOCKED_SKILLS, 0);
-        player.setAttached(EWAttachments.ARCANE_FLUX, 0L);
+        com.anton.elementalwands.util.WandProgression.migrate(player);
 
         // Give the player a wand if they don't already have one anywhere in inventory
         if (!playerHasWand(player)) {
             player.getInventory().insertStack(new ItemStack(ModItems.FRACTURED_WAND));
         }
 
-        refreshWizardBook(player);
+        refreshProgression(player);
         ModNetworking.syncPlayerData(player);
 
         player.sendMessage(
@@ -365,15 +309,19 @@ public class ElementalWandsMod implements ModInitializer {
             return 0;
         }
 
-        player.setAttached(EWAttachments.AFFINITY, WizardAffinity.NONE.name());
-        player.setAttached(EWAttachments.UNLOCKED_SKILLS, 0);
-        player.setAttached(EWAttachments.ARCANE_FLUX, 0L);
+        if (!com.anton.elementalwands.util.WandLoadouts.canEdit(player)) {
+            player.sendMessage(Text.literal("Change spells or affinity outside combat."), false);
+            return 0;
+        }
 
-        refreshWizardBook(player);
+        com.anton.elementalwands.util.WandProgression.migrate(player);
+        player.setAttached(EWAttachments.AFFINITY, WizardAffinity.NONE.name());
+
+        refreshProgression(player);
         ModNetworking.syncPlayerData(player);
 
         player.sendMessage(
-                Text.literal("Your affinity has been reset. Choose a new path.")
+                Text.literal("Choose an element in the hub. All balances and purchases are saved.")
                         .formatted(Formatting.DARK_RED),
                 false);
         return 1;
@@ -389,129 +337,8 @@ public class ElementalWandsMod implements ModInitializer {
         return false;
     }
 
-    /**
-     * Finds the wizard's path book in the player's inventory and refreshes its
-     * content.
-     */
-    public static void refreshWizardBook(ServerPlayerEntity player) {
-        for (int i = 0; i < player.getInventory().size(); i++) {
-            ItemStack stack = player.getInventory().getStack(i);
-            if (isWizardPathBook(stack)) {
-                // Only rebuild if flux or skills have changed since the book was last created
-                ItemStack updated = createWizardBook(player);
-                WrittenBookContentComponent oldContent = stack.get(DataComponentTypes.WRITTEN_BOOK_CONTENT);
-                WrittenBookContentComponent newContent = updated.get(DataComponentTypes.WRITTEN_BOOK_CONTENT);
-                if (oldContent != null && newContent != null && oldContent.equals(newContent)) {
-                    return; // No change needed
-                }
-                player.getInventory().setStack(i, updated);
-                return;
-            }
-        }
-    }
-
-    // ── Dynamic Wizard's Path Book ──────────────────────────────────────────
-
-    static ItemStack createWizardBook(ServerPlayerEntity player) {
-        WizardAffinity affinity = EWAttachments.getAffinity(player);
-
-        Text page1 = (affinity == WizardAffinity.NONE)
-                ? buildAffinityPickerPage()
-                : buildProgressPage(player);
-
-        // Page 2 — tips
-        Text page2 = Text.literal("The Path\n\n")
-                .formatted(Formatting.DARK_GREEN, Formatting.BOLD)
-                .append(Text.literal(
-                        "Strike enemies with your wand to gather Arcane Flux.\n\nEvery hit on an enemy also charges your wand's Ultimate Reservoir.\n\nSpend flux in this book to unlock Secondary and Ultimate abilities.")
-                        .formatted(Formatting.BLACK));
-
-        // Page 3 — elements
-        Text page3 = Text.literal("Elemental Paths\n\n")
-                .formatted(Formatting.GOLD, Formatting.BOLD)
-                .append(Text.literal(
-                        "Fire  Wind  Stone\nNature  Space\n\nEach element has three spells:\nPrimary  Secondary  Ultimate\n\nUnlock Secondary and Ultimate via Arcane Flux.")
-                        .formatted(Formatting.DARK_PURPLE));
-
-        ItemStack book = new ItemStack(Items.WRITTEN_BOOK);
-        book.set(DataComponentTypes.WRITTEN_BOOK_CONTENT, new WrittenBookContentComponent(
-                RawFilteredPair.of("The Wizard's Path"),
-                "The Ancients",
-                0,
-                List.of(RawFilteredPair.of(page1), RawFilteredPair.of(page2), RawFilteredPair.of(page3)),
-                true));
-        return book;
-    }
-
-    private static Text buildAffinityPickerPage() {
-        MutableText page = Text.literal("Choose Your Path\n\n")
-                .formatted(Formatting.DARK_PURPLE, Formatting.BOLD);
-        page.append(Text.literal(
-                "Choose your elemental affinity:\n\n")
-                .formatted(Formatting.BLACK));
-        page.append(buildAffinityButton("FIRE",  Formatting.RED));
-        page.append(Text.literal("\n"));
-        page.append(buildAffinityButton("WIND",  Formatting.GREEN));
-        page.append(Text.literal("\n"));
-        page.append(buildAffinityButton("STONE", Formatting.GOLD));
-        page.append(Text.literal("\n"));
-        page.append(buildAffinityButton("NATURE", Formatting.DARK_GREEN));
-        page.append(Text.literal("\n"));
-        page.append(buildAffinityButton("SPACE", Formatting.LIGHT_PURPLE));
-        return page;
-    }
-
-    private static Text buildAffinityButton(String element, Formatting color) {
-        String lower = element.toLowerCase(java.util.Locale.ROOT);
-        MutableText btn = Text.literal("[ " + element + " ]")
-                .formatted(color, Formatting.BOLD);
-        return btn.styled(style -> style.withClickEvent(
-                new ClickEvent.RunCommand("/ew affinity " + lower)));
-    }
-
-    private static Text buildProgressPage(ServerPlayerEntity player) {
-        WizardAffinity affinity = EWAttachments.getAffinity(player);
-        long arcaneFlux = player.getAttachedOrElse(EWAttachments.ARCANE_FLUX, 0L);
-        int skills = player.getAttachedOrElse(EWAttachments.UNLOCKED_SKILLS, 0);
-        boolean secUnlocked = (skills & EWAttachments.SKILL_SECONDARY) != 0;
-        boolean ultUnlocked = (skills & EWAttachments.SKILL_ULTIMATE) != 0;
-
-        long nextCost = secUnlocked ? EWAttachments.ULTIMATE_FLUX_COST : EWAttachments.SECONDARY_FLUX_COST;
-        String fluxLine = (secUnlocked && ultUnlocked)
-                ? "All paths opened!"
-                : arcaneFlux + " / " + nextCost;
-
-        MutableText page = Text.literal("The Wizard's Path\n\n")
-                .formatted(Formatting.DARK_PURPLE, Formatting.BOLD);
-        page.append(Text.literal("Affinity: ").formatted(Formatting.DARK_AQUA));
-        page.append(Text.literal(affinity.name() + "\n").formatted(Formatting.LIGHT_PURPLE));
-        page.append(Text.literal("Arcane Flux: ").formatted(Formatting.DARK_AQUA));
-        page.append(Text.literal(fluxLine + "\n\n").formatted(Formatting.AQUA));
-        page.append(buildUnlockButton(secUnlocked, "secondary",
-                EWAttachments.SECONDARY_FLUX_COST, EWAttachments.SECONDARY_XP_COST, arcaneFlux));
-        page.append(Text.literal("\n\n"));
-        page.append(buildUnlockButton(ultUnlocked, "ultimate",
-                EWAttachments.ULTIMATE_FLUX_COST, EWAttachments.ULTIMATE_XP_COST, arcaneFlux));
-        page.append(Text.literal("\n\n"));
-        MutableText switchBtn = Text.literal("[ SWITCH ELEMENT ]")
-                .formatted(Formatting.DARK_RED, Formatting.BOLD);
-        page.append(switchBtn.styled(style -> style.withClickEvent(
-                new ClickEvent.RunCommand("/ew affinity reset"))));
-        page.append(Text.literal("\nSwitching resets progression.").formatted(Formatting.GRAY));
-        return page;
-    }
-
-    private static Text buildUnlockButton(boolean alreadyUnlocked, String skill,
-            long fluxCost, int xpCost, long currentFlux) {
-        if (alreadyUnlocked) {
-            return Text.literal("[" + skill.toUpperCase() + ": UNLOCKED]").formatted(Formatting.GREEN);
-        }
-        boolean ready = currentFlux >= fluxCost;
-        String label = "[ UNLOCK " + skill.toUpperCase()
-                + " (Cost: " + xpCost + " Levels) ]";
-        MutableText btn = Text.literal(label)
-                .formatted(ready ? Formatting.GOLD : Formatting.GRAY);
-        return btn.styled(style -> style.withClickEvent(
-                new ClickEvent.RunCommand("/ew unlock " + skill)));
+    /** Keep progression visible without rebuilding an inventory book on each hit. */
+    public static void refreshProgression(ServerPlayerEntity player) {
+        ModNetworking.syncPlayerData(player);
     }
 }

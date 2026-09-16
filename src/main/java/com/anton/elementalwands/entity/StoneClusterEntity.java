@@ -1,5 +1,7 @@
 package com.anton.elementalwands.entity;
 
+import com.anton.elementalwands.party.WandAllies;
+
 import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.registry.ModParticles;
@@ -90,7 +92,7 @@ public final class StoneClusterEntity extends ProjectileEntity {
     public static boolean eligible(Entity owner, LivingEntity target) {
         return target!=owner && target.isAlive() && !target.isSpectator()
                 && !(target instanceof PlayerEntity player && player.isCreative())
-                && !owner.isTeammate(target)
+                && !WandAllies.protectedFrom(owner, target)
                 && !(target instanceof TameableEntity pet && pet.isOwner((LivingEntity)owner));
     }
     @Override public boolean shouldSave() { return false; }
@@ -177,7 +179,7 @@ public final class StoneClusterEntity extends ProjectileEntity {
         if (victim!=null) {
             float damage=StoneClusterRules.damage(mass());
             if (victim.damage(world,world.getDamageSources().thrown(this,owner),damage)) {
-                AbstractWandItem.onWandDamageDealt(owner,damage);
+                AbstractWandItem.onWandDamageDealt(owner,damage, com.anton.elementalwands.data.WizardAffinity.STONE);
                 if (mass()>=StoneClusterRules.STAGGER_MASS) stagger(world,victim);
             }
         }

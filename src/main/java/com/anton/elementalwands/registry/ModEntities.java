@@ -161,6 +161,34 @@ public final class ModEntities {
                         .dimensions(EntityDimensions.fixed(.1f,.1f)).trackRangeBlocks(256).trackedUpdateRate(1)
                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"guardian_lift"))));
 
+        public static final EntityType<com.anton.elementalwands.entity.FireLeapEntity> FIRE_LEAP = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID,"fire_leap"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.FireLeapEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.FireLeapEntity::new)
+                        .dimensions(EntityDimensions.fixed(.1f,.1f)).trackRangeBlocks(96).trackedUpdateRate(1)
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"fire_leap"))));
+
+        public static final EntityType<com.anton.elementalwands.entity.FlashoverEmberEntity> FLASHOVER_EMBER = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID,"flashover_ember"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.FlashoverEmberEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.FlashoverEmberEntity::new)
+                        .dimensions(EntityDimensions.fixed(.45f,.45f)).trackRangeBlocks(64).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"flashover_ember"))));
+
+        public static final EntityType<com.anton.elementalwands.entity.ThornLashEntity> THORN_LASH = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID,"thorn_lash"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.ThornLashEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.ThornLashEntity::new)
+                        .dimensions(EntityDimensions.fixed(9,9)).trackRangeBlocks(64).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"thorn_lash"))));
+
+        public static final EntityType<com.anton.elementalwands.entity.OvergrowthSeedEntity> OVERGROWTH_SEED = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID,"overgrowth_seed"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.OvergrowthSeedEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.OvergrowthSeedEntity::new)
+                        .dimensions(EntityDimensions.fixed(.4f,.4f)).trackRangeBlocks(96).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"overgrowth_seed"))));
+
         private ModEntities() {
         }
 

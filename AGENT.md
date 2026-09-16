@@ -4,6 +4,31 @@ This file gives coding agents the current working map for the Elemental Wands
 repo. It is based on the older `CLAUDE.md`, but cleaned up for the current
 Universal Wand / affinity architecture.
 
+## Product vision and future planning
+
+The authoritative plans live in the **Elemental Wands Planning** Obsidian vault
+inside this repository: `Elemental Wands Planning/`.
+Local path: `/Users/antonlabas/Desktop/elementalwands/Elemental Wands Planning`.
+
+- [Home](Elemental%20Wands%20Planning/Home.md): starting point and how to use the vault.
+- [Vision](Elemental%20Wands%20Planning/Vision.md): design decisions and open questions.
+- [Progress](Elemental%20Wands%20Planning/Progress.md): milestones, stable task IDs, status, and completion evidence.
+- [Updates](Elemental%20Wands%20Planning/Updates.md): dated session outcomes and next actions.
+- [Ideas](Elemental%20Wands%20Planning/Ideas.md): uncommitted possibilities.
+
+Read Vision and Progress before substantial feature work. At session end, update
+the relevant Progress item and add a brief entry to Updates. Keep implemented,
+verified, and installed states distinct; detailed feature reports remain in this
+repository. Update Vision when an agreed design decision changes.
+
+The current direction is survival SMP; the earlier fixed-map campaign was
+superseded. Proposed features are not necessarily implemented. This guide remains
+the implementation/build reference. `docs/MOD_VISION.md` and `docs/PROGRESS.md` are
+navigation pointers, not separate editable plans. Planning Markdown files belong
+in Git with the code; Obsidian settings are ignored. Open only the planning folder
+as the working Obsidian vault, so the app stays focused on these notes. If the
+project moves, update any machine-specific external repository links as needed.
+
 ## Current session checkpoint — September 12, 2026
 
 Latest approved combat balance (September 12): Fire primary/Pyre deal 6; meteor

@@ -2,6 +2,7 @@
 build/
 bin/
 run/
+/.local-backups/
 
 # Gradle caches
 .gradle/
@@ -21,3 +22,6 @@ run/
 /.local-previews/
 /art/**/*.html
 !/art/**/viewer.template.html
+
+# Obsidian preferences stay local; planning Markdown stays versionable.
+.obsidian/

@@ -82,6 +82,9 @@ public final class GuardianArenaManager {
         Box volume() { var a=receipt; return new Box(a.x()-HALF-1,a.floor(),a.z()-HALF-1,a.x()+HALF+1,a.top()+1,a.z()+HALF+1); }
     }
 
+    public static java.util.List<String> enrolledPlayers(FracturedGuardianEntity guardian){
+        return active!=null && active.guardian==guardian ? active.roster.enrolled().stream().map(UUID::toString).toList() : java.util.List.of();
+    }
     private GuardianArenaManager() {}
 
     public static void init() {

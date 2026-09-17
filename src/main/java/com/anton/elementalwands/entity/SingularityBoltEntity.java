@@ -192,7 +192,7 @@ public class SingularityBoltEntity extends ProjectileEntity {
     private static boolean damageWithoutKnockback(
             ServerWorld world, LivingEntity target, DamageSource source, float amount) {
         Vec3d velocityBeforeDamage = target.getVelocity();
-        boolean damaged = target.damage(world, source, amount);
+        boolean damaged = com.anton.elementalwands.util.SpellCombat.damage(target,world,source,amount,source.getAttacker(),com.anton.elementalwands.data.WizardAffinity.SPACE);
         if (target.getVelocity().squaredDistanceTo(velocityBeforeDamage) > 1.0e-12) {
             // Projectile damage can apply vanilla knockback even when a shield blocks
             // all damage. Restore the exact incoming motion while preserving attribution.

@@ -161,13 +161,13 @@ public class InfernoWaveEntity extends ProjectileEntity {
                 ? serverWorld.getDamageSources().thrown(this, livingOwner)
                 : serverWorld.getDamageSources().generic();
 
-        boolean damaged = target.damage(serverWorld, source, DAMAGE);
+        boolean damaged = com.anton.elementalwands.util.SpellCombat.damage(target,serverWorld,source,DAMAGE,getOwner(),com.anton.elementalwands.data.WizardAffinity.FIRE);
         if (damaged) {
             com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(getOwner(), DAMAGE, com.anton.elementalwands.data.WizardAffinity.FIRE);
         }
 
         // Set target on fire
-        target.setOnFireFor(3); // 3 seconds
+        com.anton.elementalwands.util.SpellCombat.ignite(target,getOwner(),3); // 3 seconds
 
         serverWorld.spawnParticles(
                 ModParticles.FIRE_IMPACT_RING,

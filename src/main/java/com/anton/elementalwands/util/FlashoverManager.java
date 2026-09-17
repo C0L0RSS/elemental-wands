@@ -182,7 +182,7 @@ public final class FlashoverManager {
             float damage=FlashoverRules.damage(count)-FlashoverRules.damage(count-1);
             // This damage type bypasses only hurt cooldown, not armor/shields/invulnerability.
             // Otherwise vanilla would silently swallow the smaller blasts three ticks apart.
-            boolean accepted=damage>0 && target.damage(world,source,damage);
+            boolean accepted=damage>0 && com.anton.elementalwands.util.SpellCombat.damage(target,world,source,damage,p,com.anton.elementalwands.data.WizardAffinity.FIRE);
             if(accepted)AbstractWandItem.onWandDamageDealt(p,damage,1,WizardAffinity.FIRE);
         }
         world.spawnParticles(net.minecraft.particle.ParticleTypes.EXPLOSION_EMITTER,at.x,at.y,at.z,1,0,0,0,0);

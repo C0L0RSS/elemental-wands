@@ -1,6 +1,11 @@
 package com.anton.elementalwands.client.overlay;
 
+import java.util.ArrayList;
 import com.anton.elementalwands.client.ClientPlayerData;
+import com.anton.elementalwands.client.WandControls;
+import com.anton.elementalwands.client.WandHudLayout;
+import com.anton.elementalwands.client.screen.WandHudEditScreen;
+import com.anton.elementalwands.data.WandSpells;
 import com.anton.elementalwands.data.WizardAffinity;
 import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.item.FireAbilityHandler;
@@ -63,69 +68,72 @@ public class WandHudOverlay implements HudRenderCallback {
     private static final String NBT_LAST_SECONDARY = "ew_last_secondary";
     private static final String NBT_LAST_GLOBAL    = "ew_last_global";
 
+    /** Real-pixel bounds of the last drawn ability row, read by the HUD position editor. */
+    public static int lastX, lastY, lastWidth, lastHeight;
+
     @Override
     public void onHudRender(DrawContext context, RenderTickCounter tickCounter) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || client.world == null) return;
         if (client.getDebugHud().shouldShowDebugHud()) return;
 
+        // The position editor previews the row even when no wand is held.
+        boolean editing = client.currentScreen instanceof WandHudEditScreen;
         ItemStack stack = client.player.getMainHandStack();
-        if (!(stack.getItem() instanceof AbstractWandItem wand)) return;
+        if (!editing && !(stack.getItem() instanceof AbstractWandItem)) return;
 
         int width  = client.getWindow().getScaledWidth();
         int height = client.getWindow().getScaledHeight();
 
-        if (com.anton.elementalwands.client.WandControls.aimingLeap())
+        if (WandControls.aimingLeap())
             context.drawCenteredTextWithShadow(client.textRenderer,"Release to leap | Change item to cancel",width/2,height/2+35,0xffffcf89);
-        int centerX     = width  / 2;
-        int hotbarTopY  = height - HOTBAR_HEIGHT;
-
-        int scaledCenterX   = Math.round(centerX    / HUD_SCALE);
-        int scaledHotbarTopY = Math.round(hotbarTopY / HUD_SCALE);
-
-        int slotCenterY = scaledHotbarTopY - SLOT_Y_OFFSET_FROM_HOTBAR_TOP;
-        int[] slotCentersX = {
-            scaledCenterX - SLOT_SPACING,
-            scaledCenterX,
-            scaledCenterX + SLOT_SPACING
-        };
 
         WizardAffinity affinity = ClientPlayerData.getAffinity();
+        boolean isFractured = affinity == WizardAffinity.NONE;
+
+        // Only slots holding an owned spell are drawn; locked categories stay in the hub as goals.
+        var drawn = new ArrayList<Integer>();
+        if (isFractured) drawn.add(0);
+        else for (int slot : WandSpells.visibleSlots(ClientPlayerData.owned()))
+            if (ClientPlayerData.owns(WandSpells.find(ClientPlayerData.loadout().get(slot)))) drawn.add(slot);
+        if (drawn.isEmpty()) { lastWidth = 0; lastHeight = 0; return; }
+
+        int rowWidth  = Math.round(drawn.size() * SLOT_SPACING * HUD_SCALE);
+        int rowHeight = Math.round(SLOT_SIZE * HUD_SCALE);
+        int centerX   = WandHudLayout.centerX(width, rowWidth);
+        int centerY   = WandHudLayout.centerY(height, rowHeight);
+        lastX = centerX - rowWidth / 2; lastY = centerY - rowHeight / 2; lastWidth = rowWidth; lastHeight = rowHeight;
+
+        int scaledCenterX = Math.round(centerX / HUD_SCALE);
+        int slotCenterY   = Math.round(centerY / HUD_SCALE);
+        int[] slotCentersX = new int[drawn.size()];
+        for (int i = 0; i < drawn.size(); i++) slotCentersX[i] = scaledCenterX + (int) ((i - (drawn.size() - 1) / 2f) * SLOT_SPACING);
+
         WandTheme theme      = resolveTheme(affinity);
         int      accentColor = getThemeAccent(theme);
 
         context.getMatrices().pushMatrix();
         context.getMatrices().scale(HUD_SCALE, HUD_SCALE);
 
-        boolean isFractured = affinity == WizardAffinity.NONE;
-
         if (isFractured) {
-            renderAbility(context, client, stack, wand, AbstractWandItem.Ability.PRIMARY, 0,
-                scaledCenterX, slotCenterY, primaryCooldownFor(affinity), theme, accentColor, true, affinity);
+            renderAbility(context, client, stack, AbstractWandItem.Ability.PRIMARY, 0,
+                slotCentersX[0], slotCenterY, primaryCooldownFor(affinity), theme, accentColor, true, affinity);
         } else {
-            for (int slot = 0; slot < 2; slot++) {
-                var spell = com.anton.elementalwands.data.WandSpells.find(ClientPlayerData.loadout().get(slot));
-                var ability = spell.ability();
-                renderAbility(context, client, stack, wand, ability, slot, slotCentersX[slot], slotCenterY,
-                        ability == AbstractWandItem.Ability.PRIMARY ? primaryCooldownFor(affinity) : secondaryCooldownFor(affinity),
-                        theme, accentColor, ClientPlayerData.owns(spell), affinity);
+            for (int i = 0; i < drawn.size(); i++) {
+                int slot = drawn.get(i);
+                var spell = WandSpells.find(ClientPlayerData.loadout().get(slot));
+                if (spell.ultimate()) renderUltimateSlot(context, client, stack, slotCentersX[i], slotCenterY, theme, accentColor, true);
+                else renderAbility(context, client, stack, spell.ability(), slot, slotCentersX[i], slotCenterY,
+                    spell.ability() == AbstractWandItem.Ability.PRIMARY ? primaryCooldownFor(affinity) : secondaryCooldownFor(affinity), theme, accentColor, true, affinity);
             }
-            renderUltimateSlot(context, client, stack, wand, slotCentersX[2], slotCenterY, theme, accentColor, ClientPlayerData.isUltimateUnlocked());
         }
-        for (int slot = 0; slot < (isFractured ? 1 : 3); slot++) {
-            int x = isFractured ? scaledCenterX : slotCentersX[slot];
-            String label = com.anton.elementalwands.client.WandControls.shortLabel(slot);
-            context.drawCenteredTextWithShadow(client.textRenderer, label, x, slotCenterY + 20, 0xFFE8D6AF);
-        }
-
-        if (affinity == WizardAffinity.FIRE && ClientPlayerData.loadout().getFirst().equals("flamethrower")) {
+        if (affinity == WizardAffinity.FIRE && ClientPlayerData.loadout().contains("flamethrower")) {
             drawFireHeat(context, client.textRenderer, scaledCenterX, slotCenterY-SLOT_SIZE/2-18,
                     ClientPlayerData.fireHeat(), ClientPlayerData.fireOverheated());
         }
         if(affinity==WizardAffinity.FIRE && ClientPlayerData.loadout().contains("flashover")) {
-            int y=slotCenterY-SLOT_SIZE/2-(ClientPlayerData.loadout().getFirst().equals("flamethrower") ? 47 : 22);
+            int y=slotCenterY-SLOT_SIZE/2-(ClientPlayerData.loadout().contains("flamethrower") ? 47 : 22);
             context.drawCenteredTextWithShadow(client.textRenderer,"1: "+ClientPlayerData.flashSlotLabel(0,client.world.getTime())+" | 2: "+ClientPlayerData.flashSlotLabel(1,client.world.getTime())+" | 3: "+ClientPlayerData.flashSlotLabel(2,client.world.getTime()),scaledCenterX,y,0xFFFFCA7B);
-            context.drawCenteredTextWithShadow(client.textRenderer,com.anton.elementalwands.client.WandControls.shortLabel(3)+" : Detonate",scaledCenterX,y+10,0xFFE8D6AF);
         }
         if (affinity == WizardAffinity.STONE) {
             drawStoneReserve(context, scaledCenterX, slotCenterY - SLOT_SIZE / 2 - 13,
@@ -182,7 +190,7 @@ public class WandHudOverlay implements HudRenderCallback {
     // -----------------------------------------------------------------------
 
     private void renderUltimateSlot(DrawContext context, MinecraftClient client, ItemStack stack,
-            AbstractWandItem wand, int x, int y, WandTheme theme, int accentColor, boolean isUnlocked) {
+            int x, int y, WandTheme theme, int accentColor, boolean isUnlocked) {
         long now        = client.world.getTime();
         int  charge     = AbstractWandItem.getUltimateCharge(stack);
         boolean isReady = charge >= 100;
@@ -253,7 +261,7 @@ public class WandHudOverlay implements HudRenderCallback {
     // Standard ability slot
     // -----------------------------------------------------------------------
 
-    private void renderAbility(DrawContext context, MinecraftClient client, ItemStack stack, AbstractWandItem wand,
+    private void renderAbility(DrawContext context, MinecraftClient client, ItemStack stack,
             AbstractWandItem.Ability ability, int slotIndex, int x, int y, int maxCooldownTicks,
             WandTheme theme, int accentColor, boolean isUnlocked, WizardAffinity affinity) {
         long now = client.world.getTime();
@@ -272,6 +280,7 @@ public class WandHudOverlay implements HudRenderCallback {
             elapsed /= 2;
         }
 
+        if(ability==AbstractWandItem.Ability.PRIMARY)maxCooldownTicks=Math.max(maxCooldownTicks,nbt.getInt("ew_primary_duration",0));
         long remaining  = maxCooldownTicks - elapsed;
         if (affinity == WizardAffinity.STONE && ability == AbstractWandItem.Ability.PRIMARY) {
             maxCooldownTicks = ClientPlayerData.stoneDuration();
@@ -308,7 +317,7 @@ public class WandHudOverlay implements HudRenderCallback {
         int renderY   = y - (frameSize / 2);
 
         float v = onCooldown || !isUnlocked ? SLOT_COOLDOWN_V : SLOT_READY_V;
-        float u = (float) (slotIndex * SLOT_U_STEP);
+        float u = (float) ((ability==AbstractWandItem.Ability.PRIMARY?0:1) * SLOT_U_STEP);
         context.drawTexture(RenderPipelines.GUI_TEXTURED, HUD_TEXTURE, renderX, renderY,
             u, v, frameSize, frameSize, 256, 256);
 
@@ -326,7 +335,7 @@ public class WandHudOverlay implements HudRenderCallback {
                 withAlpha(accentColor, 0x32));
         }
 
-        drawThemeCooldownMotif(context, theme, ability == AbstractWandItem.Ability.PRIMARY ? 0 : 1, renderX, renderY, now, animation);
+        drawThemeCooldownMotif(context, theme, slotIndex, renderX, renderY, now, animation);
 
         if (isWindSecondary) {
             drawWindDashPips(context, renderX, renderY, windCharges, windMaxCharges,
@@ -401,9 +410,9 @@ public class WandHudOverlay implements HudRenderCallback {
         switch (theme) {
             case FIRE  -> drawFireCooldown(context, slotIndex, renderX, renderY, now, animation);
             case NATURE -> drawNatureCooldown(context, slotIndex, renderX, renderY, now, animation);
-            case WIND  -> drawWindCooldown(context, slotIndex, renderX, renderY, now, animation);
-            case STONE -> drawStoneCooldown(context, slotIndex, renderX, renderY, now, animation);
-            case SPACE -> drawSpaceCooldown(context, slotIndex, renderX, renderY, now, animation);
+            case WIND  -> drawWindCooldown(context, slotIndex==2?2:slotIndex==0?0:1, renderX, renderY, now, animation);
+            case STONE -> drawStoneCooldown(context, slotIndex==2?2:slotIndex==0?0:1, renderX, renderY, now, animation);
+            case SPACE -> drawSpaceCooldown(context, slotIndex==2?2:slotIndex==0?0:1, renderX, renderY, now, animation);
             case MANA  -> { /* fractured — intentionally blank */ }
         }
     }

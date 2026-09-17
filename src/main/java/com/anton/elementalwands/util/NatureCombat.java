@@ -38,9 +38,9 @@ public final class NatureCombat {
         });
     }
 
-    /** The first contact deals 3; successive Entangle levels reach 5 at five stacks. */
+    /** The first contact deals 1; successive Entangle levels reach 2 at five stacks. */
     public static float thornDamage(int stacks) {
-        return 3.0f + 0.5f * Math.clamp(stacks - 1, 0, 4);
+        return 1.0f + 0.25f * Math.clamp(stacks - 1, 0, 4);
     }
 
     public static void thornContact(ServerWorld world, LivingEntity target, UUID casterUuid) {
@@ -53,7 +53,7 @@ public final class NatureCombat {
         CONTACTS.put(key, now + INTERVAL);
         EntangleTracker.addStack(world, target);
         float damage = thornDamage(EntangleTracker.getStacks(target));
-        if (target.damage(world, world.getDamageSources().sweetBerryBush(), damage)) {
+        if (com.anton.elementalwands.util.SpellCombat.damage(target,world,world.getDamageSources().sweetBerryBush(),damage,world.getPlayerByUuid(casterUuid),com.anton.elementalwands.data.WizardAffinity.NATURE)) {
             if (target instanceof FracturedGuardianEntity guardian) guardian.onNatureThorns();
             reward(world.getPlayerByUuid(casterUuid), damage, THORN_CHARGE, 3);
         }

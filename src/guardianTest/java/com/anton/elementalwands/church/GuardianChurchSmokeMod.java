@@ -38,6 +38,7 @@ public final class GuardianChurchSmokeMod implements ModInitializer {
             if(ticks==100) {
                 site=GuardianChurchManager.sites().getFirst();
                 check(site.phase==GuardianChurchManager.Phase.RESTORED,"Victory was lost on restart");
+                check(site.rewardPlayers!=null&&!site.rewardPlayers.isEmpty(),"Reward eligibility lost on restart");
                 for(int x=-5;x<=5;x++)for(int z=-3;z<=8;z++)world.getChunk(x,z);
                 var chest=(ChestBlockEntity)world.getBlockEntity(site.at(-5,-1,35));
                 check(chest.isEmpty(),"Restart refilled a previously emptied reward chest");
@@ -121,6 +122,13 @@ public final class GuardianChurchSmokeMod implements ModInitializer {
                 var expected=GuardianChurchLoot.roll(world,site.anchor(),x);
                 for (int slot=0;slot<27;slot++) check(ItemStack.areEqual(reward.getStack(slot),expected.get(slot)),"Victory chest differs from its site-specific roll");
             }
+            check(site.rewardPlayers.contains(player.getUuidAsString()),"Victory did not retain admitted player's book entitlement");
+            var hit=new net.minecraft.util.hit.BlockHitResult(Vec3d.ofCenter(site.at(-5,-1,35)),net.minecraft.util.math.Direction.UP,site.at(-5,-1,35),false);
+            long beforeBooks=java.util.stream.IntStream.range(0,player.getInventory().size()).filter(i->player.getInventory().getStack(i).isOf(ModItems.SECONDARY_SPELL_BOOK)).count();
+            net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.invoker().interact(player,world,net.minecraft.util.Hand.MAIN_HAND,hit);
+            net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.invoker().interact(player,world,net.minecraft.util.Hand.MAIN_HAND,hit);
+            long afterBooks=java.util.stream.IntStream.range(0,player.getInventory().size()).filter(i->player.getInventory().getStack(i).isOf(ModItems.SECONDARY_SPELL_BOOK)).count();
+            check(afterBooks==beforeBooks+1,"Reward chest did not grant exactly one personal book");
             var chest=(ChestBlockEntity)world.getBlockEntity(site.at(-5,-1,35));chest.clear();chest.markDirty();
             check(GuardianChurchManager.interact(player,site.socket()).contains("already been restored"),"Completed church can be farmed");
             var roof=site.at(7,20,25);check(world.getBlockState(roof).isOf(Blocks.WARPED_PLANKS),"Collapsed roof was not rebuilt");

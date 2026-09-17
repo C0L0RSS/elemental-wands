@@ -59,13 +59,13 @@ public final class ThornLashEntity extends Entity {
             if (contact == null) continue;
             contacted.add(target.getUuid());
             float before = target.getHealth();
-            if (!target.damage(world, world.getDamageSources().playerAttack(caster), ThornLashRules.DAMAGE)) continue;
+            if (!com.anton.elementalwands.util.SpellCombat.damage(target,world,world.getDamageSources().playerAttack(caster),ThornLashRules.DAMAGE,caster,com.anton.elementalwands.data.WizardAffinity.NATURE)) continue;
             float lost = Math.max(0, before - target.getHealth());
             NatureCombat.lashDamageDealt(caster, lost);
             float heal = Math.min(Math.max(0, ThornLashRules.HEAL_CAP - healingUsed), lost * ThornLashRules.LIFESTEAL);
             healingUsed += heal;
             if (heal > 0) {
-                caster.heal(heal);
+                com.anton.elementalwands.util.SpellCombat.heal(caster,heal,caster,com.anton.elementalwands.data.WizardAffinity.NATURE);
                 for (int i = 0; i < 8; i++) {
                     Vec3d p = contact.lerp(caster.getEntityPos().add(0, 1, 0), i / 7.0);
                     world.spawnParticles(ModParticles.NATURE_POLLEN, p.x, p.y, p.z, 1, .025, .025, .025, 0);

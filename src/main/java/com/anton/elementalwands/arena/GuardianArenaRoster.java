@@ -12,6 +12,7 @@ public final class GuardianArenaRoster {
     public GuardianArenaRoster(Collection<UUID> players) {
         enrolled=Set.copyOf(players); remaining=new LinkedHashSet<>(players);
     }
+    public Set<UUID> enrolled(){return enrolled;}
     public boolean enrolled(UUID id) { return enrolled.contains(id); }
     public boolean alive(UUID id) { return remaining.contains(id); }
     public boolean eliminate(UUID id) { return remaining.remove(id); }

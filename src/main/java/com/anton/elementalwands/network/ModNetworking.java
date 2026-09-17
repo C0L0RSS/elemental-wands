@@ -84,7 +84,9 @@ public final class ModNetworking {
                 com.anton.elementalwands.util.WandProgression.flux(player),
                 com.anton.elementalwands.util.WandLoadouts.get(player),
                 com.anton.elementalwands.util.WandLoadouts.canEdit(player),
-                com.anton.elementalwands.util.WandProgression.owned(player)));
+                com.anton.elementalwands.util.WandProgression.owned(player),
+                com.anton.elementalwands.util.WandProgression.get(player,EWAttachments.getAffinity(player)).xp(),
+                com.anton.elementalwands.util.SpellBooks.credits(player)));
     }
 
     public static void openHub(ServerPlayerEntity player) {
@@ -180,21 +182,25 @@ public final class ModNetworking {
     }
 
     /** S2C packet carrying the server-authoritative unlocked-skills bitmask and affinity. */
-    public record SyncPlayerDataPayload(int unlockedSkills, String affinity, long flux, List<String> loadout, boolean canEdit, List<String> owned) implements CustomPayload {
-        public static final Id<SyncPlayerDataPayload> ID = new Id<>(
-                Identifier.of(ElementalWandsMod.MOD_ID, "sync_player_data"));
-        public static final PacketCodec<RegistryByteBuf, SyncPlayerDataPayload> CODEC =
-                PacketCodec.tuple(
-                        PacketCodecs.INTEGER, SyncPlayerDataPayload::unlockedSkills,
-                        PacketCodecs.STRING,  SyncPlayerDataPayload::affinity,
-                        PacketCodecs.VAR_LONG, SyncPlayerDataPayload::flux,
-                        PacketCodecs.STRING.collect(PacketCodecs.toList(3)), SyncPlayerDataPayload::loadout,
-                        PacketCodecs.BOOLEAN, SyncPlayerDataPayload::canEdit,
-                        PacketCodecs.string(64).collect(PacketCodecs.toList(256)), SyncPlayerDataPayload::owned,
-                        SyncPlayerDataPayload::new);
-
-        @Override
-        public Id<? extends CustomPayload> getId() { return ID; }
+    public record SyncPlayerDataPayload(int unlockedSkills,String affinity,long flux,List<String> loadout,boolean canEdit,List<String> owned,double xp,List<Integer> credits) implements CustomPayload {
+        public SyncPlayerDataPayload(int skills,String affinity,long flux,List<String> ids,boolean editable,List<String> owned) {this(skills,affinity,flux,ids,editable,owned,0,List.of(0,0,0));}
+        public static final Id<SyncPlayerDataPayload> ID=new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"sync_player_data"));
+        public static final PacketCodec<RegistryByteBuf,SyncPlayerDataPayload> CODEC=new PacketCodec<>() {
+            public SyncPlayerDataPayload decode(RegistryByteBuf b) {
+                int skills=b.readInt();String affinity=b.readString(32);long flux=b.readVarLong();
+                var ids=PacketCodecs.string(64).collect(PacketCodecs.toList(5)).decode(b);boolean editable=b.readBoolean();
+                var owned=PacketCodecs.string(64).collect(PacketCodecs.toList(256)).decode(b);
+                double xp=b.readDouble();var credits=PacketCodecs.VAR_INT.collect(PacketCodecs.toList(3)).decode(b);
+                return new SyncPlayerDataPayload(skills,affinity,flux,ids,editable,owned,xp,credits);
+            }
+            public void encode(RegistryByteBuf b,SyncPlayerDataPayload p) {
+                b.writeInt(p.unlockedSkills);b.writeString(p.affinity,32);b.writeVarLong(p.flux);
+                PacketCodecs.string(64).collect(PacketCodecs.toList(5)).encode(b,p.loadout);b.writeBoolean(p.canEdit);
+                PacketCodecs.string(64).collect(PacketCodecs.toList(256)).encode(b,p.owned);b.writeDouble(p.xp);
+                PacketCodecs.VAR_INT.collect(PacketCodecs.toList(3)).encode(b,p.credits);
+            }
+        };
+        @Override public Id<? extends CustomPayload> getId(){return ID;}
     }
 
     public static void syncFireBuild(ServerPlayerEntity player) {

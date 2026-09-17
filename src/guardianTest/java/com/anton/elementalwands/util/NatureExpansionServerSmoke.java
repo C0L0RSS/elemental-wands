@@ -54,22 +54,22 @@ public final class NatureExpansionServerSmoke implements ModInitializer {
         if(t==30) {p.setHealth(10);WandLoadouts.cast(p,0);WandLoadouts.cast(p,0);}
         if(t==34) require(lashes()==1,"Cooldown sweep count="+lashes()+" nbt="+p.getMainHandStack().get(net.minecraft.component.DataComponentTypes.CUSTOM_DATA));
         if(t==42) {
-            near(enemy.getHealth(),194,"Single sweep damage");near(p.getHealth(),11.5f,"Lifesteal ratio");near(ally.getHealth(),200,"Lash hit ally");
+            near(enemy.getHealth(),197,"Single sweep damage");near(p.getHealth(),11.5f,"Lifesteal ratio");near(ally.getHealth(),200,"Lash hit ally");
             require(SeedlingManager.getActiveSeedlingsForCaster(p.getEntityWorld(),p.getUuid()).isEmpty(),"Lash planted seed");
             enemy.setPosition(.5,100,-3);freshWand();p.setHealth(10);WandLoadouts.cast(p,0);
         }
-        if(t==54) {near(p.getHealth(),10,"Rear miss healed");near(enemy.getHealth(),194,"Lash hit behind caster");
+        if(t==54) {near(p.getHealth(),10,"Rear miss healed");near(enemy.getHealth(),197,"Lash hit behind caster");
             enemy.setPosition(.5,100,3.5);enemy.setInvulnerable(true);freshWand();WandLoadouts.cast(p,0);}
         if(t==66) {near(p.getHealth(),10,"Invulnerable hit healed");enemy.setInvulnerable(false);
             for(int x=-2;x<=2;x++)for(int y=100;y<=103;y++)p.getEntityWorld().setBlockState(new BlockPos(x,y,2),Blocks.STONE.getDefaultState());
             freshWand();WandLoadouts.cast(p,0);}
         if(t==78) {
-            near(enemy.getHealth(),194,"Lash penetrated cover");near(p.getHealth(),10,"Covered hit healed");
+            near(enemy.getHealth(),197,"Lash penetrated cover");near(p.getHealth(),10,"Covered hit healed");
             for(int x=-2;x<=2;x++)for(int y=100;y<=103;y++)p.getEntityWorld().setBlockState(new BlockPos(x,y,2),Blocks.AIR.getDefaultState());
             enemy.setHealth(1);freshWand();WandLoadouts.cast(p,0);
         }
         if(t==90) {
-            near(p.getHealth(),10.25f,"Overkill gave extra healing");
+            near(p.getHealth(),10.5f,"Overkill gave extra healing");
             mobs.add(zombie(-1,100,3));mobs.add(zombie(.5,100,3.5));mobs.add(zombie(2,100,3));
             p.setHealth(10);freshWand();WandLoadouts.cast(p,0);
         }

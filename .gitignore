@@ -23,7 +23,7 @@ run/
 /art/**/*.html
 !/art/**/viewer.template.html
 
-# Obsidian preferences stay local; planning Markdown stays versionable.
+# Local Obsidian settings
 .obsidian/
 
 # Python bytecode

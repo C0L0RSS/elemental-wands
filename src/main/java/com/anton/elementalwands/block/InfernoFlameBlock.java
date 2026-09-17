@@ -55,7 +55,12 @@ public final class InfernoFlameBlock extends Block {
         handler.addEvent(CollisionEvent.FIRE_IGNITE);
         handler.addPostCallback(CollisionEvent.FIRE_IGNITE, colliding -> {
             AbstractFireBlock.igniteEntity(colliding);
-            colliding.serverDamage(world.getDamageSources().inFire(), 1.0f);
+            if(world instanceof net.minecraft.server.world.ServerWorld sw) {
+                var id=com.anton.elementalwands.util.TemporaryBlockManager.casterAt(sw,pos);
+                var owner=id==null?null:sw.getPlayerByUuid(id);
+                com.anton.elementalwands.util.SpellCombat.trackBurn(colliding,owner,160);
+                com.anton.elementalwands.util.SpellCombat.damage(colliding,sw,world.getDamageSources().inFire(),1,owner,com.anton.elementalwands.data.WizardAffinity.FIRE);
+            }
         });
     }
 }

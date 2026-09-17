@@ -23,7 +23,7 @@ public final class FireLeapManager {
                 || FireBuildManager.hopRemaining(p)>0) return false;
         // A normal sprint jump is allowed, but a high fall cannot be converted into another flight.
         if(!FireLeapRules.supported(world,p,p.getEntityPos(),1.5) || !FireLeapRules.validTarget(p,target)) {
-            p.sendMessage(Text.literal("No clear leap path. Aim at nearby ground."),true);return false;
+            p.sendMessage(Text.literal("No clear leap path. Aim toward open ground or a reachable ledge."),true);return false;
         }
         if(!AbstractWandItem.tryStartCooldown(world,p,p.getMainHandStack(),AbstractWandItem.Ability.SECONDARY,0)) return false;
         var leap=new FireLeapEntity(ModEntities.FIRE_LEAP,world);leap.begin(p,target);
@@ -52,7 +52,7 @@ public final class FireLeapManager {
             if(distance-half>outer || distance+half<inner || target.getBoundingBox().minY>surface.y+FireLeapRules.WAVE_HEIGHT
                     || target.getBoundingBox().maxY<surface.y) continue;
             hits.add(target.getUuid());float damage=FireLeapRules.damage(distance);
-            if(target.damage(world,p.getDamageSources().playerAttack(p),damage)) AbstractWandItem.onWandDamageDealt(p,damage,1,WizardAffinity.FIRE);
+            if(com.anton.elementalwands.util.SpellCombat.damage(target,world,p.getDamageSources().playerAttack(p),damage,p,com.anton.elementalwands.data.WizardAffinity.FIRE)) AbstractWandItem.onWandDamageDealt(p,damage,1,WizardAffinity.FIRE);
         }
         // The moving crest uses the exact same surface and cover rules as damage.
         int count=Math.max(16,(int)Math.ceil(outer*2*Math.PI/.4));

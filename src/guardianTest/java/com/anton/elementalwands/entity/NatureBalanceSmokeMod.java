@@ -70,35 +70,35 @@ public final class NatureBalanceSmokeMod implements ModInitializer {
             require(AbstractWandItem.getUltimateCharge(wand) == 1, "Rapid seeds bypass charge cadence");
 
             NatureCombat.thornContact(world, ramp, player.getUuid());
-            close(ramp.getHealth(), 197, "First flower tick");
+            close(ramp.getHealth(), 199, "First flower tick");
             for (int i=0; i<10; i++) {
                 ramp.timeUntilRegen = 0; // Prove our shared limit, independently of vanilla immunity.
                 NatureCombat.thornContact(world, ramp, player.getUuid());
             }
-            close(ramp.getHealth(), 197, "Overlapping patches multiply damage");
+            close(ramp.getHealth(), 199, "Overlapping patches multiply damage");
             require(EntangleTracker.getStacks(ramp) == 1, "Overlap accelerates Entangle");
             NatureCombat.thornContact(world, crowd, player.getUuid());
-            close(crowd.getHealth(), 197, "Another enemy should still take damage");
+            close(crowd.getHealth(), 199, "Another enemy should still take damage");
             require(AbstractWandItem.getUltimateCharge(wand) == 4, "Crowd bypasses shared charge limit");
-            long flux = player.getAttachedOrElse(EWAttachments.ARCANE_FLUX, 0L);
+            long flux = WandProgression.flux(player);
             wand = new ItemStack(ModItems.FRACTURED_WAND);
             player.equipStack(EquipmentSlot.MAINHAND, wand);
             NatureCombat.thornContact(world, cow(world, 14), player.getUuid());
             direct.timeUntilRegen = 0; hitSeed(world, direct);
             require(AbstractWandItem.getUltimateCharge(wand) == 0, "Wand swapping resets charge limits");
-            require(player.getAttachedOrElse(EWAttachments.ARCANE_FLUX, 0L) > flux,
+            require(WandProgression.flux(player) > flux,
                     "Charge limiting removed Arcane Flux progression");
         }
         if (tick == 49) {
             ramp.timeUntilRegen = 0;
             NatureCombat.thornContact(world, ramp, player.getUuid());
-            close(ramp.getHealth(), 197, "Contact window ended before 20 ticks");
+            close(ramp.getHealth(), 199, "Contact window ended before 20 ticks");
         }
         if (tick >= 50 && tick <= 110 && (tick - 30) % 20 == 0) {
             int stacks = (tick - 30) / 20 + 1;
             float before = ramp.getHealth();
             NatureCombat.thornContact(world, ramp, player.getUuid());
-            close(before - ramp.getHealth(), 3 + .5f * (stacks - 1), "Flower damage ramp");
+            close(before - ramp.getHealth(), 1 + .25f * (stacks - 1), "Flower damage ramp");
             require(EntangleTracker.getStacks(ramp) == stacks, "Flower stack cadence");
             if (tick == 50) {
                 require(AbstractWandItem.getUltimateCharge(wand) == 3, "Charge did not reopen at 20 ticks");
@@ -113,10 +113,10 @@ public final class NatureBalanceSmokeMod implements ModInitializer {
         if (tick == 130) {
             CowEntity immune = cow(world, 14); immune.setInvulnerable(true);
             int beforeCharge = AbstractWandItem.getUltimateCharge(wand);
-            long beforeFlux = player.getAttachedOrElse(EWAttachments.ARCANE_FLUX, 0L);
+            long beforeFlux = WandProgression.flux(player);
             NatureCombat.thornContact(world, immune, player.getUuid()); hitSeed(world, immune);
             require(AbstractWandItem.getUltimateCharge(wand) == beforeCharge
-                    && player.getAttachedOrElse(EWAttachments.ARCANE_FLUX, 0L) == beforeFlux,
+                    && WandProgression.flux(player) == beforeFlux,
                     "Rejected damage earned rewards");
             require(ramp.getStatusEffect(StatusEffects.SLOWNESS).getAmplifier() == 6,
                     "Flowers lost ordinary full root");
@@ -126,7 +126,7 @@ public final class NatureBalanceSmokeMod implements ModInitializer {
             player.setPosition(35.5, 100, .5);
             CowEntity crushed = cow(world, 38);
             OvergrowthManager.startOvergrowth(world, player, center, 5);
-            close(crushed.getHealth(), 182, "Ultimate burst changed");
+            close(crushed.getHealth(), 194, "Ultimate burst changed");
             require(AbstractWandItem.getUltimateCharge(wand) == beforeCharge, "Ultimate refunds charge");
             tree = world.getEntitiesByClass(AwakenedTreeEntity.class, new Box(center).expand(10), e->true).getFirst();
             NatureCombat.thornContact(world, tree, player.getUuid());
@@ -151,7 +151,7 @@ public final class NatureBalanceSmokeMod implements ModInitializer {
             close(player.getHealth(), 14, "Tree must heal twelve health over its lifetime");
             close(fireHealing.getHealth(), 8, "Fire must keep its original six health per 15s");
             require(!tree.isAlive() || tree.isRemoved(), "Tree did not expire after 15 seconds");
-            Files.writeString(Path.of("NATURE_PASSED.txt"), "Nature balance: real direct seed damage; no direct Entangle; thorn ramp 3..5; shared contact and charge windows; crowd and swapped-wand limits; independent casters; rejected-hit rewards; preserved Flux; zero ultimate refund; tree exclusion; actual Regeneration II healing and unchanged Regeneration I.\n");
+            Files.writeString(Path.of("NATURE_PASSED.txt"), "Nature balance: real direct seed damage; no direct Entangle; thorn ramp 1..2; shared contact and charge windows; crowd and swapped-wand limits; independent casters; rejected-hit rewards; preserved Flux; zero ultimate refund; tree exclusion; actual Regeneration II healing and unchanged Regeneration I.\n");
             System.out.println("NATURE BALANCE CHECK PASSED"); server.stop(false);
         }
     }
@@ -171,6 +171,7 @@ public final class NatureBalanceSmokeMod implements ModInitializer {
                 MinecraftServer.class, UUID.class, String.class, double.class, double.class, double.class);
         factory.setAccessible(true);
         var player = (ServerPlayerEntity) factory.invoke(null, server, UUID.randomUUID(), name, x, 100.0, .5);
+        player.setAttached(EWAttachments.AFFINITY, "NATURE");
         player.onTeleportationDone(); player.setNoGravity(true); return player;
     }
 }

@@ -59,7 +59,7 @@ public final class FireLeapClientSmoke implements ClientModInitializer {
             if(!ready)return;
             int t=++scene;
             if(t<45) { WandWelcome.reset();c.setScreen(null); }
-            if(t>=45 && t<=85) { c.player.setYaw(0);c.player.setPitch((float)Math.toDegrees(Math.atan2(c.player.getEyeY()-floor,59.8))); }
+            if(t>=45 && t<=85) { c.player.setYaw(0);c.player.setPitch(0); }
             if(t==45)GLFW.glfwFocusWindow(c.getWindow().getHandle());
             if(t==50) {
                 WandControls.reset();require(c.isWindowFocused(),"Test window not focused");
@@ -87,7 +87,32 @@ public final class FireLeapClientSmoke implements ClientModInitializer {
                 require(sawFlight && peak>3.8,"Client did not receive full flight "+peak);
                 require(!c.player.hasVehicle() && c.player.getEntityPos().distanceTo(target)<.5,"Client missed destination "+c.player.getEntityPos()+" vs "+target);
                 require(c.player.getHealth()==20,"Ordinary landing hurt caster");
-                Files.writeString(Path.of("HUB_PASSED.txt"),"Actual integrated client: hold/preview, cancellation, release packet, synchronized carrier flight, apex, destination, no landing fall damage and screenshots passed. Human combat feel pending.\n");
+                sawFlight=false;peak=0;var uuid=c.player.getUuid();
+                server.execute(()->{
+                    var w=server.getOverworld();
+                    for(int x=-1;x<=2;x++)for(int z=10;z<=13;z++)for(int y=0;y<3;y++)
+                        w.setBlockState(new BlockPos(x,floor+y,z),Blocks.STONE_BRICKS.getDefaultState());
+                    var p=server.getPlayerManager().getPlayer(uuid);
+                    var state=FireBuildManager.state(p);state.putLong("hop_ready",0);p.setAttached(EWAttachments.FIRE_BUILD_STATE,state);
+                    ModNetworking.syncFireBuild(p);p.networkHandler.requestTeleport(.5,floor,.5,0,0);
+                });
+            }
+            if(t>=155 && t<=180) { c.player.setYaw(0);c.player.setPitch(0); }
+            if(t==155) {
+                WandControls.input(true,1,GLFW.GLFW_PRESS);target=FireLeapRules.target(c.player);
+                require(target!=null && target.y==floor+3 && target.z>10 && target.z<11
+                        && FireLeapRules.validTarget(c.player,target),"Client hidden ledge targeting failed: "+target);
+            }
+            if(t==170)screenshot(c,"fire-leap-ledge-aim.png");
+            if(t==180)WandControls.input(true,1,GLFW.GLFW_RELEASE);
+            if(t>180 && t<215 && c.player.getVehicle() instanceof FireLeapEntity) {
+                sawFlight=true;peak=Math.max(peak,c.player.getY()-floor);
+            }
+            if(t==220) {
+                require(sawFlight && peak>4 && !c.player.hasVehicle() && c.player.getEntityPos().distanceTo(target)<.5
+                        && c.player.getHealth()==20,"Hidden ledge flight/landing failed: "+c.player.getEntityPos()+" vs "+target);
+                screenshot(c,"fire-leap-ledge-landed.png");
+                Files.writeString(Path.of("HUB_PASSED.txt"),"Actual integrated client: horizon aim at range cap, hold/preview, cancellation, release packet, synchronized full-range and hidden-ledge flights, safe landings and screenshots passed. Human combat feel pending.\n");
                 done=true;c.scheduleStop();
             }
         }catch(Throwable e) { done=true;e.printStackTrace();try{Files.writeString(Path.of("HUB_FAILED.txt"),e.toString());}catch(Exception ignored){}c.scheduleStop(); }

@@ -47,8 +47,7 @@ public final class OvergrowthManager {
     private static final double TREE_RADIUS_SQ = TREE_RADIUS * TREE_RADIUS;
     private static final double TREE_Y_BELOW = 4.0;
     private static final double TREE_Y_ABOVE = 8.0;
-    private static final float BASE_CRUSH_DAMAGE = 14.0f;
-    private static final float MAX_CRUSH_DAMAGE = 18.0f;
+    private static final float ROOT_CRUSH_DAMAGE = 6.0f;
     private static final int ROOT_CRUSH_SLOW_TICKS = 30;
     private static final int ROOT_CRUSH_SLOW_AMPLIFIER = 6;
 
@@ -96,7 +95,7 @@ public final class OvergrowthManager {
     public static void startOvergrowth(ServerWorld world, PlayerEntity caster, BlockPos seedlingPos,
             int consumedSeedlings) {
         startOvergrowthInternal(world, caster, seedlingPos,
-                List.of(seedlingPos.toImmutable()), consumedSeedlings, TREE_DURATION_TICKS);
+                List.of(seedlingPos.toImmutable()), TREE_DURATION_TICKS);
     }
 
     public static void startOvergrowth(ServerWorld world, PlayerEntity caster, BlockPos seedlingPos,
@@ -104,7 +103,7 @@ public final class OvergrowthManager {
         List<BlockPos> sources = consumedSeedlings.stream()
                 .map(snapshot -> snapshot.anchorPos().toImmutable())
                 .toList();
-        startOvergrowthInternal(world, caster, seedlingPos, sources, consumedSeedlings.size(), TREE_DURATION_TICKS);
+        startOvergrowthInternal(world, caster, seedlingPos, sources, TREE_DURATION_TICKS);
     }
 
     public static boolean startThrownOvergrowth(ServerWorld world, PlayerEntity caster, BlockPos anchor) {
@@ -117,7 +116,7 @@ public final class OvergrowthManager {
         List<BlockPos> sources = flower.map(s -> List.of(s.anchorPos())).orElse(List.of());
         int duration = TREE_DURATION_TICKS + (flower.isPresent() ? OvergrowthThrowRules.BONUS_TICKS : 0);
         // The optional flower changes duration only: burst damage stays at the base value.
-        startOvergrowthInternal(world, caster, anchor, sources, 0, duration);
+        startOvergrowthInternal(world, caster, anchor, sources, duration);
         return true;
     }
 
@@ -128,7 +127,7 @@ public final class OvergrowthManager {
     }
 
     private static void startOvergrowthInternal(ServerWorld world, PlayerEntity caster,
-            BlockPos seedlingPos, List<BlockPos> sources, int consumedSeedlings, int duration) {
+            BlockPos seedlingPos, List<BlockPos> sources, int duration) {
         int now = world.getServer().getTicks();
         BlockPos center = seedlingPos.toImmutable();
 
@@ -143,9 +142,7 @@ public final class OvergrowthManager {
         ACTIVE.computeIfAbsent(world.getRegistryKey(), _key -> new ArrayList<>()).add(tree);
 
         advanceTreeGrowth(world, tree, 0, now);
-        float damage = Math.min(MAX_CRUSH_DAMAGE,
-                BASE_CRUSH_DAMAGE + Math.max(0, consumedSeedlings - 1));
-        applyRootCrush(world, caster, center, damage);
+        applyRootCrush(world, caster, center, ROOT_CRUSH_DAMAGE);
         spawnRootAwakening(world, center, sources.size());
 
         world.playSound(null, center, SoundEvents.BLOCK_AZALEA_PLACE,
@@ -273,7 +270,7 @@ public final class OvergrowthManager {
             double dz = target.getZ() - centerVec.z;
             if (dx * dx + dz * dz > TREE_RADIUS_SQ) continue;
 
-            boolean damaged = target.damage(world, world.getDamageSources().playerAttack(caster), damage);
+            boolean damaged = com.anton.elementalwands.util.SpellCombat.damage(target, world, world.getDamageSources().playerAttack(caster), damage, caster, com.anton.elementalwands.data.WizardAffinity.NATURE);
             if (damaged) {
                 AbstractWandItem.onWandDamageDealt(caster, damage, 0, com.anton.elementalwands.data.WizardAffinity.NATURE);
             }
@@ -303,9 +300,12 @@ public final class OvergrowthManager {
     private static void tickHealingBeacon(ServerWorld world, AwakenedTree tree, int now) {
         PlayerEntity caster = world.getPlayerByUuid(tree.casterUuid);
         if (caster == null || !caster.isAlive()) return;
+        for(PlayerEntity ally:world.getPlayers()) {
+            if(ally.isAlive() && !ally.isSpectator() && (ally==caster || com.anton.elementalwands.party.WandAllies.protectedFrom(caster,ally))
+                    && containsPos(tree,ally.getX(),ally.getY()+.1,ally.getZ()))
+                SpellBuffs.regeneration(ally,caster,com.anton.elementalwands.data.WizardAffinity.NATURE,1);
+        }
         if (!containsPos(tree, caster.getX(), caster.getY() + 0.1, caster.getZ())) return;
-
-        SpellBuffs.regeneration(caster, 1);
         if (now % 20 == 0) {
             world.spawnParticles(ModParticles.NATURE_HEART,
                     caster.getX(), caster.getBodyY(0.52), caster.getZ(),

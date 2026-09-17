@@ -127,14 +127,16 @@ public abstract class AbstractWandItem extends Item {
             elapsed /= 2;
         }
 
-        long remaining = abilityCooldownTicks - elapsed;
+        int recovery=ability==Ability.PRIMARY ? Math.max(abilityCooldownTicks,nbt.getInt("ew_primary_duration",0)) : abilityCooldownTicks;
+        long remaining = recovery - elapsed;
         if (remaining > 0) {
             sendCooldownActionbar(player, ability, (int) remaining);
             return false;
         }
 
         NbtComponent.set(DataComponentTypes.CUSTOM_DATA, stack, data -> {
-            data.putLong(key, now);
+            if(abilityCooldownTicks>0 || ability==Ability.PRIMARY) data.putLong(key, now);
+            if(ability==Ability.PRIMARY)data.putInt("ew_primary_duration",abilityCooldownTicks);
             data.putLong(NBT_LAST_GLOBAL, now);
         });
         return true;

@@ -50,7 +50,7 @@ public final class OvergrowthThrowServerSmoke implements ModInitializer {
             require(OvergrowthManager.startThrownOvergrowth(p.getEntityWorld(),p,ordinary),"Ordinary tree failed");
             require(OvergrowthManager.remainingTicks(p.getEntityWorld(),p.getUuid(),enhanced)==400,"Flower did not add five seconds");
             require(OvergrowthManager.remainingTicks(p.getEntityWorld(),p.getUuid(),ordinary)==300,"No-flower duration changed");
-            near(enhancedVictim.getHealth(),186,"Enhanced burst changed");near(ordinaryVictim.getHealth(),186,"Base burst changed");
+            near(enhancedVictim.getHealth(),194,"Enhanced burst changed");near(ordinaryVictim.getHealth(),194,"Base burst changed");
         }
         if(t==70) {
             var w=p.getEntityWorld();
@@ -68,7 +68,7 @@ public final class OvergrowthThrowServerSmoke implements ModInitializer {
         if(t==114)near(victim.getHealth(),200,"Projectile itself damaged enemy");
         if(t==130) {
             require(trees().stream().anyMatch(tree->tree.getBlockX()==24 && tree.getBlockZ()<4),"Enemy hit did not grow grounded tree");
-            near(victim.getHealth(),186,"Enemy-hit tree burst wrong");
+            near(victim.getHealth(),194,"Enemy-hit tree burst wrong");
             p.getEntityWorld().setBlockState(new BlockPos(10,99,0),Blocks.WATER.getDefaultState());
             prepare(10.5,100,.5,0,90);WandLoadouts.cast(p,2);
         }

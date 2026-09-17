@@ -104,7 +104,7 @@ public class VacuumBladeEntity extends ProjectileEntity {
                 ? serverWorld.getDamageSources().thrown(this, livingOwner)
                 : serverWorld.getDamageSources().generic();
 
-        boolean damaged = target.damage(serverWorld, source, damage);
+        boolean damaged = com.anton.elementalwands.util.SpellCombat.damage(target,serverWorld,source,damage,owner,com.anton.elementalwands.data.WizardAffinity.WIND);
         if (damaged) {
             com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(owner, damage, com.anton.elementalwands.data.WizardAffinity.WIND);
         }

@@ -32,6 +32,10 @@ public class ModItems {
 
     public static final Item GUARDIAN_HEART = register("guardian_heart", settings -> new Item(settings.fireproof()));
 
+    public static final Item BASIC_SPELL_BOOK=register("basic_spell_book",s->new com.anton.elementalwands.item.SpellBookItem(s,0));
+    public static final Item SECONDARY_SPELL_BOOK=register("secondary_spell_book",s->new com.anton.elementalwands.item.SpellBookItem(s,1));
+    public static final Item ULTIMATE_SPELL_BOOK=register("ultimate_spell_book",s->new com.anton.elementalwands.item.SpellBookItem(s,2));
+
     // ── Wands ──────────────────────────────────────────
     public static final Item FRACTURED_WAND = register("fractured_wand", settings -> new UniversalWandItem(settings));
     public static final Item TITAN_SWORD = register("titan_sword", settings -> new Item(
@@ -59,6 +63,7 @@ public class ModItems {
     public static void registerAll() {
         ItemGroupEvents.modifyEntriesEvent(ItemGroups.TOOLS).register(entries -> {
             entries.add(FRACTURED_WAND);
+            entries.add(BASIC_SPELL_BOOK);entries.add(SECONDARY_SPELL_BOOK);entries.add(ULTIMATE_SPELL_BOOK);
             entries.add(TITAN_SWORD);
             entries.add(STONE_ZOMBIE_SPAWN_EGG);
             entries.add(FIRE_SPIRIT_SPAWN_EGG);

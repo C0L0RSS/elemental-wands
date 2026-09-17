@@ -178,7 +178,7 @@ public final class StoneClusterEntity extends ProjectileEntity {
     private void impact(ServerWorld world, PlayerEntity owner, LivingEntity victim) {
         if (victim!=null) {
             float damage=StoneClusterRules.damage(mass());
-            if (victim.damage(world,world.getDamageSources().thrown(this,owner),damage)) {
+            if (com.anton.elementalwands.util.SpellCombat.damage(victim,world,world.getDamageSources().thrown(this,owner),damage,owner,com.anton.elementalwands.data.WizardAffinity.STONE)) {
                 AbstractWandItem.onWandDamageDealt(owner,damage, com.anton.elementalwands.data.WizardAffinity.STONE);
                 if (mass()>=StoneClusterRules.STAGGER_MASS) stagger(world,victim);
             }

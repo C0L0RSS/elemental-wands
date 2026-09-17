@@ -20,6 +20,9 @@ public final class WandExplosionBehavior extends ExplosionBehavior {
         this.world = world; this.caster = caster; this.delegate = delegate == null ? new ExplosionBehavior() : delegate;
     }
     public UUID caster() { return caster; }
+    private com.anton.elementalwands.data.WizardAffinity affinity=com.anton.elementalwands.data.WizardAffinity.NONE;
+    public WandExplosionBehavior(ServerWorld world,UUID caster,ExplosionBehavior delegate,com.anton.elementalwands.data.WizardAffinity affinity){this(world,caster,delegate);this.affinity=affinity;}
+    public com.anton.elementalwands.data.WizardAffinity affinity(){return affinity;}
     @Override public boolean shouldDamage(Explosion explosion, Entity target) {
         return !WandAllies.protectedFrom(world, caster, target) && delegate.shouldDamage(explosion, target);
     }

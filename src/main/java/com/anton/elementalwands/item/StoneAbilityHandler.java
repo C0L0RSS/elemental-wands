@@ -222,8 +222,7 @@ public final class StoneAbilityHandler {
             if (Math.abs(distanceSide) > blastHalfRight) continue;
             if (Math.abs(distanceVertical) > blastHalfUp) continue;
 
-            boolean damaged = target.damage(
-                    world, world.getDamageSources().playerAttack(caster), SHATTER_DAMAGE);
+            boolean damaged = com.anton.elementalwands.util.SpellCombat.damage(target, world, world.getDamageSources().playerAttack(caster), SHATTER_DAMAGE, caster, com.anton.elementalwands.data.WizardAffinity.STONE);
             if (damaged) {
                 AbstractWandItem.onWandDamageDealt(caster, SHATTER_DAMAGE, com.anton.elementalwands.data.WizardAffinity.STONE);
             }

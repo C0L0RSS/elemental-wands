@@ -22,13 +22,13 @@ public final class WandLoadouts {
             if (entity instanceof ServerPlayerEntity p) markCombat(p);
             if (source.getAttacker() instanceof ServerPlayerEntity p) markCombat(p);
         });
-        ServerLifecycleEvents.SERVER_STOPPED.register(server -> COMBAT_UNTIL.clear());
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> {COMBAT_UNTIL.clear();SpellCombat.clear();});
     }
     public static List<String> get(PlayerEntity player) {
         var affinity = EWAttachments.getAffinity(player);
         var ids = player.getAttachedOrElse(EWAttachments.WAND_LOADOUTS, Map.of()).get(affinity.name());
-        var normalized = WandSpells.normalize(affinity, ids);
-        if (ids != null && !ids.equals(normalized)) {
+        var normalized = WandSpells.reconcile(affinity, ids, WandProgression.owned(player));
+        if (!normalized.equals(ids)) {
             var saved = new HashMap<>(player.getAttachedOrElse(EWAttachments.WAND_LOADOUTS, Map.of()));
             saved.put(affinity.name(), normalized);
             player.setAttached(EWAttachments.WAND_LOADOUTS, Map.copyOf(saved));
@@ -53,7 +53,7 @@ public final class WandLoadouts {
         if (!canEdit(player)) return "You can change spells outside combat.";
         var spell = WandSpells.find(id);
         if (spell == null || !WandProgression.owns(player, spell)) return "Unlock this spell first.";
-        if (slot < 0 || slot > 2 || spell.category().slot() != slot) return "This spell fits the " + spell.category().label() + " slot.";
+        if (slot < 0 || slot >= WandSpells.SLOT_COUNT || !WandSpells.fits(spell,slot) || !WandSpells.slotOpen(WandProgression.owned(player),slot)) return "This spell fits the " + spell.category().label() + " slot.";
         var current = get(player);
         var next = WandSpells.equip(affinity, current, slot, id);
         if (next.equals(current)) return "This spell is already equipped or does not fit that slot.";
@@ -72,7 +72,7 @@ public final class WandLoadouts {
         var ids = get(player);
         if (slot < 0 || slot >= ids.size()) return;
         var spell = WandSpells.find(ids.get(slot));
-        if (!WandProgression.owns(player, spell)) {
+        if (spell==null || !WandProgression.owns(player, spell)) {
             player.sendMessage(Text.translatable("hud.elementalwands.locked"), true); return;
         }
         if (spell.id().equals("flamethrower")) { FireBuildManager.hold(player); return; }

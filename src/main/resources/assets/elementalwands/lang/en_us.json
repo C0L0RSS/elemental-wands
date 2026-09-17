@@ -46,5 +46,8 @@
   "block.elementalwands.nature_roots": "Living Brambles",
   "block.elementalwands.nature_raft": "Verdant Raft",
   "block.elementalwands.nature_heartwood": "Grove Heartwood",
-  "block.elementalwands.nature_flowering_leaves": "Flowering Grove Leaves"
+  "block.elementalwands.nature_flowering_leaves": "Flowering Grove Leaves",
+  "item.elementalwands.basic_spell_book": "Basic Spell Book",
+  "item.elementalwands.secondary_spell_book": "Secondary Spell Book",
+  "item.elementalwands.ultimate_spell_book": "Ultimate Spell Book"
 }

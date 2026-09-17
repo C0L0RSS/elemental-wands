@@ -25,6 +25,21 @@ public abstract class PlayerEntityMixin implements SoulboundInventoryCarrier {
             cir.setReturnValue(false);
     }
 
+    @org.spongepowered.asm.mixin.injection.Redirect(method="attack",at=@At(value="INVOKE",target="Lnet/minecraft/entity/Entity;sidedDamage(Lnet/minecraft/entity/damage/DamageSource;F)Z"))
+    private boolean ew$titanDamage(net.minecraft.entity.Entity target,net.minecraft.entity.damage.DamageSource source,float amount){
+        PlayerEntity player=(PlayerEntity)(Object)this;
+        if(player.getEntityWorld() instanceof net.minecraft.server.world.ServerWorld world && player.getMainHandStack().isOf(com.anton.elementalwands.registry.ModItems.TITAN_SWORD) && TitanDomeManager.hasActiveDome(player))
+            return com.anton.elementalwands.util.SpellCombat.damage(target,world,source,amount,player,com.anton.elementalwands.data.WizardAffinity.STONE);
+        return target.sidedDamage(source,amount);
+    }
+    @org.spongepowered.asm.mixin.injection.Redirect(method="attack",at=@At(value="INVOKE",target="Lnet/minecraft/entity/LivingEntity;damage(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/entity/damage/DamageSource;F)Z"))
+    private boolean ew$titanSweep(net.minecraft.entity.LivingEntity target,net.minecraft.server.world.ServerWorld world,net.minecraft.entity.damage.DamageSource source,float amount){
+        PlayerEntity player=(PlayerEntity)(Object)this;
+        if(player.getMainHandStack().isOf(com.anton.elementalwands.registry.ModItems.TITAN_SWORD) && TitanDomeManager.hasActiveDome(player))
+            return com.anton.elementalwands.util.SpellCombat.damage(target,world,source,amount,player,com.anton.elementalwands.data.WizardAffinity.STONE);
+        return target.damage(world,source,amount);
+    }
+
     @Unique
     private List<ItemStack> elementalWands$soulboundItems = Collections.emptyList();
 

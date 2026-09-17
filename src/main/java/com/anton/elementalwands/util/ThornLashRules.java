@@ -8,8 +8,8 @@ public final class ThornLashRules {
     public static final int SWEEP_TICKS = 8;
     public static final int LIFETIME = 12;
     public static final double RANGE = 4.5;
-    public static final float DAMAGE = 6;
-    public static final float LIFESTEAL = .25f;
+    public static final float DAMAGE = 3;
+    public static final float LIFESTEAL = .5f;
     public static final float HEAL_CAP = 2;
     public static final double WIDTH = .28;
 

@@ -27,7 +27,7 @@ public final class WandHubScreen extends Screen {
     private String selected = "", stamp = "", message = "";
     private enum Page { LOADOUT, STORE, CONTROLS, ELEMENTS, GUIDE }
     private Page page = Page.LOADOUT;
-    private int libraryPage, categoryFilter = -1;
+    private int libraryPage, selectedSlot, categoryFilter = -1;
     public static WandHubScreen guide() { var screen = new WandHubScreen(); screen.page = Page.GUIDE; return screen; }
     private int binding = -1, ticks;
     private float scale = 1;
@@ -44,7 +44,7 @@ public final class WandHubScreen extends Screen {
     public void feedback(String text) { message = text; stamp = ""; refresh(); }
     private List<WandSpells.Spell> library() {
         return WandSpells.forAffinity(ClientPlayerData.getAffinity()).stream()
-                .filter(s -> page == Page.STORE || ClientPlayerData.owns(s))
+                .filter(s -> page == Page.STORE || (ClientPlayerData.owns(s) && WandSpells.fits(s,selectedSlot)))
                 .filter(s -> page != Page.STORE || categoryFilter < 0 || s.category().slot() == categoryFilter).toList();
     }
     private void page(Page next) { page = next; categoryFilter = -1; binding = -1; libraryPage = 0; selected = ""; refresh(); }
@@ -52,11 +52,10 @@ public final class WandHubScreen extends Screen {
         if (client == null) return;
         var affinity = ClientPlayerData.getAffinity();
         String current = affinity + ":" + ClientPlayerData.owned() + ":" + ClientPlayerData.flux() + ":"
-                + ClientPlayerData.loadout() + ":" + ClientPlayerData.canEdit() + ":" + page + ":" + selected + ":" + binding + ":" + libraryPage + ":" + categoryFilter;
+                + ClientPlayerData.loadout() + ":" + ClientPlayerData.canEdit() + ":" + page + ":" + selected + ":" + binding + ":" + libraryPage + ":" + categoryFilter + ":" + selectedSlot + ":" + ClientPlayerData.xp() + ":" + ClientPlayerData.credits();
         if (current.equals(stamp)) return;
         var chosen = WandSpells.find(selected);
-        if (chosen == null || chosen.affinity() != affinity || (page == Page.LOADOUT && !ClientPlayerData.owns(chosen)))
-            selected = WandSpells.forAffinity(affinity).getFirst().id();
+        if (chosen == null || !library().contains(chosen)) selected=library().isEmpty()?"":library().getFirst().id();
         stamp = current;
         clearChildren();
         button("Done", 284, 244, 58, 16, this::close);
@@ -82,26 +81,28 @@ public final class WandHubScreen extends Screen {
         button("Spell Store", 122, 65, 116, 18, () -> page(Page.STORE)).active = page != Page.STORE;
         button("Controls", 242, 65, 100, 18, () -> page(Page.CONTROLS)).active = page != Page.CONTROLS;
         if (page == Page.CONTROLS) {
-            for (int i = 0; i < 4; i++) {
-                int slot = i;
-                button(binding == i ? "Press a key..." : WandControls.label(i).getString(), 22, 105 + i*31, 146, 18,
-                        () -> { binding = slot; refresh(); });
+            for (int i=0;i<6;i++) {
+                int input=i; int x=i<3?22:194,y=105+(i%3)*35;
+                button(binding==i?"Press a key...":WandControls.label(i).getString(),x,y,146,18,
+                        ()->{binding=input;refresh();});
             }
             button("Reset controls", 22, 221, 146, 20, () -> feedback(WandControls.reset()));
-            button("Minecraft controls...", 194, 211, 148, 20, () -> client.setScreen(new ControlsOptionsScreen(this, client.options)));
+            button("Minecraft controls...", 194, 203, 148, 16, () -> client.setScreen(new ControlsOptionsScreen(this, client.options)));
+            button("Move HUD", 194, 222, 148, 16, () -> client.setScreen(new WandHudEditScreen(this)));
             return;
         }
         if (page == Page.STORE) button("Category: " + (categoryFilter < 0 ? "All" : WandSpells.Category.forSlot(categoryFilter).label()), 18, 86, 156, 13,
                 () -> { categoryFilter = categoryFilter == 2 ? -1 : categoryFilter+1; libraryPage = 0;
                     selected = library().isEmpty() ? "" : library().getFirst().id(); refresh(); });
-        if (page == Page.LOADOUT) for (int slot = 0; slot < 3; slot++) {
-            String id = ClientPlayerData.loadout().get(slot);
-            var spell = WandSpells.find(id);
-            var b = button("", 24 + slot * 52, 102, 36, 36, () -> {
-                if (ClientPlayerData.owns(spell)) { selected = id; refresh(); }
-                else { page(Page.STORE); selected = id; refresh(); }
-            });
-            b.setTooltip(Tooltip.of(Text.literal((ClientPlayerData.owns(spell) ? "" : "Visit the store: ") + spell.name())));
+        if(page==Page.LOADOUT) {
+            var slots=visibleSlots();int size=slotSize();
+            for(int index=0;index<slots.size();index++) {
+                int slot=slots.get(index);var spell=WandSpells.find(ClientPlayerData.loadout().get(slot));
+                var b=button("",slotX(index),102,size,size,()->{
+                    selectedSlot=slot;libraryPage=0;selected=ClientPlayerData.loadout().get(slot);stamp="";refresh();
+                });
+                b.setTooltip(Tooltip.of(Text.literal(WandSpells.slotLabel(slot)+(spell==null?"":": "+spell.name()))));
+            }
         }
         var spells = library();
         libraryPage = Math.clamp(libraryPage, 0, Math.max(0, (spells.size()-1)/3));
@@ -115,22 +116,23 @@ public final class WandHubScreen extends Screen {
             button(">", 154, 237, 20, 12, () -> { libraryPage++; refresh(); }).active = (libraryPage+1)*3 < spells.size();
         }
         var spell = WandSpells.find(selected);
+        if(spell==null)return;
         boolean owned = ClientPlayerData.owns(spell);
         if (page == Page.STORE) {
-            var b = button(owned ? "Owned" : "Buy Spell", 194, 202, 148, 20, () -> action("unlock", 0, spell.id()));
-            b.active = !owned && ClientPlayerData.canEdit() && ClientPlayerData.flux() >= spell.price();
+            var b = button(owned ? "Owned" : ClientPlayerData.free(spell) ? "Learn Free" : "Buy Spell", 194, 202, 148, 20, () -> action("unlock", 0, spell.id()));
+            b.active = !owned && ClientPlayerData.canEdit() && (ClientPlayerData.free(spell) || ClientPlayerData.flux() >= spell.price());
             if (owned) {
-                boolean equipped = ClientPlayerData.loadout().get(spell.category().slot()).equals(spell.id());
+                boolean equipped = ClientPlayerData.loadout().contains(spell.id());
                 var equipButton = button(equipped ? "Equipped" : "Equip now", 194, 225, 148, 16,
-                        () -> action("equip", spell.category().slot(), spell.id()));
+                        () -> action("equip", destination(spell), spell.id()));
                 equipButton.setTooltip(Tooltip.of(Text.literal(
-                        "Replaces " + WandSpells.find(ClientPlayerData.loadout().get(spell.category().slot())).name())));
+                        "Equip in " + WandSpells.slotLabel(destination(spell)))));
                 equipButton.active = !equipped && ClientPlayerData.canEdit();
             }
         } else {
-            int slot = spell.category().slot();
+            int slot = selectedSlot;
             boolean equipped = ClientPlayerData.loadout().get(slot).equals(spell.id());
-            button(equipped ? spell.category().label() + " equipped" : "Equip " + spell.category().label(), 194, 202, 148, 20,
+            button(equipped ? WandSpells.slotLabel(slot) + " equipped" : "Equip " + WandSpells.slotLabel(slot), 194, 202, 148, 20,
                     () -> action("equip", slot, spell.id())).active = !equipped && ClientPlayerData.canEdit();
         }
     }
@@ -157,6 +159,13 @@ public final class WandHubScreen extends Screen {
         if (affinity != WizardAffinity.NONE) texture(context, "corner_" + affinity.name().toLowerCase(Locale.ROOT), 0, 0, 64, 64, 64);
         context.drawText(textRenderer, "Wizard's Wand", 43, 22, INK, false);
         context.drawText(textRenderer, affinity == WizardAffinity.NONE ? "Choose an affinity" : title(affinity) + " affinity", 43, 36, MUTED, false);
+        if(affinity!=WizardAffinity.NONE){
+            double xp=ClientPlayerData.xp();int level=ElementLevels.level(xp);
+            context.drawText(textRenderer,"Lv "+level+" / 6  +"+((level-1)*10)+"%",194,22,MUTED,false);
+            context.drawText(textRenderer,level==6?"Maximum level":"XP "+(int)ElementLevels.within(xp)+" / "+(int)ElementLevels.required(xp),194,34,MUTED,false);
+            context.fill(194,40,292,41,0xFFC6B087);
+            context.fill(194,40,194+(level==6?98:(int)(98*ElementLevels.within(xp)/ElementLevels.required(xp))),41,0xFF9B722B);
+        }
         String balance = affinity == WizardAffinity.NONE ? "Choose your element" : title(affinity) + " Flux: " + String.format(Locale.ROOT, "%,d", ClientPlayerData.flux());
         context.drawText(textRenderer, textRenderer.trimToWidth(balance, 148), 22, 51, MUTED, false);
         if (page == Page.GUIDE) {
@@ -167,44 +176,53 @@ public final class WandHubScreen extends Screen {
             wrapped(context, "Every element has its own Flux and spell collection. Your purchases and equipped spells are saved when you switch.", 194, 117, 145, INK);
             wrapped(context, "New elements start with a free basic spell.", 194, 177, 145, MUTED);
         } else if (page == Page.CONTROLS) {
-            for (int i = 0; i < 4; i++) context.drawText(textRenderer, i==3 ? "Spell alternate" : WandSpells.Category.forSlot(i).label(), 22, 94+i*31, MUTED, false);
-            wrapped(context, binding >= 0 ? "Press a keyboard key or click a mouse button. Escape cancels." : "Bind spells and their alternate action. Flashover uses alternate to detonate.", 194, 94, 145, INK);
-            wrapped(context, "Hold Basic to repeat. Sneak + right-click interacts with blocks. Put the wand away for normal tools.", 194, 150, 145, MUTED);
+            for(int i=0;i<6;i++)context.drawText(textRenderer,i==3?"Spell alternate":WandSpells.slotLabel(WandControls.slotForInput(i)),i<3?22:194,94+(i%3)*35,MUTED,false);
+            context.drawText(textRenderer,binding>=0?"Press key / mouse; Esc cancels":"Hold Basic to repeat. Sneak-use blocks.",22,203,MUTED,false);
         } else {
-            if (page == Page.LOADOUT) for (var category : WandSpells.Category.values()) {
-                context.getMatrices().pushMatrix();context.getMatrices().translate(42+category.slot()*52,90);context.getMatrices().scale(.8f,.8f);
-                context.drawText(textRenderer,category.label(),-textRenderer.getWidth(category.label())/2,0,MUTED,false);context.getMatrices().popMatrix();
+            if(page==Page.LOADOUT)for(int i=0;i<visibleSlots().size();i++){
+                int slot=visibleSlots().get(i);
+                if(!WandSpells.slotOpen(ClientPlayerData.owned(),slot))continue;
+                String label=WandSpells.slotLabel(slot);
+                if(visibleSlots().size()>3)label=switch(slot){case 1->"Tech I";case 2->"Ult";case 3->"Tech II";case 4->"Flex";default->"Basic";};
+                context.getMatrices().pushMatrix();context.getMatrices().translate(slotX(i)+slotSize()/2f,90);context.getMatrices().scale(.75f,.75f);
+                context.drawText(textRenderer,label,-textRenderer.getWidth(label)/2,0,MUTED,false);context.getMatrices().popMatrix();
             }
             if (page == Page.LOADOUT) context.drawText(textRenderer, "Owned spells", 22, 153, MUTED, false);
             var spell = WandSpells.find(selected);
+            if(spell!=null) {
             icon(context, spell, 302, 12, 28);
-            wrapped(context, spell.name(), 194, 94, 148, INK);
+            context.drawText(textRenderer,textRenderer.trimToWidth(spell.name(),148),194,94,INK,false);
             context.drawText(textRenderer, spell.ultimate() ? "Ultimate / 100 charge" : spell.category().label() + " spell", 194, 110, MUTED, false);
-            wrapped(context, spell.description(), 194, 124, 148, INK);
-            context.drawText(textRenderer, spell.timing(), 194, 168, MUTED, false);
-            context.drawText(textRenderer, spell.reach(), 194, 179, MUTED, false);
+            wrappedLimited(context, spell.description(), 194, 124, 148, INK, 3);
+            context.drawText(textRenderer, textRenderer.trimToWidth(spell.timing(),148), 194, 168, MUTED, false);
+            context.drawText(textRenderer, textRenderer.trimToWidth(spell.reach(),148), 194, 179, MUTED, false);
             if (page == Page.STORE) {
-                String cost = ClientPlayerData.owns(spell) ? (spell.price() == 0 ? "Free starter spell" : "Permanently owned") : "Price: " + spell.price() + " Flux";
+                String cost = ClientPlayerData.owns(spell) ? (spell.price() == 0 ? "Free starter spell" : "Permanently owned") : ClientPlayerData.free(spell) ? "Free spell choice" : "Price: " + spell.price() + " Flux";
                 context.drawText(textRenderer, cost, 194, 190, MUTED, false);
-                if (!ClientPlayerData.owns(spell) && ClientPlayerData.flux() < spell.price())
+                if (!ClientPlayerData.owns(spell) && !ClientPlayerData.free(spell) && ClientPlayerData.flux() < spell.price())
                     context.drawText(textRenderer, "Need " + (spell.price()-ClientPlayerData.flux()) + " more Flux", 194, 226, 0xFF853E27, false);
                 wrapped(context, "Earn " + title(affinity) + " Flux with " + title(affinity) + " spell damage.", 22, 211, 148, MUTED);
             }
-            if (page == Page.LOADOUT && ClientPlayerData.owns(spell) && !ClientPlayerData.loadout().get(spell.category().slot()).equals(spell.id())) {
-                var replaced = WandSpells.find(ClientPlayerData.loadout().get(spell.category().slot()));
+            if (page == Page.LOADOUT && ClientPlayerData.owns(spell) && !ClientPlayerData.loadout().contains(spell.id())) {
+                var replaced = WandSpells.find(ClientPlayerData.loadout().get(selectedSlot));
                 String label = "Replaces " + (ClientPlayerData.owns(replaced) ? replaced.name() : "empty slot");
                 context.drawText(textRenderer, textRenderer.trimToWidth(label,148), 194, 225, MUTED, false);
+            }
+            } else {
+                wrapped(context,"No owned "+WandSpells.slotLabel(selectedSlot)+" spells.",194,94,148,INK);
+                wrapped(context,"Learn spells in the Spell Store to fill this box.",194,125,148,MUTED);
             }
             if (!ClientPlayerData.canEdit()) context.drawText(textRenderer, "Locked during combat", 194, 235, 0xFF853E27, false);
         }
         super.render(context, localX(mouseX), localY(mouseY), delta);
         if ((page == Page.LOADOUT || page == Page.STORE) && affinity != WizardAffinity.NONE) {
-            if (page == Page.LOADOUT) for (int i = 0; i < 3; i++) {
-                var spell = WandSpells.find(ClientPlayerData.loadout().get(i));
-                if (ClientPlayerData.owns(spell)) icon(context, spell, 28+i*52, 106, 28);
-                else context.drawText(textRenderer, "+", 39+i*52, 116, MUTED, false);
-                String key = WandControls.shortLabel(i);
-                context.drawText(textRenderer, key, 42+i*52-textRenderer.getWidth(key)/2, 141, MUTED, false);
+            if(page==Page.LOADOUT)for(int i=0;i<visibleSlots().size();i++){
+                int slot=visibleSlots().get(i),size=slotSize(),x=slotX(i);var spell=WandSpells.find(ClientPlayerData.loadout().get(slot));
+                if(ClientPlayerData.owns(spell))icon(context,spell,x+4,106,size-8);
+                if(WandSpells.slotOpen(ClientPlayerData.owned(),slot)){
+                    String key=WandControls.slotKey(slot);context.drawText(textRenderer,key,x+(size-textRenderer.getWidth(key))/2,141,MUTED,false);
+                }
+                if(selectedSlot==slot)context.fill(x,102,x+size,104,0xFFF4D176);
             }
             var spells = library();
             for (int i = libraryPage*3; i < Math.min(spells.size(), libraryPage*3+3); i++) {
@@ -212,7 +230,7 @@ public final class WandHubScreen extends Screen {
                 int y = (page == Page.STORE ? 100 : 164) + (i%3)*(page == Page.STORE ? 36 : 24);
                 icon(context, spell, 22, y+3, 16);
                 if (spell.id().equals(selected)) context.fill(18, y, 20, y+22, 0xFFF4D176);
-                if (page == Page.STORE) context.drawText(textRenderer, ClientPlayerData.owns(spell) ? "Owned" : spell.price() + " Flux", 24, y+24, MUTED, false);
+                if (page == Page.STORE) context.drawText(textRenderer, ClientPlayerData.owns(spell) ? "Owned" : ClientPlayerData.free(spell) ? "Free" : spell.price() + " Flux", 24, y+24, MUTED, false);
             }
         }
         if (page != Page.GUIDE && !message.isBlank()) {
@@ -225,9 +243,20 @@ public final class WandHubScreen extends Screen {
         return "Press " + WandControls.hubLabel() + " to open your hub and choose an element.\n\n"
                 + "Basic: " + WandControls.label(0).getString() + " | Technique: " + WandControls.label(1).getString()
                 + " | Ultimate: " + WandControls.label(2).getString() + "\nChange your keys in Controls.\n\n"
-                + "Deal spell damage to earn that element's Flux.\nBuy spells in the Store; equip one of each category.\n"
+                + "Deal spell damage to earn element XP and Flux.\nBuy spells in the Store; learning opens slots.\n"
                 + "Your purchases stay saved when switching elements.\n\n"
                 + "Explore the world and discover what awaits.";
+    }
+    private List<Integer> visibleSlots(){return WandSpells.visibleSlots(ClientPlayerData.owned());}
+    private int slotSize(){return visibleSlots().size()==3?36:visibleSlots().size()==4?32:28;}
+    private int slotX(int index){return 24+index*(visibleSlots().size()==3?52:visibleSlots().size()==4?40:32);}
+    private int destination(WandSpells.Spell spell){
+        for(int i=0;i<5;i++)if(WandSpells.fits(spell,i)&&WandSpells.slotOpen(ClientPlayerData.owned(),i)&&ClientPlayerData.loadout().get(i).isEmpty())return i;
+        return WandSpells.fits(spell,selectedSlot)&&WandSpells.slotOpen(ClientPlayerData.owned(),selectedSlot)?selectedSlot:spell.category().slot();
+    }
+    private void wrappedLimited(DrawContext ctx,String text,int x,int y,int width,int color,int count){
+        var lines=textRenderer.wrapLines(Text.literal(text),width);
+        for(int i=0;i<Math.min(count,lines.size());i++)ctx.drawText(textRenderer,lines.get(i),x,y+i*11,color,false);
     }
     private static String title(WizardAffinity affinity) {
         String s = affinity.name().toLowerCase(Locale.ROOT); return Character.toUpperCase(s.charAt(0)) + s.substring(1);

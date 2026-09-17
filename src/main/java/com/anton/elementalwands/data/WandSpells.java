@@ -76,7 +76,7 @@ public final class WandSpells {
         spell(WizardAffinity.STONE, Ability.ULTIMATE, "titan_dome", "Titan Dome", "Invoke the Titan Dome and its protective stone power."),
         spell(WizardAffinity.NATURE, Ability.PRIMARY, "seed", "Seed", "Launch a winged seed to strike an enemy or plant a growing flower."),
         new Spell("thorn_lash", WizardAffinity.NATURE, Ability.PRIMARY, "Thorn Lash",
-                "Sweep a thorny vine. Heal 25% of health damage dealt, up to one heart per cast.", 500),
+                "Sweep a thorny vine. Heal 50% of health damage dealt, up to one heart per cast.", 500),
         spell(WizardAffinity.NATURE, Ability.SECONDARY, "tendril_bloom", "Tendril Bloom", "Send vines from flowers, or three from a root knot when none exist. Break a source to end its brambles."),
         spell(WizardAffinity.NATURE, Ability.ULTIMATE, "overgrowth", "Overgrowth", "Throw an acorn to grow a healing oak. One nearby flower extends its duration."),
         spell(WizardAffinity.SPACE, Ability.PRIMARY, "singularity_bolt", "Singularity Bolt", "Launch a black star with subtle guidance and a damaging impact burst."),
@@ -92,33 +92,58 @@ public final class WandSpells {
         for (var category : Category.values()) spells.stream().filter(s -> s.category() == category).findFirst().ifPresent(s -> result.add(s.id()));
         return List.copyOf(result);
     }
-    public static boolean valid(WizardAffinity affinity, List<String> ids) {
-        if (affinity == WizardAffinity.NONE) return ids.equals(defaults(affinity));
-        if (ids.size() != 3 || ids.stream().distinct().count() != 3) return false;
-        for (int i = 0; i < 3; i++) {
-            Spell s = find(ids.get(i));
-            if (s == null || s.affinity() != affinity || s.category().slot() != i) return false;
-        }
+    public static final int SLOT_COUNT=5;
+    public static boolean fits(Spell spell,int slot) {
+        if(spell==null) return false;
+        return switch(slot) {case 0->spell.category()==Category.BASIC; case 1,3->spell.category()==Category.TECHNIQUE;
+            case 2->spell.category()==Category.ULTIMATE;case 4->!spell.ultimate();default->false;};
+    }
+    public static String slotLabel(int slot) {return switch(slot){case 0->"Basic";case 1->"Technique";case 2->"Ultimate";case 3->"Technique II";case 4->"Flexible";default->"";};}
+    public static boolean slotOpen(List<String> owned,int slot) {
+        long basics=owned.stream().distinct().map(WandSpells::find).filter(s->s!=null&&s.category()==Category.BASIC).count();
+        long techniques=owned.stream().distinct().map(WandSpells::find).filter(s->s!=null&&s.category()==Category.TECHNIQUE).count();
+        return switch(slot) {case 0->true;case 1->techniques>=1;case 2->owned.stream().map(WandSpells::find).anyMatch(s->s!=null&&s.ultimate());
+            case 3->techniques>=2;case 4->basics>=2||techniques>=3;default->false;};
+    }
+    public static List<Integer> visibleSlots(List<String> owned) {
+        var slots=new java.util.ArrayList<>(List.of(0,1,2));
+        if(slotOpen(owned,3))slots.add(3);if(slotOpen(owned,4))slots.add(4);
+        return slots;
+    }
+    public static boolean valid(WizardAffinity affinity,List<String> ids) {
+        if(affinity==WizardAffinity.NONE) return ids.equals(defaults(affinity));
+        if(ids.size()!=SLOT_COUNT) return false;
+        var seen=new java.util.HashSet<String>();
+        for(int i=0;i<ids.size();i++) {if(ids.get(i).isEmpty())continue;var spell=find(ids.get(i));
+            if(spell==null||spell.affinity()!=affinity||!fits(spell,i)||!seen.add(spell.id()))return false;}
         return true;
     }
-    /** Restore old freely-swapped loadouts to category order while keeping spell choices. */
-    public static List<String> normalize(WizardAffinity affinity, List<String> ids) {
-        if (ids == null || affinity == WizardAffinity.NONE) return defaults(affinity);
-        var result = new java.util.ArrayList<>(defaults(affinity));
-        for (var category : Category.values()) ids.stream().map(WandSpells::find)
-                .filter(s -> s != null && s.affinity() == affinity && s.category() == category)
-                .findFirst().ifPresent(s -> result.set(category.slot(), s.id()));
+    /** Preserves old selections in their category, with blank added slots. */
+    public static List<String> normalize(WizardAffinity affinity,List<String> ids) {
+        if(affinity==WizardAffinity.NONE)return defaults(affinity);
+        var result=new java.util.ArrayList<>(java.util.Collections.nCopies(SLOT_COUNT,""));
+        if(ids!=null) for(int i=0;i<ids.size();i++) {
+            var spell=find(ids.get(i));if(spell==null||spell.affinity()!=affinity||result.contains(spell.id()))continue;
+            int target=i<SLOT_COUNT&&fits(spell,i)?i:spell.category().slot();
+            if(result.get(target).isEmpty())result.set(target,spell.id());
+        }
         return List.copyOf(result);
     }
-    public static List<String> equip(WizardAffinity affinity, List<String> current, int slot, String id) {
-        Spell s = find(id);
-        if (!valid(affinity, current) || slot < 0 || slot >= current.size() || s == null
-                || s.affinity() != affinity || s.category().slot() != slot) return current;
-        var next = new java.util.ArrayList<>(current);
-        int oldSlot = next.indexOf(id);
-        if (oldSlot >= 0) next.set(oldSlot, next.get(slot));
-        next.set(slot, id);
-        return valid(affinity, next) ? List.copyOf(next) : current;
+    public static List<String> reconcile(WizardAffinity affinity,List<String> current,List<String> owned) {
+        if(affinity==WizardAffinity.NONE)return defaults(affinity);
+        var result=new java.util.ArrayList<>(normalize(affinity,current));
+        for(int i=0;i<SLOT_COUNT;i++)if(!slotOpen(owned,i)||!owned.contains(result.get(i)))result.set(i,"");
+        // Dedicated slots get first choice; flexible uses only remaining distinct spells.
+        for(int i=0;i<SLOT_COUNT;i++)if(slotOpen(owned,i)&&result.get(i).isEmpty())
+            for(String id:owned){var spell=find(id);if(spell!=null&&spell.affinity()==affinity&&fits(spell,i)&&!result.contains(id)){result.set(i,id);break;}}
+        return List.copyOf(result);
+    }
+    public static List<String> equip(WizardAffinity affinity,List<String> current,int slot,String id) {
+        var spell=find(id);
+        if(!valid(affinity,current)||slot<0||slot>=SLOT_COUNT||spell==null||spell.affinity()!=affinity||!fits(spell,slot))return current;
+        var next=new java.util.ArrayList<>(current);int oldSlot=next.indexOf(id);
+        if(oldSlot>=0&&oldSlot!=slot){String displaced=next.get(slot);next.set(oldSlot,fits(find(displaced),oldSlot)?displaced:"");}
+        next.set(slot,id);return valid(affinity,next)?List.copyOf(next):current;
     }
     private WandSpells() {}
 }

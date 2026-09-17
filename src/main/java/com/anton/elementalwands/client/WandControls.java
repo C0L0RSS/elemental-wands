@@ -20,7 +20,7 @@ import org.lwjgl.glfw.GLFW;
  * do not steal Attack/Use from tools when the wand is put away. */
 public final class WandControls {
     private static final InputUtil.Key[] KEYS = defaults();
-    private static final boolean[] HELD = new boolean[4];
+    private static final boolean[] HELD = new boolean[6];
     private static int heldHotbar = -1, repeatTick;
     private static String heldAffinity = "";
     private static net.minecraft.item.ItemStack leapWand;
@@ -28,7 +28,7 @@ public final class WandControls {
     private static KeyBinding hubKey;
     private static final Path CONFIG = FabricLoader.getInstance().getConfigDir().resolve("elementalwands-controls.properties");
     private static InputUtil.Key[] defaults() { return new InputUtil.Key[]{InputUtil.Type.MOUSE.createFromCode(0),
-            InputUtil.Type.MOUSE.createFromCode(1), InputUtil.Type.KEYSYM.createFromCode(GLFW.GLFW_KEY_X),InputUtil.Type.KEYSYM.createFromCode(GLFW.GLFW_KEY_R)}; }
+            InputUtil.Type.MOUSE.createFromCode(1), InputUtil.Type.KEYSYM.createFromCode(GLFW.GLFW_KEY_X),InputUtil.Type.KEYSYM.createFromCode(GLFW.GLFW_KEY_R),InputUtil.Type.KEYSYM.createFromCode(GLFW.GLFW_KEY_Z),InputUtil.Type.KEYSYM.createFromCode(GLFW.GLFW_KEY_V)}; }
     public static void init() {
         hubKey = KeyBindingHelper.registerKeyBinding(new KeyBinding("key.elementalwands.hub", GLFW.GLFW_KEY_H,
                 new KeyBinding.Category(Identifier.of("elementalwands", "general"))));
@@ -41,10 +41,11 @@ public final class WandControls {
                     boolean duplicate=false;
                     for(int j=0;j<i;j++)if(KEYS[j].equals(key))duplicate=true;
                     if(valid(key) && !duplicate)KEYS[i]=key;
-                    else if(i==3) {
-                        for(int code:new int[]{GLFW.GLFW_KEY_R,GLFW.GLFW_KEY_V,GLFW.GLFW_KEY_G,GLFW.GLFW_KEY_B}) {
+                    else {
+                        for(int code:new int[]{GLFW.GLFW_KEY_R,GLFW.GLFW_KEY_Z,GLFW.GLFW_KEY_V,GLFW.GLFW_KEY_G,GLFW.GLFW_KEY_B,GLFW.GLFW_KEY_N}) {
                             var fallback=InputUtil.Type.KEYSYM.createFromCode(code);
-                            if(!fallback.equals(KEYS[0]) && !fallback.equals(KEYS[1]) && !fallback.equals(KEYS[2])) { KEYS[i]=fallback;break; }
+                            boolean used=false;for(int j=0;j<i;j++)if(fallback.equals(KEYS[j]))used=true;
+                            if(!used) { KEYS[i]=fallback;break; }
                         }
                     }
                 }
@@ -65,7 +66,10 @@ public final class WandControls {
         return key.getCode() >= 0 && !(key.getCategory() == InputUtil.Type.KEYSYM && key.getCode() == GLFW.GLFW_KEY_ESCAPE);
     }
     public static String hubLabel() { return hubKey.getBoundKeyLocalizedText().getString(); }
+    public static int inputForSlot(int slot){return slot<3?slot:slot+1;}
+    public static int slotForInput(int input){return input<3?input:input-1;}
     public static Text label(int slot) { return KEYS[slot].getLocalizedText(); }
+    public static String slotKey(int slot){return shortLabel(inputForSlot(slot));}
     public static String shortLabel(int slot) {
         var key = KEYS[slot];
         if (key.getCategory() == InputUtil.Type.MOUSE) return switch (key.getCode()) {
@@ -98,7 +102,7 @@ public final class WandControls {
         if (client.getNetworkHandler() != null && ClientPlayNetworking.canSend(ModNetworking.ReleaseSpellPayload.ID))
             ClientPlayNetworking.send(ModNetworking.ReleaseSpellPayload.INSTANCE);
     }
-    public static void clear() { leapAim=false;leapWand=null; if (HELD[0]) release(); java.util.Arrays.fill(HELD, false); heldHotbar = -1; repeatTick = 0; }
+    public static void clear() { leapAim=false;leapWand=null; if (java.util.stream.IntStream.range(0,HELD.length).anyMatch(i->HELD[i])) release(); java.util.Arrays.fill(HELD, false); heldHotbar = -1; repeatTick = 0; }
     public static boolean aimingLeap() { return leapAim && validLeapContext(); }
     private static boolean validLeapContext() {
         var c=MinecraftClient.getInstance();
@@ -113,7 +117,7 @@ public final class WandControls {
             var target=com.anton.elementalwands.util.FireLeapRules.target(c.player);
             if(target!=null && com.anton.elementalwands.util.FireLeapRules.validTarget(c.player,target))
                 ClientPlayNetworking.send(new ModNetworking.FireLeapCommitPayload(target.x,target.y,target.z));
-            else c.player.sendMessage(Text.literal("No clear leap path. Aim at nearby ground."),true);
+            else c.player.sendMessage(Text.literal("No clear leap path. Aim toward open ground or a reachable ledge."),true);
         }
         leapAim=false;leapWand=null;
     }
@@ -121,7 +125,7 @@ public final class WandControls {
         var client = MinecraftClient.getInstance();
         var key = (mouse ? InputUtil.Type.MOUSE : InputUtil.Type.KEYSYM).createFromCode(code);
         if (action == GLFW.GLFW_RELEASE) {
-            for (int i = 0; i < KEYS.length; i++) if (KEYS[i].equals(key)) { if (i==0 && HELD[i]) release(); if(i==1 && HELD[i] && leapAim) releaseLeap(); HELD[i] = false; }
+            for (int i = 0; i < KEYS.length; i++) if (KEYS[i].equals(key)) { if (HELD[i] && spellAtInput(i,"flamethrower")) release(); if(HELD[i] && spellAtInput(i,"fire_hop") && leapAim) releaseLeap(); HELD[i] = false; }
             return false;
         }
         if (client.currentScreen != null || client.player == null || !client.player.isAlive() || client.player.isSpectator()
@@ -136,9 +140,9 @@ public final class WandControls {
                 heldAffinity = ClientPlayerData.getAffinity().name(); repeatTick = 0;
                 if(i==3) {
                     if(ClientPlayerData.loadout().contains("flashover"))ClientPlayNetworking.send(ModNetworking.AlternateSpellPayload.INSTANCE);
-                } else if(i==1 && ClientPlayerData.loadout().size()>1 && ClientPlayerData.loadout().get(1).equals("fire_hop")) {
+                } else if(spellAtInput(i,"fire_hop")) {
                     leapWand=client.player.getMainHandStack();leapAim=true;
-                } else ClientPlayNetworking.send(new ModNetworking.CastSlotPayload(i));
+                } else ClientPlayNetworking.send(new ModNetworking.CastSlotPayload(slotForInput(i)));
             }
             return true;
         }
@@ -155,12 +159,14 @@ public final class WandControls {
                 || client.player.isSpectator() || !(client.player.getMainHandStack().getItem() instanceof AbstractWandItem)
                 || heldHotbar != client.player.getInventory().getSelectedSlot() || !heldAffinity.equals(ClientPlayerData.getAffinity().name())) { clear(); return; }
         if (++repeatTick % 2 != 0) return;
-        for (int i = 0; i < 2 && i < ClientPlayerData.loadout().size(); i++) {
-            var spell = WandSpells.find(ClientPlayerData.loadout().get(i));
+        for (int i = 0; i < KEYS.length; i++) {
+            if(i==3 || slotForInput(i)>=ClientPlayerData.loadout().size())continue;
+            var spell = WandSpells.find(ClientPlayerData.loadout().get(slotForInput(i)));
             if (HELD[i] && spell != null && spell.ability() == AbstractWandItem.Ability.PRIMARY && (spell.id().equals("flamethrower") || primaryReady(client)))
-                ClientPlayNetworking.send(new ModNetworking.CastSlotPayload(i));
+                ClientPlayNetworking.send(new ModNetworking.CastSlotPayload(slotForInput(i)));
         }
     }
+    private static boolean spellAtInput(int input,String id){int slot=slotForInput(input);return input!=3 && slot>=0 && slot<ClientPlayerData.loadout().size() && ClientPlayerData.loadout().get(slot).equals(id);}
     private static boolean primaryReady(MinecraftClient client) {
         long now = client.world.getTime();
         var data = client.player.getMainHandStack().getOrDefault(net.minecraft.component.DataComponentTypes.CUSTOM_DATA,
@@ -173,6 +179,7 @@ public final class WandControls {
             case NATURE -> com.anton.elementalwands.item.NatureAbilityHandler.getPrimaryCooldownTicks();
             default -> AbstractWandItem.DEFAULT_PRIMARY_COOLDOWN_TICKS;
         };
+        duration=Math.max(duration,data.getInt("ew_primary_duration",0));
         long elapsed = now - data.getLong("ew_last_primary").orElse(-1000000000L);
         if (ClientPlayerData.getEntangleStacks(client.player.getId()) > 0) elapsed /= 2;
         return elapsed >= duration;

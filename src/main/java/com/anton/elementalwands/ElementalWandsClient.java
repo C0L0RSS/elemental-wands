@@ -100,8 +100,9 @@ public class ElementalWandsClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(ModNetworking.SyncPlayerDataPayload.ID,
                 (payload, context) -> {
                     ClientPlayerData.setUnlockedSkills(payload.unlockedSkills(), payload.affinity());
-                    ClientPlayerData.setHubData(payload.flux(), payload.loadout(), payload.canEdit());
                     ClientPlayerData.setOwned(payload.owned());
+                    ClientPlayerData.setHubData(payload.flux(), payload.loadout(), payload.canEdit());
+                    ClientPlayerData.setProgress(payload.xp(),payload.credits());
                     if (context.client().currentScreen instanceof com.anton.elementalwands.client.screen.WandHubScreen hub) hub.refresh();
                 });
         ClientPlayNetworking.registerGlobalReceiver(ModNetworking.FlashoverStatePayload.ID,(payload,context) -> {

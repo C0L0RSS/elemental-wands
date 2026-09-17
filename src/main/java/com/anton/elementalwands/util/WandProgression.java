@@ -44,7 +44,7 @@ public final class WandProgression {
     public static void earn(PlayerEntity player, WizardAffinity source, long amount) {
         if (source == WizardAffinity.NONE || amount <= 0) return;
         var old = get(player, source);
-        put(player, source, new ElementProgress(old.flux() + Math.min(amount, Long.MAX_VALUE - old.flux()), old.spells()));
+        put(player, source, new ElementProgress(old.flux() + Math.min(amount, Long.MAX_VALUE - old.flux()), old.spells(), old.xp()));
     }
     public static String purchase(ServerPlayerEntity player, String expectedAffinity, String id) {
         var affinity = EWAttachments.getAffinity(player);
@@ -54,10 +54,13 @@ public final class WandProgression {
         if (spell == null || spell.affinity() != affinity || affinity == WizardAffinity.NONE) return "This spell belongs to another element.";
         if (owns(player, spell)) return "You already own this spell.";
         var old = get(player, affinity);
-        if (old.flux() < spell.price()) return "Not enough " + affinity.name().toLowerCase(Locale.ROOT) + " Flux.";
+        int freeTier = SpellBooks.availableTier(player, spell);
+        if (freeTier < 0 && old.flux() < spell.price()) return "Not enough " + affinity.name().toLowerCase(Locale.ROOT) + " Flux.";
         var ids = new ArrayList<>(old.spells()); ids.add(id);
-        put(player, affinity, new ElementProgress(old.flux() - spell.price(), ids));
-        return "Purchased " + spell.name() + ".";
+        put(player, affinity, new ElementProgress(old.flux() - (freeTier>=0 ? 0 : spell.price()), ids, old.xp()));
+        if (freeTier>=0) SpellBooks.spend(player, freeTier);
+        WandLoadouts.get(player); // Fill newly available capacity without replacing chosen spells.
+        return (freeTier>=0 ? "Learned for free: " : "Purchased ") + spell.name() + ".";
     }
     public static boolean adminMatches(WandSpells.Spell spell, int bits) {
         return spell.ability()==com.anton.elementalwands.item.AbstractWandItem.Ability.PRIMARY ? bits==3 : spell.unlocked(bits);
@@ -68,7 +71,17 @@ public final class WandProgression {
         var old = get(player, affinity);
         var ids = new HashSet<>(old.spells());
         WandSpells.forAffinity(affinity).stream().filter(s -> adminMatches(s,bits)).forEach(s -> ids.add(s.id()));
-        put(player, affinity, new ElementProgress(old.flux(), ids.stream().sorted().toList()));
+        put(player, affinity, new ElementProgress(old.flux(), ids.stream().sorted().toList(), old.xp()));
+    }
+    public static void experience(ServerPlayerEntity player, WizardAffinity source, double amount) {
+        if (source==WizardAffinity.NONE || !Double.isFinite(amount) || amount<=0) return;
+        var old=get(player,source); int before=ElementLevels.level(old.xp());
+        var next=new ElementProgress(old.flux(),old.spells(),old.xp()+amount);
+        if(next.xp()==old.xp()) return;
+        put(player,source,next);
+        if(ElementLevels.level(next.xp())>before) player.sendMessage(net.minecraft.text.Text.literal(
+                source.name()+" reached level "+ElementLevels.level(next.xp())+"! Damage +"+((ElementLevels.level(next.xp())-1)*10)+"%"),false);
+        com.anton.elementalwands.network.ModNetworking.syncPlayerData(player);
     }
     private static void put(PlayerEntity player, WizardAffinity affinity, ElementProgress progress) {
         var saved = new HashMap<>(player.getAttachedOrElse(EWAttachments.ELEMENT_PROGRESS, Map.of()));

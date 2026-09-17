@@ -49,6 +49,7 @@ public final class GuardianChurchManager {
         public transient int offeringTicks;
         public String token=UUID.randomUUID().toString(),guardian;
         public boolean stocked;
+        public List<String> rewardPlayers=new ArrayList<>();
         public int layoutVersion;
         public JsonArray statueMoveInventory; // Durable original inventory until the moved blocks are saved.
         public BlockPos socket() { return at(0,0,layoutVersion>=2?-6:0); }
@@ -90,6 +91,10 @@ public final class GuardianChurchManager {
                 return ActionResult.SUCCESS;
             }
             Site s=siteAt(world,hit.getBlockPos());
+            if(s!=null && s.phase==Phase.RESTORED && hand==Hand.MAIN_HAND && s.rewardPlayers!=null
+                    && s.rewardPlayers.contains(p.getUuidAsString()) && world.getBlockEntity(hit.getBlockPos()) instanceof ChestBlockEntity
+                    && (hit.getBlockPos().equals(s.at(-5,-1,35)) || hit.getBlockPos().equals(s.at(5,-1,35))))
+                com.anton.elementalwands.util.SpellBooks.claim(p,s.token);
             if (s!=null && hit.getBlockPos().equals(s.offering()) && world.getBlockEntity(hit.getBlockPos()) instanceof ChestBlockEntity chest) {
                 com.anton.elementalwands.util.WandGuide.removeLegacyBooks(chest);
                 if (hand==Hand.MAIN_HAND && s.phase==Phase.RUINED) p.sendMessage(Text.literal("Place the Guardian Heart on the pedestal before the statue when your group is ready."), false);
@@ -103,6 +108,7 @@ public final class GuardianChurchManager {
         ServerLivingEntityEvents.AFTER_DEATH.register((entity,source) -> {
             if (entity instanceof FracturedGuardianEntity guardian && GuardianArenaManager.isFighting(guardian)) {
                 for (Site s:sites()) if (guardian.getUuidAsString().equals(s.guardian) && s.phase==Phase.ACTIVE) {
+                    s.rewardPlayers=new ArrayList<>(GuardianArenaManager.enrolledPlayers(guardian));
                     s.phase=Phase.RESTORING; s.cursor=0;
                     // Commit victory before either restoration or reward inventories are changed.
                     if (!save()) { s.phase=Phase.ACTIVE; return; }

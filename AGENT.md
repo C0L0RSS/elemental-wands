@@ -4,32 +4,23 @@ This file gives coding agents the current working map for the Elemental Wands
 repo. It is based on the older `CLAUDE.md`, but cleaned up for the current
 Universal Wand / affinity architecture.
 
-## Product vision and future planning
+## Working on requested changes
 
-The authoritative plans live in the **Elemental Wands Planning** Obsidian vault
-inside this repository: `Elemental Wands Planning/`.
-Local path: `/Users/antonlabas/Desktop/elementalwands/Elemental Wands Planning`.
+For implementation requests, prioritize the requested code changes and relevant
+verification. Read, create, or update planning documents and trackers only when
+the user explicitly asks; do not substitute plan maintenance for implementation.
 
-- [Home](Elemental%20Wands%20Planning/Home.md): starting point and how to use the vault.
-- [Vision](Elemental%20Wands%20Planning/Vision.md): design decisions and open questions.
-- [Progress](Elemental%20Wands%20Planning/Progress.md): milestones, stable task IDs, status, and completion evidence.
-- [Updates](Elemental%20Wands%20Planning/Updates.md): dated session outcomes and next actions.
-- [Ideas](Elemental%20Wands%20Planning/Ideas.md): uncommitted possibilities.
+## Current session checkpoint — September 16, 2026
 
-Read Vision and Progress before substantial feature work. At session end, update
-the relevant Progress item and add a brief entry to Updates. Keep implemented,
-verified, and installed states distinct; detailed feature reports remain in this
-repository. Update Vision when an agreed design decision changes.
-
-The current direction is survival SMP; the earlier fixed-map campaign was
-superseded. Proposed features are not necessarily implemented. This guide remains
-the implementation/build reference. `docs/MOD_VISION.md` and `docs/PROGRESS.md` are
-navigation pointers, not separate editable plans. Planning Markdown files belong
-in Git with the code; Obsidian settings are ignored. Open only the planning folder
-as the working Obsidian vault, so the app stays focused on these notes. If the
-project moves, update any machine-specific external repository links as needed.
-
-## Current session checkpoint — September 14, 2026
+Latest Fire Leap targeting (September 16): forward/horizon aim projects onto ground
+within the 60-block horizontal cap; aimed ledge sides resolve to their reachable
+collision tops without requiring direct top-face visibility. The +4/-6 elevation,
+full-body arc, fluid/chunk/border and arena checks remain. See
+`docs/fire-leap-targeting-2026-09-16.md` for behavior, server/client tests and screenshots.
+Build, server safety cases, native-client full-range/hidden-ledge flights, asset
+checks and JAR integrity passed. Lunar source/installed SHA-256:
+`364f908fe08894c7b7a4f77451f5f615beec2d6e8e84059e2651152a44ac190a`.
+Backup: `.local-backups/lunar/20260916-212822/`. Restart Lunar; human aiming feel pending.
 
 Latest throwable Overgrowth (September 14): all Nature loadouts now throw an acorn
 with the Ultimate input. Ground impact grows the existing 15-second healing oak;
@@ -481,7 +472,7 @@ com.anton.elementalwands
 |-- data/                       # EWAttachments and WizardAffinity
 |-- network/                    # ModNetworking payloads and sync helpers
 |-- client/
-|   |-- overlay/WandHudOverlay  # 3-slot ability HUD above hotbar
+|   |-- overlay/WandHudOverlay  # ability row beside the hotbar; only equipped, owned slots
 |   `-- ClientPlayerData        # client cache for synced unlocks and affinity
 |-- world/ModWorldGen.java      # currently a no-op after crystal worldgen removal
 |-- church/                     # persistent church sites, socket, ritual and restoration
@@ -540,6 +531,11 @@ ultimate behavior.
 - Left mouse / right mouse / X: spell slots 1 / 2 / ultimate by default.
 - Rebind the three spell inputs in the hub's Controls tab; settings persist in
   `config/elementalwands-controls.properties`. Old ultimate bindings migrate.
+- The wand HUD sits level with the hotbar, left of the offhand slot, so it never
+  covers the armor bar, held-item name or action-bar cooldown messages. It draws
+  only slots that hold an owned spell and shows no key labels. Controls > Move HUD
+  opens `WandHudEditScreen`: drag or arrow-nudge the live row; `WandHudLayout`
+  saves the offset from bottom-centre in `config/elementalwands-hud.properties`.
 - Sneak + right mouse: vanilla block interaction with the wand. Its ordinary
   item `use` no longer casts. Putting away the wand restores vanilla input.
 - Client-only `WandMouseMixin` / `WandKeyboardMixin` capture slot input, avoiding

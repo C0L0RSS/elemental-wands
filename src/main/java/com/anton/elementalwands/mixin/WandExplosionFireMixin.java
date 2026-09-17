@@ -19,6 +19,11 @@ import java.util.List;
 @Mixin(ExplosionImpl.class)
 public abstract class WandExplosionFireMixin {
     @Shadow @Final private ExplosionBehavior behavior;
+    @Redirect(method="damageEntities",at=@At(value="INVOKE",target="Lnet/minecraft/entity/Entity;damage(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/entity/damage/DamageSource;F)Z"))
+    private boolean ew$damage(net.minecraft.entity.Entity target,ServerWorld world,net.minecraft.entity.damage.DamageSource source,float amount){
+        if(behavior instanceof WandExplosionBehavior wand)return com.anton.elementalwands.util.SpellCombat.damage(target,world,source,amount,world.getPlayerByUuid(wand.caster()),wand.affinity());
+        return target.damage(world,source,amount);
+    }
     @Redirect(method = "createFire", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/server/world/ServerWorld;setBlockState(Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/block/BlockState;)Z"))
     private boolean elementalwands$ownedFire(ServerWorld world, BlockPos pos, BlockState state) {

@@ -1,0 +1,67 @@
+// Optional real-server regression fixture. All worlds, players and metadata stay under build/.
+// ./gradlew -I tools/progression_server_smoke.init.gradle runServer --args nogui
+allprojects {
+    plugins.withId('fabric-loom') {
+        def smokeRoot = layout.buildDirectory.dir('progression-server-smoke').get().asFile
+        def runRoot = file('build/progression-server-smoke-run')
+        tasks.register('hubServerSmokeSetup') {
+            doLast {
+                runRoot.mkdirs()
+                def oldWorld = new File(runRoot, 'progression-test')
+                if (oldWorld.exists() && !oldWorld.renameTo(new File(runRoot, 'progression-test-before-' + System.currentTimeMillis()))) {
+                    throw new GradleException('Could not preserve the previous disposable test world.')
+                }
+                def acceptedEula = file('run/eula.txt')
+                if (!acceptedEula.exists() || !acceptedEula.text.contains('eula=true')) {
+                    throw new GradleException('Accept the Minecraft EULA in run/eula.txt before using this test server.')
+                }
+                new File(runRoot, 'eula.txt').text = acceptedEula.text
+                new File(runRoot, 'server.properties').text = '''server-ip=127.0.0.1
+server-port=0
+online-mode=false
+level-type=minecraft:flat
+generate-structures=false
+level-name=progression-test
+generator-settings={"layers":[{"block":"minecraft:bedrock","height":1},{"block":"minecraft:dirt","height":2},{"block":"minecraft:grass_block","height":1}],"biome":"minecraft:plains"}
+spawn-protection=0
+view-distance=8
+simulation-distance=8
+difficulty=normal
+max-tick-time=-1
+'''
+                new File(runRoot,'PROGRESSION_FAILED.txt').delete()
+                new File(runRoot,'PROGRESSION_PASSED.txt').delete()
+            }
+        }
+        tasks.register('hubServerSmokeMetadata') {
+            doLast {
+                def metadata = new File(smokeRoot,'metadata')
+                metadata.mkdirs()
+                new File(metadata,'fabric.mod.json').text = '''{
+  "schemaVersion": 1, "id": "progression_server_smoke", "version": "1.0.0", "environment": "server",
+  "entrypoints": {"main": ["com.anton.elementalwands.util.ProgressionServerSmoke"]},
+  "depends": {"elementalwands": "*"}
+}'''
+            }
+        }
+        tasks.register('hubServerSmokeJar', Jar) {
+            dependsOn guardianTestClasses, hubServerSmokeMetadata
+            archiveFileName = 'progression-server-smoke.jar'
+            destinationDirectory = smokeRoot
+            from sourceSets.guardianTest.output
+            from new File(smokeRoot,'metadata')
+        }
+        loom.runs.server.runDir('build/progression-server-smoke-run')
+        loom.runs.server.vmArg('-Dfabric.addMods=' + new File(smokeRoot,'progression-server-smoke.jar').absolutePath)
+        tasks.named('runServer') {
+            dependsOn hubServerSmokeJar, hubServerSmokeSetup
+            standardInput = System.in
+            doLast {
+                def marker = new File(runRoot,'PROGRESSION_PASSED.txt')
+                if (!marker.exists() || new File(runRoot,'PROGRESSION_FAILED.txt').exists()) {
+                    throw new GradleException('Hub server checks did not pass; inspect build/progression-server-smoke-run/logs/latest.log')
+                }
+            }
+        }
+    }
+}

@@ -56,11 +56,14 @@ public final class FireBuildManager {
                 || existing.hotbar()!=player.getInventory().getSelectedSlot() || existing.expires()<now)) {
             stop(player);existing=null;
         }
-        if (existing==null && !AbstractWandItem.tryStartCooldown(player.getEntityWorld(), player,stack,AbstractWandItem.Ability.PRIMARY,0)) return;
+        if (existing==null && !AbstractWandItem.tryStartCooldown(player.getEntityWorld(), player,stack,AbstractWandItem.Ability.PRIMARY,AbstractWandItem.DEFAULT_PRIMARY_COOLDOWN_TICKS)) return;
         CHANNELS.put(player.getUuid(),new Channel(stack,player.getEntityWorld(),player.getInventory().getSelectedSlot(),
                 now+FireBuildRules.LEASE_TICKS,existing==null ? now : existing.started()));
     }
-    public static void stop(ServerPlayerEntity player) { CHANNELS.remove(player.getUuid()); }
+    public static void stop(ServerPlayerEntity player) {
+        var channel=CHANNELS.remove(player.getUuid());
+        if(channel!=null) net.minecraft.component.type.NbtComponent.set(net.minecraft.component.DataComponentTypes.CUSTOM_DATA,channel.wand(),n->n.putLong("ew_last_primary",player.getEntityWorld().getTime()));
+    }
     public static boolean spraying(ServerPlayerEntity player) { return CHANNELS.containsKey(player.getUuid()); }
     private static void tick(ServerPlayerEntity player) {
         var world=player.getEntityWorld(); int now=world.getServer().getTicks();
@@ -105,8 +108,8 @@ public final class FireBuildManager {
                 if (FireBuildRules.inCone(eye,aim,point) && visible(player,eye,point)) { touches=true;break; }
             }
             if (touches) {
-                target.setOnFireFor(FireBuildRules.IGNITE_SECONDS);
-                if (target.damage(player.getEntityWorld(),player.getDamageSources().playerAttack(player),damage)) {
+                SpellCombat.ignite(target,player,FireBuildRules.IGNITE_SECONDS);
+                if (com.anton.elementalwands.util.SpellCombat.damage(target,player.getEntityWorld(),player.getDamageSources().playerAttack(player),damage,player,com.anton.elementalwands.data.WizardAffinity.FIRE)) {
                     AbstractWandItem.onWandDamageDealt(player,damage,0,WizardAffinity.FIRE);hit=true;
                 }
             }

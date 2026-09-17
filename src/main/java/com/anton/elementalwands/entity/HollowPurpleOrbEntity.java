@@ -180,7 +180,7 @@ public class HollowPurpleOrbEntity extends ProjectileEntity {
                     continue;
                 }
 
-                boolean damaged = living.damage(world, source, MASSIVE_DAMAGE);
+                boolean damaged = com.anton.elementalwands.util.SpellCombat.damage(living, world, source, MASSIVE_DAMAGE, getOwner(), com.anton.elementalwands.data.WizardAffinity.SPACE);
                 if (damaged) {
                     com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(getOwner(), MASSIVE_DAMAGE, com.anton.elementalwands.data.WizardAffinity.SPACE);
                 }

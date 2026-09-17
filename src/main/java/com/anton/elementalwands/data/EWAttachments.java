@@ -16,6 +16,9 @@ public final class EWAttachments {
     public static final AttachmentType<java.util.Map<String, ElementProgress>> ELEMENT_PROGRESS = AttachmentRegistry.create(
             Identifier.of("elementalwands", "element_progress"), builder -> builder.initializer(() -> java.util.Map.of())
                     .persistent(Codec.unboundedMap(Codec.STRING, ElementProgress.CODEC)).copyOnDeath());
+    public static final AttachmentType<NbtCompound> SPELL_BOOKS = AttachmentRegistry.create(
+            Identifier.of("elementalwands", "spell_books"), builder -> builder.initializer(NbtCompound::new)
+                    .persistent(NbtCompound.CODEC).copyOnDeath());
     public static final AttachmentType<Boolean> PROGRESSION_MIGRATED = AttachmentRegistry.create(
             Identifier.of("elementalwands", "progression_migrated"), builder -> builder.initializer(() -> false)
                     .persistent(Codec.BOOL).copyOnDeath());

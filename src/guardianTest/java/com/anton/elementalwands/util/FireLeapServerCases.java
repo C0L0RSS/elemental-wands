@@ -12,6 +12,7 @@ import net.minecraft.util.math.*;
 /** Additional real-world cover, height, validation and reload cases. */
 final class FireLeapServerCases {
     static void run(ServerPlayerEntity p) {
+        targeting(p);
         var w=p.getEntityWorld();
         for(int x=40;x<=62;x++)for(int z=38;z<=62;z++) {
             w.getChunk(new BlockPos(x,99,z));w.setBlockState(new BlockPos(x,99,z),Blocks.STONE.getDefaultState());
@@ -44,6 +45,45 @@ final class FireLeapServerCases {
         var loaded=new FireLeapEntity(ModEntities.FIRE_LEAP,w);
         loaded.readData(net.minecraft.storage.NbtReadView.create(net.minecraft.util.ErrorReporter.EMPTY,p.getRegistryManager(),save.getNbt()));
         loaded.tick();require(loaded.isRemoved(),"Reload resumed an orphaned leap");
+    }
+    private static void targeting(ServerPlayerEntity p) {
+        var w=p.getEntityWorld();
+        // Isolated lane: clear terrain, then exercise the actual world raycasts.
+        for(int x=100;x<=104;x++)for(int z=100;z<=166;z++) {
+            w.getChunk(new BlockPos(x,99,z));
+            w.setBlockState(new BlockPos(x,99,z),Blocks.STONE.getDefaultState());
+            for(int y=100;y<=110;y++)w.setBlockState(new BlockPos(x,y,z),Blocks.AIR.getDefaultState());
+        }
+        p.setPosition(102.5,100,100.5);p.setYaw(0);p.setHeadYaw(0);
+        for(float pitch:new float[]{0, .5f, -15}) {
+            p.setPitch(pitch);Vec3d target=FireLeapRules.target(p);
+            require(target!=null && Math.abs(target.z-160.5)<.01 && target.y==100
+                    && FireLeapRules.validTarget(p,target),"Forward aim failed at pitch "+pitch+": "+target);
+        }
+        p.setPitch(20);Vec3d near=FireLeapRules.target(p);
+        require(near!=null && near.z>103 && near.z<106 && FireLeapRules.validTarget(p,near),"Precise nearby ground aim changed: "+near);
+        // A three-block ledge hides its top from the eye ray.
+        for(int x=101;x<=103;x++)for(int z=110;z<=113;z++)for(int y=100;y<=102;y++)
+            w.setBlockState(new BlockPos(x,y,z),Blocks.STONE.getDefaultState());
+        p.setPitch(0);Vec3d ledge=FireLeapRules.target(p);
+        require(ledge!=null && ledge.y==103 && ledge.z>110 && ledge.z<111
+                && FireLeapRules.validTarget(p,ledge),"Hidden ledge top rejected: "+ledge);
+        // Fractional collision tops must be respected, not rounded to block Y.
+        for(int x=101;x<=103;x++)for(int z=110;z<=113;z++)
+            w.setBlockState(new BlockPos(x,103,z),Blocks.STONE_SLAB.getDefaultState());
+        Vec3d slab=FireLeapRules.target(p);
+        require(slab!=null && slab.y==103.5 && FireLeapRules.validTarget(p,slab),"Slab ledge rejected: "+slab);
+        require(!FireLeapRules.validTarget(p,new Vec3d(102.5,104.5,110.5)),"Excessive rise accepted");
+        require(!FireLeapRules.validTarget(p,new Vec3d(102.5,93.5,110.5)),"Excessive drop accepted");
+        require(!FireLeapRules.validTarget(p,new Vec3d(Double.NaN,100,110)),"Nonfinite destination accepted");
+        w.setBlockState(new BlockPos(102,102,100),Blocks.STONE.getDefaultState());
+        require(!FireLeapRules.validTarget(p,slab),"Ledge snapping bypassed takeoff ceiling");
+        w.setBlockState(new BlockPos(102,102,100),Blocks.AIR.getDefaultState());
+        for(int x=100;x<=104;x++)for(int y=100;y<=110;y++)
+            w.setBlockState(new BlockPos(x,y,106),Blocks.STONE.getDefaultState());
+        require(!FireLeapRules.validTarget(p,slab),"Ledge snapping bypassed solid wall");
+        Vec3d wall=FireLeapRules.target(p);
+        require(wall!=null && wall.z<106 && FireLeapRules.validTarget(p,wall),"Tall wall did not stop target in front: "+wall);
     }
     static CowEntity cow(ServerPlayerEntity p,double x,double y,double z) {
         var cow=EntityType.COW.create(p.getEntityWorld(),SpawnReason.COMMAND);cow.setPosition(x,y,z);cow.setNoGravity(true);cow.setAiDisabled(true);

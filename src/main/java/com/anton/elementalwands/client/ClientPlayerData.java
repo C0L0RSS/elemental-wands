@@ -17,6 +17,13 @@ public final class ClientPlayerData {
     private static int unlockedSkills = 0;
     private static String affinity = "NONE";
     private static long flux;
+    private static double xp;
+    private static List<Integer> credits=List.of(0,0,0);
+    public static double xp(){return xp;}
+    public static List<Integer> credits(){return credits;}
+    public static boolean free(com.anton.elementalwands.data.WandSpells.Spell spell){return spell!=null&&!owns(spell)&&com.anton.elementalwands.util.SpellBooks.availableTier(credits,spell.category())>=0;}
+    public static void setProgress(double value,List<Integer> counts){xp=com.anton.elementalwands.data.ElementLevels.clamp(value);credits=List.copyOf(counts);}
+
     private static float fireHeat;
     private static boolean fireOverheated;
     private static long hopReadyAt;
@@ -53,8 +60,7 @@ public final class ClientPlayerData {
     public static List<String> loadout() { return loadout; }
     public static void setHubData(long newFlux, List<String> ids, boolean editable) {
         flux = newFlux;
-        loadout = com.anton.elementalwands.data.WandSpells.valid(getAffinity(), ids) ? List.copyOf(ids)
-                : com.anton.elementalwands.data.WandSpells.defaults(getAffinity());
+        loadout = com.anton.elementalwands.data.WandSpells.reconcile(getAffinity(), ids, owned);
         canEdit = editable;
     }
     private static List<BlockPos> natureSeedlings = List.of();
@@ -151,7 +157,7 @@ public final class ClientPlayerData {
         clearStoneCluster();
         unlockedSkills = 0;
         affinity = "NONE";
-        owned = List.of(); flux = 0; loadout = List.of("fractured_beam"); canEdit = false;
+        owned = List.of(); xp=0;credits=List.of(0,0,0); flux = 0; loadout = List.of("fractured_beam"); canEdit = false;
         natureSeedlings = List.of();
         entangledEntities.clear();
     }

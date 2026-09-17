@@ -17,7 +17,9 @@
     "GuardianChurchPistonMixin",
     "GuardianChurchPlacementMixin",
     "GuardianChurchChunkAccessor",
-    "GuardianChurchLocateMixin"
+    "GuardianChurchLocateMixin",
+    "SpellBurnDamageMixin",
+    "SpellRegenerationMixin"
   ],
   "injectors": {
     "defaultRequire": 1

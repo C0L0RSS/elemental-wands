@@ -18,6 +18,9 @@ public final class PyreCoalsBlock extends MagmaBlock {
     @Override public void onSteppedOn(World world, BlockPos pos, BlockState state, Entity entity) {
         if (world instanceof ServerWorld serverWorld
                 && WandAllies.protectedFrom(serverWorld, TemporaryBlockManager.casterAt(serverWorld, pos), entity)) return;
-        super.onSteppedOn(world, pos, state, entity);
+        if(world instanceof ServerWorld sw && !entity.bypassesSteppingEffects() && entity instanceof net.minecraft.entity.LivingEntity) {
+            var id=TemporaryBlockManager.casterAt(sw,pos);
+            com.anton.elementalwands.util.SpellCombat.damage(entity,sw,world.getDamageSources().hotFloor(),1,id==null?null:sw.getPlayerByUuid(id),com.anton.elementalwands.data.WizardAffinity.FIRE);
+        }
     }
 }

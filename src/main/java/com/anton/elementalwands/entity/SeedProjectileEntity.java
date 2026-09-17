@@ -135,7 +135,7 @@ public class SeedProjectileEntity extends ProjectileEntity {
                             ? sw.getDamageSources().thrown(this, livingOwner)
                             : sw.getDamageSources().magic());
 
-            boolean damaged = living.damage(sw, source, NatureCombat.SEED_DAMAGE);
+            boolean damaged = com.anton.elementalwands.util.SpellCombat.damage(living, sw, source, NatureCombat.SEED_DAMAGE, owner, com.anton.elementalwands.data.WizardAffinity.NATURE);
             if (damaged) {
                 NatureCombat.seedDamageDealt(owner);
             }

@@ -46,6 +46,7 @@ public class ElementalWandsClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        com.anton.elementalwands.client.wand.WandItemModel.register();
         ModParticleFactories.registerAll();
         StoneParticleFactories.registerAll();
         NatureParticleFactories.registerAll();

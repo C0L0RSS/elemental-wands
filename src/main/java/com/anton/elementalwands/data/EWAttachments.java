@@ -45,7 +45,9 @@ public final class EWAttachments {
 
     public static final AttachmentType<String> AFFINITY = AttachmentRegistry.create(
             Identifier.of("elementalwands", "affinity"),
-            builder -> builder.initializer(() -> "NONE").persistent(Codec.STRING).copyOnDeath());
+            builder -> builder.initializer(() -> "NONE").persistent(Codec.STRING).copyOnDeath()
+                    .syncWith(net.minecraft.network.codec.PacketCodecs.STRING,
+                            net.fabricmc.fabric.api.attachment.v1.AttachmentSyncPredicate.all()));
 
     // Receipts live in the same player save as inventory. Death restores gear
     // before vanilla drops it; copying receipts to a dead player's replacement

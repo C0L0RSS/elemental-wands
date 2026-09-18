@@ -12,4 +12,4 @@ Guardian interactions, water walking and cleanup. Human combat testing is pendin
 - `nature-03-entangle.png`: attached mob/Guardian vines.
 - `nature-04-tree.png`: oak tree and custom heart/leaf accents.
 
-See `docs/nature-redesign-2026-09-10.md` for build and install evidence.
+See `docs/archive/reports/nature-redesign-2026-09-10.md` for build and install evidence.

@@ -2,7 +2,7 @@
 
 **Implemented and installed September 12.** This workshop remains the approved
 visual reference. Runtime files, package validation, backup and installation are
-recorded in `docs/fire-redesign-2026-09-12.md`. Earlier preview-only scope notes
+recorded in `docs/archive/reports/fire-redesign-2026-09-12.md`. Earlier preview-only scope notes
 below are historical. Restart Minecraft through Lunar to test the implementation.
 
 **September 12 spectacle update:** the approved round model is preserved. A full

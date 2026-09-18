@@ -28,4 +28,4 @@ These commands regenerate the authored outputs. Preserve any manual Blockbench
 edits before rerunning them. The editable `.bbmodel` includes the unchanged atlas
 and all animations. Earlier versions are retained for comparison.
 
-See `../../../docs/fractured-guardian.md` for Lunar commands and playtest notes.
+See `../../../docs/reference/guardian-combat.md` for Lunar commands and playtest notes.

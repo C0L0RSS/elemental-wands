@@ -13,4 +13,4 @@ Run `python3 build_animations.py` to regenerate animation data and the Blockbenc
 project. Run `python3 preview_motion.py` to verify motion and regenerate previews.
 The Blockbench keyframe signs match the installed GeckoLib plugin's JSON importer.
 
-See `../../../docs/fractured-guardian.md` for commands, lore, and the next checkpoint.
+See `../../../docs/reference/guardian-combat.md` for commands, lore, and the next checkpoint.

@@ -22,7 +22,7 @@ build and asset checks in AGENT.md before installation.
 The user approved seeing the full preview and asked for a higher, longer jump:
 1.8 seconds airborne and an 11-block arc. The subsequent in-game report was a
 cancelled takeoff. A physical-floor check and vertical departure/arrival fix are
-installed but await user confirmation. See [the session handoff](../../../docs/MOD_HANDOFF.md).
+installed but await user confirmation. See [current status](../../../docs/STATUS.md).
 
 `sequence_preview.py` adds the default full-jump scene to the generated HTML.
 Refresh V5 after regeneration; V4 has no full-jump option. Preview flight and wave

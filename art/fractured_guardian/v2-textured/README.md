@@ -77,4 +77,4 @@ integrity check passed. The existing VFX validator covers production assets,
 not this design directory. That initial texture pass did not add runtime code. The subsequent summon
 prototype was confirmed in Lunar; the current animation work is described below.
 
-The next motion pass is in `../v3-animated/`; its generator preserves this approved art source. Runtime now includes idle/walk and commanded action rehearsals. See `../../../docs/fractured-guardian.md`.
+The next motion pass is in `../v3-animated/`; its generator preserves this approved art source. Runtime now includes idle/walk and commanded action rehearsals. See `../../../docs/reference/guardian-combat.md`.

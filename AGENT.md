@@ -10,7 +10,41 @@ For implementation requests, prioritize the requested code changes and relevant
 verification. Read, create, or update planning documents and trackers only when
 the user explicitly asks; do not substitute plan maintenance for implementation.
 
-## Current session checkpoint — September 16, 2026
+## Current session checkpoint — September 17, 2026
+
+
+Latest wand redesign (September 17): approved coarse-pixel twisted wood, a tapered
+coil bottom and a compact glass cube now use a native dynamic item model. Muted
+per-element cores rotate with eight confined drifting motes; Stone uses its
+ability-art grays. `art/wand/design.json` and `tools/prepare_wand_assets.py` own
+464 exterior wood quads, three standalone wand textures and six core palettes.
+Held views are now 35% larger, with the first-person pose moved inward for screen
+clearance. GUI/hotbar rendering uses a separately cropped upper mesh (y >= 3),
+centered and enlarged inside the slot; its bounds are tested in the client fixture.
+Ground/item-frame size is unchanged. The exporter unions wood boxes and verifies the closed shell to remove overlap
+flicker; glass has one outward-facing skin with reflections baked into its texture.
+`client/wand/` owns rendering. AFFINITY now synchronizes to tracking clients so
+remote held wands follow their holder; unheld world items use neutral quartz.
+Existing spell/item data is unchanged. The legacy flat sprite remains the particle
+icon/fallback. `tools/wand_model_client_smoke.init.gradle` checks native first/off/
+third-person views, all display contexts, six palettes, attachment synchronization,
+remote-holder isolation, particle bounds and resource reload in a disposable world.
+The three wand PNGs are separate from the 266-PNG spell/HUD contract. Clean build,
+all required asset exporters, shell-volume verification, JAR integrity and the native
+client fixture passed. Source/installed Lunar SHA-256:
+`6be269a6ddf898715cc2c084ec73c864fbdbf81c3745745004e0c2ba2d73eb0c`.
+Backup: `.local-backups/lunar/20260917-201136/`. Restart Lunar. Human Lunar visual
+feedback and an actual two-client appearance check remain pending.
+
+
+Latest slots/cooldowns (September 17): cooldowns are keyed per spell ID instead of
+per ability, so two Basics or two Techniques equipped together recover
+independently. Loadouts are five free numbered slots with no category limits;
+the hub shows all five boxes and labels them Slot 1-5. The wand HUD sits beside
+the hotbar, hides empty slots, shows no key labels and can be dragged from
+Controls > Move HUD. Build and `git diff --check` pass; the hub/progression server
+smokes were updated for the new rules but not re-run. Human balance testing of
+free slot combinations is pending a multiplayer session.
 
 Latest Fire Leap targeting (September 16): forward/horizon aim projects onto ground
 within the 60-block horizontal cap; aimed ledge sides resolve to their reachable
@@ -419,6 +453,7 @@ python3 tools/prepare_guardian_pedestal.py --check
 python3 tools/prepare_nature_expansion.py --check
 node tools/prepare_nature_models.mjs --check
 python3 tools/prepare_wand_hub_assets.py --check
+python3 tools/prepare_wand_assets.py --check
 unzip -t build/libs/elementalwands-2.2.0.jar
 ```
 
@@ -545,17 +580,33 @@ ultimate behavior.
   and validates life/spectator state, held wand, affinity/unlocks, arena admission,
   and Hollow Purple commitment before calling the existing ability handler.
 - `WandSpells` owns stable spell IDs/metadata. `EWAttachments.WAND_LOADOUTS` persists
-  each affinity's three selections on the player and copies them on death.
+  each affinity's five slot selections on the player and copies them on death.
+- Slots are five free, numbered positions (Slot 1-5). Any owned spell may sit in
+  any slot, including ultimates; only duplicates are rejected. Categories
+  (Basic / Technique / Ultimate) remain store metadata and pricing only. Newly
+  learned spells fill the first empty slot. The hub always shows five boxes and
+  the Controls page lists Slot 1-5 then the spell alternate. Slot 1 (left mouse by
+  default) also carries the aimed Flashover disarm / root-knot break interaction.
 - Swaps retain all existing spell cooldown and ultimate-charge data. Ten seconds
   after casting or damage, or throughout arena participation, loadout edits are locked.
 
 ### Cooldowns And Charge
 
-Primary and secondary cooldowns are stored in ItemStack `CUSTOM_DATA`:
+Cooldowns are per spell, stored in ItemStack `CUSTOM_DATA`:
 
-- `ew_last_global`
-- `ew_last_primary`
-- `ew_last_secondary`
+- `ew_last_global`: the six-tick tap between any two casts.
+- `ew_cd_<spellId>`: that spell's last cast tick.
+- `ew_cdd_<spellId>`: the recovery that cast started (Gathered Mass varies it).
+
+`WandLoadouts.cast` marks the dispatched spell with `AbstractWandItem.beginCast`,
+so handlers that only know their `Ability` resolve the right key through
+`castingSpell`; a zero cooldown request means "global tap only" and stores nothing.
+Two spells of the same category never share a timer, except that every Basic cast
+also starts `ew_cd_basic_shared`, a ten-tick recovery (`BASIC_SHARED_RECOVERY_TICKS`)
+that caps alternating Basics at two casts per second; Techniques and ultimates chain
+freely. Flamethrower release and
+Stone Wall shatter start their own spell's cooldown via `startCooldown`. The HUD
+and the client hold-to-repeat gate read the same per-spell keys.
 
 Entangle stacks on the caster halve elapsed cooldown time, effectively slowing
 cooldown recovery.

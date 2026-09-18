@@ -56,13 +56,13 @@ public final class FireBuildManager {
                 || existing.hotbar()!=player.getInventory().getSelectedSlot() || existing.expires()<now)) {
             stop(player);existing=null;
         }
-        if (existing==null && !AbstractWandItem.tryStartCooldown(player.getEntityWorld(), player,stack,AbstractWandItem.Ability.PRIMARY,AbstractWandItem.DEFAULT_PRIMARY_COOLDOWN_TICKS)) return;
+        if (existing==null && !AbstractWandItem.tryStartCooldown(player.getEntityWorld(), player,stack,"flamethrower",AbstractWandItem.DEFAULT_PRIMARY_COOLDOWN_TICKS)) return;
         CHANNELS.put(player.getUuid(),new Channel(stack,player.getEntityWorld(),player.getInventory().getSelectedSlot(),
                 now+FireBuildRules.LEASE_TICKS,existing==null ? now : existing.started()));
     }
     public static void stop(ServerPlayerEntity player) {
         var channel=CHANNELS.remove(player.getUuid());
-        if(channel!=null) net.minecraft.component.type.NbtComponent.set(net.minecraft.component.DataComponentTypes.CUSTOM_DATA,channel.wand(),n->n.putLong("ew_last_primary",player.getEntityWorld().getTime()));
+        if(channel!=null) AbstractWandItem.startCooldown(player.getEntityWorld(),channel.wand(),"flamethrower",AbstractWandItem.DEFAULT_PRIMARY_COOLDOWN_TICKS,false);
     }
     public static boolean spraying(ServerPlayerEntity player) { return CHANNELS.containsKey(player.getUuid()); }
     private static void tick(ServerPlayerEntity player) {

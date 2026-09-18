@@ -14,7 +14,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 
-/** Server authority for loadouts; swapping never touches wand cooldown/charge NBT. */
+/** Server authority for loadouts: five free slots, any owned spell in any slot. Swapping never touches wand cooldown/charge NBT. */
 public final class WandLoadouts {
     private static final Map<UUID, Integer> COMBAT_UNTIL = new HashMap<>();
     public static void init() {
@@ -53,7 +53,7 @@ public final class WandLoadouts {
         if (!canEdit(player)) return "You can change spells outside combat.";
         var spell = WandSpells.find(id);
         if (spell == null || !WandProgression.owns(player, spell)) return "Unlock this spell first.";
-        if (slot < 0 || slot >= WandSpells.SLOT_COUNT || !WandSpells.fits(spell,slot) || !WandSpells.slotOpen(WandProgression.owned(player),slot)) return "This spell fits the " + spell.category().label() + " slot.";
+        if (slot < 0 || slot >= WandSpells.SLOT_COUNT) return "Choose a slot from 1 to " + WandSpells.SLOT_COUNT + ".";
         var current = get(player);
         var next = WandSpells.equip(affinity, current, slot, id);
         if (next.equals(current)) return "This spell is already equipped or does not fit that slot.";
@@ -75,20 +75,24 @@ public final class WandLoadouts {
         if (spell==null || !WandProgression.owns(player, spell)) {
             player.sendMessage(Text.translatable("hud.elementalwands.locked"), true); return;
         }
-        if (spell.id().equals("flamethrower")) { FireBuildManager.hold(player); return; }
-        if (spell.id().equals("flashover")) { FlashoverManager.toss(player);return; }
-        if (spell.id().equals("fire_hop")) return; // Aimed release uses FireLeapCommitPayload.
-        FireBuildManager.stop(player);
-        markCombat(player);
-        if (spell.id().equals("thorn_lash")) {
-            com.anton.elementalwands.item.NatureAbilityHandler.castThornLash(world, player, stack); return;
-        }
-        switch (spell.ability()) {
-            case PRIMARY -> wand.castPrimary(world, player, stack);
-            case SECONDARY -> wand.castSecondary(world, player, stack);
-            case ULTIMATE -> wand.castUltimate(world, player, stack);
-            default -> { }
-        }
+        // Handlers key cooldowns by spell; tell them which spell this slot holds.
+        AbstractWandItem.beginCast(player, spell.id());
+        try {
+            if (spell.id().equals("flamethrower")) { FireBuildManager.hold(player); return; }
+            if (spell.id().equals("flashover")) { FlashoverManager.toss(player);return; }
+            if (spell.id().equals("fire_hop")) return; // Aimed release uses FireLeapCommitPayload.
+            FireBuildManager.stop(player);
+            markCombat(player);
+            if (spell.id().equals("thorn_lash")) {
+                com.anton.elementalwands.item.NatureAbilityHandler.castThornLash(world, player, stack); return;
+            }
+            switch (spell.ability()) {
+                case PRIMARY -> wand.castPrimary(world, player, stack);
+                case SECONDARY -> wand.castSecondary(world, player, stack);
+                case ULTIMATE -> wand.castUltimate(world, player, stack);
+                default -> { }
+            }
+        } finally { AbstractWandItem.endCast(player); }
     }
     private WandLoadouts() {}
 }

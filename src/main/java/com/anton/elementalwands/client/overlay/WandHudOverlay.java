@@ -64,9 +64,6 @@ public class WandHudOverlay implements HudRenderCallback {
     private static final int SLOT_READY_V = 0;
     private static final int SLOT_COOLDOWN_V = 80;
 
-    private static final String NBT_LAST_PRIMARY   = "ew_last_primary";
-    private static final String NBT_LAST_SECONDARY = "ew_last_secondary";
-    private static final String NBT_LAST_GLOBAL    = "ew_last_global";
 
     /** Real-pixel bounds of the last drawn ability row, read by the HUD position editor. */
     public static int lastX, lastY, lastWidth, lastHeight;
@@ -122,7 +119,7 @@ public class WandHudOverlay implements HudRenderCallback {
             for (int i = 0; i < drawn.size(); i++) {
                 int slot = drawn.get(i);
                 var spell = WandSpells.find(ClientPlayerData.loadout().get(slot));
-                if (spell.ultimate()) renderUltimateSlot(context, client, stack, slotCentersX[i], slotCenterY, theme, accentColor, true);
+                if (spell.ultimate()) renderUltimateSlot(context, client, stack, slot, slotCentersX[i], slotCenterY, theme, accentColor, true);
                 else renderAbility(context, client, stack, spell.ability(), slot, slotCentersX[i], slotCenterY,
                     spell.ability() == AbstractWandItem.Ability.PRIMARY ? primaryCooldownFor(affinity) : secondaryCooldownFor(affinity), theme, accentColor, true, affinity);
             }
@@ -190,7 +187,7 @@ public class WandHudOverlay implements HudRenderCallback {
     // -----------------------------------------------------------------------
 
     private void renderUltimateSlot(DrawContext context, MinecraftClient client, ItemStack stack,
-            int x, int y, WandTheme theme, int accentColor, boolean isUnlocked) {
+            int slotIndex, int x, int y, WandTheme theme, int accentColor, boolean isUnlocked) {
         long now        = client.world.getTime();
         int  charge     = AbstractWandItem.getUltimateCharge(stack);
         boolean isReady = charge >= 100;
@@ -220,7 +217,7 @@ public class WandHudOverlay implements HudRenderCallback {
         AnimationProfile anim = isReady
             ? new AnimationProfile(1.0f + 0.3f * MathHelper.sin((float)(now * 0.25)), 1.5f, 1.0f)
             : new AnimationProfile(charge / 100.0f * 0.8f + 0.2f, 0.5f + charge / 100.0f, 0.5f + charge / 100.0f * 0.5f);
-        drawThemeCooldownMotif(context, theme, 2, renderX, renderY, now, anim);
+        drawThemeCooldownMotif(context, theme, slotIndex, renderX, renderY, now, anim);
 
         // Charge fill bar (bottom-to-top vertical fill)
         if (isUnlocked && charge > 0 && charge < 100) {
@@ -267,26 +264,26 @@ public class WandHudOverlay implements HudRenderCallback {
         long now = client.world.getTime();
 
         NbtCompound nbt = stack.getOrDefault(DataComponentTypes.CUSTOM_DATA, NbtComponent.DEFAULT).copyNbt();
-        String key = switch (ability) {
-            case PRIMARY   -> NBT_LAST_PRIMARY;
-            case SECONDARY -> NBT_LAST_SECONDARY;
-            default        -> NBT_LAST_GLOBAL;
-        };
+        var selectedSpell = WandSpells.find(ClientPlayerData.loadout().get(slotIndex));
+        String spellId = selectedSpell == null ? "" : selectedSpell.id();
 
-        long last    = nbt.getLong(key).orElse(-1_000_000_000L);
+        // Each spell owns its cooldown; the stored duration is the recovery its last cast started.
+        long last    = nbt.getLong(AbstractWandItem.cooldownKey(spellId)).orElse(-1_000_000_000L);
         long elapsed = now - last;
 
         if (ClientPlayerData.getEntangleStacks(client.player.getId()) > 0) {
             elapsed /= 2;
         }
 
-        if(ability==AbstractWandItem.Ability.PRIMARY)maxCooldownTicks=Math.max(maxCooldownTicks,nbt.getInt("ew_primary_duration",0));
+        maxCooldownTicks = Math.max(maxCooldownTicks, nbt.getInt(AbstractWandItem.durationKey(spellId), 0));
         long remaining  = maxCooldownTicks - elapsed;
-        if (affinity == WizardAffinity.STONE && ability == AbstractWandItem.Ability.PRIMARY) {
+        // A ready Basic still greys briefly while the shared Basic recovery runs.
+        if (selectedSpell != null && selectedSpell.category() == WandSpells.Category.BASIC)
+            remaining = Math.max(remaining, AbstractWandItem.basicSharedRemaining(nbt, now, ClientPlayerData.getEntangleStacks(client.player.getId()) > 0));
+        if (spellId.equals("gathered_mass")) {
             maxCooldownTicks = ClientPlayerData.stoneDuration();
             remaining = ClientPlayerData.stoneRemaining(now);
         }
-        var selectedSpell = com.anton.elementalwands.data.WandSpells.find(ClientPlayerData.loadout().get(slotIndex));
         if (selectedSpell != null && selectedSpell.id().equals("fire_hop")) {
             remaining=ClientPlayerData.hopRemaining(now);maxCooldownTicks=com.anton.elementalwands.util.FireBuildRules.HOP_COOLDOWN;
         } else if (selectedSpell != null && selectedSpell.id().equals("flashover")) {
@@ -410,11 +407,19 @@ public class WandHudOverlay implements HudRenderCallback {
         switch (theme) {
             case FIRE  -> drawFireCooldown(context, slotIndex, renderX, renderY, now, animation);
             case NATURE -> drawNatureCooldown(context, slotIndex, renderX, renderY, now, animation);
-            case WIND  -> drawWindCooldown(context, slotIndex==2?2:slotIndex==0?0:1, renderX, renderY, now, animation);
-            case STONE -> drawStoneCooldown(context, slotIndex==2?2:slotIndex==0?0:1, renderX, renderY, now, animation);
-            case SPACE -> drawSpaceCooldown(context, slotIndex==2?2:slotIndex==0?0:1, renderX, renderY, now, animation);
+            case WIND  -> drawWindCooldown(context, glyphIndex(slotIndex), renderX, renderY, now, animation);
+            case STONE -> drawStoneCooldown(context, glyphIndex(slotIndex), renderX, renderY, now, animation);
+            case SPACE -> drawSpaceCooldown(context, glyphIndex(slotIndex), renderX, renderY, now, animation);
             case MANA  -> { /* fractured — intentionally blank */ }
         }
+    }
+
+    /** Glyph textures are per category (basic / technique / ultimate), not per slot position. */
+    private static int glyphIndex(int slotIndex) {
+        var loadout = ClientPlayerData.loadout();
+        var spell = slotIndex >= 0 && slotIndex < loadout.size() ? WandSpells.find(loadout.get(slotIndex)) : null;
+        if (spell == null) return 0;
+        return switch (spell.ability()) { case SECONDARY -> 1; case ULTIMATE -> 2; default -> 0; };
     }
 
     private void drawFireCooldown(DrawContext context, int slotIndex, int renderX, int renderY,

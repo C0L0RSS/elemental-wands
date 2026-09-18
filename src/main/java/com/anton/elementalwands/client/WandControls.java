@@ -162,26 +162,23 @@ public final class WandControls {
         for (int i = 0; i < KEYS.length; i++) {
             if(i==3 || slotForInput(i)>=ClientPlayerData.loadout().size())continue;
             var spell = WandSpells.find(ClientPlayerData.loadout().get(slotForInput(i)));
-            if (HELD[i] && spell != null && spell.ability() == AbstractWandItem.Ability.PRIMARY && (spell.id().equals("flamethrower") || primaryReady(client)))
+            if (HELD[i] && spell != null && spell.ability() == AbstractWandItem.Ability.PRIMARY && (spell.id().equals("flamethrower") || spellReady(client, spell)))
                 ClientPlayNetworking.send(new ModNetworking.CastSlotPayload(slotForInput(i)));
         }
     }
     private static boolean spellAtInput(int input,String id){int slot=slotForInput(input);return input!=3 && slot>=0 && slot<ClientPlayerData.loadout().size() && ClientPlayerData.loadout().get(slot).equals(id);}
-    private static boolean primaryReady(MinecraftClient client) {
+    /** Client-side repeat gate mirroring the server's per-spell cooldown check. */
+    private static boolean spellReady(MinecraftClient client, WandSpells.Spell spell) {
         long now = client.world.getTime();
         var data = client.player.getMainHandStack().getOrDefault(net.minecraft.component.DataComponentTypes.CUSTOM_DATA,
                 net.minecraft.component.type.NbtComponent.DEFAULT).copyNbt();
         if (now - data.getLong("ew_last_global").orElse(-1000000000L) < 6) return false;
-        if (ClientPlayerData.getAffinity() == com.anton.elementalwands.data.WizardAffinity.STONE)
-            return ClientPlayerData.stoneRemaining(now) <= 0;
-        int duration = switch (ClientPlayerData.getAffinity()) {
-            case SPACE -> com.anton.elementalwands.item.SpaceAbilityHandler.getPrimaryCooldownTicks();
-            case NATURE -> com.anton.elementalwands.item.NatureAbilityHandler.getPrimaryCooldownTicks();
-            default -> AbstractWandItem.DEFAULT_PRIMARY_COOLDOWN_TICKS;
-        };
-        duration=Math.max(duration,data.getInt("ew_primary_duration",0));
-        long elapsed = now - data.getLong("ew_last_primary").orElse(-1000000000L);
-        if (ClientPlayerData.getEntangleStacks(client.player.getId()) > 0) elapsed /= 2;
+        if (spell.id().equals("gathered_mass")) return ClientPlayerData.stoneRemaining(now) <= 0;
+        int duration = data.getInt(AbstractWandItem.durationKey(spell.id()), 0);
+        long elapsed = now - data.getLong(AbstractWandItem.cooldownKey(spell.id())).orElse(-1000000000L);
+        boolean entangled = ClientPlayerData.getEntangleStacks(client.player.getId()) > 0;
+        if (entangled) elapsed /= 2;
+        if (spell.category() == WandSpells.Category.BASIC && AbstractWandItem.basicSharedRemaining(data, now, entangled) > 0) return false;
         return elapsed >= duration;
     }
     public static void open() {

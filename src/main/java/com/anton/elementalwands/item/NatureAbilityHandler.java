@@ -117,7 +117,7 @@ public final class NatureAbilityHandler {
 
     public static void castThornLash(ServerWorld world, PlayerEntity caster, ItemStack stack) {
         if (!AbstractWandItem.tryStartCooldown(world, caster, stack,
-                AbstractWandItem.Ability.PRIMARY, com.anton.elementalwands.util.ThornLashRules.COOLDOWN)) return;
+                "thorn_lash", com.anton.elementalwands.util.ThornLashRules.COOLDOWN)) return;
         var lash = new com.anton.elementalwands.entity.ThornLashEntity(
                 com.anton.elementalwands.registry.ModEntities.THORN_LASH, world);
         lash.initialize(caster);

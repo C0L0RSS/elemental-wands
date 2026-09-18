@@ -58,7 +58,7 @@ public final class WandHubServerSmoke implements ModInitializer {
             player.setAttached(EWAttachments.ARCANE_FLUX, 500L);
             var wand = new ItemStack(ModItems.FRACTURED_WAND);
             player.setStackInHand(Hand.MAIN_HAND, wand);
-            require(WandLoadouts.get(player).equals(WandSpells.defaults(WizardAffinity.FIRE)), "Existing players did not receive the default loadout");
+            require(WandLoadouts.get(player).equals(List.of("inferno_wave", "", "", "", "")), "Existing players did not receive the free basic in slot 1");
             var defaults = WandLoadouts.get(player);
             WandLoadouts.equip(player, "FIRE", 0, "dragons_pyre");
             require(WandLoadouts.get(player).equals(defaults), "Locked spell equipped");
@@ -82,7 +82,7 @@ public final class WandHubServerSmoke implements ModInitializer {
             require(WandProgression.flux(player) == 0 && WandProgression.skills(player) == 3 && player.experienceLevel == 0,
                     "Store purchase failed with zero XP");
             NbtComponent.set(DataComponentTypes.CUSTOM_DATA, wand, n -> {
-                n.putLong("ew_last_primary", 345); n.putLong("ew_last_secondary", 678);
+                n.putLong(AbstractWandItem.cooldownKey("inferno_wave"), 345); n.putLong(AbstractWandItem.cooldownKey("dragons_pyre"), 678);
                 n.putInt(AbstractWandItem.NBT_ULTIMATE_CHARGE, 74);
             });
             require(!player.getAttachedOrElse(EWAttachments.WELCOME_SEEN, false), "New player guide already acknowledged");
@@ -102,20 +102,25 @@ public final class WandHubServerSmoke implements ModInitializer {
                     && !player.getInventory().getStack(22).isEmpty(), "Guide cleanup removed non-mod books");
             var original = wand.get(DataComponentTypes.CUSTOM_DATA).copyNbt();
             WandLoadouts.equip(player, "FIRE", 0, "dragons_pyre");
-            require(WandLoadouts.get(player).equals(defaults), "Technique entered Basic slot");
+            require(WandLoadouts.get(player).equals(List.of("dragons_pyre", "inferno_wave", "meteor", "", "")), "Free slots did not swap a technique into slot 1");
+            WandLoadouts.equip(player, "FIRE", 0, "inferno_wave");
             player.setAttached(EWAttachments.WAND_LOADOUTS, Map.of("FIRE", List.of("dragons_pyre", "inferno_wave", "meteor")));
-            require(WandLoadouts.get(player).equals(defaults), "Legacy swapped loadout was not reordered");
+            require(WandLoadouts.get(player).equals(List.of("dragons_pyre", "inferno_wave", "meteor", "", "")), "Legacy three-slot loadout lost its order");
+            WandLoadouts.equip(player, "FIRE", 0, "inferno_wave");
             for (var element : WizardAffinity.values()) if (element != WizardAffinity.NONE) {
-                var ids = WandSpells.defaults(element);
-                for (int slot = 0; slot < 3; slot++) for (int other = 0; other < 3; other++) if (slot != other)
-                    require(WandSpells.equip(element, ids, slot, ids.get(other)).equals(ids), "Category validation allowed a wrong slot");
+                var ids = WandSpells.normalize(element, WandSpells.defaults(element));
+                for (int slot = 0; slot < 3; slot++) for (int other = 0; other < 3; other++) if (slot != other) {
+                    var swapped = WandSpells.equip(element, ids, slot, ids.get(other));
+                    require(swapped.get(slot).equals(ids.get(other)) && swapped.get(other).equals(ids.get(slot)), "Free slots did not swap spells");
+                }
+                require(WandSpells.equip(element, ids, 5, ids.get(0)).equals(ids), "Out-of-range slot accepted");
             }
             require(wand.get(DataComponentTypes.CUSTOM_DATA).copyNbt().equals(original), "Equip reset cooldown or charge");
             var equipped = WandLoadouts.get(player);
-            for (String id : List.of("meteor", "blink_rift", "missing")) WandLoadouts.equip(player, "FIRE", 0, id);
+            for (String id : List.of("blink_rift", "missing")) WandLoadouts.equip(player, "FIRE", 0, id);
             WandLoadouts.equip(player, "SPACE", 1, "inferno_wave");
             WandLoadouts.equip(player, "FIRE", -1, "inferno_wave");
-            WandLoadouts.equip(player, "FIRE", 3, "inferno_wave");
+            WandLoadouts.equip(player, "FIRE", 5, "inferno_wave");
             require(WandLoadouts.get(player).equals(equipped), "Malformed/stale/cross-affinity equip changed loadout");
             var save = NbtWriteView.create(ErrorReporter.EMPTY, player.getRegistryManager()); player.writeData(save);
             player.setAttached(EWAttachments.WAND_LOADOUTS, Map.of());
@@ -135,7 +140,7 @@ public final class WandHubServerSmoke implements ModInitializer {
             require(WandProgression.flux(player) == 0 && WandProgression.get(player, WizardAffinity.FIRE).flux() == 130, "Lingering Fire damage credited Nature");
             AbstractWandItem.onWandDamageDealt(player, 15, WizardAffinity.NATURE);
             require(WandProgression.flux(player) == 15, "Nature damage did not earn Nature Flux");
-            require(WandLoadouts.get(player).equals(WandSpells.defaults(WizardAffinity.NATURE)), "Other affinity inherited Fire choices");
+            require(WandLoadouts.get(player).equals(List.of("seed", "", "", "", "")), "Other affinity inherited Fire choices");
             com.anton.elementalwands.ElementalWandsMod.handleAffinitySet(player.getCommandSource(), WizardAffinity.FIRE);
             require(WandProgression.flux(player) == 130 && WandProgression.skills(player) == 3, "Switch did not restore Fire progress");
             var progressSave = NbtWriteView.create(ErrorReporter.EMPTY, player.getRegistryManager()); player.writeData(progressSave);
@@ -146,11 +151,11 @@ public final class WandHubServerSmoke implements ModInitializer {
             require(WandProgression.skills(player) == 3, "Permanent purchases failed save/reload");
             require(WandLoadouts.get(player).equals(equipped), "Fire loadout was lost on affinity change");
             wand = player.getMainHandStack();
-            NbtComponent.set(DataComponentTypes.CUSTOM_DATA, wand, n -> { n.putLong("ew_last_primary", -10000); n.putLong("ew_last_global", -10000); });
-            WandLoadouts.cast(player, 0); // Basic slot casts Inferno Wave.
+            NbtComponent.set(DataComponentTypes.CUSTOM_DATA, wand, n -> { n.putLong(AbstractWandItem.cooldownKey("inferno_wave"), -10000); n.putLong("ew_last_global", -10000); });
+            WandLoadouts.cast(player, 0); // Slot 1 casts Inferno Wave.
             var castData = wand.get(DataComponentTypes.CUSTOM_DATA).copyNbt();
-            require(castData.getLong("ew_last_primary").orElseThrow() == player.getEntityWorld().getTime(), "Basic slot dispatched wrong spell");
-            require(castData.getLong("ew_last_secondary").orElseThrow() == 678, "Basic cast touched technique cooldown");
+            require(castData.getLong(AbstractWandItem.cooldownKey("inferno_wave")).orElseThrow() == player.getEntityWorld().getTime(), "Slot 1 dispatched wrong spell");
+            require(castData.getLong(AbstractWandItem.cooldownKey("dragons_pyre")).orElseThrow() == 678, "Inferno Wave cast touched Dragon's Pyre cooldown");
             WandLoadouts.equip(player, "FIRE", 0, "inferno_wave");
             require(WandLoadouts.get(player).equals(equipped), "Combat lock bypassed");
             require(com.anton.elementalwands.ElementalWandsMod.handleAffinitySet(player.getCommandSource(), WizardAffinity.NATURE) == 0,
@@ -175,7 +180,7 @@ public final class WandHubServerSmoke implements ModInitializer {
         if (tick == 235) {
             require(WandLoadouts.canEdit(player), "Combat lock did not expire");
             WandLoadouts.equip(player, "FIRE", 0, "inferno_wave");
-            require(WandLoadouts.get(player).equals(WandSpells.defaults(WizardAffinity.FIRE)), "Post-combat category loadout changed");
+            require(WandLoadouts.get(player).equals(List.of("inferno_wave", "dragons_pyre", "meteor", "", "")), "Post-combat loadout changed");
             Files.writeString(Path.of("HUB_PASSED.txt"), "Legacy migration, element balances, permanent purchases, duplicate/stale purchase rejection, XP preservation, damage-source currency attribution, switch restrictions, unlock gates, invalid/stale payloads, cooldown/charge retention, category restrictions and Basic dispatch, player serialization, respawn persistence, interaction and combat lock checks passed.\n");
             server.stop(false);
         }

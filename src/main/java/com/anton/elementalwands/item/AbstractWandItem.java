@@ -36,10 +36,18 @@ public abstract class AbstractWandItem extends Item {
     public static final int DEFAULT_SECONDARY_COOLDOWN_TICKS = 120;
 
     private static final int GLOBAL_COOLDOWN_TICKS = 6;
+    /** Every Basic-category cast also starts this short shared recovery, so two Basics
+     * equipped together cannot alternate faster than two casts per second. Tune or zero
+     * after multiplayer balance testing. */
+    public static final int BASIC_SHARED_RECOVERY_TICKS = 10;
+    public static final String BASIC_SHARED_ID = "basic_shared";
 
     private static final String NBT_LAST_GLOBAL    = "ew_last_global";
-    private static final String NBT_LAST_PRIMARY   = "ew_last_primary";
-    private static final String NBT_LAST_SECONDARY = "ew_last_secondary";
+    /** Per-spell cooldown keys: last cast tick and the recovery that cast started. */
+    private static final String NBT_COOLDOWN_PREFIX = "ew_cd_";
+    private static final String NBT_DURATION_PREFIX = "ew_cdd_";
+    /** Spell IDs currently being dispatched, so ability-keyed handlers resolve the right spell. */
+    private static final java.util.Map<java.util.UUID, String> CASTING = new java.util.HashMap<>();
     // NOTE: NBT_LAST_ULTIMATE intentionally removed — replaced by charge system
     public static final String NBT_ULTIMATE_CHARGE = "elementalwands:ultimate_charge";
 
@@ -98,11 +106,40 @@ public abstract class AbstractWandItem extends Item {
     }
 
     // -----------------------------------------------------------------------
-    // Cooldown system (PRIMARY / SECONDARY)
+    // Cooldown system (per spell)
     // -----------------------------------------------------------------------
+
+    public static String cooldownKey(String spellId) { return NBT_COOLDOWN_PREFIX + spellId; }
+    public static String durationKey(String spellId) { return NBT_DURATION_PREFIX + spellId; }
+
+    /** Marks the spell a dispatch is casting; handlers that only know their Ability resolve it here. */
+    public static void beginCast(PlayerEntity player, String spellId) { CASTING.put(player.getUuid(), spellId); }
+    public static void endCast(PlayerEntity player) { CASTING.remove(player.getUuid()); }
+
+    /** The spell behind an ability-keyed cast: the active dispatch, else the first equipped spell of that ability. */
+    public static String castingSpell(PlayerEntity player, Ability ability) {
+        String active = CASTING.get(player.getUuid());
+        if (active != null) return active;
+        for (String id : com.anton.elementalwands.util.WandLoadouts.get(player)) {
+            var spell = com.anton.elementalwands.data.WandSpells.find(id);
+            if (spell != null && spell.ability() == ability) return id;
+        }
+        return ability.name().toLowerCase(Locale.ROOT);
+    }
 
     public static boolean tryStartCooldown(ServerWorld world, PlayerEntity player, ItemStack stack,
             Ability ability, int abilityCooldownTicks) {
+        return tryStartCooldown(world, player, stack, castingSpell(player, ability), abilityCooldownTicks);
+    }
+
+    /**
+     * Checks the short global tap, then this spell's own recovery. A zero cooldown
+     * means "global tap only": nothing is stored and other spells are never consulted.
+     * Stone's Gathered Mass passes a variable duration; the longer of the requested
+     * and previously stored recovery is authoritative.
+     */
+    public static boolean tryStartCooldown(ServerWorld world, PlayerEntity player, ItemStack stack,
+            String spellId, int abilityCooldownTicks) {
         long now = world.getTime();
 
         NbtCompound nbt = stack.getOrDefault(DataComponentTypes.CUSTOM_DATA, NbtComponent.DEFAULT).copyNbt();
@@ -114,32 +151,64 @@ public abstract class AbstractWandItem extends Item {
             return false;
         }
 
-        String key = switch (ability) {
-            case PRIMARY   -> NBT_LAST_PRIMARY;
-            case SECONDARY -> NBT_LAST_SECONDARY;
-            default        -> NBT_LAST_PRIMARY;
-        };
+        boolean entangled = com.anton.elementalwands.util.EntangleTracker.getStacks(player) > 0;
+        var spell = com.anton.elementalwands.data.WandSpells.find(spellId);
+        boolean basic = spell != null && spell.category() == com.anton.elementalwands.data.WandSpells.Category.BASIC;
 
-        long last    = nbt.getLong(key).orElse(-1_000_000_000L);
-        long elapsed = now - last;
+        if (abilityCooldownTicks > 0) {
+            long last    = nbt.getLong(cooldownKey(spellId)).orElse(-1_000_000_000L);
+            long elapsed = now - last;
+            if (entangled) elapsed /= 2;
 
-        if (com.anton.elementalwands.util.EntangleTracker.getStacks(player) > 0) {
-            elapsed /= 2;
+            int recovery   = Math.max(abilityCooldownTicks, nbt.getInt(durationKey(spellId), 0));
+            long remaining = recovery - elapsed;
+            if (remaining > 0) {
+                sendCooldownActionbar(player, spell == null ? ability(spellId).displayName : spell.name(), (int) remaining);
+                return false;
+            }
         }
 
-        int recovery=ability==Ability.PRIMARY ? Math.max(abilityCooldownTicks,nbt.getInt("ew_primary_duration",0)) : abilityCooldownTicks;
-        long remaining = recovery - elapsed;
-        if (remaining > 0) {
-            sendCooldownActionbar(player, ability, (int) remaining);
-            return false;
+        if (basic) {
+            long elapsed = now - nbt.getLong(cooldownKey(BASIC_SHARED_ID)).orElse(-1_000_000_000L);
+            if (entangled) elapsed /= 2;
+            long remaining = BASIC_SHARED_RECOVERY_TICKS - elapsed;
+            if (remaining > 0) {
+                sendCooldownActionbar(player, "Basic recovery", (int) remaining);
+                return false;
+            }
         }
 
         NbtComponent.set(DataComponentTypes.CUSTOM_DATA, stack, data -> {
-            if(abilityCooldownTicks>0 || ability==Ability.PRIMARY) data.putLong(key, now);
-            if(ability==Ability.PRIMARY)data.putInt("ew_primary_duration",abilityCooldownTicks);
+            if (abilityCooldownTicks > 0) {
+                data.putLong(cooldownKey(spellId), now);
+                data.putInt(durationKey(spellId), abilityCooldownTicks);
+            }
+            if (basic) data.putLong(cooldownKey(BASIC_SHARED_ID), now);
             data.putLong(NBT_LAST_GLOBAL, now);
         });
         return true;
+    }
+
+    /** Ticks left on the shared Basic recovery, halved-progress aware; zero when ready. */
+    public static long basicSharedRemaining(NbtCompound nbt, long now, boolean entangled) {
+        long elapsed = now - nbt.getLong(cooldownKey(BASIC_SHARED_ID)).orElse(-1_000_000_000L);
+        if (entangled) elapsed /= 2;
+        return Math.max(0, BASIC_SHARED_RECOVERY_TICKS - elapsed);
+    }
+
+    /** Puts a spell on cooldown outside the normal cast path (channel release, wall shatter). */
+    public static void startCooldown(ServerWorld world, ItemStack stack, String spellId, int cooldownTicks, boolean tapGlobal) {
+        long now = world.getTime();
+        NbtComponent.set(DataComponentTypes.CUSTOM_DATA, stack, data -> {
+            data.putLong(cooldownKey(spellId), now);
+            data.putInt(durationKey(spellId), cooldownTicks);
+            if (tapGlobal) data.putLong(NBT_LAST_GLOBAL, now);
+        });
+    }
+
+    private static Ability ability(String spellId) {
+        var spell = com.anton.elementalwands.data.WandSpells.find(spellId);
+        return spell == null ? Ability.PRIMARY : spell.ability();
     }
 
     // -----------------------------------------------------------------------
@@ -226,8 +295,11 @@ public abstract class AbstractWandItem extends Item {
     }
 
     public static void sendCooldownActionbar(PlayerEntity player, Ability ability, int remainingTicks) {
+        sendCooldownActionbar(player, ability.displayName, remainingTicks);
+    }
+
+    public static void sendCooldownActionbar(PlayerEntity player, String label, int remainingTicks) {
         double seconds = remainingTicks / 20.0;
-        String label = ability.displayName;
         String msg = String.format(Locale.ROOT, "%s cooldown: %.1fs", label, seconds);
         player.sendMessage(Text.literal(msg), true);
     }

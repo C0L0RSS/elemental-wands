@@ -92,24 +92,12 @@ public final class WandSpells {
         for (var category : Category.values()) spells.stream().filter(s -> s.category() == category).findFirst().ifPresent(s -> result.add(s.id()));
         return List.copyOf(result);
     }
+    /** Five numbered slots. Any owned spell may sit in any slot; categories are store metadata only. */
     public static final int SLOT_COUNT=5;
-    public static boolean fits(Spell spell,int slot) {
-        if(spell==null) return false;
-        return switch(slot) {case 0->spell.category()==Category.BASIC; case 1,3->spell.category()==Category.TECHNIQUE;
-            case 2->spell.category()==Category.ULTIMATE;case 4->!spell.ultimate();default->false;};
-    }
-    public static String slotLabel(int slot) {return switch(slot){case 0->"Basic";case 1->"Technique";case 2->"Ultimate";case 3->"Technique II";case 4->"Flexible";default->"";};}
-    public static boolean slotOpen(List<String> owned,int slot) {
-        long basics=owned.stream().distinct().map(WandSpells::find).filter(s->s!=null&&s.category()==Category.BASIC).count();
-        long techniques=owned.stream().distinct().map(WandSpells::find).filter(s->s!=null&&s.category()==Category.TECHNIQUE).count();
-        return switch(slot) {case 0->true;case 1->techniques>=1;case 2->owned.stream().map(WandSpells::find).anyMatch(s->s!=null&&s.ultimate());
-            case 3->techniques>=2;case 4->basics>=2||techniques>=3;default->false;};
-    }
-    public static List<Integer> visibleSlots(List<String> owned) {
-        var slots=new java.util.ArrayList<>(List.of(0,1,2));
-        if(slotOpen(owned,3))slots.add(3);if(slotOpen(owned,4))slots.add(4);
-        return slots;
-    }
+    public static boolean fits(Spell spell,int slot) { return spell!=null && slot>=0 && slot<SLOT_COUNT; }
+    public static String slotLabel(int slot) { return "Slot "+(slot+1); }
+    public static boolean slotOpen(List<String> owned,int slot) { return slot>=0 && slot<SLOT_COUNT; }
+    public static List<Integer> visibleSlots(List<String> owned) { return List.of(0,1,2,3,4); }
     public static boolean valid(WizardAffinity affinity,List<String> ids) {
         if(affinity==WizardAffinity.NONE) return ids.equals(defaults(affinity));
         if(ids.size()!=SLOT_COUNT) return false;
@@ -118,14 +106,14 @@ public final class WandSpells {
             if(spell==null||spell.affinity()!=affinity||!fits(spell,i)||!seen.add(spell.id()))return false;}
         return true;
     }
-    /** Preserves old selections in their category, with blank added slots. */
+    /** Preserves old selections by index, with blank added slots. */
     public static List<String> normalize(WizardAffinity affinity,List<String> ids) {
         if(affinity==WizardAffinity.NONE)return defaults(affinity);
         var result=new java.util.ArrayList<>(java.util.Collections.nCopies(SLOT_COUNT,""));
         if(ids!=null) for(int i=0;i<ids.size();i++) {
             var spell=find(ids.get(i));if(spell==null||spell.affinity()!=affinity||result.contains(spell.id()))continue;
-            int target=i<SLOT_COUNT&&fits(spell,i)?i:spell.category().slot();
-            if(result.get(target).isEmpty())result.set(target,spell.id());
+            int target=i<SLOT_COUNT?i:result.indexOf("");
+            if(target>=0&&result.get(target).isEmpty())result.set(target,spell.id());
         }
         return List.copyOf(result);
     }
@@ -133,7 +121,7 @@ public final class WandSpells {
         if(affinity==WizardAffinity.NONE)return defaults(affinity);
         var result=new java.util.ArrayList<>(normalize(affinity,current));
         for(int i=0;i<SLOT_COUNT;i++)if(!slotOpen(owned,i)||!owned.contains(result.get(i)))result.set(i,"");
-        // Dedicated slots get first choice; flexible uses only remaining distinct spells.
+        // Newly owned spells fill the first empty slots so a purchase is usable at once.
         for(int i=0;i<SLOT_COUNT;i++)if(slotOpen(owned,i)&&result.get(i).isEmpty())
             for(String id:owned){var spell=find(id);if(spell!=null&&spell.affinity()==affinity&&fits(spell,i)&&!result.contains(id)){result.set(i,id);break;}}
         return List.copyOf(result);

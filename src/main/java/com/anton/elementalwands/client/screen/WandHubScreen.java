@@ -24,6 +24,8 @@ import org.lwjgl.glfw.GLFW;
 public final class WandHubScreen extends Screen {
     public static final int PAPER_WIDTH = 360, PAPER_HEIGHT = 266;
     private static final int INK = 0xFF352C20, MUTED = 0xFF715A39;
+    /** Controls page order: slots 1-5, then the spell alternate (input index 3). */
+    private static final int[] CONTROL_ORDER = {0, 1, 2, 4, 5, 3};
     private String selected = "", stamp = "", message = "";
     private enum Page { LOADOUT, STORE, CONTROLS, ELEMENTS, GUIDE }
     private Page page = Page.LOADOUT;
@@ -44,7 +46,7 @@ public final class WandHubScreen extends Screen {
     public void feedback(String text) { message = text; stamp = ""; refresh(); }
     private List<WandSpells.Spell> library() {
         return WandSpells.forAffinity(ClientPlayerData.getAffinity()).stream()
-                .filter(s -> page == Page.STORE || (ClientPlayerData.owns(s) && WandSpells.fits(s,selectedSlot)))
+                .filter(s -> page == Page.STORE || ClientPlayerData.owns(s))
                 .filter(s -> page != Page.STORE || categoryFilter < 0 || s.category().slot() == categoryFilter).toList();
     }
     private void page(Page next) { page = next; categoryFilter = -1; binding = -1; libraryPage = 0; selected = ""; refresh(); }
@@ -82,8 +84,8 @@ public final class WandHubScreen extends Screen {
         button("Controls", 242, 65, 100, 18, () -> page(Page.CONTROLS)).active = page != Page.CONTROLS;
         if (page == Page.CONTROLS) {
             for (int i=0;i<6;i++) {
-                int input=i; int x=i<3?22:194,y=105+(i%3)*35;
-                button(binding==i?"Press a key...":WandControls.label(i).getString(),x,y,146,18,
+                int input=CONTROL_ORDER[i]; int x=i<3?22:194,y=105+(i%3)*35;
+                button(binding==input?"Press a key...":WandControls.label(input).getString(),x,y,146,18,
                         ()->{binding=input;refresh();});
             }
             button("Reset controls", 22, 221, 146, 20, () -> feedback(WandControls.reset()));
@@ -176,14 +178,13 @@ public final class WandHubScreen extends Screen {
             wrapped(context, "Every element has its own Flux and spell collection. Your purchases and equipped spells are saved when you switch.", 194, 117, 145, INK);
             wrapped(context, "New elements start with a free basic spell.", 194, 177, 145, MUTED);
         } else if (page == Page.CONTROLS) {
-            for(int i=0;i<6;i++)context.drawText(textRenderer,i==3?"Spell alternate":WandSpells.slotLabel(WandControls.slotForInput(i)),i<3?22:194,94+(i%3)*35,MUTED,false);
-            context.drawText(textRenderer,binding>=0?"Press key / mouse; Esc cancels":"Hold Basic to repeat. Sneak-use blocks.",22,203,MUTED,false);
+            for(int i=0;i<6;i++){int input=CONTROL_ORDER[i];context.drawText(textRenderer,input==3?"Spell alternate":WandSpells.slotLabel(WandControls.slotForInput(input)),i<3?22:194,94+(i%3)*35,MUTED,false);}
+            context.drawText(textRenderer,binding>=0?"Press key / mouse; Esc cancels":"Hold a Basic spell's key to repeat.",22,203,MUTED,false);
         } else {
             if(page==Page.LOADOUT)for(int i=0;i<visibleSlots().size();i++){
                 int slot=visibleSlots().get(i);
                 if(!WandSpells.slotOpen(ClientPlayerData.owned(),slot))continue;
                 String label=WandSpells.slotLabel(slot);
-                if(visibleSlots().size()>3)label=switch(slot){case 1->"Tech I";case 2->"Ult";case 3->"Tech II";case 4->"Flex";default->"Basic";};
                 context.getMatrices().pushMatrix();context.getMatrices().translate(slotX(i)+slotSize()/2f,90);context.getMatrices().scale(.75f,.75f);
                 context.drawText(textRenderer,label,-textRenderer.getWidth(label)/2,0,MUTED,false);context.getMatrices().popMatrix();
             }
@@ -209,8 +210,8 @@ public final class WandHubScreen extends Screen {
                 context.drawText(textRenderer, textRenderer.trimToWidth(label,148), 194, 225, MUTED, false);
             }
             } else {
-                wrapped(context,"No owned "+WandSpells.slotLabel(selectedSlot)+" spells.",194,94,148,INK);
-                wrapped(context,"Learn spells in the Spell Store to fill this box.",194,125,148,MUTED);
+                wrapped(context,"No spells to place in "+WandSpells.slotLabel(selectedSlot)+".",194,94,148,INK);
+                wrapped(context,"Learn spells in the Spell Store, then put them in any slot.",194,125,148,MUTED);
             }
             if (!ClientPlayerData.canEdit()) context.drawText(textRenderer, "Locked during combat", 194, 235, 0xFF853E27, false);
         }
@@ -241,9 +242,9 @@ public final class WandHubScreen extends Screen {
     }
     private String guideText() {
         return "Press " + WandControls.hubLabel() + " to open your hub and choose an element.\n\n"
-                + "Basic: " + WandControls.label(0).getString() + " | Technique: " + WandControls.label(1).getString()
-                + " | Ultimate: " + WandControls.label(2).getString() + "\nChange your keys in Controls.\n\n"
-                + "Deal spell damage to earn element XP and Flux.\nBuy spells in the Store; learning opens slots.\n"
+                + "Slots 1-3: " + WandControls.label(0).getString() + ", " + WandControls.label(1).getString() + ", " + WandControls.label(2).getString()
+                + " | Slots 4-5: " + WandControls.label(4).getString() + ", " + WandControls.label(5).getString() + "\nChange your keys in Controls.\n\n"
+                + "Deal spell damage to earn element XP and Flux.\nBuy spells in the Store and place them in any slot.\n"
                 + "Your purchases stay saved when switching elements.\n\n"
                 + "Explore the world and discover what awaits.";
     }

@@ -236,11 +236,7 @@ public final class StoneAbilityHandler {
         ACTIVE_WALLS.remove(caster.getUuid());
         TemporaryBlockManager.restoreTemporaryBlocks(world, wall.placement);
 
-        long cooldownTick = world.getTime();
-        NbtComponent.set(DataComponentTypes.CUSTOM_DATA, stack, data -> {
-            data.putLong("ew_last_secondary", cooldownTick);
-            data.putLong("ew_last_global", cooldownTick);
-        });
+        AbstractWandItem.startCooldown(world, stack, "stone_wall", getSecondaryCooldownTicks(), true);
 
         net.minecraft.util.math.random.Random random = world.getRandom();
         for (BlockPos pos : wall.blockPositions) {

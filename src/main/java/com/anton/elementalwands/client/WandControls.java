@@ -125,7 +125,7 @@ public final class WandControls {
         var client = MinecraftClient.getInstance();
         var key = (mouse ? InputUtil.Type.MOUSE : InputUtil.Type.KEYSYM).createFromCode(code);
         if (action == GLFW.GLFW_RELEASE) {
-            for (int i = 0; i < KEYS.length; i++) if (KEYS[i].equals(key)) { if (HELD[i] && spellAtInput(i,"flamethrower")) release(); if(HELD[i] && spellAtInput(i,"fire_hop") && leapAim) releaseLeap(); HELD[i] = false; }
+            for (int i = 0; i < KEYS.length; i++) if (KEYS[i].equals(key)) { if (HELD[i] && (spellAtInput(i,"flamethrower") || spellAtInput(i,"stone_charge"))) release(); if(HELD[i] && spellAtInput(i,"fire_hop") && leapAim) releaseLeap(); HELD[i] = false; }
             return false;
         }
         if (client.currentScreen != null || client.player == null || !client.player.isAlive() || client.player.isSpectator()
@@ -162,6 +162,8 @@ public final class WandControls {
         for (int i = 0; i < KEYS.length; i++) {
             if(i==3 || slotForInput(i)>=ClientPlayerData.loadout().size())continue;
             var spell = WandSpells.find(ClientPlayerData.loadout().get(slotForInput(i)));
+            if (HELD[i] && spell != null && spell.id().equals("stone_charge"))
+                ClientPlayNetworking.send(ModNetworking.StoneChargeHoldPayload.INSTANCE);
             if (HELD[i] && spell != null && spell.ability() == AbstractWandItem.Ability.PRIMARY && (spell.id().equals("flamethrower") || spellReady(client, spell)))
                 ClientPlayNetworking.send(new ModNetworking.CastSlotPayload(slotForInput(i)));
         }

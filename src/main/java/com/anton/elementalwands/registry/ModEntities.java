@@ -192,6 +192,13 @@ public final class ModEntities {
         private ModEntities() {
         }
 
+        public static final EntityType<com.anton.elementalwands.entity.FaultlineSpikeEntity> FAULTLINE_SPIKE = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "faultline_spike"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.FaultlineSpikeEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.FaultlineSpikeEntity::new)
+                        .dimensions(EntityDimensions.fixed(1.1f, 1.3f)).trackRangeBlocks(64).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"faultline_spike"))));
+
         public static void registerAll() {
                 // classload hook — field initializers run on class load
         }

@@ -6,6 +6,7 @@
   "mixins": [
     "FallingBlockEntityInvoker",
     "StoneStaggerMixin",
+    "StoneMotionMixin",
     "StoneDamageMixin",
     "PlayerEntityMixin",
     "ScreenHandlerMixin",

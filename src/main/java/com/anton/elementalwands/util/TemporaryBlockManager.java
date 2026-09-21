@@ -82,6 +82,12 @@ public final class TemporaryBlockManager {
         return new TemporaryPlacement(id, originalByPos.size());
     }
 
+    /** Includes anonymous placements: a null caster is not proof that terrain is unowned. */
+    public static boolean isTracked(ServerWorld world, BlockPos pos) {
+        return TEMP.getOrDefault(world.getRegistryKey(), List.of()).stream()
+                .anyMatch(batch -> batch.originalByPos.containsKey(pos.asLong()));
+    }
+
     public static UUID casterAt(ServerWorld world, BlockPos pos) {
         for (TempBlocks batch : TEMP.getOrDefault(world.getRegistryKey(), List.of())) {
             if (batch.originalByPos.containsKey(pos.asLong()) && world.getBlockState(pos).isOf(batch.placedState.getBlock()))

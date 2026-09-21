@@ -1,8 +1,12 @@
 # Current status
 
-Reviewed September 17, 2026. This page contains outstanding work, not release history.
+Reviewed September 21, 2026. This page contains outstanding work, not release history.
 It records known verification limits; it is not a fresh installation receipt.
 
+- **Stone techniques:** first versions of Faultline and Juggernaut are present.
+  Dedicated-server mechanics and native client movement/render checks cover the
+  initial implementation. Human Lunar/co-op feedback is still needed for steering,
+  interruption feel, spike appearance, varied terrain and destruction balance.
 - **3D wand:** native client previews and model checks passed in the redesign
   session. The larger held pose and cropped hotbar icon still need the user's
   Lunar feedback. Actual two-client affinity appearance remains unverified;

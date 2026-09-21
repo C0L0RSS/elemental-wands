@@ -42,6 +42,8 @@ public final class ModNetworking {
         PayloadTypeRegistry.playC2S().register(AlternateSpellPayload.ID, AlternateSpellPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(FlashoverStatePayload.ID, FlashoverStatePayload.CODEC);
 
+        PayloadTypeRegistry.playC2S().register(StoneChargeHoldPayload.ID, StoneChargeHoldPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(StoneMotionPayload.ID, StoneMotionPayload.CODEC);
         // S2C
         PayloadTypeRegistry.playS2C().register(SyncPlayerDataPayload.ID, SyncPlayerDataPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(HubFeedbackPayload.ID, HubFeedbackPayload.CODEC);
@@ -55,12 +57,17 @@ public final class ModNetworking {
     }
 
     public static void registerC2SReceivers() {
+        ServerPlayNetworking.registerGlobalReceiver(StoneChargeHoldPayload.ID,
+                (payload, context) -> com.anton.elementalwands.util.StoneChargeManager.hold(context.player()));
         ServerPlayNetworking.registerGlobalReceiver(AlternateSpellPayload.ID, (payload, context) -> com.anton.elementalwands.util.FlashoverManager.detonate(context.player()));
         ServerPlayNetworking.registerGlobalReceiver(CastUltimatePayload.ID,
                 (payload, context) -> handleCastUltimate(context.player()));
         ServerPlayNetworking.registerGlobalReceiver(FireLeapCommitPayload.ID, (payload, context) ->
                 com.anton.elementalwands.util.FireLeapManager.commit(context.player(),new net.minecraft.util.math.Vec3d(payload.x(),payload.y(),payload.z())));
-        ServerPlayNetworking.registerGlobalReceiver(ReleaseSpellPayload.ID, (payload, context) -> com.anton.elementalwands.util.FireBuildManager.stop(context.player()));
+        ServerPlayNetworking.registerGlobalReceiver(ReleaseSpellPayload.ID, (payload, context) -> {
+            com.anton.elementalwands.util.FireBuildManager.stop(context.player());
+            com.anton.elementalwands.util.StoneChargeManager.stop(context.player(), true);
+        });
         ServerPlayNetworking.registerGlobalReceiver(CastSlotPayload.ID,
                 (payload, context) -> com.anton.elementalwands.util.WandLoadouts.cast(context.player(), payload.slot()));
         ServerPlayNetworking.registerGlobalReceiver(HubActionPayload.ID,
@@ -233,6 +240,19 @@ public final class ModNetworking {
         public static final PacketCodec<RegistryByteBuf,FireBuildPayload> CODEC = PacketCodec.tuple(
                 PacketCodecs.FLOAT,FireBuildPayload::heat,PacketCodecs.BOOLEAN,FireBuildPayload::overheated,
                 PacketCodecs.VAR_INT,FireBuildPayload::hopRemaining,FireBuildPayload::new);
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
+    public record StoneChargeHoldPayload() implements CustomPayload {
+        public static final StoneChargeHoldPayload INSTANCE = new StoneChargeHoldPayload();
+        public static final Id<StoneChargeHoldPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"stone_charge_hold"));
+        public static final PacketCodec<RegistryByteBuf,StoneChargeHoldPayload> CODEC = PacketCodec.unit(INSTANCE);
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
+    public record StoneMotionPayload(int entityId, float yaw, float speed, int mode) implements CustomPayload {
+        public static final Id<StoneMotionPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"stone_motion"));
+        public static final PacketCodec<RegistryByteBuf,StoneMotionPayload> CODEC = PacketCodec.tuple(
+                PacketCodecs.VAR_INT,StoneMotionPayload::entityId,PacketCodecs.FLOAT,StoneMotionPayload::yaw,
+                PacketCodecs.FLOAT,StoneMotionPayload::speed,PacketCodecs.VAR_INT,StoneMotionPayload::mode,StoneMotionPayload::new);
         @Override public Id<? extends CustomPayload> getId() { return ID; }
     }
     public record ReleaseSpellPayload() implements CustomPayload {

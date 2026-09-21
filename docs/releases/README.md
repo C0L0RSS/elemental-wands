@@ -5,6 +5,7 @@ are not claims of public publication. Older entries describe what changed then;
 use [current guides](../README.md) for today’s behavior and [status](../STATUS.md)
 for outstanding verification. Detailed historical reports are optional background.
 
+- [2026-09-21 — Stone techniques](2026-09-21.md)
 - [2026-09-17 — 3D wands and flexible loadouts](2026-09-17.md)
 - [2026-09-16 — Easier Fire Leap aiming](2026-09-16.md)
 - [2026-09-14 — Nature spells, Fire tuning, and offering pedestal](2026-09-14.md)

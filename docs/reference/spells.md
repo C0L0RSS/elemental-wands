@@ -65,10 +65,42 @@ Stone Wall provides cover and can be recast nearby to shatter forward. A Guardia
 hit consumes the wall after it absorbs that hit; shared beam/wave/volley cover
 must protect against that same attack without shielding later attacks. Titan Dome
 owns temporary terrain, confinement, and equipment effects through its lifecycle.
-The retired primary spike attack and Titan Aegis wall path must not be restored.
+The retired primary spike attack and Titan Aegis wall path remain retired.
+Faultline is a separately purchased Technique, not a replacement for Gathered Mass.
+
+Faultline (`faultline`, 500 Flux) sends a ten-block widening wave after a short
+warning. The custom non-solid spikes rise and immediately crumble. Each target
+can take one 4-damage hit per cast; non-Guardian enemies lose horizontal momentum,
+receive a low pop, and have movement interrupted for ten ticks. Forty ticks of
+interrupt immunity prevent repeated Faultlines from maintaining a movement lock.
+The wave follows nearby solid/leaf/water surfaces; tall cover or a gap stops that
+lane. It never edits terrain. Recovery is nine seconds.
+
+Juggernaut (`stone_charge`, 500 Flux) is held to run and released to brake. Grounded
+forward motion ramps from a shoulder bump to full strength over approximately
+2.5 seconds, with a five-second run limit and eight-second recovery after ending.
+Steering is gradual and becomes tighter at speed; looking remains free. Vanilla
+jump height, gravity and fall damage remain intact. At full speed, the running
+jump covers about ten blocks on level ground. Airborne movement cannot build
+charge. Landing has no attack and allows the run to continue; water ends it.
+A voluntary grounded release gives a short non-damaging slide; airborne release
+hands control back to normal movement.
+
+The first body collision ends the run. Impact damage rises from 4 to 14 before
+level scaling. Stronger impacts include a forward cone with weaker secondary
+hits. A bounded block budget favors dirt/leaves/glass, then wood, with ordinary
+stone costing much more and breaking only close to a full-speed impact. Intact
+hard cover shields blocks behind it. No containers, ores, protected structures,
+tracked temporary blocks, or floor excavation are allowed; normal block drops
+apply. Server block-break vetoes are respected. Ordinary damage does not cancel
+a run; ordinary knockback is heavily reduced and ignored at full speed.
+Slowness reduces speed/power, while Faultline and hard roots interrupt the run.
+Other spells cannot be cast during the run or its braking slide.
 
 Owners: `StoneAbilityHandler`, `StoneClusterManager`/`StoneClusterEntity`,
-`TitanDomeManager`, and shared temporary-block ownership.
+`FaultlineManager`/`FaultlineSpikeEntity`/`FaultlineSpikeRenderer`,
+`StoneChargeManager`/`StoneTechniqueRules`/`StoneMotionMixin`, `TitanDomeManager`,
+and shared temporary-block ownership.
 
 ## Nature
 

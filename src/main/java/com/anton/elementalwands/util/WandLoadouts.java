@@ -42,7 +42,7 @@ public final class WandLoadouts {
         return Math.max(0, COMBAT_UNTIL.getOrDefault(player.getUuid(), 0) - player.getEntityWorld().getServer().getTicks());
     }
     public static boolean canEdit(ServerPlayerEntity player) {
-        return player.isAlive() && !player.isSpectator() && combatTicks(player) == 0
+        return player.isAlive() && !player.isSpectator() && !StoneChargeManager.active(player) && combatTicks(player) == 0
                 && !HollowPurpleChargeManager.isCharging(player.getEntityWorld(), player)
                 && !com.anton.elementalwands.arena.GuardianArenaManager.isParticipant(player);
     }
@@ -65,7 +65,7 @@ public final class WandLoadouts {
     public static void cast(ServerPlayerEntity player, int slot) {
         if (!player.isAlive() || player.isSpectator() || !com.anton.elementalwands.arena.GuardianArenaManager.canCast(player)) return;
         ServerWorld world = player.getEntityWorld();
-        if (HollowPurpleChargeManager.isCharging(world, player) || FireLeapManager.flying(player)) return;
+        if (HollowPurpleChargeManager.isCharging(world, player) || FireLeapManager.flying(player) || StoneChargeManager.active(player)) return;
         var stack = player.getMainHandStack();
         if (!(stack.getItem() instanceof AbstractWandItem wand)) return;
         if(slot==0 && (FlashoverManager.tryDisarmAimed(player) || TendrilBloomManager.tryBreakKnotAimed(player)))return;
@@ -83,6 +83,8 @@ public final class WandLoadouts {
             if (spell.id().equals("fire_hop")) return; // Aimed release uses FireLeapCommitPayload.
             FireBuildManager.stop(player);
             markCombat(player);
+            if (spell.id().equals("faultline")) { FaultlineManager.cast(player); return; }
+            if (spell.id().equals("stone_charge")) { StoneChargeManager.start(player); return; }
             if (spell.id().equals("thorn_lash")) {
                 com.anton.elementalwands.item.NatureAbilityHandler.castThornLash(world, player, stack); return;
             }

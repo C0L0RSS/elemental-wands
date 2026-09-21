@@ -39,11 +39,6 @@ public class WandHudOverlay implements HudRenderCallback {
         Identifier.of("elementalwands", "textures/gui/ability/wind_secondary.png"),
         Identifier.of("elementalwands", "textures/gui/ability/wind_ultimate.png")
     };
-    private static final Identifier[] STONE_ABILITY_TEXTURES = {
-        Identifier.of("elementalwands", "textures/gui/ability/stone_primary.png"),
-        Identifier.of("elementalwands", "textures/gui/ability/stone_secondary.png"),
-        Identifier.of("elementalwands", "textures/gui/ability/stone_ultimate.png")
-    };
     private static final Identifier[] NATURE_ABILITY_TEXTURES = {
         Identifier.of("elementalwands", "textures/gui/ability/nature_primary.png"),
         Identifier.of("elementalwands", "textures/gui/ability/nature_secondary.png"),
@@ -291,6 +286,11 @@ public class WandHudOverlay implements HudRenderCallback {
         } else if (selectedSpell != null && selectedSpell.id().equals("flamethrower")) {
             remaining=ClientPlayerData.fireOverheated() ? (long)Math.ceil((ClientPlayerData.fireHeat()-com.anton.elementalwands.util.FireBuildRules.UNLOCK_HEAT)/com.anton.elementalwands.util.FireBuildRules.COOL_PER_TICK) : 0;
         }
+        if (spellId.equals("faultline") || spellId.equals("stone_charge")) {
+            maxCooldownTicks = spellId.equals("faultline") ? com.anton.elementalwands.util.StoneTechniqueRules.FAULT_COOLDOWN
+                    : com.anton.elementalwands.util.StoneTechniqueRules.CHARGE_COOLDOWN;
+            remaining = maxCooldownTicks - elapsed;
+        }
         boolean onCooldown = remaining > 0;
 
         boolean isWindSecondary  = affinity == WizardAffinity.WIND && ability == AbstractWandItem.Ability.SECONDARY;
@@ -408,7 +408,7 @@ public class WandHudOverlay implements HudRenderCallback {
             case FIRE  -> drawFireCooldown(context, slotIndex, renderX, renderY, now, animation);
             case NATURE -> drawNatureCooldown(context, slotIndex, renderX, renderY, now, animation);
             case WIND  -> drawWindCooldown(context, glyphIndex(slotIndex), renderX, renderY, now, animation);
-            case STONE -> drawStoneCooldown(context, glyphIndex(slotIndex), renderX, renderY, now, animation);
+            case STONE -> drawStoneCooldown(context, slotIndex, renderX, renderY, now, animation);
             case SPACE -> drawSpaceCooldown(context, glyphIndex(slotIndex), renderX, renderY, now, animation);
             case MANA  -> { /* fractured — intentionally blank */ }
         }
@@ -466,11 +466,8 @@ public class WandHudOverlay implements HudRenderCallback {
 
     private void drawStoneCooldown(DrawContext context, int slotIndex, int renderX, int renderY,
             long now, AnimationProfile animation) {
-        Identifier glyph = STONE_ABILITY_TEXTURES[Math.max(0, Math.min(slotIndex,
-                STONE_ABILITY_TEXTURES.length - 1))];
-        context.drawTexture(RenderPipelines.GUI_TEXTURED, glyph,
-                renderX + 6, renderY + 6, 0.0f, 0.0f,
-                24, 24, 32, 32, 32, 32);
+        var spell = WandSpells.find(ClientPlayerData.loadout().get(slotIndex));
+        com.anton.elementalwands.client.SpellIcons.draw(context, spell, renderX + 6, renderY + 6, 24);
 
         int dustCount = Math.max(2, Math.round(3 * animation.density));
         for (int i = 0; i < dustCount; i++) {

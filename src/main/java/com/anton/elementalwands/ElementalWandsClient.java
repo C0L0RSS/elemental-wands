@@ -73,6 +73,13 @@ public class ElementalWandsClient implements ClientModInitializer {
                     (state,world,pos,tint)->tint<0?-1:0xFF000000|tint,block);
 
         EntityRendererRegistry.register(ModEntities.OVERGROWTH_SEED,com.anton.elementalwands.client.renderer.OvergrowthSeedRenderer::new);
+        EntityRendererRegistry.register(ModEntities.FAULTLINE_SPIKE,com.anton.elementalwands.client.renderer.FaultlineSpikeRenderer::new);
+        ClientPlayNetworking.registerGlobalReceiver(ModNetworking.StoneMotionPayload.ID, (payload, context) -> {
+            if (context.client().world == null) return;
+            var entity = context.client().world.getEntityById(payload.entityId());
+            if (entity instanceof com.anton.elementalwands.util.StoneMotionAccess motion)
+                motion.elementalwands$stoneMotion(payload.yaw(), payload.speed(), payload.mode());
+        });
         EntityRendererRegistry.register(ModEntities.THORN_LASH,com.anton.elementalwands.client.renderer.ThornLashRenderer::new);
         EntityRendererRegistry.register(ModEntities.SEED_PROJECTILE,com.anton.elementalwands.client.renderer.NatureSeedRenderer::new);
         EntityRendererRegistry.register(ModEntities.VACUUM_BLADE,

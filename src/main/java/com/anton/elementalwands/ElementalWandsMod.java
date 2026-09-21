@@ -67,6 +67,8 @@ public class ElementalWandsMod implements ModInitializer {
 
         TemporaryBlockManager.init();
         StoneAbilityHandler.init();
+        com.anton.elementalwands.util.FaultlineManager.init();
+        com.anton.elementalwands.util.StoneChargeManager.init();
         com.anton.elementalwands.util.StoneClusterManager.init();
         EntangleTracker.init();
         com.anton.elementalwands.util.NatureCombat.init();

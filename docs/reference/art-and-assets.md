@@ -67,6 +67,12 @@ the meteor is a stepped all-fire sphere. Preserve ordinary falling-block renderi
 Wind wings keep vanilla Elytra geometry; dash tracers and landing effects are
 presentation, not movement authority. Calamity Tornado is retired.
 
+Faultline uses the code-native stepped spike mesh in `FaultlineSpikeRenderer`,
+with the existing approved `stone_spike.png` material. Its visual entities have
+no solid collision and expire immediately after the moving crest. The two new
+Technique icons use native pixel compositions in `SpellIcons`, preserving the
+existing spell-texture inventory.
+
 Stone's approved material sources are `art/stone/natural-gray/` and the subsequent
 `art/stone/weathered-detail/` revision. Gathered Mass replaced the old ground-spike
 primary. Keep the chipped wall/dome/equipment materials and gray ability art.

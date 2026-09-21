@@ -22,6 +22,8 @@ public final class WandSpells {
         public String iconPath() { return "textures/gui/ability/" + affinity.name().toLowerCase(Locale.ROOT)
                 + "_" + ability.name().toLowerCase(Locale.ROOT) + ".png"; }
         public String timing() {
+            if (id.equals("faultline")) return "Cooldown: 9s";
+            if (id.equals("stone_charge")) return "Hold to run / Recovery: 8s";
             if (id.equals("thorn_lash")) return "Cooldown: 1s";
             if (id.equals("flamethrower")) return "Heat: 4s to overheat";
             if (id.equals("flashover")) return "Per bomb: blast 6s / lost 2s";
@@ -42,6 +44,8 @@ public final class WandSpells {
         }
         public String reach() {
             return switch(id) {
+                case "faultline" -> "Range: 10 / Brief movement interrupt";
+                case "stone_charge" -> "Full speed: 2.5s / Max run: 5s";
                 case "overgrowth" -> "Tree: 15s / with flower: 20s";
                 case "thorn_lash" -> "Range 4.5 / Max heal 1 heart";
                 case "flamethrower" -> "Range: 6 blocks";
@@ -74,6 +78,10 @@ public final class WandSpells {
         spell(WizardAffinity.STONE, Ability.PRIMARY, "gathered_mass", "Gathered Mass", "Aim down to gather stone. Aim forward to throw your reserve."),
         spell(WizardAffinity.STONE, Ability.SECONDARY, "stone_wall", "Stone Wall", "Raise cover. Cast again near your active wall to shatter it forward."),
         spell(WizardAffinity.STONE, Ability.ULTIMATE, "titan_dome", "Titan Dome", "Invoke the Titan Dome and its protective stone power."),
+        new Spell("faultline", WizardAffinity.STONE, Ability.SECONDARY, "Faultline",
+                "Send a broad wave of stone spikes forward. Briefly interrupt enemies as the spikes crumble.", 500),
+        new Spell("stone_charge", WizardAffinity.STONE, Ability.SECONDARY, "Juggernaut",
+                "Hold to charge with heavy steering. Build speed for a crushing impact and a long running leap. Release to brake.", 500),
         spell(WizardAffinity.NATURE, Ability.PRIMARY, "seed", "Seed", "Launch a winged seed to strike an enemy or plant a growing flower."),
         new Spell("thorn_lash", WizardAffinity.NATURE, Ability.PRIMARY, "Thorn Lash",
                 "Sweep a thorny vine. Heal 50% of health damage dealt, up to one heart per cast.", 500),

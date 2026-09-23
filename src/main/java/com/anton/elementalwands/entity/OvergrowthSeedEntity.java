@@ -27,6 +27,7 @@ public final class OvergrowthSeedEntity extends Entity {
     private PlayerEntity caster;
     private ItemStack chargedWand;
     private boolean dropping, resolved;
+    private SpellCastVisuals.Wake wake = SpellCastVisuals.Wake.NONE;
 
     public OvergrowthSeedEntity(EntityType<? extends OvergrowthSeedEntity> type, World world) {
         super(type, world); setNoGravity(true);
@@ -35,6 +36,7 @@ public final class OvergrowthSeedEntity extends Entity {
         caster = owner; chargedWand = stack;
         setPosition(owner.getEyePos().add(0, -.12, 0));
         setVelocity(owner.getRotationVec(1).multiply(OvergrowthThrowRules.SPEED));
+        wake = SpellCastVisuals.Wake.from(owner, getEntityPos(), getVelocity());
     }
     @Override public PositionInterpolator getInterpolator() { return interpolator; }
     @Override protected void initDataTracker(DataTracker.Builder builder) {}
@@ -94,7 +96,8 @@ public final class OvergrowthSeedEntity extends Entity {
         }
         setPosition(to);
         setVelocity(getVelocity().multiply(.99).add(0, -OvergrowthThrowRules.GRAVITY, 0));
-        world.spawnParticles(ModParticles.NATURE_POLLEN, getX(), getY(), getZ(), 2, .06, .06, .06, .005);
+        Vec3d shown = wake.at(getEntityPos());
+        world.spawnParticles(ModParticles.NATURE_POLLEN, shown.x, shown.y, shown.z, 2, .06, .06, .06, .005);
     }
     private void drop() { dropping = true; setVelocity(0, -.1, 0); velocityDirty = true; }
     private void fizzle(ServerWorld world) {

@@ -120,14 +120,16 @@ public final class FireBuildManager {
         var world=player.getEntityWorld(); var eye=player.getEyePos(); var aim=player.getRotationVec(1).normalize();
         var right=aim.crossProduct(new Vec3d(0,1,0)); if (right.lengthSquared()<0.01) right=new Vec3d(1,0,0); right=right.normalize();
         var up=right.crossProduct(aim).normalize();
+        // The stream leaves the wand tip; the damage cone above still uses the eye line.
+        var wake=SpellCastVisuals.Wake.from(player,eye,aim);
         for (int ray=0;ray<5;ray++) {
             double angle=ray*Math.PI*2/5+world.getTime()*0.13;
             var direction=aim.add(right.multiply(Math.cos(angle)*0.22)).add(up.multiply(Math.sin(angle)*0.22)).normalize();
             var end=eye.add(direction.multiply(FireBuildRules.RANGE));
             var obstruction=world.raycast(new RaycastContext(eye,end,RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,player));
             double length=obstruction.getType()==HitResult.Type.MISS ? FireBuildRules.RANGE : Math.max(0,eye.distanceTo(obstruction.getPos())-0.2);
-            for (double d=0.8;d<=length;d+=0.65) {
-                var point=eye.add(direction.multiply(d));
+            for (double d=0.15;d<=length;d+=0.65) {
+                var point=wake.at(eye.add(direction.multiply(d)));
                 world.spawnParticles(ModParticles.FIRE_FLAME_RIBBON,point.x,point.y-0.12,point.z,1,0.04,0.04,0.04,0.02);
             }
         }

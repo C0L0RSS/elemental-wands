@@ -18,6 +18,14 @@ prior ownership correctly, never turn another temporary layer into permanent
 terrain or overwrite unrelated later edits. Equipment loans must restore the
 original item across death/reload without losing it or duplicating it.
 
+Cast particles leave the wand, not the caster's face. `util/SpellCastVisuals`
+estimates the held wand tip on the casting-hand side; cast bursts bloom just past
+it, the fractured beam is drawn from it, and the Flamethrower stream and
+projectile wakes (Inferno Wave, Vacuum Blade, Singularity Bolt, seeds) bend from
+it onto the true path over the first three blocks. Aim, collision, damage and
+travel distance still use the authoritative eye-line path. Client renderers additionally fade spell sprites and
+meshes near the first-person camera through `client/renderer/SpellViewClearance`.
+
 ## Fire
 
 Inferno Wave is the traveling primary; Dragon's Pyre sends a ground-following wall

@@ -42,6 +42,10 @@ It records known verification limits; it is not a fresh installation receipt.
   The updated hub/progression server fixtures were not rerun in that session.
   Shared Basic recovery, element leveling, spell-book rewards, and current Thorn
   Lash tuning are present in code; this documentation cleanup did not retest them.
+- **Wand-tip cast particles:** cast bursts, the fractured beam, the Flamethrower
+  stream and projectile wakes now start at an estimated wand tip instead of the
+  caster's face. The build passed; the tip placement (right/left hand,
+  first/third person, wide FOV) has not been checked in a native client or Lunar.
 - **Human playtesting:** free-slot combinations, progression pace, recent Fire
   Leap/Flashover and Nature changes, and multiplayer timing remain balance/feel
   work. Automated mechanics checks do not settle these questions.

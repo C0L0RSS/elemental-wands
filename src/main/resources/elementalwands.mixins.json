@@ -11,6 +11,7 @@
     "PlayerEntityMixin",
     "SpringbloomMovementMixin",
     "SpringbloomFallMixin",
+    "UpdraftFallMixin",
     "SpringbloomAirMixin",
     "ScreenHandlerMixin",
     "GuardianArenaPlayerMixin",

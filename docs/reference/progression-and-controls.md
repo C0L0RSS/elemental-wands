@@ -23,7 +23,7 @@ Bindings are editable in Controls and saved in
 Sneak + right mouse performs ordinary block interaction. Slot 1 also handles
 close aimed Flashover disarming and Nature root-knot/Springbloom breaking. While
 Gale Daggers is prepared, a fresh slot-1 press releases its volley instead. Holding
-that click does not also repeat Sky Shear.
+that click does not also repeat Sky Shear. Updraft also requires a fresh press.
 
 The HUD sits beside the hotbar, shows owned equipped spells without key labels,
 and hides empty slots. Controls > Move HUD permits dragging or arrow nudging;
@@ -73,6 +73,7 @@ that dispatch by ability category. Keep the six-tick global tap and ten-tick
 shared Basic recovery as well as individual timers. Entangle slows recovery.
 Gale Daggers also persists its last launch on the player, with synchronized
 remaining recovery and a transient prepared count for input/HUD feedback.
+Updraft likewise persists and synchronizes its last cast on the player.
 Swapping slots does not erase cooldowns or the shared 100-point ultimate reservoir.
 `onWandDamageDealt` owns Flux/charge awards; Nature has explicit charge windows.
 

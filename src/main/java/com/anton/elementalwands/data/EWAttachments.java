@@ -39,6 +39,12 @@ public final class EWAttachments {
             Identifier.of("elementalwands", "springbloom_ready"), builder -> builder.initializer(() -> 0L)
                     .persistent(Codec.LONG).copyOnDeath());
 
+    public static final AttachmentType<Long> UPDRAFT_LAST_CAST = AttachmentRegistry.create(
+            Identifier.of("elementalwands", "updraft_last_cast"), builder -> builder.initializer(() -> -1_000_000_000L)
+                    .persistent(Codec.LONG).copyOnDeath()
+                    .syncWith(net.minecraft.network.codec.PacketCodecs.VAR_LONG,
+                            net.fabricmc.fabric.api.attachment.v1.AttachmentSyncPredicate.all()));
+
     public static final AttachmentType<Long> GALE_LAST_LAUNCH = AttachmentRegistry.create(
             Identifier.of("elementalwands", "gale_last_launch"), builder -> builder.initializer(() -> -1_000_000_000L)
                     .persistent(Codec.LONG).copyOnDeath()

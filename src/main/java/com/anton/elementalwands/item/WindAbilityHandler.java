@@ -171,12 +171,8 @@ public final class WindAbilityHandler {
             chainCount = 0;
         }
 
-        // Calculate dash strength with additive bonus
-        // Base (2.0) + (0.5 * chainCount)
-        // Chain 0: 2.0
-        // Chain 1: 2.5
-        // Chain 2: 3.0
-        float dashStrength = DASH_BASE_STRENGTH + (chainCount * 0.5f);
+        // Scale the entire impulse, including the chain bonus, to 75% of its original strength.
+        float dashStrength = (DASH_BASE_STRENGTH + chainCount * 0.5f) * .75f;
 
         // Execute dash
         Vec3d look = caster.getRotationVec(1.0f).normalize();

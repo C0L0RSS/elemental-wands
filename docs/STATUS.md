@@ -3,12 +3,20 @@
 Reviewed September 23, 2026. This page contains outstanding work, not release history.
 It records known verification limits; it is not a fresh installation receipt.
 
-- **Gale Daggers:** Wind now has four spells. Server checks passed for the
+- **Updraft:** Wind now has five spells, with no cap on future additions. Native
+  client checks measured a 10.00-block rise and passed normal horizontal control,
+  midair activation, safe landing, and prepared-dagger/Waylay Dash combos. The
+  launch emits an expanding floor ring of white smoke puffs. The optional
+  hidden-window fixture records gameplay for MP4 previews. Waylay Dash's base
+  and chained boosts are now 75% of their previous strength. Human Lunar balance
+  feedback remains pending. Server checks passed for the exact eight-second
+  cooldown, collision, safe landing, movement combos, and lifecycle cleanup.
+- **Gale Daggers:** Server checks passed for the
   three-shot burst, fresh aim, damage, deferred/player-owned cooldown, cover,
   allies and cleanup. Native client checks passed for prepared models, real
   key/mouse input, held-click suppression and cooldown/HUD synchronization.
   Daggers now leave a trail of small cloud-white rings. Human Lunar/multiplayer
-  feel and balance remain pending; the fifth Wind spell is still to be designed.
+  feel and balance remain pending.
 - **Wind artwork:** bright cloud-white gusts, impact puffs, wings and ability icons
   replace the dark fractured textures. Native client inspection passed for blade
   synchronization and target damage, equipped Zephyr wings and landing completion,

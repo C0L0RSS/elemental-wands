@@ -299,6 +299,12 @@ public class WandHudOverlay implements HudRenderCallback {
             if(ClientPlayerData.getEntangleStacks(client.player.getId())>0)since/=2;
             remaining = Math.max(remaining,maxCooldownTicks-since);onCooldown=remaining>0;
         }
+        if (spellId.equals("updraft")) {
+            maxCooldownTicks = com.anton.elementalwands.util.UpdraftManager.COOLDOWN;
+            long since = now - client.player.getAttachedOrElse(com.anton.elementalwands.data.EWAttachments.UPDRAFT_LAST_CAST,-1_000_000_000L);
+            if(ClientPlayerData.getEntangleStacks(client.player.getId())>0)since/=2;
+            remaining = Math.max(maxCooldownTicks-elapsed,maxCooldownTicks-since);onCooldown=remaining>0;
+        }
         boolean isWindSecondary = spellId.equals("waylay_dash");
         int windCharges          = 0;
         int windMaxCharges       = 0;
@@ -338,7 +344,9 @@ public class WandHudOverlay implements HudRenderCallback {
                 withAlpha(accentColor, 0x32));
         }
 
-        drawThemeCooldownMotif(context, theme, slotIndex, renderX, renderY, now, animation);
+        if (spellId.equals("updraft") || spellId.equals("gale_daggers"))
+            com.anton.elementalwands.client.SpellIcons.draw(context, selectedSpell, renderX + 6, renderY + 6, 24);
+        else drawThemeCooldownMotif(context, theme, slotIndex, renderX, renderY, now, animation);
 
         if (isWindSecondary) {
             drawWindDashPips(context, renderX, renderY, windCharges, windMaxCharges,

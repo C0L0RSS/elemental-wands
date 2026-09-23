@@ -110,6 +110,7 @@ public class ElementalWandsMod implements ModInitializer {
         WaylayDashVfxManager.init();
         ZephyrStrikeManager.init();
         com.anton.elementalwands.util.GaleDaggers.init();
+        com.anton.elementalwands.util.UpdraftManager.init();
         ModNetworking.registerPayloads();
         ModNetworking.registerC2SReceivers();
         com.anton.elementalwands.util.WandLoadouts.init();

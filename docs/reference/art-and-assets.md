@@ -84,6 +84,11 @@ and fade over five ticks. Rings stay where they spawn, stop at collision, and
 respect near-camera clearance; idle daggers emit none. `GaleRingParticle` owns
 the orientation and fade, independently of the larger Wind impact rings.
 
+Updraft emits twenty vanilla cloud particles radially at the launch point to
+form an expanding smoke ring close to the floor. Existing Wind air ribbons form
+a brief eight-tick rising spiral. Its upward-gust icon is composed in `SpellIcons`;
+no new bitmap assets are generated.
+
 Wind wings keep vanilla Elytra geometry; dash tracers and landing effects are
 presentation, not movement authority. The held wand has a separate palette and
 is outside this texture pass. Calamity Tornado is retired.

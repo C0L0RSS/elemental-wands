@@ -10,7 +10,19 @@ public final class SpellIcons {
     public static void draw(DrawContext ctx, WandSpells.Spell spell, int x, int y, int size) {
         if (spell==null || spell.affinity()==WizardAffinity.NONE) return;
         ctx.getMatrices().pushMatrix();ctx.getMatrices().translate(x,y);ctx.getMatrices().scale(size/32f,size/32f);
-        if (spell.id().equals("gale_daggers")) {
+        if (spell.id().equals("updraft")) {
+            // A pearl-white rising gust above a small stepped cloud.
+            ctx.fill(4,24,28,29,0xFFB8CBD4);ctx.fill(2,23,9,27,0xFFD8E5E8);
+            ctx.fill(6,20,14,27,0xFFF8FAF7);ctx.fill(13,23,24,28,0xFFE6EEF0);
+            ctx.fill(22,21,29,26,0xFFF8FAF7);
+            for(int row=0;row<15;row++) {
+                int half=Math.max(2,7-row/2), y0=3+row;
+                if(row<7)ctx.fill(16-half,y0,17+half,y0+2,0xFFB8CBD4);
+                ctx.fill(15,y0,18,y0+2,0xFFF8FAF7);
+            }
+            ctx.fill(9,15,12,20,0xFFD8E5E8);ctx.fill(7,12,10,16,0xFFE6EEF0);
+            ctx.fill(21,13,24,19,0xFFD8E5E8);ctx.fill(23,9,26,14,0xFFE6EEF0);
+        } else if (spell.id().equals("gale_daggers")) {
             for(int i=0;i<3;i++) {
                 int x0=6+i*10, tip=i==1?1:5;
                 for(int y0=tip;y0<21;y0++) {

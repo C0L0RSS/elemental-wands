@@ -100,6 +100,24 @@ Run the relevant server/client fixture when changing behavior it covers. Do not
 claim a fixture passed from an old report. Documentation-only changes need link,
 reference, and whitespace checks; they do not require a gameplay build.
 
+## Delegating tests and gameplay recordings
+
+The user prefers one **GPT-6 Sol (`gpt-6-sol`) subagent** for established test and
+recording work together when the main agent has useful independent work, such as
+reviewing the implementation or updating documentation. This is standing project
+authorization for that bounded delegation; no new confirmation is needed.
+Use medium reasoning and a short, fresh handoff instead of the full conversation.
+
+The main agent owns design, production changes, unexpected gameplay bugs, and
+final review. The subagent runs the agreed checks, verifies receipts, records
+gameplay, encodes the MP4, and returns concise results. Escalate unexpected
+failures rather than weakening assertions or repeatedly debugging independently.
+Do not spawn an agent just to encode a video or wait on a command. If delegation
+is unavailable or there is no useful parallel work, run the workflow locally.
+This preference does not authorize installation into Lunar or concurrent edits
+to the code being tested. Follow the [test and recording handoff](docs/reference/testing.md#test-and-recording-handoff)
+for commands, shared-workspace coordination, and deliverables.
+
 ## Local installation
 
 Build output: `build/libs/elementalwands-2.2.0.jar`.

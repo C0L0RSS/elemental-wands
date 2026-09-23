@@ -62,13 +62,15 @@ public final class WandLoadouts {
         player.setAttached(EWAttachments.WAND_LOADOUTS, Map.copyOf(saved));
         return "Equipped " + spell.name() + " in slot " + (slot + 1) + ".";
     }
-    public static void cast(ServerPlayerEntity player, int slot) {
+    public static void cast(ServerPlayerEntity player, int slot) { cast(player, slot, true); }
+    public static void cast(ServerPlayerEntity player, int slot, boolean deliberate) {
         if (!player.isAlive() || player.isSpectator() || !com.anton.elementalwands.arena.GuardianArenaManager.canCast(player)) return;
         ServerWorld world = player.getEntityWorld();
         if (HollowPurpleChargeManager.isCharging(world, player) || FireLeapManager.flying(player) || StoneChargeManager.active(player)) return;
         var stack = player.getMainHandStack();
         if (!(stack.getItem() instanceof AbstractWandItem wand)) return;
-        if(slot==0 && (FlashoverManager.tryDisarmAimed(player) || TendrilBloomManager.tryBreakKnotAimed(player)))return;
+        if(slot==0 && GaleDaggers.active(player)) { if(deliberate)GaleDaggers.fire(player); return; }
+        if(slot==0 && (SpringbloomManager.tryBreakAimed(player) || FlashoverManager.tryDisarmAimed(player) || TendrilBloomManager.tryBreakKnotAimed(player)))return;
         var ids = get(player);
         if (slot < 0 || slot >= ids.size()) return;
         var spell = WandSpells.find(ids.get(slot));
@@ -83,8 +85,10 @@ public final class WandLoadouts {
             if (spell.id().equals("fire_hop")) return; // Aimed release uses FireLeapCommitPayload.
             FireBuildManager.stop(player);
             markCombat(player);
+            if (spell.id().equals(GaleDaggers.ID)) { if(deliberate)GaleDaggers.cast(player); return; }
             if (spell.id().equals("faultline")) { FaultlineManager.cast(player); return; }
             if (spell.id().equals("stone_charge")) { StoneChargeManager.start(player); return; }
+            if (spell.id().equals("springbloom")) { SpringbloomManager.cast(player); return; }
             if (spell.id().equals("thorn_lash")) {
                 com.anton.elementalwands.item.NatureAbilityHandler.castThornLash(world, player, stack); return;
             }

@@ -16,7 +16,12 @@ public final class NatureMeshes {
     public static final RenderLayer LAYER=RenderLayer.getEntityTranslucent(TEXTURE);
     private static final Map<String,float[]> MESHES=load();
     private static Map<String,float[]> load(){
-        var stream=NatureMeshes.class.getResourceAsStream("/assets/elementalwands/nature/meshes.json");
+        Map<String,float[]> meshes=new java.util.HashMap<>(load("meshes"));
+        meshes.putAll(load("springbloom"));
+        return Map.copyOf(meshes);
+    }
+    private static Map<String,float[]> load(String file){
+        var stream=NatureMeshes.class.getResourceAsStream("/assets/elementalwands/nature/"+file+".json");
         if(stream==null)throw new IllegalStateException("Missing Nature meshes");
         try(var reader=new InputStreamReader(stream,StandardCharsets.UTF_8)){
             return new Gson().fromJson(reader,new TypeToken<Map<String,float[]>>(){}.getType());

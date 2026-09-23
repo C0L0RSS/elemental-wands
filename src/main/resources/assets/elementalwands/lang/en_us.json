@@ -1,7 +1,7 @@
 {
   "entity.elementalwands.overgrowth_seed": "Overgrowth Acorn",
   "block.elementalwands.nature_root_knot": "Root Knot",
-  "entity.elementalwands.thorn_lash": "Thorn Lash",
+  "entity.elementalwands.thorn_lash": "Thornbite",
   "item.elementalwands.fractured_wand": "Wizard's Wand",
   "item.elementalwands.titan_sword": "Titan Sword",
   "item.elementalwands.zephyr_wings": "Zephyr Wings",
@@ -49,5 +49,10 @@
   "block.elementalwands.nature_flowering_leaves": "Flowering Grove Leaves",
   "item.elementalwands.basic_spell_book": "Basic Spell Book",
   "item.elementalwands.secondary_spell_book": "Secondary Spell Book",
-  "item.elementalwands.ultimate_spell_book": "Ultimate Spell Book"
+  "item.elementalwands.ultimate_spell_book": "Ultimate Spell Book",
+  "block.elementalwands.springbloom": "Springbloom",
+  "entity.elementalwands.springbloom": "Springbloom",
+  "entity.elementalwands.gale_dagger": "Gale Dagger",
+  "death.attack.gale_dagger": "%1$s was struck by %2$s’s Gale Daggers",
+  "death.attack.gale_dagger.item": "%1$s was struck by %2$s’s Gale Daggers using %3$s"
 }

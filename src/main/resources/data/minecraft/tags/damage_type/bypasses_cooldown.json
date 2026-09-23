@@ -1,4 +1,7 @@
 {
   "replace": false,
-  "values": ["elementalwands:flashover"]
+  "values": [
+    "elementalwands:flashover",
+    "elementalwands:gale_dagger"
+  ]
 }

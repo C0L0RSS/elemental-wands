@@ -1,6 +1,7 @@
 package com.anton.elementalwands.mixin;
 
 import com.anton.elementalwands.util.StoneMotionAccess;
+import com.anton.elementalwands.util.StoneTechniqueRules;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.util.math.Vec3d;
 import org.spongepowered.asm.mixin.Mixin;
@@ -19,8 +20,8 @@ public abstract class StoneMotionMixin implements StoneMotionAccess {
         long now = self.getEntityWorld().getTime();
         if (mode == 3) {
             if (now < elementalwands$immuneUntil) return;
-            elementalwands$interruptUntil = now + 10;
-            elementalwands$immuneUntil = now + 40;
+            elementalwands$interruptUntil = now + StoneTechniqueRules.INTERRUPT;
+            elementalwands$immuneUntil = now + StoneTechniqueRules.INTERRUPT_GRACE;
             elementalwands$mode = 0;
         } else {
             elementalwands$yaw = yaw; elementalwands$speed = speed; elementalwands$mode = mode;

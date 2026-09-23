@@ -14,11 +14,11 @@ import org.joml.Vector3f;
 
 /** Immutable extraction data keeps held, GUI, remote-player and dropped render calls independent. */
 public final class WandRenderer implements SpecialModelRenderer<WandRenderer.State> {
-    public record State(int element, double seconds) {}
+    public record State(int element, double seconds, com.anton.elementalwands.client.renderer.ThornbiteVisual.Snapshot bite) {}
     private static final RenderLayer WOOD=RenderLayer.getEntitySolid(Identifier.of("elementalwands","textures/wand/wood.png"));
     private static final RenderLayer CORE=RenderLayer.getEntityTranslucentEmissive(Identifier.of("elementalwands","textures/wand/cores.png"));
     private static final RenderLayer GLASS=RenderLayer.getItemEntityTranslucentCull(Identifier.of("elementalwands","textures/wand/glass.png"));
-    @Override public State getData(ItemStack stack) {return new State(0,0);}
+    @Override public State getData(ItemStack stack) {return new State(0,0,null);}
     @Override public void collectVertices(Set<Vector3f> vertices) {for(var v:WandMesh.BOUNDS)vertices.add(new Vector3f(v));}
     @Override public void render(State state,ItemDisplayContext context,MatrixStack matrices,
                                  OrderedRenderCommandQueue queue,int light,int overlay,boolean glint,int outline) {
@@ -49,6 +49,7 @@ public final class WandRenderer implements SpecialModelRenderer<WandRenderer.Sta
         queue.getBatchingQueue(1).submitCustom(matrices,GLASS,(entry,out)->WandMesh.cube(out,entry,.89f,
                 0xffffff,LightmapTextureManager.MAX_LIGHT_COORDINATE,overlay,0,0,1,1,false));
         matrices.pop();
+        com.anton.elementalwands.client.renderer.ThornbiteVisual.render(state.bite(),context,matrices,queue,light);
     }
     public static void rotateCore(MatrixStack matrices,double t) {
         matrices.multiply(RotationAxis.POSITIVE_X.rotation((float)(.08*Math.sin(t*.23))));

@@ -122,8 +122,8 @@ public final class NatureAbilityHandler {
                 com.anton.elementalwands.registry.ModEntities.THORN_LASH, world);
         lash.initialize(caster);
         world.spawnEntity(lash);
-        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP,
-                SoundCategory.PLAYERS, .8f, .75f);
+        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_FISHING_BOBBER_THROW,
+                SoundCategory.PLAYERS, .55f, 1.45f);
         world.playSound(null, caster.getBlockPos(), SoundEvents.BLOCK_AZALEA_LEAVES_BREAK,
                 SoundCategory.PLAYERS, .7f, .7f);
     }

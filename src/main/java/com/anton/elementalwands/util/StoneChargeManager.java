@@ -92,7 +92,7 @@ public final class StoneChargeManager {
         INTERRUPT_READY.put(target.getUuid(),now+StoneTechniqueRules.INTERRUPT_GRACE);
         if(target instanceof ServerPlayerEntity player)stop(player,false);
         ((StoneMotionAccess)target).elementalwands$stoneMotion(0,0,3);
-        target.setSprinting(false);target.setVelocity(0,.24,0);target.velocityModified=true;
+        target.setSprinting(false);target.setVelocity(0,StoneTechniqueRules.FAULT_LAUNCH_SPEED,0);target.velocityModified=true;
         var packet=new ModNetworking.StoneMotionPayload(target.getId(),0,0,3);
         for(var player:PlayerLookup.tracking(target))ServerPlayNetworking.send(player,packet);
         if(target instanceof ServerPlayerEntity player)ServerPlayNetworking.send(player,packet);

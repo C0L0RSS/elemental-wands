@@ -24,7 +24,7 @@ public final class WandControls {
     private static int heldHotbar = -1, repeatTick;
     private static String heldAffinity = "";
     private static net.minecraft.item.ItemStack leapWand;
-    private static boolean leapAim;
+    private static boolean leapAim, daggerPrimaryHeld;
     private static KeyBinding hubKey;
     private static final Path CONFIG = FabricLoader.getInstance().getConfigDir().resolve("elementalwands-controls.properties");
     private static InputUtil.Key[] defaults() { return new InputUtil.Key[]{InputUtil.Type.MOUSE.createFromCode(0),
@@ -102,7 +102,7 @@ public final class WandControls {
         if (client.getNetworkHandler() != null && ClientPlayNetworking.canSend(ModNetworking.ReleaseSpellPayload.ID))
             ClientPlayNetworking.send(ModNetworking.ReleaseSpellPayload.INSTANCE);
     }
-    public static void clear() { leapAim=false;leapWand=null; if (java.util.stream.IntStream.range(0,HELD.length).anyMatch(i->HELD[i])) release(); java.util.Arrays.fill(HELD, false); heldHotbar = -1; repeatTick = 0; }
+    public static void clear() { daggerPrimaryHeld=false; leapAim=false;leapWand=null; if (java.util.stream.IntStream.range(0,HELD.length).anyMatch(i->HELD[i])) release(); java.util.Arrays.fill(HELD, false); heldHotbar = -1; repeatTick = 0; }
     public static boolean aimingLeap() { return leapAim && validLeapContext(); }
     private static boolean validLeapContext() {
         var c=MinecraftClient.getInstance();
@@ -125,7 +125,7 @@ public final class WandControls {
         var client = MinecraftClient.getInstance();
         var key = (mouse ? InputUtil.Type.MOUSE : InputUtil.Type.KEYSYM).createFromCode(code);
         if (action == GLFW.GLFW_RELEASE) {
-            for (int i = 0; i < KEYS.length; i++) if (KEYS[i].equals(key)) { if (HELD[i] && (spellAtInput(i,"flamethrower") || spellAtInput(i,"stone_charge"))) release(); if(HELD[i] && spellAtInput(i,"fire_hop") && leapAim) releaseLeap(); HELD[i] = false; }
+            for (int i = 0; i < KEYS.length; i++) if (KEYS[i].equals(key)) { if (HELD[i] && (spellAtInput(i,"flamethrower") || spellAtInput(i,"stone_charge"))) release(); if(HELD[i] && spellAtInput(i,"fire_hop") && leapAim) releaseLeap(); HELD[i] = false; if(i==0)daggerPrimaryHeld=false; }
             return false;
         }
         if (client.currentScreen != null || client.player == null || !client.player.isAlive() || client.player.isSpectator()
@@ -136,6 +136,9 @@ public final class WandControls {
                 || InputUtil.isKeyPressed(client.getWindow(), GLFW.GLFW_KEY_RIGHT_SHIFT))) return false;
         for (int i = 0; i < KEYS.length; i++) if (KEYS[i].equals(key)) {
             if (action == GLFW.GLFW_PRESS) {
+                boolean daggersReady=client.player.getAttachedOrElse(com.anton.elementalwands.data.EWAttachments.GALE_PREPARED,0)>0;
+                if(i==0)daggerPrimaryHeld=daggersReady;
+                else if(spellAtInput(i,"gale_daggers") && daggersReady && HELD[0])daggerPrimaryHeld=true;
                 HELD[i] = true; heldHotbar = client.player.getInventory().getSelectedSlot();
                 heldAffinity = ClientPlayerData.getAffinity().name(); repeatTick = 0;
                 if(i==3) {
@@ -160,12 +163,12 @@ public final class WandControls {
                 || heldHotbar != client.player.getInventory().getSelectedSlot() || !heldAffinity.equals(ClientPlayerData.getAffinity().name())) { clear(); return; }
         if (++repeatTick % 2 != 0) return;
         for (int i = 0; i < KEYS.length; i++) {
-            if(i==3 || slotForInput(i)>=ClientPlayerData.loadout().size())continue;
+            if(i==3 || (i==0 && daggerPrimaryHeld) || slotForInput(i)>=ClientPlayerData.loadout().size())continue;
             var spell = WandSpells.find(ClientPlayerData.loadout().get(slotForInput(i)));
             if (HELD[i] && spell != null && spell.id().equals("stone_charge"))
                 ClientPlayNetworking.send(ModNetworking.StoneChargeHoldPayload.INSTANCE);
             if (HELD[i] && spell != null && spell.ability() == AbstractWandItem.Ability.PRIMARY && (spell.id().equals("flamethrower") || spellReady(client, spell)))
-                ClientPlayNetworking.send(new ModNetworking.CastSlotPayload(slotForInput(i)));
+                ClientPlayNetworking.send(new ModNetworking.CastSlotPayload(slotForInput(i), false));
         }
     }
     private static boolean spellAtInput(int input,String id){int slot=slotForInput(input);return input!=3 && slot>=0 && slot<ClientPlayerData.loadout().size() && ClientPlayerData.loadout().get(slot).equals(id);}

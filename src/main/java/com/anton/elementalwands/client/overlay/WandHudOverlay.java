@@ -293,7 +293,13 @@ public class WandHudOverlay implements HudRenderCallback {
         }
         boolean onCooldown = remaining > 0;
 
-        boolean isWindSecondary  = affinity == WizardAffinity.WIND && ability == AbstractWandItem.Ability.SECONDARY;
+        if (spellId.equals("gale_daggers")) {
+            maxCooldownTicks = com.anton.elementalwands.util.GaleDaggers.COOLDOWN;
+            long since = now - client.player.getAttachedOrElse(com.anton.elementalwands.data.EWAttachments.GALE_LAST_LAUNCH,-1_000_000_000L);
+            if(ClientPlayerData.getEntangleStacks(client.player.getId())>0)since/=2;
+            remaining = Math.max(remaining,maxCooldownTicks-since);onCooldown=remaining>0;
+        }
+        boolean isWindSecondary = spellId.equals("waylay_dash");
         int windCharges          = 0;
         int windMaxCharges       = 0;
         int windRechargeTicks    = 0;
@@ -337,6 +343,8 @@ public class WandHudOverlay implements HudRenderCallback {
         if (isWindSecondary) {
             drawWindDashPips(context, renderX, renderY, windCharges, windMaxCharges,
                 windRechargeTicks, windRechargeDuration, now);
+        } else if (spellId.equals("gale_daggers") && client.player.getAttachedOrElse(com.anton.elementalwands.data.EWAttachments.GALE_PREPARED,0)>0) {
+            context.drawText(client.textRenderer,"READY",renderX+7,renderY+23,0xFFFFFFFF,true);
         } else if (onCooldown && remaining > 20 && isUnlocked) {
             String digit  = String.valueOf((int) Math.ceil(remaining / 20.0));
             int txtWidth  = client.textRenderer.getWidth(digit);

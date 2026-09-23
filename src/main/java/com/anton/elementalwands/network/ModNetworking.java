@@ -69,7 +69,7 @@ public final class ModNetworking {
             com.anton.elementalwands.util.StoneChargeManager.stop(context.player(), true);
         });
         ServerPlayNetworking.registerGlobalReceiver(CastSlotPayload.ID,
-                (payload, context) -> com.anton.elementalwands.util.WandLoadouts.cast(context.player(), payload.slot()));
+                (payload, context) -> com.anton.elementalwands.util.WandLoadouts.cast(context.player(), payload.slot(), payload.deliberate()));
         ServerPlayNetworking.registerGlobalReceiver(HubActionPayload.ID,
                 (payload, context) -> handleHub(context.player(), payload));
     }
@@ -261,9 +261,10 @@ public final class ModNetworking {
         public static final PacketCodec<RegistryByteBuf,ReleaseSpellPayload> CODEC = PacketCodec.unit(INSTANCE);
         @Override public Id<? extends CustomPayload> getId() { return ID; }
     }
-    public record CastSlotPayload(int slot) implements CustomPayload {
+    public record CastSlotPayload(int slot, boolean deliberate) implements CustomPayload {
+        public CastSlotPayload(int slot) { this(slot, true); }
         public static final Id<CastSlotPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID, "cast_slot"));
-        public static final PacketCodec<RegistryByteBuf, CastSlotPayload> CODEC = PacketCodec.tuple(PacketCodecs.VAR_INT, CastSlotPayload::slot, CastSlotPayload::new);
+        public static final PacketCodec<RegistryByteBuf, CastSlotPayload> CODEC = PacketCodec.tuple(PacketCodecs.VAR_INT, CastSlotPayload::slot, PacketCodecs.BOOLEAN, CastSlotPayload::deliberate, CastSlotPayload::new);
         @Override public Id<? extends CustomPayload> getId() { return ID; }
     }
     public record HubActionPayload(String action, String affinity, int slot, String value) implements CustomPayload {

@@ -75,6 +75,7 @@ public class ElementalWandsMod implements ModInitializer {
         OvergrowthManager.init();
         SeedlingManager.init();
         TendrilBloomManager.init();
+        com.anton.elementalwands.util.SpringbloomManager.init();
         MeteorManager.init();
         TitanDomeManager.init();
         BlinkRiftManager.init();
@@ -108,6 +109,7 @@ public class ElementalWandsMod implements ModInitializer {
         ModItems.registerAll();
         WaylayDashVfxManager.init();
         ZephyrStrikeManager.init();
+        com.anton.elementalwands.util.GaleDaggers.init();
         ModNetworking.registerPayloads();
         ModNetworking.registerC2SReceivers();
         com.anton.elementalwands.util.WandLoadouts.init();

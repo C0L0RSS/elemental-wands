@@ -29,6 +29,8 @@ import net.minecraft.util.Identifier;
  */
 public final class ModSpellBlocks {
 
+    public static final Block SPRINGBLOOM=register("springbloom",
+            com.anton.elementalwands.block.SpringbloomBlock::new,natureSettings());
     public static final Block NATURE_SEEDLING=register("nature_seedling",
             com.anton.elementalwands.block.NatureSeedlingBlock::new,natureSettings());
     public static final Block NATURE_ROOT_KNOT=register("nature_root_knot",

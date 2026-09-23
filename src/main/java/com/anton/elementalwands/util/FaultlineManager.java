@@ -80,10 +80,20 @@ public final class FaultlineManager {
             }
             return true;
         }
-        int row = (age - StoneTechniqueRules.WINDUP) / 2;
-        if (row >= StoneTechniqueRules.FAULT_ROWS) return age < StoneTechniqueRules.WINDUP + 20 + FaultlineSpikeEntity.LIFE;
-        if ((age - StoneTechniqueRules.WINDUP) % 2 != 0) return true;
-        double depth = row + 1, halfWidth = 1 + depth*.3;
+        int firstRow = (age - StoneTechniqueRules.WINDUP) * StoneTechniqueRules.FAULT_ROWS_PER_TICK;
+        if (firstRow >= StoneTechniqueRules.FAULT_ROWS) {
+            int travelTicks = (StoneTechniqueRules.FAULT_ROWS + StoneTechniqueRules.FAULT_ROWS_PER_TICK - 1)
+                    / StoneTechniqueRules.FAULT_ROWS_PER_TICK;
+            return age < StoneTechniqueRules.WINDUP + travelTicks + FaultlineSpikeEntity.LIFE;
+        }
+        // Visit every intermediate surface even when several rows erupt in the same tick.
+        for (int row = firstRow; row < Math.min(firstRow + StoneTechniqueRules.FAULT_ROWS_PER_TICK,
+                StoneTechniqueRules.FAULT_ROWS); row++) eruptRow(wave, row);
+        return true;
+    }
+    private static void eruptRow(Wave wave, int row) {
+        var owner = wave.owner;
+        double depth = row + 1, halfWidth = 1 + 3 * depth / StoneTechniqueRules.FAULT_ROWS;
         Vec3d lastVisual = null;
         for (int lane = 0; lane < 9; lane++) {
             Vec3d prior = wave.previous[lane];
@@ -113,7 +123,6 @@ public final class FaultlineManager {
         }
         if (row%3==0) wave.world.playSound(null,BlockPos.ofFloored(wave.origin.add(wave.forward.multiply(depth))),
                 SoundEvents.BLOCK_DEEPSLATE_BREAK,SoundCategory.PLAYERS,.65f,.75f);
-        return true;
     }
     private static void clear(Wave wave) { wave.visuals.forEach(FaultlineSpikeEntity::discard); }
     private FaultlineManager() {}

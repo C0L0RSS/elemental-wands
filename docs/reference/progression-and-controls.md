@@ -14,13 +14,16 @@ retired by exact title/author, without removing ordinary player books.
 Loadouts have five free numbered slots. Any owned spell, including an ultimate,
 can occupy any slot; the same spell cannot occupy two slots. Categories remain
 store metadata, pricing, and spell-book eligibility, not slot restrictions.
-Purchases fill available empty positions without replacing chosen spells.
+Purchases fill available empty positions without replacing chosen spells. Five is
+the minimum development target per element, not a cap on the learnable catalog.
 
 Default slot inputs are left mouse, right mouse, X, Z, V; Spell alternate is R.
 Bindings are editable in Controls and saved in
 `config/elementalwands-controls.properties`. Existing saved bindings can differ.
 Sneak + right mouse performs ordinary block interaction. Slot 1 also handles
-close aimed Flashover disarming and Nature root-knot breaking.
+close aimed Flashover disarming and Nature root-knot/Springbloom breaking. While
+Gale Daggers is prepared, a fresh slot-1 press releases its volley instead. Holding
+that click does not also repeat Sky Shear.
 
 The HUD sits beside the hotbar, shows owned equipped spells without key labels,
 and hides empty slots. Controls > Move HUD permits dragging or arrow nudging;
@@ -56,7 +59,8 @@ permission and must remain separate from normal progression.
 | `client/screen/WandHubScreen`, `client/overlay/WandHudOverlay` | Presentation of synchronized state |
 | `network/ModNetworking` | Bounded requests and authoritative state sync |
 
-`CastSlotPayload` sends a slot index, not a client-authorized spell. The server
+`CastSlotPayload` sends a slot index and whether the input is a fresh press or
+a held repeat, not a client-authorized spell. The server
 resolves the actual loadout and validates life, held item, ownership, affinity,
 arena rules, and committed actions. Fire Leap uses its dedicated aimed-release
 request; hold/release channels also require server validation.
@@ -67,6 +71,8 @@ Cooldowns are stored on the wand per spell ID (`ew_cd_*`, `ew_cdd_*`). The
 `AbstractWandItem.beginCast`/`endCast` context preserves identity through handlers
 that dispatch by ability category. Keep the six-tick global tap and ten-tick
 shared Basic recovery as well as individual timers. Entangle slows recovery.
+Gale Daggers also persists its last launch on the player, with synchronized
+remaining recovery and a transient prepared count for input/HUD feedback.
 Swapping slots does not erase cooldowns or the shared 100-point ultimate reservoir.
 `onWandDamageDealt` owns Flux/charge awards; Nature has explicit charge windows.
 

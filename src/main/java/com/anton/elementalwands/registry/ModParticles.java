@@ -23,6 +23,7 @@ public final class ModParticles {
     public static final SimpleParticleType FIRE_METEOR_WARNING = register("fire_meteor_warning", true);
     public static final SimpleParticleType FIRE_METEOR_IMPACT = register("fire_meteor_impact", true);
 
+    public static final SimpleParticleType GALE_DAGGER_TRAIL = register("gale_dagger_trail");
     public static final SimpleParticleType WIND_MOTE = register("wind_mote");
     public static final SimpleParticleType WIND_CRESCENT = register("wind_crescent");
     public static final SimpleParticleType WIND_AIR_RIBBON = register("wind_air_ribbon");

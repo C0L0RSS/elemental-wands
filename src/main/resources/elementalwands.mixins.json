@@ -9,6 +9,9 @@
     "StoneMotionMixin",
     "StoneDamageMixin",
     "PlayerEntityMixin",
+    "SpringbloomMovementMixin",
+    "SpringbloomFallMixin",
+    "SpringbloomAirMixin",
     "ScreenHandlerMixin",
     "GuardianArenaPlayerMixin",
     "GuardianArenaWorldMixin",
@@ -27,6 +30,8 @@
   },
   "client": [
     "FireLeapHudMixin",
+    "ThornbiteProjectionAccessor",
+    "ThornbiteVisibilityMixin",
     "WandMouseMixin",
     "WandKeyboardMixin"
   ]

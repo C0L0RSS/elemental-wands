@@ -189,6 +189,20 @@ public final class ModEntities {
                         .dimensions(EntityDimensions.fixed(.4f,.4f)).trackRangeBlocks(96).trackedUpdateRate(1).disableSaving()
                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"overgrowth_seed"))));
 
+        public static final EntityType<com.anton.elementalwands.entity.SpringbloomEntity> SPRINGBLOOM = Registry.register(
+                Registries.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"springbloom"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.SpringbloomEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.SpringbloomEntity::new)
+                        .dimensions(EntityDimensions.fixed(2.5f,1)).trackRangeBlocks(96).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"springbloom"))));
+
+        public static final EntityType<com.anton.elementalwands.entity.GaleDaggerEntity> GALE_DAGGER = Registry.register(
+                Registries.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"gale_dagger"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.GaleDaggerEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.GaleDaggerEntity::new)
+                        .dimensions(EntityDimensions.fixed(.18f,.18f)).trackRangeBlocks(96).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"gale_dagger"))));
+
         private ModEntities() {
         }
 

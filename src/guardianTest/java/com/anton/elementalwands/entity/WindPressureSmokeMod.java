@@ -40,7 +40,7 @@ public final class WindPressureSmokeMod implements ModInitializer {
             for(int x=-4;x<=4;x++)for(int z=-4;z<=4;z++){world.getChunk(x,z);world.setChunkForced(x,z,true);}
             y=world.getTopY(Heightmap.Type.MOTION_BLOCKING,0,0);
             var factory=com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);factory.setAccessible(true);
-            player=(ServerPlayerEntity)factory.invoke(null,server,UUID.randomUUID(),"WindPressure",.5,(double)y,.5);player.onTeleportationDone();player.setInvulnerable(true);player.setYaw(0);player.setPitch(0);
+            player=(ServerPlayerEntity)factory.invoke(null,server,UUID.randomUUID(),"WindPressure",.5,(double)y,.5);player.onTeleportationDone();player.setInvulnerable(true);player.setYaw(0);player.setHeadYaw(0);player.setBodyYaw(0);player.setPitch(0);
             wand=new ItemStack(ModItems.FRACTURED_WAND);
             WindAbilityHandler.castSecondary(world,player,wand);WindAbilityHandler.castSecondary(world,player,wand);
             require(WindAbilityHandler.getDashCharges(wand)==0,"Two dashes did not consume two charges");
@@ -53,7 +53,7 @@ public final class WindPressureSmokeMod implements ModInitializer {
             report.append("Two dash charges retained; recharge occurs exactly at 100 ticks.\n");
         }
         if(boss==null)return;
-        if(tick==30) {health=boss.getHealth();guard=boss.getGuard();WindAbilityHandler.castPrimary(world,player,wand);}
+        if(tick==30) {player.setHeadYaw(0);health=boss.getHealth();guard=boss.getGuard();WindAbilityHandler.castPrimary(world,player,wand);}
         if(tick==36) {
             float loss=health-boss.getHealth();require(loss>1.5 && loss<=2.8,"Fan damage stacked or center missed: "+loss);
             require(guard-boss.getGuard()>4 && guard-boss.getGuard()<=7,"Three blades stacked guard damage");
@@ -66,11 +66,11 @@ public final class WindPressureSmokeMod implements ModInitializer {
         if(tick==106) {
             report.append("Real three-blade cast hits centered boss once; repeated fire through slam/recovery never launches it.\n");
             boss.discard();
-            zombie=EntityType.ZOMBIE.create(world,SpawnReason.COMMAND);zombie.setPosition(.5,y,13.5);zombie.setAiDisabled(true);zombie.equipStack(EquipmentSlot.HEAD,new ItemStack(net.minecraft.item.Items.CARVED_PUMPKIN));zombie.setInvulnerable(false);world.spawnEntity(zombie);zombie.setOnGround(true);
-            health=zombie.getHealth();WindAbilityHandler.castPrimary(world,player,wand);
+            zombie=EntityType.ZOMBIE.create(world,SpawnReason.COMMAND);zombie.setPosition(.5,y,8.5);zombie.setAiDisabled(true);zombie.equipStack(EquipmentSlot.HEAD,new ItemStack(net.minecraft.item.Items.CARVED_PUMPKIN));zombie.setInvulnerable(false);world.spawnEntity(zombie);zombie.setOnGround(true);
+            player.setHeadYaw(0);health=zombie.getHealth();WindAbilityHandler.castPrimary(world,player,wand);
         }
-        if(tick==115)require(zombie.getHealth()==health,"Wind projectile exceeded strict 12-block range");
-        if(tick==130) {zombie.setPosition(.5,y,8.5);zombie.setVelocity(Vec3d.ZERO);health=zombie.getHealth();WindAbilityHandler.castPrimary(world,player,wand);}
+        if(tick==115)require(zombie.getHealth()==health,"Wind projectile exceeded strict 7-block range");
+        if(tick==130) {zombie.setPosition(.5,y,5.5);zombie.setVelocity(Vec3d.ZERO);player.setHeadYaw(0);health=zombie.getHealth();WindAbilityHandler.castPrimary(world,player,wand);}
         if(tick==140) {
             require(zombie.getHealth()<health,"Centered ordinary mob missed the new fan");
             zombie.discard();
@@ -82,7 +82,7 @@ public final class WindPressureSmokeMod implements ModInitializer {
             var rejected=new VacuumBladeEntity(world,player,new Vec3d(0,0,1),false,new HashSet<>());
             rejected.onEntityHit(new EntityHitResult(ordinary));
             require(ordinary.getHealth()==after && ordinary.getVelocity().equals(recoil),"Rejected damage still adds knockback");
-            report.append("12-block cutoff rejects distant target; center blade hits close mob; accepted hits push ordinary mobs, rejected hits do not.\n");
+            report.append("7-block cutoff rejects distant target; center blade hits close mob; accepted hits push ordinary mobs, rejected hits do not.\n");
             boss=new FracturedGuardianEntity(ModEntities.FRACTURED_GUARDIAN,world);boss.setPosition(.5,y,.5);boss.stopReview();world.spawnEntity(boss);
             player.setPosition(.5,y,12.5);player.setVelocity(Vec3d.ZERO);
         }

@@ -126,6 +126,7 @@ EXPECTED_PARTICLE_DEFINITIONS: dict[str, list[str]] = {
 for _element, _families in PARTICLE_FAMILIES.items():
     for _family, (_count, _size) in _families.items():
         EXPECTED_PARTICLE_DEFINITIONS[f"{_element}_{_family}"] = family_ids(_element, _family, _count)
+EXPECTED_PARTICLE_DEFINITIONS["gale_dagger_trail"] = family_ids("wind", "burst_ring", 6)
 EXPECTED_PARTICLE_DEFINITIONS["space_expansion_ring"] = family_ids(
     "space", "implosion_ring", 6, reverse=True
 )
@@ -170,8 +171,8 @@ def validate_json() -> list[str]:
         errors.append(f"missing particle definition: assets/elementalwands/particles/{missing}.json")
     for extra in sorted(actual_names - expected_names):
         errors.append(f"unexpected particle definition: {definitions[extra].relative_to(ROOT)}")
-    if len(definitions) != 40:
-        errors.append(f"particle definition count {len(definitions)}, expected 40")
+    if len(definitions) != 41:
+        errors.append(f"particle definition count {len(definitions)}, expected 41")
 
     for name, expected_textures in EXPECTED_PARTICLE_DEFINITIONS.items():
         path = definitions.get(name)

@@ -140,6 +140,16 @@ public abstract class AbstractWandItem extends Item {
      */
     public static boolean tryStartCooldown(ServerWorld world, PlayerEntity player, ItemStack stack,
             String spellId, int abilityCooldownTicks) {
+        return checkCooldown(world, player, stack, spellId, abilityCooldownTicks, true);
+    }
+
+    /** Check recovery without consuming it; preparation uses this before the global tap. */
+    public static boolean canStartCooldown(ServerWorld world, PlayerEntity player, ItemStack stack,
+            String spellId, int ticks) {
+        return checkCooldown(world, player, stack, spellId, ticks, false);
+    }
+    private static boolean checkCooldown(ServerWorld world, PlayerEntity player, ItemStack stack,
+            String spellId, int abilityCooldownTicks, boolean commit) {
         long now = world.getTime();
 
         NbtCompound nbt = stack.getOrDefault(DataComponentTypes.CUSTOM_DATA, NbtComponent.DEFAULT).copyNbt();
@@ -178,6 +188,7 @@ public abstract class AbstractWandItem extends Item {
             }
         }
 
+        if (!commit) return true;
         NbtComponent.set(DataComponentTypes.CUSTOM_DATA, stack, data -> {
             if (abilityCooldownTicks > 0) {
                 data.putLong(cooldownKey(spellId), now);

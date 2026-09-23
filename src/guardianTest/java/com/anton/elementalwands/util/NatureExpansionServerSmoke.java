@@ -45,18 +45,21 @@ public final class NatureExpansionServerSmoke implements ModInitializer {
             p.setHealth(10);p.setYaw(0);p.setPitch(0);p.setAttached(EWAttachments.AFFINITY,"NATURE");freshWand();
             var team=server.getScoreboard().addTeam("nature_allies");team.setFriendlyFireAllowed(true);
             server.getScoreboard().addScoreHolderToTeam(p.getName().getString(),team);server.getScoreboard().addScoreHolderToTeam(ally.getName().getString(),team);
-            p.setAttached(EWAttachments.WAND_LOADOUTS,Map.of("NATURE",List.of("thorn_lash","tendril_bloom","overgrowth")));
-            WandLoadouts.cast(p,0);require(lashes()==0,"Unowned Lash cast");
+            p.setAttached(EWAttachments.WAND_LOADOUTS,Map.of("NATURE",List.of("", "", "", "", "thorn_lash")));
+            WandLoadouts.cast(p,4);require(lashes()==0,"Unowned bite cast");
             WandProgression.earn(p,WizardAffinity.NATURE,1000);
             WandProgression.purchase(p,"NATURE","thorn_lash");WandProgression.purchase(p,"NATURE","tendril_bloom");
             require(WandProgression.flux(p)==0 && WandProgression.owns(p,WandSpells.find("thorn_lash")),"Purchase incorrect");
+            WandLoadouts.equip(p,"NATURE",0,"thorn_lash");
+            WandLoadouts.equip(p,"NATURE",1,"tendril_bloom");
         }
         if(t==30) {p.setHealth(10);WandLoadouts.cast(p,0);WandLoadouts.cast(p,0);}
-        if(t==34) require(lashes()==1,"Cooldown sweep count="+lashes()+" nbt="+p.getMainHandStack().get(net.minecraft.component.DataComponentTypes.CUSTOM_DATA));
+        if(t==31) {p.setYaw(90);p.setPitch(-30);}
+        if(t==34) require(lashes()==1,"Cooldown bite count="+lashes()+" nbt="+p.getMainHandStack().get(net.minecraft.component.DataComponentTypes.CUSTOM_DATA));
         if(t==42) {
-            near(enemy.getHealth(),197,"Single sweep damage");near(p.getHealth(),11.5f,"Lifesteal ratio");near(ally.getHealth(),200,"Lash hit ally");
+            near(enemy.getHealth(),197,"Committed forward bite damage");near(p.getHealth(),11.5f,"Lifesteal ratio");near(ally.getHealth(),200,"Lash hit ally");
             require(SeedlingManager.getActiveSeedlingsForCaster(p.getEntityWorld(),p.getUuid()).isEmpty(),"Lash planted seed");
-            enemy.setPosition(.5,100,-3);freshWand();p.setHealth(10);WandLoadouts.cast(p,0);
+            p.setYaw(0);p.setPitch(0);enemy.setPosition(.5,100,-3);freshWand();p.setHealth(10);WandLoadouts.cast(p,0);
         }
         if(t==54) {near(p.getHealth(),10,"Rear miss healed");near(enemy.getHealth(),197,"Lash hit behind caster");
             enemy.setPosition(.5,100,3.5);enemy.setInvulnerable(true);freshWand();WandLoadouts.cast(p,0);}
@@ -70,12 +73,13 @@ public final class NatureExpansionServerSmoke implements ModInitializer {
         }
         if(t==90) {
             near(p.getHealth(),10.5f,"Overkill gave extra healing");
-            mobs.add(zombie(-1,100,3));mobs.add(zombie(.5,100,3.5));mobs.add(zombie(2,100,3));
+            mobs.add(zombie(-1,100,3));mobs.add(zombie(.5,100,3.5));mobs.add(zombie(.5,100,4.4));mobs.add(zombie(2,100,3));
             p.setHealth(10);freshWand();WandLoadouts.cast(p,0);
         }
         if(t==102) {
-            near(p.getHealth(),12,"Group healing cap");
-            for(var mob:mobs)require(mob.getHealth()<200,"Sweep missed front target");
+            near(p.getHealth(),10+(200-mobs.get(1).getHealth())*.5f,"Single-target actual-damage healing");
+            require(mobs.get(1).getHealth()<200,"Bite missed aimed target");
+            for(int i:new int[]{0,2,3})near(mobs.get(i).getHealth(),200,"Bite swept sideways or pierced a target");
             mobs.forEach(Entity::discard);mobs.clear();
             mobs.add(zombie(-5,100,7));mobs.add(zombie(.5,100,10));mobs.add(zombie(6,100,7));
             freshWand();NatureAbilityHandler.castSecondary(p.getEntityWorld(),p,p.getMainHandStack());
@@ -148,7 +152,23 @@ public final class NatureExpansionServerSmoke implements ModInitializer {
         }
         if(t==510) {
             require(p.getEntityWorld().getBlockState(knot).isAir(),"Orphan knot did not remove itself");
-            Files.writeString(Path.of("HUB_PASSED.txt"),"Nature expansion passed: ownership, cooldown, aimed sweep, allies, cover, miss/invulnerability/overkill healing, group cap, no planting, three targets, moving/damaged caster, early/completed knot destruction, Guardian crush, enemy/allied wand disarm, support loss, source-specific flower cleanup, affinity exit, expiry and orphan cleanup.\n");
+        }
+        if(t==515) {
+            mobs.forEach(Entity::discard);mobs.clear();p.setPosition(.5,100,.5);p.setYaw(0);p.setPitch(0);
+            mobs.add(zombie(.5,100,2.5));mobs.add(zombie(.5,100,4));mobs.getFirst().setInvulnerable(true);
+            p.setHealth(10);freshWand();WandLoadouts.cast(p,0);
+        }
+        if(t==527) {
+            near(mobs.get(1).getHealth(),200,"Bite pierced invulnerable first target");near(p.getHealth(),10,"Blocked bite healed");
+            mobs.forEach(Entity::discard);mobs.clear();mobs.add(zombie(.5,100,5.8));freshWand();WandLoadouts.cast(p,0);
+        }
+        if(t==539) {
+            near(mobs.getFirst().getHealth(),200,"Bite exceeded range");
+            freshWand();WandLoadouts.cast(p,0);p.setStackInHand(Hand.MAIN_HAND,ItemStack.EMPTY);
+        }
+        if(t==542) {
+            require(lashes()==0,"Unequipping retained bite");
+            Files.writeString(Path.of("HUB_PASSED.txt"),"Nature expansion passed: ownership, cooldown, committed single-target bite, allies, cover, miss/invulnerability/overkill healing, nearest-only contact, turning after cast, invulnerable obstruction, max range, unequip cleanup, no planting, three targets, moving/damaged caster, early/completed knot destruction, Guardian crush, enemy/allied wand disarm, support loss, source-specific flower cleanup, affinity exit, expiry and orphan cleanup.\n");
             server.stop(false);
         }
     }

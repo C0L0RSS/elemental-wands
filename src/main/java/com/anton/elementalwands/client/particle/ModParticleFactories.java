@@ -72,13 +72,14 @@ public final class ModParticleFactories {
             0xFFFFFF, 0xFFFFFF,
             SpriteMode.BY_AGE, false, true);
 
+    // Wind PNGs own their pearl and pale-blue colors; keep particle tint neutral.
     private static final Profile WIND_MOTE = new Profile(
             0.04f, 0.075f, 0.35f,
             16, 30,
             0.7f, 0.05f, 0.68f,
             -0.012f, 0.985f,
             -0.1f, 0.1f,
-            0xFFFFF6, 0xD8DCDA,
+            0xFFFFFF, 0xFFFFFF,
             SpriteMode.RANDOM, false, true);
 
     private static final Profile WIND_CRESCENT = new Profile(
@@ -87,7 +88,7 @@ public final class ModParticleFactories {
             0.9f, 0.03f, 0.62f,
             0.0f, 0.95f,
             -0.045f, 0.045f,
-            0xFFFFF7, 0xD1D5D4,
+            0xFFFFFF, 0xFFFFFF,
             SpriteMode.BY_AGE, false, true);
 
     private static final Profile WIND_AIR_RIBBON = new Profile(
@@ -96,7 +97,7 @@ public final class ModParticleFactories {
             0.68f, 0.08f, 0.56f,
             -0.006f, 0.96f,
             -0.055f, 0.055f,
-            0xFFFFF4, 0xCDD2D2,
+            0xFFFFFF, 0xFFFFFF,
             SpriteMode.BY_AGE, false, true);
 
     private static final Profile WIND_BURST_RING = new Profile(
@@ -105,7 +106,7 @@ public final class ModParticleFactories {
             0.8f, 0.0f, 0.3f,
             0.0f, 1.0f,
             0.0f, 0.0f,
-            0xFFFFF7, 0xD6D8D7,
+            0xFFFFFF, 0xFFFFFF,
             SpriteMode.BY_AGE, false, true);
 
     private static final Profile WIND_ZEPHYR_IMPACT = new Profile(
@@ -114,7 +115,7 @@ public final class ModParticleFactories {
             0.95f, 0.02f, 0.58f,
             0.0f, 0.98f,
             0.0f, 0.0f,
-            0xFFFFF8, 0xC8CDCE,
+            0xFFFFFF, 0xFFFFFF,
             SpriteMode.BY_AGE, false, true);
 
     private static final Profile WIND_SLIPSTREAM = new Profile(
@@ -123,7 +124,7 @@ public final class ModParticleFactories {
             0.72f, 0.03f, 0.58f,
             0.0f, 0.97f,
             0.0f, 0.0f,
-            0xFFFDF2, 0x9EA4A8,
+            0xFFFFFF, 0xFFFFFF,
             SpriteMode.BY_AGE, false, true);
 
     private static final Profile WIND_SHEAR_FEATHER = new Profile(
@@ -132,7 +133,7 @@ public final class ModParticleFactories {
             0.84f, 0.02f, 0.62f,
             0.035f, 0.96f,
             -0.055f, 0.055f,
-            0xFFFFF7, 0x7E858B,
+            0xFFFFFF, 0xFFFFFF,
             SpriteMode.BY_AGE, false, true);
 
     private static final Profile ARCANE_MOTE = new Profile(
@@ -172,6 +173,8 @@ public final class ModParticleFactories {
                 sprites -> new ElementalParticleFactory(sprites, FIRE_METEOR_WARNING, false, false));
         factories.register(ModParticles.FIRE_METEOR_IMPACT,
                 sprites -> new ElementalParticleFactory(sprites, FIRE_METEOR_IMPACT, false, false));
+        factories.register(ModParticles.GALE_DAGGER_TRAIL,
+                sprites -> (effect,world,x,y,z,dx,dy,dz,random) -> new GaleRingParticle(world,x,y,z,dx,dy,dz,sprites));
         factories.register(ModParticles.WIND_MOTE,
                 sprites -> new ElementalParticleFactory(sprites, WIND_MOTE));
         factories.register(ModParticles.WIND_CRESCENT,

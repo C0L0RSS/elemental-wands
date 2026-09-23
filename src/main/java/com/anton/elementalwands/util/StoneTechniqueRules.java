@@ -6,7 +6,9 @@ import net.minecraft.util.math.MathHelper;
 public final class StoneTechniqueRules {
     public static final String FAULTLINE = "faultline", CHARGE = "stone_charge";
     public static final int FAULT_COOLDOWN = 180, CHARGE_COOLDOWN = 160;
-    public static final int WINDUP = 6, FAULT_ROWS = 10, INTERRUPT = 10, INTERRUPT_GRACE = 40;
+    public static final int WINDUP = 2, FAULT_ROWS = 20, INTERRUPT = 12, INTERRUPT_GRACE = 40;
+    public static final int FAULT_ROWS_PER_TICK = 2;
+    public static final double FAULT_LAUNCH_SPEED = .45;
     public static final int RAMP = 50, MAX_RUN = 100, BRAKE = 6;
     public static final double START_SPEED = .30, TOP_SPEED = .82;
     public static float power(double speed) {

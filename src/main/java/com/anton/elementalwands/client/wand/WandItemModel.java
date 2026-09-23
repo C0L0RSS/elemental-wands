@@ -41,7 +41,14 @@ public final class WandItemModel implements ItemModel {
                                  ItemDisplayContext display,ClientWorld world,HeldItemContext holder,int seed) {
         var client=MinecraftClient.getInstance();
         double time=world==null?0:(world.getTime()+client.getRenderTickCounter().getTickProgress(false))/20.0;
-        var data=new WandRenderer.State(WandMesh.element(affinity(holder,display).name()),time);
+        boolean held = display == ItemDisplayContext.FIRST_PERSON_LEFT_HAND || display == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND
+                || display == ItemDisplayContext.THIRD_PERSON_LEFT_HAND || display == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND;
+        var bite = held && holder != null && holder.getEntity() instanceof PlayerEntity player
+                && (display == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND || display == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND)
+                    == (player.getMainArm() == net.minecraft.util.Arm.RIGHT)
+                && stack.isOf(player.getMainHandStack().getItem())
+                ? com.anton.elementalwands.client.renderer.ThornbiteVisual.forHolder(player, client.getRenderTickCounter().getTickProgress(false)) : null;
+        var data=new WandRenderer.State(WandMesh.element(affinity(holder,display).name()),time,bite);
         state.addModelKey(this);state.addModelKey(data.element());state.markAnimated();
         var layer=state.newLayer();layer.setVertices(()->display==ItemDisplayContext.GUI?WandMesh.GUI_BOUNDS:WandMesh.BOUNDS);
         layer.setSpecialModel(renderer,data);settings.addSettings(layer,display);

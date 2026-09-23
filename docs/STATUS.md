@@ -1,9 +1,36 @@
 # Current status
 
-Reviewed September 21, 2026. This page contains outstanding work, not release history.
+Reviewed September 23, 2026. This page contains outstanding work, not release history.
 It records known verification limits; it is not a fresh installation receipt.
 
-- **Stone techniques:** first versions of Faultline and Juggernaut are present.
+- **Gale Daggers:** Wind now has four spells. Server checks passed for the
+  three-shot burst, fresh aim, damage, deferred/player-owned cooldown, cover,
+  allies and cleanup. Native client checks passed for prepared models, real
+  key/mouse input, held-click suppression and cooldown/HUD synchronization.
+  Daggers now leave a trail of small cloud-white rings. Human Lunar/multiplayer
+  feel and balance remain pending; the fifth Wind spell is still to be designed.
+- **Wind artwork:** bright cloud-white gusts, impact puffs, wings and ability icons
+  replace the dark fractured textures. Native client inspection passed for blade
+  synchronization and target damage, equipped Zephyr wings and landing completion,
+  with screenshots of the HUD, casts, dash trails and landing burst. Human Lunar
+  appearance feedback remains pending. The Wind pressure server fixture now passes with the
+  seven-block primary range, including ordinary-target hits and Guardian checks.
+  Its simulated player now sets head direction explicitly for aimed casts.
+- **Springbloom:** Nature now has five spells. The dedicated-server fixture covers
+  purchases, cooldown, hostile/rim catches, collision, destruction and cleanup,
+  plus planting through forest-floor foliage and restoring covered plants. Partial
+  flowers beside obstacles share a synchronized visual/collision footprint.
+  Native client checks passed for the approved model, real mouse casting, a
+  last-second pod catch, protected landing, and approximately 20.7 blocks upward /
+  14.8 forward with movement held. Human Lunar/co-op feedback on placement,
+  timing and coordinated chaining remains pending.
+- **Thornbite:** Thorn Lash is now a committed single-target flytrap bite. The
+  Nature server fixture passed for combat. The revised visual launches and returns
+  at the wand tip along the hand side; its native client fixture passed with
+  right/left hands, third person, wide FOV and turning during return. Human
+  Lunar/co-op feedback on attack feel, silhouette and balance remains pending.
+- **Stone techniques:** Faultline now reaches 20 blocks at four times its initial
+  speed, with a stronger upward launch and a 0.6-second movement interruption.
   Dedicated-server mechanics and native client movement/render checks cover the
   initial implementation. Human Lunar/co-op feedback is still needed for steering,
   interruption feel, spike appearance, varied terrain and destruction balance.

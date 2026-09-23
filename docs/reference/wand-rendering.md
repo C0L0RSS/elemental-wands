@@ -34,6 +34,22 @@ Glass uses one outward-facing shell, drawn after its contents. Do not add
 coincident transparent shells to simulate reflections. Keep the animated core
 and motes entirely inside the glass across their full movement range.
 
+Thornbite uses the existing Nature workshop palette: bright leaf/root greens,
+pink petals with violet at the jaw base, and golden teeth/healing accents, over
+the same neutral pixel-grain material as the seed and flower models. Its icon
+matches that palette.
+
+Thornbite submits its flytrap and braided stem together from the actual held-wand
+tip transform. The smaller mouth grows out from that socket, takes a curve on the
+casting-hand side toward the committed contact, then shrinks back into the current
+wand tip. Turning or moving cannot leave the returning jaw at the player's eye.
+The client-only projection adapter matches first-person hand and world FOVs;
+GUI, dropped, and offhand wands must not emit the main-hand spell. Third-person
+geometry uses world depth; the first-person hand pass explicitly clips covered
+stem segments and mouths. Near-camera scaling keeps the mouth out of the lens.
+The owning player's culling bounds include the bite so it remains visible when
+the hand is just outside the view. Server hit tests keep their committed aim.
+
 Held wands use the holder's affinity. The affinity attachment synchronizes to
 tracking clients; do not color every remote wand using the local player's state.
 Unheld world items are neutral quartz. GUI holder fallback and per-draw immutable

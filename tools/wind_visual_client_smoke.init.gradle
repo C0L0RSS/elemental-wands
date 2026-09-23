@@ -1,0 +1,51 @@
+// Guided native wind visual scene. The completed world deliberately stays open.
+// ./gradlew -I tools/wind_visual_client_smoke.init.gradle runClient -PhubClientAssets=/path/to/assets
+allprojects {
+    plugins.withId('fabric-loom') {
+        def smokeRoot = layout.buildDirectory.dir('wind-visual-client-smoke').get().asFile
+        def existingAssets = project.findProperty('hubClientAssets')
+        if (existingAssets) {
+            loom.runs.client.vmArg('-Dfabric.dli.config=' + new File(smokeRoot, 'launch.cfg').absolutePath)
+        }
+        tasks.register('windVisualMetadata') {
+            if (existingAssets) dependsOn generateDLIConfig
+            doLast {
+                def metadata = new File(smokeRoot, 'metadata')
+                metadata.mkdirs()
+                new File(metadata, 'fabric.mod.json').text = '''{
+  "schemaVersion": 1, "id": "wind_visual_client_smoke", "version": "1.0.0", "environment": "client",
+  "entrypoints": {"client": ["com.anton.elementalwands.client.WindVisualClientSmoke"]},
+  "depends": {"elementalwands": "*"}
+}'''
+                new File(smokeRoot, 'WIND_VISUAL_PASSED.txt').delete()
+                new File(smokeRoot, 'WIND_VISUAL_FAILED.txt').delete()
+                if (existingAssets) {
+                    def assets = file(existingAssets)
+                    if (!new File(assets, 'indexes/27.json').exists())
+                        throw new GradleException('Existing asset cache needs indexes/27.json')
+                    def launch = file('.gradle/loom-cache/launch.cfg').text
+                    launch = launch.replaceAll(/(?m)(\t--assetIndex\r?\n)\t[^\r\n]+/, { match, prefix -> prefix + '\t27' })
+                    launch = launch.replaceAll(/(?m)(\t--assetsDir\r?\n)\t[^\r\n]+/, { match, prefix -> prefix + '\t' + assets.absolutePath })
+                    new File(smokeRoot, 'launch.cfg').text = launch
+                }
+            }
+        }
+        tasks.register('windVisualJar', Jar) {
+            dependsOn guardianTestClasses, windVisualMetadata
+            archiveFileName = 'wind-visual-client-smoke.jar'
+            destinationDirectory = smokeRoot
+            from sourceSets.guardianTest.output
+            from new File(smokeRoot, 'metadata')
+        }
+        loom.runs.client.runDir('build/wind-visual-client-smoke')
+        loom.runs.client.vmArg('-Dfabric.addMods=' + new File(smokeRoot, 'wind-visual-client-smoke.jar').absolutePath)
+        tasks.named('runClient') {
+            dependsOn windVisualJar
+            doLast {
+                if (!new File(smokeRoot, 'WIND_VISUAL_PASSED.txt').exists()
+                        || new File(smokeRoot, 'WIND_VISUAL_FAILED.txt').exists())
+                    throw new GradleException('Wind visual check failed; inspect build/wind-visual-client-smoke/logs/latest.log')
+            }
+        }
+    }
+}

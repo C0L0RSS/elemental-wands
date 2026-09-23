@@ -35,7 +35,7 @@ public final class StoneTechniqueClientSmoke implements ClientModInitializer {
             if(!started) {
                 started=true;c.options.pauseOnLostFocus=false;
                 c.createIntegratedServerLoader().createAndStart("stone-technique-"+System.currentTimeMillis(),
-                        new LevelInfo("Stone techniques verification",GameMode.SURVIVAL,false,Difficulty.NORMAL,true,
+                        new LevelInfo("Stone techniques verification",GameMode.SURVIVAL,false,Difficulty.PEACEFUL,true,
                                 new GameRules(FeatureFlags.DEFAULT_ENABLED_FEATURES),DataConfiguration.SAFE_MODE),
                         new GeneratorOptions(812L,false,false),WorldPresets::createTestOptions,null);return;
             }
@@ -67,15 +67,15 @@ public final class StoneTechniqueClientSmoke implements ClientModInitializer {
             }
             if(t==60)server.execute(()->chargeStarted=StoneChargeManager.active(server.getPlayerManager().getPlayer(uuid)));
             if(t==75)require(chargeStarted && c.player.getZ()>startZ+4,"Native client charge did not move: "+c.player.getEntityPos());
-            if(t==108)server.execute(()->chargeFull=StoneChargeManager.speed(server.getPlayerManager().getPlayer(uuid))>=.80);
-            if(t==110){require(chargeFull,"Native charge never reached full speed");jumpZ=c.player.getZ();c.options.jumpKey.setPressed(true);}
-            if(t==112)c.options.jumpKey.setPressed(false);
+            if(t==113)server.execute(()->chargeFull=StoneChargeManager.speed(server.getPlayerManager().getPlayer(uuid))>=.80);
+            if(t==115){require(chargeFull,"Native charge never reached full speed");jumpZ=c.player.getZ();c.options.jumpKey.setPressed(true);}
+            if(t==117)c.options.jumpKey.setPressed(false);
             if(t>=110 && t<137) {
                 peak=Math.max(peak,c.player.getY()-floor);
                 if(!c.player.isOnGround())airborne=true;
                 if(airborne && c.player.isOnGround() && !landed){landed=true;jumpDistance=c.player.getZ()-jumpZ;}
             }
-            if(t==116)screenshot(c,"stone-charge-leap.png");
+            if(t==121)screenshot(c,"stone-charge-leap.png");
             if(t==137) {
                 require(airborne && landed && peak>1 && peak<1.5,"Jump height/landing changed: "+peak);
                 require(jumpDistance>7 && jumpDistance<12,"Leap distance outside expected range: "+jumpDistance);
@@ -91,7 +91,7 @@ public final class StoneTechniqueClientSmoke implements ClientModInitializer {
             if(t==171)WandControls.input(false,GLFW.GLFW_KEY_Z,GLFW.GLFW_RELEASE);
             if(t>=172 && t<204) {
                 for(var entity:c.world.getEntities())if(entity instanceof FaultlineSpikeEntity)sawSpikes=true;
-                if(t==183)screenshot(c,"stone-faultline-wave.png");
+                if(t==179)screenshot(c,"stone-faultline-wave.png");
             }
             if(t==211) {
                 require(sawSpikes,"Native client never received spike models");

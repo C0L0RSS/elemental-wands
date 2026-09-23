@@ -31,6 +31,24 @@ public final class EWAttachments {
             Identifier.of("elementalwands", "fire_build_state"), builder -> builder.initializer(NbtCompound::new)
                     .persistent(NbtCompound.CODEC).copyOnDeath());
 
+    public static final AttachmentType<Boolean> SPRINGBLOOM_FLIGHT = AttachmentRegistry.create(
+            Identifier.of("elementalwands", "springbloom_flight"), builder -> builder.initializer(() -> false)
+                    .syncWith(net.minecraft.network.codec.PacketCodecs.BOOLEAN,
+                            net.fabricmc.fabric.api.attachment.v1.AttachmentSyncPredicate.all()));
+    public static final AttachmentType<Long> SPRINGBLOOM_READY = AttachmentRegistry.create(
+            Identifier.of("elementalwands", "springbloom_ready"), builder -> builder.initializer(() -> 0L)
+                    .persistent(Codec.LONG).copyOnDeath());
+
+    public static final AttachmentType<Long> GALE_LAST_LAUNCH = AttachmentRegistry.create(
+            Identifier.of("elementalwands", "gale_last_launch"), builder -> builder.initializer(() -> -1_000_000_000L)
+                    .persistent(Codec.LONG).copyOnDeath()
+                    .syncWith(net.minecraft.network.codec.PacketCodecs.VAR_LONG,
+                            net.fabricmc.fabric.api.attachment.v1.AttachmentSyncPredicate.all()));
+    public static final AttachmentType<Integer> GALE_PREPARED = AttachmentRegistry.create(
+            Identifier.of("elementalwands", "gale_prepared"), builder -> builder.initializer(() -> 0)
+                    .syncWith(net.minecraft.network.codec.PacketCodecs.VAR_INT,
+                            net.fabricmc.fabric.api.attachment.v1.AttachmentSyncPredicate.all()));
+
     public static final int SKILL_SECONDARY = 1;
     public static final int SKILL_ULTIMATE  = 2;
 

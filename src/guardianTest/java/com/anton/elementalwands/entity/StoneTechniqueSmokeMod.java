@@ -20,7 +20,10 @@ import net.minecraft.util.math.*;
 /** Real-world damage, movement state, terrain permissions and lifecycle regression fixture. */
 public final class StoneTechniqueSmokeMod implements ModInitializer {
     private int tick;private ServerPlayerEntity caster,victim;private float health;private boolean chargedHit;
-    private double airSpeed;
+    private double airSpeed, launchedPeak;
+    private net.minecraft.entity.mob.ZombieEntity farMob;
+    private ServerPlayerEntity beyond;
+    private int farHitTick=-1;
     private ServerPlayerEntity rooted,swapped,dead,ceiling;
     private static void require(boolean value,String message) { if(!value)throw new AssertionError(message); }
     public void onInitialize() {
@@ -46,12 +49,35 @@ public final class StoneTechniqueSmokeMod implements ModInitializer {
             require(StoneTechniqueRules.power(.3)==0 && StoneTechniqueRules.power(.82)>.999,"Wrong charge power bounds");
             require(Math.abs(StoneTechniqueRules.turn(0,90,.82,true))<2,"Full-speed turn not constrained");
             surfaceChecks(world);
+            farMob=new net.minecraft.entity.mob.ZombieEntity(net.minecraft.entity.EntityType.ZOMBIE,world);
+            farMob.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED).setBaseValue(0);farMob.refreshPositionAndAngles(.5,101,19.5,0,0);
+            farMob.getAttributeInstance(EntityAttributes.MAX_HEALTH).setBaseValue(200);farMob.setHealth(200);
+            farMob.equipStack(EquipmentSlot.HEAD,new ItemStack(net.minecraft.item.Items.CARVED_PUMPKIN));
+            world.spawnEntity(farMob);
+            beyond=player(server,"BeyondFaultline",.5,101,22.5);beyond.setNoGravity(true);beyond.setLoaded(true);
+        }
+        if(farMob!=null && tick>30 && tick<65) {
+            launchedPeak=Math.max(launchedPeak,farMob.getY()-101);
+            if(farMob.getHealth()<200 && farHitTick<0) {
+                farHitTick=tick;
+                require(((StoneMotionAccess)farMob).elementalwands$stoneInterrupted(),"Distant mob was not interrupted");
+                require(farMob.getVelocity().y>.2,"Distant mob did not receive upward velocity: "+farMob.getVelocity());
+            }
+            if(farHitTick>0 && tick==farHitTick+10)
+                require(((StoneMotionAccess)farMob).elementalwands$stoneInterrupted(),"Interrupt ended prematurely");
+            if(farHitTick>0 && tick==farHitTick+12)
+                require(!((StoneMotionAccess)farMob).elementalwands$stoneInterrupted(),"Interrupt exceeded 0.6 seconds");
         }
         if(tick==65) {
+            require(farHitTick>30 && farHitTick<=42,"20-block shockwave too slow or missed: "+farHitTick);
+            require(launchedPeak>1 && launchedPeak<1.8,"Mob launch height not noticeable/controlled: "+launchedPeak);
+            require(Math.abs(200-farMob.getHealth()-4)<.1,"Distant mob took repeated or unexpected damage");
+            require(beyond.getHealth()==20,"Faultline exceeded its range");
+            farMob.discard();beyond.setPosition(15,101,100);
             require(Math.abs(health-victim.getHealth()-4)<.1,"Wave did not damage exactly once: "+(health-victim.getHealth()));
-            require(!((StoneMotionAccess)victim).elementalwands$stoneInterrupted(),"Half-second interrupt failed to expire");
+            require(!((StoneMotionAccess)victim).elementalwands$stoneInterrupted(),"Movement interrupt failed to expire");
             require(world.getEntitiesByClass(FaultlineSpikeEntity.class,new Box(-15,95,-10,20,110,20),e->true).isEmpty(),"Spikes failed to crumble");
-            for(int z=0;z<11;z++)require(world.getBlockState(new BlockPos(0,100,z)).isOf(Blocks.STONE),"Wave changed terrain");
+            for(int z=0;z<21;z++)require(world.getBlockState(new BlockPos(0,100,z)).isOf(Blocks.STONE),"Wave changed terrain");
             destructionChecks(world);
         }
         if(tick==75) {
@@ -123,8 +149,8 @@ public final class StoneTechniqueSmokeMod implements ModInitializer {
             require(!StoneChargeManager.active(rooted) && !StoneChargeManager.active(swapped) && !StoneChargeManager.active(dead),"Root, item change or death leaked charge");
             require(!StoneChargeManager.active(ceiling),"Ceiling collision did not end charge");
             require(world.getBlockState(new BlockPos(-6,103,60)).isOf(Blocks.OAK_PLANKS),"Ceiling collision broke blocks");
-            Files.writeString(Path.of("STONE_PASSED.txt"),"PASS: five-slot catalog, Faultline single damage/crumble/interrupt, water/leaves/cover, material budget and shielded blocks, containers and tracked terrain, grounded acceleration, direct impact, damage continuation, fresh-wand recovery, airborne pause, slowness, explicit interrupt/grace braking, full-speed knockback resistance, root/item/death cleanup and ceiling stop.\n");
-            System.out.println("STONE TECHNIQUES SERVER CHECKS PASSED");server.stop(false);
+            Files.writeString(Path.of("STONE_PASSED.txt"),"PASS: five-slot catalog, 20-block fast Faultline, single damage/crumble, real mob upward launch and 0.6s interrupt, water/leaves/cover, material budget and shielded blocks, containers and tracked terrain, grounded acceleration, direct impact, damage continuation, fresh-wand recovery, airborne pause, slowness, explicit interrupt/grace braking, full-speed knockback resistance, root/item/death cleanup and ceiling stop.\n");
+            System.out.println("STONE TECHNIQUES SERVER CHECKS PASSED; Faultline launch peak="+launchedPeak+", distant hit after "+(farHitTick-30)+" ticks");server.stop(false);
         }
     }
     private ServerPlayerEntity readyPlayer(MinecraftServer server,String name,double x,double z)throws Exception {

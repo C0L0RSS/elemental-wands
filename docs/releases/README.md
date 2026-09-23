@@ -5,6 +5,10 @@ are not claims of public publication. Older entries describe what changed then;
 use [current guides](../README.md) for today’s behavior and [status](../STATUS.md)
 for outstanding verification. Detailed historical reports are optional background.
 
+- [2026-09-23 — Wind: Gale Daggers](2026-09-23-wind.md)
+- [2026-09-22 — Cloud-white Wind](2026-09-22-wind.md)
+- [2026-09-22 — Faster Faultline](2026-09-22-stone.md)
+- [2026-09-22 — Nature: Thornbite and Springbloom](2026-09-22.md)
 - [2026-09-21 — Stone techniques](2026-09-21.md)
 - [2026-09-17 — 3D wands and flexible loadouts](2026-09-17.md)
 - [2026-09-16 — Easier Fire Leap aiming](2026-09-16.md)

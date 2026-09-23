@@ -22,8 +22,10 @@ public final class WandSpells {
         public String iconPath() { return "textures/gui/ability/" + affinity.name().toLowerCase(Locale.ROOT)
                 + "_" + ability.name().toLowerCase(Locale.ROOT) + ".png"; }
         public String timing() {
+            if (id.equals("gale_daggers")) return "Cooldown: 12s after firing";
             if (id.equals("faultline")) return "Cooldown: 9s";
             if (id.equals("stone_charge")) return "Hold to run / Recovery: 8s";
+            if (id.equals("springbloom")) return "Cooldown: 10s";
             if (id.equals("thorn_lash")) return "Cooldown: 1s";
             if (id.equals("flamethrower")) return "Heat: 4s to overheat";
             if (id.equals("flashover")) return "Per bomb: blast 6s / lost 2s";
@@ -44,9 +46,12 @@ public final class WandSpells {
         }
         public String reach() {
             return switch(id) {
-                case "faultline" -> "Range: 10 / Brief movement interrupt";
+                case "gale_daggers" -> "40 blocks / 3 x 5 damage";
+                case "sky_shear" -> "Range: 7 blocks";
+                case "faultline" -> "Range: 20 / Launch + 0.6s interrupt";
                 case "stone_charge" -> "Full speed: 2.5s / Max run: 5s";
                 case "overgrowth" -> "Tree: 15s / with flower: 20s";
+                case "springbloom" -> "4s pad / ~20 up, 15 forward";
                 case "thorn_lash" -> "Range 4.5 / Max heal 1 heart";
                 case "flamethrower" -> "Range: 6 blocks";
                 case "flashover" -> "3 embers / blast: 4 blocks";
@@ -75,17 +80,21 @@ public final class WandSpells {
         spell(WizardAffinity.WIND, Ability.PRIMARY, "sky_shear", "Sky Shear", "Release three cutting crescents in a narrow fan ahead of you."),
         spell(WizardAffinity.WIND, Ability.SECONDARY, "waylay_dash", "Waylay Dash", "Dash to reposition. Two charges recover individually over time."),
         spell(WizardAffinity.WIND, Ability.ULTIMATE, "zephyr_strike", "Zephyr Strike", "Take flight with temporary wings, then deliver a powerful landing impact."),
+        new Spell("gale_daggers", WizardAffinity.WIND, Ability.SECONDARY, "Gale Daggers",
+                "Ready 3 daggers. Press again or primary fire to burst. Aim each shot; recovery starts on firing.", 500),
         spell(WizardAffinity.STONE, Ability.PRIMARY, "gathered_mass", "Gathered Mass", "Aim down to gather stone. Aim forward to throw your reserve."),
         spell(WizardAffinity.STONE, Ability.SECONDARY, "stone_wall", "Stone Wall", "Raise cover. Cast again near your active wall to shatter it forward."),
         spell(WizardAffinity.STONE, Ability.ULTIMATE, "titan_dome", "Titan Dome", "Invoke the Titan Dome and its protective stone power."),
         new Spell("faultline", WizardAffinity.STONE, Ability.SECONDARY, "Faultline",
-                "Send a broad wave of stone spikes forward. Briefly interrupt enemies as the spikes crumble.", 500),
+                "Send a fast wave of stone spikes forward. Launch enemies and briefly interrupt movement as the spikes crumble.", 500),
         new Spell("stone_charge", WizardAffinity.STONE, Ability.SECONDARY, "Juggernaut",
                 "Hold to charge with heavy steering. Build speed for a crushing impact and a long running leap. Release to brake.", 500),
         spell(WizardAffinity.NATURE, Ability.PRIMARY, "seed", "Seed", "Launch a winged seed to strike an enemy or plant a growing flower."),
-        new Spell("thorn_lash", WizardAffinity.NATURE, Ability.PRIMARY, "Thorn Lash",
-                "Sweep a thorny vine. Heal 50% of health damage dealt, up to one heart per cast.", 500),
+        new Spell("thorn_lash", WizardAffinity.NATURE, Ability.PRIMARY, "Thornbite",
+                "Snap a flytrap forward at one foe. Heal 50% of health damage, up to one heart.", 500),
         spell(WizardAffinity.NATURE, Ability.SECONDARY, "tendril_bloom", "Tendril Bloom", "Send vines from flowers, or three from a root knot when none exist. Break a source to end its brambles."),
+        spell(WizardAffinity.NATURE, Ability.SECONDARY, "springbloom", "Springbloom",
+                "Throw a jump flower. Land on it to launch safely. Anyone can use or break it."),
         spell(WizardAffinity.NATURE, Ability.ULTIMATE, "overgrowth", "Overgrowth", "Throw an acorn to grow a healing oak. One nearby flower extends its duration."),
         spell(WizardAffinity.SPACE, Ability.PRIMARY, "singularity_bolt", "Singularity Bolt", "Launch a black star with subtle guidance and a damaging impact burst."),
         spell(WizardAffinity.SPACE, Ability.SECONDARY, "blink_rift", "Blink Rift", "Blink to a safe location, leaving a rift you can use to return."),

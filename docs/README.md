@@ -3,18 +3,18 @@
 Start with [AGENT.md](../AGENT.md) for repository working rules. Read the relevant
 current guide below; there is no requirement to read this whole folder.
 
-| I want to understand… | Current reference |
-| --- | --- |
-| What still needs attention | [Current status](STATUS.md) |
-| Slots, controls, store, levels, spell books, parties | [Progression and controls](reference/progression-and-controls.md) |
-| What each element does and which code owns it | [Spells](reference/spells.md) |
-| The 3D wand and its animated elemental glass | [Wand rendering](reference/wand-rendering.md) |
-| Visual style and which assets are safe to regenerate | [Art and assets](reference/art-and-assets.md) |
-| Guardian combat and animation constraints | [Guardian combat](reference/guardian-combat.md) |
-| Churches, rituals, arena returns and saved-world recovery | [Church and arena](reference/church-and-arena.md) |
-| How automated Minecraft previews and checks work | [Testing](reference/testing.md) |
-| Short summaries of player-facing changes | [Releases](releases/README.md) |
-| Why an old decision was made or how a bug was verified | [Historical archive](archive/README.md) |
+| I want to understand…                                     | Current reference                                                 |
+| --------------------------------------------------------- | ----------------------------------------------------------------- |
+| What still needs attention                                | [Current status](STATUS.md)                                       |
+| Slots, controls, store, levels, spell books, parties      | [Progression and controls](reference/progression-and-controls.md) |
+| What each element does and which code owns it             | [Spells](reference/spells.md)                                     |
+| The 3D wand and its animated elemental glass              | [Wand rendering](reference/wand-rendering.md)                     |
+| Visual style and which assets are safe to regenerate      | [Art and assets](reference/art-and-assets.md)                     |
+| Guardian combat and animation constraints                 | [Guardian combat](reference/guardian-combat.md)                   |
+| Churches, rituals, arena returns and saved-world recovery | [Church and arena](reference/church-and-arena.md)                 |
+| How automated Minecraft previews and checks work          | [Testing](reference/testing.md)                                   |
+| Short summaries of player-facing changes                  | [Releases](releases/README.md)                                    |
+| Why an old decision was made or how a bug was verified    | [Historical archive](archive/README.md)                           |
 
 ## Keeping this useful
 

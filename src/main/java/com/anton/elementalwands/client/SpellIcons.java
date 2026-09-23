@@ -10,7 +10,18 @@ public final class SpellIcons {
     public static void draw(DrawContext ctx, WandSpells.Spell spell, int x, int y, int size) {
         if (spell==null || spell.affinity()==WizardAffinity.NONE) return;
         ctx.getMatrices().pushMatrix();ctx.getMatrices().translate(x,y);ctx.getMatrices().scale(size/32f,size/32f);
-        if (spell.id().equals("faultline")) {
+        if (spell.id().equals("gale_daggers")) {
+            for(int i=0;i<3;i++) {
+                int x0=6+i*10, tip=i==1?1:5;
+                for(int y0=tip;y0<21;y0++) {
+                    int half=Math.min(2,(y0-tip)/3);
+                    ctx.fill(x0-half,y0,x0+half+1,y0+1,0xFFBCCBD0);
+                    ctx.fill(x0,y0,x0+1,y0+1,0xFFF8FAF7);
+                }
+                ctx.fill(x0-3,21,x0+4,23,0xFFD8E2E4);
+                ctx.fill(x0-1,23,x0+2,29,0xFF98AAB4);ctx.fill(x0-1,29,x0+2,31,0xFFE8EEED);
+            }
+        } else if (spell.id().equals("faultline")) {
             for (int i=0;i<3;i++) {
                 int base=3+i*10, tip=i==1?3:10;
                 for(int row=tip;row<27;row++) {
@@ -31,14 +42,26 @@ public final class SpellIcons {
             ctx.fill(10,17,17,22,0xFF9CAD9E);ctx.fill(20,10,25,14,0xFF899A90);
             ctx.fill(18,18,25,23,0xFF899A90);ctx.fill(26,13,29,21,0xFFB5C3B7);
             ctx.fill(29,15,31,19,0xFFCED6C6);ctx.fill(15,8,17,10,0xFFE0E3CF);
+        } else if (spell.id().equals("springbloom")) {
+            for(int px=3;px<29;px+=5){ctx.fill(px,23,px+5,28,0xFF30B821);ctx.fill(px+1,21,px+4,26,0xFF78E330);}
+            ctx.fill(3,20,29,24,0xFF9945DB);ctx.fill(5,18,27,23,0xFFF0338F);
+            for(int row=0;row<10;row++){int half=6+row/2;ctx.fill(16-half,9+row,16+half,10+row,row<4?0xFFFFD64C:0xFFFFCC26);}
+            ctx.fill(11,9,18,11,0xFFFFED82);
         } else if (spell.id().equals("thorn_lash")) {
-            for (int i=0;i<23;i++) {
-                int px=4+i, py=24-(int)(17*Math.sin(i/22.0*Math.PI*.8));
-                ctx.fill(px,py,px+3,py+4,0xFF254D28);
-                ctx.fill(px,py,px+2,py+2,0xFF8DBD5C);
-                if(i%5==0) {ctx.fill(px,py-3,px+2,py,0xFFBFA97A);ctx.fill(px+1,py-4,px+2,py-2,0xFFE2D7A4);}
+            // Three twined stems beneath an open, toothed flytrap.
+            for(int row=17;row<31;row++) for(int strand=0;strand<3;strand++) {
+                int px=13+strand*2+(int)Math.round(Math.sin(row*.6+strand*2));
+                ctx.fill(px,row,px+2,row+1,strand==1?0xFF78E330:0xFF2E851A);
             }
-            ctx.fill(3,25,8,29,0xFF75603E);ctx.fill(4,25,6,28,0xFFB69D68);
+            for(int side:new int[]{-1,1}) for(int row=0;row<13;row++) {
+                int width=3+(int)(5*Math.sin(row/12.0*Math.PI));
+                int center=16+side*(7-row/3);
+                ctx.fill(center-width/2,4+row,center+width/2+1,5+row,0xFF30B821);
+                ctx.fill(center-width/2+1,5+row,center+width/2,6+row,0xFF78E330);
+                int inner=center-side*(width/2-1);
+                ctx.fill(inner-1,5+row,inner+2,6+row,row<3?0xFF9945DB:0xFFF0338F);
+                if(row%3==0)ctx.fill(inner+(side<0?1:-3),4+row,inner+(side<0?4:0),5+row,0xFFFFCC26);
+            }
         } else if (spell.id().equals("flamethrower")) {
             ctx.getMatrices().pushMatrix();ctx.getMatrices().translate(31,1);ctx.getMatrices().rotate((float)(Math.PI/2));
             glyph(ctx,spell,0,0,29);ctx.getMatrices().popMatrix();

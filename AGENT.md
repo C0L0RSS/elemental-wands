@@ -90,6 +90,7 @@ python3 tools/prepare_guardian_throw_socket.py --check
 python3 tools/prepare_guardian_pedestal.py --check
 python3 tools/prepare_nature_expansion.py --check
 node tools/prepare_nature_models.mjs --check
+node tools/prepare_springbloom.mjs --check
 python3 tools/prepare_wand_hub_assets.py --check
 python3 tools/prepare_wand_assets.py --check
 unzip -t build/libs/elementalwands-2.2.0.jar

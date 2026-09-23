@@ -34,7 +34,7 @@ public final class GaleDaggersServerSmoke implements ModInitializer {
             WandProgression.earn(owner,WizardAffinity.WIND,500);WandProgression.purchase(owner,"WIND",GaleDaggers.ID);
             require(WandProgression.owns(owner,WandSpells.find(GaleDaggers.ID)),"Purchase failed");
             WandLoadouts.equip(owner,"WIND",3,GaleDaggers.ID);owner.setYaw(0);owner.setPitch(0);
-            require(WandSpells.forAffinity(WizardAffinity.WIND).size()==4,"Wrong Wind spell count");
+            require(WandSpells.forAffinity(WizardAffinity.WIND).size()>=5,"Missing Wind spells");
             require(WindFanRules.RANGE==7 && WindFanRules.damage(0)==7 && WindFanRules.damage(7)==4,"Primary range/falloff mismatch");
         }
         if(owner==null)return;

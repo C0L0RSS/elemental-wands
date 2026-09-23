@@ -22,6 +22,7 @@ public final class WandSpells {
         public String iconPath() { return "textures/gui/ability/" + affinity.name().toLowerCase(Locale.ROOT)
                 + "_" + ability.name().toLowerCase(Locale.ROOT) + ".png"; }
         public String timing() {
+            if (id.equals("updraft")) return "Cooldown: 8s";
             if (id.equals("gale_daggers")) return "Cooldown: 12s after firing";
             if (id.equals("faultline")) return "Cooldown: 9s";
             if (id.equals("stone_charge")) return "Hold to run / Recovery: 8s";
@@ -46,6 +47,7 @@ public final class WandSpells {
         }
         public String reach() {
             return switch(id) {
+                case "updraft" -> "Rise: ~10 blocks";
                 case "gale_daggers" -> "40 blocks / 3 x 5 damage";
                 case "sky_shear" -> "Range: 7 blocks";
                 case "faultline" -> "Range: 20 / Launch + 0.6s interrupt";
@@ -82,6 +84,8 @@ public final class WandSpells {
         spell(WizardAffinity.WIND, Ability.ULTIMATE, "zephyr_strike", "Zephyr Strike", "Take flight with temporary wings, then deliver a powerful landing impact."),
         new Spell("gale_daggers", WizardAffinity.WIND, Ability.SECONDARY, "Gale Daggers",
                 "Ready 3 daggers. Press again or primary fire to burst. Aim each shot; recovery starts on firing.", 500),
+        new Spell("updraft", WizardAffinity.WIND, Ability.SECONDARY, "Updraft",
+                "Launch upward with normal air control. Cast on the ground or in midair; land safely.", 500),
         spell(WizardAffinity.STONE, Ability.PRIMARY, "gathered_mass", "Gathered Mass", "Aim down to gather stone. Aim forward to throw your reserve."),
         spell(WizardAffinity.STONE, Ability.SECONDARY, "stone_wall", "Stone Wall", "Raise cover. Cast again near your active wall to shatter it forward."),
         spell(WizardAffinity.STONE, Ability.ULTIMATE, "titan_dome", "Titan Dome", "Invoke the Titan Dome and its protective stone power."),

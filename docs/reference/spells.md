@@ -55,8 +55,29 @@ Owners: `FireAbilityHandler`, `FireBuildManager`/`FireBuildRules`,
 Sky Shear fires a short three-crescent fan centered on the crosshair, with a
 strict seven-block range limit, damage falling from 7 to 4, and one hit per enemy
 per cast. Waylay Dash has two separately
-recovering charges. Zephyr Strike temporarily equips wings, launches the player,
+recovering charges (five seconds per charge). Its base and chained movement
+impulses are 75% of their former strength: 1.5 base and 1.875 for the second
+chained dash. Existing momentum, aim, collisions and terrain still affect total
+travel. Zephyr Strike temporarily equips wings, launches the player,
 and creates a landing impact before restoring their chest equipment.
+
+Updraft (`updraft`, 500 Flux) applies a single vertical launch (~10 blocks of rise
+in clear space), retaining current horizontal momentum and vanilla air control.
+It can launch from the ground or midair. One charge recovers in eight seconds
+from activation, with per-player recovery preserved across wand changes, death
+and reconnects, plus the shared spell cooldown/Entangle rules. It requires a
+fresh press, so holding its input does not automatically launch again.
+
+The caster remains free to attack, fire prepared daggers and use Waylay Dash.
+Updraft grants fall protection only until the first landing, without slowing the
+fall or reducing combat damage. Walls and ceilings retain normal collision.
+Water/lava contact, climbing, mounting, flight/gliding, death, affinity/world exit,
+disconnect and encounter exclusion end its transient flight state. Putting away
+the wand does not remove the current jump's safe landing. Twenty white smoke
+puffs expand radially from the launch point near the floor (or at the feet for
+midair casts), with a short rising Wind spiral. Owners: `UpdraftManager`,
+`UpdraftFallMixin`, and the vertical-only `UpdraftLaunchPayload`; the owning client
+preserves its live X/Z velocity rather than receiving stale server components.
 
 Gale Daggers (`gale_daggers`, 500 Flux) prepares three pearl-white daggers above
 and beside the head, with the center higher and all tips facing forward. Press

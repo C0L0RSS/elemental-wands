@@ -85,6 +85,7 @@ public final class WandLoadouts {
             if (spell.id().equals("fire_hop")) return; // Aimed release uses FireLeapCommitPayload.
             FireBuildManager.stop(player);
             markCombat(player);
+            if (spell.id().equals(UpdraftManager.ID)) { if(deliberate)UpdraftManager.cast(player); return; }
             if (spell.id().equals(GaleDaggers.ID)) { if(deliberate)GaleDaggers.cast(player); return; }
             if (spell.id().equals("faultline")) { FaultlineManager.cast(player); return; }
             if (spell.id().equals("stone_charge")) { StoneChargeManager.start(player); return; }

@@ -45,6 +45,7 @@ public final class ModNetworking {
         PayloadTypeRegistry.playC2S().register(StoneChargeHoldPayload.ID, StoneChargeHoldPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(StoneMotionPayload.ID, StoneMotionPayload.CODEC);
         // S2C
+        PayloadTypeRegistry.playS2C().register(UpdraftLaunchPayload.ID, UpdraftLaunchPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncPlayerDataPayload.ID, SyncPlayerDataPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(HubFeedbackPayload.ID, HubFeedbackPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(WelcomePayload.ID, WelcomePayload.CODEC);
@@ -175,6 +176,13 @@ public final class ModNetworking {
         public static final PacketCodec<RegistryByteBuf,StoneStaggerPayload> CODEC = PacketCodec.tuple(
                 PacketCodecs.INTEGER,StoneStaggerPayload::entityId,
                 PacketCodecs.INTEGER,StoneStaggerPayload::ticks,StoneStaggerPayload::new);
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
+
+    public record UpdraftLaunchPayload() implements CustomPayload {
+        public static final UpdraftLaunchPayload INSTANCE = new UpdraftLaunchPayload();
+        public static final Id<UpdraftLaunchPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID, "updraft_launch"));
+        public static final PacketCodec<RegistryByteBuf, UpdraftLaunchPayload> CODEC = PacketCodec.unit(INSTANCE);
         @Override public Id<? extends CustomPayload> getId() { return ID; }
     }
 

@@ -76,6 +76,11 @@ public class ElementalWandsClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.SPRINGBLOOM,com.anton.elementalwands.client.renderer.SpringbloomRenderer::new);
         EntityRendererRegistry.register(ModEntities.OVERGROWTH_SEED,com.anton.elementalwands.client.renderer.OvergrowthSeedRenderer::new);
         EntityRendererRegistry.register(ModEntities.FAULTLINE_SPIKE,com.anton.elementalwands.client.renderer.FaultlineSpikeRenderer::new);
+        ClientPlayNetworking.registerGlobalReceiver(ModNetworking.UpdraftLaunchPayload.ID, (payload, context) -> {
+            var p = context.player();
+            p.setVelocity(com.anton.elementalwands.util.UpdraftManager.launch(p.getVelocity()));
+            p.setOnGround(false); p.fallDistance = 0;
+        });
         ClientPlayNetworking.registerGlobalReceiver(ModNetworking.StoneMotionPayload.ID, (payload, context) -> {
             if (context.client().world == null) return;
             var entity = context.client().world.getEntityById(payload.entityId());

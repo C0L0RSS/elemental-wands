@@ -43,6 +43,7 @@ public class SingularityBoltEntity extends ProjectileEntity {
 
     private Vec3d startPos;
     private Vec3d launchDirection;
+    private com.anton.elementalwands.util.SpellCastVisuals.Wake wake = com.anton.elementalwands.util.SpellCastVisuals.Wake.NONE;
     private LivingEntity guidanceTarget;
     private boolean guidanceAttempted;
     private boolean guidanceFinished;
@@ -64,6 +65,7 @@ public class SingularityBoltEntity extends ProjectileEntity {
         Vec3d direction = owner.getRotationVec(1.0f).normalize();
         launchDirection = direction;
         setVelocity(direction.multiply(PROJECTILE_SPEED));
+        wake = com.anton.elementalwands.util.SpellCastVisuals.Wake.from(owner, spawnPos, direction);
     }
 
     private boolean protectsAlly(Entity target) {
@@ -363,17 +365,18 @@ public class SingularityBoltEntity extends ProjectileEntity {
                 : new Vec3d(0.0, 0.0, 1.0);
 
         Vec3d velocity = getVelocity();
-        spawnDirected(world, ModParticles.SPACE_SINGULARITY, center, velocity);
+        Vec3d shown = wake.at(center);
+        spawnDirected(world, ModParticles.SPACE_SINGULARITY, shown, velocity);
         if (age % 2 == 0) {
-            spawnDirected(world, ModParticles.SPACE_BROKEN_ORBIT, center, velocity);
+            spawnDirected(world, ModParticles.SPACE_BROKEN_ORBIT, shown, velocity);
         }
 
         for (int i = 0; i < 5; i++) {
             double distance = 0.75 + i * 0.38;
             double phase = age * 0.7 + i * 2.19;
-            Vec3d point = center.subtract(direction.multiply(distance))
-                    .add(Math.cos(phase) * 0.20, Math.sin(phase * 1.3) * 0.20, Math.sin(phase) * 0.20);
-            Vec3d inward = center.subtract(point).normalize().multiply(0.13 + i * 0.012);
+            Vec3d point = wake.at(center.subtract(direction.multiply(distance))
+                    .add(Math.cos(phase) * 0.20, Math.sin(phase * 1.3) * 0.20, Math.sin(phase) * 0.20));
+            Vec3d inward = shown.subtract(point).normalize().multiply(0.13 + i * 0.012);
             spawnDirected(world, i % 2 == 0 ? ModParticles.SPACE_CONSUMPTION : ModParticles.SPACE_MOTE,
                     point, inward);
         }

@@ -35,6 +35,8 @@ public class SeedProjectileEntity extends ProjectileEntity {
     private static final int MAX_LIFETIME_TICKS = 100;
 
     private int ticksAlive;
+    private com.anton.elementalwands.util.SpellCastVisuals.Wake wake =
+            com.anton.elementalwands.util.SpellCastVisuals.Wake.NONE;
 
     public SeedProjectileEntity(EntityType<? extends SeedProjectileEntity> type, World world) {
         super(type, world);
@@ -51,6 +53,7 @@ public class SeedProjectileEntity extends ProjectileEntity {
 
         Vec3d dir = owner.getRotationVec(1.0f).normalize();
         setVelocity(dir.multiply(INITIAL_SPEED));
+        wake = com.anton.elementalwands.util.SpellCastVisuals.Wake.from(owner, eye, dir);
     }
 
     private boolean protectsAlly(Entity target) {
@@ -78,11 +81,12 @@ public class SeedProjectileEntity extends ProjectileEntity {
 
         // The renderer supplies the readable winged-seed silhouette. These restrained custom
         // motes make its direction legible without hiding the detailed sprite in a vanilla cloud.
+        Vec3d shown = wake.at(getEntityPos());
         sw.spawnParticles(ModParticles.NATURE_POLLEN,
-                getX(), getY(), getZ(), 2, 0.09, 0.07, 0.09, 0.008);
+                shown.x, shown.y, shown.z, 2, 0.09, 0.07, 0.09, 0.008);
         if ((ticksAlive & 1) == 0) {
             sw.spawnParticles(ModParticles.NATURE_LEAF,
-                    getX(), getY(), getZ(), 1, 0.035, 0.035, 0.035, 0.0);
+                    shown.x, shown.y, shown.z, 1, 0.035, 0.035, 0.035, 0.0);
         }
 
         HitResult hit = ProjectileUtil.getCollision(this, this::canHit);

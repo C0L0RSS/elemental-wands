@@ -94,7 +94,9 @@ public class UniversalWandItem extends AbstractWandItem {
         }
 
         // Draw the fractured beam with the shared original arcane texture family.
-        spawnParticleLine(world, start, end, ModParticles.ARCANE_THREAD);
+        // The drawn beam leaves the wand tip; the hit above still uses the eye-line raycast.
+        spawnParticleLine(world, com.anton.elementalwands.util.SpellCastVisuals.wandTip(caster), end,
+                ModParticles.ARCANE_THREAD);
 
         // Apply damage if we hit an entity
         if (hit instanceof EntityHitResult entityHit) {

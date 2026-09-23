@@ -32,6 +32,7 @@ public class VacuumBladeEntity extends ProjectileEntity {
     private java.util.Set<java.util.UUID> castHits = new java.util.HashSet<>();
 
     private Vec3d startPos;
+    private com.anton.elementalwands.util.SpellCastVisuals.Wake wake = com.anton.elementalwands.util.SpellCastVisuals.Wake.NONE;
 
     public VacuumBladeEntity(EntityType<? extends VacuumBladeEntity> type, World world) {
         super(type, world);
@@ -44,6 +45,7 @@ public class VacuumBladeEntity extends ProjectileEntity {
         dataTracker.set(MIRRORED, mirrored);
         startPos = owner.getEyePos(); setPosition(startPos);
         setVelocity(direction.normalize().multiply(PROJECTILE_SPEED));
+        wake = com.anton.elementalwands.util.SpellCastVisuals.Wake.from(owner, startPos, direction);
     }
 
     private boolean protectsAlly(Entity target) {
@@ -157,7 +159,7 @@ public class VacuumBladeEntity extends ProjectileEntity {
 
         for (int sample = 1; sample <= samples; sample++) {
             double progress = sample / (double) samples;
-            Vec3d point = from.add(delta.multiply(progress));
+            Vec3d point = wake.at(from.add(delta.multiply(progress)));
             Vec3d wakeVelocity = direction.multiply(-0.025);
             spawnDirected(world, ModParticles.WIND_SLIPSTREAM, point, wakeVelocity);
 

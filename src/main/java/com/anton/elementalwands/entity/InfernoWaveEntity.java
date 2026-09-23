@@ -37,6 +37,7 @@ public class InfernoWaveEntity extends ProjectileEntity {
     private static final int MAX_AGE_TICKS = 60; // backstop if startPos is ever lost
 
     private Vec3d startPos;
+    private com.anton.elementalwands.util.SpellCastVisuals.Wake wake = com.anton.elementalwands.util.SpellCastVisuals.Wake.NONE;
     private Set<Integer> hitEntities = new HashSet<>();
 
     public InfernoWaveEntity(EntityType<? extends InfernoWaveEntity> type, World world) {
@@ -52,6 +53,7 @@ public class InfernoWaveEntity extends ProjectileEntity {
         // Set velocity in owner's facing direction
         Vec3d direction = owner.getRotationVec(1.0f).normalize();
         setVelocity(direction.multiply(PROJECTILE_SPEED));
+        wake = com.anton.elementalwands.util.SpellCastVisuals.Wake.from(owner, startPos, direction);
     }
 
     private boolean protectsAlly(Entity target) {
@@ -128,7 +130,7 @@ public class InfernoWaveEntity extends ProjectileEntity {
         double distance = start.distanceTo(end);
         int samples = Math.max(1, (int) Math.ceil(distance / WAKE_SPACING));
         for (int i = 0; i <= samples; i++) {
-            Vec3d point = start.lerp(end, (double) i / samples);
+            Vec3d point = wake.at(start.lerp(end, (double) i / samples));
             world.spawnParticles(ModParticles.FIRE_FLAME_RIBBON,
                     point.x, point.y, point.z,
                     1, 0.055, 0.045, 0.055, 0.012);

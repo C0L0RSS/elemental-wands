@@ -12,7 +12,6 @@
     "SpringbloomMovementMixin",
     "SpringbloomFallMixin",
     "UpdraftFallMixin",
-    "SpringbloomAirMixin",
     "ScreenHandlerMixin",
     "GuardianArenaPlayerMixin",
     "GuardianArenaWorldMixin",

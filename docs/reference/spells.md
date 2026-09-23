@@ -180,9 +180,11 @@ the cushion stays rigid on launch and emits pollen. The raised solid center cann
 be walked onto. A player landing from above is caught without incoming fall damage
 and launched upward, including hostile players and last-second pod catches.
 Incoming horizontal movement chooses the direction and scales the launch up to its
-cap. Air movement input does not accelerate the chosen arc; normal gravity and
-collision still apply. On level ground, targets are roughly 20 blocks upward and
-15 forward at full speed. A drop to lower terrain can extend the travel.
+cap. During the flight, movement input steers with ordinary vanilla air control,
+as in any fall; normal gravity and collision still apply. On level ground, flights
+rise roughly 20 blocks; steering alone covers about 8–10 blocks from a standing
+launch, and holding forward after a full-speed launch reaches roughly 23–25.
+A drop to lower terrain can extend the travel.
 
 Each pad is reusable, breakable in one hit, and lasts 80 ticks from opening. Slot 1
 can also break an aimed pad with a wand. The 200-tick throw cooldown is keyed to the
@@ -195,7 +197,7 @@ vehicles, fluids and climbing end the flight state. Pad expiry, breaking, suppor
 loss and owner exit restore only that pad's tracked placement. Scheduled checks
 remove orphan pads after reload; transient visual entities are not saved.
 Owners: `SpringbloomManager`, `SpringbloomRules`, `SpringbloomEntity`,
-`SpringbloomBlock`, the Springbloom movement/fall/air mixins and `SpringbloomRenderer`.
+`SpringbloomBlock`, the Springbloom movement/fall mixins and `SpringbloomRenderer`.
 
 `NatureCombat` owns per-caster damage/charge windows; prevent thorn spam or
 multiple wands from bypassing them. Guardian resistance prevents permanent rooting

@@ -85,6 +85,8 @@ public final class WandLoadouts {
             if (spell.id().equals("fire_hop")) return; // Aimed release uses FireLeapCommitPayload.
             FireBuildManager.stop(player);
             markCombat(player);
+            if (spell.id().equals(GravityWellManager.ID)) { if(deliberate)GravityWellManager.cast(player); return; }
+            if (spell.id().equals(AstralDoubleManager.ID)) { if(deliberate)AstralDoubleManager.cast(player); return; }
             if (spell.id().equals(UpdraftManager.ID)) { if(deliberate)UpdraftManager.cast(player); return; }
             if (spell.id().equals(GaleDaggers.ID)) { if(deliberate)GaleDaggers.cast(player); return; }
             if (spell.id().equals("faultline")) { FaultlineManager.cast(player); return; }

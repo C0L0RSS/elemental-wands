@@ -54,6 +54,8 @@ inspect their assertions when behavior changes instead of trusting an old name.
 | Nature Springbloom | `springbloom_server_smoke.init.gradle` | `springbloom_client_smoke.init.gradle` |
 | Nature Lash / Bloom / Overgrowth | `nature_expansion_server_smoke.init.gradle`, `overgrowth_throw_server_smoke.init.gradle` | `nature_expansion_client_smoke.init.gradle`, `nature_overgrowth_client_smoke.init.gradle` |
 | Stone | `stone_cluster_smoke.init.gradle`, `stone_technique_smoke.init.gradle` | `stone_technique_client_smoke.init.gradle`; Guardian floor client includes Stone cluster mesh checks |
+| Space Gravity Well | `gravity_well_server_smoke.init.gradle` | `gravity_well_client_smoke.init.gradle` |
+| Space Astral Double | `astral_double_server_smoke.init.gradle` | `astral_double_client_smoke.init.gradle` |
 | Wind Updraft / dash combos | `updraft_server_smoke.init.gradle` | `updraft_client_smoke.init.gradle` |
 | Wind daggers | `gale_daggers_server_smoke.init.gradle` | `gale_daggers_client_smoke.init.gradle` |
 | Wind | `wind_pressure_smoke.init.gradle` | `wind_visual_client_smoke.init.gradle` (guided visual review; leaves disposable world open) |
@@ -187,6 +189,20 @@ desktop capture. Preserve the final MP4 and concise receipts under ignored
 when choosing an output filename; generated raw frames need not be retained once
 the exported video is verified.
 
+### Astral Double recording
+
+`astral_double_client_smoke.init.gradle` accepts `-PastralRecord` and the same
+`hubClientAssets` option. It records 300 consecutive frames at 20 fps (15 seconds)
+from the game framebuffer into the directory named by
+`build/astral-double-client-smoke/RECORDING_DIR.txt`. Use the encoding recipe above
+with 300 frames and `.local-previews/astral-double/astral-double-gameplay.mp4`.
+The ordinary mode exercises bound inputs; recording sends scripted cast packets.
+Require fresh `build/astral-double-smoke-run/PRESSURE_PASSED.txt` and
+`build/astral-double-client-smoke/HUB_PASSED.txt`, with no failure markers.
+Scenes cover the orb toss, skin and wand, mirrored fire, consuming teleport,
+Blink Rift return and destruction poof. A dev player's supplied skin is used;
+this does not verify the user's authenticated Lunar skin or multiplayer feel.
+
 ## Evidence retention
 
 Keep useful final native views, a concise result/limitation summary, and critical
@@ -199,3 +215,17 @@ Do not delete `art/` sources, runtime assets, test fixtures, or the only explana
 of a recovery edge case while pruning screenshots. Check links and generator
 references first. `docs/archive/evidence/` holds selected historical evidence;
 `.local-previews/` and `build/` hold local outputs rather than required starting context.
+
+### Gravity Well recording
+
+`gravity_well_client_smoke.init.gradle` accepts `-PgravityRecord` and
+`-PhubClientAssets="$HOME/.lunarclient/shared/assets"`. Its hidden-window mode
+captures 240 frames at 20 fps (12 seconds), covering the throw, impact, pulling
+mobs, accelerating collapse buildup, outward burst, a second well and automatic
+collapse. Use the encoding
+recipe above with 240 frames and `.local-previews/gravity-well/gravity-well-gameplay.mp4`.
+`build/gravity-well-client-smoke/RECORDING_DIR.txt` identifies the raw frames.
+Require its fresh `HUB_PASSED.txt` and the dedicated fixture's
+`build/gravity-well-smoke-run/PRESSURE_PASSED.txt`, with no failure markers.
+The ordinary client mode exercises the bound fifth-slot input; recording sends
+scripted packets. Neither mode establishes human Lunar balance approval.

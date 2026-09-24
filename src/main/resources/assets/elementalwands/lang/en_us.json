@@ -54,5 +54,12 @@
   "entity.elementalwands.springbloom": "Springbloom",
   "entity.elementalwands.gale_dagger": "Gale Dagger",
   "death.attack.gale_dagger": "%1$s was struck by %2$s’s Gale Daggers",
-  "death.attack.gale_dagger.item": "%1$s was struck by %2$s’s Gale Daggers using %3$s"
+  "death.attack.gale_dagger.item": "%1$s was struck by %2$s’s Gale Daggers using %3$s",
+  "entity.elementalwands.astral_double": "Astral Double",
+  "death.attack.gravity_collapse": "%1$s was crushed by %2$s’s gravity well",
+  "death.attack.gravity_collapse.item": "%1$s was crushed by %2$s’s gravity well using %3$s",
+  "entity.elementalwands.gravity_bomb": "Gravity Bomb",
+  "entity.elementalwands.astral_orb": "Astral Orb",
+  "death.attack.astral_bolt": "%1$s was struck by an astral echo",
+  "death.attack.astral_bolt.player": "%1$s was struck by %2$s’s astral echo"
 }

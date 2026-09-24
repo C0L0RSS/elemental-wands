@@ -128,3 +128,40 @@ Spawn eggs use `settings.spawnEgg(entityType)`.
 
 See [AGENT.md](../../AGENT.md) for the required validation commands and
 [Guardian combat](guardian-combat.md) for the multi-source animation pipeline.
+
+Astral Double uses the owner's native player skin (wide or slim arms and outer
+skin layers) through `AstralDoubleRenderer`, with the existing Space wand model. The top-level
+state wraps the player appearance so Minecraft does not route it to its vanilla
+player renderer and skip the clone effects.
+`AstralOrbRenderer` owns the small faceted throwable and reuses vanilla amethyst
+texture. Short, irregular violet wisps taper into pixel steps as they orbit and rise
+around the skin, using a code-native mesh
+with the vanilla white-concrete texture. Floating motes and disappearance reuse
+Space motes and implosion rings. The
+ability icon is a code-native pair of figures in `SpellIcons`. No existing Space
+texture family is regenerated for this spell.
+
+Gravity Well's throwable uses `GravityBombRenderer` for a compact six-plate
+crying-obsidian shell around a violet energy cube. The plates separate slightly
+with each pulse while the cube tumbles; three small satellites and a tapering
+wake carry its motion. The effect condenses close to the camera so its
+eye-height spawn cannot briefly fill the view. On impact, six shell fragments arc outward with a spark
+fan and a crystalline snap as the field unfurls over half a second. This opening
+animation does not delay the server's impact activation.
+
+The formed well keeps its faceted crying-obsidian core,
+broken tilted violet orbits and a readable segmented four-block boundary. A dark
+central disk, plum falloff and four layered spiral bands give the field a shallow
+vortex silhouette. Particles use deep plum and violet with sparse amethyst
+highlights, matching Space rather than pale lavender/white. A bounded
+set of 480 code-native billboard motes with fading tails follows four low spiral
+arms and continuously travels
+inward over approximately 2.3 seconds, reaching the orb rather than fading near
+the perimeter. Stable particle identities preserve their positions when collapse
+begins; they accelerate into the core over 0.4 seconds, then burst outward and
+fade for 0.6 seconds. The core swells during buildup and disappears on the burst.
+Synchronized server phase timestamps drive that sequence, including late tracking;
+no per-particle network traffic or new raster asset family is needed. The mesh
+boundary and stream remain visible with reduced vanilla particle settings.
+`SpellIcons` owns the code-native core-and-orbit glyph. The renderer reuses vanilla
+block textures and uses no cross-shaped glints.

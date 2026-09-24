@@ -32,6 +32,7 @@ public final class WandItemModel implements ItemModel {
     }
     public static WizardAffinity affinity(HeldItemContext holder,ItemDisplayContext display) {
         var client=MinecraftClient.getInstance();
+        if(holder!=null && holder.getEntity() instanceof com.anton.elementalwands.entity.AstralDoubleEntity) return WizardAffinity.SPACE;
         if(holder!=null && holder.getEntity() instanceof PlayerEntity player)
             return player==client.player?ClientPlayerData.getAffinity():EWAttachments.getAffinity(player);
         if(display==ItemDisplayContext.GUI && holder==null && client.player!=null)return ClientPlayerData.getAffinity();

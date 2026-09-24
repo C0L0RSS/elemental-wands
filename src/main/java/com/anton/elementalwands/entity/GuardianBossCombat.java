@@ -498,6 +498,9 @@ final class GuardianBossCombat {
                         || forward.dotProduct(new Vec3d(delta.x,0,delta.z).normalize()) >= .25)
                     && GuardianWaveSurface.clearLine(world,guardian,center.add(0,1,0),point.add(0,.6,0));
         };
+        for (AstralDoubleEntity clone : world.getEntitiesByClass(AstralDoubleEntity.class,
+                new net.minecraft.util.math.Box(center,center).expand(radius+1,3,radius+1),e->!e.isRemoved()))
+            if(hit.test(clone.getBlockPos()))clone.damage(world,world.getDamageSources().mobAttack(guardian),1);
         com.anton.elementalwands.util.SeedlingManager.crushGrowth(world, hit);
         com.anton.elementalwands.util.TendrilBloomManager.crushGrowth(world, hit);
         for (AwakenedTreeEntity tree : world.getEntitiesByClass(AwakenedTreeEntity.class,
@@ -555,6 +558,13 @@ final class GuardianBossCombat {
             return surface != null && waveContact(center,new net.minecraft.util.math.Box(pos),previous,radius,surface.y)
                     && walls.clear(world,guardian,center.add(0,.7,0),surface.add(0,.7,0),true);
         };
+        for (AstralDoubleEntity clone : world.getEntitiesByClass(AstralDoubleEntity.class,
+                new net.minecraft.util.math.Box(center,center).expand(radius+2,6,radius+2),e->!e.isRemoved())) {
+            Vec3d floor=GuardianWaveSurface.ground(world,guardian,center,clone.getX(),clone.getZ());
+            if(floor!=null && waveContact(center,clone.getBoundingBox(),previous,radius,floor.y)
+                    && walls.clear(world,guardian,center.add(0,.7,0),floor.add(0,.7,0),true))
+                clone.damage(world,world.getDamageSources().mobAttack(guardian),1);
+        }
         com.anton.elementalwands.util.SeedlingManager.crushGrowth(world,contacted);
         com.anton.elementalwands.util.TendrilBloomManager.crushGrowth(world,contacted);
         // The continuous ridge is client-rendered. Keep server effects bounded as the radius grows.

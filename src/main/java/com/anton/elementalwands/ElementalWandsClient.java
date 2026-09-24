@@ -72,6 +72,9 @@ public class ElementalWandsClient implements ClientModInitializer {
             net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry.BLOCK.register(
                     (state,world,pos,tint)->tint<0?-1:0xFF000000|tint,block);
 
+        EntityRendererRegistry.register(ModEntities.GRAVITY_BOMB,com.anton.elementalwands.client.renderer.GravityBombRenderer::new);
+        EntityRendererRegistry.register(ModEntities.ASTRAL_DOUBLE,com.anton.elementalwands.client.renderer.AstralDoubleRenderer::new);
+        EntityRendererRegistry.register(ModEntities.ASTRAL_ORB,com.anton.elementalwands.client.renderer.AstralOrbRenderer::new);
         EntityRendererRegistry.register(ModEntities.GALE_DAGGER,com.anton.elementalwands.client.renderer.GaleDaggerRenderer::new);
         EntityRendererRegistry.register(ModEntities.SPRINGBLOOM,com.anton.elementalwands.client.renderer.SpringbloomRenderer::new);
         EntityRendererRegistry.register(ModEntities.OVERGROWTH_SEED,com.anton.elementalwands.client.renderer.OvergrowthSeedRenderer::new);

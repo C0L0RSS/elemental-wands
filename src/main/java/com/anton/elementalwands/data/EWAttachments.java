@@ -55,6 +55,18 @@ public final class EWAttachments {
                     .syncWith(net.minecraft.network.codec.PacketCodecs.VAR_INT,
                             net.fabricmc.fabric.api.attachment.v1.AttachmentSyncPredicate.all()));
 
+    public static final AttachmentType<NbtCompound> ASTRAL_STATE = AttachmentRegistry.create(
+            Identifier.of("elementalwands", "astral_state"), builder -> builder.initializer(NbtCompound::new)
+                    .persistent(NbtCompound.CODEC).copyOnDeath()
+                    .syncWith(net.minecraft.network.codec.PacketCodecs.NBT_COMPOUND,
+                            net.fabricmc.fabric.api.attachment.v1.AttachmentSyncPredicate.all()));
+
+    public static final AttachmentType<NbtCompound> GRAVITY_STATE = AttachmentRegistry.create(
+            Identifier.of("elementalwands", "gravity_state"), builder -> builder.initializer(NbtCompound::new)
+                    .persistent(NbtCompound.CODEC).copyOnDeath()
+                    .syncWith(net.minecraft.network.codec.PacketCodecs.NBT_COMPOUND,
+                            net.fabricmc.fabric.api.attachment.v1.AttachmentSyncPredicate.all()));
+
     public static final int SKILL_SECONDARY = 1;
     public static final int SKILL_ULTIMATE  = 2;
 

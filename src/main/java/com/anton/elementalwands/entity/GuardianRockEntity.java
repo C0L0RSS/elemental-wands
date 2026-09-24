@@ -92,6 +92,13 @@ public class GuardianRockEntity extends ProjectileEntity implements FlyingItemEn
                 double f = start.distanceTo(hit.get()) / Math.max(1e-8, start.distanceTo(end));
                 if (f < entityFraction) { entityFraction = f; direct = player; }
             }
+            // The double is fragile: rocks/shards destroy it on contact without becoming a shield.
+            Vec3d clearEnd=start.lerp(end,entityFraction);
+            for (AstralDoubleEntity clone : world.getEntitiesByClass(AstralDoubleEntity.class,new Box(start,clearEnd).expand(r),e->!e.isRemoved())) {
+                Box box=clone.getBoundingBox().expand(r);
+                if(box.contains(start)||box.raycast(start,clearEnd).isPresent())
+                    clone.damage(world,world.getDamageSources().thrown(this,guardian),1);
+            }
             if (direct != null || blocked) {
                 setPosition(start.lerp(end, entityFraction));
                 if(direct==null && blockContact!=null)walls.breakWall(world,blockContact);
@@ -108,6 +115,11 @@ public class GuardianRockEntity extends ProjectileEntity implements FlyingItemEn
 
     private void impact(ServerWorld world, FracturedGuardianEntity guardian, ServerPlayerEntity direct) {
         Vec3d center = getEntityPos();
+        if(!isShard())for(AstralDoubleEntity clone:world.getEntitiesByClass(AstralDoubleEntity.class,new Box(center,center).expand(3),e->!e.isRemoved())) {
+            Vec3d from=center.subtract(getVelocity().normalize().multiply(.08));
+            if(clone.squaredDistanceTo(center)<=9 && walls.clear(world,guardian,from,clone.getBoundingBox().getCenter(),false))
+                clone.damage(world,world.getDamageSources().thrown(this,guardian),1);
+        }
         for (ServerPlayerEntity player : world.getPlayers(p -> GuardianBossCombat.canDamage(guardian, p))) {
             if (isShard()) {
                 if (player != direct || volleyHits.contains(player.getUuid())) continue;

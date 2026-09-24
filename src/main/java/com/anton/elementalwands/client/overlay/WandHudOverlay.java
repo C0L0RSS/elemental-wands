@@ -305,6 +305,21 @@ public class WandHudOverlay implements HudRenderCallback {
             if(ClientPlayerData.getEntangleStacks(client.player.getId())>0)since/=2;
             remaining = Math.max(maxCooldownTicks-elapsed,maxCooldownTicks-since);onCooldown=remaining>0;
         }
+        var astralState=client.player.getAttachedOrElse(com.anton.elementalwands.data.EWAttachments.ASTRAL_STATE,new net.minecraft.nbt.NbtCompound());
+        if (spellId.equals("astral_double")) {
+            int itemRecovery=nbt.getInt(AbstractWandItem.durationKey(spellId),0);
+            maxCooldownTicks=Math.max(astralState.getInt("recovery",0),itemRecovery);
+            remaining=astralState.getBoolean("active",false) ? 0 : Math.max(Math.max(0,itemRecovery-elapsed),
+                    com.anton.elementalwands.util.AstralDoubleManager.remaining(astralState,now,ClientPlayerData.getEntangleStacks(client.player.getId())>0));
+            onCooldown=remaining>0;
+        }
+        var gravityState=client.player.getAttachedOrElse(com.anton.elementalwands.data.EWAttachments.GRAVITY_STATE,new net.minecraft.nbt.NbtCompound());
+        if (spellId.equals("gravity_well")) {
+            maxCooldownTicks=com.anton.elementalwands.util.GravityWellManager.COOLDOWN;
+            remaining=Math.max(maxCooldownTicks-elapsed,com.anton.elementalwands.util.GravityWellManager.remaining(
+                    gravityState,now,ClientPlayerData.getEntangleStacks(client.player.getId())>0));
+            onCooldown=!gravityState.getBoolean("active",false) && remaining>0;
+        }
         boolean isWindSecondary = spellId.equals("waylay_dash");
         int windCharges          = 0;
         int windMaxCharges       = 0;
@@ -344,13 +359,21 @@ public class WandHudOverlay implements HudRenderCallback {
                 withAlpha(accentColor, 0x32));
         }
 
-        if (spellId.equals("updraft") || spellId.equals("gale_daggers"))
+        if (spellId.equals("updraft") || spellId.equals("gale_daggers") || spellId.equals("astral_double") || spellId.equals("gravity_well"))
             com.anton.elementalwands.client.SpellIcons.draw(context, selectedSpell, renderX + 6, renderY + 6, 24);
         else drawThemeCooldownMotif(context, theme, slotIndex, renderX, renderY, now, animation);
 
         if (isWindSecondary) {
             drawWindDashPips(context, renderX, renderY, windCharges, windMaxCharges,
                 windRechargeTicks, windRechargeDuration, now);
+        } else if (spellId.equals("gravity_well") && gravityState.getBoolean("active",false)) {
+            long expires=gravityState.getLong("expires",0);
+            String label=gravityState.getBoolean("collapsing",false) ? "BURST" : expires==0 ? "TOSS" : "PULL "+Math.max(0,(expires-now+19)/20);
+            context.drawText(client.textRenderer,label,x-client.textRenderer.getWidth(label)/2,renderY+23,0xFFE4CAFF,true);
+        } else if (spellId.equals("astral_double") && astralState.getBoolean("active",false)) {
+            long expires=astralState.getLong("expires",0);
+            String label=expires==0 ? "TOSS" : String.valueOf(Math.max(0,(expires-now+19)/20));
+            context.drawText(client.textRenderer,label,x-client.textRenderer.getWidth(label)/2,renderY+23,0xFFE4CAFF,true);
         } else if (spellId.equals("gale_daggers") && client.player.getAttachedOrElse(com.anton.elementalwands.data.EWAttachments.GALE_PREPARED,0)>0) {
             context.drawText(client.textRenderer,"READY",renderX+7,renderY+23,0xFFFFFFFF,true);
         } else if (onCooldown && remaining > 20 && isUnlocked) {

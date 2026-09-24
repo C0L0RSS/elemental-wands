@@ -1,8 +1,26 @@
 # Current status
 
-Reviewed September 23, 2026. This page contains outstanding work, not release history.
+Reviewed September 24, 2026. This page contains outstanding work, not release history.
 It records known verification limits; it is not a fresh installation receipt.
 
+- **Gravity Well:** Space has five learnable spells; every current elemental
+  catalog now meets the five-spell minimum. Dedicated-server checks passed the
+  12.25-block level throw, immediate floor/wall/entity impact, pull, early/automatic
+  collapse, damage/XP, cover/allies/double protection, Guardian resistance,
+  Blink chaining, impact recovery and covered cleanup cases. Native client checks
+  passed bound input, visible mob pull, both collapse modes, HUD and hub text.
+  The continuous inward stream, 0.4-second accelerated buildup and outward burst
+  were verified with fresh native client footage; server checks passed delayed
+  single-hit damage and cosmetic cleanup.
+  The native gameplay recording was visually reviewed. Human Lunar/multiplayer
+  balance and feel remain pending; this is not an installation receipt.
+- **Astral Double:** Space now has five spells with Gravity Well.
+  Dedicated-server checks passed the short toss, mirrored/simultaneous damage,
+  Blink Rift chaining, one-use return, delayed recovery, invalid placement,
+  ally protection, Guardian attack destruction and covered lifecycle cases.
+  Native client checks passed for bound input, the owner skin and wand, mirrored
+  fire, teleport chaining and HUD synchronization. Human Lunar/multiplayer feel
+  remains pending. This status is not an installation receipt.
 - **Updraft:** Wind now has five spells, with no cap on future additions. Native
   client checks measured a 10.00-block rise and passed normal horizontal control,
   midair activation, safe landing, and prepared-dagger/Waylay Dash combos. The

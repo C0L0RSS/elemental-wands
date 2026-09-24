@@ -12,6 +12,7 @@ import net.minecraft.server.world.ServerWorld;
 public final class WandAllies {
     private WandAllies() {}
     private static UUID principal(Entity entity) {
+        if (entity instanceof com.anton.elementalwands.entity.AstralDoubleEntity clone && clone.ownerUuid()!=null) return clone.ownerUuid();
         if (entity instanceof AwakenedTreeEntity tree && tree.getCasterUuid() != null) return tree.getCasterUuid();
         if (entity instanceof Tameable pet && pet.getOwnerReference() != null) return pet.getOwnerReference().getUuid();
         return entity.getUuid();

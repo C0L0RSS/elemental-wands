@@ -203,6 +203,26 @@ public final class ModEntities {
                         .dimensions(EntityDimensions.fixed(.18f,.18f)).trackRangeBlocks(96).trackedUpdateRate(1).disableSaving()
                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"gale_dagger"))));
 
+        public static final EntityType<com.anton.elementalwands.entity.AstralDoubleEntity> ASTRAL_DOUBLE = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID,"astral_double"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.AstralDoubleEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.AstralDoubleEntity::new)
+                        .dimensions(EntityDimensions.fixed(.6f,1.8f)).trackRangeBlocks(96).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"astral_double"))));
+        public static final EntityType<com.anton.elementalwands.entity.AstralOrbEntity> ASTRAL_ORB = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID,"astral_orb"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.AstralOrbEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.AstralOrbEntity::new)
+                        .dimensions(EntityDimensions.fixed(.25f,.25f)).trackRangeBlocks(96).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"astral_orb"))));
+
+        public static final EntityType<com.anton.elementalwands.entity.GravityBombEntity> GRAVITY_BOMB = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID,"gravity_bomb"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.GravityBombEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.GravityBombEntity::new)
+                        .dimensions(EntityDimensions.fixed(.3f,.3f)).trackRangeBlocks(96).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"gravity_bomb"))));
+
         private ModEntities() {
         }
 

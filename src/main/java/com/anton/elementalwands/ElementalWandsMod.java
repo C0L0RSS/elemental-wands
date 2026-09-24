@@ -110,6 +110,9 @@ public class ElementalWandsMod implements ModInitializer {
         WaylayDashVfxManager.init();
         ZephyrStrikeManager.init();
         com.anton.elementalwands.util.GaleDaggers.init();
+        FabricDefaultAttributeRegistry.register(ModEntities.ASTRAL_DOUBLE, com.anton.elementalwands.entity.AstralDoubleEntity.createAttributes().build());
+        com.anton.elementalwands.util.AstralDoubleManager.init();
+        com.anton.elementalwands.util.GravityWellManager.init();
         com.anton.elementalwands.util.UpdraftManager.init();
         ModNetworking.registerPayloads();
         ModNetworking.registerC2SReceivers();

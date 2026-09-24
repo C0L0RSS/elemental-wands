@@ -233,6 +233,70 @@ retarget or U-turn and loses guidance through cover or invalid angles. Impact
 causes damage without restoring the retired pull/mobility-disruption mechanics.
 Blink Rift makes a safe teleport and leaves a temporary return rift.
 
+Astral Double (`astral_double`, 500 Flux) tosses a harmless, visible orb in a short
+arc (about seven blocks on level ground). A supported landing with clear standing
+room creates one stationary copy of the caster, using their skin and arm model,
+holding a Space wand with violet motes around it. Wall contacts drop the orb to
+the floor. Invalid, fluid, unloaded or unsupported landings fizzle and begin a
+three-second recovery. A fresh press is required; holding the input cannot
+consume the newly formed double.
+
+The double lasts 45 seconds from landing. Every successful Singularity Bolt cast
+also launches a full-strength bolt from the double toward the caster's crosshair
+hit point. Each projectile retains its own ordinary range, cover collision and
+limited guidance. The paired damage type lets both bolts deal damage even on the
+same tick, while preserving armor, shields, party protection and Space attribution.
+It does not copy Hollow Purple or fire autonomously.
+
+Recasting within 64 blocks teleports to the double and consumes it. Walls between
+the two positions do not prevent a return to a safe destination; arena containment
+still applies. The double neither consumes nor refreshes Blink Rift, and blinking
+does not remove the double. Blink, consume the double, then immediately use the
+still-open return rift is supported through the existing global input timing.
+
+A single hostile damaging hit, including Guardian beam, wave, slam, rock and shard
+contact, destroys the double in a magical poof. Owner/allied attacks are protected.
+Guardian projectiles destroy it without treating it as defensive cover. Destruction,
+teleport consumption and expiry start 15 seconds of recovery; the orb's flight and
+the live double do not start that timer. The player retains recovery across wand
+replacement, death and reconnects. Putting away the wand keeps the beacon, while
+death, affinity/loadout/world exit, disconnect, encounter exclusion, loss of safe
+support and server shutdown remove it with recovery. The entities are transient;
+a saved active marker recovers safely after an interrupted server run.
+Owners: `AstralDoubleManager`, `AstralOrbEntity`, `AstralDoubleEntity`, and the
+shared Singularity Bolt and Guardian collision paths.
+
+Gravity Well (`gravity_well`, 500 Flux) throws a violet gravity bomb in an arc,
+traveling about 12 blocks on a level throw. The first hostile living-entity,
+solid-surface or fluid impact creates a stationary well; it neither bounces nor
+follows a struck enemy. One bomb/well may exist per caster. A fresh press is
+required for both throwing and early collapse; held repeats do neither.
+
+The well lasts four seconds and pulls eligible living targets within four blocks
+of its center. Solid cover blocks both pull and burst. It deals no ticking damage.
+Recast to collapse early, or let the full duration expire: either begins a
+0.4-second buildup with accelerating inward particles, then deals six base damage
+with Space level/XP attribution and a stronger inward impulse. The visual burst
+explodes outward for 0.6 seconds; that debris is cosmetic and deals no extra hits.
+Pull continues during buildup. Repeated recasts cannot restart or duplicate it.
+Early collapse trades sustained control time for an earlier burst; it does not
+amplify damage.
+The caster, allies, owned summons and protected pets are unaffected. Knockback
+resistance reduces pull, and the Guardian takes damage without displacement.
+Movement, primary fire, Astral Double and Blink Rift remain independent; Hollow
+Purple's existing charge lock still prevents manual casts during its commitment.
+
+Recovery begins on impact and lasts 16 seconds, including time spent pulling;
+collapse never restarts that timer. The live HUD shows TOSS / PULL plus time,
+BURST during buildup, then remaining recovery. Recovery is retained on both the original wand and a
+persistent player attachment, preventing replacement-wand resets. Losing a
+flying bomb to timeout, unloaded terrain or cancellation costs full recovery.
+Death, disconnect, affinity/loadout/world exit, encounter exclusion and server
+stop remove the effect without a damaging collapse. Rejoin clears stale active
+state and retains recovery; transient bombs are never saved. Putting away the
+wand does not cancel a valid well. No blocks are modified.
+Owners: `GravityWellManager`, `GravityBombEntity`, `GravityBombRenderer`.
+
 Hollow Purple commits for its complete charge. The player can aim but cannot
 walk, blink, or use items; switching/dropping the wand does not cancel or refund
 it. Death, world exit, and encounter teardown clean it up without a refund.

@@ -33,6 +33,7 @@ public class SoulBoltEntity extends ProjectileEntity implements FlyingItemEntity
             Identifier.of(ElementalWandsMod.MOD_ID, "necromancer_soul"));
     private static final ItemStack STACK = new ItemStack(Items.SKELETON_SKULL);
     private UUID target;
+    private double speed = NecromancerRules.BOLT_SPEED;
     private boolean loadedFromSave;
 
     public SoulBoltEntity(EntityType<? extends SoulBoltEntity> type, World world) { super(type, world); }
@@ -44,11 +45,12 @@ public class SoulBoltEntity extends ProjectileEntity implements FlyingItemEntity
         loadedFromSave = true; // A reloaded bolt must not resume a stale fight.
     }
 
-    void launch(NecromancerEntity boss, ServerPlayerEntity player, Vec3d from) {
+    void launch(NecromancerEntity boss, ServerPlayerEntity player, Vec3d from, double speed) {
+        this.speed = speed;
         setOwner(boss);
         target = player.getUuid();
         setPosition(from);
-        setVelocity(player.getBoundingBox().getCenter().subtract(from).normalize().multiply(NecromancerRules.BOLT_SPEED));
+        setVelocity(player.getBoundingBox().getCenter().subtract(from).normalize().multiply(speed));
         velocityDirty = true;
     }
 
@@ -101,7 +103,7 @@ public class SoulBoltEntity extends ProjectileEntity implements FlyingItemEntity
         if (angle < 1e-4) return;
         double t = Math.min(1, NecromancerRules.BOLT_TURN / angle);
         Vec3d turned = current.lerp(desired, t).normalize();
-        setVelocity(turned.multiply(NecromancerRules.BOLT_SPEED));
+        setVelocity(turned.multiply(speed));
         velocityDirty = true;
     }
 

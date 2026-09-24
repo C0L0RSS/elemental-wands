@@ -14,6 +14,21 @@ public class NecromancerRenderer extends GeoEntityRenderer<NecromancerEntity, Ne
     }
 
     @Override
+    public void updateRenderState(NecromancerEntity entity, NecromancerRenderState state, float partialTick) {
+        super.updateRenderState(entity, state, partialTick);
+        state.colossus = entity.isColossus();
+        state.transformTime = entity.getTransformTime(partialTick);
+    }
+
+    @Override
+    protected net.minecraft.util.math.Box getBoundingBox(NecromancerEntity entity) {
+        // The emerging skeleton and its reared skull extend far beyond either hitbox.
+        if (!entity.isColossus() && !entity.isTransforming()) return super.getBoundingBox(entity);
+        return new net.minecraft.util.math.Box(entity.getX() - 6, entity.getY() - .5, entity.getZ() - 6,
+                entity.getX() + 6, entity.getY() + 9, entity.getZ() + 6);
+    }
+
+    @Override
     public NecromancerRenderState createRenderState(NecromancerEntity entity, Void relatedObject) {
         return new NecromancerRenderState();
     }

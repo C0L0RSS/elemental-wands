@@ -60,7 +60,39 @@ public final class NecromancerContractTest {
         require((Action.HANDS.impact - 10) * .2 > NecromancerRules.HANDS_RADIUS + .3, "Grasping hands cannot be escaped on foot");
         // Homing tracks at range, but a late sprint-strafe inside three blocks outturns it.
         require(NecromancerRules.BOLT_TURN < Math.atan2(.28, 3), "Soul bolts cannot be sidestepped");
-        System.out.println("Necromancer checks passed: scaling, threshold, army caps, drain cap, spell priority, vision, target rotation, telegraph timing, sidestep window.");
+
+        // Colossus: robed spells never pick melee; the colossus never blinks.
+        ready.clear();
+        var near = List.of(new Candidate(a, 3, true));
+        require(NecromancerRules.choose(near, ready, 0, null, 3, 3) == Action.BLINK, "Robed form lost its blink");
+        require(NecromancerRules.chooseColossus(near, ready, 0, null, 5, 5) == Action.SWIPE, "Close player not swiped");
+        require(NecromancerRules.chooseColossus(near, ready, 0, Action.SWIPE, 5, 5) == Action.GRAB, "Swipe and grab do not alternate");
+        require(NecromancerRules.chooseColossus(List.of(new Candidate(a, 3, true), new Candidate(b, 12, true)), ready, 0, null, 5, 5) != Action.BLINK, "Colossus blinked");
+        require(NecromancerRules.chooseColossus(List.of(new Candidate(a, 12, true)), ready, 0, null, 5, 5) == Action.LUNGE, "Distant player not lunged at");
+        require(NecromancerRules.chooseColossus(List.of(new Candidate(a, 12, true)), ready, 0, null, 0, 5) == Action.RAISE, "Colossus did not refill its army");
+        require(NecromancerRules.chooseColossus(List.of(new Candidate(a, 30, false)), ready, 0, null, 5, 5) == null, "Colossus cast without reach or vision");
+        // Transformation clock: the body grows before the roar, and both finish inside the cinematic.
+        require(0 < NecromancerRules.TRANSFORM_GROW && NecromancerRules.TRANSFORM_GROW < NecromancerRules.TRANSFORM_ROAR
+                && NecromancerRules.TRANSFORM_ROAR < NecromancerRules.TRANSFORM_TICKS, "Transformation clock out of order");
+        require(NecromancerRules.COLOSSUS_CLEARANCE >= NecromancerRules.COLOSSUS_HEIGHT, "Clearance lower than the body");
+        // Grab: never a one-shot, and the team can break it.
+        require(NecromancerRules.grabDamage(20) <= 12 && NecromancerRules.grabDamage(20) < 20 && NecromancerRules.grabDamage(10) < 10, "Grab slam can one-shot");
+        require(NecromancerRules.grabEscape(600) <= 30 && NecromancerRules.grabEscape(1400) <= 45, "Grab escape too hard");
+        require(Action.GRAB.impact < NecromancerRules.GRAB_LIFT_END && NecromancerRules.GRAB_LIFT_END < NecromancerRules.GRAB_SLAM
+                && NecromancerRules.GRAB_SLAM < Action.GRAB.duration, "Grab timeline out of order");
+        // Swipe: a front arc, jumpable, never behind the skeleton.
+        require(NecromancerRules.swipeHits(0, 4, 0, 0), "Swipe missed straight ahead");
+        require(!NecromancerRules.swipeHits(0, -4, 0, 0), "Swipe hit behind");
+        require(!NecromancerRules.swipeHits(0, 4, 1.2, 0), "A vanilla jump (1.25 blocks) cannot clear the swipe");
+        require(!NecromancerRules.swipeHits(0, 7, 0, 0), "Swipe reached beyond its radius");
+        require(NecromancerRules.swipeHits(4, 0, 0, Math.toRadians(-90)), "Swipe ignored facing");
+        // Lunge: a proper arc that lands where it aimed, after a readable telegraph.
+        require(NecromancerRules.lungeHeight(0) == 0 && Math.abs(NecromancerRules.lungeHeight(1)) < 1e-9
+                && Math.abs(NecromancerRules.lungeHeight(.5) - NecromancerRules.LUNGE_APEX) < 1e-9, "Lunge arc wrong");
+        require(NecromancerRules.LUNGE_LOCK < NecromancerRules.LUNGE_LAUNCH && NecromancerRules.lungeFlight() > 6, "Lunge telegraph too short");
+        require(NecromancerRules.boltCount(true) > NecromancerRules.boltCount(false) && NecromancerRules.handsRadius(true) > NecromancerRules.handsRadius(false), "Colossus spells are not stronger");
+        require(Action.BOLT.impact + (NecromancerRules.boltCount(true) - 1) * NecromancerRules.boltInterval(true) < Action.BOLT.duration, "Colossus volley truncated");
+        System.out.println("Necromancer checks passed: scaling, threshold, army caps, drain cap, spell priority, vision, target rotation, telegraph timing, sidestep window, colossus priorities, transformation clock, grab caps, jumpable swipe, lunge arc.");
     }
 
     private static void require(boolean value, String reason) { if (!value) throw new AssertionError(reason); }

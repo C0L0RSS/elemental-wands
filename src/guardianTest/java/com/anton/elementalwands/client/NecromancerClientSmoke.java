@@ -110,8 +110,41 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
             if (t == 320) cast(server, uuid, Action.BLINK);
             if (t == 325) shot(c, "necromancer-blink.png");
             if (t == 345) shot(c, "necromancer-curse.png");
-            if (t >= 360) {
-                Files.writeString(Path.of("NECRO_PASSED.txt"), "Hollow Necromancer native client passed: placeholder GeckoLib model and renderer, front/side views, bolt, hands, drain, raise, spectral minion renderers, blink and curse screenshots. Visual review and human Lunar playtest pending.\n");
+            // Phase two: the transformation from a wide front view, then the colossus and its attacks.
+            if (t == 355) server.execute(() -> {
+                var p = server.getPlayerManager().getPlayer(uuid);
+                if (server.getOverworld().getEntity(bossId) instanceof NecromancerEntity boss) {
+                    boss.stopFight();
+                    boss.refreshPositionAndAngles(.5, floor, 6.5, 180, 0); boss.setBodyYaw(180); boss.setHeadYaw(180);
+                    boss.requestTransform();
+                }
+                p.networkHandler.requestTeleport(.5, floor + 1, -5.5, 0, 8);
+            });
+            if (t > 357 && t < 470) look(c, 0, 8);
+            for (int frame = 0; frame < 8; frame++) if (t == 362 + frame * 13) shot(c, "necromancer-transform-" + frame + ".png");
+            if (t == 470) {
+                var boss = boss(c);
+                require(boss != null && boss.isColossus() && !boss.isTransforming(), "Client did not see the finished colossus");
+                require(Math.abs(boss.getWidth() - com.anton.elementalwands.entity.necromancer.NecromancerRules.COLOSSUS_WIDTH) < .01, "Client hitbox did not grow");
+                shot(c, "necromancer-colossus-front.png");
+            }
+            if (t == 472) server.execute(() -> server.getPlayerManager().getPlayer(uuid).networkHandler.requestTeleport(10.5, floor + 1, 6.5, 90, 10));
+            if (t > 474 && t < 490) look(c, 90, 10);
+            if (t == 488) shot(c, "necromancer-colossus-side.png");
+            if (t == 490) server.execute(() -> server.getPlayerManager().getPlayer(uuid).networkHandler.requestTeleport(.5, floor + 1, -5.5, 0, 8));
+            if (t > 492 && t < 592) look(c, 0, 8);
+            if (t >= 592) look(c, -25, 12);
+            if (t == 495) cast(server, uuid, Action.SWIPE);
+            if (t == 509) shot(c, "necromancer-colossus-swipe-windup.png");
+            if (t == 514) shot(c, "necromancer-colossus-swipe.png");
+            if (t == 540) cast(server, uuid, Action.BOLT);
+            if (t == 552) shot(c, "necromancer-colossus-roar.png");
+            if (t == 590) server.execute(() -> server.getPlayerManager().getPlayer(uuid).networkHandler.requestTeleport(6.5, floor + 1, -7.5, -25, 12));
+            if (t == 595) cast(server, uuid, Action.LUNGE);
+            if (t == 608) shot(c, "necromancer-colossus-lunge-mark.png");
+            if (t == 624) shot(c, "necromancer-colossus-lunge-air.png");
+            if (t >= 650) {
+                Files.writeString(Path.of("NECRO_PASSED.txt"), "Hollow Necromancer native client passed: placeholder GeckoLib model and renderer, front/side views, bolt, hands, drain, raise, spectral minion renderers, blink and curse screenshots, transformation sequence, synchronized colossus form and hitbox, swipe, roar and lunge screenshots. Visual review and human Lunar playtest pending.\n");
                 done = true; c.scheduleStop();
             }
         } catch (Throwable e) {

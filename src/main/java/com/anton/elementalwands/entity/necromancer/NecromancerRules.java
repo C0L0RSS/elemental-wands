@@ -15,10 +15,15 @@ public final class NecromancerRules {
         RAISE(44, 22, 300),
         DRAIN(84, 14, 240),
         HANDS(48, 32, 130),
-        BOLT(40, 12, 50);
+        BOLT(40, 12, 50),
+        // Colossus-only: the giant skeleton trades the blink for its long arms and lunge.
+        SWIPE(36, 18, 70),
+        GRAB(64, 16, 200),
+        LUNGE(50, 34, 130);
 
         public final int duration, impact, cooldown;
         Action(int duration, int impact, int cooldown) { this.duration = duration; this.impact = impact; this.cooldown = cooldown; }
+        public boolean colossusOnly() { return this == SWIPE || this == GRAB || this == LUNGE; }
     }
 
     public record Candidate(UUID id, double distance, boolean visible) {}
@@ -49,9 +54,52 @@ public final class NecromancerRules {
     public static final int RISE_TICKS = 24, RAISE_PER_CAST = 2;
     public static final double RISE_DEPTH = 1.9;
 
+    /** Transformation clock: arms and skull, then the body grows out (hitbox swap), a roar, and control returns. */
+    public static final int TRANSFORM_TICKS = 100, TRANSFORM_GROW = 60, TRANSFORM_ROAR = 85, RELOCATE_TIMEOUT = 200;
+    public static final float COLOSSUS_WIDTH = 3.6f, COLOSSUS_HEIGHT = 4.5f;
+    /** The crawl is low, but rearing needs headroom: clearance is checked above the hitbox. */
+    public static final double COLOSSUS_CLEARANCE = 5.5;
+    public static final double REACH = 5.5;
+
+    public static final double SWIPE_RADIUS = 6.5, SWIPE_ARC = Math.toRadians(150), SWIPE_JUMP_CLEAR = 1.0;
+    public static final float SWIPE_DAMAGE = 10;
+
+    public static final double GRAB_REACH = 6.5, GRAB_CONE = Math.toRadians(70);
+    public static final int GRAB_LIFT_END = 36, GRAB_SLAM = 44, GRAB_REGRAB = 300;
+
+    public static final double LUNGE_MIN = 7, LUNGE_MAX = 20, LUNGE_RADIUS = 3.5, LUNGE_APEX = 3;
+    public static final int LUNGE_LOCK = 12, LUNGE_LAUNCH = 20;
+    public static final float LUNGE_DAMAGE = 9;
+
+    public static int boltCount(boolean colossus) { return colossus ? 5 : BOLT_COUNT; }
+    public static int boltInterval(boolean colossus) { return colossus ? 4 : BOLT_INTERVAL; }
+    public static double boltSpeed(boolean colossus) { return colossus ? .48 : BOLT_SPEED; }
+    public static double handsRadius(boolean colossus) { return colossus ? 2.4 : HANDS_RADIUS; }
+    public static int handsTargets(boolean colossus) { return colossus ? 4 : HANDS_MAX_TARGETS; }
+    public static int raisePerCast(boolean colossus) { return colossus ? 3 : RAISE_PER_CAST; }
+
+    /** The slam hurts but never one-shots: at most a third of a player's health and never above 12. */
+    public static float grabDamage(float playerMaxHealth) { return Math.min(12, playerMaxHealth * .35f); }
+    /** Team damage during the hold that breaks the grip and staggers the skeleton. */
+    public static float grabEscape(float bossMaxHealth) { return Math.max(20, bossMaxHealth * .03f); }
+
+    /** A sweep low enough to jump: feet above this height over the skeleton's floor clear it. */
+    public static boolean swipeHits(double dx, double dz, double feetAboveFloor, double facingYawRadians) {
+        double distance = Math.sqrt(dx * dx + dz * dz);
+        if (distance > SWIPE_RADIUS || feetAboveFloor > SWIPE_JUMP_CLEAR) return false;
+        if (distance < 1.2) return true;
+        double forwardX = -Math.sin(facingYawRadians), forwardZ = Math.cos(facingYawRadians);
+        double cos = (dx * forwardX + dz * forwardZ) / distance;
+        return Math.acos(Math.clamp(cos, -1, 1)) <= SWIPE_ARC / 2;
+    }
+
+    /** Lunge flight: a parabola from start to landing with a fixed apex, sampled per tick. */
+    public static double lungeHeight(double progress) { return 4 * LUNGE_APEX * progress * (1 - progress); }
+    public static int lungeFlight() { return Action.LUNGE.impact - LUNGE_LAUNCH; }
+
     public static int health(int players) { return 600 + 400 * (Math.max(1, players) - 1); }
 
-    /** Phase two begins at half health; the transformation itself arrives with the colossus form. */
+    /** Phase two begins at half health: the robed caster transforms into the colossus. */
     public static boolean threshold(float health, float maxHealth) { return health <= maxHealth * .5f; }
 
     public static int minionCap(boolean colossus, int players) {
@@ -71,6 +119,9 @@ public final class NecromancerRules {
             case HANDS -> candidate.distance() <= HANDS_RANGE;
             case RAISE -> candidate.distance() <= ENCOUNTER_RANGE;
             case BLINK -> candidate.distance() <= BLINK_TRIGGER;
+            case SWIPE -> candidate.distance() <= REACH + 1;
+            case GRAB -> candidate.visible() && candidate.distance() <= GRAB_REACH;
+            case LUNGE -> candidate.distance() >= LUNGE_MIN && candidate.distance() <= LUNGE_MAX;
         };
     }
 
@@ -85,6 +136,22 @@ public final class NecromancerRules {
         if (available.test(Action.BLINK)) return Action.BLINK;
         if (minions * 2 <= cap && available.test(Action.RAISE)) return Action.RAISE;
         for (Action action : new Action[]{Action.DRAIN, Action.HANDS, Action.RAISE, Action.BOLT})
+            if (action != last && (action != Action.RAISE || minions < cap) && available.test(action)) return action;
+        return available.test(Action.BOLT) ? Action.BOLT : null;
+    }
+
+    /**
+     * The colossus answers close players with its arms, alternating swipe and grab, refills its army,
+     * lunges at distant players, and otherwise keeps casting its larger spells.
+     */
+    public static Action chooseColossus(List<Candidate> players, Map<Action, Long> ready, long now, Action last, int minions, int cap) {
+        if (players.isEmpty()) return null;
+        java.util.function.Predicate<Action> available = action -> now >= ready.getOrDefault(action, 0L)
+                && players.stream().anyMatch(p -> canTarget(action, p));
+        for (Action melee : last == Action.SWIPE ? new Action[]{Action.GRAB, Action.SWIPE} : new Action[]{Action.SWIPE, Action.GRAB})
+            if (available.test(melee)) return melee;
+        if (minions * 2 <= cap && available.test(Action.RAISE)) return Action.RAISE;
+        for (Action action : new Action[]{Action.LUNGE, Action.HANDS, Action.DRAIN, Action.RAISE, Action.BOLT})
             if (action != last && (action != Action.RAISE || minions < cap) && available.test(action)) return action;
         return available.test(Action.BOLT) ? Action.BOLT : null;
     }

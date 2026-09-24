@@ -90,7 +90,7 @@ public final class GravityBombEntity extends Entity {
     }
     private boolean eligible(LivingEntity e) {
         return e.isAlive() && !e.isSpectator() && !WandAllies.protectedFrom(owner, e)
-                && (!(e instanceof FracturedGuardianEntity g) || GuardianArenaManager.eligible(g, owner))
+                && (!(e instanceof WandBoss boss) || boss.eligible(owner))
                 && (!(e instanceof net.minecraft.entity.player.PlayerEntity p) || (!p.isCreative() && GuardianArenaManager.canCast(p)));
     }
     private void affect(ServerWorld w, boolean burst) {
@@ -101,7 +101,7 @@ public final class GravityBombEntity extends Entity {
             if (delta.lengthSquared() > GravityWellManager.RADIUS * GravityWellManager.RADIUS) continue;
             if (w.raycast(new RaycastContext(center, target, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, this)).getType() != HitResult.Type.MISS) continue;
             if (burst) SpellCombat.damage(e, w, new DamageSource(w.getRegistryManager().getOrThrow(net.minecraft.registry.RegistryKeys.DAMAGE_TYPE).getOrThrow(COLLAPSE_DAMAGE), this, owner), GravityWellManager.DAMAGE, owner, WizardAffinity.SPACE);
-            if (!(e instanceof FracturedGuardianEntity) && !e.hasVehicle()) {
+            if (!(e instanceof WandBoss) && !e.hasVehicle()) {
                 double resistance = MathHelper.clamp(e.getAttributeValue(EntityAttributes.KNOCKBACK_RESISTANCE), 0, 1);
                 Vec3d direction = delta.normalize();
                 double force = (burst ? .65 : .075) * (1 - resistance);

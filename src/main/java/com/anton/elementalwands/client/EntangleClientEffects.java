@@ -2,6 +2,7 @@ package com.anton.elementalwands.client;
 
 import com.anton.elementalwands.client.renderer.NatureMeshes;
 import com.anton.elementalwands.entity.FracturedGuardianEntity;
+import com.anton.elementalwands.entity.WandBoss;
 import net.fabricmc.fabric.api.client.rendering.v1.RenderStateDataKey;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.client.MinecraftClient;
@@ -26,8 +27,8 @@ public final class EntangleClientEffects {
             long time=context.world().getTime();
             var visibleStates=new java.util.HashMap<>(ClientPlayerData.getEntangledEntities());
             // Ultimate recovery may be earned without regular Entangle stacks.
-            for(var entity:context.world().getEntities())if(entity instanceof FracturedGuardianEntity guardian
-                    && guardian.natureOpening() && !visibleStates.containsKey(entity.getId()))
+            for(var entity:context.world().getEntities())if(entity instanceof WandBoss boss
+                    && boss.natureOpening() && !visibleStates.containsKey(entity.getId()))
                 visibleStates.put(entity.getId(),new ClientPlayerData.EntangleState(5,time,0,time-10));
             for(var item:visibleStates.entrySet()){
                 var entity=context.world().getEntityById(item.getKey());
@@ -37,14 +38,15 @@ public final class EntangleClientEffects {
                 if(entity.squaredDistanceTo(camera)>48*48 || !context.frustum().isVisible(entity.getBoundingBox().expand(.7)))continue;
                 var state=item.getValue();int stacks=time<state.rootVisualUntilTick()?5:state.stacks();
                 if(stacks==0)continue;
-                boolean boss=entity instanceof FracturedGuardianEntity;
+                boolean boss=entity instanceof WandBoss;
                 boolean wide=entity.getWidth()>entity.getHeight();
-                String type=boss?"boss":wide?"wide":"human";
-                float w=boss?3.2f:wide?1.4f:.6f,h=boss?5.2f:wide?.9f:1.8f;
+                // The boss wrap is authored around the Guardian's silhouette.
+                String type=entity instanceof FracturedGuardianEntity?"boss":wide?"wide":"human";
+                float w=type.equals("boss")?3.2f:wide?1.4f:.6f,h=type.equals("boss")?5.2f:wide?.9f:1.8f;
                 float sx=(entity.getWidth()*.55f+.08f)/(w*.55f+.08f),sy=entity.getHeight()/h;
                 String mode="lingering";
                 if(stacks>=5){
-                    if(boss)mode=((FracturedGuardianEntity)entity).natureOpening()?"opening":"resisting";
+                    if(boss)mode=((WandBoss)entity).natureOpening()?"opening":"resisting";
                     else if(time<state.rootVisualUntilTick())mode="rooted";
                 }
                 Vec3d relative=entity.getLerpedPos(delta).subtract(camera);

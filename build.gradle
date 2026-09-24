@@ -78,6 +78,13 @@ tasks.register('checkGuardianBeam', JavaExec) {
 }
 check.dependsOn checkGuardianBeam
 
+tasks.register('checkNecromancer', JavaExec) {
+    dependsOn guardianTestClasses
+    classpath = sourceSets.guardianTest.runtimeClasspath
+    mainClass = 'com.anton.elementalwands.entity.necromancer.NecromancerContractTest'
+}
+check.dependsOn checkNecromancer
+
 tasks.register('checkParties', JavaExec) {
     dependsOn guardianTestClasses
     classpath = sourceSets.guardianTest.runtimeClasspath

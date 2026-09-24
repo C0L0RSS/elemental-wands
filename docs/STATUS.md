@@ -3,6 +3,12 @@
 Reviewed September 24, 2026. This page contains outstanding work, not release history.
 It records known verification limits; it is not a fresh installation receipt.
 
+- **Hollow Necromancer (in progress):** phase one is playable via `/summon` with a
+  placeholder model. Contract and dedicated-server checks passed cover, drain,
+  hands, blink/curse, minion rise, army cap, cleanup and wand damage. Native client
+  screenshots showed the model, casts and rising minions; the minion tint is faint
+  at night. Pending: phase-one art, the giant-skeleton transformation, the elite,
+  the crypt realm dimension, and human Lunar balance/feel.
 - **Gravity Well:** Space has five learnable spells; every current elemental
   catalog now meets the five-spell minimum. Dedicated-server checks passed the
   12.25-block level throw, immediate floor/wall/entity impact, pull, early/automatic

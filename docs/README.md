@@ -11,6 +11,7 @@ current guide below; there is no requirement to read this whole folder.
 | The 3D wand and its animated elemental glass              | [Wand rendering](reference/wand-rendering.md)                     |
 | Visual style and which assets are safe to regenerate      | [Art and assets](reference/art-and-assets.md)                     |
 | Guardian combat and animation constraints                 | [Guardian combat](reference/guardian-combat.md)                   |
+| The Hollow Necromancer boss (in progress)                 | [Necromancer combat](reference/necromancer-combat.md)             |
 | Churches, rituals, arena returns and saved-world recovery | [Church and arena](reference/church-and-arena.md)                 |
 | How automated Minecraft previews and checks work          | [Testing](reference/testing.md)                                   |
 | Short summaries of player-facing changes                  | [Releases](releases/README.md)                                    |

@@ -233,6 +233,35 @@ public final class ModEntities {
                         .dimensions(EntityDimensions.fixed(1.1f, 1.3f)).trackRangeBlocks(64).trackedUpdateRate(1).disableSaving()
                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"faultline_spike"))));
 
+        // Small stooped caster; summon-only until its crypt exists.
+        public static final EntityType<com.anton.elementalwands.entity.necromancer.NecromancerEntity> HOLLOW_NECROMANCER = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "hollow_necromancer"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.necromancer.NecromancerEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.necromancer.NecromancerEntity::new)
+                        .dimensions(EntityDimensions.fixed(.7f, 1.45f)).trackRangeBlocks(128).trackedUpdateRate(1)
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "hollow_necromancer"))));
+
+        public static final EntityType<com.anton.elementalwands.entity.necromancer.SoulBoltEntity> SOUL_BOLT = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "soul_bolt"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.necromancer.SoulBoltEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.necromancer.SoulBoltEntity::new)
+                        .dimensions(EntityDimensions.fixed(.5f, .5f)).trackRangeBlocks(96).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "soul_bolt"))));
+
+        public static final EntityType<com.anton.elementalwands.entity.necromancer.SpectralSkeletonEntity> SPECTRAL_SKELETON = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "spectral_skeleton"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.necromancer.SpectralSkeletonEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.necromancer.SpectralSkeletonEntity::new)
+                        .dimensions(EntityDimensions.fixed(.6f, 1.99f)).trackRangeBlocks(80).trackedUpdateRate(2).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "spectral_skeleton"))));
+
+        public static final EntityType<com.anton.elementalwands.entity.necromancer.SpectralZombieEntity> SPECTRAL_ZOMBIE = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "spectral_zombie"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.necromancer.SpectralZombieEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.necromancer.SpectralZombieEntity::new)
+                        .dimensions(EntityDimensions.fixed(.6f, 1.95f)).trackRangeBlocks(80).trackedUpdateRate(2).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "spectral_zombie"))));
+
         public static void registerAll() {
                 // classload hook — field initializers run on class load
         }

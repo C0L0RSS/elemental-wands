@@ -1,7 +1,7 @@
 package com.anton.elementalwands.util;
 
 import com.anton.elementalwands.data.*;
-import com.anton.elementalwands.entity.FracturedGuardianEntity;
+import com.anton.elementalwands.entity.WandBoss;
 import com.anton.elementalwands.party.WandAllies;
 import net.minecraft.entity.*;
 import net.minecraft.entity.mob.HostileEntity;
@@ -30,7 +30,7 @@ public final class SpellCombat {
         return accepted;
     }
     public static double targetRate(LivingEntity target) {
-        return target instanceof PlayerEntity || target instanceof HostileEntity || target instanceof FracturedGuardianEntity
+        return target instanceof PlayerEntity || target instanceof HostileEntity || target instanceof WandBoss
                 || target instanceof MobEntity mob && mob.getTarget()!=null ? 1 : .1;
     }
     public static void reward(LivingEntity target,Entity owner,WizardAffinity affinity,float before) {

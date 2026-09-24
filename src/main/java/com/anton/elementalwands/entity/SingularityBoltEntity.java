@@ -326,8 +326,8 @@ public class SingularityBoltEntity extends ProjectileEntity {
         if (target instanceof HostileEntity) {
             return true;
         }
-        if (target instanceof FracturedGuardianEntity guardian) {
-            return guardian.isBossAggressive() && !guardian.isTeammate(livingOwner);
+        if (target instanceof WandBoss boss) {
+            return boss.isBossAggressive() && !target.isTeammate(livingOwner);
         }
         return target instanceof MobEntity mob && mob.getTarget() == livingOwner;
     }

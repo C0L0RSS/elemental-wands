@@ -98,8 +98,8 @@ public final class EntangleTracker {
         map.put(target.getUuid(), new EntangleData(newStacks, now));
 
         applyEffects(target, newStacks);
-        if (target instanceof com.anton.elementalwands.entity.FracturedGuardianEntity guardian) {
-            guardian.onNatureEntangle(newStacks);
+        if (target instanceof com.anton.elementalwands.entity.WandBoss boss) {
+            boss.onNatureEntangle(newStacks);
         }
         if (newStacks > currentStacks) {
             spawnVineParticles(world, target, newStacks);
@@ -128,7 +128,7 @@ public final class EntangleTracker {
 
     private static int getRootVisualTicksRemaining(LivingEntity entity) {
         World world = entity.getEntityWorld();
-        if (entity instanceof com.anton.elementalwands.entity.FracturedGuardianEntity) return 0;
+        if (entity instanceof com.anton.elementalwands.entity.WandBoss) return 0;
         if (!(world instanceof ServerWorld serverWorld)) return 0;
 
         int now=serverWorld.getServer().getTicks();
@@ -143,7 +143,7 @@ public final class EntangleTracker {
     /** Ultimate roots are visual-only here: do not manufacture stacks or cooldown penalties. */
     public static void syncUltimateRoot(ServerWorld world,LivingEntity target,int ticks) {
         if(target instanceof AwakenedTreeEntity)return;
-        if(target instanceof com.anton.elementalwands.entity.FracturedGuardianEntity)return;
+        if(target instanceof com.anton.elementalwands.entity.WandBoss)return;
         ULTIMATE_ROOT_UNTIL.put(target.getUuid(),world.getServer().getTicks()+ticks);
         ModNetworking.syncEntangleStacks(target,getStacks(target),getRootVisualTicksRemaining(target));
     }
@@ -169,12 +169,12 @@ public final class EntangleTracker {
 
     public static void applyNatureSlow(LivingEntity target, int ticks, int amplifier) {
         if (target instanceof AwakenedTreeEntity) return;
-        int capped = target instanceof com.anton.elementalwands.entity.FracturedGuardianEntity ? 0 : amplifier;
+        int capped = target instanceof com.anton.elementalwands.entity.WandBoss ? 0 : amplifier;
         target.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, ticks, capped, false, false, true));
     }
 
     private static void applyEffects(LivingEntity target, int stacks) {
-        if (target instanceof com.anton.elementalwands.entity.FracturedGuardianEntity) {
+        if (target instanceof com.anton.elementalwands.entity.WandBoss) {
             applyNatureSlow(target, 60, 0);
             return;
         }

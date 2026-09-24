@@ -36,7 +36,7 @@ silently accept terms or point a fixture at the user's real world.
 
 The complete standard build/VFX command list lives in [AGENT.md](../../AGENT.md).
 Use `--offline` only when dependencies/assets are already cached. `./gradlew build`
-includes `checkGuardianBeam` and `checkParties`; neither is a live gameplay test.
+includes `checkGuardianBeam`, `checkNecromancer` and `checkParties`; neither is a live gameplay test.
 For church layout changes also run `python3 tools/build_guardian_church.py --check`.
 
 ## Selecting a fixture
@@ -61,6 +61,7 @@ inspect their assertions when behavior changes instead of trusting an old name.
 | Wind | `wind_pressure_smoke.init.gradle` | `wind_visual_client_smoke.init.gradle` (guided visual review; leaves disposable world open) |
 | Guardian combat | `guardian_combat_smoke.init.gradle`, `guardian_guard_smoke.init.gradle`, `guardian_phase_smoke.init.gradle` | `guardian_floor_client_smoke.init.gradle` |
 | Guardian cover / Nature / walls | `guardian_cover_smoke.init.gradle`, `guardian_nature_smoke.init.gradle`, `guardian_wall_smoke.init.gradle` | Relevant native visual fixture |
+| Hollow Necromancer | `necromancer_server_smoke.init.gradle` | `necromancer_client_smoke.init.gradle` (screenshots) |
 | Church / arena | `guardian_church_smoke.init.gradle`, `guardian_arena_smoke.init.gradle` | Guardian floor client with visual options |
 | Worldgen / locate | `guardian_church_worldgen_smoke.init.gradle`, `guardian_church_locate_smoke.init.gradle` | Human terrain review |
 | Parties / audit regressions | `party_server_smoke.init.gradle`, `audit_fixes_smoke.init.gradle` | Human co-op review |

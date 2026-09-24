@@ -1,6 +1,5 @@
 package com.anton.elementalwands.entity;
 
-import com.anton.elementalwands.arena.GuardianArenaManager;
 import com.anton.elementalwands.party.WandAllies;
 import com.anton.elementalwands.registry.*;
 import com.anton.elementalwands.util.AstralDoubleManager;
@@ -45,7 +44,7 @@ public final class AstralDoubleEntity extends PathAwareEntity {
         if(isRemoved() || amount<=0 || !Float.isFinite(amount))return false;
         var p=owner();var attacker=source.getAttacker();
         if(p==null || (attacker!=null && WandAllies.protectedFrom(attacker,this)))return false;
-        if(attacker instanceof FracturedGuardianEntity g && !GuardianArenaManager.eligible(g,p))return false;
+        if(attacker instanceof WandBoss boss && !boss.eligible(p))return false;
         AstralDoubleManager.destroyed(this);return true;
     }
     @Override public boolean isPushable(){return false;}

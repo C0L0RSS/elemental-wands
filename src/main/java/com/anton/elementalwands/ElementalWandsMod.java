@@ -83,6 +83,9 @@ public class ElementalWandsMod implements ModInitializer {
         ModBlocks.registerAll();
         ModEntities.registerAll();
         FabricDefaultAttributeRegistry.register(ModEntities.FRACTURED_GUARDIAN, FracturedGuardianEntity.createAttributes().build());
+        FabricDefaultAttributeRegistry.register(ModEntities.HOLLOW_NECROMANCER, com.anton.elementalwands.entity.necromancer.NecromancerEntity.createAttributes().build());
+        FabricDefaultAttributeRegistry.register(ModEntities.SPECTRAL_SKELETON, net.minecraft.entity.mob.AbstractSkeletonEntity.createAbstractSkeletonAttributes().build());
+        FabricDefaultAttributeRegistry.register(ModEntities.SPECTRAL_ZOMBIE, ZombieEntity.createZombieAttributes().build());
         FabricDefaultAttributeRegistry.register(ModEntities.AWAKENED_TREE, AwakenedTreeEntity.createAttributes().build());
         FabricDefaultAttributeRegistry.register(ModEntities.STONE_ZOMBIE, StoneZombieEntity.createAttributes().build());
         SpawnRestriction.register(
@@ -154,6 +157,7 @@ public class ElementalWandsMod implements ModInitializer {
         // ── /ew unlock + /ew affinity + /ew admin commands ──────────────
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             GuardianCommands.register(dispatcher);
+            com.anton.elementalwands.command.NecromancerCommands.register(dispatcher);
             com.anton.elementalwands.command.PartyCommands.register(dispatcher);
             dispatcher.register(
                 CommandManager.literal("ew")

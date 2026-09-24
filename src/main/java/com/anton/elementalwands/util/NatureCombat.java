@@ -3,7 +3,7 @@ package com.anton.elementalwands.util;
 import com.anton.elementalwands.party.WandAllies;
 
 import com.anton.elementalwands.entity.AwakenedTreeEntity;
-import com.anton.elementalwands.entity.FracturedGuardianEntity;
+import com.anton.elementalwands.entity.WandBoss;
 import com.anton.elementalwands.item.AbstractWandItem;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -54,7 +54,7 @@ public final class NatureCombat {
         EntangleTracker.addStack(world, target);
         float damage = thornDamage(EntangleTracker.getStacks(target));
         if (com.anton.elementalwands.util.SpellCombat.damage(target,world,world.getDamageSources().sweetBerryBush(),damage,world.getPlayerByUuid(casterUuid),com.anton.elementalwands.data.WizardAffinity.NATURE)) {
-            if (target instanceof FracturedGuardianEntity guardian) guardian.onNatureThorns();
+            if (target instanceof WandBoss boss) boss.onNatureThorns();
             reward(world.getPlayerByUuid(casterUuid), damage, THORN_CHARGE, 3);
         }
     }

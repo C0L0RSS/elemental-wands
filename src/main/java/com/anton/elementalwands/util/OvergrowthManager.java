@@ -276,8 +276,8 @@ public final class OvergrowthManager {
             }
 
             EntangleTracker.applyNatureSlow(target, ROOT_CRUSH_SLOW_TICKS, ROOT_CRUSH_SLOW_AMPLIFIER);
-            if (target instanceof com.anton.elementalwands.entity.FracturedGuardianEntity guardian) {
-                guardian.onNatureEntangle(EntangleTracker.MAX_STACKS);
+            if (target instanceof com.anton.elementalwands.entity.WandBoss boss) {
+                boss.onNatureEntangle(EntangleTracker.MAX_STACKS);
             } else {
                 EntangleTracker.syncUltimateRoot(world,target,ROOT_CRUSH_SLOW_TICKS);
                 target.addVelocity(0.0, -0.65, 0.0);

@@ -3,7 +3,7 @@ package com.anton.elementalwands.util;
 import com.anton.elementalwands.arena.GuardianArenaManager;
 import com.anton.elementalwands.church.GuardianChurchManager;
 import com.anton.elementalwands.data.*;
-import com.anton.elementalwands.entity.FracturedGuardianEntity;
+import com.anton.elementalwands.entity.WandBoss;
 import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.party.WandAllies;
@@ -86,7 +86,7 @@ public final class StoneChargeManager {
         var effect=p.getStatusEffect(StatusEffects.SLOWNESS);return effect!=null && effect.getAmplifier()>=6;
     }
     public static void interrupt(LivingEntity target) {
-        if (!(target.getEntityWorld() instanceof ServerWorld world) || target instanceof FracturedGuardianEntity) return;
+        if (!(target.getEntityWorld() instanceof ServerWorld world) || target instanceof WandBoss) return;
         int now=world.getServer().getTicks();
         if(INTERRUPT_READY.getOrDefault(target.getUuid(),0)>now)return;
         INTERRUPT_READY.put(target.getUuid(),now+StoneTechniqueRules.INTERRUPT_GRACE);
@@ -197,7 +197,7 @@ public final class StoneChargeManager {
             float amount=StoneTechniqueRules.damage(power)*(target==direct?1:(float)(.65-.25*ahead/depth));
             if(SpellCombat.damage(target,world,p.getDamageSources().playerAttack(p),amount,p,WizardAffinity.STONE)) {
                 AbstractWandItem.onWandDamageDealt(p,amount,WizardAffinity.STONE);
-                if(!(target instanceof FracturedGuardianEntity)) {
+                if(!(target instanceof WandBoss)) {
                     target.addVelocity(direction.x*(.35+power),.12+power*.12,direction.z*(.35+power));target.velocityModified=true;
                 }
             }

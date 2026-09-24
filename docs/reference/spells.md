@@ -127,7 +127,7 @@ Faultline (`faultline`, 500 Flux) sends a twenty-block widening wave after a 0.1
 warning. It advances two one-block rows per tick (40 blocks per second), reaching
 its end about 0.6 seconds after casting. Its far-end width remains eight blocks.
 The custom non-solid spikes rise and immediately crumble. Each target
-can take one 4-damage hit per cast; non-Guardian enemies lose horizontal momentum,
+can take one 4-damage hit per cast; non-boss enemies lose horizontal momentum,
 receive an upward launch of roughly 1.4 blocks on open ground, and have movement
 interrupted for twelve ticks (0.6 seconds). They can still aim and cast; this is
 a movement interruption rather than an action lock. Forty ticks of interrupt
@@ -221,7 +221,7 @@ Owners: `SpringbloomManager`, `SpringbloomRules`, `SpringbloomEntity`,
 `SpringbloomBlock`, the Springbloom movement/fall mixins and `SpringbloomRenderer`.
 
 `NatureCombat` owns per-caster damage/charge windows; prevent thorn spam or
-multiple wands from bypassing them. Guardian resistance prevents permanent rooting
+multiple wands from bypassing them. Boss resistance prevents permanent rooting
 while preserving earned recovery openings. Owners: `NatureAbilityHandler`,
 `SeedlingManager`, `TendrilBloomManager`, `ThornLashEntity`/`ThornLashRules`,
 `OvergrowthSeedEntity`/`OvergrowthManager`, `EntangleTracker`, `NatureCombat`.
@@ -282,7 +282,7 @@ Pull continues during buildup. Repeated recasts cannot restart or duplicate it.
 Early collapse trades sustained control time for an earlier burst; it does not
 amplify damage.
 The caster, allies, owned summons and protected pets are unaffected. Knockback
-resistance reduces pull, and the Guardian takes damage without displacement.
+resistance reduces pull, and bosses take damage without displacement.
 Movement, primary fire, Astral Double and Blink Rift remain independent; Hollow
 Purple's existing charge lock still prevents manual casts during its commitment.
 
@@ -305,3 +305,6 @@ Owners: `SpaceAbilityHandler`, `SingularityBoltEntity`, `BlinkRiftManager`,
 
 Visual ownership is described in [art and assets](art-and-assets.md).
 Targeted test runners are listed in [testing](testing.md).
+
+Bosses implement `WandBoss` (the Guardian and Hollow Necromancer). Wand spells
+do not root, knock back, stagger or interrupt them; they still take normal damage.

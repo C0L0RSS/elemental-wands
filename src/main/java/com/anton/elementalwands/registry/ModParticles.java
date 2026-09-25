@@ -67,6 +67,9 @@ public final class ModParticles {
     // Beam telegraphing is gameplay-critical, so it remains visible on Minimal.
     public static final SimpleParticleType ARCANE_THREAD = register("arcane_thread", true);
 
+    public static final SimpleParticleType NECROMANCER_SOUL_WISP = register("necromancer_soul_wisp");
+    public static final SimpleParticleType NECROMANCER_BITE_SHARD = register("necromancer_bite_shard");
+
     private ModParticles() {
     }
 

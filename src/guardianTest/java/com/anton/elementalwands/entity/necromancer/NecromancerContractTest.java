@@ -68,7 +68,7 @@ public final class NecromancerContractTest {
         require(NecromancerRules.chooseColossus(near, ready, 0, null, 5, 5) == Action.SWIPE, "Close player not swiped");
         require(NecromancerRules.chooseColossus(near, ready, 0, Action.SWIPE, 5, 5) == Action.GRAB, "Swipe and grab do not alternate");
         require(NecromancerRules.chooseColossus(List.of(new Candidate(a, 3, true), new Candidate(b, 12, true)), ready, 0, null, 5, 5) != Action.BLINK, "Colossus blinked");
-        require(NecromancerRules.chooseColossus(List.of(new Candidate(a, 12, true)), ready, 0, null, 5, 5) == Action.LUNGE, "Distant player not lunged at");
+        require(NecromancerRules.chooseColossus(List.of(new Candidate(a, 12, true)), ready, 0, null, 5, 5) == Action.RUSH, "Distant player not lunged at");
         require(NecromancerRules.chooseColossus(List.of(new Candidate(a, 12, true)), ready, 0, null, 0, 5) == Action.RAISE, "Colossus did not refill its army");
         require(NecromancerRules.chooseColossus(List.of(new Candidate(a, 30, false)), ready, 0, null, 5, 5) == null, "Colossus cast without reach or vision");
         // Transformation clock: the body grows before the roar, and both finish inside the cinematic.
@@ -86,13 +86,15 @@ public final class NecromancerContractTest {
         require(!NecromancerRules.swipeHits(0, 4, 1.2, 0), "A vanilla jump (1.25 blocks) cannot clear the swipe");
         require(!NecromancerRules.swipeHits(0, 7, 0, 0), "Swipe reached beyond its radius");
         require(NecromancerRules.swipeHits(4, 0, 0, Math.toRadians(-90)), "Swipe ignored facing");
-        // Lunge: a proper arc that lands where it aimed, after a readable telegraph.
-        require(NecromancerRules.lungeHeight(0) == 0 && Math.abs(NecromancerRules.lungeHeight(1)) < 1e-9
-                && Math.abs(NecromancerRules.lungeHeight(.5) - NecromancerRules.LUNGE_APEX) < 1e-9, "Lunge arc wrong");
-        require(NecromancerRules.LUNGE_LOCK < NecromancerRules.LUNGE_LAUNCH && NecromancerRules.lungeFlight() > 6, "Lunge telegraph too short");
+        require(NecromancerRules.RUSH_WARNING >= 10, "Rush lacks a sidestep warning");
+        require(NecromancerRules.RUSH_SPEED * NecromancerRules.ROOT_TICKS + NecromancerRules.RUSH_REACH >= NecromancerRules.HANDS_RANGE,
+                "Hands root expires before a direct rush can reach its farthest target");
+        require(NecromancerRules.RUSH_BITE < NecromancerRules.RUSH_THROW && NecromancerRules.RUSH_THROW < NecromancerRules.RUSH_RECOVER,
+                "Rush bite/throw/recovery out of order");
+        require(!NecromancerRules.canTarget(Action.RUSH, new Candidate(a, 12, false)), "Rush targeted through cover");
         require(NecromancerRules.boltCount(true) > NecromancerRules.boltCount(false) && NecromancerRules.handsRadius(true) > NecromancerRules.handsRadius(false), "Colossus spells are not stronger");
         require(Action.BOLT.impact + (NecromancerRules.boltCount(true) - 1) * NecromancerRules.boltInterval(true) < Action.BOLT.duration, "Colossus volley truncated");
-        System.out.println("Necromancer checks passed: scaling, threshold, army caps, drain cap, spell priority, vision, target rotation, telegraph timing, sidestep window, colossus priorities, transformation clock, grab caps, jumpable swipe, lunge arc.");
+        System.out.println("Necromancer checks passed: scaling, threshold, army caps, drain cap, spell priority, vision, target rotation, telegraph timing, sidestep window, colossus priorities, transformation clock, grab caps, jumpable swipe, rush timing and cover.");
     }
 
     private static void require(boolean value, String reason) { if (!value) throw new AssertionError(reason); }

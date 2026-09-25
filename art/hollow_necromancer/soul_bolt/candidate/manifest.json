@@ -1,0 +1,11 @@
+{
+  "status": "review candidate only",
+  "cubes": 50,
+  "dimensions": [
+    256,
+    128
+  ],
+  "bite_cycle_seconds": 3.2,
+  "jaw_open_degrees": 84,
+  "features": "long narrow mandible within the skull width, closed jaw floor, launch and snapping bite"
+}

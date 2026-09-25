@@ -107,7 +107,8 @@ public class ElementalWandsClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.FIRE_SPIRIT, FireSpiritRenderer::new);
         EntityRendererRegistry.register(ModEntities.FRACTURED_GUARDIAN, FracturedGuardianRenderer::new);
         EntityRendererRegistry.register(ModEntities.HOLLOW_NECROMANCER, com.anton.elementalwands.client.renderer.NecromancerRenderer::new);
-        EntityRendererRegistry.register(ModEntities.SOUL_BOLT, context -> new net.minecraft.client.render.entity.FlyingItemEntityRenderer<>(context, .8f, true));
+        EntityRendererRegistry.register(ModEntities.SOUL_BOLT, com.anton.elementalwands.client.renderer.SoulBoltRenderer::new);
+        EntityRendererRegistry.register(ModEntities.GRASPING_HAND, com.anton.elementalwands.client.renderer.GraspingHandRenderer::new);
         EntityRendererRegistry.register(ModEntities.SPECTRAL_SKELETON, com.anton.elementalwands.client.renderer.SpectralMinionRenderers.Skeleton::new);
         EntityRendererRegistry.register(ModEntities.SPECTRAL_ZOMBIE, com.anton.elementalwands.client.renderer.SpectralMinionRenderers.Zombie::new);
         EntityRendererRegistry.register(ModEntities.GUARDIAN_LIFT, EmptyEntityRenderer::new);

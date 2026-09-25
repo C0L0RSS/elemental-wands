@@ -24,13 +24,24 @@ import net.minecraft.world.gen.WorldPresets;
 import net.minecraft.world.level.LevelInfo;
 import org.lwjgl.glfw.GLFW;
 
-/** Native placeholder model, animation, spell VFX and minion renderer screenshots. */
+/** Native V2 anatomy, eight-second emergence, attack poses and optional framebuffer recording. */
 public final class NecromancerClientSmoke implements ClientModInitializer {
     private boolean started, arranged, done;
     private volatile boolean ready;
     private volatile String serverFailure;
     private int ticks, scene, floor;
     private UUID bossId;
+    private final boolean rushRecord = Boolean.getBoolean("necro.rushRecord");
+    private UUID rushVictim;
+    private net.minecraft.util.math.Vec3d rushFocus;
+    private boolean sawRushGrip, sawHandGrip, sawHandModels;
+    private final boolean soulRecord = Boolean.getBoolean("necro.soulRecord");
+    private final boolean record = Boolean.getBoolean("necro.record") || soulRecord || rushRecord;
+    private boolean sawSoulFlight, sawSoulBite;
+    private int soulId = -1;
+    private final java.util.concurrent.atomic.AtomicInteger recorded = new java.util.concurrent.atomic.AtomicInteger();
+    private String recordingDirectory;
+    private net.minecraft.util.math.Vec3d walkDestination, walkStart;
 
     public void onInitializeClient() { ClientTickEvents.END_CLIENT_TICK.register(this::tick); }
 
@@ -41,6 +52,13 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
             if (!started) {
                 started = true; c.options.pauseOnLostFocus = false; c.options.tutorialStep = net.minecraft.client.tutorial.TutorialStep.NONE;
                 GLFW.glfwSetWindowSize(c.getWindow().getHandle(), 1280, 720);
+                c.options.getFov().setValue(60);
+                if (record) {
+                    GLFW.glfwHideWindow(c.getWindow().getHandle());
+                    recordingDirectory = "necromancer-recording-" + System.currentTimeMillis();
+                    Files.createDirectories(c.runDirectory.toPath().resolve("screenshots").resolve(recordingDirectory));
+                    Files.writeString(Path.of("RECORDING_DIR.txt"), Path.of("screenshots", recordingDirectory).toAbsolutePath().toString());
+                }
                 c.createIntegratedServerLoader().createAndStart("necromancer-" + System.currentTimeMillis(),
                         new LevelInfo("Necromancer verification", GameMode.CREATIVE, false, Difficulty.NORMAL, true,
                                 new GameRules(FeatureFlags.DEFAULT_ENABLED_FEATURES), DataConfiguration.SAFE_MODE),
@@ -58,7 +76,7 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
                             w.setBlockState(new BlockPos(x, floor - 1, z), ((x + z) % 2 == 0 ? Blocks.STONE_BRICKS : Blocks.MOSSY_STONE_BRICKS).getDefaultState());
                             for (int y = 0; y < 9; y++) w.setBlockState(new BlockPos(x, floor + y, z), Blocks.AIR.getDefaultState());
                         }
-                        w.setTimeOfDay(13500); w.setWeather(6000, 0, false, false);
+                        w.setTimeOfDay(6000); w.setWeather(6000, 0, false, false);
                         var p = server.getPlayerManager().getPlayer(uuid); p.setAttached(EWAttachments.WELCOME_SEEN, true);
                         var boss = new NecromancerEntity(ModEntities.HOLLOW_NECROMANCER, w);
                         boss.refreshPositionAndAngles(.5, floor, 4.5, 180, 0);
@@ -74,7 +92,9 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
             int t = ++scene;
             c.setScreen(null); WandWelcome.reset();
             c.options.hudHidden = true;
-            if (t < 40) look(c, 0, 12);
+            if (soulRecord) { soulScene(c, t); return; }
+            if (rushRecord) { rushScene(c, t); return; }
+            if (t < 40) look(c, 0, -5);
             if (t == 35) {
                 var boss = boss(c);
                 require(boss != null, "Necromancer missing on client");
@@ -82,10 +102,10 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
                 shot(c, "necromancer-front.png");
             }
             if (t == 40) server.execute(() -> server.getPlayerManager().getPlayer(uuid).networkHandler.requestTeleport(3.8, floor, 4.5, 90, 10));
-            if (t > 42 && t < 60) look(c, 90, 10);
+            if (t > 42 && t < 60) look(c, 90, -5);
             if (t == 55) shot(c, "necromancer-side.png");
             if (t == 60) server.execute(() -> server.getPlayerManager().getPlayer(uuid).networkHandler.requestTeleport(.5, floor, .5, 0, 10));
-            if (t > 62) look(c, 0, 10);
+            if (t > 62) look(c, 0, -5);
             if (t == 65) cast(server, uuid, Action.BOLT);
             if (t == 72) shot(c, "necromancer-bolt-windup.png");
             if (t == 84) shot(c, "necromancer-bolt.png");
@@ -110,6 +130,7 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
             if (t == 320) cast(server, uuid, Action.BLINK);
             if (t == 325) shot(c, "necromancer-blink.png");
             if (t == 345) shot(c, "necromancer-curse.png");
+            if (t == 350) c.options.getFov().setValue(45);
             // Phase two: the transformation from a wide front view, then the colossus and its attacks.
             if (t == 355) server.execute(() -> {
                 var p = server.getPlayerManager().getPlayer(uuid);
@@ -118,39 +139,185 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
                     boss.refreshPositionAndAngles(.5, floor, 6.5, 180, 0); boss.setBodyYaw(180); boss.setHeadYaw(180);
                     boss.requestTransform();
                 }
-                p.networkHandler.requestTeleport(.5, floor + 1, -5.5, 0, 8);
+                p.networkHandler.requestTeleport(-7.5, floor + 1, -3.5, -39, 0);
             });
-            if (t > 357 && t < 470) look(c, 0, 8);
-            for (int frame = 0; frame < 8; frame++) if (t == 362 + frame * 13) shot(c, "necromancer-transform-" + frame + ".png");
-            if (t == 470) {
+            if (t > 357 && t < 530) lookAtBoss(c);
+            for (int frame = 0; frame < 12; frame++) if (t == 362 + frame * 13) shot(c, "necromancer-transform-" + frame + ".png");
+            if (t == 520) server.execute(() -> server.getPlayerManager().getPlayer(uuid).networkHandler.requestTeleport(.5, floor + 1, -5.5, 0, 0));
+            if (t == 530) {
                 var boss = boss(c);
                 require(boss != null && boss.isColossus() && !boss.isTransforming(), "Client did not see the finished colossus");
                 require(Math.abs(boss.getWidth() - com.anton.elementalwands.entity.necromancer.NecromancerRules.COLOSSUS_WIDTH) < .01, "Client hitbox did not grow");
                 shot(c, "necromancer-colossus-front.png");
             }
-            if (t == 472) server.execute(() -> server.getPlayerManager().getPlayer(uuid).networkHandler.requestTeleport(10.5, floor + 1, 6.5, 90, 10));
-            if (t > 474 && t < 490) look(c, 90, 10);
-            if (t == 488) shot(c, "necromancer-colossus-side.png");
-            if (t == 490) server.execute(() -> server.getPlayerManager().getPlayer(uuid).networkHandler.requestTeleport(.5, floor + 1, -5.5, 0, 8));
-            if (t > 492 && t < 592) look(c, 0, 8);
-            if (t >= 592) look(c, -25, 12);
-            if (t == 495) cast(server, uuid, Action.SWIPE);
-            if (t == 509) shot(c, "necromancer-colossus-swipe-windup.png");
-            if (t == 514) shot(c, "necromancer-colossus-swipe.png");
-            if (t == 540) cast(server, uuid, Action.BOLT);
-            if (t == 552) shot(c, "necromancer-colossus-roar.png");
-            if (t == 590) server.execute(() -> server.getPlayerManager().getPlayer(uuid).networkHandler.requestTeleport(6.5, floor + 1, -7.5, -25, 12));
-            if (t == 595) cast(server, uuid, Action.LUNGE);
-            if (t == 608) shot(c, "necromancer-colossus-lunge-mark.png");
-            if (t == 624) shot(c, "necromancer-colossus-lunge-air.png");
-            if (t >= 650) {
-                Files.writeString(Path.of("NECRO_PASSED.txt"), "Hollow Necromancer native client passed: placeholder GeckoLib model and renderer, front/side views, bolt, hands, drain, raise, spectral minion renderers, blink and curse screenshots, transformation sequence, synchronized colossus form and hitbox, swipe, roar and lunge screenshots. Visual review and human Lunar playtest pending.\n");
+            if (t == 532) server.execute(() -> server.getPlayerManager().getPlayer(uuid).networkHandler.requestTeleport(10.5, floor + 1, 6.5, 90, 10));
+            if (t > 534 && t < 550) look(c, 90, -5);
+            if (t == 548) shot(c, "necromancer-colossus-side.png");
+            if (t == 550) server.execute(() -> server.getPlayerManager().getPlayer(uuid).networkHandler.requestTeleport(.5, floor + 1, -5.5, 0, 8));
+            if (t > 552 && t < 652) look(c, 0, -3);
+            if (t >= 652) lookAtBoss(c);
+            if (t == 555) cast(server, uuid, Action.SWIPE);
+            if (t == 569) shot(c, "necromancer-colossus-swipe-windup.png");
+            if (t == 574) shot(c, "necromancer-colossus-swipe.png");
+            if (t == 600) cast(server, uuid, Action.BOLT);
+            if (t == 612) shot(c, "necromancer-colossus-roar.png");
+            if (t == 650) server.execute(() -> server.getPlayerManager().getPlayer(uuid).networkHandler.requestTeleport(6.5, floor + 1, -7.5, -25, 12));
+            if (t == 655) cast(server, uuid, Action.RUSH);
+            // Move the camera aside only after the lunge locks its landing, then follow the body.
+            if (t == 670) server.execute(() -> server.getPlayerManager().getPlayer(uuid).networkHandler.requestTeleport(-7.5, floor + 1, -1.5, -90, 0));
+            if (t >= 672) lookAtBoss(c);
+            if (t == 668) shot(c, "necromancer-colossus-lunge-mark.png");
+            if (t == 684) shot(c, "necromancer-colossus-lunge-air.png");
+            if (t == 710) server.execute(() -> {
+                if (server.getOverworld().getEntity(bossId) instanceof NecromancerEntity boss) {
+                    boss.stopFight();
+                    walkDestination = boss.getEntityPos().add(4, 0, 0);
+                }
+            });
+            if (t >= 714 && t < 770 && t % 4 == 2) server.execute(() -> {
+                if (walkDestination != null && server.getOverworld().getEntity(bossId) instanceof NecromancerEntity boss)
+                    boss.getMoveControl().moveTo(walkDestination.x, walkDestination.y, walkDestination.z, 1);
+            });
+            if (t == 714 && boss(c) != null) walkStart = boss(c).getEntityPos();
+            if (t == 746) shot(c, "necromancer-colossus-crawl.png");
+            if (t == 770) {
+                require(walkStart != null && boss(c) != null && boss(c).getEntityPos().squaredDistanceTo(walkStart) > 1, "Colossus did not crawl in the native preview");
+            }
+            if (record && t >= 340 && t < 790)
+                ScreenshotRecorder.saveScreenshot(c.runDirectory, recordingDirectory + "/frame-" + String.format(java.util.Locale.ROOT, "%04d", t - 340) + ".png", c.getFramebuffer(), 1, message -> recorded.incrementAndGet());
+            if (t >= 790) {
+                if (record && recorded.get() < 450) return;
+                Files.writeString(Path.of("NECRO_PASSED.txt"), "Hollow Necromancer native client passed: V2 GeckoLib model and renderer, front/side views, bolt, hands, drain, raise, spectral minion renderers, blink and curse screenshots, eight-second hood emergence sequence, synchronized colossus form and hitbox, swipe, roar, outstretched lunge and moving crawl screenshots. Visual review and human Lunar playtest pending.\n");
                 done = true; c.scheduleStop();
             }
         } catch (Throwable e) {
             done = true; e.printStackTrace();
             try { Files.writeString(Path.of("NECRO_FAILED.txt"), e.toString()); } catch (Exception ignored) {}
             c.scheduleStop();
+        }
+    }
+
+    /** Side camera with an admitted scripted player; real combat owns every grab and hit. */
+    private void rushScene(MinecraftClient c, int t) throws Exception {
+        var server = c.getServer();
+        if (t == 1) {
+            c.options.getFov().setValue(70);
+            server.execute(() -> {
+                try {
+                    var w = server.getOverworld();
+                    var boss = (NecromancerEntity)w.getEntity(bossId);
+                    boss.refreshPositionAndAngles(.5, floor, 2.5, 0, 0);
+                    boss.setBodyYaw(0); boss.requestTransform();
+                    var f = com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player", net.minecraft.server.MinecraftServer.class,
+                            UUID.class, String.class, double.class, double.class, double.class);
+                    f.setAccessible(true);
+                    var victim = (net.minecraft.server.network.ServerPlayerEntity)f.invoke(null, server, UUID.randomUUID(), "RushTarget", .5, (double)floor, 16.5);
+                    victim.changeGameMode(GameMode.SURVIVAL);
+                    victim.setNoGravity(true);
+                    var observer = server.getPlayerManager().getPlayer(c.player.getUuid());
+                    observer.networkHandler.sendPacket(net.minecraft.network.packet.s2c.play.PlayerListS2CPacket.entryFromPlayer(java.util.List.of(victim)));
+                    observer.networkHandler.sendPacket(new net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket(victim.getId(), victim.getUuid(), victim.getX(), victim.getY(), victim.getZ(), victim.getPitch(), victim.getYaw(), victim.getType(), 0, victim.getVelocity(), victim.getHeadYaw()));
+                    observer.changeGameMode(GameMode.SPECTATOR);
+                    rushVictim = victim.getUuid(); victim.setLoaded(true); victim.onTeleportationDone(); victim.getHungerManager().setFoodLevel(10);
+                    server.getPlayerManager().getPlayer(c.player.getUuid()).networkHandler.requestTeleport(-9, floor + 2, 15, -90, 5);
+                } catch (Throwable e) { serverFailure = e.toString(); }
+            });
+        }
+        // Fake players have no input connection: integrate their released throw velocity in this fixture only.
+        if (t > 165) server.execute(() -> {
+            var victim = server.getPlayerManager().getPlayer(rushVictim);
+            var boss = (NecromancerEntity)server.getOverworld().getEntity(bossId);
+            if (victim != null && boss != null && boss.getGrabbed() != victim.getId() && victim.getVelocity().lengthSquared() > .01) {
+                victim.move(net.minecraft.entity.MovementType.SELF, victim.getVelocity());
+                victim.setVelocity(victim.getVelocity().multiply(.91, .98, .91).add(0, -.08, 0));
+                if (victim.isOnGround()) victim.setVelocity(net.minecraft.util.math.Vec3d.ZERO);
+            }
+        });
+        if (t == 180 || t == 300) server.execute(() -> {
+            var w = server.getOverworld(); var boss = (NecromancerEntity)w.getEntity(bossId);
+            var victim = server.getPlayerManager().getPlayer(rushVictim);
+            boss.stopFight(); boss.refreshPositionAndAngles(.5, floor, 2.5, 0, 0); boss.setBodyYaw(0);
+            victim.setPosition(.5, floor, 16.5); victim.setVelocity(net.minecraft.util.math.Vec3d.ZERO);
+            victim.setHealth(20); victim.timeUntilRegen = 0; victim.clearStatusEffects();
+            boss.testAction(victim, t == 180 ? Action.RUSH : Action.HANDS);
+        });
+        // Ease the fixed side camera toward the midpoint so the throw stays in frame.
+        var focusBoss = boss(c);
+        var focusVictim = rushVictim == null ? null : c.world.getPlayerByUuid(rushVictim);
+        var wantedFocus = focusBoss != null && focusVictim != null
+                ? focusBoss.getEntityPos().lerp(focusVictim.getEntityPos(), .5).add(0, 1.6, 0)
+                : new net.minecraft.util.math.Vec3d(.5, floor + 1.8, 10);
+        rushFocus = rushFocus == null ? wantedFocus : rushFocus.lerp(wantedFocus, .12);
+        var delta = rushFocus.subtract(c.player.getEyePos());
+        look(c, (float)Math.toDegrees(Math.atan2(-delta.x, delta.z)), (float)-Math.toDegrees(Math.atan2(delta.y, delta.horizontalLength())));
+        var boss = boss(c);
+        if (boss != null && boss.getGrabbed() >= 0) {
+            if (t < 300) sawRushGrip = true; else sawHandGrip = true;
+        }
+        for (var e : c.world.getEntities()) if (e instanceof com.anton.elementalwands.entity.necromancer.GraspingHandEntity hand) {
+            require(c.getEntityRenderDispatcher().getRenderer(hand) instanceof com.anton.elementalwands.client.renderer.GraspingHandRenderer, "Missing hands renderer");
+            sawHandModels = true;
+            if (t == 348) {
+                var renderer = (com.anton.elementalwands.client.renderer.GraspingHandRenderer)c.getEntityRenderDispatcher().getRenderer(hand);
+                var field = renderer.getClass().getDeclaredField("models"); field.setAccessible(true);
+                var models = (com.anton.elementalwands.client.model.GraspingHandModel[])field.get(renderer);
+                for (int variant = 0; variant < models.length; variant++) {
+                    require(Math.abs(models[variant].getBone("root").orElseThrow().getRotX()) > .2,
+                            "Hand variant " + variant + " did not lean into grip");
+                    require(Math.abs(models[variant].getBone("finger_1_1").orElseThrow().getRotX()) > .5,
+                            "Hand variant " + variant + " fingers not animated");
+                }
+            }
+        }
+        if (t >= 170 && t < 470) ScreenshotRecorder.saveScreenshot(c.runDirectory,
+                recordingDirectory + "/frame-" + String.format(java.util.Locale.ROOT, "%04d", t - 170) + ".png", c.getFramebuffer(), 1, message -> recorded.incrementAndGet());
+        if (t == 178) require(c.world.getPlayerByUuid(rushVictim) != null, "Scripted victim missing on client");
+        if (t >= 470 && recorded.get() >= 300) {
+            require(sawRushGrip && sawHandGrip && sawHandModels, "Missing rush/hands native state: " + sawRushGrip + "/" + sawHandGrip + "/" + sawHandModels);
+            Files.writeString(Path.of("NECRO_PASSED.txt"), "Native rush/hands: colossus model, rush contact grip, hands models/renderer and catch-triggered grip; 300 frames at 20 fps. Scripted player throw integration; human Lunar playtest pending.\n");
+            done = true; c.scheduleStop();
+        }
+    }
+
+    /** Isolated native view of the real projectile, its looping jaw and wall impact. */
+    private void soulScene(MinecraftClient c, int t) throws Exception {
+        look(c, 0, 0);
+        if (t == 1) {
+            c.options.getFov().setValue(70);
+            c.getServer().execute(() -> {
+                var w = c.getServer().getOverworld();
+                if (w.getEntity(bossId) instanceof NecromancerEntity boss) {
+                    boss.refreshPositionAndAngles(7, floor, 7, 180, 0);
+                    for (int y = 0; y < 4; y++) for (int z = 2; z <= 5; z++)
+                        w.setBlockState(new BlockPos(3, floor + y, z), Blocks.STONE_BRICKS.getDefaultState());
+                    var bolt = new com.anton.elementalwands.entity.necromancer.SoulBoltEntity(ModEntities.SOUL_BOLT, w);
+                    bolt.setOwner(boss);
+                    bolt.setPosition(-1.7, floor + 1.6, 3.5);
+                    bolt.setVelocity(.06, 0, 0);
+                    w.spawnEntity(bolt);
+                }
+            });
+        }
+        for (var entity : c.world.getEntities()) {
+            if (!(entity instanceof com.anton.elementalwands.entity.necromancer.SoulBoltEntity bolt)) continue;
+            soulId = bolt.getId();
+            require(c.getEntityRenderDispatcher().getRenderer(bolt) instanceof com.anton.elementalwands.client.renderer.SoulBoltRenderer,
+                    "Soul Bolt still uses the item renderer");
+            if (bolt.isBiting()) {
+                sawSoulBite = true;
+                require(bolt.getVelocity().lengthSquared() < 1e-8, "Impact skull kept moving");
+            } else if (bolt.age > 15) sawSoulFlight = true;
+        }
+        if (t == 35) shot(c, "soul-bolt-flight.png");
+        if (t >= 10 && t < 170)
+            ScreenshotRecorder.saveScreenshot(c.runDirectory, recordingDirectory + "/frame-" + String.format(java.util.Locale.ROOT, "%04d", t - 10) + ".png",
+                    c.getFramebuffer(), 1, message -> recorded.incrementAndGet());
+        if (t >= 170) {
+            if (recorded.get() < 160) return;
+            require(sawSoulFlight && sawSoulBite, "Missing flight or synchronized bite state");
+            require(c.world.getEntityById(soulId) == null, "Impact skull did not expire");
+            Files.writeString(Path.of("NECRO_PASSED.txt"), "Soul Bolt native client passed: custom GeckoLib renderer, moving flight, synchronized stationary wall bite, expiry; 160 frames at 20 fps. Human Lunar review pending.\n");
+            done = true; c.scheduleStop();
         }
     }
 
@@ -166,6 +333,13 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
         return null;
     }
     private static void look(MinecraftClient c, float yaw, float pitch) { c.player.setYaw(yaw); c.player.setPitch(pitch); }
+    private void lookAtBoss(MinecraftClient c) {
+        var boss = boss(c);
+        if (boss == null) return;
+        var delta = boss.getEntityPos().add(0, 1.7, 0).subtract(c.player.getEyePos());
+        look(c, (float)Math.toDegrees(Math.atan2(-delta.x, delta.z)),
+                (float)-Math.toDegrees(Math.atan2(delta.y, delta.horizontalLength())));
+    }
     private static void shot(MinecraftClient c, String name) { ScreenshotRecorder.saveScreenshot(c.runDirectory, name, c.getFramebuffer(), 1, t -> {}); }
     private static void require(boolean b, String why) { if (!b) throw new AssertionError(why); }
 }

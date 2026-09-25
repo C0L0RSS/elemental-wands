@@ -1,16 +1,17 @@
 # Current status
 
-Reviewed September 24, 2026. This page contains outstanding work, not release history.
+Reviewed September 25, 2026. This page contains outstanding work, not release history.
 It records known verification limits; it is not a fresh installation receipt.
 
-- **Hollow Necromancer (in progress):** both phases are playable via `/summon` with a
-  placeholder model. Contract and dedicated-server checks passed phase one (cover,
-  drain, hands, blink/curse, minion rise, army cap, cleanup, wand damage) and phase
-  two (half-health hold, low-ceiling relocation, invulnerable transformation and its
-  save/reload, grab lift/slam cap/escape/release, jumpable swipe, lunge). Native client
-  screenshots showed both forms, the transformation, swipe and roar; the lunge was not
-  captured on camera and the minion tint is faint at night. Pending: human Lunar
-  review of the transformation and grab feel, real art, the elite, and the crypt realm.
+- **Hollow Necromancer (in progress):** both forms use the authored V2 models.
+  The phase-two leap has been replaced by a grounded rush, grab, bite and throw;
+  successful Grasping Hands catches trigger that sequence. The spell now uses
+  six animated skeletal hand models per marked area. The original grab-and-slam
+  retains its teammate rescue mechanic. Pending: human Lunar/co-op review of the
+  art, rush steering, bite/throw timing and balance; the spectral elite and crypt
+  realm. Minion tint at night remains a visual-review item. Automated fixture
+  coverage and its limitations are described in the testing reference; this is
+  not a Lunar installation receipt.
 - **Gravity Well:** Space has five learnable spells; every current elemental
   catalog now meets the five-spell minimum. Dedicated-server checks passed the
   12.25-block level throw, immediate floor/wall/entity impact, pull, early/automatic

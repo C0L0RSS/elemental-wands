@@ -85,7 +85,9 @@ public interface NecromancerMinion {
                 mob.setNoGravity(false);
                 // Blocks may have been placed over the grave during the rise.
                 if (!world.isSpaceEmpty(mob)) { dissolve(mob, world); return; }
-                mob.setAiDisabled(false);
+                // A minion finishing its rise must also respect the emergence cinematic.
+                Entity caster = world.getEntity(state.boss);
+                mob.setAiDisabled(caster instanceof NecromancerEntity necromancer && necromancer.isTransforming());
             }
             return;
         }

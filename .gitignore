@@ -28,3 +28,4 @@ run/
 
 # Python bytecode
 __pycache__/
+!/art/hollow_necromancer/workshop/index.html

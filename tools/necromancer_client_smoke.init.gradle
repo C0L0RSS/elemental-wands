@@ -5,6 +5,9 @@ allprojects {
         def smokeRoot=layout.buildDirectory.dir('necromancer-client-smoke').get().asFile
         // Optional existing cache for offline verification (for example Lunar shared/assets).
         def existingAssets=project.findProperty('hubClientAssets')
+        if (project.hasProperty('necroRecord')) loom.runs.client.vmArg('-Dnecro.record=true')
+        if (project.hasProperty('rushRecord')) loom.runs.client.vmArg('-Dnecro.rushRecord=true')
+        if (project.hasProperty('soulBoltRecord')) loom.runs.client.vmArg('-Dnecro.soulRecord=true')
         if (existingAssets) {
             loom.runs.client.vmArg('-Dfabric.dli.config='+new File(smokeRoot,'launch.cfg').absolutePath)
         }

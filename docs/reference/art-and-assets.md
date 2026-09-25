@@ -49,6 +49,9 @@ Runtime resources live under `src/main/resources/assets/elementalwands/`.
 | `tools/prepare_guardian_assets.py` | Guardian body, glow/crack textures and merged animation |
 | `tools/prepare_guardian_throw_socket.py` | Server socket derived from authored animation |
 | `tools/prepare_guardian_pedestal.py` | Native offering pedestal models |
+| `art/hollow_necromancer/v2/build_art.py` | Authored mage/skeleton geometry, textures, animation and sampled server grab/slam and bite/throw wrist sockets; Pillow and NumPy |
+| `art/hollow_necromancer/soul_bolt/build_preview.py` | Authored skull, hinged jaw, flight/impact animations, glow mask and prepared particle frames; `--install` exports mod resources, `--check` verifies them |
+| `art/hollow_necromancer/grasping_hands/build_preview.py` | Three skeletal hand proportions, articulated claw animation and cyan glow masks; `--install` exports, `--check` verifies |
 | `tools/build_guardian_church.py` | Ruined/restored church layouts and structure resources |
 
 Do not run generators with replacement options unless intentionally changing their
@@ -114,7 +117,7 @@ by the Devouring Eclipse. Visual terrain fragments do not authorize world edits.
 ## Asset contracts and resource conventions
 
 The validator counts Fire 45, Wind 53, Stone 41, Nature 44, Space 81 PNGs:
-264 affinity images plus two shared images, and 41 particle definitions.
+264 affinity images plus two shared images, and 43 particle definitions (including two Necromancer effects).
 Guardian creature textures, church textures, menu textures, and the three wand
 textures are separate from that spell/HUD contract. Do not change counts to hide
 an accidentally removed or regenerated asset. The unused rendered seed sprite

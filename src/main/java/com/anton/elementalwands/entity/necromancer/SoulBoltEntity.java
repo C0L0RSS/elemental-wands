@@ -2,16 +2,16 @@ package com.anton.elementalwands.entity.necromancer;
 
 import com.anton.elementalwands.ElementalWandsMod;
 import com.anton.elementalwands.entity.AstralDoubleEntity;
+import com.anton.elementalwands.registry.ModParticles;
 import java.util.UUID;
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.FlyingItemEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.damage.DamageType;
 import net.minecraft.entity.data.DataTracker;
+import net.minecraft.entity.data.TrackedData;
+import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.projectile.ProjectileEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
@@ -26,20 +26,35 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
+import software.bernie.geckolib.animatable.GeoEntity;
+import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.animatable.manager.AnimatableManager;
+import software.bernie.geckolib.animatable.processing.AnimationController;
+import software.bernie.geckolib.animation.RawAnimation;
+import software.bernie.geckolib.util.GeckoLibUtil;
 
 /** Slow homing soul. Turns a little each tick, so strafing and cover both beat it. */
-public class SoulBoltEntity extends ProjectileEntity implements FlyingItemEntity {
+public class SoulBoltEntity extends ProjectileEntity implements GeoEntity {
     public static final RegistryKey<DamageType> DAMAGE = RegistryKey.of(RegistryKeys.DAMAGE_TYPE,
             Identifier.of(ElementalWandsMod.MOD_ID, "necromancer_soul"));
-    private static final ItemStack STACK = new ItemStack(Items.SKELETON_SKULL);
+    private static final TrackedData<Boolean> BITING = DataTracker.registerData(SoulBoltEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    private static final RawAnimation FLIGHT = RawAnimation.begin().thenLoop("animation.soul_bolt.flight");
+    private static final RawAnimation IMPACT = RawAnimation.begin().thenPlayAndHold("animation.soul_bolt.impact");
+    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+    private int impactTicks;
     private UUID target;
     private double speed = NecromancerRules.BOLT_SPEED;
     private boolean loadedFromSave;
 
     public SoulBoltEntity(EntityType<? extends SoulBoltEntity> type, World world) { super(type, world); }
 
-    @Override protected void initDataTracker(DataTracker.Builder builder) {}
-    @Override public ItemStack getStack() { return STACK; }
+    @Override protected void initDataTracker(DataTracker.Builder builder) { builder.add(BITING, false); }
+    public boolean isBiting() { return dataTracker.get(BITING); }
+    @Override public AnimatableInstanceCache getAnimatableInstanceCache() { return cache; }
+    @Override public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+        controllers.add(new AnimationController<SoulBoltEntity>("jaw", 0,
+                state -> state.setAndContinue(state.animatable().isBiting() ? IMPACT : FLIGHT)));
+    }
     @Override protected void readCustomData(ReadView view) {
         super.readCustomData(view);
         loadedFromSave = true; // A reloaded bolt must not resume a stale fight.
@@ -51,6 +66,7 @@ public class SoulBoltEntity extends ProjectileEntity implements FlyingItemEntity
         target = player.getUuid();
         setPosition(from);
         setVelocity(player.getBoundingBox().getCenter().subtract(from).normalize().multiply(speed));
+        faceVelocity();
         velocityDirty = true;
     }
 
@@ -59,7 +75,13 @@ public class SoulBoltEntity extends ProjectileEntity implements FlyingItemEntity
         if (getEntityWorld() instanceof ServerWorld world) {
             if (loadedFromSave || age > NecromancerRules.BOLT_LIFE || !(getOwner() instanceof NecromancerEntity boss)
                     || !boss.isAlive()) { discard(); return; }
+            // Contact is resolved once. Keep only the harmless visual for the jaw snap.
+            if (isBiting()) {
+                if (++impactTicks >= 8) discard();
+                return;
+            }
             steer(world, boss);
+            faceVelocity();
             Vec3d start = getEntityPos(), end = start.add(getVelocity());
             var block = world.raycast(new RaycastContext(start, end, RaycastContext.ShapeType.COLLIDER,
                     RaycastContext.FluidHandling.NONE, this));
@@ -79,16 +101,27 @@ public class SoulBoltEntity extends ProjectileEntity implements FlyingItemEntity
                 setPosition(start.lerp(end, fraction));
                 if (hit != null) hit.damage(world, source(world, boss), NecromancerRules.BOLT_DAMAGE);
                 world.spawnParticles(ParticleTypes.SOUL, getX(), getY(), getZ(), 12, .25, .25, .25, .06);
-                world.spawnParticles(ParticleTypes.SCULK_SOUL, getX(), getY(), getZ(), 4, .15, .15, .15, .02);
+                world.spawnParticles(ModParticles.NECROMANCER_BITE_SHARD, getX(), getY(), getZ(), 4, .15, .15, .15, .02);
                 world.playSound(null, getX(), getY(), getZ(), SoundEvents.PARTICLE_SOUL_ESCAPE.value(), SoundCategory.HOSTILE, 1.4f, .8f);
-                discard();
+                setVelocity(Vec3d.ZERO);
+                velocityDirty = true;
+                dataTracker.set(BITING, true);
                 return;
             }
-            world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, getX(), getY(), getZ(), 1, .05, .05, .05, .005);
+            world.spawnParticles(ModParticles.NECROMANCER_SOUL_WISP, getX(), getY(), getZ(), 1, .05, .05, .05, .005);
             if (age % 3 == 0) world.spawnParticles(ParticleTypes.SOUL, getX(), getY(), getZ(), 1, .08, .08, .08, .01);
         }
+        if (isBiting()) return;
+        faceVelocity();
         // Same integration on both sides; the server alone decides contact and damage.
         setPosition(getEntityPos().add(getVelocity()));
+    }
+
+    private void faceVelocity() {
+        Vec3d v = getVelocity();
+        if (v.lengthSquared() < 1e-8) return;
+        setYaw((float)Math.toDegrees(Math.atan2(-v.x, v.z)));
+        setPitch((float)-Math.toDegrees(Math.atan2(v.y, v.horizontalLength())));
     }
 
     /** Bounded turn toward the tracked player; a lost or ineligible target flies straight. */

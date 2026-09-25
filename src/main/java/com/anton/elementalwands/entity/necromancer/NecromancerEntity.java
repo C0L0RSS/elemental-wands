@@ -34,8 +34,8 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
     private static final String PASSIVE_TAG = "ew_necromancer_passive";
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.hollow_necromancer.idle");
     private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.hollow_necromancer.walk");
-    private static final RawAnimation CRAWL_IDLE = RawAnimation.begin().thenLoop("animation.hollow_necromancer.colossus_idle");
-    private static final RawAnimation CRAWL = RawAnimation.begin().thenLoop("animation.hollow_necromancer.colossus_crawl");
+    private static final RawAnimation COLOSSUS_IDLE = RawAnimation.begin().thenLoop("animation.hollow_necromancer.colossus_idle");
+    private static final RawAnimation COLOSSUS_WALK = RawAnimation.begin().thenLoop("animation.hollow_necromancer.colossus_walk");
     private static final TrackedData<Integer> DRAIN_TARGET = DataTracker.registerData(NecromancerEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Boolean> COLOSSUS = DataTracker.registerData(NecromancerEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Long> TRANSFORM_START = DataTracker.registerData(NecromancerEntity.class, TrackedDataHandlerRegistry.LONG);
@@ -219,7 +219,7 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
         controllers.add(new AnimationController<NecromancerEntity>(CONTROLLER, 3, state -> {
                     if (state.controller().getTriggeredAnimation() != null) return PlayState.CONTINUE;
-                    if (state.animatable().isColossus()) return state.setAndContinue(state.isMoving() ? CRAWL : CRAWL_IDLE);
+                    if (state.animatable().isColossus()) return state.setAndContinue(state.isMoving() ? COLOSSUS_WALK : COLOSSUS_IDLE);
                     return state.setAndContinue(state.isMoving() ? WALK : IDLE);
                 }).receiveTriggeredAnimations()
                 .triggerableAnim("bolt", RawAnimation.begin().thenPlay("animation.hollow_necromancer.cast_bolt"))
@@ -231,7 +231,8 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
                 .triggerableAnim("roar", RawAnimation.begin().thenPlay("animation.hollow_necromancer.colossus_roar"))
                 .triggerableAnim("swipe", RawAnimation.begin().thenPlay("animation.hollow_necromancer.colossus_swipe"))
                 .triggerableAnim("grab", RawAnimation.begin().thenPlay("animation.hollow_necromancer.colossus_grab"))
-                .triggerableAnim("lunge", RawAnimation.begin().thenPlay("animation.hollow_necromancer.colossus_lunge")));
+                .triggerableAnim("rush", RawAnimation.begin().thenLoop("animation.hollow_necromancer.colossus_rush"))
+                .triggerableAnim("bite_throw", RawAnimation.begin().thenPlay("animation.hollow_necromancer.colossus_bite_throw")));
     }
 
     @Override public AnimatableInstanceCache getAnimatableInstanceCache() { return cache; }

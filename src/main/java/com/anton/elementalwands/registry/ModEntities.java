@@ -238,7 +238,7 @@ public final class ModEntities {
                 Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "hollow_necromancer"),
                 FabricEntityTypeBuilder.<com.anton.elementalwands.entity.necromancer.NecromancerEntity>create(SpawnGroup.MISC,
                         com.anton.elementalwands.entity.necromancer.NecromancerEntity::new)
-                        .dimensions(EntityDimensions.fixed(.7f, 1.45f)).trackRangeBlocks(128).trackedUpdateRate(1)
+                        .dimensions(EntityDimensions.fixed(.7f, 2.15f)).trackRangeBlocks(128).trackedUpdateRate(1)
                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "hollow_necromancer"))));
 
         public static final EntityType<com.anton.elementalwands.entity.necromancer.SoulBoltEntity> SOUL_BOLT = Registry.register(
@@ -247,6 +247,13 @@ public final class ModEntities {
                         com.anton.elementalwands.entity.necromancer.SoulBoltEntity::new)
                         .dimensions(EntityDimensions.fixed(.5f, .5f)).trackRangeBlocks(96).trackedUpdateRate(1).disableSaving()
                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "soul_bolt"))));
+
+        public static final EntityType<com.anton.elementalwands.entity.necromancer.GraspingHandEntity> GRASPING_HAND = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "grasping_hand"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.necromancer.GraspingHandEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.necromancer.GraspingHandEntity::new)
+                        .dimensions(EntityDimensions.fixed(.5f, .5f)).trackRangeBlocks(96).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "grasping_hand"))));
 
         public static final EntityType<com.anton.elementalwands.entity.necromancer.SpectralSkeletonEntity> SPECTRAL_SKELETON = Registry.register(
                 Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "spectral_skeleton"),

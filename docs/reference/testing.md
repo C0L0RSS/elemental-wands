@@ -61,7 +61,7 @@ inspect their assertions when behavior changes instead of trusting an old name.
 | Wind | `wind_pressure_smoke.init.gradle` | `wind_visual_client_smoke.init.gradle` (guided visual review; leaves disposable world open) |
 | Guardian combat | `guardian_combat_smoke.init.gradle`, `guardian_guard_smoke.init.gradle`, `guardian_phase_smoke.init.gradle` | `guardian_floor_client_smoke.init.gradle` |
 | Guardian cover / Nature / walls | `guardian_cover_smoke.init.gradle`, `guardian_nature_smoke.init.gradle`, `guardian_wall_smoke.init.gradle` | Relevant native visual fixture |
-| Hollow Necromancer | `necromancer_server_smoke.init.gradle`, `necromancer_phase_smoke.init.gradle` | `necromancer_client_smoke.init.gradle` (screenshots) |
+| Hollow Necromancer | `necromancer_server_smoke.init.gradle`, `necromancer_phase_smoke.init.gradle` | `necromancer_client_smoke.init.gradle` (screenshots; `-PnecroRecord` for hidden recording) |
 | Church / arena | `guardian_church_smoke.init.gradle`, `guardian_arena_smoke.init.gradle` | Guardian floor client with visual options |
 | Worldgen / locate | `guardian_church_worldgen_smoke.init.gradle`, `guardian_church_locate_smoke.init.gradle` | Human terrain review |
 | Parties / audit regressions | `party_server_smoke.init.gradle`, `audit_fixes_smoke.init.gradle` | Human co-op review |
@@ -206,6 +206,22 @@ this does not verify the user's authenticated Lunar skin or multiplayer feel.
 
 ## Evidence retention
 
+The Necromancer client runner accepts `-PnecroRecord` with `hubClientAssets`.
+It captures 450 framebuffer frames at 20 fps (22.5 seconds), covering the
+eight-second emergence, the standing skeleton, swipe, casting, rush and walking.
+`build/necromancer-client-smoke/RECORDING_DIR.txt` identifies the frame directory;
+require a fresh `NECRO_PASSED.txt` and no `NECRO_FAILED.txt`. Screenshots also cover
+the mage and transformation stages. This scripted recording does not verify
+human input, multiplayer feel or installation into Lunar.
+
+The same runner accepts `-PsoulBoltRecord` for an isolated skull view. It records
+160 frames at 20 fps (eight seconds), checking the custom Soul Bolt renderer,
+flight, synchronized stationary wall bite and removal. The deliberately slowed
+test projectile makes the repeating jaw motion visible; normal combat uses the
+existing faster homing volleys. Use the same recording directory and receipt paths
+as above and encode with 160 frames. Run the Necromancer server fixture as well
+to verify cover and player damage.
+
 Keep useful final native views, a concise result/limitation summary, and critical
 reproduction steps. Raw successful build/client logs are regenerable and usually
 need not be retained in docs. Keep failure evidence when it explains an unresolved
@@ -230,3 +246,20 @@ Require its fresh `HUB_PASSED.txt` and the dedicated fixture's
 `build/gravity-well-smoke-run/PRESSURE_PASSED.txt`, with no failure markers.
 The ordinary client mode exercises the bound fifth-slot input; recording sends
 scripted packets. Neither mode establishes human Lunar balance approval.
+
+### Necromancer rush and Grasping Hands recording
+
+Use `-PrushRecord` on `necromancer_client_smoke.init.gradle` with the existing
+`hubClientAssets` option. It captures 300 frames at 20 fps (15 seconds), showing
+an ordinary rush/grab/bite/throw and the phase-two Hands follow-up from a side
+camera. The server fixture `necromancer_phase_smoke.init.gradle` checks the old
+slam and rescue, rush hit/miss, cover, single bite, throw, no teammate interrupt,
+nearest trapped target, Hands escape/visual expiry and cancellation. The native
+fixture also checks that all three hand rigs lean and curl their fingers during
+the grip, guarding against shared animation-processor state.
+
+The native recording uses a scripted player with no input client; the fixture
+integrates its released throw velocity. Actual combat owns the grip, bite and
+throw impulse. Require fresh `NECRO_PASSED.txt` and no failure receipt, then encode
+the current `RECORDING_DIR.txt` to `.local-previews/grasping-hands/necromancer-rush-gameplay.mp4`.
+This does not verify human movement input or multiplayer latency.

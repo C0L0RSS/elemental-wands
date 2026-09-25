@@ -17,7 +17,7 @@ public final class NecromancerCommands {
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         var root = CommandManager.literal("necromancer").requires(source -> source.hasPermissionLevel(2));
-        for (String action : new String[]{"fight", "stop", "status", "transform", "bolt", "hands", "drain", "raise", "blink", "swipe", "grab", "lunge"})
+        for (String action : new String[]{"fight", "stop", "status", "transform", "bolt", "hands", "drain", "raise", "blink", "swipe", "grab", "rush"})
             root.then(CommandManager.literal(action).executes(context -> run(context.getSource(), action)));
         dispatcher.register(CommandManager.literal("ew").then(root));
     }
@@ -40,7 +40,7 @@ public final class NecromancerCommands {
             }
             default -> {
                 Action cast = Action.valueOf(action.toUpperCase());
-                if (cast.colossusOnly() != boss.isColossus())
+                if (cast.colossusOnly() && !boss.isColossus() || cast == Action.BLINK && boss.isColossus())
                     yield cast.colossusOnly() ? action + " needs the colossus; use /ew necromancer transform first." : action + " is a robed-form spell.";
                 boss.testAction(source.getPlayerOrThrow(), cast);
                 yield "one real " + action + " cast at you, then passive. Survival/Adventure players can take damage.";

@@ -5,6 +5,7 @@ are not claims of public publication. Older entries describe what changed then;
 use [current guides](../README.md) for today’s behavior and [status](../STATUS.md)
 for outstanding verification. Detailed historical reports are optional background.
 
+- [2026-09-24 — Hollow Necromancer redesign](2026-09-24-necromancer.md)
 - [2026-09-24 — Space: Gravity Well](2026-09-24-gravity-well.md)
 - [2026-09-23 — Space: Astral Double](2026-09-23-space.md)
 - [2026-09-23 — Wind: Gale Daggers and Updraft](2026-09-23-wind.md)

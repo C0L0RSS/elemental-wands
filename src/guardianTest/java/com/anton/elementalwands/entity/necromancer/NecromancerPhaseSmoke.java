@@ -26,6 +26,7 @@ public final class NecromancerPhaseSmoke implements ModInitializer {
     private ServerPlayerEntity target, second;
     private NecromancerEntity boss;
     private Vec3d origin, pinned;
+    private boolean caughtRush, thrownRush;
 
     public void onInitialize() {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
@@ -149,24 +150,80 @@ public final class NecromancerPhaseSmoke implements ModInitializer {
                 heal(target); heal(second);
                 boss.refreshPositionAndAngles(.5, 100, .5, 0, 0);
                 target.setPosition(.5, 100, 14.5); second.setPosition(20.5, 100, 20.5);
-                boss.testAction(target, Action.LUNGE);
+                boss.testAction(target, Action.RUSH);
                 mark = t; stage = 5;
             }
         }
-        // Lunge: travels to its marked landing and damages there.
-        if (stage == 5 && g == Action.LUNGE.impact + 3) {
-            require(boss.getZ() > 9, "Lunge did not travel: " + boss.getEntityPos());
-            require(target.getHealth() < 20, "Lunge landing missed");
-            require(!boss.hasNoGravity(), "Lunge left gravity off");
-            heal(target); heal(second);
-            second.setPosition(.5, 100, 8.5);
-            boss.startFight();
-            mark = t; stage = 6;
+        // Grounded rush: contact starts the grip, team damage cannot break it, bite then throw.
+        if (stage == 5) {
+            require(Math.abs(boss.getY() - 100) < .1, "Rush became airborne");
+            if (boss.getGrabbed() == target.getId() && !caughtRush) {
+                caughtRush = true;
+                boss.damage(w, w.getDamageSources().playerAttack(second), 30);
+                require(boss.getGrabbed() == target.getId(), "Team damage interrupted rush grip");
+            }
+            if (caughtRush && boss.getGrabbed() == -1 && target.getVelocity().horizontalLength() > 1) thrownRush = true;
+            if (g == 95) {
+                require(caughtRush && thrownRush, "Rush did not grab then throw");
+                require(target.getHealth() == 20 - NecromancerRules.RUSH_DAMAGE, "Rush bite did not hit exactly once: " + target.getHealth());
+                boss.stopFight(); boss.refreshPositionAndAngles(.5, 100, .5, 0, 0);
+                target.setPosition(.5, 100, 14.5); heal(target);
+                boss.testAction(target, Action.RUSH);
+                mark = t; stage = 7;
+            }
         }
-        if (stage == 6 && g == 140) {
-            require(boss.status().contains("colossus") && boss.status().contains("fighting"), "Colossus fight did not run: " + boss.status());
-            boss.stopFight();
-            Files.writeString(Path.of("NECROMANCER_PASSED.txt"), "Hollow Necromancer phase two passed: burst held at half health; low ceiling relocated before growing; transformation invulnerable, grew mid-way, finished and persisted, and a mid-transform save resumed as colossus; grab lifted and slammed within its cap, team damage broke the grip, stop released and unpinned; swipe hit in front, spared a jumper and turned to its target; lunge travelled, landed damage and restored gravity; colossus fight mode ran.\n");
+        // Sidestep after commitment: limited steering cannot snap onto a player behind it.
+        if (stage == 7) {
+            if (g == 13) target.setPosition(10.5, 100, -4.5);
+            require(boss.getGrabbed() == -1, "Dodged rush still grabbed");
+            if (g == 60) {
+                require(target.getHealth() == 20, "Missed rush dealt damage");
+                boss.stopFight(); boss.refreshPositionAndAngles(.5, 100, .5, 0, 0);
+                target.setPosition(.5, 100, 14.5); heal(target);
+                for (int x = -5; x <= 5; x++) for (int y = 100; y < 107; y++) w.setBlockState(new BlockPos(x, y, 6), Blocks.STONE.getDefaultState());
+                boss.testAction(target, Action.RUSH); mark = t; stage = 8;
+            }
+        }
+        if (stage == 8 && g == 65) {
+            require(boss.getZ() < 6 && boss.getGrabbed() == -1 && target.getHealth() == 20, "Rush crossed or grabbed through cover");
+            for (int x = -5; x <= 5; x++) for (int y = 100; y < 107; y++) w.setBlockState(new BlockPos(x, y, 6), Blocks.AIR.getDefaultState());
+            boss.stopFight(); boss.refreshPositionAndAngles(.5, 100, .5, 0, 0);
+            target.setPosition(.5, 100, 13.5); second.setPosition(7.5, 100, 15.5); heal(target); heal(second);
+            boss.testAction(target, Action.HANDS); mark = t; stage = 9;
+            caughtRush = thrownRush = false;
+        }
+        if (stage == 9) {
+            if (g == 20) require(w.getEntitiesByClass(GraspingHandEntity.class, boss.getBoundingBox().expand(30), e -> true).size() == 12, "Hands models missing");
+            if (g == 33) require(boss.status().contains("rush"), "Hands catch did not immediately start rush");
+            if (boss.getGrabbed() == target.getId()) caughtRush = true;
+            require(boss.getGrabbed() != second.getId(), "Hands chose the farther trapped player");
+            if (caughtRush && boss.getGrabbed() == -1 && target.getVelocity().horizontalLength() > 1) thrownRush = true;
+            if (g == 120) {
+                require(caughtRush && thrownRush && target.getHealth() == 5, "Hands + bite combo failed: " + target.getHealth());
+                require(second.getHealth() == 13, "Secondary trapped player got bitten");
+                require(w.getEntitiesByClass(GraspingHandEntity.class, boss.getBoundingBox().expand(40), e -> true).isEmpty(), "Hands visuals did not expire");
+                boss.stopFight(); boss.refreshPositionAndAngles(.5, 100, .5, 0, 0);
+                target.setPosition(.5, 100, 13.5); heal(target); second.setPosition(30, 100, 30);
+                boss.testAction(target, Action.HANDS); mark = t; stage = 10;
+            }
+        }
+        if (stage == 10) {
+            if (g == 15) target.setPosition(12.5, 100, -4.5);
+            if (g == 40) {
+                require(target.getHealth() == 20 && !boss.status().contains("rush"), "Escaped hands triggered combo");
+                boss.stopFight(); boss.refreshPositionAndAngles(.5, 100, .5, 0, 0);
+                target.setPosition(.5, 100, 10.5); heal(target);
+                boss.testAction(target, Action.RUSH); mark = t; stage = 11;
+            }
+        }
+        if (stage == 11 && boss.getGrabbed() == target.getId()) {
+            boss.stopFight(); require(boss.getGrabbed() == -1, "Cancel retained rush victim");
+            target.setPosition(20.5, 104, 20.5); pinned = target.getEntityPos(); mark = t; stage = 12;
+        }
+        if (stage == 11) require(g < 80, "Cancellation test never grabbed");
+        if (stage == 12 && g == 5) {
+            require(target.getEntityPos().distanceTo(pinned) < .01 && target.getHealth() == 20, "Cancelled rush still pinned or bit");
+            Files.writeString(Path.of("NECROMANCER_PASSED.txt"), "Phase two passed: transformation and save, original grab/slam and teammate rescue, swipe; grounded rush, single bite, throw, no team interrupt, sidestep, wall collision, hands visuals and nearest caught target combo, escape, expiry and cancellation.\n");
             server.stop(false);
         }
     }

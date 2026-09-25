@@ -1,0 +1,11 @@
+{
+  "revision": "Revision 02",
+  "date": "2026-09-24",
+  "summary": "Lean hooded mage; hunched skeleton with jointed claws, a four-limbed crawl and an outstretched lunge.",
+  "texture": [
+    256,
+    128
+  ],
+  "cubes": 244,
+  "bones": 75
+}

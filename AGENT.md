@@ -94,7 +94,9 @@ node tools/prepare_nature_models.mjs --check
 node tools/prepare_springbloom.mjs --check
 python3 tools/prepare_wand_hub_assets.py --check
 python3 tools/prepare_wand_assets.py --check
-python3 art/hollow_necromancer/v0-placeholder/build_placeholder.py --check
+python3 art/hollow_necromancer/v2/build_art.py --check
+python3 art/hollow_necromancer/soul_bolt/build_preview.py --check
+python3 art/hollow_necromancer/grasping_hands/build_preview.py --check
 unzip -t build/libs/elementalwands-2.2.0.jar
 ```
 

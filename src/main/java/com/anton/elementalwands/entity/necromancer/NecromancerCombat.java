@@ -66,12 +66,15 @@ final class NecromancerCombat {
     private final List<SoulBoltEntity> bolts = new ArrayList<>();
     private final List<Grasp> grasps = new ArrayList<>();
     private final List<Curse> curses = new ArrayList<>();
-    private Vec3d home, blinkTo, lungeFrom, lungeTo;
+    private Vec3d home, blinkTo;
     private Action active, last;
     private UUID target, held;
     private long started, nextAction, emptySince = -1, nextMove, pendingSince = -1, nextRelocate, staggerUntil;
     private boolean engaged, reviewing, minionsFrozen;
     private int boltsFired;
+    private long rushCaught = -1;
+    private boolean handsRush;
+    private final List<GraspingHandEntity> handVisuals = new ArrayList<>();
     private float drained, gripDamage;
     private float lockedYaw;
 
@@ -95,6 +98,7 @@ final class NecromancerCombat {
         for (MobEntity minion : minions) if (!minion.isRemoved() && minion.getEntityWorld() instanceof ServerWorld world)
             NecromancerMinion.dissolve(minion, world);
         minions.clear(); grasps.clear(); curses.clear();
+        handVisuals.forEach(GraspingHandEntity::discard); handVisuals.clear();
         for (SoulBoltEntity bolt : bolts) bolt.discard();
         bolts.clear();
         ready.clear(); lastTargeted.clear(); grabbedAt.clear(); last = null;
@@ -118,7 +122,7 @@ final class NecromancerCombat {
 
     /** Called with the health actually lost; hits on the colossus during a grab loosen its grip. */
     void damaged(float lost) {
-        if (held == null || lost <= 0) return;
+        if (active != Action.GRAB || held == null || lost <= 0) return;
         gripDamage += lost;
         if (gripDamage >= grabEscape(boss.getMaxHealth()) && boss.getEntityWorld() instanceof ServerWorld world) {
             release(world, true);
@@ -228,15 +232,21 @@ final class NecromancerCombat {
     private void tickTransform(ServerWorld world, long now) {
         halt();
         int t = (int)boss.getTransformTime(0);
-        Vec3d hood = boss.getEntityPos().add(0, 1.3, 0);
-        if (t >= 8 && t < 45 && t % 3 == 0)
-            world.spawnParticles(ParticleTypes.SOUL, hood.x, hood.y, hood.z, 3, .2, .2, .2, .03);
-        if (t == 28) world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_SKELETON_HURT, SoundCategory.HOSTILE, 1.6f, .35f);
-        if (t == 45) world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_WARDEN_EMERGE, SoundCategory.HOSTILE, 2f, .8f);
-        if (t >= 40 && t < TRANSFORM_ROAR && t % 2 == 0) {
-            // The robe burns away as the body crawls out of it.
-            world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, boss.getX(), boss.getY() + .4, boss.getZ(), 4, .35, .35, .35, .02);
-            world.spawnParticles(ParticleTypes.LARGE_SMOKE, boss.getX(), boss.getY() + .8, boss.getZ(), 1, .3, .3, .3, .01);
+        Vec3d hood = boss.getEntityPos().subtract(forward().multiply(.3)).add(0, 1.9, 0);
+        if (t >= 18 && t < 65 && t % 4 == 0)
+            world.spawnParticles(ParticleTypes.SOUL, hood.x, hood.y, hood.z, 2, .13, .13, .13, .01);
+        if (t == 27) world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_SKELETON_HURT, SoundCategory.HOSTILE, 1.6f, .35f);
+        if (t == 49 || t == 56) {
+            Vec3d hand = boss.getEntityPos().add(forward().multiply(1.5));
+            world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_IRON_GOLEM_STEP, SoundCategory.HOSTILE, 1.2f, .6f);
+            world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, floorState(world, hand)), hand.x, hand.y + .05, hand.z, 12, .7, .02, .4, .025);
+        }
+        if (t == 68) world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_WARDEN_EMERGE, SoundCategory.HOSTILE, 2f, .65f);
+        if (t >= 112 && t < 155 && t % 2 == 0) {
+            // The empty robe lies behind the skeleton before it burns. Cosmetic particles only.
+            Vec3d robe = boss.getEntityPos().subtract(forward().multiply(1.2)).add(0, .12, 0);
+            world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, robe.x, robe.y, robe.z, 5, .35, .08, .65, .015);
+            world.spawnParticles(ParticleTypes.LARGE_SMOKE, robe.x, robe.y + .15, robe.z, 1, .3, .12, .5, .015);
         }
         if (t == TRANSFORM_GROW && !boss.isColossus()) {
             boss.setColossus(true);
@@ -303,7 +313,7 @@ final class NecromancerCombat {
         interrupt();
         boolean colossus = boss.isColossus();
         active = action; last = action; started = now; target = player.getUuid();
-        boltsFired = 0; drained = 0;
+        boltsFired = 0; drained = 0; rushCaught = -1; handsRush = false;
         lastTargeted.put(target, now);
         ready.put(action, now + action.duration + action.cooldown);
         face(player.getEntityPos());
@@ -316,7 +326,7 @@ final class NecromancerCombat {
             case BLINK -> "blink";
             case SWIPE -> "swipe";
             case GRAB -> "grab";
-            case LUNGE -> "lunge";
+            case RUSH -> "rush";
         });
         switch (action) {
             case BOLT -> world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_EVOKER_PREPARE_ATTACK, SoundCategory.HOSTILE, 1f, colossus ? .7f : 1.3f);
@@ -326,8 +336,17 @@ final class NecromancerCombat {
                 world.getPlayers(p -> p != player && canDamage(boss, p) && boss.distanceTo(p) <= HANDS_RANGE).stream()
                         .sorted(Comparator.comparingDouble(boss::squaredDistanceTo))
                         .limit(handsTargets(colossus) - 1).forEach(victims::add);
-                for (ServerPlayerEntity victim : victims)
-                    grasps.add(new Grasp(ground(world, victim.getEntityPos()), handsRadius(colossus), now + action.impact));
+                for (ServerPlayerEntity victim : victims) {
+                    Vec3d center = ground(world, victim.getEntityPos());
+                    grasps.add(new Grasp(center, handsRadius(colossus), now + action.impact));
+                    for (int i = 0; i < 6; i++) {
+                        var hand = new GraspingHandEntity(ModEntities.GRASPING_HAND, world);
+                        double angle = i * Math.PI / 3 + .15, radius = handsRadius(colossus) * .7;
+                        hand.setup(boss, center.add(Math.cos(angle) * radius, 0, Math.sin(angle) * radius),
+                                (float)Math.toDegrees(angle) + 90, i % 3, colossus ? 1.18f : 1f, i % 2 == 1);
+                        if (world.spawnEntity(hand)) handVisuals.add(hand);
+                    }
+                }
             }
             case DRAIN -> {
                 boss.setDrainTarget(player.getId());
@@ -344,21 +363,22 @@ final class NecromancerCombat {
             }
             case SWIPE -> world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_WITHER_SKELETON_AMBIENT, SoundCategory.HOSTILE, 2f, .45f);
             case GRAB -> world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_SKELETON_AMBIENT, SoundCategory.HOSTILE, 2f, .35f);
-            case LUNGE -> world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_RAVAGER_ATTACK, SoundCategory.HOSTILE, 2f, .5f);
+            case RUSH -> world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_RAVAGER_ATTACK, SoundCategory.HOSTILE, 2f, .5f);
         }
     }
 
     private void tickAction(ServerWorld world, long now) {
         int tick = (int)(now - started);
         boolean colossus = boss.isColossus();
-        if (active != Action.LUNGE || tick < LUNGE_LAUNCH) halt();
+        if (active == Action.RUSH) { tickRush(world, now); return; }
+        halt();
         ServerPlayerEntity player = world.getServer().getPlayerManager().getPlayer(target);
         boolean valid = player != null && (reviewing ? player.isAlive() && !player.isSpectator() && player.getEntityWorld() == world
                 : canDamage(boss, player));
         boolean tracking = switch (active) {
             case BLINK -> false;
             case SWIPE, GRAB -> tick < active.impact - 6; // Committed swings stop turning before they land.
-            case LUNGE -> tick < LUNGE_LOCK;
+            case RUSH -> false;
             default -> true;
         };
         if (valid && tracking) { face(player.getEntityPos()); lockedYaw = boss.getYaw(); }
@@ -396,7 +416,7 @@ final class NecromancerCombat {
                 if (tick == active.impact) swipe(world);
             }
             case GRAB -> tickGrab(world, player, valid, tick, now);
-            case LUNGE -> { if (!tickLunge(world, player, valid, tick)) return; }
+            case RUSH -> {}
         }
         if (active != null && tick >= active.duration) finish(now);
     }
@@ -407,15 +427,15 @@ final class NecromancerCombat {
         ready.put(active, now + active.cooldown);
         boss.setDrainTarget(-1);
         if (held != null && boss.getEntityWorld() instanceof ServerWorld world) release(world, false);
-        if (active == Action.LUNGE) boss.setNoGravity(false);
+        if (active == Action.RUSH) { halt(); boss.stopTriggeredAnim(NecromancerEntity.CONTROLLER, null); }
         active = null;
         nextAction = now + RECOVERY_GAP;
     }
 
     private void interrupt() {
         if (held != null && boss.getEntityWorld() instanceof ServerWorld world) release(world, false);
-        if (active == Action.LUNGE) boss.setNoGravity(false);
-        active = null; blinkTo = null; lungeTo = null;
+        if (active == Action.RUSH) { halt(); boss.stopTriggeredAnim(NecromancerEntity.CONTROLLER, null); }
+        active = null; blinkTo = null; rushCaught = -1; handsRush = false;
         boss.setDrainTarget(-1);
         halt();
         boss.stopTriggeredAnim(NecromancerEntity.CONTROLLER, null);
@@ -474,15 +494,15 @@ final class NecromancerCombat {
         ServerPlayerEntity victim = world.getServer().getPlayerManager().getPlayer(held);
         if (victim == null || victim.getEntityWorld() != world || !victim.isAlive() || victim.isSpectator() || victim.isCreative()
                 || !boss.eligible(victim)) { release(world, false); return; }
-        Vec3d forward = forward();
         if (tick < GRAB_SLAM) {
-            double lift = Math.min(1, (tick - active.impact) / (double)(GRAB_LIFT_END - active.impact));
-            Vec3d hand = boss.getEntityPos().add(forward.multiply(3.2)).add(0, 1 + lift * 4, 0);
-            pin(world, victim, hand);
-            if (tick % 3 == 0) world.spawnParticles(ParticleTypes.SOUL, hand.x, hand.y + .9, hand.z, 2, .3, .3, .3, .02);
+            Vec3d hand = NecromancerGrabSocket.worldPosition(boss, tick);
+            // The palm holds the upper torso. Keep feet above the floor on the downward stroke.
+            Vec3d feet = new Vec3d(hand.x, Math.max(boss.getY() + .05, hand.y - .85), hand.z);
+            pin(world, victim, feet);
+            if (tick % 3 == 0) world.spawnParticles(ParticleTypes.SOUL, hand.x, hand.y, hand.z, 2, .2, .2, .2, .01);
             return;
         }
-        Vec3d slam = ground(world, boss.getEntityPos().add(forward.multiply(4)).add(0, 1, 0));
+        Vec3d slam = ground(world, NecromancerGrabSocket.worldPosition(boss, GRAB_SLAM));
         pin(world, victim, slam);
         float damage = grabDamage(victim.getMaxHealth());
         victim.damage(world, world.getDamageSources().mobAttack(boss), damage);
@@ -525,46 +545,58 @@ final class NecromancerCombat {
         }
     }
 
-    /** Telegraphed pounce: track, lock a marked landing, then an arc that stops at walls. */
-    private boolean tickLunge(ServerWorld world, ServerPlayerEntity player, boolean valid, int tick) {
-        if (tick < LUNGE_LOCK) {
-            if (valid) lungeTo = landing(world, player.getEntityPos());
-        }
-        if (lungeTo == null) { finish(world.getTime()); return false; }
-        if (tick < LUNGE_LAUNCH) {
-            if (tick % 2 == 0) ring(world, lungeTo, LUNGE_RADIUS, tick < LUNGE_LOCK ? ParticleTypes.SOUL : ParticleTypes.SOUL_FIRE_FLAME, 16);
-            return true;
-        }
-        if (tick == LUNGE_LAUNCH) { lungeFrom = boss.getEntityPos(); boss.setNoGravity(true); }
-        if (tick > LUNGE_LAUNCH && tick <= active.impact) {
-            double progress = (tick - LUNGE_LAUNCH) / (double)lungeFlight();
-            Vec3d desired = lungeFrom.lerp(lungeTo, progress).add(0, lungeHeight(progress), 0);
-            boss.setVelocity(Vec3d.ZERO);
-            boss.move(MovementType.SELF, desired.subtract(boss.getEntityPos()));
-        }
-        if (tick == active.impact) {
-            boss.setNoGravity(false);
-            Vec3d at = boss.getEntityPos();
-            world.playSound(null, at.x, at.y, at.z, SoundEvents.ENTITY_GENERIC_EXPLODE.value(), SoundCategory.HOSTILE, 1.2f, .6f);
-            world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, floorState(world, at)), at.x, at.y + .1, at.z, 50, 1.6, .1, 1.6, .15);
-            for (LivingEntity victim : world.getEntitiesByClass(LivingEntity.class, new Box(at, at).expand(LUNGE_RADIUS + 1, 3, LUNGE_RADIUS + 1),
-                    e -> e instanceof ServerPlayerEntity p ? canDamage(boss, p) : e instanceof AstralDoubleEntity)) {
-                double dx = victim.getX() - at.x, dz = victim.getZ() - at.z;
-                if (dx * dx + dz * dz > LUNGE_RADIUS * LUNGE_RADIUS || Math.abs(victim.getY() - at.y) > 2.5) continue;
-                if (victim.damage(world, world.getDamageSources().mobAttack(boss), LUNGE_DAMAGE)) victim.takeKnockback(.9, -dx, -dz);
+    /** Grounded pursuit, then a separate contact-triggered grab/bite/throw animation. */
+    private void tickRush(ServerWorld world, long now) {
+        ServerPlayerEntity victim = world.getServer().getPlayerManager().getPlayer(target);
+        if (victim == null || !canDamage(boss, victim)) { finish(now); return; }
+        int elapsed = (int)(now - started);
+        if (rushCaught >= 0) {
+            halt(); hold(lockedYaw);
+            int grip = (int)(now - rushCaught);
+            if (grip < RUSH_THROW) {
+                Vec3d wrist = NecromancerRushSocket.worldPosition(boss, grip);
+                Vec3d feet = new Vec3d(wrist.x, Math.max(boss.getY() + .05, wrist.y - .85), wrist.z);
+                if (!clear(world, victim.getBoundingBox().getCenter(), feet.add(0, .85, 0))) { finish(now); return; }
+                pin(world, victim, feet);
+                if (grip == RUSH_BITE) {
+                    victim.damage(world, world.getDamageSources().mobAttack(boss), RUSH_DAMAGE);
+                    world.playSound(null, victim.getBlockPos(), SoundEvents.ENTITY_GENERIC_EAT.value(), SoundCategory.HOSTILE, 2f, .5f);
+                    world.spawnParticles(ParticleTypes.SOUL, wrist.x, wrist.y, wrist.z, 14, .3, .3, .3, .04);
+                }
+            } else if (held != null) {
+                release(world, false);
+                victim.removeStatusEffect(StatusEffects.SLOWNESS);
+                Vec3d throwVelocity = forward().multiply(1.25);
+                victim.setVelocity(throwVelocity.x, .55, throwVelocity.z);
+                victim.velocityModified = true;
+                world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.HOSTILE, 1.8f, .65f);
             }
+            if (grip >= RUSH_RECOVER) finish(now);
+            return;
         }
-        return true;
-    }
-
-    /** Landing inside the leash, on supported ground with room for the body. */
-    private Vec3d landing(ServerWorld world, Vec3d wanted) {
-        Vec3d offset = wanted.subtract(home).multiply(1, 0, 1);
-        if (offset.length() > MOVEMENT_RANGE + 4) wanted = home.add(offset.normalize().multiply(MOVEMENT_RANGE + 4)).add(0, wanted.y - home.y, 0);
-        Vec3d toward = wanted.subtract(boss.getEntityPos()).multiply(1, 0, 1);
-        // Land just short of the player rather than on top of them.
-        if (toward.length() > 2.5) wanted = wanted.subtract(toward.normalize().multiply(2));
-        return standable(world, wanted, COLOSSUS_WIDTH, COLOSSUS_HEIGHT);
+        int warning = handsRush ? 0 : RUSH_WARNING;
+        if (elapsed < warning) { halt(); face(victim.getEntityPos()); lockedYaw = boss.getYaw(); return; }
+        if (elapsed >= warning + RUSH_TRAVEL || boss.squaredDistanceTo(home) > MOVEMENT_RANGE * MOVEMENT_RANGE * 4) { finish(now); return; }
+        Vec3d delta = victim.getEntityPos().subtract(boss.getEntityPos());
+        float wanted = (float)Math.toDegrees(Math.atan2(-delta.x, delta.z));
+        lockedYaw += MathHelper.clamp(MathHelper.wrapDegrees(wanted - lockedYaw), -RUSH_TURN, RUSH_TURN);
+        hold(lockedYaw);
+        if (delta.horizontalLength() <= RUSH_REACH && Math.abs(delta.y) < 2.5
+                && forward().dotProduct(delta.multiply(1, 0, 1).normalize()) > .65
+                && clear(world, boss.getEntityPos().add(0, 1.5, 0), victim.getBoundingBox().getCenter())) {
+            halt(); held = victim.getUuid(); boss.setGrabbed(victim.getId());
+            victim.stopGliding(); rushCaught = now;
+            boss.stopTriggeredAnim(NecromancerEntity.CONTROLLER, null);
+            boss.triggerAnim(NecromancerEntity.CONTROLLER, "bite_throw");
+            return;
+        }
+        // MovementType.SELF resolves block collisions; never teleport or turn through a wall.
+        Vec3d before = boss.getEntityPos();
+        boss.setVelocity(Vec3d.ZERO);
+        Vec3d step = forward().multiply(RUSH_SPEED);
+        boss.move(MovementType.SELF, new Vec3d(step.x, -.12, step.z));
+        if (boss.getEntityPos().subtract(before).horizontalLength() < .1) { finish(now); return; }
+        if (elapsed % 5 == 0) world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_SKELETON_STEP, SoundCategory.HOSTILE, 1.8f, .55f);
     }
 
     // ── Shared spells and effects ────────────────────────────────────────────
@@ -572,12 +604,20 @@ final class NecromancerCombat {
     /** Hands, curses and the army run on their own clocks, even while the boss casts something else. */
     private void tickEffects(ServerWorld world, long now) {
         prune();
+        List<ServerPlayerEntity> caught = new ArrayList<>();
+        handVisuals.removeIf(GraspingHandEntity::isRemoved);
         grasps.removeIf(grasp -> {
-            if (now >= grasp.detonate()) { detonate(world, grasp); return true; }
+            if (now >= grasp.detonate()) { detonate(world, grasp, caught); return true; }
             if (now % 2 == 0) ring(world, grasp.center(), grasp.radius(), ParticleTypes.SOUL_FIRE_FLAME, (int)Math.round(grasp.radius() * 8));
             if (now % 6 == 0) world.spawnParticles(ParticleTypes.SOUL, grasp.center().x, grasp.center().y + .1, grasp.center().z, 2, .6, 0, .6, .01);
             return false;
         });
+        if (boss.isColossus() && !boss.isTransforming() && active == Action.HANDS && !caught.isEmpty()) {
+            ServerPlayerEntity nearest = caught.stream().min(Comparator.comparingDouble(boss::squaredDistanceTo)).orElseThrow();
+            ready.put(Action.HANDS, now + Action.HANDS.cooldown);
+            begin(world, Action.RUSH, nearest, now);
+            handsRush = true;
+        }
         curses.removeIf(curse -> {
             if (now >= curse.until()) return true;
             if (now % 3 == 0) {
@@ -592,7 +632,7 @@ final class NecromancerCombat {
         });
     }
 
-    private void detonate(ServerWorld world, Grasp grasp) {
+    private void detonate(ServerWorld world, Grasp grasp, List<ServerPlayerEntity> caught) {
         Vec3d center = grasp.center();
         world.playSound(null, center.x, center.y, center.z, SoundEvents.ENTITY_EVOKER_FANGS_ATTACK, SoundCategory.HOSTILE, 1.2f, .6f);
         for (int i = 0; i < 6; i++) {
@@ -602,9 +642,11 @@ final class NecromancerCombat {
         world.spawnParticles(ParticleTypes.SCULK_SOUL, center.x, center.y + .3, center.z, 10, .7, .2, .7, .04);
         for (LivingEntity victim : world.getEntitiesByClass(LivingEntity.class, new Box(center, center).expand(grasp.radius() + 1, 2, grasp.radius() + 1),
                 e -> (e instanceof ServerPlayerEntity p ? canDamage(boss, p) : e instanceof AstralDoubleEntity) && inside(e, center, grasp.radius()))) {
-            if (victim.damage(world, source(world, GRASP, null), HANDS_DAMAGE) && victim instanceof ServerPlayerEntity)
+            if (victim.damage(world, source(world, GRASP, null), HANDS_DAMAGE) && victim instanceof ServerPlayerEntity player) {
                 // Same zero-speed root the Nature wand uses; short, visible and unsaved beyond its duration.
                 victim.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, ROOT_TICKS, 6, false, true, true), boss);
+                caught.add(player);
+            }
         }
     }
 
@@ -687,7 +729,7 @@ final class NecromancerCombat {
         nextMove = now + (boss.isColossus() ? 4 : 8);
         double distance = boss.distanceTo(nearest);
         if (boss.isColossus()) {
-            // The skeleton crawls straight at its prey; steering avoids pathfinding a body this wide.
+            // The skeleton closes on all fours; the rush accelerates this grounded gait.
             if (distance <= REACH - .5) { halt(); face(nearest.getEntityPos()); return; }
             Vec3d destination = leash(nearest.getEntityPos());
             boss.getMoveControl().moveTo(destination.x, destination.y, destination.z, 1);

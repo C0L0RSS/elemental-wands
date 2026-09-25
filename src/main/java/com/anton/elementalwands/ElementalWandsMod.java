@@ -125,6 +125,7 @@ public class ElementalWandsMod implements ModInitializer {
         ModWorldGen.registerAll();
         com.anton.elementalwands.arena.GuardianArenaManager.init();
         com.anton.elementalwands.church.GuardianChurchManager.init();
+        com.anton.elementalwands.crypt.HollowCryptManager.init();
 
         // ── First-join starter kit ──────────────────────────────────────
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
@@ -158,6 +159,7 @@ public class ElementalWandsMod implements ModInitializer {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             GuardianCommands.register(dispatcher);
             com.anton.elementalwands.command.NecromancerCommands.register(dispatcher);
+            com.anton.elementalwands.command.CryptCommands.register(dispatcher);
             com.anton.elementalwands.command.PartyCommands.register(dispatcher);
             dispatcher.register(
                 CommandManager.literal("ew")

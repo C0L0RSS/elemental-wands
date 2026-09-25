@@ -8,10 +8,17 @@ It records known verification limits; it is not a fresh installation receipt.
   successful Grasping Hands catches trigger that sequence. The spell now uses
   six animated skeletal hand models per marked area. The original grab-and-slam
   retains its teammate rescue mechanic. Pending: human Lunar/co-op review of the
-  art, rush steering, bite/throw timing and balance; the spectral elite and crypt
-  realm. Minion tint at night remains a visual-review item. Automated fixture
+  art, rush steering, bite/throw timing and balance; the spectral elite. Minion tint at night remains a visual-review item. Automated fixture
   coverage and its limitations are described in the testing reference; this is
   not a Lunar installation receipt.
+- **Hollow Crypt realm:** the dimension, the approved dead-forest clearing, the
+  naturally generated graveyard and its headstone entrance are in place. The native
+  client fixture passed slot building, arrival, summoning, wall pull-back, teleport
+  limits, block protection, reset, return, `/locate`, the headstone ritual, the boss rising and
+  the return after victory. Pending: the offering item and the full fight lifecycle (sealed party, death
+  spectating, rewards, restart recovery). The graveyard design is a first pass. Human Lunar review is still needed for
+  brightness (ambient light 0.1), fog density and whether fire spells can burn the
+  clearing's logs (`reset` restores them).
 - **Gravity Well:** Space has five learnable spells; every current elemental
   catalog now meets the five-spell minimum. Dedicated-server checks passed the
   12.25-block level throw, immediate floor/wall/entity impact, pull, early/automatic

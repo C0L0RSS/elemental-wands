@@ -62,6 +62,7 @@ inspect their assertions when behavior changes instead of trusting an old name.
 | Guardian combat | `guardian_combat_smoke.init.gradle`, `guardian_guard_smoke.init.gradle`, `guardian_phase_smoke.init.gradle` | `guardian_floor_client_smoke.init.gradle` |
 | Guardian cover / Nature / walls | `guardian_cover_smoke.init.gradle`, `guardian_nature_smoke.init.gradle`, `guardian_wall_smoke.init.gradle` | Relevant native visual fixture |
 | Hollow Necromancer | `necromancer_server_smoke.init.gradle`, `necromancer_phase_smoke.init.gradle` | `necromancer_client_smoke.init.gradle` (screenshots; `-PnecroRecord` for hidden recording) |
+| Hollow Crypt realm | — | `crypt_client_smoke.init.gradle` (realm build, enter, summon, wall, reset, leave, `/locate`, headstone ritual, victory return; screenshots) |
 | Church / arena | `guardian_church_smoke.init.gradle`, `guardian_arena_smoke.init.gradle` | Guardian floor client with visual options |
 | Worldgen / locate | `guardian_church_worldgen_smoke.init.gradle`, `guardian_church_locate_smoke.init.gradle` | Human terrain review |
 | Parties / audit regressions | `party_server_smoke.init.gradle`, `audit_fixes_smoke.init.gradle` | Human co-op review |
@@ -75,6 +76,8 @@ Examples from the repository root:
 ```
 
 Client runners using `hubClientAssets` can reuse the local Lunar asset cache.
+A fresh run directory's first-launch accessibility screen turns the narrator on; set
+`narrator:0` in that runner's `options.txt` (the crypt runner switches it off itself).
 The floor runner uses `floorClientAssets` instead; supported visual switches
 include `guardianPedestalVisual`, `guardianBurnVisual`, and `natureVisual`.
 Check the runner for the required asset index and completion marker. A process

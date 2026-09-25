@@ -1,0 +1,248 @@
+package com.anton.elementalwands.client;
+
+import com.anton.elementalwands.crypt.HollowCryptManager;
+import com.anton.elementalwands.crypt.HollowCryptRealm;
+import com.anton.elementalwands.data.EWAttachments;
+import com.anton.elementalwands.entity.necromancer.NecromancerEntity;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.UUID;
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
+import net.minecraft.block.Blocks;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.util.ScreenshotRecorder;
+import net.minecraft.resource.DataConfiguration;
+import net.minecraft.resource.featuretoggle.FeatureFlags;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.Difficulty;
+import net.minecraft.world.GameMode;
+import net.minecraft.world.GameRules;
+import net.minecraft.world.World;
+import net.minecraft.world.gen.GeneratorOptions;
+import net.minecraft.world.gen.WorldPresets;
+import net.minecraft.world.level.LevelInfo;
+import org.lwjgl.glfw.GLFW;
+
+/** Native Hollow Crypt harness: build a slot, enter, summon, contain, reset, leave, then locate the graveyard and use its headstone. */
+public final class CryptClientSmoke implements ClientModInitializer {
+    private boolean started, done;
+    private int ticks, scene, stage;
+    private volatile String serverFailure;
+    private volatile boolean serverStep;
+    private Vec3d home;
+    private volatile BlockPos headstone, graveyard;
+    private int risen;
+
+    public void onInitializeClient() { ClientTickEvents.END_CLIENT_TICK.register(this::tick); }
+
+    private void tick(MinecraftClient c) {
+        if (done || c.getOverlay() != null) return;
+        try {
+            if (++ticks > 4500) throw new AssertionError("Crypt client timeout at stage " + stage);
+            if (!started) {
+                started = true; c.options.pauseOnLostFocus = false; c.options.tutorialStep = net.minecraft.client.tutorial.TutorialStep.NONE;
+                GLFW.glfwSetWindowSize(c.getWindow().getHandle(), 1280, 720);
+                c.options.getFov().setValue(70);
+                c.options.getNarrator().setValue(net.minecraft.client.option.NarratorMode.OFF);
+                c.getNarratorManager().clear();
+                c.createIntegratedServerLoader().createAndStart("crypt-" + System.currentTimeMillis(),
+                        new LevelInfo("Crypt verification", GameMode.SURVIVAL, false, Difficulty.NORMAL, true,
+                                new GameRules(FeatureFlags.DEFAULT_ENABLED_FEATURES), DataConfiguration.SAFE_MODE),
+                        new GeneratorOptions(4011L, true, false), WorldPresets::createDemoOptions, null);
+                return;
+            }
+            if (c.world == null || c.player == null || c.getServer() == null) return;
+            if (serverFailure != null) throw new AssertionError(serverFailure);
+            var server = c.getServer(); var uuid = c.player.getUuid();
+            c.setScreen(null); WandWelcome.reset(); c.options.hudHidden = true;
+            boolean inRealm = c.world.getRegistryKey() == HollowCryptRealm.WORLD;
+            switch (stage) {
+                case 0 -> { // enter: the slot is built section by section, then the player arrives
+                    if (++scene < 20) return;
+                    home = c.player.getEntityPos();
+                    onServer(server, () -> {
+                        var p = player(server, uuid); p.setAttached(EWAttachments.WELCOME_SEEN, true);
+                        run(server, p, "ew crypt enter");
+                    });
+                    next();
+                }
+                case 1 -> {
+                    if (!inRealm) return;
+                    if (++scene == 1) onServer(server, () -> {
+                        var p = player(server, uuid);
+                        var realm = server.getWorld(HollowCryptRealm.WORLD);
+                        BlockPos centre = HollowCryptRealm.nearestCentre(p.getEntityPos());
+                        require(HollowCryptRealm.inPlay(centre, p.getEntityPos(), 0), "Arrival is outside the clearing");
+                        require(realm.getBlockState(centre).isOf(Blocks.SOUL_SOIL), "Summoning circle missing at the centre");
+                        require(realm.getBlockState(centre.add(45, 5, 0)).isOf(Blocks.BARRIER), "Invisible wall missing at the rim");
+                        require(realm.getBlockState(centre.add(0, 31, 0)).isOf(Blocks.BARRIER), "Invisible lid missing");
+                        int wood = 0;
+                        for (int x = 50; x < 120; x++) for (int y = 1; y < 40; y++)
+                            if (realm.getBlockState(centre.add(x, y, 3)).isOf(Blocks.DARK_OAK_WOOD)) wood++;
+                        require(wood > 20, "Forest missing beyond the rim (" + wood + " wood blocks on the sample line)");
+                    });
+                    if (scene < 45) look(c, 180, 0); else if (scene < 60) look(c, 200, -40); else look(c, 110, -8);
+                    if (scene == 40) shot(c, "crypt-arrival.png");
+                    if (scene == 55) shot(c, "crypt-look-up.png");
+                    if (scene == 70) shot(c, "crypt-rim.png");
+                    if (scene == 75) next();
+                }
+                case 2 -> { // summon the boss at the circle and keep it passive for the camera
+                    if (++scene == 1) onServer(server, () -> {
+                        var p = player(server, uuid);
+                        run(server, p, "ew crypt summon");
+                        var realm = server.getWorld(HollowCryptRealm.WORLD);
+                        var bosses = realm.getEntitiesByClass(NecromancerEntity.class, p.getBoundingBox().expand(60), e -> e.isAlive());
+                        require(bosses.size() == 1, "Expected one summoned necromancer, found " + bosses.size());
+                        bosses.get(0).stopFight();
+                        BlockPos centre = HollowCryptRealm.nearestCentre(p.getEntityPos());
+                        require(bosses.get(0).getBlockPos().isWithinDistance(centre.up(), 2), "Boss did not rise at the circle");
+                        p.networkHandler.requestTeleport(centre.getX() + 6.5, HollowCryptRealm.SURFACE_Y + 1, centre.getZ() + 12.5, 150, 0);
+                    });
+                    if (scene > 5) lookAtBoss(c);
+                    if (scene == 40) shot(c, "crypt-boss.png");
+                    if (scene == 45) next();
+                }
+                case 3 -> { // containment, teleport limits and block protection
+                    if (++scene == 1) onServer(server, () -> {
+                        var p = player(server, uuid);
+                        BlockPos centre = HollowCryptRealm.nearestCentre(p.getEntityPos());
+                        var realm = (net.minecraft.server.world.ServerWorld) p.getEntityWorld();
+                        require(!HollowCryptManager.canTeleport(p, realm, Vec3d.ofCenter(centre.add(70, 1, 0))), "Spell teleport allowed past the wall");
+                        require(HollowCryptManager.canTeleport(p, realm, Vec3d.ofCenter(centre.add(10, 1, 0))), "Spell teleport refused inside the clearing");
+                        require(!HollowCryptManager.canTeleport(p, server.getOverworld(), Vec3d.ZERO), "Spell teleport allowed out of the realm");
+                        BlockPos ground = centre.add(3, 0, 20);
+                        require(!PlayerBlockBreakEvents.BEFORE.invoker().beforeBlockBreak(realm, p, ground, realm.getBlockState(ground), null),
+                                "Survival player may break realm blocks");
+                        p.networkHandler.requestTeleport(centre.getX() + 70.5, HollowCryptRealm.SURFACE_Y + 1, centre.getZ() + .5, 0, 0);
+                    });
+                    if (scene == 10) onServer(server, () -> {
+                        var p = player(server, uuid);
+                        require(HollowCryptRealm.inPlay(HollowCryptRealm.nearestCentre(p.getEntityPos()), p.getEntityPos(), 0),
+                                "Player outside the wall was not pulled back: " + p.getEntityPos());
+                    });
+                    if (scene == 15) next();
+                }
+                case 4 -> { // reset clears the boss and restores the layout
+                    if (++scene == 1) onServer(server, () -> {
+                        var p = player(server, uuid);
+                        var realm = (net.minecraft.server.world.ServerWorld) p.getEntityWorld();
+                        BlockPos centre = HollowCryptRealm.nearestCentre(p.getEntityPos());
+                        realm.setBlockState(centre.add(2, 0, 2), Blocks.AIR.getDefaultState());
+                        run(server, p, "ew crypt reset");
+                        require(realm.getEntitiesByClass(NecromancerEntity.class, HollowCryptRealm.footprint(centre), e -> true).isEmpty(), "Reset left the boss behind");
+                    });
+                    if (scene == 60) onServer(server, () -> {
+                        var p = player(server, uuid);
+                        BlockPos centre = HollowCryptRealm.nearestCentre(p.getEntityPos());
+                        require(!p.getEntityWorld().getBlockState(centre.add(2, 0, 2)).isAir(), "Reset did not restore the damaged ground");
+                        run(server, p, "ew crypt leave");
+                    });
+                    if (scene == 61) next();
+                }
+                case 5 -> {
+                    if (inRealm || c.world.getRegistryKey() != World.OVERWORLD) return;
+                    if (++scene < 10) return;
+                    require(c.player.getEntityPos().distanceTo(home) < 2, "Leave did not return to the entry point: " + c.player.getEntityPos() + " vs " + home);
+                    next();
+                }
+                case 6 -> { // the graveyard generates, /locate finds it, and it can be placed for the camera
+                    if (++scene == 1) onServer(server, () -> {
+                        var p = player(server, uuid);
+                        try {
+                            int found = server.getCommandManager().getDispatcher().execute("locate structure elementalwands:hollow_graveyard", p.getCommandSource());
+                            require(found > 0, "/locate found no graveyard");
+                        } catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) { throw new AssertionError("/locate failed: " + e.getMessage()); }
+                        server.getOverworld().setTimeOfDay(6000);
+                        graveyard = p.getBlockPos().add(0, 0, -40);
+                        for (int cx = -4; cx <= 4; cx++) for (int cz = -4; cz <= 4; cz++)
+                            server.getOverworld().setChunkForced((graveyard.getX() >> 4) + cx, (graveyard.getZ() >> 4) + cz, true);
+                    });
+                    if (scene == 20) onServer(server, () -> {
+                        var p = player(server, uuid); BlockPos at = graveyard;
+                        run(server, p, "place structure elementalwands:hollow_graveyard " + at.getX() + " " + at.getY() + " " + at.getZ());
+                        headstone = null;
+                        for (BlockPos q : BlockPos.iterate(at.add(-40, -30, -40), at.add(40, 40, 40)))
+                            if (server.getOverworld().getBlockState(q).isOf(Blocks.SKELETON_SKULL)) { headstone = q.toImmutable(); break; }
+                        require(headstone != null, "Placed graveyard has no headstone skull");
+                        // Hover for the camera: the graveyard may generate in any rotation.
+                        p.getAbilities().allowFlying = true; p.getAbilities().flying = true; p.sendAbilitiesUpdate();
+                        p.networkHandler.requestTeleport(headstone.getX() + 18.5, headstone.getY() + 10, headstone.getZ() + 18.5, 0, 0);
+                    });
+                    if (scene > 23 && headstone != null) lookAt(c, Vec3d.ofCenter(headstone).add(0, -4, 0));
+                    if (scene == 60) shot(c, "crypt-graveyard.png");
+                    if (scene == 62) onServer(server, () -> player(server, uuid).networkHandler.requestTeleport(headstone.getX() - 7.5, headstone.getY() + 1, headstone.getZ() - 7.5, 0, 0));
+                    if (scene == 75) shot(c, "crypt-headstone.png");
+                    if (scene == 80) next();
+                }
+                case 7 -> { // using the headstone drags the player in and the boss rises
+                    if (scene == 0) onServer(server, () -> {
+                        var p = player(server, uuid);
+                        BlockPos stone = headstone.down(); // chiseled deepslate under the skull
+                        var hit = new net.minecraft.util.hit.BlockHitResult(Vec3d.ofCenter(stone), net.minecraft.util.math.Direction.SOUTH, stone, false);
+                        var result = net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.invoker().interact(p, server.getOverworld(), net.minecraft.util.Hand.MAIN_HAND, hit);
+                        require(result == net.minecraft.util.ActionResult.SUCCESS, "Headstone did not respond: " + result);
+                    });
+                    scene++;
+                    if (!inRealm) return;
+                    if (++risen == 100) onServer(server, () -> {
+                        var p = player(server, uuid);
+                        var realm = server.getWorld(HollowCryptRealm.WORLD);
+                        var bosses = realm.getEntitiesByClass(NecromancerEntity.class, p.getBoundingBox().expand(60), e -> e.isAlive());
+                        require(bosses.size() == 1, "Ritual raised " + bosses.size() + " bosses");
+                        var boss = bosses.get(0);
+                        // Victory: the death event schedules the return; the corpse is removed at once.
+                        net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.AFTER_DEATH.invoker().afterDeath(boss, realm.getDamageSources().generic());
+                        boss.discard();
+                    });
+                    if (risen > 100) next();
+                }
+                case 8 -> {
+                    if (inRealm) { require(++scene < 400, "Victory did not send the player home"); return; }
+                    Files.writeString(Path.of("CRYPT_PASSED.txt"), "Hollow Crypt native client passed: slot build, layout spot checks, arrival, summon at circle, wall pull-back, "
+                            + "spell teleport limits, survival block protection, reset restoration, return, /locate, graveyard placement, headstone ritual, "
+                            + "boss rising and victory return. Screenshots: crypt-*.png. Human Lunar review pending.\n");
+                    done = true; c.scheduleStop();
+                }
+                default -> {}
+            }
+        } catch (Throwable e) {
+            try { Files.writeString(Path.of("CRYPT_FAILED.txt"), e + "\n"); } catch (Exception ignored) {}
+            e.printStackTrace();
+            done = true; c.scheduleStop();
+        }
+    }
+
+    private void next() { stage++; scene = 0; serverStep = false; }
+
+    private void onServer(MinecraftServer server, Runnable action) {
+        server.execute(() -> {
+            try { action.run(); serverStep = true; }
+            catch (Throwable e) { serverFailure = e.toString(); }
+        });
+    }
+
+    private static void run(MinecraftServer server, ServerPlayerEntity p, String command) {
+        server.getCommandManager().parseAndExecute(p.getCommandSource(), command);
+    }
+
+    private static ServerPlayerEntity player(MinecraftServer server, UUID id) { return server.getPlayerManager().getPlayer(id); }
+    private static void look(MinecraftClient c, float yaw, float pitch) { c.player.setYaw(yaw); c.player.setPitch(pitch); }
+    private static void lookAt(MinecraftClient c, Vec3d target) {
+        var d = target.subtract(c.player.getEyePos());
+        look(c, (float) Math.toDegrees(Math.atan2(-d.x, d.z)), (float) -Math.toDegrees(Math.atan2(d.y, d.horizontalLength())));
+    }
+    private static void lookAtBoss(MinecraftClient c) {
+        for (var e : c.world.getEntities()) if (e instanceof NecromancerEntity boss) {
+            var d = boss.getEntityPos().add(0, 1.2, 0).subtract(c.player.getEyePos());
+            look(c, (float) Math.toDegrees(Math.atan2(-d.x, d.z)), (float) -Math.toDegrees(Math.atan2(d.y, d.horizontalLength())));
+        }
+    }
+    private static void shot(MinecraftClient c, String name) { ScreenshotRecorder.saveScreenshot(c.runDirectory, name, c.getFramebuffer(), 1, t -> {}); }
+    private static void require(boolean b, String why) { if (!b) throw new AssertionError(why); }
+}

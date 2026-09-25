@@ -6,3 +6,4 @@
 - Matched the grab's held-player position to the animated hand.
 - Soul bolts now use the custom glowing skull, face their flight direction, and chomp through the air before snapping shut on impact.
 - Grasping Hands now raises six animated skeletal claws around each marked player. In phase two, a successful catch triggers the rush, bite and throw; the separate grab-and-slam keeps its teammate rescue mechanic.
+- Added the Hollow Crypt, the necromancer's own dimension: a huge clearing ringed by a dark, dead forest under a starless sky and thick fog. Graveyards now generate in the overworld (`/locate structure elementalwands:hollow_graveyard`). Use the headstone to drag everyone nearby into the crypt, where the necromancer rises. Beat it and the crypt sends you home; `/ew crypt leave` gets you out early.

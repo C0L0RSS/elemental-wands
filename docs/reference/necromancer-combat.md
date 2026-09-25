@@ -1,7 +1,8 @@
 # Hollow Necromancer combat
 
-The Hollow Necromancer is a second cooperative boss in progress. It is currently
-summon-only for testing; its crypt realm dimension is planned but not built.
+The Hollow Necromancer is a second cooperative boss in progress. Operators test it
+with `/summon` or in the Hollow Crypt realm (`/ew crypt`; see [Church and arena](church-and-arena.md#hollow-crypt-realm)).
+The survival graveyard ritual that leads there is not built yet.
 Java owners are under `src/main/java/com/anton/elementalwands/entity/necromancer/`.
 
 ## Encounter intent
@@ -66,8 +67,8 @@ stay continuous; the model hides whichever body is inactive.
 
 ## Planned
 
-A custom spectral elite raised by the colossus, further human art/animation review, and the crypt
-realm dimension entered from a graveyard.
+A custom spectral elite raised by the colossus, further human art/animation review, and the
+overworld graveyard with the ritual and fight lifecycle that lead into the crypt realm.
 
 ## Art and verification
 

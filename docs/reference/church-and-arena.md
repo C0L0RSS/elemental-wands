@@ -81,6 +81,45 @@ saved absolute target heights avoid repeatedly expanding earthwork on reload.
 Ritual clearing permits natural vegetation in lift columns without clearing stone
 roofs or arbitrary structures. Admission must precede those world mutations.
 
+## Hollow Crypt realm
+
+The Hollow Necromancer is fought in its own dimension, `elementalwands:hollow_crypt`: a flat
+world with a fixed night, no weather or skylight, Nether-style thick fog and drifting ash.
+Each fight slot is a clearing 88 blocks across. It sits inside a dead forest of about 200
+cosmetic trees that reaches 124 blocks out, with some giants whose high boughs arch over the rim.
+An invisible barrier shell and lid keep players and the boss within 44 blocks of the centre and
+30 blocks above the ground. Owners are under `src/main/java/com/anton/elementalwands/crypt/`.
+
+`art/hollow_crypt/build_layout.py` authors the clearing and forest. Its default run writes
+the browser preview to `.local-previews/hollow-crypt/` (launch entry `hollow-crypt-preview`,
+port 8360), which also shows the overworld graveyard. `--install` writes the realm as
+48×48 structure tiles plus `hollow_graveyard.nbt`, and `--check` detects drift. The radius, ceiling and tile grid are
+duplicated in `HollowCryptRealm` and must stay in step.
+
+A slot is laid out the first time it is used, one tile per server tick, and is then reused.
+`elementalwands/hollow-crypt.json` records the built slots and each player's return point.
+When the installed tiles change, every slot moves to untouched ground instead of being
+rebuilt over the old layout. Inside the realm, every player teleport (spells, pearls,
+commands, portals) must stay in the clearing and cannot cross into or out of the realm, except
+the crypt's own entry and exit. A player who escapes the clearing is pulled back. Survival
+players cannot break or place blocks there. Temporary spell blocks still work and restore
+themselves as usual. Death in the realm respawns the player normally and spends their return point.
+
+Graveyards generate in plains, meadow, savanna, snowy plains, forest, birch forest,
+dark forest, taiga and swamp biomes. They're found with
+`/locate structure elementalwands:hollow_graveyard`, and new chunks only. Using the headstone
+altar pulls every living player within 16 blocks into a free slot, blinded for a moment. It
+records their return points first. The boss rises on the circle three seconds after they
+arrive. When it dies, everyone in the slot is sent home ten seconds later. The altar is
+recognised by its block pattern in any rotation, not by the structure record, so
+`/place structure` copies work too. A player-built copy of the pattern would work as well.
+
+Commands: `/ew crypt leave` is open to anyone in the realm, so a survival group is never
+stranded. Operators also have `enter [slot]`, `summon` (clears the slot and raises a
+fighting boss on the circle), `reset` (clears entities and restores the layout) and
+`status`. No offering is needed yet. The sealed party, spectating after death, rewards and
+restart recovery for an interrupted fight are not built. The graveyard's chest is empty.
+
 ## Authoring and tests
 
 `tools/build_guardian_church.py` owns ruined/restored layouts and structure output;

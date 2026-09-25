@@ -259,6 +259,7 @@ public final class GuardianArenaManager {
     }
 
     public static boolean canTeleport(PlayerEntity player, ServerWorld destination, Vec3d target) {
+        if (!com.anton.elementalwands.crypt.HollowCryptManager.canTeleport(player, destination, target)) return false;
         if (internalTeleport || active==null || !player.isAlive()) return true;
         Session s=active; var a=s.receipt;
         if(isWatching(player)) return destination==s.world && contains(a.x(),a.z(),a.floor()+2,a.top()-2,target,2);

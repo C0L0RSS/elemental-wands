@@ -103,22 +103,40 @@ rebuilt over the old layout. Inside the realm, every player teleport (spells, pe
 commands, portals) must stay in the clearing and cannot cross into or out of the realm, except
 the crypt's own entry and exit. A player who escapes the clearing is pulled back. Survival
 players cannot break or place blocks there. Temporary spell blocks still work and restore
-themselves as usual. Death in the realm respawns the player normally and spends their return point.
+themselves as usual.
 
 Graveyards generate in plains, meadow, savanna, snowy plains, forest, birch forest,
 dark forest, taiga and swamp biomes. They're found with
-`/locate structure elementalwands:hollow_graveyard`, and new chunks only. Using the headstone
-altar pulls every living player within 16 blocks into a free slot, blinded for a moment. It
-records their return points first. The boss rises on the circle three seconds after they
-arrive. When it dies, everyone in the slot is sent home ten seconds later. The altar is
-recognised by its block pattern in any rotation, not by the structure record, so
-`/place structure` copies work too. A player-built copy of the pattern would work as well.
+`/locate structure elementalwands:hollow_graveyard`, and new chunks only. Entry is free: using
+the headstone altar seals every living non-Creative player within 16 blocks into a fight in
+a free slot. It records their return points first and blinds them for a moment on the way in.
+The boss rises on the circle three seconds after they arrive. The altar is recognised by its
+block pattern in any rotation, not by the structure record, so `/place structure` copies work
+too. A player-built copy of the pattern would work as well.
 
-Commands: `/ew crypt leave` is open to anyone in the realm, so a survival group is never
-stranded. Operators also have `enter [slot]`, `summon` (clears the slot and raises a
-fighting boss on the circle), `reset` (clears entities and restores the layout) and
-`status`. No offering is needed yet. The sealed party, spectating after death, rewards and
-restart recovery for an interrupted fight are not built. The graveyard's chest is empty.
+- **Death:** nothing drops in the realm; inventory and experience carry over to the respawn.
+  A fallen fighter respawns as a spectator above their own clearing. They cannot leave it or
+  teleport away, and get their game mode back when the fight ends. Disconnecting also counts
+  as falling; rejoining mid-fight puts the player back as a spectator.
+- **Wipe:** when nobody is left standing (dead, disconnected or gone), the boss and its army
+  vanish. Everyone is sent back to where they entered and the slot's layout is rebuilt. The
+  group may use the headstone again straight away.
+- **Victory:** ten seconds after the boss dies, everyone is sent back. The first win at a
+  graveyard places two chests beside the open grave. They hold the church's seeded treasure
+  roll plus bones and never refill. Every player who has won at that graveyard may claim one
+  personal spell book there (free Basic or Technique spell) by opening a chest; the
+  receipt key is `graveyard:<site>`. The graveyard is otherwise unchanged.
+- **Restart:** a fight is never resumed. On startup its slot is marked for rebuilding, and
+  each player still in the realm goes home with their game mode restored when they join.
+
+`elementalwands/hollow-crypt.json` records the built slots, return points, game modes to
+restore, fights in progress and won graveyards.
+
+Commands: `/ew crypt leave` is open to anyone in the realm and forfeits their place in a
+fight. Operators also have `enter [slot]` and `summon`, which raises a fighting boss on the
+circle; the non-Creative players already in the slot become its sealed party, and a summon
+with none fights until reset. They also have `reset` (ends the slot's fight, clears
+entities and restores the layout) and `status`. The graveyard's gate chest is empty.
 
 ## Authoring and tests
 

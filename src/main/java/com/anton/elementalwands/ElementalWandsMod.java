@@ -84,8 +84,7 @@ public class ElementalWandsMod implements ModInitializer {
         ModEntities.registerAll();
         FabricDefaultAttributeRegistry.register(ModEntities.FRACTURED_GUARDIAN, FracturedGuardianEntity.createAttributes().build());
         FabricDefaultAttributeRegistry.register(ModEntities.HOLLOW_NECROMANCER, com.anton.elementalwands.entity.necromancer.NecromancerEntity.createAttributes().build());
-        FabricDefaultAttributeRegistry.register(ModEntities.SPECTRAL_SKELETON, net.minecraft.entity.mob.AbstractSkeletonEntity.createAbstractSkeletonAttributes().build());
-        FabricDefaultAttributeRegistry.register(ModEntities.SPECTRAL_ZOMBIE, ZombieEntity.createZombieAttributes().build());
+        com.anton.elementalwands.entity.undead.HollowUndeadSpawns.register();
         FabricDefaultAttributeRegistry.register(ModEntities.AWAKENED_TREE, AwakenedTreeEntity.createAttributes().build());
         FabricDefaultAttributeRegistry.register(ModEntities.STONE_ZOMBIE, StoneZombieEntity.createAttributes().build());
         SpawnRestriction.register(
@@ -121,6 +120,7 @@ public class ElementalWandsMod implements ModInitializer {
         ModNetworking.registerC2SReceivers();
         com.anton.elementalwands.util.WandLoadouts.init();
         com.anton.elementalwands.util.FireBuildManager.init();
+        com.anton.elementalwands.util.FireLeapManager.init();
         com.anton.elementalwands.util.FlashoverManager.init();
         ModWorldGen.registerAll();
         com.anton.elementalwands.arena.GuardianArenaManager.init();

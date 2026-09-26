@@ -17,17 +17,18 @@ Creative/Spectator players are excluded and Peaceful stops the fight.
 | --- | --- |
 | Soul bolt | Three slow homing skulls with glowing eyes and continuously chomping jaws. They turn a little each tick, so cover and a late sidestep both beat them. |
 | Grasping hands | Six articulated skeletal claws rise around each of up to three marked players, with cyan soul seams and flexing fingers. Walking out of the fixed ring before 1.6 seconds avoids its damage and 1.5-second root. |
-| Life drain | A channeled tether that damages and heals the boss, capped per channel. Losing line of sight or range breaks it. |
+| Life drain | Two braided soul strands flow from the target into a focus above the mage’s animated hand (the colossus uses its jaw focus). The drained player sees smooth mist and curling wisps in first person. Damage and boss healing remain capped per channel; losing line of sight or range breaks it. |
 | Blink | When a player gets close it teleports away within the leash and leaves a Slowness/Wither curse patch. |
-| Raise | Spectral skeletons and zombies climb out of the floor, never under a player, up to an army cap. |
+| Raise | Hollow undead claw out of the floor, never under a player, up to an army cap. The army starts with crawlers; up to two archers join once a body stands, and one brute joins an army of three or any colossus army (`NecromancerRules.raiseKind`). |
 
 Health scales with participants and never shrinks mid-fight. Rules and tuning live
 in `NecromancerRules`, which the contract checks exercise without a world.
 
-Minions are custom subclasses of vanilla undead (`SpectralSkeletonEntity`,
-`SpectralZombieEntity`). They do not burn, convert, drop loot or save, are on the
-caster's side for targeting and spell protection, cannot damage it, and dissolve
-when it stops or is gone. `NecromancerMinion` owns the rise-from-the-floor effect.
+Minions are the same Hollow Crawler, Risen Archer and Hunched Brute that spawn at
+night (see [Hollow undead](hollow-undead.md)). Once bound by `NecromancerMinion` they
+do not burn, drop loot or experience, or save, are on the caster's side for targeting
+and spell protection, cannot damage it, and dissolve when it stops or is gone. Each
+plays its own rise clip standing on the floor and cannot act until it ends.
 
 Player spells treat the boss as a `WandBoss`, the shared interface that also
 covers the Guardian: no roots, knockback, stagger or interrupts from wand spells.
@@ -81,7 +82,7 @@ requires Pillow and NumPy. Default invocation writes the workshop candidate;
 five runtime outputs. Neither option installs a JAR into Lunar.
 
 The earlier V0/V1 generators are historical sources and must not overwrite V2
-runtime assets. Minion bodies remain vanilla textures with a pale tint.
+runtime assets. Minion art is owned by the Hollow undead exporter.
 
 Soul bolts use the authored skull from `art/hollow_necromancer/soul_bolt/build_preview.py`.
 Its default invocation builds the local review page; `--install` exports the model,
@@ -90,6 +91,17 @@ texture, glow mask, animations and prepared wisp/shard particles into mod resour
 The jaw chomps every 0.8 seconds while flying. Contact deals damage once, stops the
 projectile and synchronizes a final bite; the harmless skull disappears within
 eight ticks. Cover, homing, damage and volley sizes retain their existing rules.
+
+Life Drain rendering is owned by `NecromancerDrainEffects` and
+`NecromancerDrainOverlay`. The server tracks the victim and cast start tick; the
+client follows the 0.7-second windup and 0.5-second pulse spacing. Nearby stream
+fragments fade in the victim's first-person view, while observers see the full
+braid. Cover, range failure or normal completion starts a 0.75-second visual
+fade; removal, death and world changes clear the effect. The mist is restricted
+to the living local victim in first person, including when several bosses cast.
+`art/hollow_necromancer/life_drain/build_runtime.py` exports the smooth HUD
+textures and sampled mage hand socket; `--check` verifies them. The browser
+preview remains an approximate art reference, not native gameplay evidence.
 
 Operator commands: `/summon elementalwands:hollow_necromancer`, then
 `/ew necromancer fight|stop|status|transform`, one-shot robed `bolt|hands|drain|raise|blink`

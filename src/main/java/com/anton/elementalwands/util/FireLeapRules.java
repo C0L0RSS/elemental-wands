@@ -9,15 +9,48 @@ import net.minecraft.world.World;
 
 /** Shared preview/server geometry. Positions describe the player's feet. */
 public final class FireLeapRules {
-    public static final double RANGE=60, ARC=4.5, WAVE_RANGE=5, WAVE_SPEED=.65, WAVE_HEIGHT=.6;
-    public static final int FLIGHT=20;
-    private static final double MAX_RISE=4, MAX_DROP=6, LANDING_INSET=.35;
-    public static Vec3d position(Vec3d from, Vec3d to, double progress) {
-        double t=Math.clamp(progress,0,1), horizontal=t*t*(3-2*t);
-        return new Vec3d(MathHelper.lerp(horizontal,from.x,to.x),
-                MathHelper.lerp(t,from.y,to.y)+Math.sin(Math.PI*t)*ARC,MathHelper.lerp(horizontal,from.z,to.z));
+    public static final double RANGE=22, WAVE_RANGE=5, WAVE_SPEED=.65, WAVE_HEIGHT=.6;
+    /** Effective gravity (blocks/tick²) of the scripted arc; slightly heavier than vanilla for a snappy drop. */
+    private static final double GRAVITY=.09;
+    private static final int MIN_FLIGHT=12, MAX_FLIGHT=30;
+    private static final double MAX_RISE=4, MAX_DROP=6, LANDING_INSET=.35, FALLBACK_STEP=1.5, SAMPLE=.3;
+
+    /** Peak height above the higher endpoint: short hops stay low, full-range leaps climb high. */
+    public static double apex(Vec3d from,Vec3d to) {
+        return Math.clamp(2.2+.2*to.subtract(from).horizontalLength(),2.5,6.5);
     }
+    /** Flight ticks follow from the arc and a constant gravity, so every leap falls with the same weight. */
+    public static int duration(Vec3d from,Vec3d to) {
+        double[] arc=ballistic(from,to);
+        return (int)Math.clamp(Math.round(Math.sqrt(arc[1]/GRAVITY)),MIN_FLIGHT,MAX_FLIGHT);
+    }
+    /** {launch speed, gravity} in units of one whole flight, for y(t)=y0+v·t−g·t²/2 with t in [0,1]. */
+    private static double[] ballistic(Vec3d from,Vec3d to) {
+        double peak=Math.max(from.y,to.y)+apex(from,to);
+        double up=Math.sqrt(peak-from.y),down=Math.sqrt(peak-to.y);
+        return new double[]{2*up*(up+down),2*(up+down)*(up+down)};
+    }
+    /** Constant horizontal speed and a true parabola: the arc reads like a thrown body, not an easing curve. */
+    public static Vec3d position(Vec3d from, Vec3d to, double progress) {
+        double t=Math.clamp(progress,0,1);double[] arc=ballistic(from,to);
+        return new Vec3d(MathHelper.lerp(t,from.x,to.x),from.y+arc[0]*t-arc[1]*t*t/2,MathHelper.lerp(t,from.z,to.z));
+    }
+    /** The aimed landing, pulled back along the aim to the farthest leap that clears; null when nothing does. */
     public static Vec3d target(PlayerEntity player) {
+        Vec3d aimed=aimed(player);
+        if(aimed==null || validTarget(player,aimed)) return aimed;
+        Vec3d from=player.getEntityPos(),step=new Vec3d(aimed.x-from.x,0,aimed.z-from.z);
+        double distance=step.horizontalLength();
+        if(distance<1) return null;
+        step=step.multiply(1/distance);
+        for(double d=distance-FALLBACK_STEP;d>=1;d-=FALLBACK_STEP) {
+            Vec3d floor=ground(player,from.x+step.x*d,from.z+step.z*d);
+            if(floor!=null && validTarget(player,floor)) return floor;
+        }
+        return null;
+    }
+    /** Where the crosshair points: a floor, a reachable ledge top, or open ground at the range cap. */
+    private static Vec3d aimed(PlayerEntity player) {
         Vec3d from=player.getEntityPos(),look=player.getRotationVec(1);
         var hit=player.getEntityWorld().raycast(new RaycastContext(player.getEyePos(),player.getEyePos().add(look.multiply(Math.hypot(RANGE, 8))),
                 RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.ANY,player));
@@ -65,9 +98,9 @@ public final class FireLeapRules {
         if (!space(world,player,to) || !supported(world,player,to,.15)) return false;
         // The actual curved flight must clear terrain; seeing the landing's top
         // face in a straight eye ray is unnecessary (and rejects raised ledges).
-        Vec3d previous=from;
-        for(int i=1;i<=FLIGHT;i++) {
-            Vec3d next=position(from,to,i/(double)FLIGHT);
+        int steps=duration(from,to)*2;Vec3d previous=from;
+        for(int i=1;i<=steps;i++) {
+            Vec3d next=position(from,to,i/(double)steps);
             if(!segment(world,player,previous,next)) return false;
             if(player instanceof net.minecraft.server.network.ServerPlayerEntity serverPlayer
                     && !com.anton.elementalwands.arena.GuardianArenaManager.canTeleport(serverPlayer,serverPlayer.getEntityWorld(),next)) return false;
@@ -87,10 +120,21 @@ public final class FireLeapRules {
             if(!world.isChunkLoaded(pos) || !world.getFluidState(pos).isEmpty()) return false;
         return !world.getBlockCollisions(body,box).iterator().hasNext();
     }
+    /** Samples closer than the 0.6-block body width, so no full block or fence post can slip between them. */
     public static boolean segment(World world,Entity body,Vec3d from,Vec3d to) {
-        int samples=Math.max(1,(int)Math.ceil(from.distanceTo(to)/.15));
+        int samples=Math.max(1,(int)Math.ceil(from.distanceTo(to)/SAMPLE));
         for(int i=1;i<=samples;i++) if(!space(world,body,from.lerp(to,i/(double)samples))) return false;
         return true;
+    }
+    /** Closest approach of a body position to the committed arc, used to confirm the client is flying it. */
+    public static double offPath(Vec3d from,Vec3d to,Vec3d at) {
+        int steps=duration(from,to)*2;double best=Double.MAX_VALUE;Vec3d previous=from;
+        for(int i=1;i<=steps;i++) {
+            Vec3d next=position(from,to,i/(double)steps),line=next.subtract(previous);
+            double t=line.lengthSquared()<1e-9 ? 0 : Math.clamp(at.subtract(previous).dotProduct(line)/line.lengthSquared(),0,1);
+            best=Math.min(best,at.distanceTo(previous.add(line.multiply(t))));previous=next;
+        }
+        return best;
     }
     public static float damage(double radius) { return radius<=1.5 ? 8 : 4; }
     private FireLeapRules() {}

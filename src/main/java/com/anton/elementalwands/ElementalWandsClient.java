@@ -109,10 +109,11 @@ public class ElementalWandsClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.HOLLOW_NECROMANCER, com.anton.elementalwands.client.renderer.NecromancerRenderer::new);
         EntityRendererRegistry.register(ModEntities.SOUL_BOLT, com.anton.elementalwands.client.renderer.SoulBoltRenderer::new);
         EntityRendererRegistry.register(ModEntities.GRASPING_HAND, com.anton.elementalwands.client.renderer.GraspingHandRenderer::new);
-        EntityRendererRegistry.register(ModEntities.SPECTRAL_SKELETON, com.anton.elementalwands.client.renderer.SpectralMinionRenderers.Skeleton::new);
-        EntityRendererRegistry.register(ModEntities.SPECTRAL_ZOMBIE, com.anton.elementalwands.client.renderer.SpectralMinionRenderers.Zombie::new);
+        EntityRendererRegistry.register(ModEntities.HOLLOW_CRAWLER, context -> new com.anton.elementalwands.client.renderer.HollowUndeadRenderer<>(context, "hollow_crawler", .6f));
+        EntityRendererRegistry.register(ModEntities.HOLLOW_ARCHER, context -> new com.anton.elementalwands.client.renderer.HollowUndeadRenderer<>(context, "hollow_archer", .4f));
+        EntityRendererRegistry.register(ModEntities.HOLLOW_BRUTE, context -> new com.anton.elementalwands.client.renderer.HollowUndeadRenderer<>(context, "hollow_brute", .6f));
         EntityRendererRegistry.register(ModEntities.GUARDIAN_LIFT, EmptyEntityRenderer::new);
-        EntityRendererRegistry.register(ModEntities.FIRE_LEAP, EmptyEntityRenderer::new);
+        com.anton.elementalwands.client.FireLeapClient.init();
         com.anton.elementalwands.client.FireLeapPreview.init();
         EntityRendererRegistry.register(ModEntities.FLASHOVER_EMBER, com.anton.elementalwands.client.renderer.FlashoverEmberRenderer::new);
         EntityRendererRegistry.register(ModEntities.GUARDIAN_ARENA, com.anton.elementalwands.client.renderer.GuardianArenaRenderer::new);
@@ -180,6 +181,8 @@ public class ElementalWandsClient implements ClientModInitializer {
 
         HudRenderCallback.EVENT.register(new com.anton.elementalwands.client.overlay.WandHudOverlay());
         HudRenderCallback.EVENT.register(new EntangleHudOverlay());
+        com.anton.elementalwands.client.NecromancerDrainEffects.register();
+        HudRenderCallback.EVENT.register(new com.anton.elementalwands.client.overlay.NecromancerDrainOverlay());
     }
 
     private static void tickClient(MinecraftClient client) {

@@ -8,17 +8,21 @@ It records known verification limits; it is not a fresh installation receipt.
   successful Grasping Hands catches trigger that sequence. The spell now uses
   six animated skeletal hand models per marked area. The original grab-and-slam
   retains its teammate rescue mechanic. Pending: human Lunar/co-op review of the
-  art, rush steering, bite/throw timing and balance; the spectral elite. Minion tint at night remains a visual-review item. Automated fixture
+  art, rush steering, bite/throw timing and balance; the spectral elite. Automated fixture
   coverage and its limitations are described in the testing reference; this is
   not a Lunar installation receipt.
-- **Hollow Crypt realm:** the dimension, the approved dead-forest clearing, the
-  naturally generated graveyard and its headstone entrance are in place. The native
-  client fixture passed slot building, arrival, summoning, wall pull-back, teleport
-  limits, block protection, reset, return, `/locate`, the headstone ritual, the boss rising and
-  the return after victory. Pending: the offering item and the full fight lifecycle (sealed party, death
-  spectating, rewards, restart recovery). The graveyard design is a first pass. Human Lunar review is still needed for
-  brightness (ambient light 0.1), fog density and whether fire spells can burn the
-  clearing's logs (`reset` restores them).
+- **Hollow undead:** the crawler, archer and brute replace the Necromancer's raised
+  minions and spawn at night. The GeckoLib files are proven to match the approved
+  preview and the server fixture covers their combat rules. Pending: human Lunar review
+  of how they look in game, walk-cycle foot sliding (the authored strides are short,
+  so walks play up to 4x faster while chasing), spawn frequency and balance.
+- **Hollow Crypt realm:** the dimension, the dead-forest clearing, the naturally
+  generated graveyard and the full fight flow are in place. That covers free headstone entry,
+  a sealed party, spectating after death, kept belongings, the wipe reset, victory chests and
+  one spell book per graveyard. The native client fixture passed all of these for a solo player,
+  plus the operator commands, containment and protection. Pending: multi-player spectating
+  (not automatable in the solo fixture), human Lunar review of brightness (ambient light 0.1),
+  fog density and whether fire spells burn the clearing's logs. The graveyard design is a first pass.
 - **Gravity Well:** Space has five learnable spells; every current elemental
   catalog now meets the five-spell minimum. Dedicated-server checks passed the
   12.25-block level throw, immediate floor/wall/entity impact, pull, early/automatic

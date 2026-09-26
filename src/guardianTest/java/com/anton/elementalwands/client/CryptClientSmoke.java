@@ -36,14 +36,15 @@ public final class CryptClientSmoke implements ClientModInitializer {
     private volatile boolean serverStep;
     private Vec3d home;
     private volatile BlockPos headstone, graveyard;
-    private int risen;
+    private volatile Vec3d rewardView;
+    private int risen, waited;
 
     public void onInitializeClient() { ClientTickEvents.END_CLIENT_TICK.register(this::tick); }
 
     private void tick(MinecraftClient c) {
         if (done || c.getOverlay() != null) return;
         try {
-            if (++ticks > 4500) throw new AssertionError("Crypt client timeout at stage " + stage);
+            if (++ticks > 7000) throw new AssertionError("Crypt client timeout at stage " + stage);
             if (!started) {
                 started = true; c.options.pauseOnLostFocus = false; c.options.tutorialStep = net.minecraft.client.tutorial.TutorialStep.NONE;
                 GLFW.glfwSetWindowSize(c.getWindow().getHandle(), 1280, 720);
@@ -180,33 +181,83 @@ public final class CryptClientSmoke implements ClientModInitializer {
                     if (scene == 75) shot(c, "crypt-headstone.png");
                     if (scene == 80) next();
                 }
-                case 7 -> { // using the headstone drags the player in and the boss rises
+                case 7 -> { // a wipe: the headstone takes the party in, the boss rises, the party falls
                     if (scene == 0) onServer(server, () -> {
                         var p = player(server, uuid);
-                        BlockPos stone = headstone.down(); // chiseled deepslate under the skull
-                        var hit = new net.minecraft.util.hit.BlockHitResult(Vec3d.ofCenter(stone), net.minecraft.util.math.Direction.SOUTH, stone, false);
-                        var result = net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.invoker().interact(p, server.getOverworld(), net.minecraft.util.Hand.MAIN_HAND, hit);
-                        require(result == net.minecraft.util.ActionResult.SUCCESS, "Headstone did not respond: " + result);
+                        p.getAbilities().allowFlying = false; p.getAbilities().flying = false; p.sendAbilitiesUpdate();
+                        p.getInventory().insertStack(new net.minecraft.item.ItemStack(net.minecraft.item.Items.DIAMOND, 7));
+                        p.experienceLevel = 5;
+                        useHeadstone(server, p);
                     });
                     scene++;
-                    if (!inRealm) return;
+                    if (!inRealm && risen <= 100) return; // after the death, keep counting wherever the player is
                     if (++risen == 100) onServer(server, () -> {
                         var p = player(server, uuid);
                         var realm = server.getWorld(HollowCryptRealm.WORLD);
+                        require(realm.getEntitiesByClass(NecromancerEntity.class, p.getBoundingBox().expand(60), e -> e.isAlive()).size() == 1, "Ritual raised no boss");
+                        p.kill(realm);
+                    });
+                    if (risen > 100 && c.player.isDead()) c.player.requestRespawn();
+                    if (risen > 110 && !c.player.isDead()) next();
+                }
+                case 8 -> { // ...and comes back to the graveyard, as themselves, with everything they carried
+                    if (inRealm || c.player.isDead()) { if (c.player.isDead()) c.player.requestRespawn(); require(++waited < 400, "Wipe did not send the player home"); return; }
+                    if (++scene == 20) onServer(server, () -> {
+                        var p = player(server, uuid);
+                        require(p.getBlockPos().isWithinDistance(headstone, 24), "Wipe returned the player away from the graveyard: " + p.getBlockPos());
+                        require(p.interactionManager.getGameMode() == GameMode.SURVIVAL, "Game mode not restored: " + p.interactionManager.getGameMode());
+                        require(p.getInventory().count(net.minecraft.item.Items.DIAMOND) == 7, "Items were lost in the crypt");
+                        require(p.experienceLevel == 5, "Experience was lost in the crypt: " + p.experienceLevel);
+                        var realm = server.getWorld(HollowCryptRealm.WORLD);
+                        require(realm.getEntitiesByClass(NecromancerEntity.class, HollowCryptRealm.footprint(HollowCryptRealm.nearestCentre(Vec3d.ZERO)), e -> true).isEmpty(),
+                                "The boss did not vanish after the wipe");
+                    });
+                    if (scene == 25) { require(serverStep, "Wipe return checks did not run"); next(); }
+                }
+                case 9 -> { // a victory: try again, and win
+                    if (scene == 0) onServer(server, () -> useHeadstone(server, player(server, uuid)));
+                    scene++;
+                    if (!inRealm) { require(scene < 400, "Second ritual did not take the player in"); return; }
+                    if (++risen == 220) onServer(server, () -> {
+                        var p = player(server, uuid);
+                        var realm = server.getWorld(HollowCryptRealm.WORLD);
                         var bosses = realm.getEntitiesByClass(NecromancerEntity.class, p.getBoundingBox().expand(60), e -> e.isAlive());
-                        require(bosses.size() == 1, "Ritual raised " + bosses.size() + " bosses");
+                        require(bosses.size() == 1, "Second ritual raised " + bosses.size() + " bosses");
                         var boss = bosses.get(0);
-                        // Victory: the death event schedules the return; the corpse is removed at once.
+                        // The death event commits the victory; the corpse is removed at once.
                         net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.AFTER_DEATH.invoker().afterDeath(boss, realm.getDamageSources().generic());
                         boss.discard();
                     });
-                    if (risen > 100) next();
+                    if (risen > 220) next();
                 }
-                case 8 -> {
-                    if (inRealm) { require(++scene < 400, "Victory did not send the player home"); return; }
+                case 10 -> { // home again, with reward chests at the grave and a spell book to claim
+                    if (inRealm) { require(++waited < 400, "Victory did not send the player home"); return; }
+                    if (++scene == 20) onServer(server, () -> {
+                        var p = player(server, uuid);
+                        var world = server.getOverworld();
+                        java.util.List<BlockPos> chests = new java.util.ArrayList<>();
+                        for (BlockPos q : BlockPos.iterate(headstone.add(-8, -6, -8), headstone.add(8, 0, 8)))
+                            if (world.getBlockEntity(q) instanceof net.minecraft.block.entity.ChestBlockEntity chest && !chest.isEmpty()) chests.add(q.toImmutable());
+                        require(chests.size() == 2, "Expected two filled reward chests at the grave, found " + chests.size());
+                        int bones = 0;
+                        for (BlockPos q : chests) if (world.getBlockEntity(q) instanceof net.minecraft.block.entity.ChestBlockEntity chest)
+                            for (int i = 0; i < chest.size(); i++) if (chest.getStack(i).isOf(net.minecraft.item.Items.BONE) || chest.getStack(i).isOf(net.minecraft.item.Items.BONE_BLOCK)) bones++;
+                        require(bones > 0, "Reward chests hold no bones");
+                        var hit = new net.minecraft.util.hit.BlockHitResult(Vec3d.ofCenter(chests.get(0)), net.minecraft.util.math.Direction.UP, chests.get(0), false);
+                        net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.invoker().interact(p, world, net.minecraft.util.Hand.MAIN_HAND, hit);
+                        net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.invoker().interact(p, world, net.minecraft.util.Hand.MAIN_HAND, hit);
+                        require(p.getInventory().count(com.anton.elementalwands.registry.ModItems.SECONDARY_SPELL_BOOK) == 1, "Victor did not receive exactly one spell book");
+                        p.networkHandler.requestTeleport(chests.get(0).getX() + .5 + 4, chests.get(0).getY() + 3, chests.get(0).getZ() + .5 + 4, 0, 0);
+                        rewardView = Vec3d.ofCenter(chests.get(0));
+                    });
+                    if (scene > 22 && rewardView != null) lookAt(c, rewardView);
+                    if (scene == 40) shot(c, "crypt-rewards.png");
+                    if (scene < 80) return; // let the screenshot finish writing
+                    require(serverStep && rewardView != null, "Reward checks did not run");
                     Files.writeString(Path.of("CRYPT_PASSED.txt"), "Hollow Crypt native client passed: slot build, layout spot checks, arrival, summon at circle, wall pull-back, "
                             + "spell teleport limits, survival block protection, reset restoration, return, /locate, graveyard placement, headstone ritual, "
-                            + "boss rising and victory return. Screenshots: crypt-*.png. Human Lunar review pending.\n");
+                            + "wipe (boss vanishes, return to the graveyard with items, XP and game mode), second ritual, victory return, "
+                            + "reward chests with bones and loot, one spell book per victor. Screenshots: crypt-*.png. Human Lunar review pending.\n");
                     done = true; c.scheduleStop();
                 }
                 default -> {}
@@ -218,7 +269,14 @@ public final class CryptClientSmoke implements ClientModInitializer {
         }
     }
 
-    private void next() { stage++; scene = 0; serverStep = false; }
+    private void next() { stage++; scene = 0; risen = 0; waited = 0; serverStep = false; }
+
+    private void useHeadstone(MinecraftServer server, ServerPlayerEntity p) {
+        BlockPos stone = headstone.down(); // chiseled deepslate under the skull
+        var hit = new net.minecraft.util.hit.BlockHitResult(Vec3d.ofCenter(stone), net.minecraft.util.math.Direction.SOUTH, stone, false);
+        var result = net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.invoker().interact(p, server.getOverworld(), net.minecraft.util.Hand.MAIN_HAND, hit);
+        require(result == net.minecraft.util.ActionResult.SUCCESS, "Headstone did not respond: " + result);
+    }
 
     private void onServer(MinecraftServer server, Runnable action) {
         server.execute(() -> {

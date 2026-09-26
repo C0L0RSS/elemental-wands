@@ -27,6 +27,7 @@ public final class NecromancerServerSmoke implements ModInitializer {
     private ServerPlayerEntity target, second;
     private NecromancerEntity boss;
     private float bossBefore;
+    private List<UUID> firstRaised = List.of();
 
     public void onInitialize() {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
@@ -98,21 +99,26 @@ public final class NecromancerServerSmoke implements ModInitializer {
             heal(target); heal(second);
             boss.combat().testAction(target, Action.RAISE);
         }
-        // Raise: minions climb out of the floor, then fight, without burning or hurting their caster.
+        // Raise: Hollow undead claw out of the floor, then fight, without burning or hurting their caster.
         if (t == 276) {
             var minions = minions(w);
             require(!minions.isEmpty() && minions.size() <= NecromancerRules.RAISE_PER_CAST, "Raise count wrong: " + minions.size());
-            require(minions.stream().allMatch(m -> m.getY() < 100 && NecromancerMinion.rising(m)), "Minions did not rise from below the floor");
+            require(minions.stream().anyMatch(m -> m instanceof com.anton.elementalwands.entity.undead.HollowCrawlerEntity)
+                    && minions.stream().noneMatch(m -> m instanceof com.anton.elementalwands.entity.undead.HollowBruteEntity),
+                    "A new army did not start with a crawler (and no brute)");
+            require(minions.stream().allMatch(m -> Math.abs(m.getY() - 100) < .05 && NecromancerMinion.rising(m)), "Minions did not rise on the floor");
+            firstRaised = minions.stream().map(MobEntity::getUuid).toList();
         }
         if (t == 305) {
             var minions = minions(w);
-            require(minions.stream().allMatch(m -> Math.abs(m.getY() - 100) < .05 && !m.noClip && !m.isAiDisabled()), "Minions did not finish rising");
             require(minions.stream().allMatch(m -> m.isTeammate(boss) && boss.isTeammate(m)), "Minions are not on the caster's side");
             float health = boss.getHealth();
             require(!boss.damage(w, w.getDamageSources().mobAttack(minions.getFirst()), 6) && boss.getHealth() == health, "Minion damaged its caster");
             boss.combat().testAction(target, Action.RAISE);
         }
         if (t == 335) boss.combat().testAction(target, Action.RAISE);
+        if (t == 352) require(firstRaised.stream().map(w::getEntity).allMatch(m -> m instanceof MobEntity mob && mob.isAlive()
+                && !NecromancerMinion.rising(mob) && !mob.isAiDisabled() && Math.abs(mob.getY() - 100) < .05), "Minions did not finish rising");
         if (t == 385) {
             var minions = minions(w);
             require(minions.size() == NecromancerRules.minionCap(false, 2), "Army cap not respected: " + minions.size());
@@ -144,7 +150,7 @@ public final class NecromancerServerSmoke implements ModInitializer {
         if (t == 520) {
             boss.stopFight();
             require(minions(w).isEmpty() && count(w, SoulBoltEntity.class) == 0, "Stop left encounter entities");
-            Files.writeString(Path.of("NECROMANCER_PASSED.txt"), "Hollow Necromancer passed: cover stops soul bolts; open volley hits; drain damages, heals within its cap, is tracked for clients and breaks on lost sight; grasping hands root players who stay and spare players who step out; minions rise from under the floor, finish with collision and AI, share the caster's side, cannot hurt it, respect the army cap and do not burn at noon; stop dissolves the army; blink escapes within the leash and leaves a Wither/Slowness curse; wand damage applies; fight mode engages.\n");
+            Files.writeString(Path.of("NECROMANCER_PASSED.txt"), "Hollow Necromancer passed: cover stops soul bolts; open volley hits; drain damages, heals within its cap, is tracked for clients and breaks on lost sight; grasping hands root players who stay and spare players who step out; crawlers claw out of the floor, finish rising with AI, share the caster's side, cannot hurt it, respect the army cap and do not burn at noon; stop dissolves the army; blink escapes within the leash and leaves a Wither/Slowness curse; wand damage applies; fight mode engages.\n");
             server.stop(false);
         }
     }

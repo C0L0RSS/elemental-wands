@@ -37,6 +37,7 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
     private static final RawAnimation COLOSSUS_IDLE = RawAnimation.begin().thenLoop("animation.hollow_necromancer.colossus_idle");
     private static final RawAnimation COLOSSUS_WALK = RawAnimation.begin().thenLoop("animation.hollow_necromancer.colossus_walk");
     private static final TrackedData<Integer> DRAIN_TARGET = DataTracker.registerData(NecromancerEntity.class, TrackedDataHandlerRegistry.INTEGER);
+    private static final TrackedData<Long> DRAIN_START = DataTracker.registerData(NecromancerEntity.class, TrackedDataHandlerRegistry.LONG);
     private static final TrackedData<Boolean> COLOSSUS = DataTracker.registerData(NecromancerEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Long> TRANSFORM_START = DataTracker.registerData(NecromancerEntity.class, TrackedDataHandlerRegistry.LONG);
     private static final TrackedData<Integer> GRABBED = DataTracker.registerData(NecromancerEntity.class, TrackedDataHandlerRegistry.INTEGER);
@@ -67,6 +68,7 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
     protected void initDataTracker(DataTracker.Builder builder) {
         super.initDataTracker(builder);
         builder.add(DRAIN_TARGET, -1);
+        builder.add(DRAIN_START, -1L);
         builder.add(COLOSSUS, false);
         builder.add(TRANSFORM_START, -1L);
         builder.add(GRABBED, -1);
@@ -100,7 +102,15 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
 
     /** Entity id of the drained player, so a client tether can follow it; -1 when idle. */
     public int getDrainTarget() { return dataTracker.get(DRAIN_TARGET); }
-    void setDrainTarget(int id) { dataTracker.set(DRAIN_TARGET, id); }
+    public long getDrainStart() { return dataTracker.get(DRAIN_START); }
+    public float getDrainTime(float partialTick) {
+        long start = getDrainStart();
+        return start < 0 ? -1 : getEntityWorld().getTime() - start + partialTick;
+    }
+    void setDrainTarget(int id) {
+        dataTracker.set(DRAIN_START, id < 0 ? -1L : getEntityWorld().getTime());
+        dataTracker.set(DRAIN_TARGET, id);
+    }
 
     @Override public boolean isBossAggressive() { return !getCommandTags().contains(PASSIVE_TAG); }
 

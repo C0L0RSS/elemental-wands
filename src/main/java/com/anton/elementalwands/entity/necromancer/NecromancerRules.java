@@ -51,8 +51,10 @@ public final class NecromancerRules {
     public static final int DRAIN_INTERVAL = 10;
     public static final float DRAIN_DAMAGE = 2, DRAIN_HEAL_SHARE = .03f;
 
-    public static final int RISE_TICKS = 24, RAISE_PER_CAST = 2;
-    public static final double RISE_DEPTH = 1.9;
+    public static final int RAISE_PER_CAST = 2;
+
+    /** Hollow undead the Raise spell can call up. */
+    public enum Undead { CRAWLER, ARCHER, BRUTE }
 
     /** Eight-second emergence: hood opens, hands plant, body pulls free, robe burns, skeleton rises. */
     public static final int TRANSFORM_TICKS = 160, TRANSFORM_GROW = 90, TRANSFORM_ROAR = 142, RELOCATE_TIMEOUT = 200;
@@ -79,6 +81,16 @@ public final class NecromancerRules {
     public static double handsRadius(boolean colossus) { return colossus ? 2.4 : HANDS_RADIUS; }
     public static int handsTargets(boolean colossus) { return colossus ? 4 : HANDS_MAX_TARGETS; }
     public static int raisePerCast(boolean colossus) { return colossus ? 3 : RAISE_PER_CAST; }
+
+    /**
+     * The army is mostly crawlers. Archers (at most two) join once one body stands; a single
+     * brute joins a grown army of three, or any colossus army. {@code roll} is uniform in [0, 1).
+     */
+    public static Undead raiseKind(int army, int archers, int brutes, boolean colossus, double roll) {
+        if (brutes == 0 && (colossus || army >= 3) && roll < .3) return Undead.BRUTE;
+        if (archers < 2 && army >= 1 && roll < .65) return Undead.ARCHER;
+        return Undead.CRAWLER;
+    }
 
     /** The slam hurts but never one-shots: at most a third of a player's health and never above 12. */
     public static float grabDamage(float playerMaxHealth) { return Math.min(12, playerMaxHealth * .35f); }

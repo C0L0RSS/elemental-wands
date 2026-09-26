@@ -18,6 +18,16 @@ public final class NecromancerContractTest {
         require(NecromancerRules.threshold(300, 600) && !NecromancerRules.threshold(301, 600), "Half-health boundary moved");
         require(NecromancerRules.minionCap(false, 1) == 3 && NecromancerRules.minionCap(false, 9) == 5, "Phase-one army cap moved");
         require(NecromancerRules.minionCap(true, 1) == 5 && NecromancerRules.minionCap(true, 9) == 7, "Colossus army cap moved");
+        // The army starts as crawlers; archers join a standing army, a brute only a grown or colossus army.
+        for (double roll = 0; roll < 1; roll += .05)
+            require(NecromancerRules.raiseKind(0, 0, 0, false, roll) == NecromancerRules.Undead.CRAWLER, "First raised body was not a crawler");
+        require(NecromancerRules.raiseKind(1, 0, 0, false, .1) == NecromancerRules.Undead.ARCHER, "Archers never joined");
+        require(NecromancerRules.raiseKind(1, 2, 0, false, .1) == NecromancerRules.Undead.CRAWLER, "More than two archers");
+        require(NecromancerRules.raiseKind(2, 0, 0, false, .1) != NecromancerRules.Undead.BRUTE, "Brute joined a small army");
+        require(NecromancerRules.raiseKind(3, 0, 0, false, .1) == NecromancerRules.Undead.BRUTE, "Brute never joined a grown army");
+        require(NecromancerRules.raiseKind(0, 0, 0, true, .1) == NecromancerRules.Undead.BRUTE, "Colossus army had no brute");
+        require(NecromancerRules.raiseKind(5, 1, 1, true, .1) != NecromancerRules.Undead.BRUTE, "Second brute joined");
+        require(NecromancerRules.raiseKind(5, 1, 1, true, .9) == NecromancerRules.Undead.CRAWLER, "Army was not mostly crawlers");
 
         // Drain healing stops at its per-channel share however long the channel runs.
         float healed = 0;

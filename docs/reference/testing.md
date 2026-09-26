@@ -62,7 +62,8 @@ inspect their assertions when behavior changes instead of trusting an old name.
 | Guardian combat | `guardian_combat_smoke.init.gradle`, `guardian_guard_smoke.init.gradle`, `guardian_phase_smoke.init.gradle` | `guardian_floor_client_smoke.init.gradle` |
 | Guardian cover / Nature / walls | `guardian_cover_smoke.init.gradle`, `guardian_nature_smoke.init.gradle`, `guardian_wall_smoke.init.gradle` | Relevant native visual fixture |
 | Hollow Necromancer | `necromancer_server_smoke.init.gradle`, `necromancer_phase_smoke.init.gradle` | `necromancer_client_smoke.init.gradle` (screenshots; `-PnecroRecord` for hidden recording) |
-| Hollow Crypt realm | — | `crypt_client_smoke.init.gradle` (realm build, enter, summon, wall, reset, leave, `/locate`, headstone ritual, victory return; screenshots) |
+| Hollow undead | `hollow_undead_server_smoke.init.gradle` (rise, chase, hit-frame damage and arrow timing, daylight burning, loot, held death clip, bound-minion rules) | `hollow_undead_client_smoke.init.gradle` (hidden window; rise, idle front/side, walk, attack key frames, death screenshots) |
+| Hollow Crypt realm | — | `crypt_client_smoke.init.gradle` (realm build, enter, summon, wall, reset, leave, `/locate`, headstone ritual, wipe with kept items, victory rewards and spell book; screenshots) |
 | Church / arena | `guardian_church_smoke.init.gradle`, `guardian_arena_smoke.init.gradle` | Guardian floor client with visual options |
 | Worldgen / locate | `guardian_church_worldgen_smoke.init.gradle`, `guardian_church_locate_smoke.init.gradle` | Human terrain review |
 | Parties / audit regressions | `party_server_smoke.init.gradle`, `audit_fixes_smoke.init.gradle` | Human co-op review |
@@ -266,3 +267,15 @@ integrates its released throw velocity. Actual combat owns the grip, bite and
 throw impulse. Require fresh `NECRO_PASSED.txt` and no failure receipt, then encode
 the current `RECORDING_DIR.txt` to `.local-previews/grasping-hands/necromancer-rush-gameplay.mp4`.
 This does not verify human movement input or multiplayer latency.
+
+### Life Drain recording
+
+Use `-PdrainRecord` with `necromancer_client_smoke.init.gradle` and the existing
+`hubClientAssets` option. It records 300 frames at 20 fps (15 seconds), showing
+the braid from an observer camera, first-person mist, a cover break and boss
+removal. Assertions check tracked cast timing, observer and third-person mist
+exclusion, fade completion and removal cleanup. Require a fresh `NECRO_PASSED.txt`
+and no failure receipt. Encode the current `RECORDING_DIR.txt` to
+`.local-previews/life-drain/life-drain-gameplay.mp4`; run the Necromancer server
+fixture for real damage, healing caps and cover rules. This does not establish
+human Lunar appearance or installation.

@@ -12,6 +12,7 @@ current guide below; there is no requirement to read this whole folder.
 | Visual style and which assets are safe to regenerate      | [Art and assets](reference/art-and-assets.md)                     |
 | Guardian combat and animation constraints                 | [Guardian combat](reference/guardian-combat.md)                   |
 | The Hollow Necromancer boss (in progress)                 | [Necromancer combat](reference/necromancer-combat.md)             |
+| Hollow undead night mobs and the Necromancer's army       | [Hollow undead](reference/hollow-undead.md)                       |
 | Churches, rituals, arena returns and saved-world recovery | [Church and arena](reference/church-and-arena.md)                 |
 | How automated Minecraft previews and checks work          | [Testing](reference/testing.md)                                   |
 | Short summaries of player-facing changes                  | [Releases](releases/README.md)                                    |

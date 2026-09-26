@@ -1,7 +1,6 @@
 package com.anton.elementalwands.client;
 
 import com.anton.elementalwands.data.*;
-import com.anton.elementalwands.entity.FireLeapEntity;
 import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.registry.ModItems;
 import com.anton.elementalwands.util.*;
@@ -70,21 +69,21 @@ public final class FireExpansionClientSmoke implements ClientModInitializer {
             if(t==65) screenshot(c,"fire-leap-aim.png");
             if(t==70) { WandControls.clear();require(!WandControls.aimingLeap(),"Cancel left preview active"); }
             if(t==75) {
-                require(!c.player.hasVehicle(),"Cancel launched the player");
+                require(!FireLeapClient.active(),"Cancel launched the player");
                 WandControls.input(true,1,GLFW.GLFW_PRESS);
             }
             if(t==85) WandControls.input(true,1,GLFW.GLFW_RELEASE);
             if(t>=86 && t<120) {
                 c.player.setPitch(45);
-                if(c.player.getVehicle() instanceof FireLeapEntity) {
+                if(FireLeapClient.active()) {
                     sawFlight=true;peak=Math.max(peak,c.player.getY()-floor);
                     if(t==93) screenshot(c,"fire-leap-flight.png");
                 }
                 if(t==109)screenshot(c,"fire-leap-wave.png");
             }
             if(t==130) {
-                require(sawFlight && peak>3.8,"Client did not receive full flight "+peak);
-                require(!c.player.hasVehicle() && c.player.getEntityPos().distanceTo(target)<.5,"Client missed destination "+c.player.getEntityPos()+" vs "+target);
+                require(sawFlight && peak>6,"Client did not receive full flight "+peak);
+                require(!FireLeapClient.active() && c.player.getEntityPos().distanceTo(target)<1.2,"Client missed destination "+c.player.getEntityPos()+" vs "+target);
                 require(c.player.getHealth()==20,"Ordinary landing hurt caster");
                 Files.writeString(Path.of("LEAP_PASSED.txt"),"Actual integrated client: hold/preview, cancellation, release packet, synchronized carrier flight, apex, destination, no landing fall damage and screenshots passed. Human combat feel pending.\n");
 

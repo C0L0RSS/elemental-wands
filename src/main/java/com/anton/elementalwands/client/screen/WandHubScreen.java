@@ -24,6 +24,7 @@ import org.lwjgl.glfw.GLFW;
 public final class WandHubScreen extends Screen {
     public static final int PAPER_WIDTH = 360, PAPER_HEIGHT = 266;
     private static final int INK = 0xFF352C20, MUTED = 0xFF715A39;
+    private static final int BASIC_COLOR = 0xFF397849, TECHNIQUE_COLOR = 0xFF356C96, ULTIMATE_COLOR = 0xFF853D71;
     /** Controls page order: slots 1-5, then the spell alternate (input index 3). */
     private static final int[] CONTROL_ORDER = {0, 1, 2, 4, 5, 3};
     private String selected = "", stamp = "", message = "";
@@ -103,7 +104,7 @@ public final class WandHubScreen extends Screen {
                 var b=button("",slotX(index),102,size,size,()->{
                     selectedSlot=slot;libraryPage=0;selected=ClientPlayerData.loadout().get(slot);stamp="";refresh();
                 });
-                b.setTooltip(Tooltip.of(Text.literal(WandSpells.slotLabel(slot)+(spell==null?"":": "+spell.name()))));
+                b.setTooltip(Tooltip.of(Text.literal(WandSpells.slotLabel(slot)+(spell==null?"":": "+spell.name()+" ("+spell.category().label()+")"))));
             }
         }
         var spells = library();
@@ -111,7 +112,8 @@ public final class WandHubScreen extends Screen {
         for (int i = libraryPage*3; i < Math.min(spells.size(), libraryPage*3+3); i++) {
             var spell = spells.get(i);
             int y = (page == Page.STORE ? 100 : 164) + (i%3)*(page == Page.STORE ? 36 : 24);
-            button("    " + spell.name(), 18, y, 156, 22, () -> { selected = spell.id(); refresh(); });
+            var b = button("    " + spell.name(), 18, y, 156, 22, () -> { selected = spell.id(); refresh(); });
+            b.setTooltip(Tooltip.of(Text.literal(spell.category().label() + ": " + spell.name())));
         }
         if (spells.size() > 3) {
             button("<", 18, 237, 20, 12, () -> { libraryPage--; refresh(); }).active = libraryPage > 0;
@@ -159,12 +161,11 @@ public final class WandHubScreen extends Screen {
         var affinity = ClientPlayerData.getAffinity();
         texture(context, "parchment" + (affinity == WizardAffinity.NONE ? "" : "_" + affinity.name().toLowerCase(Locale.ROOT)), 0, 0, 360, 266, 512);
         if (affinity != WizardAffinity.NONE) texture(context, "corner_" + affinity.name().toLowerCase(Locale.ROOT), 0, 0, 64, 64, 64);
-        context.drawText(textRenderer, "Wizard's Wand", 43, 22, INK, false);
-        context.drawText(textRenderer, affinity == WizardAffinity.NONE ? "Choose an affinity" : title(affinity) + " affinity", 43, 36, MUTED, false);
+        context.drawText(textRenderer, affinity == WizardAffinity.NONE ? "Choose an affinity" : title(affinity) + " affinity", 43, 25, INK, false);
         if(affinity!=WizardAffinity.NONE){
             double xp=ClientPlayerData.xp();int level=ElementLevels.level(xp);
-            context.drawText(textRenderer,"Lv "+level+" / 6  +"+((level-1)*10)+"%",194,22,MUTED,false);
-            context.drawText(textRenderer,level==6?"Maximum level":"XP "+(int)ElementLevels.within(xp)+" / "+(int)ElementLevels.required(xp),194,34,MUTED,false);
+            context.drawText(textRenderer,"Lv "+level+" / 6  +"+((level-1)*10)+"%",194,17,MUTED,false);
+            context.drawText(textRenderer,level==6?"Maximum level":"XP "+(int)ElementLevels.within(xp)+" / "+(int)ElementLevels.required(xp),194,29,MUTED,false);
             context.fill(194,40,292,41,0xFFC6B087);
             context.fill(194,40,194+(level==6?98:(int)(98*ElementLevels.within(xp)/ElementLevels.required(xp))),41,0xFF9B722B);
         }
@@ -193,7 +194,9 @@ public final class WandHubScreen extends Screen {
             if(spell!=null) {
             icon(context, spell, 302, 12, 28);
             context.drawText(textRenderer,textRenderer.trimToWidth(spell.name(),148),194,94,INK,false);
-            context.drawText(textRenderer, spell.ultimate() ? "Ultimate / 100 charge" : spell.category().label() + " spell", 194, 110, MUTED, false);
+            int categoryColor = categoryColor(spell.category());
+            context.fill(194, 107, 342, 121, categoryColor);
+            context.drawText(textRenderer, spell.ultimate() ? "Ultimate / 100 charge" : spell.category().label() + " spell", 198, 110, 0xFFFFFFFF, true);
             wrappedLimited(context, spell.description(), 194, 124, 148, INK, 3);
             context.drawText(textRenderer, textRenderer.trimToWidth(spell.timing(),148), 194, 168, MUTED, false);
             context.drawText(textRenderer, textRenderer.trimToWidth(spell.reach(),148), 194, 179, MUTED, false);
@@ -220,6 +223,7 @@ public final class WandHubScreen extends Screen {
             if(page==Page.LOADOUT)for(int i=0;i<visibleSlots().size();i++){
                 int slot=visibleSlots().get(i),size=slotSize(),x=slotX(i);var spell=WandSpells.find(ClientPlayerData.loadout().get(slot));
                 if(ClientPlayerData.owns(spell))icon(context,spell,x+4,106,size-8);
+                if(ClientPlayerData.owns(spell)) context.fill(x+2, 102+size-3, x+size-2, 102+size, categoryColor(spell.category()));
                 if(WandSpells.slotOpen(ClientPlayerData.owned(),slot)){
                     String key=WandControls.slotKey(slot);context.drawText(textRenderer,key,x+(size-textRenderer.getWidth(key))/2,141,MUTED,false);
                 }
@@ -230,6 +234,11 @@ public final class WandHubScreen extends Screen {
                 var spell = spells.get(i);
                 int y = (page == Page.STORE ? 100 : 164) + (i%3)*(page == Page.STORE ? 36 : 24);
                 icon(context, spell, 22, y+3, 16);
+                int categoryColor = categoryColor(spell.category());
+                context.fill(18, y+2, 21, y+20, categoryColor);
+                context.fill(155, y+4, 170, y+18, categoryColor);
+                String initial = spell.category().label().substring(0, 1);
+                context.drawText(textRenderer, initial, 162-textRenderer.getWidth(initial)/2, y+7, 0xFFFFFFFF, true);
                 if (spell.id().equals(selected)) context.fill(18, y, 20, y+22, 0xFFF4D176);
                 if (page == Page.STORE) context.drawText(textRenderer, ClientPlayerData.owns(spell) ? "Owned" : ClientPlayerData.free(spell) ? "Free" : spell.price() + " Flux", 24, y+24, MUTED, false);
             }
@@ -261,6 +270,13 @@ public final class WandHubScreen extends Screen {
     }
     private static String title(WizardAffinity affinity) {
         String s = affinity.name().toLowerCase(Locale.ROOT); return Character.toUpperCase(s.charAt(0)) + s.substring(1);
+    }
+    private static int categoryColor(WandSpells.Category category) {
+        return switch (category) {
+            case BASIC -> BASIC_COLOR;
+            case TECHNIQUE -> TECHNIQUE_COLOR;
+            case ULTIMATE -> ULTIMATE_COLOR;
+        };
     }
     private void wrapped(DrawContext ctx, String text, int x, int y, int width, int color) {
         for (var line : textRenderer.wrapLines(Text.literal(text), width)) { ctx.drawText(textRenderer, line, x, y, color, false); y += 11; }

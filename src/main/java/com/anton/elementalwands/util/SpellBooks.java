@@ -37,15 +37,18 @@ public final class SpellBooks {
         n.putInt("tier"+tier,Math.max(0,credits(p).get(tier)-1));p.setAttached(EWAttachments.SPELL_BOOKS,n);
     }
     public static boolean claim(ServerPlayerEntity p,String site) {
+        return claim(p,"church:"+site,"Your Guardian spell book is in your inventory. Right-click it for a free Basic or Technique spell.");
+    }
+    /** One personal book per receipt key, e.g. per church or per graveyard. */
+    public static boolean claim(ServerPlayerEntity p,String key,String message) {
         var n=p.getAttachedOrElse(EWAttachments.SPELL_BOOKS,new NbtCompound()).copy();
-        String key="church:"+site;
         if(n.getBoolean(key,false)) return false;
         // One-slot item: require actual space before recording a receipt; never drop a personal reward.
         if(p.getInventory().getEmptySlot()<0) {p.sendMessage(Text.literal("Make room, then open this chest to claim your spell book."),true);return false;}
         var book=new ItemStack(ModItems.SECONDARY_SPELL_BOOK);
         if(!p.getInventory().insertStack(book)) return false;
         n.putBoolean(key,true);p.setAttached(EWAttachments.SPELL_BOOKS,n);
-        p.sendMessage(Text.literal("Your Guardian spell book is in your inventory. Right-click it for a free Basic or Technique spell."),false);
+        p.sendMessage(Text.literal(message),false);
         return true;
     }
     private SpellBooks() {}

@@ -36,7 +36,9 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
     private net.minecraft.util.math.Vec3d rushFocus;
     private boolean sawRushGrip, sawHandGrip, sawHandModels;
     private final boolean soulRecord = Boolean.getBoolean("necro.soulRecord");
-    private final boolean record = Boolean.getBoolean("necro.record") || soulRecord || rushRecord;
+    private final boolean drainRecord = Boolean.getBoolean("necro.drainRecord");
+    private boolean sawDrain, sawDrainClear;
+    private final boolean record = Boolean.getBoolean("necro.record") || soulRecord || rushRecord || drainRecord;
     private boolean sawSoulFlight, sawSoulBite;
     private int soulId = -1;
     private final java.util.concurrent.atomic.AtomicInteger recorded = new java.util.concurrent.atomic.AtomicInteger();
@@ -92,6 +94,7 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
             int t = ++scene;
             c.setScreen(null); WandWelcome.reset();
             c.options.hudHidden = true;
+            if (drainRecord) { drainScene(c, t); return; }
             if (soulRecord) { soulScene(c, t); return; }
             if (rushRecord) { rushScene(c, t); return; }
             if (t < 40) look(c, 0, -5);
@@ -118,13 +121,10 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
             if (t == 262) shot(c, "necromancer-raise-cast.png");
             if (t == 284) shot(c, "necromancer-raise-rising.png");
             if (t == 305) {
-                boolean skeleton = false, zombie = false;
-                for (var e : c.world.getEntities()) {
-                    Object renderer = c.getEntityRenderDispatcher().getRenderer(e);
-                    skeleton |= renderer instanceof com.anton.elementalwands.client.renderer.SpectralMinionRenderers.Skeleton;
-                    zombie |= renderer instanceof com.anton.elementalwands.client.renderer.SpectralMinionRenderers.Zombie;
-                }
-                require(skeleton || zombie, "No spectral minion rendered");
+                boolean undead = false;
+                for (var e : c.world.getEntities())
+                    undead |= c.getEntityRenderDispatcher().getRenderer(e) instanceof com.anton.elementalwands.client.renderer.HollowUndeadRenderer<?>;
+                require(undead, "No Hollow undead minion rendered");
                 shot(c, "necromancer-minions.png");
             }
             if (t == 320) cast(server, uuid, Action.BLINK);
@@ -280,6 +280,80 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
     }
 
     /** Isolated native view of the real projectile, its looping jaw and wall impact. */
+    /** Real tracked casts: observer braid, local mist, cover break, then boss removal. */
+    private void drainScene(MinecraftClient c,int t) throws Exception {
+        var server=c.getServer();var uuid=c.player.getUuid();
+        c.options.hudHidden=false;
+        if(t==1) {
+            c.options.getFov().setValue(65);
+            server.execute(() -> {
+                try {
+                    var w=server.getOverworld();
+                    w.setTimeOfDay(18000);
+                    var f=com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player",net.minecraft.server.MinecraftServer.class,
+                            UUID.class,String.class,double.class,double.class,double.class);
+                    f.setAccessible(true);
+                    var victim=(net.minecraft.server.network.ServerPlayerEntity)f.invoke(null,server,UUID.randomUUID(),"DrainTarget",.5,(double)floor,-2.5);
+                    rushVictim=victim.getUuid();victim.changeGameMode(GameMode.SURVIVAL);victim.setNoGravity(true);
+                    var observer=server.getPlayerManager().getPlayer(uuid);
+                    observer.networkHandler.sendPacket(net.minecraft.network.packet.s2c.play.PlayerListS2CPacket.entryFromPlayer(java.util.List.of(victim)));
+                    observer.networkHandler.sendPacket(new net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket(victim.getId(),victim.getUuid(),victim.getX(),victim.getY(),victim.getZ(),0,0,victim.getType(),0,victim.getVelocity(),0));
+                    victim.setLoaded(true);victim.onTeleportationDone();
+                    observer.networkHandler.requestTeleport(-6,floor+1,1,-90,10);
+                }catch(Throwable e){serverFailure=e.toString();}
+            });
+        }
+        if(t<105)look(c,-90,10);else look(c,0,0);
+        if(t==20)cast(server,rushVictim,Action.DRAIN);
+        if(t==60) {
+            require(boss(c).getDrainTarget()!=c.player.getId(),"Observer became drain target");
+            require(NecromancerDrainEffects.localVeil(0)==null,"Observer received mist");
+            shot(c,"life-drain-braid.png");
+        }
+        if(t==105)server.execute(() -> {
+            var p=server.getPlayerManager().getPlayer(uuid);
+            var standIn=server.getPlayerManager().getPlayer(rushVictim);
+            // This actor was explicitly spawned for the observer shot. Remove that
+            // client copy before putting the real first-person camera in its place.
+            p.networkHandler.sendPacket(new net.minecraft.network.packet.s2c.play.EntitiesDestroyS2CPacket(standIn.getId()));
+            standIn.discard();
+            p.networkHandler.requestTeleport(.5,floor,-2.5,0,0);
+        });
+        if(t==125)cast(server,uuid,Action.DRAIN);
+        if(t==155) {
+            var veil=NecromancerDrainEffects.localVeil(0);
+            require(veil!=null && veil.time()>.7 && veil.fade()==0,"Local first-person drain mist missing");
+            require(Math.abs(veil.time()*20-boss(c).getDrainTime(0))<2,"Mist clock differs from tracked cast");
+            c.options.setPerspective(net.minecraft.client.option.Perspective.THIRD_PERSON_BACK);
+            require(NecromancerDrainEffects.localVeil(0)==null,"Mist visible in third person");
+            c.options.setPerspective(net.minecraft.client.option.Perspective.FIRST_PERSON);
+            sawDrain=true;shot(c,"life-drain-player-eye.png");
+        }
+        if(t==175)server.execute(() -> {
+            var w=server.getOverworld();
+            for(int x=-2;x<=2;x++)for(int y=0;y<5;y++)w.setBlockState(new BlockPos(x,floor+y,1),Blocks.STONE_BRICKS.getDefaultState());
+        });
+        if(t==205) {
+            require(boss(c).getDrainTarget()<0 && boss(c).getDrainStart()<0,"Cover did not clear server drain state");
+            require(NecromancerDrainEffects.localVeil(0)==null,"Mist did not fade after cover break");
+            sawDrainClear=true;shot(c,"life-drain-cover-clear.png");
+        }
+        if(t==215)server.execute(() -> {
+            var w=server.getOverworld();
+            for(int x=-2;x<=2;x++)for(int y=0;y<5;y++)w.setBlockState(new BlockPos(x,floor+y,1),Blocks.AIR.getDefaultState());
+        });
+        if(t==225)cast(server,uuid,Action.DRAIN);
+        if(t==260)server.execute(() -> server.getOverworld().getEntity(bossId).discard());
+        if(t==280)require(NecromancerDrainEffects.localVeil(0)==null,"Mist survived boss removal");
+        if(t>=10 && t<310)ScreenshotRecorder.saveScreenshot(c.runDirectory,recordingDirectory+"/frame-"+String.format(java.util.Locale.ROOT,"%04d",t-10)+".png",
+                c.getFramebuffer(),1,message -> recorded.incrementAndGet());
+        if(t>=310 && recorded.get()>=300) {
+            require(sawDrain && sawDrainClear,"Drain lifecycle checks incomplete");
+            Files.writeString(Path.of("NECRO_PASSED.txt"),"Life Drain native client passed: tracked cast clock, observer exclusion, first-person mist, third-person exclusion, cover break/fade, boss removal; 300 frames at 20 fps. Human Lunar review pending.\n");
+            done=true;c.scheduleStop();
+        }
+    }
+
     private void soulScene(MinecraftClient c, int t) throws Exception {
         look(c, 0, 0);
         if (t == 1) {

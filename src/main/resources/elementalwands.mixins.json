@@ -12,6 +12,7 @@
     "SpringbloomMovementMixin",
     "SpringbloomFallMixin",
     "UpdraftFallMixin",
+    "FireLeapFallMixin",
     "ScreenHandlerMixin",
     "GuardianArenaPlayerMixin",
     "GuardianArenaWorldMixin",
@@ -23,13 +24,14 @@
     "GuardianChurchChunkAccessor",
     "GuardianChurchLocateMixin",
     "SpellBurnDamageMixin",
-    "SpellRegenerationMixin"
+    "SpellRegenerationMixin",
+    "HollowCryptDeathMixin"
   ],
   "injectors": {
     "defaultRequire": 1
   },
   "client": [
-    "FireLeapHudMixin",
+    "FireLeapMotionMixin",
     "ThornbiteProjectionAccessor",
     "ThornbiteVisibilityMixin",
     "WandMouseMixin",

@@ -18,7 +18,7 @@ import net.minecraft.util.math.*;
 /** Real-server regression for independent recoveries, reloads, lethal hits and 60-block travel. */
 public final class FireTuningServerSmoke implements ModInitializer {
     private int ticks;private ServerPlayerEntity p;private CreeperEntity creeper;
-    private Vec3d landing;
+    private Vec3d landing; private net.minecraft.entity.passive.CowEntity landingVictim;
     public void onInitialize() {ServerTickEvents.END_SERVER_TICK.register(s -> {
         try {run(s);}catch(Throwable e){e.printStackTrace();try{Files.writeString(Path.of("HUB_FAILED.txt"),e.toString());}catch(Exception ignored){}s.stop(false);}
     });}
@@ -71,24 +71,28 @@ public final class FireTuningServerSmoke implements ModInitializer {
         if(t==335) {
             require(FlashoverManager.slotStates(p).equals(List.of(0,0,0)),"Independent timers never recovered");
             WandProgression.purchase(p,"FIRE","fire_hop");WandLoadouts.equip(p,"FIRE",1,"fire_hop");
-            p.setPosition(.5,100,.5);landing=new Vec3d(.5,100,60.5);
+            p.setPosition(.5,100,.5);landing=new Vec3d(.5,100,.5+FireLeapRules.RANGE);
             Vec3d aim=landing.add(0,0,-.3).subtract(p.getEyePos());p.setYaw(0);p.setHeadYaw(0);p.setPitch((float)-Math.toDegrees(Math.atan2(aim.y,aim.horizontalLength())));
             var aimed=FireLeapRules.target(p);
-            require(aimed!=null && aimed.distanceTo(landing)<.5 && FireLeapRules.validTarget(p,aimed),"Aiming ray still stops before 60 blocks: target="+aimed+" eye="+p.getEyePos()+" pitch="+p.getPitch()+" aim="+p.getRotationVec(1));
-            require(FireLeapRules.validTarget(p,landing),"Clear 60-block route rejected");
-            require(!FireLeapRules.validTarget(p,landing.add(0,0,.1)),"Beyond 60 blocks accepted");
+            require(aimed!=null && aimed.distanceTo(landing)<.5 && FireLeapRules.validTarget(p,aimed),"Aiming ray stops before the range cap: target="+aimed+" eye="+p.getEyePos()+" pitch="+p.getPitch()+" aim="+p.getRotationVec(1));
+            require(FireLeapRules.validTarget(p,landing),"Clear full-range route rejected");
+            require(!FireLeapRules.validTarget(p,landing.add(0,0,.1)),"Beyond the range cap accepted");
             BlockPos obstruction=BlockPos.ofFloored(FireLeapRules.position(p.getEntityPos(),landing,.5));
             p.getEntityWorld().setBlockState(obstruction,Blocks.STONE.getDefaultState());
             require(!FireLeapRules.validTarget(p,landing),"Long route skipped a mid-arc obstruction");
             p.getEntityWorld().setBlockState(obstruction,Blocks.AIR.getDefaultState());
-            require(FireLeapManager.commit(p,landing),"60-block leap would not commit");
+            landingVictim=FireLeapServerCases.cow(p,landing.x,landing.y,landing.z);
+            require(FireLeapManager.commit(p,landing),"Full-range leap would not commit");
+            require(landingVictim.getHealth()==200,"Leap damaged on takeoff");
         }
-        if(t==345)require(p.hasVehicle() && p.getZ()>25 && p.getY()>104,"Long leap aborted or missed midpoint");
-        if(t==360) {
-            require(!p.hasVehicle() && p.getEntityPos().distanceTo(landing)<.1,"60-block leap did not land safely: "+p.getEntityPos());
+        if(t>335 && t<=365 && FireLeapManager.flying(p)) FireLeapServerCases.fly(p,new Vec3d(.5,100,.5),landing,t-335);
+        if(t==347)require(FireLeapManager.flying(p) && p.getZ()>9 && p.getY()>105,"Long leap aborted or missed midpoint");
+        if(t==370) {
+            require(!FireLeapManager.flying(p) && p.getEntityPos().distanceTo(landing)<.1,"Full-range leap did not land safely: "+p.getEntityPos());
             require(FireBuildManager.hopRemaining(p)>0,"Long leap lost cooldown");
+            require(landingVictim.getHealth()==192,"Landing wave did not hit its center exactly once: "+landingVictim.getHealth());landingVictim.discard();
             FireLeapServerCases.run(p);
-            Files.writeString(Path.of("HUB_PASSED.txt"),"Passed: single bomb leaves a creeper alive; spare throws and detonations during recovery; independent 6s blast and 2s disarm timers; throw pacing/cap; player reload and orphan recovery; wand replacement; 60-block aim, full route collision, flight and landing; existing leap safety and wave protections.\n");s.stop(false);
+            Files.writeString(Path.of("HUB_PASSED.txt"),"Passed: single bomb leaves a creeper alive; spare throws and detonations during recovery; independent 6s blast and 2s disarm timers; throw pacing/cap; player reload and orphan recovery; wand replacement; full-range aim, route collision, arc tracking and landing; arc shape; existing leap safety and wave protections.\n");s.stop(false);
         }
     }
     private static void require(boolean b,String why){if(!b)throw new AssertionError(why);}

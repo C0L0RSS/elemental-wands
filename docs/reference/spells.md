@@ -37,9 +37,19 @@ Spell ground fire is owned and temporary so it cannot bypass allied protection.
 Flamethrower is a held close-range cone with gradual damage ramp, heat, overheat,
 and release/timeout handling. Fire Leap is hold-to-aim/release-to-commit, with
 terrain targeting, a validated full-body flight arc, and a jumpable landing wave.
-The current targeting accepts horizon aim and reachable ledge tops within its
-60-block horizontal cap; it retains elevation, cover, fluid, chunk, and arena
-safety checks. Keep the stable `fire_hop` ID for saved purchases.
+Targeting accepts horizon aim and reachable ledge tops within a 22-block
+horizontal cap. When the aimed arc is blocked, it pulls the landing back along
+the aim to the farthest clear leap. It keeps the elevation, cover, fluid, chunk
+and arena safety checks. The arc is a true parabola at constant horizontal speed.
+Its peak is 2.5–6.5 blocks above the higher end and grows with distance.
+Flight time comes from a fixed gravity, about 0.8 s for short hops and 1.2 s at
+full range. The server validates the arc, spends the cooldown and owns fall
+protection and the wave. The caster's client flies the committed arc with real
+collision, so there is no carrier entity and no seated pose. The wave fires only
+when the server sees the caster land on footing within 1.5 blocks of the mark.
+Leaving the arc, hitting something midair or never arriving ends the leap
+without a wave. Landing keeps a short skid. Keep the stable `fire_hop` ID for
+saved purchases.
 
 Flashover throws sticky embers onto surfaces or enemies and detonates them with
 Spell alternate. Bomb slots recover independently after blast or loss; pending
@@ -47,7 +57,7 @@ staggered blasts remain disarmable. Shared hit accounting caps a sequence's
 per-victim damage. Never add terrain destruction or unowned spreading fire.
 
 Owners: `FireAbilityHandler`, `FireBuildManager`/`FireBuildRules`,
-`FireLeapManager`/`FireLeapRules`/`FireLeapEntity`, `FlashoverManager`/
+`FireLeapManager`/`FireLeapRules`/`client/FireLeapClient`, `FlashoverManager`/
 `FlashoverRules`/`FlashoverEmberEntity`, `MeteorManager`.
 
 ## Wind

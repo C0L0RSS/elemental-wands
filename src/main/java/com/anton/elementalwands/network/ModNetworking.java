@@ -44,6 +44,7 @@ public final class ModNetworking {
 
         PayloadTypeRegistry.playC2S().register(StoneChargeHoldPayload.ID, StoneChargeHoldPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(StoneMotionPayload.ID, StoneMotionPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(FireLeapPayload.ID, FireLeapPayload.CODEC);
         // S2C
         PayloadTypeRegistry.playS2C().register(UpdraftLaunchPayload.ID, UpdraftLaunchPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncPlayerDataPayload.ID, SyncPlayerDataPayload.CODEC);
@@ -254,6 +255,14 @@ public final class ModNetworking {
         public static final StoneChargeHoldPayload INSTANCE = new StoneChargeHoldPayload();
         public static final Id<StoneChargeHoldPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"stone_charge_hold"));
         public static final PacketCodec<RegistryByteBuf,StoneChargeHoldPayload> CODEC = PacketCodec.unit(INSTANCE);
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
+    /** A committed leap for its caster to fly and for nearby players to see coming; active=false ends it. */
+    public record FireLeapPayload(int entityId, net.minecraft.util.math.Vec3d from, net.minecraft.util.math.Vec3d to, boolean active) implements CustomPayload {
+        public static final Id<FireLeapPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"fire_leap"));
+        public static final PacketCodec<RegistryByteBuf,FireLeapPayload> CODEC = PacketCodec.tuple(
+                PacketCodecs.VAR_INT,FireLeapPayload::entityId,net.minecraft.util.math.Vec3d.PACKET_CODEC,FireLeapPayload::from,
+                net.minecraft.util.math.Vec3d.PACKET_CODEC,FireLeapPayload::to,PacketCodecs.BOOLEAN,FireLeapPayload::active,FireLeapPayload::new);
         @Override public Id<? extends CustomPayload> getId() { return ID; }
     }
     public record StoneMotionPayload(int entityId, float yaw, float speed, int mode) implements CustomPayload {

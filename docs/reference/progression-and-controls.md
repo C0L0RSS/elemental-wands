@@ -29,7 +29,9 @@ uses a fresh press to toss its orb and another fresh press to teleport to and
 consume the formed double.
 
 The HUD sits beside the hotbar, shows owned equipped spells without key labels,
-and hides empty slots. Controls > Move HUD permits dragging or arrow nudging;
+and hides empty slots. The hub marks Basic, Technique, and Ultimate spells with
+distinct colors in the spell list, selected details, and equipped slots.
+Controls > Move HUD permits dragging or arrow nudging;
 `config/elementalwands-hud.properties` stores the position.
 
 Purchases spend elemental Flux, not vanilla XP levels. Default Basics are free;

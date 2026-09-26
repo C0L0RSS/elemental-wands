@@ -59,6 +59,12 @@ public class ModItems {
             settings -> new SpawnEggItem(settings.spawnEgg(ModEntities.STONE_ZOMBIE).maxCount(64)));
     public static final Item FIRE_SPIRIT_SPAWN_EGG = register("fire_spirit_spawn_egg",
             settings -> new SpawnEggItem(settings.spawnEgg(ModEntities.FIRE_SPIRIT).maxCount(64)));
+    public static final Item HOLLOW_CRAWLER_SPAWN_EGG = register("hollow_crawler_spawn_egg",
+            settings -> new SpawnEggItem(settings.spawnEgg(ModEntities.HOLLOW_CRAWLER).maxCount(64)));
+    public static final Item HOLLOW_ARCHER_SPAWN_EGG = register("hollow_archer_spawn_egg",
+            settings -> new SpawnEggItem(settings.spawnEgg(ModEntities.HOLLOW_ARCHER).maxCount(64)));
+    public static final Item HOLLOW_BRUTE_SPAWN_EGG = register("hollow_brute_spawn_egg",
+            settings -> new SpawnEggItem(settings.spawnEgg(ModEntities.HOLLOW_BRUTE).maxCount(64)));
 
     public static void registerAll() {
         ItemGroupEvents.modifyEntriesEvent(ItemGroups.TOOLS).register(entries -> {
@@ -67,6 +73,9 @@ public class ModItems {
             entries.add(TITAN_SWORD);
             entries.add(STONE_ZOMBIE_SPAWN_EGG);
             entries.add(FIRE_SPIRIT_SPAWN_EGG);
+            entries.add(HOLLOW_CRAWLER_SPAWN_EGG);
+            entries.add(HOLLOW_ARCHER_SPAWN_EGG);
+            entries.add(HOLLOW_BRUTE_SPAWN_EGG);
         });
     }
 

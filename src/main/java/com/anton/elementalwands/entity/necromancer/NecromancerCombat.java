@@ -2,6 +2,9 @@ package com.anton.elementalwands.entity.necromancer;
 
 import com.anton.elementalwands.ElementalWandsMod;
 import com.anton.elementalwands.entity.AstralDoubleEntity;
+import com.anton.elementalwands.entity.undead.HollowArcherEntity;
+import com.anton.elementalwands.entity.undead.HollowBruteEntity;
+import com.anton.elementalwands.entity.undead.HollowCrawlerEntity;
 import com.anton.elementalwands.registry.ModEntities;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -401,7 +404,6 @@ final class NecromancerCombat {
                     world.playSound(null, boss.getBlockPos(), SoundEvents.BLOCK_RESPAWN_ANCHOR_DEPLETE.value(), SoundCategory.HOSTILE, .8f, 1.4f);
                     finish(now); return;
                 }
-                if (tick % 2 == 0) tether(world, player);
                 if ((tick - active.impact) % DRAIN_INTERVAL == 0 && player.damage(world, source(world, DRAIN, null), DRAIN_DAMAGE)) {
                     float heal = drainHeal(DRAIN_DAMAGE, boss.getMaxHealth(), drained);
                     if (heal > 0) { boss.heal(heal); drained += heal; }
@@ -661,13 +663,20 @@ final class NecromancerCombat {
             // Never rise inside or directly under a player, or inside the colossus.
             if (spot == null || !world.getPlayers(p -> p.isAlive() && !p.isSpectator() && p.squaredDistanceTo(spot) < 2 * 2).isEmpty()
                     || boss.getBoundingBox().expand(.5).contains(spot.add(0, .5, 0))) continue;
-            MobEntity minion = boss.getRandom().nextBoolean()
-                    ? new SpectralZombieEntity(ModEntities.SPECTRAL_ZOMBIE, world)
-                    : new SpectralSkeletonEntity(ModEntities.SPECTRAL_SKELETON, world);
+            MobEntity minion = switch (raiseKind(minions.size(), count(HollowArcherEntity.class), count(HollowBruteEntity.class),
+                    colossus, boss.getRandom().nextDouble())) {
+                case CRAWLER -> new HollowCrawlerEntity(ModEntities.HOLLOW_CRAWLER, world);
+                case ARCHER -> new HollowArcherEntity(ModEntities.HOLLOW_ARCHER, world);
+                case BRUTE -> new HollowBruteEntity(ModEntities.HOLLOW_BRUTE, world);
+            };
             minion.refreshPositionAndAngles(spot.x, spot.y, spot.z, boss.getRandom().nextFloat() * 360, 0);
-            NecromancerMinion.bind(minion, boss, spot.y);
+            NecromancerMinion.bind(minion, boss);
             if (world.spawnEntity(minion)) { minions.add(minion); i++; }
         }
+    }
+
+    private int count(Class<? extends MobEntity> kind) {
+        return (int)minions.stream().filter(kind::isInstance).count();
     }
 
     private void blink(ServerWorld world) {
@@ -765,15 +774,6 @@ final class NecromancerCombat {
     private void prune() {
         minions.removeIf(minion -> minion.isRemoved() || !minion.isAlive());
         bolts.removeIf(SoulBoltEntity::isRemoved);
-    }
-
-    private void tether(ServerWorld world, ServerPlayerEntity player) {
-        Vec3d from = player.getBoundingBox().getCenter(), to = castOrigin();
-        int points = (int)Math.max(6, from.distanceTo(to));
-        for (int i = 0; i < points; i++) {
-            Vec3d point = from.lerp(to, (i + boss.getRandom().nextDouble()) / points);
-            world.spawnParticles(ParticleTypes.SOUL, point.x, point.y, point.z, 1, .03, .03, .03, 0);
-        }
     }
 
     private void ring(ServerWorld world, Vec3d center, double radius, ParticleEffect effect, int points) {

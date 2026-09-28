@@ -3,14 +3,23 @@ package com.anton.elementalwands.client.renderer;
 import com.anton.elementalwands.client.model.NecromancerModel;
 import com.anton.elementalwands.entity.necromancer.NecromancerEntity;
 import net.minecraft.client.render.entity.EntityRendererFactory;
+import net.minecraft.util.math.BlockPos;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
 import software.bernie.geckolib.renderer.layer.AutoGlowingGeoLayer;
 
 public class NecromancerRenderer extends GeoEntityRenderer<NecromancerEntity, NecromancerRenderState> {
+    /** Both forms carry their own faint soul light, about a soul lantern one block away, so the boss stays findable in the dark crypt. */
+    private static final int MIN_BODY_LIGHT = 9;
+
     public NecromancerRenderer(EntityRendererFactory.Context context) {
         super(context, new NecromancerModel());
         this.shadowRadius = .45f;
-        withRenderLayer(AutoGlowingGeoLayer::new); // Hood eyes and staff focus.
+        withRenderLayer(AutoGlowingGeoLayer::new); // Eyes, staff focus, soul runes, colossus sockets and bone seams.
+    }
+
+    @Override
+    protected int getBlockLight(NecromancerEntity entity, BlockPos pos) {
+        return Math.max(super.getBlockLight(entity, pos), MIN_BODY_LIGHT);
     }
 
     @Override

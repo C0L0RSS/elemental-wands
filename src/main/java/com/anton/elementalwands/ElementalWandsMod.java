@@ -126,6 +126,7 @@ public class ElementalWandsMod implements ModInitializer {
         com.anton.elementalwands.arena.GuardianArenaManager.init();
         com.anton.elementalwands.church.GuardianChurchManager.init();
         com.anton.elementalwands.crypt.HollowCryptManager.init();
+        com.anton.elementalwands.entity.necromancer.NecromancerFightLog.init();
 
         // ── First-join starter kit ──────────────────────────────────────
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {

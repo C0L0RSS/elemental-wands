@@ -30,17 +30,23 @@ ARRIVAL = (0, 1, 34)  # south edge of the clearing, facing the centre
 class Layout:
     def __init__(self):
         self.b = {}
+        self.carved = set()  # below-ground cells a structure template must dig out as air
 
     def put(self, x, y, z, state, replace=True):
         state = state if ':' in state else 'minecraft:' + state
         if replace or (x, y, z) not in self.b:
             self.b[x, y, z] = state
+            self.carved.discard((x, y, z))
 
     def get(self, x, y, z):
         return self.b.get((x, y, z))
 
     def clear(self, x, y, z):
         self.b.pop((x, y, z), None)
+
+    def carve(self, x, y, z):
+        self.clear(x, y, z)
+        self.carved.add((x, y, z))
 
 
 def value_noise(seed):
@@ -301,6 +307,7 @@ def build_realm(seed=0x4011_0C27):
                 lay.put(cx + ox, y, cz + oz, 'dark_oak_wood')
         for ox, oz in ((-1, 0), (2, 1), (1, -1), (0, 2)):
             lay.put(cx + ox, 1, cz + oz, 'mangrove_roots')
+        lay.put(cx + 1, h + 2, cz, 'soul_lantern')  # On a taller corner; pools light inside the clearing.
 
     def marker(cx, cz, yaw):
         lay.put(cx, 1, cz, 'cobbled_deepslate')
@@ -322,8 +329,9 @@ def build_realm(seed=0x4011_0C27):
         else:
             for i in range(rng.randint(1, 3)):
                 marker(cx + i * 2 * round(math.cos(a + 1.57)), cz + i * 2 * round(math.sin(a + 1.57)), a)
+            lay.put(cx, 3, cz, 'soul_lantern')  # A grave light on the first marker, replacing any cap.
 
-    # Soul-fire braziers around the rim give the only warm-ish light.
+    # Soul-fire braziers light the rim; the lanterns on the cover above light the clearing.
     for i in range(10):
         a = i / 10 * math.tau + .12
         cx, cz = round(math.cos(a) * 41), round(math.sin(a) * 41)
@@ -382,10 +390,10 @@ def build_graveyard(seed=0x6EA7):
     lay = Layout()
     noise = value_noise(seed)
     W, N, S = 13, -17, 13   # half-width, north and south edges (z)
+    # The floor is a single layer laid over the natural ground; worldgen levels the land to it.
+    # Only the open grave reaches lower, so no foundation slab can stand proud of the terrain.
     for x in range(-W - 3, W + 4):
         for z in range(N - 3, S + 5):
-            for y in (-2, -1):
-                lay.put(x, y, z, 'dirt')
             n = noise(x, z, 5)
             inside = abs(x) <= W and N <= z <= S
             lay.put(x, 0, z, ('coarse_dirt' if n < .35 else 'podzol' if n < .55 else 'grass_block') if inside else 'grass_block')
@@ -452,12 +460,16 @@ def build_graveyard(seed=0x6EA7):
     for x in range(-4, 5):
         for z in range(N + 1, N + 7):
             lay.put(x, 0, z, 'deepslate_tiles' if (x + z) % 4 else 'cracked_deepslate_tiles')
-    for x in (-1, 0, 1):
-        for z in range(N + 3, N + 7):
-            if x != 0 and z in (N + 3, N + 6):
-                continue
-            lay.clear(x, 0, z); lay.clear(x, -1, z)
-            lay.put(x, -2, z, 'soul_soil')
+    grave = {(x, z) for x in (-1, 0, 1) for z in range(N + 3, N + 7) if x == 0 or z not in (N + 3, N + 6)}
+    for x, z in sorted(grave):
+        lay.carve(x, 0, z); lay.carve(x, -1, z)
+        lay.put(x, -2, z, 'soul_soil')
+    # Earthen sides for the open grave: the template's only blocks below the floor besides its bed.
+    for x, z in sorted(grave):
+        for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            if (x + dx, z + dz) not in grave:
+                for y in (-1, -2):
+                    lay.put(x + dx, y, z + dz, 'dirt', replace=False)
     for x in range(-2, 3):
         for z in (N + 2, N + 7):
             lay.put(x, 0, z, 'polished_deepslate')
@@ -649,21 +661,67 @@ def realm_tiles(lay):
     return out
 
 
+PERCHES = ROOT / 'src/main/java/com/anton/elementalwands/crypt/HollowCryptPerches.java'
+
+
+def perches(lay):
+    """Bough tops above the barrier lid, over the clearing, where the Necromancer stands during
+    a siege: seen from below, never reached. Low, inward spots win; at least 16 blocks apart."""
+    spots = []
+    for (x, y, z), state in lay.b.items():
+        if 'wood' not in state or not PLAY_CEILING + 3 <= y <= PLAY_CEILING + 14:
+            continue
+        r = math.hypot(x + .5, z + .5)
+        if not 24 <= r <= 38:
+            continue
+        if any(lay.get(x + dx, y + dy, z + dz) is not None for dx in (-1, 0, 1) for dz in (-1, 0, 1) for dy in (1, 2, 3)):
+            continue  # Room to stand: nothing in the 3x3 column above the top face.
+        spots.append((y + r * .5, y, x, z))
+    chosen = []
+    for _, y, x, z in sorted(spots):
+        if all(math.hypot(x - cx, z - cz) >= 16 for cx, _, cz in chosen):
+            chosen.append((x, y + 1, z))
+    assert len(chosen) >= 4, f'Only {len(chosen)} siege perches'
+    return sorted(chosen, key=lambda p: math.atan2(p[2], p[0]))
+
+
+def perches_java(spots):
+    rows = ''.join(f'        {{{x}, {y}, {z}}},\n' for x, y, z in spots)
+    return ('package com.anton.elementalwands.crypt;\n\n'
+            '/**\n'
+            ' * Generated by art/hollow_crypt/build_layout.py: bough tops above the barrier lid where the\n'
+            ' * Necromancer stands during a siege. Block offsets from the clearing centre; y is the feet\n'
+            ' * height above {@link HollowCryptRealm#SURFACE_Y}.\n'
+            ' */\n'
+            'public final class HollowCryptPerches {\n'
+            '    private HollowCryptPerches() {}\n\n'
+            '    public static final int[][] SPOTS = {\n'
+            f'{rows}'
+            '    };\n'
+            '}\n').encode()
+
+
 GRAVEYARD = ROOT / 'src/main/resources/data/elementalwands/structure/hollow_graveyard.nbt'
+# Template layer holding the graveyard floor (layout y=0). Shared with "floor_layer" in
+# data/elementalwands/worldgen/structure/hollow_graveyard.json, which seats it on the ground.
+GRAVEYARD_FLOOR_LAYER = 2
 
 
 def graveyard_nbt(lay):
-    """Worldgen template. Air above the ground clears grass and bumps inside the footprint;
-    jigsaw placement does not treat absent positions specially, so nothing below is omitted."""
+    """Worldgen template. Air above the floor clears grass and bumps inside the footprint, and
+    carved cells dig the open grave. Other cells below the floor are absent, so the natural
+    ground (levelled by the structure's terrain adaptation) stays in place under the floor."""
     xs, ys, zs = zip(*lay.b)
     lo = (min(xs), min(ys), min(zs))
+    assert lo[1] == -GRAVEYARD_FLOOR_LAYER, f'Graveyard floor moved to template layer {-lo[1]}'
     size = (max(xs) - lo[0] + 1, max(ys) - lo[1] + 1, max(zs) - lo[2] + 1)
     blocks = {}
     for x in range(size[0]):
         for z in range(size[2]):
             for y in range(size[1]):
-                state = lay.b.get((x + lo[0], y + lo[1], z + lo[2]))
-                if state is None and y + lo[1] >= 1:
+                pos = (x + lo[0], y + lo[1], z + lo[2])
+                state = lay.b.get(pos)
+                if state is None and (pos[1] >= 1 or pos in lay.carved):
                     state = 'minecraft:air'
                 if state is not None:
                     blocks[x, y, z] = state
@@ -673,7 +731,7 @@ def graveyard_nbt(lay):
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument('--serve', action='store_true')
-    ap.add_argument('--install', action='store_true', help='write the realm tiles and graveyard structure into the mod')
+    ap.add_argument('--install', action='store_true', help='write the realm tiles, siege perches and graveyard structure into the mod')
     ap.add_argument('--check', action='store_true', help='verify the installed tiles match this builder')
     args = ap.parse_args()
     realm = build_realm()
@@ -681,18 +739,22 @@ if __name__ == '__main__':
         files = realm_tiles(realm)
         stale = set(STRUCTURES.glob('realm_*.nbt')) - set(files)
         files[GRAVEYARD] = graveyard_nbt(build_graveyard())
+        spots = perches(realm)
+        files[PERCHES] = perches_java(spots)
         if args.check:
             for path, data in files.items():
                 assert path.exists() and path.read_bytes() == data, f'Drift: {path.relative_to(ROOT)}'
             assert not stale, f'Unexpected tiles: {sorted(p.name for p in stale)}'
-            print(f'Hollow Crypt verified: {len(files) - 1} realm tiles ({len(realm.b)} blocks) and the graveyard')
+            print(f'Hollow Crypt verified: {len(files) - 2} realm tiles ({len(realm.b)} blocks), '
+                  f'{len(spots)} siege perches and the graveyard')
         else:
             STRUCTURES.mkdir(parents=True, exist_ok=True)
             for path in stale:
                 path.unlink()
             for path, data in files.items():
                 path.write_bytes(data)
-            print(f'Installed {len(files) - 1} realm tiles and the graveyard ({sum(map(len, files.values())) // 1024} KiB)')
+            print(f'Installed {len(files) - 2} realm tiles, {len(spots)} siege perches and the graveyard '
+                  f'({sum(map(len, files.values())) // 1024} KiB)')
         raise SystemExit
     export({'realm': realm, 'graveyard': build_graveyard()})
     print(f'Preview written to {OUT.relative_to(ROOT)}/index.html')

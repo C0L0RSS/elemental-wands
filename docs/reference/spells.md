@@ -310,6 +310,8 @@ Owners: `GravityWellManager`, `GravityBombEntity`, `GravityBombRenderer`.
 Hollow Purple commits for its complete charge. The player can aim but cannot
 walk, blink, or use items; switching/dropping the wand does not cancel or refund
 it. Death, world exit, and encounter teardown clean it up without a refund.
+The orb erases blocks along its path except in the Hollow Crypt realm, where it
+leaves the terrain intact (as do explosions there; see `HollowCryptRealm.keepsTerrain`).
 Owners: `SpaceAbilityHandler`, `SingularityBoltEntity`, `BlinkRiftManager`,
 `HollowPurpleChargeManager`. Keep arena containment in all teleport paths.
 

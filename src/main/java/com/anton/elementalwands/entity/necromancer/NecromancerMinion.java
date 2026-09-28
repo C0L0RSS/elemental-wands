@@ -61,8 +61,9 @@ public interface NecromancerMinion {
         if (state.boss == null || rising(mob) || !(mob.getEntityWorld() instanceof ServerWorld world)) return;
         Entity boss = world.getEntity(state.boss);
         // Stopping the encounter dissolves the army directly; this only catches lost casters.
+        // Measured from the encounter's home, so a caster on a far siege perch keeps its whole army.
         boolean bound = boss instanceof NecromancerEntity necromancer && necromancer.isAlive()
-                && mob.squaredDistanceTo(necromancer) <= 64 * 64;
+                && mob.squaredDistanceTo(necromancer.anchor()) <= 64 * 64;
         state.orphanTicks = bound ? 0 : state.orphanTicks + 1;
         if (state.orphanTicks >= 40) dissolve(mob, world);
     }

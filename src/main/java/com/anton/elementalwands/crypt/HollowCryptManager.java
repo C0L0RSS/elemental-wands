@@ -402,17 +402,36 @@ public final class HollowCryptManager {
         });
     }
 
-    /** Sends every roster player home and retires the fight; a lost fight also restores the clearing. */
+    /** Sends everyone in the fight home and retires it; a lost fight also restores the clearing. */
     private static void finish(MinecraftServer server, ServerWorld realm, int slot) {
-        Fight fight = state.fights.remove(String.valueOf(slot));
-        persist();
+        Fight fight = state.fights.get(String.valueOf(slot));
         if (fight == null) return;
+        Set<ServerPlayerEntity> members = members(fight, slot, server, realm);
+        state.fights.remove(String.valueOf(slot));
+        persist();
+        for (ServerPlayerEntity p : members)
+            // Offline or still on the death screen: handled on join or respawn.
+            if (p.isAlive() && p.networkHandler.player == p && inRealm(p)) leave(p);
+        if (!fight.won) build(realm, slot);
+    }
+
+    /**
+     * The sealed roster plus anyone else in the slot, such as Creative players the headstone
+     * brought along or players who entered by command; a fight's end releases them all. Without a
+     * realm, only the roster.
+     */
+    private static Set<ServerPlayerEntity> members(Fight fight, int slot, MinecraftServer server, ServerWorld realm) {
+        Set<ServerPlayerEntity> members = new LinkedHashSet<>();
         for (String id : fight.roster) {
             ServerPlayerEntity p = server.getPlayerManager().getPlayer(UUID.fromString(id));
-            // Offline or still on the death screen: handled on join or respawn.
-            if (p != null && p.isAlive() && p.networkHandler.player == p && inRealm(p)) leave(p);
+            if (p != null) members.add(p);
         }
-        if (!fight.won) build(realm, slot);
+        if (realm != null) {
+            var area = HollowCryptRealm.footprint(HollowCryptRealm.centre(state.generation, slot));
+            // Only those the crypt brought in (it recorded where they came from), not an operator who /tp'd in.
+            members.addAll(realm.getPlayers(p -> area.contains(p.getEntityPos()) && state.returns.containsKey(p.getUuidAsString())));
+        }
+        return members;
     }
 
     /** Fallen fighters watch from above the clearing until the fight ends. */
@@ -685,10 +704,9 @@ public final class HollowCryptManager {
     }
 
     private static void tell(Fight fight, MinecraftServer server, String message) {
-        for (String id : fight.roster) {
-            ServerPlayerEntity p = server.getPlayerManager().getPlayer(UUID.fromString(id));
-            if (p != null) p.sendMessage(Text.literal(message), false);
-        }
+        Integer slot = slotOf(fight);
+        for (ServerPlayerEntity p : members(fight, slot == null ? -1 : slot, server, slot == null ? null : realm(server)))
+            p.sendMessage(Text.literal(message), false);
     }
 
     private static void arrive(ServerPlayerEntity player, ServerWorld realm, int slot) {

@@ -1,13 +1,13 @@
 # Hollow undead
 
-Three skeletal night mobs that also form the Hollow Necromancer's raised army.
+Three skeletal night mobs that also form the Hollow Necromancer's siege waves.
 Code lives in `entity/undead/`; the Necromancer's binding rules are in
 [Necromancer combat](necromancer-combat.md).
 
 | Mob | Role | Health / damage | Night spawn (weight, group) | Drops |
 | --- | --- | --- | --- | --- |
 | Hollow Crawler | Legless fodder; drags itself along, rears and rakes with a claw | 14 / 3 | 45, 2–4 | Rotten flesh 0–2, bone 0–1 |
-| Risen Archer | Holds at about 12 blocks and fires a real arrow | 18 / arrow | 25, 1–2 | Bone 0–2, arrow 0–2, rare bow |
+| Risen Archer | Holds at about 12 blocks and fires a real arrow | 18 / arrow | 25, 1–2 | Bone 0–2, arrow 0–2 |
 | Hunched Brute | Rare heavy with a spiked maul; long windup, one crushing swing | 40 / 10, armor 4 | 8, 1 | Bone 1–3, iron nugget 0–3, rare iron ingot |
 
 Drops scale with Looting. Wild mobs give normal experience (the brute gives 10).
@@ -23,7 +23,7 @@ bodies do not. All three are tagged `#minecraft:undead` and `#minecraft:skeleton
 ## Clips and combat timing
 
 Each mob has `idle`, `walk`, `rise`, `attack` and `death` clips. A rise plays when a
-body spawns (except chunk generation) or is raised by the Necromancer. The body
+body spawns (except chunk generation) or rises in a Necromancer siege wave. The body
 stands on the floor and cannot act until the clip ends. Goal controls are disabled
 rather than NoAI, so a body saved mid-rise reloads active.
 

@@ -117,9 +117,12 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
             if (t == 143) shot(c, "necromancer-hands.png");
             if (t == 160) cast(server, uuid, Action.DRAIN);
             if (t == 185) shot(c, "necromancer-drain.png");
-            if (t == 250) cast(server, uuid, Action.RAISE);
-            if (t == 262) shot(c, "necromancer-raise-cast.png");
-            if (t == 284) shot(c, "necromancer-raise-rising.png");
+            if (t == 250) server.execute(() -> {
+                if (server.getOverworld().getEntity(bossId) instanceof NecromancerEntity boss) boss.testWave(server.getPlayerManager().getPlayer(uuid), 1);
+                else serverFailure = "Boss missing for wave";
+            });
+            if (t == 262) shot(c, "necromancer-wave-streams.png");
+            if (t == 284) shot(c, "necromancer-wave-rising.png");
             if (t == 305) {
                 boolean undead = false;
                 for (var e : c.world.getEntities())
@@ -160,7 +163,7 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
             if (t == 569) shot(c, "necromancer-colossus-swipe-windup.png");
             if (t == 574) shot(c, "necromancer-colossus-swipe.png");
             if (t == 600) cast(server, uuid, Action.BOLT);
-            if (t == 612) shot(c, "necromancer-colossus-roar.png");
+            if (t == 612) shot(c, "necromancer-colossus-bolt.png");
             if (t == 650) server.execute(() -> server.getPlayerManager().getPlayer(uuid).networkHandler.requestTeleport(6.5, floor + 1, -7.5, -25, 12));
             if (t == 655) cast(server, uuid, Action.RUSH);
             // Move the camera aside only after the lunge locks its landing, then follow the body.
@@ -187,7 +190,7 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
                 ScreenshotRecorder.saveScreenshot(c.runDirectory, recordingDirectory + "/frame-" + String.format(java.util.Locale.ROOT, "%04d", t - 340) + ".png", c.getFramebuffer(), 1, message -> recorded.incrementAndGet());
             if (t >= 790) {
                 if (record && recorded.get() < 450) return;
-                Files.writeString(Path.of("NECRO_PASSED.txt"), "Hollow Necromancer native client passed: V2 GeckoLib model and renderer, front/side views, bolt, hands, drain, raise, spectral minion renderers, blink and curse screenshots, eight-second hood emergence sequence, synchronized colossus form and hitbox, swipe, roar, outstretched lunge and moving crawl screenshots. Visual review and human Lunar playtest pending.\n");
+                Files.writeString(Path.of("NECRO_PASSED.txt"), "Hollow Necromancer native client passed: V2 GeckoLib model and renderer, front/side views, bolt, hands, drain, siege wave, Hollow undead renderers, blink and curse screenshots, eight-second hood emergence sequence, synchronized colossus form and hitbox, swipe, bolt spit, outstretched lunge and moving crawl screenshots. Visual review and human Lunar playtest pending.\n");
                 done = true; c.scheduleStop();
             }
         } catch (Throwable e) {
@@ -214,6 +217,8 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
                     var victim = (net.minecraft.server.network.ServerPlayerEntity)f.invoke(null, server, UUID.randomUUID(), "RushTarget", .5, (double)floor, 16.5);
                     victim.changeGameMode(GameMode.SURVIVAL);
                     victim.setNoGravity(true);
+                    // Full iron, as in the playtest: the Hands + bite combo hurts badly but is survivable.
+                    victim.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.ARMOR).setBaseValue(15);
                     var observer = server.getPlayerManager().getPlayer(c.player.getUuid());
                     observer.networkHandler.sendPacket(net.minecraft.network.packet.s2c.play.PlayerListS2CPacket.entryFromPlayer(java.util.List.of(victim)));
                     observer.networkHandler.sendPacket(new net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket(victim.getId(), victim.getUuid(), victim.getX(), victim.getY(), victim.getZ(), victim.getPitch(), victim.getYaw(), victim.getType(), 0, victim.getVelocity(), victim.getHeadYaw()));

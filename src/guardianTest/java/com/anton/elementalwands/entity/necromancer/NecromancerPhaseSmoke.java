@@ -50,6 +50,7 @@ public final class NecromancerPhaseSmoke implements ModInitializer {
             boss.refreshPositionAndAngles(.5, 100, .5, 0, 0);
             w.spawnEntity(boss);
             boss.stopFight();
+            boss.setStage(NecromancerRules.Stage.DONE); // Sieges are covered by the server smoke; burst straight to phase two.
             origin = boss.getEntityPos();
             target = player(server, "PhaseTarget", 12.5, 100, .5);
             second = player(server, "PhaseSecond", .5, 100, 16.5);
@@ -95,7 +96,7 @@ public final class NecromancerPhaseSmoke implements ModInitializer {
             }
             if (g == 50) {
                 require(boss.getGrabbed() == -1, "Slam did not release");
-                require(target.getHealth() < 20 && target.getHealth() >= 20 - 12.01, "Slam damage outside its cap: " + target.getHealth());
+                require(Math.abs(target.getHealth() - (20 - NecromancerRules.grabDamage(20))) < .01, "Slam damage outside its cap: " + target.getHealth());
                 place(target, 4.5); heal(target);
                 boss.testAction(target, Action.GRAB);
                 mark = t; stage = 2;
@@ -174,7 +175,7 @@ public final class NecromancerPhaseSmoke implements ModInitializer {
         }
         // Sidestep after commitment: limited steering cannot snap onto a player behind it.
         if (stage == 7) {
-            if (g == 13) target.setPosition(10.5, 100, -4.5);
+            if (g == NecromancerRules.RUSH_WARNING + 1) target.setPosition(10.5, 100, -4.5); // After the aim locks.
             require(boss.getGrabbed() == -1, "Dodged rush still grabbed");
             if (g == 60) {
                 require(target.getHealth() == 20, "Missed rush dealt damage");
@@ -189,18 +190,22 @@ public final class NecromancerPhaseSmoke implements ModInitializer {
             for (int x = -5; x <= 5; x++) for (int y = 100; y < 107; y++) w.setBlockState(new BlockPos(x, y, 6), Blocks.AIR.getDefaultState());
             boss.stopFight(); boss.refreshPositionAndAngles(.5, 100, .5, 0, 0);
             target.setPosition(.5, 100, 13.5); second.setPosition(7.5, 100, 15.5); heal(target); heal(second);
+            armor(target, true); // The combo is sized for the playtest's iron armor.
             boss.testAction(target, Action.HANDS); mark = t; stage = 9;
             caughtRush = thrownRush = false;
         }
         if (stage == 9) {
-            if (g == 20) require(w.getEntitiesByClass(GraspingHandEntity.class, boss.getBoundingBox().expand(30), e -> true).size() == 12, "Hands models missing");
+            if (g == 20) require(w.getEntitiesByClass(GraspingHandEntity.class, boss.getBoundingBox().expand(30), e -> true).size()
+                    == 2 * NecromancerRules.handsModels(NecromancerRules.handsRadius(true)), "Hands models missing");
             if (g == 33) require(boss.status().contains("rush"), "Hands catch did not immediately start rush");
             if (boss.getGrabbed() == target.getId()) caughtRush = true;
             require(boss.getGrabbed() != second.getId(), "Hands chose the farther trapped player");
             if (caughtRush && boss.getGrabbed() == -1 && target.getVelocity().horizontalLength() > 1) thrownRush = true;
             if (g == 120) {
-                require(caughtRush && thrownRush && target.getHealth() == 5, "Hands + bite combo failed: " + target.getHealth());
-                require(second.getHealth() == 13, "Secondary trapped player got bitten");
+                // Full iron (15 armor): hands 10 → 6.0, bite 14 → 9.52. It hurts a lot and leaves the player standing.
+                require(caughtRush && thrownRush && Math.abs(target.getHealth() - (20 - 6f - 9.52f)) < .05, "Hands + bite combo failed: " + target.getHealth());
+                require(second.getHealth() == 20 - NecromancerRules.HANDS_DAMAGE, "Secondary trapped player got bitten");
+                armor(target, false);
                 require(w.getEntitiesByClass(GraspingHandEntity.class, boss.getBoundingBox().expand(40), e -> true).isEmpty(), "Hands visuals did not expire");
                 boss.stopFight(); boss.refreshPositionAndAngles(.5, 100, .5, 0, 0);
                 target.setPosition(.5, 100, 13.5); heal(target); second.setPosition(30, 100, 30);
@@ -223,7 +228,7 @@ public final class NecromancerPhaseSmoke implements ModInitializer {
         if (stage == 11) require(g < 80, "Cancellation test never grabbed");
         if (stage == 12 && g == 5) {
             require(target.getEntityPos().distanceTo(pinned) < .01 && target.getHealth() == 20, "Cancelled rush still pinned or bit");
-            Files.writeString(Path.of("NECROMANCER_PASSED.txt"), "Phase two passed: transformation and save, original grab/slam and teammate rescue, swipe; grounded rush, single bite, throw, no team interrupt, sidestep, wall collision, hands visuals and nearest caught target combo, escape, expiry and cancellation.\n");
+            Files.writeString(Path.of("NECROMANCER_PASSED.txt"), "Phase two passed: transformation and save, original grab/slam and teammate rescue, swipe; grounded rush, single bite, throw, no team interrupt, sidestep, wall collision, hands visuals and nearest caught target combo against iron armor, escape, expiry and cancellation.\n");
             server.stop(false);
         }
     }
@@ -240,6 +245,10 @@ public final class NecromancerPhaseSmoke implements ModInitializer {
     private void place(ServerPlayerEntity player, double distance) {
         player.setPosition(boss.getX(), 100, boss.getZ() + distance);
         player.setVelocity(Vec3d.ZERO);
+    }
+    /** Full iron is 15 armor points. Fixture players never tick equipment, so the attribute is set directly. */
+    private static void armor(ServerPlayerEntity player, boolean on) {
+        player.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.ARMOR).setBaseValue(on ? 15 : 0);
     }
     private static void heal(ServerPlayerEntity player) { player.setHealth(20); player.timeUntilRegen = 0; player.clearStatusEffects(); player.setVelocity(Vec3d.ZERO); }
     private static ServerPlayerEntity player(MinecraftServer s, String name, double x, double y, double z) throws Exception {

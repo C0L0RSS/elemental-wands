@@ -23,6 +23,133 @@ def keys(frames):
     return out
 
 
+def siege_and_windup_clips(clip, rot, pos, scale, claw, clips):
+    """Tells added after the first co-op playtest. Timings match NecromancerRules: the perch
+    channel loops through a siege; the crash spans the six-second exposed window; the ambush
+    bursts 0.7 s after he appears; the rush windup is 1.5 s; the colossus spells share their
+    robed casts' lengths, with bolts leaving at 0.6 s and every 0.3 s after."""
+    zero = (0, 0, 0)
+
+    # Robed: arms raised to the waves below, staff flame roaring, the robe drifting.
+    clip('perch_channel', 3, True)
+    pos('perch_channel', 'robe', [(0, zero), (1.5, (0, .6, 0)), (3, zero)])
+    rot('perch_channel', 'body', [(0, (-7, 0, 1)), (1.5, (-10, 0, -1)), (3, (-7, 0, 1))])
+    rot('perch_channel', 'hood', [(0, (-12, 0, 0)), (1, (-15, 4, 0)), (2, (-11, -3, 0)), (3, (-12, 0, 0))])
+    rot('perch_channel', 'left_arm', [(0, (-140, 0, -26)), (1.5, (-148, 0, -32)), (3, (-140, 0, -26))])
+    rot('perch_channel', 'mage_forearm_left', [(0, (-12, 0, 0)), (1.5, (-4, 0, 0)), (3, (-12, 0, 0))])
+    rot('perch_channel', 'mage_hand_left', [(0, (-20, 0, 0)), (1.5, (-35, 0, 0)), (3, (-20, 0, 0))])
+    rot('perch_channel', 'right_arm', [(0, (-60, 0, 12)), (1.5, (-66, 0, 15)), (3, (-60, 0, 12))])
+    # The staff chain nets to zero at rest, so its world tilt is body + arm + forearm + staff:
+    # here about 105 degrees forward, the skull aimed down at the clearing.
+    rot('perch_channel', 'staff', [(0, (175, 0, 0)), (1.5, (180, 0, 0)), (3, (175, 0, 0))])
+    rot('perch_channel', 'robe_tail', [(0, (10, 0, -3)), (1.5, (16, 0, 3)), (3, (10, 0, -3))])
+    for side, sign in (('left', 1), ('right', -1)):
+        rot('perch_channel', 'skirt_' + side, [(0, (4, 0, sign * 4)), (1.5, (8, 0, sign * 7)), (3, (4, 0, sign * 4))])
+    scale('perch_channel', 'staff_flame', [(0, 1.5), (.75, (1.3, 1.9, 1.3)), (1.5, 1.6), (2.25, (1.35, 2, 1.35)), (3, 1.5)])
+
+    # Robed: slams down from the bough, kneels heaving on its planted staff, flame guttering,
+    # then rises as the exposed window closes.
+    clip('crash', 6)
+    pos('crash', 'robe', [(0, (0, 2, 0)), (.12, (0, -6, 0)), (.4, (0, -4.5, 0)), (5.2, (0, -4.5, 0)), (6, zero)])
+    rot('crash', 'body', [(0, (-10, 0, 0)), (.12, (42, 0, 5)), (.6, (32, 0, 3)), (1.6, (37, 0, 4)), (2.6, (31, 0, 2)),
+                          (3.6, (37, 0, 4)), (4.6, (31, 0, 2)), (5.2, (32, 0, 2)), (6, zero)])
+    rot('crash', 'hood', [(0, zero), (.12, (28, 0, 0)), (.6, (20, -6, -4)), (3, (24, 4, -2)), (5.2, (20, -4, -4)), (6, zero)])
+    rot('crash', 'right_arm', [(0, (-120, 0, 10)), (.12, (-38, 0, 12)), (5.2, (-38, 0, 12)), (6, zero)])
+    rot('crash', 'mage_forearm_right', [(0, zero), (.12, (-20, 0, 0)), (5.2, (-20, 0, 0)), (6, zero)])
+    rot('crash', 'left_arm', [(0, (-120, 0, -10)), (.12, (-12, 0, -18)), (.6, (-6, 0, -10)), (5.2, (-6, 0, -10)), (6, zero)])
+    rot('crash', 'mage_leg_right', [(0, zero), (.12, (-55, 0, 0)), (5.2, (-55, 0, 0)), (6, zero)])
+    rot('crash', 'mage_leg_left', [(0, zero), (.12, (35, 0, 0)), (5.2, (35, 0, 0)), (6, zero)])
+    for side, sign in (('left', 1), ('right', -1)):
+        rot('crash', 'skirt_' + side, [(0, zero), (.12, (-18, 0, sign * 16)), (5.2, (-15, 0, sign * 14)), (6, zero)])
+    rot('crash', 'staff', [(0, (110, 0, 0)), (.12, (24, 0, 0)), (5.2, (24, 0, 0)), (6, zero)])  # Planted upright.
+    scale('crash', 'staff_flame', [(0, 1), (.12, .35), (3, .5), (5.2, .6), (6, 1)])
+
+    # Robed: staff hoisted overhead in both hands, then driven into the floor at the burst.
+    clip('ambush_burst', 1.7)
+    rot('ambush_burst', 'body', [(0, zero), (.5, (-18, 0, 0)), (.7, (28, 0, 0)), (.85, (22, 0, 0)), (1.4, (22, 0, 0)), (1.7, zero)])
+    rot('ambush_burst', 'hood', [(0, zero), (.5, (-16, 0, 0)), (.7, (18, 0, 0)), (1.4, (14, 0, 0)), (1.7, zero)])
+    rot('ambush_burst', 'right_arm', [(0, zero), (.5, (-165, 0, 5)), (.7, (-40, 0, 5)), (1.4, (-40, 0, 5)), (1.7, zero)])
+    rot('ambush_burst', 'left_arm', [(0, zero), (.5, (-152, 0, -12)), (.7, (-32, 0, -20)), (1.4, (-32, 0, -20)), (1.7, zero)])
+    for side in ('left', 'right'):
+        rot('ambush_burst', 'mage_forearm_' + side, [(0, zero), (.5, (-22, 0, 0)), (.7, zero), (1.7, zero)])
+    # Hoisted with the skull up and back, then driven skull-first into the floor ahead.
+    rot('ambush_burst', 'staff', [(0, zero), (.5, (175, 0, 0)), (.7, (162, 0, 0)), (1.4, (162, 0, 0)), (1.7, zero)])
+    pos('ambush_burst', 'robe', [(0, zero), (.5, (0, .8, 0)), (.7, (0, -1.5, 0)), (1.4, (0, -1, 0)), (1.7, zero)])
+    scale('ambush_burst', 'staff_flame', [(0, 1), (.5, 2.2), (.7, 2.6), (.9, 1), (1.7, 1)])
+
+    # Colossus rush windup: rears with a roar, drops into a coiled crouch, then scrapes the
+    # floor with one claw and the other while glaring down its lane.
+    clip('colossus_rush_windup', 1.5)
+    pos('colossus_rush_windup', 'colossus', [(0, (0, -10, 0)), (.35, (0, -5, 1)), (.7, (0, -12.5, 2)), (1.5, (0, -12, 2))])
+    rot('colossus_rush_windup', 'spine', [(0, (43, -3, 1)), (.35, (8, 0, 0)), (.7, (58, 0, 0)), (1, (60, -7, 3)), (1.25, (60, 7, -3)), (1.5, (57, 0, 0))])
+    rot('colossus_rush_windup', 'skull', [(0, (-58, 5, -3)), (.35, (-22, 0, 0)), (.7, (-74, 0, 0)), (1.5, (-72, 0, 0))])
+    rot('colossus_rush_windup', 'jaw', [(0, (4, 0, 0)), (.35, (40, 0, 0)), (.7, (18, 0, 0)), (1.1, (26, 0, 0)), (1.5, (22, 0, 0))])
+    for side, sign in (('right', 1), ('left', -1)):
+        rot('colossus_rush_windup', 'leg_' + side, [(0, (-32, 0, 0)), (.35, (-8, 0, 0)), (.7, (-52, 0, sign * 8)), (1.5, (-54, 0, sign * 8))])
+        rot('colossus_rush_windup', 'shin_' + side, [(0, (82, 0, 0)), (.35, (18, 0, 0)), (.7, (102, 0, 0)), (1.5, (104, 0, 0))])
+        claw('colossus_rush_windup', side, [(0, 12), (.35, -28), (.7, 30), (.95 if sign > 0 else 1.2, 62), (1.5, 44)])
+
+    # Colossus bolt: the skull thrusts forward and the jaws spit four skulls.
+    clip('colossus_cast_bolt', 2)
+    pos('colossus_cast_bolt', 'colossus', [(0, (0, -10, 0)), (.45, (0, -8, 0)), (1.6, (0, -8, 0)), (2, (0, -10, 0))])
+    rot('colossus_cast_bolt', 'spine', [(0, (43, -3, 1)), (.45, (30, 0, 0)), (1.6, (32, 0, 0)), (2, (43, -3, 1))])
+    skull, jaw = [(0, (-58, 5, -3)), (.45, (-34, 0, 0))], [(0, (4, 0, 0)), (.5, (12, 0, 0))]
+    for i in range(4):
+        t = .6 + i * .3
+        skull += [(t, (-26, 0, 0)), (t + .15, (-34, 0, 0))]
+        jaw += [(t, (50, 0, 0)), (t + .15, (14, 0, 0))]
+    rot('colossus_cast_bolt', 'skull', skull + [(2, (-58, 5, -3))])
+    rot('colossus_cast_bolt', 'jaw', jaw + [(2, (4, 0, 0))])
+    for side in ('right', 'left'):
+        claw('colossus_cast_bolt', side, [(0, 12), (.45, 30), (1.6, 30), (2, 12)])
+
+    # Colossus hands: rears, drives both claws into the floor, holds them buried, then clenches
+    # as the rings close (1.6 s) and pulls free.
+    clip('colossus_cast_hands', 2.4)
+    pos('colossus_cast_hands', 'colossus', [(0, (0, -10, 0)), (.15, (0, -6, 0)), (.25, (0, -12, 1)), (1.55, (0, -12, 1)), (1.75, (0, -9, 0)), (2.4, (0, -10, 0))])
+    rot('colossus_cast_hands', 'spine', [(0, (43, -3, 1)), (.15, (22, 0, 0)), (.25, (58, 0, 0)), (1.55, (58, 0, 0)), (1.7, (40, 0, 0)), (2.4, (43, -3, 1))])
+    rot('colossus_cast_hands', 'skull', [(0, (-58, 5, -3)), (.15, (-30, 0, 0)), (.25, (-66, 0, 0)), (1.55, (-66, 0, 0)), (1.7, (-40, 0, 0)), (2.4, (-58, 5, -3))])
+    rot('colossus_cast_hands', 'jaw', [(0, (4, 0, 0)), (.15, (30, 0, 0)), (.25, (10, 0, 0)), (1.5, (12, 0, 0)), (1.6, (42, 0, 0)), (2.4, (4, 0, 0))])
+    for side in ('right', 'left'):
+        rot('colossus_cast_hands', 'leg_' + side, [(0, (-32, 0, 0)), (.25, (-44, 0, 0)), (1.55, (-44, 0, 0)), (2.4, (-32, 0, 0))])
+        rot('colossus_cast_hands', 'shin_' + side, [(0, (82, 0, 0)), (.25, (96, 0, 0)), (1.55, (96, 0, 0)), (2.4, (82, 0, 0))])
+        claw('colossus_cast_hands', side, [(0, 12), (.15, -32), (.25, 22), (1.5, 26), (1.6, 66), (2, 40), (2.4, 12)])
+
+    # Colossus drain: head low with the jaws gaping, one claw reaching out and curling on each pulse.
+    clip('colossus_cast_drain', 4.2)
+    rot('colossus_cast_drain', 'spine', [(0, (43, -3, 1)), (.6, (52, 0, 0)), (3.8, (52, 0, 0)), (4.2, (43, -3, 1))])
+    rot('colossus_cast_drain', 'skull', [(0, (-58, 5, -3)), (.6, (-42, 0, 0)), (3.8, (-44, 0, 0)), (4.2, (-58, 5, -3))])
+    rot('colossus_cast_drain', 'jaw', [(0, (4, 0, 0)), (.6, (52, 0, 0)), (2.2, (46, 0, 0)), (3.8, (54, 0, 0)), (4.2, (4, 0, 0))])
+    scale('colossus_cast_drain', 'soul_core', [(0, 1), (.7, 1.25), (1.2, 1), (1.7, 1.25), (2.2, 1), (2.7, 1.25), (3.2, 1), (3.7, 1.25), (4.2, 1)])
+    claw('colossus_cast_drain', 'right', [(0, 12), (.6, -25), (1.2, 35), (1.4, -15), (2.2, 35), (2.4, -15), (3.2, 35), (3.4, -15), (3.8, 20), (4.2, 12)])
+    claw('colossus_cast_drain', 'left', [(0, 12), (.6, 30), (3.8, 30), (4.2, 12)])
+
+    # Contacts: planted claws stay on the floor while the body moves; reaching claws are solved too.
+    def ticks(name):
+        return [t / 20 for t in range(round(clips[name]['animation_length'] * 20) + 1)]
+
+    for side, sign in (('right', 1), ('left', -1)):
+        rest = [sign * 20, 5, -43]
+        plant(clips['colossus_cast_bolt'], side, [(t, rest, 1, -65) for t in ticks('colossus_cast_bolt')])
+        lift = {'0': rest, '.15': [sign * 17, 38, -34], '.25': [sign * 18, 3, -52], '1.55': [sign * 18, 3, -52],
+                '1.8': [sign * 19, 10, -47], '2.4': rest}
+        plant(clips['colossus_cast_hands'], side, [(t, sample(lift, t, rest), 1,
+                                                    sample({'0': [-65], '.15': [-10], '.25': [-85], '1.55': [-85], '2.4': [-65]}, t, [-65])[0])
+                                                   for t in ticks('colossus_cast_hands')])
+        # Rear, crouch, then this claw drags back across the floor while the other waits.
+        start = .75 if sign > 0 else 1.0
+        scrape = {'0': rest, '.35': [sign * 18, 28, -32], '.7': [sign * 20, 4, -52], f'{start:.2f}': [sign * 20, 4, -52],
+                  f'{start + .25:.2f}': [sign * 20, 4, -38], f'{start + .45:.2f}': [sign * 20, 9, -48], '1.5': [sign * 20, 4, -50]}
+        plant(clips['colossus_rush_windup'], side, [(t, sample(scrape, t, rest), 1,
+                                                     sample({'0': [-65], '.35': [-20], '.7': [-80], '1.5': [-75]}, t, [-65])[0])
+                                                    for t in ticks('colossus_rush_windup')])
+    reach = {'0': [20, 5, -43], '.6': [14, 30, -64], '3.8': [14, 30, -64], '4.2': [20, 5, -43]}
+    plant(clips['colossus_cast_drain'], 'right', [(t, sample(reach, t, [20, 5, -43]), 1,
+                                                   sample({'0': [-65], '.6': [-5], '3.8': [-5], '4.2': [-65]}, t, [-65])[0])
+                                                  for t in ticks('colossus_cast_drain')])
+    plant(clips['colossus_cast_drain'], 'left', [(t, [-20, 5, -43], 1, -65) for t in ticks('colossus_cast_drain')])
+
+
 def animations():
     clips = {}
 
@@ -229,5 +356,6 @@ def animations():
             '1.2': [18, 43, -29], '1.4': [12, 28, -56], '1.75': [20, 8, -47], '2.2': [20, 5, -43]}
     plant(bite, 'right', [(t / 20, sample(path, t / 20, [10, 20, -51]), 1, -20 if t < 29 else -65) for t in range(45)])
     plant(bite, 'left', [(t / 20, [-20, 5, -43], 1, -65) for t in range(45)])
+    siege_and_windup_clips(clip, rot, pos, scale, claw, clips)
 
     return {'format_version': '1.8.0', 'animations': {'animation.hollow_necromancer.' + k: v for k, v in clips.items()}}

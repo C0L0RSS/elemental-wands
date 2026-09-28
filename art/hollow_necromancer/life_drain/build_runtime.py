@@ -27,9 +27,10 @@ def exports():
     y, x = np.mgrid[:n, :n] / (n - 1) * 2 - 1
     radius = np.hypot(x, y)
     rgba = np.zeros((n, n, 4), dtype=np.uint8)
-    for c, stops in enumerate(([58,29,8], [126,76,22], [137,91,37])):
+    # Pale soul-cyan mist: it lifts the dark crypt at the screen edges instead of darkening it.
+    for c, stops in enumerate(([96,48,22], [224,168,112], [230,178,122])):
         rgba[:,:,c] = np.interp(radius, [0,.4,1], stops).astype(np.uint8)
-    rgba[:,:,3] = (np.interp(radius,[0,.4,1],[255,178,0])).astype(np.uint8)
+    rgba[:,:,3] = (np.interp(radius,[0,.4,1],[230,140,0])).astype(np.uint8)
     png('gui/life_drain/fog.png', Image.fromarray(rgba))
     # Large, smooth curl; transparent margins prevent clipped ends under rotation.
     layer = Image.new('RGBA', (512,512)); draw = ImageDraw.Draw(layer)
@@ -37,11 +38,12 @@ def exports():
     for i in range(201):
         t=i/200; a,b,c,d=(470,250),(335,300),(115,160),(215,100)
         pts.append(tuple((1-t)**3*a[k]+3*(1-t)**2*t*b[k]+3*(1-t)*t*t*c[k]+t**3*d[k] for k in range(2)))
-    draw.line(pts, fill=(113,164,169,255), width=14)
+    draw.line(pts, fill=(150,240,245,255), width=14)
     png('gui/life_drain/wisp.png',layer.filter(ImageFilter.GaussianBlur(5)))
-    rgba[:,:,:3] = [2,7,14]
-    rgba[:,:,3] = (255*np.interp(radius,[.28,.68,1,1.28],[0,.10,.60,.94])).astype(np.uint8)
-    png('gui/life_drain/shadow.png',Image.fromarray(rgba))
+    # Soft soul-coloured edge glow with a clear centre; a tint, not a dark vignette.
+    rgba[:,:,:3] = [46,196,208]
+    rgba[:,:,3] = (255*np.interp(radius,[.30,.70,1,1.30],[0,.06,.32,.50])).astype(np.uint8)
+    png('gui/life_drain/edge_glow.png',Image.fromarray(rgba))
     png('misc/life_drain_white.png',Image.new('RGBA',(2,2),'white'),False)
     animation=json.loads((ASSETS/'geckolib/animations/hollow_necromancer.animation.json').read_text())['animations']
     clip=animation['animation.hollow_necromancer.drain']
@@ -73,6 +75,10 @@ final class NecromancerDrainSocket {
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser();parser.add_argument('--check',action='store_true');args=parser.parse_args()
+    retired=[ASSETS/'textures/gui/life_drain/shadow.png',ASSETS/'textures/gui/life_drain/shadow.png.mcmeta']
+    for path in retired:
+        if args.check and path.exists(): raise SystemExit(f'Retired Life Drain export still present: {path}')
+        if not args.check: path.unlink(missing_ok=True)
     for path,data in exports().items():
         if args.check:
             if not path.exists() or path.read_bytes()!=data: raise SystemExit(f'Stale Life Drain export: {path}')

@@ -61,9 +61,9 @@ inspect their assertions when behavior changes instead of trusting an old name.
 | Wind | `wind_pressure_smoke.init.gradle` | `wind_visual_client_smoke.init.gradle` (guided visual review; leaves disposable world open) |
 | Guardian combat | `guardian_combat_smoke.init.gradle`, `guardian_guard_smoke.init.gradle`, `guardian_phase_smoke.init.gradle` | `guardian_floor_client_smoke.init.gradle` |
 | Guardian cover / Nature / walls | `guardian_cover_smoke.init.gradle`, `guardian_nature_smoke.init.gradle`, `guardian_wall_smoke.init.gradle` | Relevant native visual fixture |
-| Hollow Necromancer | `necromancer_server_smoke.init.gradle`, `necromancer_phase_smoke.init.gradle` | `necromancer_client_smoke.init.gradle` (screenshots; `-PnecroRecord` for hidden recording) |
+| Hollow Necromancer | `necromancer_server_smoke.init.gradle` (spells, Hands→ambush, waves, blink/shift, the full two-siege fight flow into the transformation), `necromancer_phase_smoke.init.gradle` (phase two; starts past the sieges) | `necromancer_client_smoke.init.gradle` (screenshots; `-PnecroRecord` for hidden recording); siege perch views are in `crypt_client_smoke` |
 | Hollow undead | `hollow_undead_server_smoke.init.gradle` (rise, chase, hit-frame damage and arrow timing, daylight burning, loot, held death clip, bound-minion rules) | `hollow_undead_client_smoke.init.gradle` (hidden window; rise, idle front/side, walk, attack key frames, death screenshots) |
-| Hollow Crypt realm | — | `crypt_client_smoke.init.gradle` (realm build, enter, summon, wall, reset, leave, `/locate`, headstone ritual, wipe with kept items, victory rewards and spell book; screenshots) |
+| Hollow Crypt realm | — | `crypt_client_smoke.init.gradle` (realm build, enter, summon, a siege on an exported bough perch with near and far-rim screenshots, wall, reset, leave, `/locate`, headstone ritual, wipe with kept items, victory rewards and spell book; screenshots) |
 | Church / arena | `guardian_church_smoke.init.gradle`, `guardian_arena_smoke.init.gradle` | Guardian floor client with visual options |
 | Worldgen / locate | `guardian_church_worldgen_smoke.init.gradle`, `guardian_church_locate_smoke.init.gradle` | Human terrain review |
 | Parties / audit regressions | `party_server_smoke.init.gradle`, `audit_fixes_smoke.init.gradle` | Human co-op review |
@@ -255,10 +255,12 @@ scripted packets. Neither mode establishes human Lunar balance approval.
 
 Use `-PrushRecord` on `necromancer_client_smoke.init.gradle` with the existing
 `hubClientAssets` option. It captures 300 frames at 20 fps (15 seconds), showing
-an ordinary rush/grab/bite/throw and the phase-two Hands follow-up from a side
-camera. The server fixture `necromancer_phase_smoke.init.gradle` checks the old
-slam and rescue, rush hit/miss, cover, single bite, throw, no teammate interrupt,
-nearest trapped target, Hands escape/visual expiry and cancellation. The native
+an ordinary rush (with its windup lane)/grab/bite/throw and the phase-two Hands
+follow-up from a side camera; the scripted victim has iron-armor points so the combo
+is survivable, as in the playtest. The server fixture `necromancer_phase_smoke.init.gradle`
+checks the old slam and rescue, rush hit/miss after the aim locks, cover, single bite,
+throw, no teammate interrupt, nearest trapped target, the combo's damage against iron
+armor, Hands escape/visual expiry and cancellation. The native
 fixture also checks that all three hand rigs lean and curl their fingers during
 the grip, guarding against shared animation-processor state.
 

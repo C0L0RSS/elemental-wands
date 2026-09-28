@@ -4,6 +4,7 @@ import com.anton.elementalwands.crypt.HollowCryptManager;
 import com.anton.elementalwands.crypt.HollowCryptRealm;
 import com.anton.elementalwands.data.EWAttachments;
 import com.anton.elementalwands.entity.necromancer.NecromancerEntity;
+import com.anton.elementalwands.entity.necromancer.NecromancerRules;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
@@ -107,7 +108,35 @@ public final class CryptClientSmoke implements ClientModInitializer {
                     });
                     if (scene > 5) lookAtBoss(c);
                     if (scene == 40) shot(c, "crypt-boss.png");
-                    if (scene == 45) next();
+                    // A siege from a shielded player: the caster takes a bough above the lid and raises wave 1.
+                    if (scene == 45) onServer(server, () -> {
+                        var p = player(server, uuid);
+                        p.getAbilities().invulnerable = true; p.sendAbilitiesUpdate();
+                        var boss = crypt(server, p);
+                        boss.startFight();
+                        require(boss.requestSiege(), "Siege could not start: " + boss.status());
+                    });
+                    if (scene == 90) onServer(server, () -> {
+                        var p = player(server, uuid);
+                        var boss = crypt(server, p);
+                        BlockPos centre = HollowCryptRealm.nearestCentre(p.getEntityPos());
+                        require(boss.stage() == NecromancerRules.Stage.SIEGE_1 && boss.hasNoGravity()
+                                && boss.getY() > HollowCryptRealm.SURFACE_Y + HollowCryptRealm.PLAY_CEILING + 1, "Caster is not on a bough perch: " + boss.status());
+                        require(HollowCryptRealm.perches(centre).stream().anyMatch(s -> s.distanceTo(boss.getEntityPos()) < .1), "Caster is off the exported perches");
+                        // Across the clearing from the perch, on the far rim.
+                        Vec3d away = centre.toCenterPos().subtract(boss.getEntityPos()).multiply(1, 0, 1).normalize().multiply(HollowCryptRealm.PLAY_RADIUS - 3);
+                        p.networkHandler.requestTeleport(centre.getX() + .5 + away.x, HollowCryptRealm.SURFACE_Y + 1, centre.getZ() + .5 + away.z, 0, 0);
+                    });
+                    if (scene == 85) shot(c, "crypt-siege-perch-near.png");
+                    if (scene == 115) shot(c, "crypt-siege-perch-far-rim.png");
+                    if (scene == 120) onServer(server, () -> {
+                        var p = player(server, uuid);
+                        var boss = crypt(server, p);
+                        boss.stopFight();
+                        require(!boss.hasNoGravity() && boss.getY() < HollowCryptRealm.SURFACE_Y + 3, "Stopped caster stayed on its perch");
+                        p.getAbilities().invulnerable = false; p.sendAbilitiesUpdate();
+                    });
+                    if (scene == 125) next();
                 }
                 case 3 -> { // containment, teleport limits and block protection
                     if (++scene == 1) onServer(server, () -> {
@@ -152,7 +181,7 @@ public final class CryptClientSmoke implements ClientModInitializer {
                     require(c.player.getEntityPos().distanceTo(home) < 2, "Leave did not return to the entry point: " + c.player.getEntityPos() + " vs " + home);
                     next();
                 }
-                case 6 -> { // the graveyard generates, /locate finds it, and it can be placed for the camera
+                case 6 -> { // the graveyard generates, /locate finds it, and the nearest natural one is used for the camera
                     if (++scene == 1) onServer(server, () -> {
                         var p = player(server, uuid);
                         try {
@@ -160,17 +189,24 @@ public final class CryptClientSmoke implements ClientModInitializer {
                             require(found > 0, "/locate found no graveyard");
                         } catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) { throw new AssertionError("/locate failed: " + e.getMessage()); }
                         server.getOverworld().setTimeOfDay(6000);
-                        graveyard = p.getBlockPos().add(0, 0, -40);
+                        // Placement refuses uneven ground, so a fixed /place spot is not reliable; use the natural one.
+                        graveyard = server.getOverworld().locateStructure(net.minecraft.registry.tag.TagKey.of(net.minecraft.registry.RegistryKeys.STRUCTURE,
+                                net.minecraft.util.Identifier.of("elementalwands", "hollow_graveyard")), p.getBlockPos(), 100, false);
+                        require(graveyard != null, "No natural graveyard near the player");
                         for (int cx = -4; cx <= 4; cx++) for (int cz = -4; cz <= 4; cz++)
                             server.getOverworld().setChunkForced((graveyard.getX() >> 4) + cx, (graveyard.getZ() >> 4) + cz, true);
                     });
                     if (scene == 20) onServer(server, () -> {
-                        var p = player(server, uuid); BlockPos at = graveyard;
-                        run(server, p, "place structure elementalwands:hollow_graveyard " + at.getX() + " " + at.getY() + " " + at.getZ());
+                        var p = player(server, uuid); var world = server.getOverworld();
                         headstone = null;
-                        for (BlockPos q : BlockPos.iterate(at.add(-40, -30, -40), at.add(40, 40, 40)))
-                            if (server.getOverworld().getBlockState(q).isOf(Blocks.SKELETON_SKULL)) { headstone = q.toImmutable(); break; }
-                        require(headstone != null, "Placed graveyard has no headstone skull");
+                        // The yard sits within 32 blocks of its chunk centre, in any rotation, on the surface.
+                        for (int x = graveyard.getX() - 64; x <= graveyard.getX() + 64 && headstone == null; x++)
+                            for (int z = graveyard.getZ() - 64; z <= graveyard.getZ() + 64 && headstone == null; z++) {
+                                int top = world.getTopY(net.minecraft.world.Heightmap.Type.WORLD_SURFACE, x, z);
+                                for (int y = top - 1; y >= top - 6; y--)
+                                    if (world.getBlockState(new BlockPos(x, y, z)).isOf(Blocks.SKELETON_SKULL)) { headstone = new BlockPos(x, y, z); break; }
+                            }
+                        require(headstone != null, "Natural graveyard has no headstone skull");
                         // Hover for the camera: the graveyard may generate in any rotation.
                         p.getAbilities().allowFlying = true; p.getAbilities().flying = true; p.sendAbilitiesUpdate();
                         p.networkHandler.requestTeleport(headstone.getX() + 18.5, headstone.getY() + 10, headstone.getZ() + 18.5, 0, 0);
@@ -254,7 +290,7 @@ public final class CryptClientSmoke implements ClientModInitializer {
                     if (scene == 40) shot(c, "crypt-rewards.png");
                     if (scene < 80) return; // let the screenshot finish writing
                     require(serverStep && rewardView != null, "Reward checks did not run");
-                    Files.writeString(Path.of("CRYPT_PASSED.txt"), "Hollow Crypt native client passed: slot build, layout spot checks, arrival, summon at circle, wall pull-back, "
+                    Files.writeString(Path.of("CRYPT_PASSED.txt"), "Hollow Crypt native client passed: slot build, layout spot checks, arrival, summon at circle, siege on an exported bough perch and back, wall pull-back, "
                             + "spell teleport limits, survival block protection, reset restoration, return, /locate, graveyard placement, headstone ritual, "
                             + "wipe (boss vanishes, return to the graveyard with items, XP and game mode), second ritual, victory return, "
                             + "reward chests with bones and loot, one spell book per victor. Screenshots: crypt-*.png. Human Lunar review pending.\n");
@@ -290,6 +326,12 @@ public final class CryptClientSmoke implements ClientModInitializer {
     }
 
     private static ServerPlayerEntity player(MinecraftServer server, UUID id) { return server.getPlayerManager().getPlayer(id); }
+    private static NecromancerEntity crypt(MinecraftServer server, ServerPlayerEntity p) {
+        var realm = server.getWorld(HollowCryptRealm.WORLD);
+        var bosses = realm.getEntitiesByClass(NecromancerEntity.class, HollowCryptRealm.footprint(HollowCryptRealm.nearestCentre(p.getEntityPos())), e -> e.isAlive());
+        require(bosses.size() == 1, "Expected one necromancer in the slot, found " + bosses.size());
+        return bosses.get(0);
+    }
     private static void look(MinecraftClient c, float yaw, float pitch) { c.player.setYaw(yaw); c.player.setPitch(pitch); }
     private static void lookAt(MinecraftClient c, Vec3d target) {
         var d = target.subtract(c.player.getEyePos());

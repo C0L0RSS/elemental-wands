@@ -1,5 +1,6 @@
 package com.anton.elementalwands.entity;
 
+import com.anton.elementalwands.crypt.HollowCryptRealm;
 import com.anton.elementalwands.party.WandAllies;
 
 import java.util.HashSet;
@@ -108,6 +109,9 @@ public class HollowPurpleOrbEntity extends ProjectileEntity {
     }
 
     private void erasePath(ServerWorld world, Vec3d center) {
+        if (HollowCryptRealm.keepsTerrain(world)) {
+            return;
+        }
         int minX = MathHelper.floor(center.x - ORB_RADIUS);
         int maxX = MathHelper.floor(center.x + ORB_RADIUS);
         int minY = MathHelper.floor(center.y - ORB_RADIUS);

@@ -1,18 +1,21 @@
 # Current status
 
-Reviewed September 25, 2026. This page contains outstanding work, not release history.
+Reviewed September 28, 2026. This page contains outstanding work, not release history.
 It records known verification limits; it is not a fresh installation receipt.
 
-- **Hollow Necromancer (in progress):** both forms use the authored V2 models.
-  The phase-two leap has been replaced by a grounded rush, grab, bite and throw;
-  successful Grasping Hands catches trigger that sequence. The spell now uses
-  six animated skeletal hand models per marked area. The original grab-and-slam
-  retains its teammate rescue mechanic. Pending: human Lunar/co-op review of the
-  art, rush steering, bite/throw timing and balance; the spectral elite. Automated fixture
-  coverage and its limitations are described in the testing reference; this is
-  not a Lunar installation receipt.
-- **Hollow undead:** the crawler, archer and brute replace the Necromancer's raised
-  minions and spawn at night. The GeckoLib files are proven to match the approved
+- **Hollow Necromancer (in progress):** redesigned after the first co-op playtest. The
+  robed fight now alternates duels (blinks, shifts, an ambush from behind, 4-block Grasping
+  Hands followed by that ambush) with two sieges of escalating undead waves while the caster
+  stands on a crypt bough, crashing down exposed after the first and transforming after the
+  second. Every soul bolt now counts, the colossus rush has a 1.5-second windup and lane, and
+  the colossus raises no army. Server fixtures cover the full two-siege flow and phase two;
+  the crypt client fixture shows the perched caster and its soul-fire column from nearby
+  and from the far rim, where fog hides the caster itself.
+  Pending: a solo and co-op Lunar playtest with `/ew necromancer log on` to tune health, wave
+  sizes and damage (the Hands→ambush and Hands→bite combos cost an iron-armored player about
+  three quarters of their health); in-game review of the new siege, ambush and phase-two animations (approved in the workshop); and human review of the art, rush steering and bite/throw timing.
+- **Hollow undead:** the crawler, archer and brute form the Necromancer's siege waves
+  and spawn at night. The GeckoLib files are proven to match the approved
   preview and the server fixture covers their combat rules. Pending: human Lunar review
   of how they look in game, walk-cycle foot sliding (the authored strides are short,
   so walks play up to 4x faster while chasing), spawn frequency and balance.
@@ -21,8 +24,14 @@ It records known verification limits; it is not a fresh installation receipt.
   a sealed party, spectating after death, kept belongings, the wipe reset, victory chests and
   one spell book per graveyard. The native client fixture passed all of these for a solo player,
   plus the operator commands, containment and protection. Pending: multi-player spectating
-  (not automatable in the solo fixture), human Lunar review of brightness (ambient light 0.1),
-  fog density and whether fire spells burn the clearing's logs. The graveyard design is a first pass.
+  (not automatable in the solo fixture), human Lunar review of brightness (ambient light 0.2,
+  lifted fog and seven clearing soul lanterns), the Necromancer's body glow, the Life Drain glow,
+  fog density and whether non-explosive fire spells burn the clearing's logs. The graveyard
+  design is a first pass; its level-ground placement was checked on a dedicated server
+  (seed 12345) and `crypt_client_smoke` (now using the nearest natural graveyard) passed, but it
+  still needs a fresh-world Lunar look beside hills. Forest-biome yards can have natural trees
+  growing inside them. A fight's end now releases everyone the crypt brought into the slot, not
+  only the sealed party; the co-op victory release needs a human multi-player check.
 - **Gravity Well:** Space has five learnable spells; every current elemental
   catalog now meets the five-spell minimum. Dedicated-server checks passed the
   12.25-block level throw, immediate floor/wall/entity impact, pull, early/automatic

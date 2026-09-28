@@ -29,6 +29,12 @@ public final class HollowCryptRealm {
     /** Everything a slot owns: the forest reaches about 146 blocks out and 90 up. */
     static final int FOOTPRINT = 200;
 
+    /**
+     * Spells and explosions never damage the realm's blocks. Temporary spell blocks still
+     * place and restore themselves; only the crypt's own layout work rewrites the terrain.
+     */
+    public static boolean keepsTerrain(World world) { return world.getRegistryKey() == WORLD; }
+
     /** The clearing's centre. Generations move to fresh ground when the layout changes. */
     public static BlockPos centre(int generation, int slot) {
         return new BlockPos((generation * SLOTS + slot) * SLOT_SPACING, SURFACE_Y, 0);
@@ -42,6 +48,14 @@ public final class HollowCryptRealm {
     public static Identifier tile(int i, int j) { return Identifier.of(ElementalWandsMod.MOD_ID, "hollow_crypt/realm_" + i + "_" + j); }
     public static BlockPos tileOrigin(BlockPos centre, int i, int j) {
         return new BlockPos(centre.getX() + TILE_ORIGIN + i * TILE, SURFACE_Y, centre.getZ() + TILE_ORIGIN + j * TILE);
+    }
+
+    /** Feet positions on the bough tops where the Necromancer stands during a siege: seen from the clearing, never reached. */
+    public static java.util.List<Vec3d> perches(BlockPos centre) {
+        java.util.List<Vec3d> out = new java.util.ArrayList<>();
+        for (int[] spot : HollowCryptPerches.SPOTS)
+            out.add(new Vec3d(centre.getX() + spot[0] + .5, SURFACE_Y + spot[1], centre.getZ() + spot[2] + .5));
+        return out;
     }
 
     /** Slot centre nearest to a position, for whichever generation laid it out. */

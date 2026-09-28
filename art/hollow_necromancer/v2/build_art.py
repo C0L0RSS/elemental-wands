@@ -182,11 +182,11 @@ def paint_cloth(f, palette=CLOTH, burnt=False):
                 if 0 <= c < f.w and 0 <= r < f.h and f.image[f.x + c, f.y + r][3] and rng.random() < .6:
                     f.put(c, r, SOUL[1], glow=SOUL[0])
     if o.get('runes') and f.side:
-        band = f.h - max(hem) - 1  # Embroidered soul-thread band just above the hem.
+        band = f.h - max(hem) - 1  # Embroidered soul-thread band just above the hem, lit so the robe reads in the dark.
         for c in range(f.w):
-            f.put(c, band, SOUL[0], glow=(7, 34, 38))
+            f.put(c, band, SOUL[0], glow=SOUL[1])
             if (c + f.x) % 5 == 2:
-                f.put(c, band - 1, SOUL[0], glow=(7, 34, 38))
+                f.put(c, band - 1, SOUL[0], glow=SOUL[1])
     if o.get('belt'):
         pass
     if o.get('mantle') and f.side:
@@ -219,6 +219,14 @@ def paint_void(f):
             f.put(c, eye_r, SOUL[2], glow=SOUL[3])
         for c in range(f.w // 2 - 2, f.w // 2 + 3):  # The skull within, barely there.
             f.put(c, eye_r + 3, BONE[0] if c % 2 == 0 else VOID[0])
+    if f.dir == 'north' and f.opts.get('front') == 'sockets':
+        # Colossus socket plate: soul light glows around the eye cubes at x=+-3, y=66.2
+        # (columns 1-2 and w-3..w-2, rows 2-3 of this 10x7 face), fading to a dim rim.
+        for x0 in (1, f.w - 3):
+            for c in range(x0 - 1, x0 + 3):
+                for r in range(1, 5):
+                    core = x0 <= c <= x0 + 1 and 2 <= r <= 3
+                    f.put(c, r, SOUL[1] if core else VOID[1], glow=SOUL[1] if core else SOUL[0])
 
 
 def paint_bone(f):
@@ -261,19 +269,21 @@ def paint_bone(f):
         for c in range(f.w):
             for r in range(f.h):
                 f.put(c, r, ramp(BONE, 1 + (r == 0)))
-    if o.get('etch') and f.dir == 'east' and f.w >= 5 and f.h >= 12:
-        c0, rng = f.w // 2, random.Random(f.x * 7 + f.y)
-        for r in range(2, f.h - 2):  # A faint soul-etched line with glyph notches.
-            f.put(c0, r, SOUL[0], glow=(10, 50, 56))
-            if r % 4 == 0:
-                f.put(c0 + rng.choice((-1, 1)), r, SOUL[0], glow=(10, 50, 56))
+    if o.get('etch') and f.side and f.h >= 10:
+        c0, rng, r = f.w // 2, random.Random(f.x * 7 + f.y), 2
+        while r < f.h - 2:  # A broken soul seam with glyph notches, so the colossus reads in the dark.
+            run = rng.randrange(2, 5)
+            for row in range(r, min(r + run, f.h - 2)):
+                f.put(c0, row, SOUL[0], glow=SOUL[1])
+            f.put(c0 + rng.choice((-1, 1)), r, SOUL[0], glow=SOUL[0])
+            r += run + rng.randrange(2, 4)
     front = o.get('front')
     if f.dir != 'north' or not front:
         return
     if front == 'charm_skull':
         f.put(0, 0, VOID[0]); f.put(1, 0, VOID[0]); f.put(0, 1, BONE[2]); f.put(1, 1, BONE[3])
     elif front == 'staff_skull':
-        f.put(0, 1, VOID[0], glow=SOUL[1]); f.put(2, 1, VOID[0], glow=SOUL[1])
+        f.put(0, 1, VOID[0], glow=SOUL[3]); f.put(2, 1, VOID[0], glow=SOUL[3])
         f.put(1, 1, BONE[2])
         for c in range(3):
             f.put(c, 2, BONE[4] if c % 2 == 0 else VOID[0])
@@ -367,7 +377,7 @@ def paint_vial(f):
             if r == 0:
                 f.put(c, r, LEATHER[2])
             else:
-                f.put(c, r, SOUL[2] if r > 0 else SOUL[1], glow=SOUL[1])
+                f.put(c, r, SOUL[2] if r > 0 else SOUL[1], glow=SOUL[2])
 
 
 PAINTERS = {'cloth': paint_cloth, 'char': lambda f: paint_cloth(f, CHAR, burnt=True), 'void': paint_void,

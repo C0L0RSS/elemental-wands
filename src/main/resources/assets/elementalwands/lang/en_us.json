@@ -72,5 +72,8 @@
   "item.elementalwands.hollow_brute_spawn_egg": "Hunched Brute Spawn Egg",
   "death.attack.necromancer_soul": "%1$s was claimed by %2$s’s soul bolt",
   "death.attack.necromancer_grasp": "%1$s was dragged under by %2$s",
-  "death.attack.necromancer_drain": "%1$s had their life drained by %2$s"
+  "death.attack.necromancer_drain": "%1$s had their life drained by %2$s",
+  "death.attack.necromancer_burst": "%1$s was torn apart by %2$s’s soul burst",
+  "necromancer.elementalwands.wave": "The dead rise: wave %s",
+  "necromancer.elementalwands.exposed": "The Necromancer has fallen. Strike now!"
 }

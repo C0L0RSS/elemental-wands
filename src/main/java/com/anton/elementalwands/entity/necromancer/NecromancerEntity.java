@@ -16,6 +16,7 @@ import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.mob.PathAwareEntity;
+import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.tag.DamageTypeTags;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -43,6 +44,7 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
     private static final TrackedData<Integer> GRABBED = DataTracker.registerData(NecromancerEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final EntityDimensions COLOSSUS_SIZE = EntityDimensions.fixed(NecromancerRules.COLOSSUS_WIDTH, NecromancerRules.COLOSSUS_HEIGHT);
     private boolean phasePending;
+    private NecromancerRules.Stage stage = NecromancerRules.Stage.DUEL_A;
     private record HurtWindow(long until, float damage) {}
     private final Map<UUID, HurtWindow> hurtWindows = new HashMap<>();
     private static final UUID ENVIRONMENT_DAMAGE = new UUID(0, 0);
@@ -82,9 +84,15 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
         long start = dataTracker.get(TRANSFORM_START);
         return start < 0 ? -1 : getEntityWorld().getTime() - start + partialTick;
     }
-    void startTransform() { phasePending = false; dataTracker.set(TRANSFORM_START, getEntityWorld().getTime()); }
+    void startTransform() { phasePending = false; stage = NecromancerRules.Stage.DONE; dataTracker.set(TRANSFORM_START, getEntityWorld().getTime()); }
     void finishTransform() { dataTracker.set(TRANSFORM_START, -1L); setColossus(true); }
     boolean phasePending() { return phasePending; }
+    void schedulePhaseTwo() { if (!isColossus() && !isTransforming()) phasePending = true; }
+    /** Where the robed fight stands: a duel, a siege, or done (transformation pending or colossus). */
+    public NecromancerRules.Stage stage() { return stage; }
+    void setStage(NecromancerRules.Stage stage) { this.stage = stage; }
+    /** The encounter's home: bound minions stay within reach of it, not of a perched caster. */
+    net.minecraft.util.math.Vec3d anchor() { return combat.anchor(); }
     /** Entity id of the player held by the colossus hand; -1 when empty. */
     public int getGrabbed() { return dataTracker.get(GRABBED); }
     void setGrabbed(int id) { dataTracker.set(GRABBED, id); }
@@ -121,8 +129,16 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
         combat.cancel();
         combat.testAction(player, action);
     }
+    /** Raises one siege wave for the nearby party and stays passive; used by the operator rehearsal command. */
+    public int testWave(ServerPlayerEntity player, int number) {
+        addCommandTag(PASSIVE_TAG);
+        combat.cancel();
+        return combat.testWave(player, number);
+    }
     /** Starts the second phase now, whatever the health; used by the operator rehearsal command. */
-    public void requestTransform() { if (!isColossus() && !isTransforming()) phasePending = true; }
+    public void requestTransform() { combat.skipSieges(); schedulePhaseTwo(); }
+    /** Starts the current duel's siege now, whatever the health; used by the operator rehearsal command. */
+    public boolean requestSiege() { return combat.requestSiege(); }
     public String status() { return combat.status(); }
     NecromancerCombat combat() { return combat; }
 
@@ -143,6 +159,9 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
         if (attacker == this || NecromancerMinion.belongsTo(attacker, this)) return false;
         if (source.isOf(DamageTypes.IN_WALL) || source.isOf(DamageTypes.DROWN)) return false;
         if (isTransforming()) return false; // The emergence is a cinematic; it cannot be burst down.
+        // Out of reach on a siege perch (or dropping from it) the caster is shielded: the waves come first.
+        if (combat.immune()) { combat.deflect(world); return false; }
+        amount *= combat.damageMultiplier(world.getTime()); // Exposed after a siege crash.
         // Per-attacker hurt windows: one teammate's hit must not swallow another's simultaneous spell.
         long now = world.getTime();
         hurtWindows.values().removeIf(window -> window.until() <= now);
@@ -154,20 +173,23 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
         boolean accepted = super.damage(world, source, amount);
         if (accepted) {
             hurtWindows.put(key, new HurtWindow(previous == null ? now + 10 : previous.until(), lastDamageTaken));
-            combat.damaged(before - getHealth());
+            combat.damaged(attacker, before - getHealth());
         }
         return accepted;
     }
 
     @Override
     protected void applyDamage(ServerWorld world, DamageSource source, float amount) {
+        float before = getHealth();
         super.applyDamage(world, source, amount);
         if (source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY) || isColossus()) return;
-        // Burst damage cannot skip the second phase: the robed form holds at half health until it transforms.
-        float floor = getMaxHealth() * .5f;
+        // Burst damage cannot skip a siege or the second phase: each duel holds at its gate
+        // (75%, then half health) until the siege or the transformation takes over. Never a heal.
+        float floor = Math.min(before, getMaxHealth() * NecromancerRules.gate(stage));
         if (getHealth() <= floor) {
             setHealth(Math.max(getHealth(), floor));
-            phasePending = true;
+            if (stage == NecromancerRules.Stage.DUEL_A || stage == NecromancerRules.Stage.DUEL_B) combat.gateReached();
+            else if (stage == NecromancerRules.Stage.DONE) phasePending = true;
         }
     }
 
@@ -183,9 +205,25 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
         // The encounter controller chooses spells and movement.
     }
 
+    /**
+     * Vanilla stretches one fire sheet over the whole hitbox, which hides the colossus. It still
+     * burns and takes fire damage; {@link #tick} shows that with small flames on its frame instead.
+     */
+    @Override
+    public boolean doesRenderOnFire() {
+        return !isColossus() && super.doesRenderOnFire();
+    }
+
     @Override
     public void tick() {
         super.tick();
+        if (getEntityWorld().isClient() && isColossus() && isOnFire() && !isInvisible()) {
+            var random = getRandom();
+            for (int i = 0; i < 2; i++)
+                getEntityWorld().addParticleClient(random.nextInt(4) == 0 ? ParticleTypes.SMOKE : ParticleTypes.FLAME,
+                        getParticleX(.8), getY() + random.nextDouble() * getHeight(), getParticleZ(.8),
+                        0, .02 + random.nextDouble() * .03, 0);
+        }
         if (!(getEntityWorld() instanceof ServerWorld world)) return;
         if (!isAlive()) { combat.cancel(); return; }
         if (isBossAggressive()) combat.tick(world);
@@ -204,6 +242,11 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
         // An interrupted transformation resumes as the finished colossus rather than replaying.
         setColossus(view.getBoolean("NecromancerColossus", false) || view.getBoolean("NecromancerTransforming", false));
         phasePending = !isColossus() && view.getBoolean("NecromancerPhasePending", false);
+        // A siege saved mid-way restarts from its first wave; the army itself never saves.
+        var stages = NecromancerRules.Stage.values();
+        stage = isColossus() ? NecromancerRules.Stage.DONE : stages[Math.clamp(view.getInt("NecromancerStage", 0), 0, stages.length - 1)];
+        if (view.getBoolean("NecromancerHasHome", false))
+            combat.restoreHome(new net.minecraft.util.math.Vec3d(view.getDouble("NecromancerHomeX", 0), view.getDouble("NecromancerHomeY", 0), view.getDouble("NecromancerHomeZ", 0)));
         dataTracker.set(TRANSFORM_START, -1L);
         calculateDimensions();
         // A saved lunge or mid-cast NoAI flag must not strand the next encounter.
@@ -217,6 +260,14 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
         view.putBoolean("NecromancerColossus", isColossus());
         view.putBoolean("NecromancerTransforming", isTransforming());
         view.putBoolean("NecromancerPhasePending", phasePending);
+        view.putInt("NecromancerStage", stage.ordinal());
+        var home = combat.home();
+        view.putBoolean("NecromancerHasHome", home != null);
+        if (home != null) {
+            view.putDouble("NecromancerHomeX", home.x);
+            view.putDouble("NecromancerHomeY", home.y);
+            view.putDouble("NecromancerHomeZ", home.z);
+        }
     }
 
     @Override
@@ -242,7 +293,15 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
                 .triggerableAnim("swipe", RawAnimation.begin().thenPlay("animation.hollow_necromancer.colossus_swipe"))
                 .triggerableAnim("grab", RawAnimation.begin().thenPlay("animation.hollow_necromancer.colossus_grab"))
                 .triggerableAnim("rush", RawAnimation.begin().thenLoop("animation.hollow_necromancer.colossus_rush"))
-                .triggerableAnim("bite_throw", RawAnimation.begin().thenPlay("animation.hollow_necromancer.colossus_bite_throw")));
+                .triggerableAnim("bite_throw", RawAnimation.begin().thenPlay("animation.hollow_necromancer.colossus_bite_throw"))
+                // Siege, ambush and phase-two tells added after the first co-op playtest.
+                .triggerableAnim("perch_channel", RawAnimation.begin().thenLoop("animation.hollow_necromancer.perch_channel"))
+                .triggerableAnim("crash", RawAnimation.begin().thenPlay("animation.hollow_necromancer.crash"))
+                .triggerableAnim("ambush_burst", RawAnimation.begin().thenPlay("animation.hollow_necromancer.ambush_burst"))
+                .triggerableAnim("rush_windup", RawAnimation.begin().thenPlay("animation.hollow_necromancer.colossus_rush_windup"))
+                .triggerableAnim("colossus_bolt", RawAnimation.begin().thenPlay("animation.hollow_necromancer.colossus_cast_bolt"))
+                .triggerableAnim("colossus_hands", RawAnimation.begin().thenPlay("animation.hollow_necromancer.colossus_cast_hands"))
+                .triggerableAnim("colossus_drain", RawAnimation.begin().thenPlay("animation.hollow_necromancer.colossus_cast_drain")));
     }
 
     @Override public AnimatableInstanceCache getAnimatableInstanceCache() { return cache; }

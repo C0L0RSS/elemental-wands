@@ -28,9 +28,13 @@ stream are approximations, not evidence of in-game appearance.
 ## In-game implementation
 
 `NecromancerDrainEffects` renders the braided cubes, incoming fragments and
-hand focus from the server-tracked target and cast clock. `NecromancerDrainOverlay`
-uses smooth filtered mist/wisp textures and a clear center for the first-person
-victim. Other views receive no vignette. The gameplay timing, damage and healing
+hand focus from the server-tracked target and cast clock. The braid is full-bright
+(eyes-style, unaffected by the dark crypt's lighting) with a soft additive halo, and
+full-bright soul wisps flow from victim to focus; each pulse lands as a rising sculk
+soul. `NecromancerDrainOverlay` tints the first-person victim's screen edges with
+soul-cyan mist that flares on each pulse; it never darkens the view and keeps a
+clear center. Other views receive no vignette. The in-game palette is brighter than
+this browser preview. The gameplay timing, damage and healing
 remain server-controlled. Broken channels fade for 0.75 seconds; death, entity
 removal and world changes clear the client presentation.
 
@@ -39,7 +43,7 @@ python3 art/hollow_necromancer/life_drain/build_runtime.py
 python3 art/hollow_necromancer/life_drain/build_runtime.py --check
 ```
 
-This exporter deterministically builds the procedural fog, curl and shadow PNGs,
+This exporter deterministically builds the procedural fog, curl and edge-glow PNGs,
 a white stream texture, and a hand socket sampled from the current runtime drain
 animation and V2 rig. It requires Pillow and NumPy. It does not install into Lunar.
 See `docs/reference/testing.md` for the `-PdrainRecord` native test and video.

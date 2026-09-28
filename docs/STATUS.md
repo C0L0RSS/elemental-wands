@@ -16,9 +16,9 @@ It records known verification limits; it is not a fresh installation receipt.
   three quarters of their health); in-game review of the new siege, ambush and phase-two animations (approved in the workshop); and human review of the art, rush steering and bite/throw timing.
 - **Hollow undead:** the crawler, archer and brute form the Necromancer's siege waves
   and spawn at night. The GeckoLib files are proven to match the approved
-  preview and the server fixture covers their combat rules. Pending: human Lunar review
-  of how they look in game, walk-cycle foot sliding (the authored strides are short,
-  so walks play up to 4x faster while chasing), spawn frequency and balance.
+  preview and the server fixture covers their combat rules. The walks were re-authored
+  at chase speed with long strides and play at travel speed, fixing the foot sliding.
+  Pending: human Lunar review of how they look and move in game, spawn frequency and balance.
 - **Hollow Crypt realm:** the dimension, the dead-forest clearing, the naturally
   generated graveyard and the full fight flow are in place. That covers free headstone entry,
   a sealed party, spectating after death, kept belongings, the wipe reset, victory chests and

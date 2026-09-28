@@ -164,9 +164,12 @@ def make_variant(index):
     def rotation(v):
         d=norm(v)
         return [math.degrees(math.asin(max(-1,min(1,d[2])))),0,math.degrees(math.atan2(d[0],-d[1]))]
+    # The crawl covers CRAWL_STRIDE pixels per cycle of two pulls, at about its chase speed
+    # (1.5 blocks/s); the game plays it at the body's travel speed, so claws stay planted.
+    CRAWL_STRIDE,CRAWL_REACH,CRAWL=20,13,25/30
     def advance(q):
         half=math.floor(q*2)
-        return (half+ease(q*2-half))*4
+        return (half+ease(q*2-half))*CRAWL_STRIDE/2
     def torso_point(q, pos, rot):
         # Same order as GeckoLib/viewer about the torso pivot: X, then Y, then Z (X/Y negated).
         ax, ay, az = -math.radians(rot[0]), -math.radians(rot[1]), math.radians(rot[2])
@@ -190,14 +193,16 @@ def make_variant(index):
         offset=0 if side<0 else .5
         n=math.floor(q+offset);phase=q+offset-n
         contact=n-offset
-        old_z=-advance(contact)-11.5
-        next_z=-advance(contact+1)-11.5
+        # Each claw plants far ahead and drags the body until it is under the chest.
+        old_z=-advance(contact)-CRAWL_REACH
+        next_z=-advance(contact+1)-CRAWL_REACH
         if phase<.68:
             return [side*4.5,.55,old_z+advance(q)],phase,0
         f=(phase-.68)/.32
-        hand=[side*(4.5+.65*math.sin(f*math.pi)),.55+1.1*math.sin(f*math.pi)**2,old_z+(next_z-old_z)*ease(f)+advance(q)]
+        hand=[side*(4.5+.9*math.sin(f*math.pi)),.55+2*math.sin(f*math.pi)**2,old_z+(next_z-old_z)*ease(f)+advance(q)]
         return hand,phase,math.sin(f*math.pi)
-    rest={side:walk_hand(0,side)[0] for side in (-1,1)}
+    # The resting claws of the idle, rise, attack and death clips.
+    rest={-1:[-4.5,.55,-11.5],1:[4.5,.55,-7.5]}
 
     def base():
         return {'root':[0,0,0],'torso_pos':[0,0,0],'torso_rot':[0,0,0],'skull':[0,0,0],'jaw':[3,0,0],'hands':{}}
@@ -219,13 +224,14 @@ def make_variant(index):
         return p
 
     def walk(t):
-        q=t/4;p=base()
+        q=t/CRAWL;p=base()
         p['root']=[0,0,-advance(q)]
-        p['torso_pos']=[.22*math.sin(q*math.tau),0,0]
-        look=[(0,[0,0,-2]),(1,[3,-3,0]),(2,[0,0,2]),(3,[3,3,0]),(4,[0,0,-2])]
-        for (a,va),(b,vb) in zip(look,look[1:]):
-            if a<=t<=b:p['skull']=mix(va,vb,ease((t-a)/(b-a)))
-        p['jaw']=[2+4*math.sin(min(1,t/2.5)*math.pi),0,0]
+        # Each pull hauls the chest up and forward; the skull strains ahead, jaw working.
+        haul=math.sin((q*2-math.floor(q*2))*math.pi)
+        p['torso_pos']=[.35*math.sin(q*math.tau),.3*haul,0]
+        p['torso_rot']=[-2*haul,0,-2.5*math.sin(q*math.tau)]
+        p['skull']=[3-7*haul,8*math.sin(q*math.tau),-3*math.sin(q*math.tau)]
+        p['jaw']=[5+7*haul**2,0,0]
         for side in (-1,1):
             pos,phase,flight=walk_hand(q,side)
             fingers=[grip(.5+.5*math.sin(phase*math.tau-f*.65),flight) for f in range(4)]
@@ -287,7 +293,7 @@ def make_variant(index):
         return p
 
     clips={}
-    for name,length,loop,sampler in (('idle',4,True,idle),('walk',4,True,walk),('rise',1.9,False,rise),
+    for name,length,loop,sampler in (('idle',4,True,idle),('walk',CRAWL,True,walk),('rise',1.9,False,rise),
                                       ('attack',1.4,False,attack),('death',1.6,False,death)):
         animation={'animation_length':length,'loop':loop,'bones':{}}
         def put(bone,kind,t,value):

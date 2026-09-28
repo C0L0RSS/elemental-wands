@@ -40,10 +40,11 @@ the clip's hit frame, taken from `HollowUndeadClips`:
 The death clip holds the corpse until it settles, instead of vanilla's one-second
 sideways tip. Hurt feedback is the standard red flash.
 
-Walk clips were authored at slow shuffling speeds (about 0.13–0.16 blocks/s). The
-controller plays the walk at the body's travel speed, clamped to 0.8–4×. It
-accumulates time per frame so speed changes never jump the pose. At full chase
-speed the feet still slide somewhat.
+Walk clips are authored at about chase speed (crawler 1.5, archer 1.8, brute
+1.67 blocks/s; `*_STRIDE` in `HollowUndeadClips`). The controller plays the walk at
+travel speed divided by that stride, clamped to 0.2–2×. A wander plays at about 0.65×,
+so planted feet and claws stay put at both speeds. It accumulates time per frame, so
+speed changes never make the pose jump.
 
 ## Assets
 

@@ -257,8 +257,9 @@ public abstract class HollowUndeadEntity extends HostileEntity implements GeoEnt
                 return test.setAndContinue(action == RISE ? rise : attack);
             }
             if (!test.isMoving()) return test.setAndContinue(idle);
-            // Limb speed is 4x blocks/tick moved; play the walk near the travel speed it was authored at.
-            test.setControllerSpeed((float)MathHelper.clamp(limbAnimator.getSpeed() * 5 / stride(), .8, 4));
+            // Limb speed is 4x blocks/tick moved. Walks are authored at chase speed, so playing them at
+            // travel speed / authored speed keeps planted feet still from a wander (~0.65x) to a chase (1x).
+            test.setControllerSpeed((float)MathHelper.clamp(limbAnimator.getSpeed() * 5 / stride(), .2, 2));
             return test.setAndContinue(walk);
         }));
     }

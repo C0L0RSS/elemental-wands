@@ -232,7 +232,10 @@ def build(source,out,brute=False):
         m.cube('arrow',[0,-6.2,0],[.18,12.4,.18],'wood')
         m.cube('arrow',[0,-12.7,0],[.5,.8,.4],'metal')
         m.cube('arrow',[0,-.7,0],[.75,1,.18],'cloth')
-    lengths={'idle':4,'walk':3.6 if brute else 3.2,'attack':4.6 if brute else 4,'rise':3.6,'death':1.7}
+    # A walk covers `stride` pixels per cycle at about the body's chase speed (archer 1.8,
+    # brute 1.65 blocks/s); the game plays it at the travel speed, so planted feet stay put.
+    stride=24 if brute else 22
+    lengths={'idle':4,'walk':(27 if brute else 23)/30,'attack':4.6 if brute else 4,'rise':3.6,'death':1.7}
     for kind,duration in lengths.items():
         c=Clip(duration,loop=kind not in ('rise','death'));samples=round(duration*30);bow_release=None
         for frame in range(samples+1):
@@ -243,10 +246,17 @@ def build(source,out,brute=False):
                 # Rock back into the windup, then drop the weight forward into the hit.
                 wind=ease(t/1.4);slam=ease((t-1.7)/.45);recover=ease((t-2.6)/2)
                 lean=(1.4*wind-3.2*slam)*(1-recover);bob=-2.4*slam*(1-recover)
-            if kind=='walk':bob=-.25*abs(math.sin(p*math.tau));shift=(.32 if brute else .16)*wave
+            if kind=='walk':
+                # Bent knees carry the long stride: the hips ride lowest as each foot lands.
+                bob=-(2 if brute else 1.6)-(.6 if brute else .5)*(1+math.cos(2*p*math.tau))/2
+                shift=(.32 if brute else .16)*wave
             if kind=='rise':bob=-12*(1-ease((t-.65)/2.4));lean=-1.5*(1-ease((t-.65)/2.4))
-            c.pose('root',t,[0,-24*(1-ease(t/.9)) if kind=='rise' else 0,-8*p if kind=='walk' else 0])
+            c.pose('root',t,[0,-24*(1-ease(t/.9)) if kind=='rise' else 0,-stride*p if kind=='walk' else 0])
             body_pos=[shift,bob,lean];body_rot=[0,0,0]
+            if kind=='walk':
+                # The upper body leans into the walk about the hips.
+                body_rot=[7 if brute else 4,0,0]
+                body_pos=add(sub([0,hip_y,0],apply(mat(body_rot),[0,hip_y,0])),[shift,bob,0])
             if kind=='death':
                 # Recoil, buckle onto the knees, then topple face down about the hips.
                 hit=ease(t/.15)*(1-ease((t-.15)/.25));kneel=ease((t-.12)/.45);fall=ease((t-.45)/.7)
@@ -259,6 +269,9 @@ def build(source,out,brute=False):
             c.pose('torso',t,body_pos,body_rot)
             c.put('skull','rotation',t,[3*wave if brute else 2*wave,2*math.sin(p*math.tau),-3 if brute else 0])
             c.put('jaw','rotation',t,[4+(7*max(0,math.sin(p*math.pi)) if kind=='attack' and brute else wave),0,0])
+            if kind=='walk':
+                # The skull levels its gaze against the lean and nods with each step.
+                c.put('skull','rotation',t,[-(5 if brute else 3)+2*math.sin(2*p*math.tau),4*wave,-3 if brute else 0])
             if kind=='death':
                 # The skull snaps back on the hit, then turns its face aside on the ground.
                 c.put('skull','rotation',t,[-18*hit+10*fall,55*fall,18*fall])
@@ -268,7 +281,11 @@ def build(source,out,brute=False):
                 shoulder=torso_at([side*half,shoulder_y+(.6 if brute and side==1 else 0),-2.7 if brute else -.3])
                 if brute:
                     hand=[side*(half+.3),shoulder[1]-sum(arm_lengths[label])+.7,-3.5+lean]
-                    if kind=='walk':hand[2]+=(1.7 if side<0 else .8)*wave*side
+                    if kind=='walk':
+                        # Hanging arms follow the lean and swing against the legs; the club arm less.
+                        # The club elbow bends to carry the maul above the lowered hips.
+                        hand=torso_at([side*(half+.3),shoulder_y+(2.2 if side==1 else 0)-sum(arm_lengths[label])+.7,-3.5])
+                        hand[2]-=(2.8 if side<0 else 1)*side*math.cos(p*math.tau)
                     if kind=='attack' and side==1:
                         # The hand travels an arc around the shoulder, just outside
                         # the skull: bent and cocked high behind the head, then
@@ -285,7 +302,8 @@ def build(source,out,brute=False):
                     # the bow arm while the drawing hand anchors beside the cheek.
                     grip=[-4.5,17.2,-3.5]
                     right=[4.8,15,-1.5]
-                    if kind=='walk':grip[2]-=.65*wave;right[2]+=.8*wave
+                    # Each arm swings forward as the opposite foot lands; the bow arm less.
+                    if kind=='walk':grip[2]+=1.2*math.cos(p*math.tau);right[2]-=2.6*math.cos(p*math.tau)
                     if kind=='attack':
                         lift=ease(t/.65);draw=ease((t-.65)/1.35)
                         lower=ease((t-3.15)/.85);release=ease((t-2.6)/.13)
@@ -303,6 +321,7 @@ def build(source,out,brute=False):
                         c.put('skull','rotation',t,[1,-80*ease(t/1.1)*(1-lower),0])
                     # A vertical bow handle lies across the curled fingers.
                     hand=add(grip,[1,0,.6]) if side<0 else right
+                    if kind=='walk':hand=torso_at(hand)
                 if kind=='death':
                     # Arms flail up as the knees go, then land along the sides; the
                     # brute's club arm sprawls forward with the club across the ground.
@@ -408,9 +427,11 @@ def build(source,out,brute=False):
                     offset=0 if side<0 else .5
                     n=math.floor(p+offset);ph=p+offset-n
                     contact=n-offset
-                    old=-8*contact-3;new=old-8
-                    ankle[2]=old+8*p if ph<.62 else old+(new-old)*ease((ph-.62)/.38)+8*p
-                    ankle[1]+=(.65 if brute and side==1 else 1.1)*max(0,math.sin((ph-.62)/.38*math.pi)) if ph>=.62 else 0
+                    # The foot lands well ahead of the hip and pushes off well behind it.
+                    old=-stride*contact-(stride*.31+.4);new=old-stride
+                    ankle[2]=old+stride*p if ph<.62 else old+(new-old)*ease((ph-.62)/.38)+stride*p
+                    # The brute favors its club side with a lower, dragging step.
+                    ankle[1]+=(1.2 if brute and side==1 else 2)*max(0,math.sin((ph-.62)/.38*math.pi)) if ph>=.62 else 0
                 if kind=='attack' and brute:ankle[2]=-1.5 if side>0 else 1
                 leg_pole=[side*.1,0,-1]
                 hip=torso_at([side*(2.6 if brute else 2),hip_y,0])

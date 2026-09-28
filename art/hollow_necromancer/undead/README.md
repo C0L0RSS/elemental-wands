@@ -10,7 +10,10 @@ recessed eye sockets and a tapered jaw. There are no legs: the pelvis trails
 along the ground. Slender upper arms and paired forearm bones use a three-dimensional
 two-bone solve with an outward elbow pole. Planted hands stay fixed in world
 space while the torso advances; the returning hand lifts and eases into its
-next contact. A four-second cycle contains two slow pulls. The camera follows
+next contact. The crawl was first authored as a four-second cycle of two slow pulls.
+It is now a lunging scramble: each claw plants 13 pixels ahead and hauls the chest up
+and forward, covering 20 pixels in 0.83 seconds (1.5 blocks/s, about chase speed).
+The camera follows
 the body and the dragging portion loops after emergence.
 Drag to orbit, scroll to zoom, and use the timeline or pose buttons to inspect it.
 The preview is an approximate art reference, not a native gameplay test.
@@ -31,6 +34,11 @@ The brute has a wider hunched rib cage, asymmetric arms, and old iron bindings.
 
 Each has Idle, Walk, Rise, and attack clips. Walks use planted contacts and sampled
 three-dimensional two-bone arm/leg poses; rise clips stop at their final pose.
+Walks are authored at about chase speed on bent knees: the hips ride lowest as each
+foot lands and the upper body leans in about the hips. Each arm swings forward as the
+opposite foot lands. The archer covers 22 pixels in 0.77 seconds (1.8 blocks/s). The
+brute covers 24 pixels in 0.9 seconds (1.67 blocks/s) and carries its maul level with
+a bent elbow, taking a lower, dragging step on the club side.
 Draw & fire includes a draw, brief aim, release, and lowering the bow. Heavy strike
 includes a long windup, downward swing, and recovery. These are art studies, not
 server combat timings. The creature buttons retain the crawler for comparison;
@@ -81,7 +89,7 @@ GeckoLib controllers: `idle` (loop), `walk` (loop; the crawler's crawl),
 `rise` (hold), `attack` (once) and `death` (hold).
 
 - Crawler: idle breathes, looks around and taps a claw; the crawl is the
-  approved dragging cycle; rise bursts both claws out of the ground before the
+  lunging scramble described above; rise bursts both claws out of the ground before the
   body hauls free; the claw lunge rears up and rakes forward, with the hit at
   about 0.58s; death jolts, collapses, rolls and settles. The crawler's hands
   are mirrored per side like the archer and brute.

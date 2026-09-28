@@ -23,11 +23,17 @@ public final class NecromancerRules {
         // Colossus-only: the giant skeleton trades the blinks for its long arms and rush.
         SWIPE(36, 18, 70),
         GRAB(64, 16, 200),
-        RUSH(100, 12, 160);
+        RUSH(100, 12, 160),
+        /** Sinks, tunnels after a distant player and erupts under them; DIVE_* drives the timeline. */
+        DIVE(260, DIVE_SINK, 260),
+        /** Screams, the graves it calls glow, and souls claw out of them to drift into its ribcage. */
+        HARVEST(56, HARVEST_SCREAM, 400);
 
         public final int duration, impact, cooldown;
         Action(int duration, int impact, int cooldown) { this.duration = duration; this.impact = impact; this.cooldown = cooldown; }
-        public boolean colossusOnly() { return this == SWIPE || this == GRAB || this == RUSH; }
+        public boolean colossusOnly() { return this == SWIPE || this == GRAB || this == RUSH || this == DIVE || this == HARVEST; }
+        /** The caster's own spells: while its soul is out, the body cannot cast them. */
+        public boolean soulSpell() { return this == BOLT || this == HANDS || this == DRAIN || this == HARVEST; }
         public boolean robedOnly() { return this == BLINK || this == SHIFT || this == AMBUSH; }
     }
 
@@ -87,12 +93,23 @@ public final class NecromancerRules {
         public int total() { return crawlers + archers + brutes; }
     }
 
-    private static final int[][] SOLO_WAVES = {{3, 0, 0}, {3, 1, 0}, {3, 1, 1}, {3, 2, 1}};
-    private static final int[][] DUO_WAVES = {{5, 0, 0}, {4, 2, 0}, {4, 2, 1}, {5, 2, 2}};
+    private static final int[][] SOLO_WAVES = {{4, 0, 0}, {4, 1, 0}, {4, 1, 1}, {5, 2, 1}};
+    private static final int[][] DUO_WAVES = {{6, 0, 0}, {5, 2, 0}, {5, 2, 1}, {6, 2, 2}};
     public static final int WAVE_ALIVE_CAP = 12;
     /** Spawns spread over this long; a cleared wave rests, a stalled one is joined by the next. */
-    public static final int WAVE_STAGGER = 40, WAVE_BREATHER = 60, WAVE_TIMEOUT = 900;
+    public static final int WAVE_STAGGER = 40, WAVE_BREATHER = 30, WAVE_TIMEOUT = 500;
     public static final double WAVE_MIN = 8, WAVE_MAX = 32, WAVE_CLEAR = 6;
+    /** While a wave lives, extra crawlers claw out near a player this often, up to {@link #reinforcements}. */
+    public static final int REINFORCE_EVERY = 100;
+    public static final double REINFORCE_MIN = 8, REINFORCE_MAX = 14;
+
+    /**
+     * Soul Fire Rain: while perched, the caster lobs fireballs at markers that fill for
+     * RAIN_WARNING ticks. The fireball leaves the staff with the marker and lands as it fills.
+     */
+    public static final int RAIN_START = 60, RAIN_WARNING = 30, RAIN_BURN = 40;
+    public static final double RAIN_RADIUS = 2.5, RAIN_BURN_RADIUS = 1.6, RAIN_ARC = 3, RAIN_SPREAD_MIN = 3, RAIN_SPREAD_MAX = 6;
+    public static final float RAIN_DAMAGE = 10;
     /** A flare marks the perch or landing point this long before the caster moves. */
     public static final int SIEGE_FLARE = 12, SIEGE_FIRST_WAVE = 20;
     /** Outside the crypt there are no boughs: the caster hovers this far above home. */
@@ -119,11 +136,41 @@ public final class NecromancerRules {
     public static final int GRAB_LIFT_END = 36, GRAB_SLAM = 44, GRAB_REGRAB = 300;
 
     public static final double RUSH_MIN = 7, RUSH_MAX = 24, RUSH_SPEED = .82, RUSH_REACH = 3.6;
-    /** The skeleton rears and scrapes while a lane marks its path; the aim locks for the last ticks. */
-    public static final int RUSH_WARNING = 30, RUSH_LOCK = 8, RUSH_COMBO_WARNING = 10, RUSH_TRAVEL = 40;
+    /**
+     * Only its body tells the charge: it crouches, rocks its weight for a random span so it cannot
+     * be counted, and goes still as the aim locks for the last few ticks.
+     */
+    public static final int RUSH_WARNING_MIN = 24, RUSH_WARNING_MAX = 40, RUSH_CROUCH = 12, RUSH_LOCK = 6, RUSH_COMBO_WARNING = 10, RUSH_TRAVEL = 40;
     public static final int RUSH_BITE = 18, RUSH_THROW = 28, RUSH_RECOVER = 44;
     public static final float RUSH_DAMAGE = 14;
-    public static final float RUSH_TURN = .75f;
+    public static final float RUSH_TURN = 1.2f;
+    /** Heavier on its feet than the robed caster: about a walking player's pace. */
+    public static final double COLOSSUS_SPEED = .32;
+
+    /**
+     * Grave Dive: sinks (shielded from DIVE_UNDER), tunnels toward its target, stops beneath
+     * them, cracks the ground for DIVE_WARNING ticks and erupts. A miss leaves it stuck and exposed.
+     */
+    public static final int DIVE_SINK = 24, DIVE_UNDER = 16, DIVE_TUNNEL = 80, DIVE_WARNING = 20, DIVE_ERUPT = 24, DIVE_STUCK = 70, DIVE_HAUL = 20;
+    public static final double DIVE_MIN = 9, DIVE_SPEED = .36, DIVE_CATCH = 1.2, DIVE_RADIUS = 3.5;
+    public static final float DIVE_DAMAGE = 16;
+
+    /**
+     * Soul Harvest: it screams at HARVEST_SCREAM, the spots it calls glow for HARVEST_GLOW, then
+     * each soul claws out over HARVEST_RISE and drifts to the ribcage; each one absorbed heals it.
+     */
+    public static final int HARVEST_SCREAM = 16, HARVEST_GLOW = 20, HARVEST_RISE = 20;
+    public static final double HARVEST_MIN = 16, HARVEST_MAX = 28, HARVEST_SPEED = .09, HARVEST_ABSORB = 2.5;
+    public static final float HARVEST_HEAL = .03f, HARVEST_SOUL_HEALTH = 4;
+
+    /**
+     * The caster inside: at a quarter health the Necromancer's soul tears out of the ribcage. The
+     * body is shielded until the soul takes {@link #soulKnockdown}; then it collapses, exposed.
+     */
+    public static final float SPLIT_GATE = .25f;
+    public static final int SPLIT_TELL = 30, SPLIT_RELEASE = 22, SPLIT_AGAIN = 400, COLLAPSE_TICKS = 100, SOUL_RETURN = 16;
+    public static final int SOUL_CAST = 60, SOUL_BLINK = 80;
+    public static final double SOUL_NEAR = 8, SOUL_FAR = 14, SOUL_LOW = 3, SOUL_HIGH = 6, SOUL_SPEED = .25, SOUL_THREAT = 4;
 
     public static int boltCount(boolean colossus) { return colossus ? 4 : BOLT_COUNT; }
     public static int boltInterval(boolean colossus) { return colossus ? 6 : BOLT_INTERVAL; }
@@ -146,6 +193,28 @@ public final class NecromancerRules {
         int crawlers = Math.min((int)Math.round(duo[0] * scale), WAVE_ALIVE_CAP - archers - brutes);
         return new Wave(crawlers, archers, brutes);
     }
+
+    /** Soul Fire Rain: a volley every four seconds in the first siege, three in the second. */
+    public static int rainEvery(Stage stage) { return stage == Stage.SIEGE_2 ? 60 : 80; }
+    /** One marker per player plus one (two in the second siege) near a random player. */
+    public static int rainMarkers(int players, Stage stage) { return Math.min(8, Math.max(1, players) + (stage == Stage.SIEGE_2 ? 2 : 1)); }
+
+    /** Extra crawlers per siege wave: two solo, one more per player after that, at most five. */
+    public static int reinforcements(int players) { return Math.min(5, Math.max(1, players) + 1); }
+
+    /** Siege bodies are quickened by the caster's soul fire; wild night spawns keep their pace. */
+    public static double quickening(Undead kind) {
+        return switch (kind) { case CRAWLER -> .3; case ARCHER -> .1; case BRUTE -> .15; };
+    }
+
+    /** Souls per harvest: three solo, one more per extra player, at most six. */
+    public static int harvestSouls(int players) { return Math.min(6, Math.max(1, players) + 2); }
+
+    /** Damage the freed soul must take before it is dragged back and the body collapses. */
+    public static float soulKnockdown(float bossMaxHealth) { return Math.max(40, bossMaxHealth * .06f); }
+
+    /** A charge's warning, drawn at random so its rhythm cannot be counted. */
+    public static int rushWarning(java.util.Random random) { return RUSH_WARNING_MIN + random.nextInt(RUSH_WARNING_MAX - RUSH_WARNING_MIN + 1); }
 
     /** Health share a duel may not cross: reaching it starts the next siege (or the transformation). */
     public static float gate(Stage stage) { return stage == Stage.DUEL_A || stage == Stage.SIEGE_1 ? .75f : .5f; }
@@ -186,6 +255,8 @@ public final class NecromancerRules {
             case SWIPE -> candidate.distance() <= REACH + 1;
             case GRAB -> candidate.visible() && candidate.distance() <= GRAB_REACH;
             case RUSH -> candidate.visible() && candidate.distance() >= RUSH_MIN && candidate.distance() <= RUSH_MAX;
+            case DIVE -> candidate.distance() >= DIVE_MIN && candidate.distance() <= ENCOUNTER_RANGE;
+            case HARVEST -> candidate.distance() <= ENCOUNTER_RANGE;
         };
     }
 
@@ -206,17 +277,23 @@ public final class NecromancerRules {
     }
 
     /**
-     * The colossus answers close players with its arms, alternating swipe and grab, rushes distant
-     * players, and otherwise keeps casting its larger spells. It raises no army.
+     * The colossus answers close players with its arms, alternating swipe and grab, dives after
+     * or rushes distant players, harvests souls when ready, and otherwise keeps casting its larger
+     * spells. It raises no army. While its soul is out ({@code split}) the body only fights.
      */
-    public static Action chooseColossus(List<Candidate> players, Map<Action, Long> ready, long now, Action last) {
+    public static Action chooseColossus(List<Candidate> players, Map<Action, Long> ready, long now, Action last, boolean split) {
         if (players.isEmpty()) return null;
         java.util.function.Predicate<Action> available = action -> now >= ready.getOrDefault(action, 0L)
-                && players.stream().anyMatch(p -> canTarget(action, p));
+                && !(split && action.soulSpell()) && players.stream().anyMatch(p -> canTarget(action, p));
         for (Action melee : last == Action.SWIPE ? new Action[]{Action.GRAB, Action.SWIPE} : new Action[]{Action.SWIPE, Action.GRAB})
             if (available.test(melee)) return melee;
-        for (Action action : new Action[]{Action.RUSH, Action.HANDS, Action.DRAIN, Action.BOLT})
-            if (action != last && available.test(action)) return action;
+        // A gap closer only when every player stands off: nobody near enough to swing at.
+        boolean allFar = players.stream().allMatch(p -> p.distance() > REACH + 1);
+        for (Action action : new Action[]{Action.DIVE, Action.RUSH, Action.HARVEST, Action.HANDS, Action.DRAIN, Action.BOLT}) {
+            if (action == last || !available.test(action)) continue;
+            if (action == Action.DIVE && !allFar) continue;
+            return action;
+        }
         return available.test(Action.BOLT) ? Action.BOLT : null;
     }
 

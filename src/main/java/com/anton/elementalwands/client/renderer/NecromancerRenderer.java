@@ -27,6 +27,20 @@ public class NecromancerRenderer extends GeoEntityRenderer<NecromancerEntity, Ne
         super.updateRenderState(entity, state, partialTick);
         state.colossus = entity.isColossus();
         state.transformTime = entity.getTransformTime(partialTick);
+        state.split = entity.isSplit();
+        state.buried = entity.isBuried();
+    }
+
+    @Override
+    public void render(NecromancerRenderState state, net.minecraft.client.util.math.MatrixStack matrices,
+            net.minecraft.client.render.command.OrderedRenderCommandQueue queue, net.minecraft.client.render.state.CameraRenderState camera) {
+        if (state.buried) return; // Tunnelling: only the trail it leaves on the surface shows.
+        super.render(state, matrices, queue, camera);
+    }
+
+    @Override
+    protected float getShadowRadius(NecromancerRenderState state) {
+        return state.buried ? 0 : super.getShadowRadius(state);
     }
 
     @Override

@@ -19,6 +19,8 @@ public class NecromancerModel extends GeoModel<NecromancerEntity> {
         boolean transforming = state.transformTime >= 0;
         getBone("robe").ifPresent(bone -> bone.setHidden(state.colossus && !transforming));
         getBone("colossus").ifPresent(bone -> bone.setHidden(!state.colossus && !transforming));
+        // With the soul torn free the ribcage stands empty.
+        getBone("soul_core").ifPresent(bone -> bone.setHidden(state.split));
     }
 
     @Override public Identifier getModelResource(GeoRenderState renderState) { return MODEL; }

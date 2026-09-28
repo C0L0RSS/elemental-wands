@@ -27,10 +27,10 @@ public final class NecromancerContractTest {
         require(Stage.SIEGE_1.firstWave() == 1 && Stage.SIEGE_1.lastWave() == 2 && Stage.SIEGE_2.firstWave() == 3 && Stage.SIEGE_2.lastWave() == 4, "Siege waves wrong");
 
         // Waves: the authored duo and solo tables, heavier each wave, scaled for bigger parties under the cap.
-        require(NecromancerRules.wave(1, 2).equals(new Wave(5, 0, 0)) && NecromancerRules.wave(2, 2).equals(new Wave(4, 2, 0))
-                && NecromancerRules.wave(3, 2).equals(new Wave(4, 2, 1)) && NecromancerRules.wave(4, 2).equals(new Wave(5, 2, 2)), "Duo waves moved");
-        require(NecromancerRules.wave(1, 1).equals(new Wave(3, 0, 0)) && NecromancerRules.wave(2, 1).equals(new Wave(3, 1, 0))
-                && NecromancerRules.wave(3, 1).equals(new Wave(3, 1, 1)) && NecromancerRules.wave(4, 1).equals(new Wave(3, 2, 1)), "Solo waves moved");
+        require(NecromancerRules.wave(1, 2).equals(new Wave(6, 0, 0)) && NecromancerRules.wave(2, 2).equals(new Wave(5, 2, 0))
+                && NecromancerRules.wave(3, 2).equals(new Wave(5, 2, 1)) && NecromancerRules.wave(4, 2).equals(new Wave(6, 2, 2)), "Duo waves moved");
+        require(NecromancerRules.wave(1, 1).equals(new Wave(4, 0, 0)) && NecromancerRules.wave(2, 1).equals(new Wave(4, 1, 0))
+                && NecromancerRules.wave(3, 1).equals(new Wave(4, 1, 1)) && NecromancerRules.wave(4, 1).equals(new Wave(5, 2, 1)), "Solo waves moved");
         for (int players = 1; players <= 8; players++) {
             int previous = 0;
             for (int n = 1; n <= 4; n++) {
@@ -44,6 +44,24 @@ public final class NecromancerContractTest {
             }
         }
         require(NecromancerRules.wave(1, 2).brutes() == 0 && NecromancerRules.wave(2, 2).brutes() == 0 && NecromancerRules.wave(3, 2).brutes() > 0, "Brutes arrive before the second siege");
+        // Reinforcements: two solo, one more per player, capped; they arrive while a wave still stands.
+        require(NecromancerRules.reinforcements(1) == 2 && NecromancerRules.reinforcements(2) == 3 && NecromancerRules.reinforcements(8) == 5, "Reinforcements moved");
+        require(NecromancerRules.REINFORCE_MIN > NecromancerRules.WAVE_CLEAR && NecromancerRules.WAVE_BREATHER <= 40 && NecromancerRules.WAVE_TIMEOUT <= 600,
+                "Waves rest too long or reinforcements claw out on top of players");
+        // Siege bodies are quickened, crawlers most; a quickened crawler's walk stays inside the 2x playback clamp.
+        require(NecromancerRules.quickening(NecromancerRules.Undead.CRAWLER) > NecromancerRules.quickening(NecromancerRules.Undead.BRUTE)
+                && NecromancerRules.quickening(NecromancerRules.Undead.BRUTE) > NecromancerRules.quickening(NecromancerRules.Undead.ARCHER)
+                && NecromancerRules.quickening(NecromancerRules.Undead.ARCHER) > 0, "Siege quickening out of order");
+        double crawler = 2.159 * Math.pow(.19 * (1 + NecromancerRules.quickening(NecromancerRules.Undead.CRAWLER)), 2) * 20;
+        require(crawler > 2.3 && crawler < 4.3 && crawler / com.anton.elementalwands.entity.undead.HollowUndeadClips.CRAWLER_STRIDE <= 2,
+                "Quickened crawlers are not faster than a zombie, outrun a walking player or overrun their walk clip: " + crawler);
+        // Soul Fire Rain: a marker on every player plus spares, faster in the second siege, escapable on foot, heavy.
+        require(NecromancerRules.rainMarkers(1, Stage.SIEGE_1) == 2 && NecromancerRules.rainMarkers(1, Stage.SIEGE_2) == 3
+                && NecromancerRules.rainMarkers(2, Stage.SIEGE_1) == 3 && NecromancerRules.rainMarkers(12, Stage.SIEGE_2) == 8, "Rain markers moved");
+        require(NecromancerRules.rainEvery(Stage.SIEGE_2) < NecromancerRules.rainEvery(Stage.SIEGE_1)
+                && NecromancerRules.rainEvery(Stage.SIEGE_2) > NecromancerRules.RAIN_WARNING, "Rain volleys overlap or do not escalate");
+        require((NecromancerRules.RAIN_WARNING - 10) * .2 > NecromancerRules.RAIN_RADIUS + .3 && NecromancerRules.RAIN_DAMAGE >= 10,
+                "A fireball marker cannot be walked out of, or its blast is chip damage");
 
         // Drain healing stops at its per-channel share however long the channel runs.
         float healed = 0;
@@ -111,14 +129,62 @@ public final class NecromancerContractTest {
         // Colossus: robed spells never pick melee; the colossus never blinks or raises an army.
         ready.clear();
         var near = List.of(new Candidate(a, 3, true));
+        var far = List.of(new Candidate(a, 12, true));
         require(NecromancerRules.choose(near, ready, 0, null, 0, 2) == Action.BLINK, "Robed form lost its blink");
-        require(NecromancerRules.chooseColossus(near, ready, 0, null) == Action.SWIPE, "Close player not swiped");
-        require(NecromancerRules.chooseColossus(near, ready, 0, Action.SWIPE) == Action.GRAB, "Swipe and grab do not alternate");
-        require(NecromancerRules.chooseColossus(List.of(new Candidate(a, 3, true), new Candidate(b, 12, true)), ready, 0, null) != Action.BLINK, "Colossus blinked");
-        require(NecromancerRules.chooseColossus(List.of(new Candidate(a, 12, true)), ready, 0, null) == Action.RUSH, "Distant player not rushed");
+        require(NecromancerRules.chooseColossus(near, ready, 0, null, false) == Action.SWIPE, "Close player not swiped");
+        require(NecromancerRules.chooseColossus(near, ready, 0, Action.SWIPE, false) == Action.GRAB, "Swipe and grab do not alternate");
+        require(NecromancerRules.chooseColossus(List.of(new Candidate(a, 3, true), new Candidate(b, 12, true)), ready, 0, null, false) != Action.BLINK, "Colossus blinked");
+        // Standing off draws the Grave Dive first, sight or not; the rush follows it.
+        require(NecromancerRules.chooseColossus(far, ready, 0, null, false) == Action.DIVE, "Distant player not dived after");
+        require(NecromancerRules.chooseColossus(List.of(new Candidate(a, 30, false)), ready, 0, null, false) == Action.DIVE, "A hidden kiter escaped the dive");
+        require(!NecromancerRules.canTarget(Action.DIVE, new Candidate(a, 5, true)), "Dived at a player already within reach");
+        ready.put(Action.SWIPE, 1000L); ready.put(Action.GRAB, 1000L);
+        require(NecromancerRules.chooseColossus(List.of(new Candidate(a, 5, true), new Candidate(b, 12, true)), ready, 0, null, false) == Action.RUSH,
+                "Dived while a player stood within reach");
+        ready.clear(); ready.put(Action.DIVE, 1000L);
+        require(NecromancerRules.chooseColossus(far, ready, 0, null, false) == Action.RUSH, "Distant player not rushed");
+        require(NecromancerRules.chooseColossus(far, ready, 0, Action.RUSH, false) == Action.HARVEST, "Harvest missing from the rotation");
         for (Action action : Action.values()) if (action.robedOnly())
-            require(NecromancerRules.chooseColossus(List.of(new Candidate(a, 12, true)), ready, 0, Action.RUSH) != action, "Colossus used " + action);
-        require(NecromancerRules.chooseColossus(List.of(new Candidate(a, 30, false)), ready, 0, null) == null, "Colossus cast without reach or vision");
+            require(NecromancerRules.chooseColossus(far, ready, 0, Action.RUSH, false) != action, "Colossus used " + action);
+        require(NecromancerRules.chooseColossus(List.of(new Candidate(a, 60, false)), ready, 0, null, false) == null, "Colossus cast beyond the encounter");
+        // With its soul out the body only fights: no bolts, hands, drain or harvest.
+        ready.clear();
+        for (double distance : new double[]{3, 5, 12, 20, 30})
+            for (Action previous : new Action[]{null, Action.SWIPE, Action.DIVE, Action.RUSH}) {
+                Action chosen = NecromancerRules.chooseColossus(List.of(new Candidate(a, distance, true)), ready, 0, previous, true);
+                require(chosen == null || !chosen.soulSpell(), "The body cast " + chosen + " while its soul was out");
+            }
+        ready.put(Action.DIVE, 1000L); ready.put(Action.RUSH, 1000L);
+        require(NecromancerRules.chooseColossus(far, ready, 0, null, true) == null, "The body cast a spell while its soul was out");
+        require(Action.BOLT.soulSpell() && Action.HANDS.soulSpell() && Action.DRAIN.soulSpell() && Action.HARVEST.soulSpell()
+                && !Action.SWIPE.soulSpell() && !Action.DIVE.soulSpell(), "Soul spells moved");
+        // The colossus keeps pace with a walking player (4.3 blocks/s) but not a sprint (5.6).
+        double colossusPace = 2.159 * NecromancerRules.COLOSSUS_SPEED * NecromancerRules.COLOSSUS_SPEED * 20;
+        require(colossusPace >= 4.3 && colossusPace < 5.6, "Colossus pace moved: " + colossusPace);
+        // Grave Dive: tunnels faster than a sprint, a player already moving walks out of the crack ring,
+        // the eruption hits hard, and a miss leaves a long opening. The whole dive fits its cast.
+        require(NecromancerRules.DIVE_SPEED > .28 && NecromancerRules.DIVE_WARNING * .216 > NecromancerRules.DIVE_RADIUS + .3,
+                "The dive cannot catch a sprinter, or its ring cannot be walked out of");
+        require(NecromancerRules.DIVE_DAMAGE >= 14 && NecromancerRules.DIVE_STUCK >= 60 && NecromancerRules.DIVE_UNDER < NecromancerRules.DIVE_SINK,
+                "Dive damage, opening or sink moved");
+        require(Action.DIVE.duration >= NecromancerRules.DIVE_SINK + NecromancerRules.DIVE_TUNNEL + NecromancerRules.DIVE_WARNING
+                + NecromancerRules.DIVE_ERUPT + NecromancerRules.DIVE_STUCK + NecromancerRules.DIVE_HAUL, "Dive timeline longer than its cast");
+        // Soul Harvest: enough time to shoot the souls down, and never more than a tenth healed at once.
+        require(NecromancerRules.harvestSouls(1) == 3 && NecromancerRules.harvestSouls(2) == 4 && NecromancerRules.harvestSouls(8) == 6, "Harvest souls moved");
+        require((NecromancerRules.HARVEST_MIN - NecromancerRules.HARVEST_ABSORB) / NecromancerRules.HARVEST_SPEED >= 120,
+                "Harvested souls reach the ribcage too fast to shoot down");
+        for (int players = 1; players <= 8; players++)
+            require(NecromancerRules.HARVEST_HEAL * NecromancerRules.harvestSouls(players) <= .18f, "A full harvest heals too much");
+        // The call reads in order: scream, a second of glowing spots, then the souls, all inside the cast.
+        require(Action.HARVEST.impact == NecromancerRules.HARVEST_SCREAM && NecromancerRules.HARVEST_GLOW >= 20
+                && Action.HARVEST.duration > NecromancerRules.HARVEST_SCREAM + NecromancerRules.HARVEST_GLOW, "Harvest call out of order");
+        // The caster inside: a knockdown within reach, a real collapse, and a soul out of melee but not out of range.
+        require(NecromancerRules.soulKnockdown(800) == 48 && NecromancerRules.soulKnockdown(1300) == 78 && NecromancerRules.soulKnockdown(300) == 40,
+                "Soul knockdown moved");
+        require(NecromancerRules.SPLIT_RELEASE < NecromancerRules.SPLIT_TELL && NecromancerRules.COLLAPSE_TICKS >= 80 && NecromancerRules.SPLIT_AGAIN > NecromancerRules.COLLAPSE_TICKS,
+                "Split clock out of order");
+        require(NecromancerRules.SOUL_NEAR > NecromancerRules.SOUL_THREAT && NecromancerRules.SOUL_LOW >= 2.5 && NecromancerRules.SOUL_HIGH <= 6
+                && NecromancerRules.SOUL_FAR < NecromancerRules.BOLT_RANGE, "The soul hovers out of reach or on top of players");
         // Transformation clock: the body grows before the roar, and both finish inside the cinematic.
         require(0 < NecromancerRules.TRANSFORM_GROW && NecromancerRules.TRANSFORM_GROW < NecromancerRules.TRANSFORM_ROAR
                 && NecromancerRules.TRANSFORM_ROAR < NecromancerRules.TRANSFORM_TICKS, "Transformation clock out of order");
@@ -134,18 +200,23 @@ public final class NecromancerContractTest {
         require(!NecromancerRules.swipeHits(0, 4, 1.2, 0), "A vanilla jump (1.25 blocks) cannot clear the swipe");
         require(!NecromancerRules.swipeHits(0, 7, 0, 0), "Swipe reached beyond its radius");
         require(NecromancerRules.swipeHits(4, 0, 0, Math.toRadians(-90)), "Swipe ignored facing");
-        // Rush: a long, readable windup that locks its aim, then a hard bite.
-        require(NecromancerRules.RUSH_WARNING >= 30 && NecromancerRules.RUSH_LOCK > 0 && NecromancerRules.RUSH_LOCK < NecromancerRules.RUSH_WARNING, "Rush lacks a readable windup");
-        require(NecromancerRules.RUSH_COMBO_WARNING >= 10 && NecromancerRules.RUSH_DAMAGE >= 14 && NecromancerRules.RUSH_TURN <= 1, "Rush combo, damage or steering moved");
+        // Rush: a windup of random length (its rhythm cannot be counted) that locks its aim, then a hard bite.
+        require(NecromancerRules.RUSH_WARNING_MIN >= 24 && NecromancerRules.RUSH_WARNING_MAX - NecromancerRules.RUSH_WARNING_MIN >= 12
+                && NecromancerRules.RUSH_LOCK > 0 && NecromancerRules.RUSH_CROUCH + NecromancerRules.RUSH_LOCK < NecromancerRules.RUSH_WARNING_MIN, "Rush lacks a readable windup");
+        var random = new java.util.Random(7);
+        int shortest = Integer.MAX_VALUE, longest = 0;
+        for (int i = 0; i < 500; i++) { int w = NecromancerRules.rushWarning(random); shortest = Math.min(shortest, w); longest = Math.max(longest, w); }
+        require(shortest == NecromancerRules.RUSH_WARNING_MIN && longest == NecromancerRules.RUSH_WARNING_MAX, "Rush warning range not covered");
+        require(NecromancerRules.RUSH_COMBO_WARNING >= 10 && NecromancerRules.RUSH_DAMAGE >= 14 && NecromancerRules.RUSH_TURN <= 1.5, "Rush combo, damage or steering moved");
         require(NecromancerRules.RUSH_SPEED * (NecromancerRules.ROOT_TICKS - NecromancerRules.RUSH_COMBO_WARNING) + NecromancerRules.RUSH_REACH >= NecromancerRules.HANDS_RANGE,
                 "Hands root expires before a combo rush can reach its farthest target");
         require(NecromancerRules.RUSH_BITE < NecromancerRules.RUSH_THROW && NecromancerRules.RUSH_THROW < NecromancerRules.RUSH_RECOVER,
                 "Rush bite/throw/recovery out of order");
-        require(Action.RUSH.duration >= NecromancerRules.RUSH_WARNING + NecromancerRules.RUSH_TRAVEL / 2, "Rush cast ends before it can run");
+        require(Action.RUSH.duration >= NecromancerRules.RUSH_WARNING_MAX + NecromancerRules.RUSH_TRAVEL / 2, "Rush cast ends before it can run");
         require(!NecromancerRules.canTarget(Action.RUSH, new Candidate(a, 12, false)), "Rush targeted through cover");
         require(NecromancerRules.boltCount(true) > NecromancerRules.boltCount(false) && NecromancerRules.handsRadius(true) > NecromancerRules.handsRadius(false), "Colossus spells are not stronger");
         require(Action.BOLT.impact + (NecromancerRules.boltCount(true) - 1) * NecromancerRules.boltInterval(true) < Action.BOLT.duration, "Colossus volley truncated");
-        System.out.println("Necromancer checks passed: scaling, stages and gates, solo/duo/party waves, drain cap, blink/shift/ambush priority, vision, target rotation, telegraph timing, hands buff and follow-up, sidestep window, siege timing, colossus priorities without an army, transformation clock, grab caps, jumpable swipe, rush windup, timing and cover.");
+        System.out.println("Necromancer checks passed: scaling, stages and gates, solo/duo/party waves, reinforcements, quickening, soul fire rain, drain cap, blink/shift/ambush priority, vision, target rotation, telegraph timing, hands buff and follow-up, sidestep window, siege timing, colossus priorities without an army, dive/rush/harvest choice, soul-split restrictions, colossus pace, grave dive, harvest, soul knockdown, transformation clock, grab caps, jumpable swipe, random rush windup, timing and cover.");
     }
 
     private static void require(boolean value, String reason) { if (!value) throw new AssertionError(reason); }

@@ -20,6 +20,7 @@ import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MovementType;
+import net.minecraft.entity.attribute.EntityAttributeModifier;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.boss.BossBar;
 import net.minecraft.entity.boss.ServerBossBar;
@@ -59,12 +60,19 @@ final class NecromancerCombat {
     static final RegistryKey<DamageType> GRASP = RegistryKey.of(RegistryKeys.DAMAGE_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "necromancer_grasp"));
     static final RegistryKey<DamageType> DRAIN = RegistryKey.of(RegistryKeys.DAMAGE_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "necromancer_drain"));
     static final RegistryKey<DamageType> BURST = RegistryKey.of(RegistryKeys.DAMAGE_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "necromancer_burst"));
+    static final RegistryKey<DamageType> FIREBALL = RegistryKey.of(RegistryKeys.DAMAGE_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "necromancer_fireball"));
+    static final RegistryKey<DamageType> ERUPT = RegistryKey.of(RegistryKeys.DAMAGE_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "necromancer_erupt"));
+    private static final Identifier QUICKENED = Identifier.of(ElementalWandsMod.MOD_ID, "necromancer_quickened");
     private static final Set<PositionFlag> KEEP_VIEW = Set.of(PositionFlag.X_ROT, PositionFlag.Y_ROT);
 
     private record Grasp(Vec3d center, double radius, long detonate) {}
     private record Curse(Vec3d center, long until) {}
+    /** A patch of soul fire left where a fireball landed. */
+    private record Burn(Vec3d center, long until) {}
     /** Siege steps: the flare before the perch, the waves, then the flare and drop to the ground. */
     private enum Step { RISING, WAVES, FALLING }
+    /** Grave Dive: sink, tunnel, crack the ground, erupt, then either stuck (a miss) or haul out. */
+    private enum Dive { SINK, TUNNEL, WARN, ERUPT, STUCK, HAUL }
 
     private final NecromancerEntity boss;
     private final ServerBossBar bar = new ServerBossBar(Text.translatable("entity.elementalwands.hollow_necromancer"),
@@ -100,6 +108,26 @@ final class NecromancerCombat {
     private long stepAt, exposedUntil, nextSpawn, waveStarted, nextWave = -1, nextSnipe, lastDeflect;
     private final List<Undead> spawnQueue = new ArrayList<>();
     private final Map<UUID, Integer> hovering = new HashMap<>();
+    // Siege pressure: reinforcements and the Soul Fire Rain.
+    private int reinforcementsLeft;
+    private long nextReinforce, nextRain;
+    private final List<Burn> burns = new ArrayList<>();
+    private final List<SoulFireballEntity> fireballs = new ArrayList<>();
+    // Phase two: the charge's hidden rhythm, the dive, the harvest and the soul that tears free.
+    private int rushWarning = RUSH_WARNING_MIN;
+    private Dive dive;
+    private long diveAt;
+    private Vec3d diveSpot;
+    private boolean diveHit;
+    private final List<HarvestSoulEntity> harvest = new ArrayList<>();
+    private final List<Vec3d> harvestSpots = new ArrayList<>();
+    private NecromancerSoulEntity soul;
+    private boolean splitPending;
+    private long splitStarted = -1, collapseUntil, nextSplit, soulReturning = -1, nextSoulCast, nextSoulBlink, soulBlinkAt = -1, nextSoulGoal;
+    private float soulDamage;
+    private int soulBolts, soulCasts;
+    private long nextSoulBolt;
+    private Vec3d soulGoal, soulBlinkTo;
 
     NecromancerCombat(NecromancerEntity boss) { this.boss = boss; }
 
@@ -121,10 +149,14 @@ final class NecromancerCombat {
         thawMinions();
         for (MobEntity minion : minions) if (!minion.isRemoved() && minion.getEntityWorld() instanceof ServerWorld world)
             NecromancerMinion.dissolve(minion, world);
-        minions.clear(); grasps.clear(); curses.clear();
+        minions.clear(); grasps.clear(); curses.clear(); burns.clear();
         handVisuals.forEach(GraspingHandEntity::discard); handVisuals.clear();
         for (SoulBoltEntity bolt : bolts) bolt.discard();
         bolts.clear();
+        fireballs.forEach(SoulFireballEntity::discard); fireballs.clear();
+        harvest.forEach(HarvestSoulEntity::discard); harvest.clear(); harvestSpots.clear();
+        dropSoul();
+        splitPending = false; splitStarted = -1; collapseUntil = 0; soulDamage = 0;
         ready.clear(); lastTargeted.clear(); grabbedAt.clear(); last = null;
         engaged = false; reviewing = false; emptySince = -1; pendingSince = -1; staggerUntil = 0;
         // The stage survives: a resumed fight re-enters its siege from the first wave.
@@ -135,13 +167,17 @@ final class NecromancerCombat {
 
     String status() {
         prune();
-        String form = boss.isTransforming() ? "transforming" : boss.isColossus() ? "colossus" : boss.phasePending() ? "robed, transformation pending"
+        String form = boss.isTransforming() ? "transforming" : boss.isColossus() ? "colossus" + (soul != null ? ", soul freed" : splitStarted >= 0 ? ", soul tearing free"
+                : now() < collapseUntil ? ", collapsed" : "") + (dive != null ? ", dive " + dive.name().toLowerCase() : "") : boss.phasePending() ? "robed, transformation pending"
                 : "robed, " + boss.stage().name().toLowerCase().replace('_', ' ') + (step == null ? "" : " (" + step.name().toLowerCase()
                 + (wave > 0 ? ", wave " + wave : "") + ")");
         return "Hollow Necromancer (" + form + "): " + (active == null ? "idle" : active.name().toLowerCase())
                 + ", health " + Math.round(boss.getHealth()) + "/" + Math.round(boss.getMaxHealth())
-                + ", minions " + minions.size() + ", " + (boss.isBossAggressive() ? engaged ? "fighting" : "waiting for players" : "passive");
+                + ", minions " + minions.size() + (harvest.isEmpty() ? "" : ", harvested souls " + harvest.size())
+                + ", " + (boss.isBossAggressive() ? engaged ? "fighting" : "waiting for players" : "passive");
     }
+
+    private long now() { return boss.getEntityWorld().getTime(); }
 
     NecromancerFightLog log() { return log; }
     Vec3d home() { return home; }
@@ -161,16 +197,27 @@ final class NecromancerCombat {
         reviewing = true;
         List<ServerPlayerEntity> party = world.getPlayers(p -> canDamage(boss, p) && boss.squaredDistanceTo(p) <= ENCOUNTER_RANGE * ENCOUNTER_RANGE);
         Wave bodies = NecromancerRules.wave(number, Math.max(1, party.size()));
-        for (Undead kind : waveBodies(bodies)) spawnWaveBody(world, kind, party);
+        for (Undead kind : waveBodies(bodies)) spawnWaveBody(world, kind, party, null);
         return bodies.total();
     }
 
     // ── Hooks from the entity ────────────────────────────────────────────────
 
-    /** Called with the health actually lost: team damage loosens a grab and interrupts an ambush windup. */
-    void damaged(Entity attacker, float lost) {
+    /**
+     * Called with the health actually lost: team damage loosens a grab, interrupts an ambush windup
+     * and, through the freed soul, drags that soul back into the body.
+     */
+    void damaged(Entity attacker, float lost, boolean throughSoul) {
         if (boss.getEntityWorld() instanceof ServerWorld world) log.bossHit(world.getTime(), attacker, lost);
         if (lost <= 0 || !(boss.getEntityWorld() instanceof ServerWorld world)) return;
+        if (throughSoul && soul != null && soulReturning < 0) {
+            soulDamage += lost;
+            if (soulDamage >= soulKnockdown(boss.getMaxHealth())) {
+                soulReturning = world.getTime();
+                log.note(world.getTime(), "soul knocked down");
+                world.playSound(null, soul.getX(), soul.getY(), soul.getZ(), SoundEvents.ENTITY_VEX_DEATH, SoundCategory.HOSTILE, 2f, .5f);
+            }
+        }
         if (active == Action.GRAB && held != null) {
             gripDamage += lost;
             if (gripDamage >= grabEscape(boss.getMaxHealth())) {
@@ -195,8 +242,14 @@ final class NecromancerCombat {
         world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_SKELETON_HURT, SoundCategory.HOSTILE, 2f, .4f);
     }
 
-    /** Shielded on a siege perch and while dropping from it. */
-    boolean immune() { return boss.stage().siege() && step != null; }
+    /**
+     * Shielded (hits flash off a soul ward) on a siege perch and while dropping from it, and while
+     * the soul is out of the colossus or tearing free.
+     */
+    boolean shielded() { return boss.stage().siege() && step != null || boss.isColossus() && (soul != null || splitStarted >= 0); }
+
+    /** Underground during a dive: nothing can reach it, and there is nothing to see. */
+    boolean buried() { return dive == Dive.TUNNEL || dive == Dive.WARN || dive == Dive.SINK && now() - diveAt >= DIVE_UNDER; }
 
     /** A soul ward flashes where the shielded caster stands, at most a few times a second. */
     void deflect(ServerWorld world) {
@@ -208,6 +261,16 @@ final class NecromancerCombat {
     }
 
     float damageMultiplier(long now) { return now < exposedUntil ? EXPOSED_MULTIPLIER : 1; }
+
+    /** The colossus reached a quarter health: its soul tears free once the current action allows. */
+    void splitReached() { if (boss.isColossus() && soul == null && splitStarted < 0) splitPending = true; }
+
+    /** Operator rehearsal: the colossus's soul tears free now. */
+    boolean requestSplit() {
+        if (!boss.isColossus() || soul != null || splitStarted >= 0) return false;
+        splitPending = true;
+        return true;
+    }
 
     /** The current duel's health gate was reached: the siege starts on the next tick. */
     void gateReached() { if (!boss.isColossus()) siegePending = true; }
@@ -280,13 +343,14 @@ final class NecromancerCombat {
         tickHovering(world, players);
         directMinions(players);
         if (tickSiege(world, now, players)) return;
+        if (tickSplit(world, now, players)) return;
         if (now < staggerUntil) { halt(); return; }
         if (active != null) { tickAction(world, now); return; }
         if (now < nextAction) { move(players, now); return; }
         List<Candidate> candidates = players.stream()
                 .map(p -> new Candidate(p.getUuid(), boss.distanceTo(p), boss.canSee(p))).toList();
         boolean colossus = boss.isColossus();
-        Action choice = colossus ? chooseColossus(candidates, ready, now, last)
+        Action choice = colossus ? chooseColossus(candidates, ready, now, last, soul != null)
                 : choose(candidates, ready, now, last, castsSinceBlink, shiftEvery);
         if (choice == Action.GRAB) {
             // A player grabbed recently is spared; fall back to the sweep.
@@ -356,7 +420,7 @@ final class NecromancerCombat {
         }
         if (t == TRANSFORM_GROW && !boss.isColossus()) {
             boss.setColossus(true);
-            boss.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED).setBaseValue(.3);
+            boss.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED).setBaseValue(COLOSSUS_SPEED);
             boss.getAttributeInstance(EntityAttributes.STEP_HEIGHT).setBaseValue(1.5);
             shove(world, .7, .25);
         }
@@ -371,6 +435,9 @@ final class NecromancerCombat {
             thawMinions();
             last = null;
             nextAction = now + 20;
+            // Its first dive and harvest come after it has shown its arms and charge.
+            ready.put(Action.DIVE, now + 160);
+            ready.put(Action.HARVEST, now + 300);
             log.stage(now, "colossus");
         }
     }
@@ -447,6 +514,7 @@ final class NecromancerCombat {
                     step = Step.WAVES;
                     wave = stage.firstWave() - 1;
                     nextWave = now + SIEGE_FIRST_WAVE;
+                    nextRain = now + RAIN_START;
                 }
             }
             case WAVES -> tickWaves(world, now, players, stage);
@@ -501,8 +569,19 @@ final class NecromancerCombat {
         }
         if (nextWave >= 0 && now >= nextWave) startWave(world, wave + 1, players, now);
         if (!spawnQueue.isEmpty() && now >= nextSpawn && minions.size() < WAVE_ALIVE_CAP) {
-            spawnWaveBody(world, spawnQueue.removeFirst(), players);
+            spawnWaveBody(world, spawnQueue.removeFirst(), players, null);
             nextSpawn = now + spawnGap;
+        }
+        // While a wave still stands, more crawlers claw out beside the players.
+        if (nextWave < 0 && !minions.isEmpty() && spawnQueue.isEmpty() && reinforcementsLeft > 0 && now >= nextReinforce
+                && minions.size() < WAVE_ALIVE_CAP && !players.isEmpty()) {
+            reinforcementsLeft--;
+            nextReinforce = now + REINFORCE_EVERY;
+            spawnWaveBody(world, Undead.CRAWLER, players, players.get(boss.getRandom().nextInt(players.size())));
+        }
+        if (now >= nextRain && !players.isEmpty()) {
+            nextRain = now + rainEvery(stage);
+            rainVolley(world, now, players, stage);
         }
         snipeHoverers(world, now, players);
         if (nextWave >= 0) return; // Resting between waves.
@@ -527,6 +606,8 @@ final class NecromancerCombat {
         spawnQueue.addAll(queue);
         spawnGap = Math.max(3, WAVE_STAGGER / Math.max(1, queue.size()));
         nextSpawn = now;
+        reinforcementsLeft = reinforcements(Math.max(1, players.size()));
+        nextReinforce = now + WAVE_STAGGER + REINFORCE_EVERY;
         log.note(now, "wave " + number + ": " + bodies.crawlers() + " crawlers, " + bodies.archers() + " archers, " + bodies.brutes() + " brutes");
         world.playSound(null, boss.getX(), boss.getY(), boss.getZ(), SoundEvents.ENTITY_EVOKER_PREPARE_SUMMON, SoundCategory.HOSTILE, 3f, .7f);
         for (ServerPlayerEntity player : players) player.sendMessage(Text.translatable("necromancer.elementalwands.wave", number), true);
@@ -541,11 +622,19 @@ final class NecromancerCombat {
         return queue;
     }
 
-    /** Claws one body out of the floor somewhere in the clearing, away from the players. */
-    private void spawnWaveBody(ServerWorld world, Undead kind, List<ServerPlayerEntity> players) {
+    /**
+     * Claws one body out of the floor somewhere in the clearing, away from the players; a
+     * reinforcement ({@code near} set) claws out a short run from that player instead.
+     */
+    private void spawnWaveBody(ServerWorld world, Undead kind, List<ServerPlayerEntity> players, ServerPlayerEntity near) {
         for (int attempt = 0; attempt < 24; attempt++) {
-            double angle = boss.getRandom().nextDouble() * Math.PI * 2, distance = WAVE_MIN + boss.getRandom().nextDouble() * (WAVE_MAX - WAVE_MIN);
-            Vec3d spot = standable(world, home.add(Math.cos(angle) * distance, 0, Math.sin(angle) * distance), .6, 1.99);
+            double angle = boss.getRandom().nextDouble() * Math.PI * 2;
+            Vec3d around = near == null ? home : near.getEntityPos();
+            double distance = near == null ? WAVE_MIN + boss.getRandom().nextDouble() * (WAVE_MAX - WAVE_MIN)
+                    : REINFORCE_MIN + boss.getRandom().nextDouble() * (REINFORCE_MAX - REINFORCE_MIN);
+            Vec3d point = around.add(Math.cos(angle) * distance, 0, Math.sin(angle) * distance);
+            if (point.subtract(home).horizontalLength() > WAVE_MAX + 4) continue;
+            Vec3d spot = standable(world, point, .6, 1.99);
             if (spot == null || players.stream().anyMatch(p -> p.squaredDistanceTo(spot) < WAVE_CLEAR * WAVE_CLEAR)
                     || boss.getBoundingBox().expand(.5).contains(spot.add(0, .5, 0))) continue;
             MobEntity minion = switch (kind) {
@@ -555,6 +644,9 @@ final class NecromancerCombat {
             };
             minion.refreshPositionAndAngles(spot.x, spot.y, spot.z, boss.getRandom().nextFloat() * 360, 0);
             NecromancerMinion.bind(minion, boss);
+            // Quickened by the caster's soul fire: siege bodies outpace their wild kin.
+            var speed = minion.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED);
+            if (speed != null) speed.addTemporaryModifier(new EntityAttributeModifier(QUICKENED, quickening(kind), EntityAttributeModifier.Operation.ADD_MULTIPLIED_BASE));
             if (world.spawnEntity(minion)) {
                 minions.add(minion);
                 stream(world, castOrigin(), spot.add(0, .4, 0));
@@ -696,7 +788,7 @@ final class NecromancerCombat {
         interrupt();
         boolean colossus = boss.isColossus();
         active = action; last = action; started = now; target = player.getUuid();
-        boltsFired = 0; drained = 0; rushCaught = -1; handsRush = false; ambushDamage = 0;
+        boltsFired = 0; drained = 0; rushCaught = -1; handsRush = false; ambushDamage = 0; diveHit = false;
         lastTargeted.put(target, now);
         ready.put(action, now + action.duration + action.cooldown);
         if (action == Action.BLINK || action == Action.SHIFT || action == Action.AMBUSH) {
@@ -712,7 +804,9 @@ final class NecromancerCombat {
             case SHIFT, AMBUSH -> null; // The blink clip plays just before the teleport.
             case SWIPE -> "swipe";
             case GRAB -> "grab";
-            case RUSH -> "rush_windup"; // Rears and scrapes through the warning; the run loop starts at launch.
+            case RUSH -> "rush_windup"; // Crouches, then rocks its weight until the aim locks; the run loop starts at launch.
+            case DIVE -> "dive";
+            case HARVEST -> "harvest";
         };
         if (clip != null) boss.triggerAnim(NecromancerEntity.CONTROLLER, clip);
         switch (action) {
@@ -727,19 +821,7 @@ final class NecromancerCombat {
                 world.getPlayers(p -> p != player && canDamage(boss, p) && boss.distanceTo(p) <= HANDS_RANGE).stream()
                         .sorted(Comparator.comparingDouble(boss::squaredDistanceTo))
                         .limit(handsTargets(colossus) - 1).forEach(victims::add);
-                double radius = handsRadius(colossus);
-                int models = handsModels(radius);
-                for (ServerPlayerEntity victim : victims) {
-                    Vec3d center = ground(world, victim.getEntityPos());
-                    grasps.add(new Grasp(center, radius, now + action.impact));
-                    for (int i = 0; i < models; i++) {
-                        var hand = new GraspingHandEntity(ModEntities.GRASPING_HAND, world);
-                        double angle = i * Math.PI * 2 / models + .15, ring = radius * .7;
-                        hand.setup(boss, center.add(Math.cos(angle) * ring, 0, Math.sin(angle) * ring),
-                                (float)Math.toDegrees(angle) + 90, i % 3, colossus ? 1.18f : 1f, i % 2 == 1);
-                        if (world.spawnEntity(hand)) handVisuals.add(hand);
-                    }
-                }
+                for (ServerPlayerEntity victim : victims) handsRing(world, ground(world, victim.getEntityPos()), handsRadius(colossus), now, colossus);
             }
             case DRAIN -> {
                 boss.setDrainTarget(player.getId());
@@ -768,9 +850,16 @@ final class NecromancerCombat {
             case SWIPE -> world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_WITHER_SKELETON_AMBIENT, SoundCategory.HOSTILE, 2f, .45f);
             case GRAB -> world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_SKELETON_AMBIENT, SoundCategory.HOSTILE, 2f, .35f);
             case RUSH -> {
-                world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_RAVAGER_ROAR, SoundCategory.HOSTILE, 2f, .7f);
-                world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_RAVAGER_ATTACK, SoundCategory.HOSTILE, 2f, .5f);
+                // Only a low rattle: the body tells the charge, and the roar comes with the launch.
+                rushWarning = rushWarning(new java.util.Random(boss.getRandom().nextLong()));
+                world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_SKELETON_AMBIENT, SoundCategory.HOSTILE, 1.8f, .3f);
             }
+            case DIVE -> {
+                dive = Dive.SINK; diveAt = now; diveSpot = null;
+                world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_WARDEN_DIG, SoundCategory.HOSTILE, 2.2f, .7f);
+            }
+            case HARVEST -> // It draws itself up with a low growl before the scream.
+                    world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_WARDEN_AGITATED, SoundCategory.HOSTILE, 2.5f, .5f);
         }
     }
 
@@ -778,6 +867,7 @@ final class NecromancerCombat {
         int tick = (int)(now - started);
         boolean colossus = boss.isColossus();
         if (active == Action.RUSH) { tickRush(world, now); return; }
+        if (active == Action.DIVE) { tickDive(world, now); return; }
         halt();
         ServerPlayerEntity player = world.getServer().getPlayerManager().getPlayer(target);
         boolean valid = player != null && (reviewing ? player.isAlive() && !player.isSpectator() && player.getEntityWorld() == world
@@ -786,7 +876,7 @@ final class NecromancerCombat {
             case BLINK, SHIFT -> false;
             case AMBUSH -> tick > AMBUSH_APPEAR && tick < active.impact - 4; // Turns on its victim, then commits.
             case SWIPE, GRAB -> tick < active.impact - 6; // Committed swings stop turning before they land.
-            case RUSH -> false;
+            case RUSH, DIVE, HARVEST -> false;
             default -> true;
         };
         if (valid && tracking) { face(player.getEntityPos()); lockedYaw = boss.getYaw(); }
@@ -831,7 +921,8 @@ final class NecromancerCombat {
                 if (tick == active.impact) swipe(world);
             }
             case GRAB -> tickGrab(world, player, valid, tick, now);
-            case RUSH -> {}
+            case HARVEST -> tickHarvestCall(world, tick);
+            case RUSH, DIVE -> {}
         }
         if (active != null && tick >= active.duration) finish(now);
     }
@@ -843,6 +934,7 @@ final class NecromancerCombat {
         boss.setDrainTarget(-1);
         if (held != null && boss.getEntityWorld() instanceof ServerWorld world) release(world, false);
         if (active == Action.RUSH) { halt(); boss.stopTriggeredAnim(NecromancerEntity.CONTROLLER, null); }
+        if (active == Action.DIVE) surface();
         active = null;
         nextAction = now + RECOVERY_GAP;
     }
@@ -850,7 +942,9 @@ final class NecromancerCombat {
     private void interrupt() {
         if (held != null && boss.getEntityWorld() instanceof ServerWorld world) release(world, false);
         if (active == Action.RUSH) { halt(); boss.stopTriggeredAnim(NecromancerEntity.CONTROLLER, null); }
+        if (active == Action.DIVE || dive != null) surface();
         active = null; blinkTo = null; ambushTo = null; rushCaught = -1; handsRush = false;
+        harvestSpots.clear(); // An interrupted call raises nothing.
         boss.setDrainTarget(-1);
         halt();
         boss.stopTriggeredAnim(NecromancerEntity.CONTROLLER, null);
@@ -1081,8 +1175,8 @@ final class NecromancerCombat {
     }
 
     /**
-     * Rear and scrape while a soul-fire lane marks the path (the aim locks for the last few ticks),
-     * then a grounded run with little steering; contact starts the grab, bite and throw.
+     * Crouch, then rock and dig in for a random span while tracking the target; it goes still as
+     * the aim locks, roars and runs with a little steering. Contact starts the grab, bite and throw.
      */
     private void tickRush(ServerWorld world, long now) {
         ServerPlayerEntity victim = world.getServer().getPlayerManager().getPlayer(target);
@@ -1112,20 +1206,26 @@ final class NecromancerCombat {
             if (grip >= RUSH_RECOVER) finish(now);
             return;
         }
-        int warning = handsRush ? RUSH_COMBO_WARNING : RUSH_WARNING;
+        int warning = handsRush ? RUSH_COMBO_WARNING : rushWarning;
         if (elapsed < warning) {
             halt();
             if (elapsed < warning - RUSH_LOCK) { face(victim.getEntityPos()); lockedYaw = boss.getYaw(); }
             else hold(lockedYaw);
-            if (elapsed % 2 == 0) rushLane(world);
-            if (elapsed % 6 == 0) {
-                Vec3d claws = boss.getEntityPos().add(forward().multiply(2));
-                world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, floorState(world, claws)), claws.x, claws.y + .1, claws.z, 8, .8, .05, .8, .08);
-                world.playSound(null, boss.getBlockPos(), SoundEvents.BLOCK_GRAVEL_BREAK, SoundCategory.HOSTILE, 1.6f, .5f);
+            if (elapsed == warning - RUSH_LOCK) boss.triggerAnim(NecromancerEntity.CONTROLLER, "rush_set");
+            // Claws dig in while it rocks: dirt kicked up at the forefeet, never a marked path.
+            if (elapsed >= RUSH_CROUCH && elapsed < warning - RUSH_LOCK && (elapsed - RUSH_CROUCH) % 8 == 0) {
+                double side = (elapsed - RUSH_CROUCH) % 16 == 0 ? 1.4 : -1.4;
+                Vec3d claw = boss.getEntityPos().add(forward().multiply(2.2)).add(-forward().z * side, 0, forward().x * side);
+                world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, floorState(world, claw)), claw.x, claw.y + .1, claw.z, 6, .35, .05, .35, .08);
+                world.playSound(null, claw.x, claw.y, claw.z, SoundEvents.BLOCK_GRAVEL_BREAK, SoundCategory.HOSTILE, 1.2f, .5f);
             }
             return;
         }
-        if (elapsed == warning) boss.triggerAnim(NecromancerEntity.CONTROLLER, "rush");
+        if (elapsed == warning) {
+            boss.triggerAnim(NecromancerEntity.CONTROLLER, "rush");
+            world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_RAVAGER_ROAR, SoundCategory.HOSTILE, 2f, .7f);
+            world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_RAVAGER_ATTACK, SoundCategory.HOSTILE, 2f, .5f);
+        }
         if (elapsed >= warning + RUSH_TRAVEL || boss.squaredDistanceTo(home) > MOVEMENT_RANGE * MOVEMENT_RANGE * 4) { finish(now); return; }
         Vec3d delta = victim.getEntityPos().subtract(boss.getEntityPos());
         float wanted = (float)Math.toDegrees(Math.atan2(-delta.x, delta.z));
@@ -1149,18 +1249,487 @@ final class NecromancerCombat {
         if (elapsed % 5 == 0) world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_SKELETON_STEP, SoundCategory.HOSTILE, 1.8f, .55f);
     }
 
-    /** Two soul-fire edges along the run's path, up to the first wall. */
-    private void rushLane(ServerWorld world) {
-        Vec3d forward = forward(), side = new Vec3d(-forward.z, 0, forward.x).multiply(RUSH_REACH / 2);
-        Vec3d start = boss.getEntityPos().add(0, .6, 0);
-        var hit = world.raycast(new RaycastContext(start, start.add(forward.multiply(RUSH_SPEED * RUSH_TRAVEL)),
-                RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, boss));
-        double length = hit.getType() == HitResult.Type.MISS ? RUSH_SPEED * RUSH_TRAVEL : start.distanceTo(hit.getPos());
-        for (double d = 2.5; d < length; d += 1.4) {
-            Vec3d mid = boss.getEntityPos().add(forward.multiply(d)).add(0, .1, 0);
-            for (Vec3d edge : new Vec3d[]{mid.add(side), mid.subtract(side)})
-                world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, true, false, edge.x, edge.y, edge.z, 1, .05, 0, .05, 0);
+    // ── Soul Fire Rain (sieges) ──────────────────────────────────────────────
+
+    /** One marker on every player plus spares near a random one; a fireball leaves the staff for each. */
+    private void rainVolley(ServerWorld world, long now, List<ServerPlayerEntity> players, Stage stage) {
+        List<Vec3d> targets = new ArrayList<>();
+        for (ServerPlayerEntity player : players) targets.add(player.getEntityPos());
+        for (int i = players.size(); i < rainMarkers(players.size(), stage); i++) {
+            ServerPlayerEntity near = players.get(boss.getRandom().nextInt(players.size()));
+            double angle = boss.getRandom().nextDouble() * Math.PI * 2;
+            double distance = RAIN_SPREAD_MIN + boss.getRandom().nextDouble() * (RAIN_SPREAD_MAX - RAIN_SPREAD_MIN);
+            targets.add(near.getEntityPos().add(Math.cos(angle) * distance, 0, Math.sin(angle) * distance));
         }
+        Vec3d from = castOrigin();
+        for (Vec3d point : targets) {
+            if (HollowCryptRealm.keepsTerrain(world)) point = HollowCryptRealm.clampToPlay(HollowCryptRealm.nearestCentre(anchor()), point);
+            SoulFireballEntity fireball = new SoulFireballEntity(ModEntities.SOUL_FIREBALL, world);
+            fireball.launch(boss, from, ground(world, point));
+            if (world.spawnEntity(fireball)) fireballs.add(fireball);
+        }
+        if (step == Step.WAVES) boss.triggerAnim(NecromancerEntity.CONTROLLER, "perch_cast"); // Chains back into the channel.
+        world.playSound(null, boss.getX(), boss.getY(), boss.getZ(), SoundEvents.ENTITY_GHAST_SHOOT, SoundCategory.HOSTILE, 3f, .5f);
+        log.cast(now, "soul fire rain", targets.size() + " markers");
+    }
+
+    /** A fireball reached its marker: a blast that throws everyone out, then a patch of soul fire. */
+    void rainLanded(ServerWorld world, SoulFireballEntity fireball, Vec3d center) {
+        world.playSound(null, center.x, center.y, center.z, SoundEvents.ENTITY_GENERIC_EXPLODE.value(), SoundCategory.HOSTILE, 1.4f, .7f);
+        world.playSound(null, center.x, center.y, center.z, SoundEvents.PARTICLE_SOUL_ESCAPE.value(), SoundCategory.HOSTILE, 2f, .6f);
+        world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, true, false, center.x, center.y + .3, center.z, 40, RAIN_RADIUS * .4, .3, RAIN_RADIUS * .4, .12);
+        world.spawnParticles(ParticleTypes.SCULK_SOUL, true, false, center.x, center.y + .4, center.z, 12, .8, .3, .8, .05);
+        world.spawnParticles(ParticleTypes.LARGE_SMOKE, center.x, center.y + .5, center.z, 8, .6, .3, .6, .02);
+        for (LivingEntity victim : world.getEntitiesByClass(LivingEntity.class, new Box(center, center).expand(RAIN_RADIUS + 1, 2.5, RAIN_RADIUS + 1),
+                e -> rainVictim(e) && inside(e, center, RAIN_RADIUS))) {
+            if (hurt(world, victim, source(world, FIREBALL, fireball), RAIN_DAMAGE, "soul fireball")) {
+                Vec3d away = victim.getEntityPos().subtract(center).multiply(1, 0, 1);
+                away = away.lengthSquared() < 1e-4 ? forward() : away.normalize();
+                victim.takeKnockback(.9, -away.x, -away.z);
+            }
+        }
+        burns.add(new Burn(center, world.getTime() + RAIN_BURN));
+    }
+
+    /** The rain spares nobody under its marker: players, doubles and the caster's own army alike. */
+    private boolean rainVictim(LivingEntity e) {
+        return e instanceof ServerPlayerEntity p ? canDamage(boss, p) : e instanceof AstralDoubleEntity || NecromancerMinion.belongsTo(e, boss);
+    }
+
+    /** One-shot rehearsal: a Soul Fire Rain volley at the nearby party from where it stands. */
+    int testRain(ServerPlayerEntity player) {
+        ServerWorld world = (ServerWorld)boss.getEntityWorld();
+        home = boss.getEntityPos();
+        reviewing = true;
+        List<ServerPlayerEntity> party = world.getPlayers(p -> canDamage(boss, p) && boss.squaredDistanceTo(p) <= ENCOUNTER_RANGE * ENCOUNTER_RANGE);
+        if (party.isEmpty()) party = List.of(player);
+        rainVolley(world, world.getTime(), party, Stage.SIEGE_1);
+        return rainMarkers(party.size(), Stage.SIEGE_1);
+    }
+
+    // ── Grave Dive ───────────────────────────────────────────────────────────
+
+    /**
+     * Sinks, tunnels toward its target faster than a sprint, stops under them and cracks the
+     * ground, then erupts. Dodging leaves it stuck half out of the earth, taking extra damage.
+     */
+    private void tickDive(ServerWorld world, long now) {
+        int t = (int)(now - diveAt);
+        ServerPlayerEntity victim = world.getServer().getPlayerManager().getPlayer(target);
+        boolean valid = victim != null && (reviewing ? victim.isAlive() && !victim.isSpectator() && victim.getEntityWorld() == world
+                : canDamage(boss, victim));
+        halt();
+        switch (dive) {
+            case SINK -> {
+                hold(lockedYaw);
+                if (t % 3 == 0) debris(world, boss.getEntityPos(), 2.2, 10);
+                if (t == DIVE_UNDER) { boss.setNoGravity(true); boss.noClip = true; }
+                if (t >= DIVE_SINK) { boss.setBuried(true); diveStep(Dive.TUNNEL, now); }
+            }
+            case TUNNEL -> {
+                if (!valid) {
+                    // Its quarry is gone: it follows the nearest player instead, or comes up where it is.
+                    victim = world.getPlayers(p -> canDamage(boss, p) && p.squaredDistanceTo(anchor()) <= ENCOUNTER_RANGE * ENCOUNTER_RANGE).stream()
+                            .min(Comparator.comparingDouble(boss::squaredDistanceTo)).orElse(null);
+                    if (victim == null) { diveWarn(world, now); return; }
+                    target = victim.getUuid();
+                }
+                Vec3d delta = victim.getEntityPos().subtract(boss.getEntityPos()).multiply(1, 0, 1);
+                if (delta.length() <= DIVE_CATCH || t >= DIVE_TUNNEL) { diveWarn(world, now); return; }
+                Vec3d next = keepInPlay(world, boss.getEntityPos().add(delta.normalize().multiply(Math.min(DIVE_SPEED, delta.length()))));
+                Vec3d floor = standable(world, next, 1, 1);
+                boss.setPosition(next.x, floor != null ? floor.y : boss.getY(), next.z);
+                face(victim.getEntityPos()); lockedYaw = boss.getYaw();
+                // Cracked earth and soul fire mark the tunnel as it closes in.
+                Vec3d at = boss.getEntityPos();
+                world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, floorState(world, at)), true, false, at.x, at.y + .1, at.z, 6, .6, .05, .6, .1);
+                world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, true, false, at.x, at.y + .1, at.z, 2, .5, .02, .5, .01);
+                if (t % 5 == 0) world.playSound(null, at.x, at.y, at.z, SoundEvents.BLOCK_ROOTED_DIRT_BREAK, SoundCategory.HOSTILE, 2f, .5f);
+            }
+            case WARN -> {
+                hold(lockedYaw);
+                if (t % 2 == 0) {
+                    ringForced(world, diveSpot, DIVE_RADIUS, ParticleTypes.SOUL_FIRE_FLAME, 28);
+                    debris(world, diveSpot, DIVE_RADIUS * .6, 8);
+                }
+                if (t % 5 == 0) world.playSound(null, diveSpot.x, diveSpot.y, diveSpot.z, SoundEvents.ENTITY_WARDEN_DIG, SoundCategory.HOSTILE, 2f, .9f);
+                if (t >= DIVE_WARNING) diveErupt(world, now);
+            }
+            case ERUPT -> {
+                hold(lockedYaw);
+                if (t < DIVE_ERUPT) return;
+                if (diveHit) { boss.triggerAnim(NecromancerEntity.CONTROLLER, "haul"); diveStep(Dive.HAUL, now); return; }
+                // A miss: stuck half out of the ground, exposed.
+                exposedUntil = now + DIVE_STUCK;
+                boss.triggerAnim(NecromancerEntity.CONTROLLER, "stuck");
+                announce(world, Text.translatable("necromancer.elementalwands.stuck"));
+                log.note(now, "dive missed: stuck and exposed");
+                diveStep(Dive.STUCK, now);
+            }
+            case STUCK -> {
+                hold(lockedYaw);
+                if (t % 4 == 0) debris(world, boss.getEntityPos(), 2, 6);
+                if (t >= DIVE_STUCK) { boss.triggerAnim(NecromancerEntity.CONTROLLER, "haul"); diveStep(Dive.HAUL, now); }
+            }
+            case HAUL -> {
+                hold(lockedYaw);
+                if (t >= DIVE_HAUL) finish(now);
+            }
+        }
+    }
+
+    private void diveStep(Dive next, long now) { dive = next; diveAt = now; }
+
+    /** Stops beneath the target: the ground cracks in a ring while it gathers itself. */
+    private void diveWarn(ServerWorld world, long now) {
+        Vec3d spot = ground(world, boss.getEntityPos());
+        if (!room(world, spot)) {
+            // The skeleton needs headroom to burst out; take the nearest open ground instead.
+            search:
+            for (double r : new double[]{1.5, 3}) for (int i = 0; i < 8; i++) {
+                Vec3d open = standable(world, spot.add(Math.cos(i * Math.PI / 4) * r, 0, Math.sin(i * Math.PI / 4) * r), COLOSSUS_WIDTH, COLOSSUS_CLEARANCE);
+                if (open != null) { spot = open; break search; }
+            }
+        }
+        diveSpot = spot;
+        boss.setPosition(spot.x, spot.y, spot.z);
+        world.playSound(null, spot.x, spot.y, spot.z, SoundEvents.ENTITY_WARDEN_DIG, SoundCategory.HOSTILE, 2.5f, .6f);
+        diveStep(Dive.WARN, now);
+    }
+
+    private void diveErupt(ServerWorld world, long now) {
+        boss.setPosition(diveSpot.x, diveSpot.y, diveSpot.z);
+        boss.noClip = false;
+        boss.setNoGravity(false);
+        boss.setBuried(false);
+        boss.triggerAnim(NecromancerEntity.CONTROLLER, "erupt");
+        world.playSound(null, diveSpot.x, diveSpot.y, diveSpot.z, SoundEvents.ENTITY_WARDEN_EMERGE, SoundCategory.HOSTILE, 2.5f, .8f);
+        world.playSound(null, diveSpot.x, diveSpot.y, diveSpot.z, SoundEvents.ENTITY_GENERIC_EXPLODE.value(), SoundCategory.HOSTILE, 1.2f, .6f);
+        world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, floorState(world, diveSpot)), true, false,
+                diveSpot.x, diveSpot.y + .3, diveSpot.z, 70, DIVE_RADIUS * .4, .4, DIVE_RADIUS * .4, .2);
+        world.spawnParticles(ParticleTypes.SCULK_SOUL, true, false, diveSpot.x, diveSpot.y + 1, diveSpot.z, 24, 1.4, .8, 1.4, .06);
+        for (LivingEntity victim : world.getEntitiesByClass(LivingEntity.class, new Box(diveSpot, diveSpot).expand(DIVE_RADIUS + 1, 3, DIVE_RADIUS + 1),
+                e -> (e instanceof ServerPlayerEntity p ? canDamage(boss, p) : e instanceof AstralDoubleEntity) && inside(e, diveSpot, DIVE_RADIUS))) {
+            if (!hurt(world, victim, source(world, ERUPT, null), DIVE_DAMAGE, "grave dive")) continue;
+            diveHit = true;
+            // Thrown up and out of the grave it opened.
+            Vec3d away = victim.getEntityPos().subtract(diveSpot).multiply(1, 0, 1);
+            away = away.lengthSquared() < 1e-4 ? forward() : away.normalize();
+            victim.setVelocity(away.x * .6, 1.0, away.z * .6);
+            victim.velocityModified = true;
+        }
+        log.note(now, diveHit ? "dive erupted under a player" : "dive erupted");
+        diveStep(Dive.ERUPT, now);
+    }
+
+    /** Ends a dive: back on its feet with gravity, and never left inside the ground. */
+    private void surface() {
+        if (dive == null) return;
+        boolean under = boss.noClip;
+        dive = null;
+        boss.noClip = false;
+        boss.setNoGravity(false);
+        boss.setBuried(false);
+        if (under && !boss.isRemoved() && boss.getEntityWorld() instanceof ServerWorld world) {
+            Vec3d spot = standable(world, boss.getEntityPos(), COLOSSUS_WIDTH, COLOSSUS_CLEARANCE);
+            if (spot == null) spot = ground(world, boss.getEntityPos().add(0, 3, 0));
+            boss.requestTeleport(spot.x, spot.y, spot.z);
+        }
+    }
+
+    /** Keeps a tunnel inside the crypt's playable clearing, or near home elsewhere. */
+    private Vec3d keepInPlay(ServerWorld world, Vec3d point) {
+        if (HollowCryptRealm.keepsTerrain(world)) {
+            BlockPos centre = HollowCryptRealm.nearestCentre(anchor());
+            Vec3d kept = HollowCryptRealm.clampToPlay(centre, point);
+            return new Vec3d(kept.x, point.y, kept.z);
+        }
+        Vec3d offset = point.subtract(anchor()).multiply(1, 0, 1);
+        double limit = MOVEMENT_RANGE * 2;
+        return offset.length() > limit ? anchor().add(offset.normalize().multiply(limit)).add(0, point.y - anchor().y, 0) : point;
+    }
+
+    /** Clods of the floor thrown up in a ring. */
+    private void debris(ServerWorld world, Vec3d center, double radius, int count) {
+        world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, floorState(world, center)), true, false,
+                center.x, center.y + .1, center.z, count, radius * .5, .05, radius * .5, .1);
+    }
+
+    // ── The caster inside (quarter health) ───────────────────────────────────
+
+    /** Runs the soul's escape, the freed soul and the collapse; returns true while they own the body. */
+    private boolean tickSplit(ServerWorld world, long now, List<ServerPlayerEntity> players) {
+        if (!boss.isColossus()) return false;
+        if (soul != null) tickSoul(world, now, players);
+        if (now < collapseUntil) {
+            halt(); hold(lockedYaw);
+            if (now % 4 == 0) {
+                Vec3d ribs = ribs();
+                world.spawnParticles(ParticleTypes.SOUL, ribs.x, ribs.y, ribs.z, 2, .6, .4, .6, .02);
+            }
+            return true;
+        }
+        if (splitStarted >= 0) { tickSplitTell(world, now); return true; }
+        if (!splitPending && soul == null && boss.soulFreed() && now >= nextSplit && boss.getHealth() <= boss.getMaxHealth() * SPLIT_GATE)
+            splitPending = true;
+        if (!splitPending || soul != null || active == Action.DIVE) return false; // A dive surfaces first.
+        beginSplit(world, now);
+        return true;
+    }
+
+    private void beginSplit(ServerWorld world, long now) {
+        interrupt();
+        splitPending = false;
+        splitStarted = now;
+        boss.setSoulFreed(true);
+        lockedYaw = boss.getYaw();
+        boss.triggerAnim(NecromancerEntity.CONTROLLER, "split");
+        world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_WARDEN_SONIC_CHARGE, SoundCategory.HOSTILE, 2.5f, .6f);
+        log.stage(now, "soul tears free");
+    }
+
+    private void tickSplitTell(ServerWorld world, long now) {
+        halt(); hold(lockedYaw);
+        int t = (int)(now - splitStarted);
+        Vec3d ribs = ribs();
+        if (t < SPLIT_RELEASE && t % 2 == 0)
+            world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, true, false, ribs.x, ribs.y, ribs.z, 4, .4, .5, .4, .03);
+        if (t == SPLIT_RELEASE) {
+            NecromancerSoulEntity freed = new NecromancerSoulEntity(ModEntities.NECROMANCER_SOUL, world);
+            freed.refreshPositionAndAngles(ribs.x, ribs.y, ribs.z, boss.getYaw(), 0);
+            freed.bind(boss);
+            if (world.spawnEntity(freed)) {
+                soul = freed;
+                boss.setSplit(true);
+                soulDamage = 0; soulReturning = -1; soulBolts = 0; soulCasts = 0; soulBlinkAt = -1;
+                soulGoal = null; nextSoulGoal = now; nextSoulCast = now + 30; nextSoulBlink = now + SOUL_BLINK;
+                world.playSound(null, ribs.x, ribs.y, ribs.z, SoundEvents.ENTITY_VEX_CHARGE, SoundCategory.HOSTILE, 2.5f, .5f);
+                world.playSound(null, ribs.x, ribs.y, ribs.z, SoundEvents.PARTICLE_SOUL_ESCAPE.value(), SoundCategory.HOSTILE, 3f, .6f);
+                world.spawnParticles(ParticleTypes.SCULK_SOUL, true, false, ribs.x, ribs.y, ribs.z, 30, .6, .6, .6, .08);
+                announce(world, Text.translatable("necromancer.elementalwands.soul_free"));
+            }
+        }
+        if (t >= SPLIT_TELL) { splitStarted = -1; nextAction = now + 10; }
+    }
+
+    /**
+     * The freed soul hovers out of reach of the ground fight, glides between vantage points,
+     * blinks away when approached and alternates bolt volleys with grasping hands. Knocked down,
+     * it is dragged back along its tether and the body collapses.
+     */
+    private void tickSoul(ServerWorld world, long now, List<ServerPlayerEntity> players) {
+        Vec3d ribs = ribs();
+        if (soul.isRemoved() && soulReturning < 0) soulReturning = now; // Lost some other way: treat it as knocked down.
+        if (soulReturning >= 0) {
+            int t = (int)(now - soulReturning);
+            if (!soul.isRemoved()) {
+                soul.setPosition(soul.getEntityPos().lerp(ribs, 1.0 / Math.max(1, SOUL_RETURN - t)));
+                stream(world, soul.getEntityPos(), ribs);
+            }
+            if (t >= SOUL_RETURN || soul.isRemoved()) collapse(world, now);
+            return;
+        }
+        if (soulBlinkAt >= 0) {
+            if (now % 2 == 0) world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, true, false, soulBlinkTo.x, soulBlinkTo.y, soulBlinkTo.z, 5, .25, .5, .25, .01);
+            if (now >= soulBlinkAt) {
+                world.spawnParticles(ParticleTypes.SOUL, true, false, soul.getX(), soul.getY() + .5, soul.getZ(), 20, .3, .3, .3, .08);
+                soul.setPosition(soulBlinkTo);
+                world.playSound(null, soulBlinkTo.x, soulBlinkTo.y, soulBlinkTo.z, SoundEvents.ENTITY_ENDERMAN_TELEPORT, SoundCategory.HOSTILE, 1.2f, .7f);
+                soulBlinkAt = -1; soulGoal = null; nextSoulBlink = now + SOUL_BLINK;
+            }
+        } else if (now >= nextSoulBlink || players.stream().anyMatch(p -> p.squaredDistanceTo(soul) < SOUL_THREAT * SOUL_THREAT)) {
+            Vec3d to = soulSpot(world, players);
+            if (to == null) nextSoulBlink = now + 20;
+            else {
+                soulBlinkTo = to; soulBlinkAt = now + 10;
+                world.playSound(null, to.x, to.y, to.z, SoundEvents.PARTICLE_SOUL_ESCAPE.value(), SoundCategory.HOSTILE, 1.6f, .8f);
+            }
+        } else {
+            if (soulGoal == null || now >= nextSoulGoal || soul.getEntityPos().distanceTo(soulGoal) < .5) { soulGoal = soulSpot(world, players); nextSoulGoal = now + 50; }
+            if (soulGoal != null) {
+                Vec3d step = soulGoal.subtract(soul.getEntityPos());
+                if (step.length() > .01) soul.setPosition(soul.getEntityPos().add(step.multiply(Math.min(1, SOUL_SPEED / step.length()))));
+            }
+        }
+        ServerPlayerEntity nearest = players.stream().min(Comparator.comparingDouble(soul::squaredDistanceTo)).orElse(null);
+        if (nearest != null) {
+            Vec3d look = nearest.getEyePos().subtract(soul.getEntityPos().add(0, .5, 0));
+            soul.setYaw((float)Math.toDegrees(Math.atan2(-look.x, look.z)));
+            soul.setHeadYaw(soul.getYaw()); soul.setBodyYaw(soul.getYaw());
+            soul.setPitch((float)-Math.toDegrees(Math.atan2(look.y, look.horizontalLength())));
+        }
+        // A faint tether back to the ribcage shows where it came from.
+        if (now % 6 == 0) {
+            Vec3d from = soul.getEntityPos().add(0, .5, 0), delta = ribs.subtract(from);
+            for (double d = 1; d < delta.length(); d += 2.5) {
+                Vec3d p = from.add(delta.normalize().multiply(d));
+                world.spawnParticles(ParticleTypes.SOUL, true, false, p.x, p.y, p.z, 1, .05, .05, .05, 0);
+            }
+        }
+        if (soulBolts > 0 && now >= nextSoulBolt) {
+            ServerPlayerEntity victim = world.getServer().getPlayerManager().getPlayer(target);
+            if (victim != null && canDamage(boss, victim)) {
+                SoulBoltEntity bolt = new SoulBoltEntity(ModEntities.SOUL_BOLT, world);
+                bolt.launch(boss, victim, soul.getEntityPos().add(0, .5, 0), BOLT_SPEED);
+                if (world.spawnEntity(bolt)) bolts.add(bolt);
+                world.playSound(null, soul.getX(), soul.getY(), soul.getZ(), SoundEvents.ENTITY_BLAZE_SHOOT, SoundCategory.HOSTILE, .8f, .6f);
+            }
+            soulBolts--;
+            nextSoulBolt = now + BOLT_INTERVAL;
+        }
+        if (now >= nextSoulCast && soulBlinkAt < 0 && !players.isEmpty()) {
+            nextSoulCast = now + SOUL_CAST;
+            ServerPlayerEntity victim = players.stream().min(Comparator.comparingLong(p -> lastTargeted.getOrDefault(p.getUuid(), Long.MIN_VALUE))).orElseThrow();
+            lastTargeted.put(victim.getUuid(), now);
+            if (soulCasts++ % 2 == 0) {
+                target = victim.getUuid();
+                soulBolts = BOLT_COUNT; nextSoulBolt = now + 10;
+                world.playSound(null, soul.getX(), soul.getY(), soul.getZ(), SoundEvents.ENTITY_EVOKER_PREPARE_ATTACK, SoundCategory.HOSTILE, 1.4f, 1.2f);
+                log.cast(now, "soul bolts", victim.getName().getString());
+            } else {
+                handsRing(world, ground(world, victim.getEntityPos()), HANDS_RADIUS, now, false);
+                world.playSound(null, soul.getX(), soul.getY(), soul.getZ(), SoundEvents.ENTITY_EVOKER_PREPARE_ATTACK, SoundCategory.HOSTILE, 1.4f, .7f);
+                log.cast(now, "soul hands", victim.getName().getString());
+            }
+        }
+    }
+
+    /** A vantage point for the soul: a short run from a player, above head height, inside the leash. */
+    private Vec3d soulSpot(ServerWorld world, List<ServerPlayerEntity> players) {
+        Vec3d focus = players.isEmpty() ? anchor() : players.get(boss.getRandom().nextInt(players.size())).getEntityPos();
+        for (int attempt = 0; attempt < 16; attempt++) {
+            double angle = boss.getRandom().nextDouble() * Math.PI * 2, distance = SOUL_NEAR + boss.getRandom().nextDouble() * (SOUL_FAR - SOUL_NEAR);
+            Vec3d point = focus.add(Math.cos(angle) * distance, 0, Math.sin(angle) * distance);
+            if (point.subtract(anchor()).horizontalLength() > BLINK_LEASH) continue;
+            if (players.stream().anyMatch(p -> p.getEntityPos().subtract(point).horizontalLength() < SOUL_NEAR - 1)) continue;
+            Vec3d floor = ground(world, new Vec3d(point.x, anchor().y + 4, point.z));
+            return floor.add(0, SOUL_LOW + boss.getRandom().nextDouble() * (SOUL_HIGH - SOUL_LOW), 0);
+        }
+        return null;
+    }
+
+    /** Knocked down: the soul is dragged home and the body folds, exposed, before it rises again. */
+    private void collapse(ServerWorld world, long now) {
+        dropSoul();
+        interrupt();
+        collapseUntil = now + COLLAPSE_TICKS;
+        exposedUntil = collapseUntil;
+        nextSplit = collapseUntil + SPLIT_AGAIN;
+        nextAction = collapseUntil + 10;
+        lockedYaw = boss.getYaw();
+        boss.triggerAnim(NecromancerEntity.CONTROLLER, "collapse");
+        Vec3d ribs = ribs();
+        world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_IRON_GOLEM_DAMAGE, SoundCategory.HOSTILE, 2.5f, .5f);
+        world.playSound(null, boss.getBlockPos(), SoundEvents.PARTICLE_SOUL_ESCAPE.value(), SoundCategory.HOSTILE, 2.5f, .5f);
+        world.spawnParticles(ParticleTypes.SCULK_SOUL, true, false, ribs.x, ribs.y, ribs.z, 24, .8, .6, .8, .05);
+        announce(world, Text.translatable("necromancer.elementalwands.soul_back"));
+        log.stage(now, "soul dragged back; body collapsed");
+    }
+
+    private void dropSoul() {
+        if (soul != null) soul.discard();
+        soul = null;
+        soulReturning = -1; soulBlinkAt = -1; soulBolts = 0;
+        boss.setSplit(false);
+    }
+
+    /** Where the soul core sits in the colossus's ribcage. */
+    private Vec3d ribs() { return boss.getEntityPos().add(forward().multiply(.8)).add(0, 2.4, 0); }
+
+    // ── Soul Harvest ─────────────────────────────────────────────────────────
+
+    /**
+     * The call: souls gather in the ribcage, then it screams at the sky (a sonic boom at the jaws
+     * and a ring of souls racing out over the ground). The spots it calls glow for a second,
+     * crack, and the souls claw out of them.
+     */
+    private void tickHarvestCall(ServerWorld world, int tick) {
+        Vec3d ribs = ribs();
+        if (tick < HARVEST_SCREAM) {
+            if (tick % 2 == 0) world.spawnParticles(ParticleTypes.SOUL, true, false, ribs.x, ribs.y, ribs.z, 3, .5, .5, .5, .03);
+            return;
+        }
+        if (tick == HARVEST_SCREAM) {
+            world.playSound(null, boss.getBlockPos(), SoundEvents.BLOCK_SCULK_SHRIEKER_SHRIEK, SoundCategory.HOSTILE, 3f, .75f);
+            world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_GHAST_SCREAM, SoundCategory.HOSTILE, 2.5f, .45f);
+            world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_WARDEN_ROAR, SoundCategory.HOSTILE, 2.5f, .6f);
+            // The jaws point at the sky: the boom rises above the skull.
+            world.spawnParticles(ParticleTypes.SONIC_BOOM, true, false, boss.getX(), boss.getY() + 5.2, boss.getZ(), 1, 0, 0, 0, 0);
+            chooseHarvestSpots(world);
+            for (Vec3d spot : harvestSpots)
+                world.playSound(null, spot.x, spot.y, spot.z, SoundEvents.PARTICLE_SOUL_ESCAPE.value(), SoundCategory.HOSTILE, 1.6f, .6f);
+            if (!harvestSpots.isEmpty()) announce(world, Text.translatable("necromancer.elementalwands.harvest"));
+        }
+        int since = tick - HARVEST_SCREAM;
+        // The scream rolls out over the ground as a widening ring of souls.
+        if (since < 12 && since % 2 == 0)
+            ringForced(world, ground(world, boss.getEntityPos()), 3 + since * 2.2, ParticleTypes.SOUL, 12 + since * 3);
+        if (since < 10 && since % 3 == 0) world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, true, false, ribs.x, ribs.y, ribs.z, 6, .4, .4, .4, .08);
+        if (since < HARVEST_GLOW) {
+            // Each called spot glows for a second, then cracks open as the soul breaks through.
+            // A glowing ring with a low column of soul fire over it reads from across the clearing.
+            if (tick % 2 == 0) for (Vec3d spot : harvestSpots) {
+                ringForced(world, spot, 1.1, ParticleTypes.SOUL_FIRE_FLAME, 14);
+                world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, true, false, spot.x, spot.y + .7, spot.z, 3, .12, .45, .12, .01);
+                world.spawnParticles(ParticleTypes.SOUL, true, false, spot.x, spot.y + .2, spot.z, 2, .3, .1, .3, .02);
+                world.spawnParticles(ParticleTypes.GLOW, true, false, spot.x, spot.y + .15, spot.z, 3, .45, .05, .45, .01);
+                if (since >= HARVEST_GLOW - 6) debris(world, spot, .9, 5);
+            }
+            return;
+        }
+        if (since == HARVEST_GLOW) raiseHarvest(world);
+    }
+
+    /** Called graves: 16–28 blocks away, clear of every player, on open ground. */
+    private void chooseHarvestSpots(ServerWorld world) {
+        harvestSpots.clear();
+        List<ServerPlayerEntity> players = world.getPlayers(p -> canDamage(boss, p) && p.squaredDistanceTo(anchor()) <= ENCOUNTER_RANGE * ENCOUNTER_RANGE);
+        int count = harvestSouls(Math.max(1, players.size()));
+        for (int attempt = 0; attempt < count * 8 && harvestSpots.size() < count; attempt++) {
+            double angle = boss.getRandom().nextDouble() * Math.PI * 2, distance = HARVEST_MIN + boss.getRandom().nextDouble() * (HARVEST_MAX - HARVEST_MIN);
+            Vec3d point = boss.getEntityPos().add(Math.cos(angle) * distance, 0, Math.sin(angle) * distance);
+            if (point.subtract(anchor()).horizontalLength() > WAVE_MAX + 4) continue;
+            if (players.stream().anyMatch(p -> p.getEntityPos().subtract(point).horizontalLength() < WAVE_CLEAR)) continue;
+            Vec3d spot = standable(world, point, .7, 1.5);
+            if (spot != null) harvestSpots.add(spot);
+        }
+    }
+
+    /** Souls claw out of the glowing spots and start their drift toward the ribcage. */
+    private void raiseHarvest(ServerWorld world) {
+        int raised = 0;
+        for (Vec3d spot : harvestSpots) {
+            HarvestSoulEntity risen = new HarvestSoulEntity(ModEntities.HARVEST_SOUL, world);
+            risen.refreshPositionAndAngles(spot.x, spot.y - .6, spot.z, 0, 0);
+            risen.bind(boss);
+            if (!world.spawnEntity(risen)) continue;
+            harvest.add(risen);
+            raised++;
+            debris(world, spot, 1, 12);
+            world.playSound(null, spot.x, spot.y, spot.z, SoundEvents.BLOCK_ROOTED_DIRT_BREAK, SoundCategory.HOSTILE, 1.4f, .6f);
+        }
+        harvestSpots.clear();
+        log.note(world.getTime(), "harvest raised " + raised + " souls");
+    }
+
+    /** A harvested soul reached the ribcage: the colossus drinks it in. */
+    void harvestAbsorbed(ServerWorld world, HarvestSoulEntity absorbed) {
+        float heal = boss.getMaxHealth() * HARVEST_HEAL;
+        boss.heal(heal);
+        Vec3d ribs = ribs();
+        world.spawnParticles(ParticleTypes.SCULK_SOUL, true, false, ribs.x, ribs.y, ribs.z, 14, .5, .5, .5, .04);
+        world.playSound(null, ribs.x, ribs.y, ribs.z, SoundEvents.BLOCK_SCULK_CATALYST_BLOOM, SoundCategory.HOSTILE, 2.5f, .6f);
+        log.note(world.getTime(), String.format("harvested soul absorbed: +%.0f health", heal));
+    }
+
+    void harvestDestroyed(HarvestSoulEntity destroyed, DamageSource source) {
+        log.note(now(), "harvested soul destroyed" + (source.getAttacker() == null ? "" : " by " + source.getAttacker().getName().getString()));
+    }
+
+    /** An action-bar line for everyone in the encounter. */
+    private void announce(ServerWorld world, Text message) {
+        for (ServerPlayerEntity player : world.getPlayers(p -> canDamage(boss, p) && p.squaredDistanceTo(anchor()) <= ENCOUNTER_RANGE * ENCOUNTER_RANGE))
+            player.sendMessage(message, true);
     }
 
     // ── Shared spells and effects ────────────────────────────────────────────
@@ -1201,6 +1770,29 @@ final class NecromancerCombat {
             }
             return false;
         });
+        burns.removeIf(burn -> {
+            if (now >= burn.until()) return true;
+            if (now % 3 == 0) world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, true, false, burn.center().x, burn.center().y + .15, burn.center().z,
+                    3, RAIN_BURN_RADIUS * .5, .05, RAIN_BURN_RADIUS * .5, .01);
+            // Standing in the embers sets anyone alight: the players and the caster's own army alike.
+            if (now % 10 == 0) for (LivingEntity victim : world.getEntitiesByClass(LivingEntity.class, new Box(burn.center(), burn.center()).expand(RAIN_BURN_RADIUS + 1, 2, RAIN_BURN_RADIUS + 1),
+                    e -> rainVictim(e) && inside(e, burn.center(), RAIN_BURN_RADIUS)))
+                if (!victim.isFireImmune()) victim.setOnFireFor(3);
+            return false;
+        });
+    }
+
+    /** A ring of hands breaking the ground around a point; it closes Hands' impact ticks later. */
+    private void handsRing(ServerWorld world, Vec3d center, double radius, long now, boolean colossus) {
+        grasps.add(new Grasp(center, radius, now + Action.HANDS.impact));
+        int models = handsModels(radius);
+        for (int i = 0; i < models; i++) {
+            var hand = new GraspingHandEntity(ModEntities.GRASPING_HAND, world);
+            double angle = i * Math.PI * 2 / models + .15, ring = radius * .7;
+            hand.setup(boss, center.add(Math.cos(angle) * ring, 0, Math.sin(angle) * ring),
+                    (float)Math.toDegrees(angle) + 90, i % 3, colossus ? 1.18f : 1f, i % 2 == 1);
+            if (world.spawnEntity(hand)) handVisuals.add(hand);
+        }
     }
 
     private void detonate(ServerWorld world, Grasp grasp, List<ServerPlayerEntity> caught) {
@@ -1299,6 +1891,8 @@ final class NecromancerCombat {
     private void prune() {
         minions.removeIf(minion -> minion.isRemoved() || !minion.isAlive());
         bolts.removeIf(SoulBoltEntity::isRemoved);
+        fireballs.removeIf(SoulFireballEntity::isRemoved);
+        harvest.removeIf(soul -> soul.isRemoved() || !soul.isAlive());
     }
 
     private void ring(ServerWorld world, Vec3d center, double radius, ParticleEffect effect, int points) {

@@ -19,7 +19,8 @@ contract checks exercise without a world.
 ```
 ROBED     Duel A (100→75%) → Siege 1 (waves 1–2) → crash, exposed → Duel B (75→50%)
           → Siege 2 (waves 3–4) → crash → transformation
-COLOSSUS  swipe / grab / rush and its larger spells; no army
+COLOSSUS  swipe / grab / rush / grave dive / soul harvest and its larger spells; no army
+          → at 25% its soul tears free (repeats until it dies)
 ```
 
 Health is 800 plus 500 per extra participant, grows when players join and never
@@ -61,17 +62,31 @@ first. Bolts and drain need sight; hands and ambush do not.
 
    | Wave | Two players | One player |
    | --- | --- | --- |
-   | 1 | 5 crawlers | 3 crawlers |
-   | 2 | 4 crawlers, 2 archers | 3 crawlers, 1 archer |
-   | 3 | 4 crawlers, 2 archers, 1 brute | 3 crawlers, 1 archer, 1 brute |
-   | 4 | 5 crawlers, 2 archers, 2 brutes | 3 crawlers, 2 archers, 1 brute |
+   | 1 | 6 crawlers | 4 crawlers |
+   | 2 | 5 crawlers, 2 archers | 4 crawlers, 1 archer |
+   | 3 | 5 crawlers, 2 archers, 1 brute | 4 crawlers, 1 archer, 1 brute |
+   | 4 | 6 crawlers, 2 archers, 2 brutes | 5 crawlers, 2 archers, 1 brute |
 
-   Each player beyond two adds 40%, capped at 12 bodies per wave. A cleared wave
-   rests three seconds; a wave that survives 45 seconds is joined by the next.
-3. Crawlers and brutes cannot reach a hovering player, so archers prefer anyone more
+   Each player beyond two adds 40%, capped at 12 bodies per wave. While a wave still
+   stands, a reinforcement crawler claws out 8–14 blocks from a random player every
+   five seconds (two per wave solo, one more per extra player, at most five). A cleared
+   wave rests 1.5 seconds; a wave that survives 25 seconds is joined by the next.
+   Siege bodies are quickened by the caster's soul fire: crawlers move 30% faster (about
+   2.6 blocks a second, faster than a zombie), brutes 15% and archers 10%. Wild night
+   spawns keep their pace.
+3. **Soul Fire Rain.** Three seconds after it perches, and then every four seconds (three
+   in the second siege), it drives its staff down and lobs a volley of blue fireballs:
+   one marker on every player plus one spare (two in the second siege) 3–6 blocks from a
+   random player. Each marker is a soul-fire ring the size of the blast with an inner
+   ring that fills it; the fireball leaves the staff with the marker and lands exactly as
+   it fills, 1.5 seconds later, along a scripted lob that passes the crypt's lid and
+   boughs. The blast deals 10 within 2.5 blocks with knockback and leaves a patch of
+   soul fire for two seconds that sets anyone inside alight. It hits the caster's own
+   army too, so crawlers can be led under a marker.
+4. Crawlers and brutes cannot reach a hovering player, so archers prefer anyone more
    than four blocks above the floor, and after three seconds of hovering the perch
    fires a soul bolt (formed just below the crypt's lid).
-4. When the last wave dies a flare marks the landing near home and it drops from the
+5. When the last wave dies a flare marks the landing near home and it drops from the
    perch. After the first siege it lies **exposed** for six seconds: no casting and
    ×1.5 damage taken. After the second, the crash leads straight into the
    transformation; the landing is chosen with room for the colossus.
@@ -104,8 +119,9 @@ and a roar at 7.1 seconds precedes the return to combat. A save during the
 transformation reloads as the finished colossus. The colossus keeps its phase if
 everyone leaves.
 
-The colossus moves on all fours in a low diagonal crawl (steering, not pathfinding),
-never blinks and raises no army. Its separate knuckles and three-part fingers form spread,
+The colossus moves on all fours in a low diagonal crawl (steering, not pathfinding) at
+about 4.4 blocks a second, just faster than a walking player, never blinks and raises
+no army. Its separate knuckles and three-part fingers form spread,
 curled claws. One hand plants while the other reaches ahead and the opposite hind
 leg pushes; even at rest the hands bear weight. It rears for its spells, the rush windup or a grab, then
 returns to the crawl. Its rush accelerates that four-limbed gait, then a contact
@@ -115,10 +131,30 @@ grab pulls the victim to its jaws for a bite and forward throw:
 | --- | --- |
 | Swipe | A marked frontal arc for 13 damage; stepping out or jumping clears it. |
 | Grab | An articulated hand lifts one player, then slams them for 45% of their health (at most 14). The server follows a wrist socket sampled from the animation and holds the player without mounting, so the camera stays free. Team damage breaks the grip and staggers it. The same player is not grabbed again for 15 seconds. |
-| Rush | A 1.5-second windup: it rears and scrapes the floor while two soul-fire edges mark its lane up to the first wall. Its aim follows the target, then locks for the last 0.4 seconds. The run then steers only 0.75° a tick. Contact grabs one player, bites once for 14 damage after 0.9 seconds, throws them forward at 1.4 seconds, and recovers by 2.2 seconds. Walls stop the run; sidestepping after the lock makes it miss. Teammate damage does not interrupt this sequence. |
+| Rush | Only its body tells the charge: no lane and no roar until it goes. It sinks its chest and coils its hind legs, then rocks its weight from side to side while each forefoot digs into the dirt and its skull stays fixed on the target. The rocking lasts a random 1.2–2 seconds in total, so it cannot be counted. For the last 0.3 seconds it goes still with its jaws clamped as the aim locks, then roars and runs, steering 1.2° a tick. Contact grabs one player, bites once for 14 damage after 0.9 seconds, throws them forward at 1.4 seconds, and recovers by 2.2 seconds. Walls stop the run; sidestepping after the lock makes it miss. Teammate damage does not interrupt this sequence. |
+| Grave Dive | Used when every player stands at least 9 blocks off; it needs no sight. It rears and plunges head first into the ground (shielded from 0.8 seconds, gone by 1.2), then tunnels toward its target at 7.2 blocks a second, faster than a sprint, leaving cracked earth and soul fire along the surface. Beneath the target, or after four seconds, it stops: the ground cracks in a 3.5-block ring for one second, then it bursts out jaws first for 16 damage and throws everyone in the ring into the air. A player who keeps moving through the warning leaves the ring. If nobody is caught it is stuck half out of the ground for 3.5 seconds, taking ×1.5 damage, before it hauls itself free. While underground it cannot be hit or targeted. |
+| Soul Harvest | Every 20 seconds or so (never while its soul is out) it kneels up, draws a breath and at 0.8 seconds screams at the sky, arms swept behind its back (a sculk shriek, a ghast scream and a warden roar; a sonic boom above its skull and a ring of souls rolling out over the ground). The spots it calls, 16–28 blocks away and at least 6 from every player (three souls solo, one more per extra player, at most six), glow with a ring and a low column of soul fire for one second and crack; then the souls claw out of them and drift toward its ribcage at 1.8 blocks a second. Each one that arrives heals 3% of its maximum health. Any hit destroys a soul; interrupting the call raises none. |
 | Spells | Four-skull bolt volleys (jaws kindling first), 5-block hands (both claws strike the floor) and the drain (a sniff and heartbeat). When Hands catches a player, the skeleton rushes the nearest caught player after a 0.5-second windup, then uses the same bite and throw. Only one victim is pursued per cast. Escape the ring before it closes to avoid the combo. |
 
 In full iron armor (15 points) the Hands + bite combo costs about 15.5 of 20 health.
+
+### The caster inside
+
+The first time the colossus reaches a quarter of its health it holds there, rears onto
+its hind legs with its arms thrown wide and convulses; 1.1 seconds later the Necromancer's
+soul tears out of the ribcage (the core there goes dark). The soul is the Soul Bolt skull
+at 2.4× with a crown of soul fire. It hovers 3–6 blocks above the ground and 8–14 blocks
+from the players, glides between vantage points, blinks away (a flare marks the spot half
+a second ahead) every four seconds or when a player comes within 4 blocks, and every three
+seconds alternates a three-bolt volley with a 4-block ring of grasping hands. A faint
+tether of souls runs back to the ribcage.
+
+While the soul is out the body is shielded (hits flash off it) and fights only with its
+arms, the rush and the dive. Hits on the soul wound the boss. Once the soul has taken
+6% of the boss's maximum health (at least 40) it is dragged back along the tether and the
+body collapses onto its chest for five seconds, taking ×1.5 damage, before it pushes
+itself up. Twenty seconds later, if it is still at or below a quarter health, the soul
+tears free again.
 
 One entity and one combined model carry both forms, so health, the boss bar and saving
 stay continuous; the model hides whichever body is inactive. So the boss stays findable in the
@@ -131,11 +167,23 @@ still takes fire damage) it shows small flames and smoke along its frame instead
 The transformed colossus is the fight's only elite; the sieges use the ordinary
 [Hollow undead](hollow-undead.md), where the Hunched Brute is the heavy.
 
-Each tell has its own clip, authored in `v2/animations.py` (`siege_and_windup_clips`): the
+Each tell has its own clip, authored in `v2/animations.py`. `siege_and_windup_clips`: the
 robed `perch_channel` loop, `crash` (kneeling through the exposed window) and `ambush_burst`,
-and the colossus `colossus_rush_windup`, `colossus_cast_bolt` (jaws spit with each skull),
-`colossus_cast_hands` (claws strike the floor at 0.25 seconds, clench as the rings close) and
-`colossus_cast_drain`. The older standalone `roar` clip is no longer used in combat.
+and the colossus `colossus_cast_bolt` (jaws spit with each skull), `colossus_cast_hands`
+(claws strike the floor at 0.25 seconds, clench as the rings close) and `colossus_cast_drain`.
+`second_playtest_clips`: the robed `perch_cast` (the staff hoisted and driven down at each
+volley, chained back into the channel), the charge's `colossus_rush_crouch`, looping
+`colossus_rush_coil` and held `colossus_rush_set`, the dive's `colossus_dive`, `colossus_erupt`,
+looping `colossus_stuck` and `colossus_haul`, and `colossus_split`, `colossus_collapse` and
+`colossus_harvest`. The older standalone `roar` and `raise` clips are no longer used in combat.
+
+The Soul Fire Rain fireball and the harvested souls are GeckoLib models from
+`art/hollow_necromancer/soul_fire/build_art.py`. The fireball is a white-hot core inside a
+cloud of flickering flame blocks with tongues streaming behind; it flies nose first along its
+arc, fully lit. The soul is a rounded, hollow-eyed head with side wisps and a waving tail; it
+swells out of the ground (`rise`), then drifts (`drift`) slightly see-through toward the
+ribcage. The script writes an orbitable review page served by the Soul Bolt server at
+`/.local-previews/soul-fire/`; `--install` and `--check` as elsewhere.
 
 ## Art and verification
 
@@ -178,9 +226,10 @@ darker palette, not native gameplay evidence.
 
 Operator commands: `/summon elementalwands:hollow_necromancer`, then
 `/ew necromancer fight|stop|status|transform|siege`, one-shot robed
-`bolt|hands|drain|blink|shift|ambush`, `wave <1-4>` and, after transforming, colossus
-`swipe|grab|rush` (spells also work). One-shot casts and waves leave the boss passive;
-`siege` starts the fight and the current duel's siege at once.
+`bolt|hands|drain|blink|shift|ambush`, `wave <1-4>`, `rain` (one Soul Fire Rain volley at
+the nearby party) and, after transforming, colossus `swipe|grab|rush|dive|harvest` (spells
+also work) and `split`. One-shot casts, volleys and waves leave the boss passive; `siege`
+and `split` start the fight and the current duel's siege, or the soul split, at once.
 
 `/ew necromancer log on|off` is a tuning aid. Fights that start while it is on record
 every cast, stage and wave, each hit on a player from the boss or its army (before and

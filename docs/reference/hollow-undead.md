@@ -40,6 +40,10 @@ the clip's hit frame, taken from `HollowUndeadClips`:
 The death clip holds the corpse until it settles, instead of vanilla's one-second
 sideways tip. Hurt feedback is the standard red flash.
 
+Bodies the Necromancer raises in a siege are quickened (a speed modifier added when
+they are bound): crawlers +30%, brutes +15%, archers +10%. The walk still plays at
+travel speed, inside the playback clamp.
+
 Walk clips are authored at about chase speed (crawler 1.5, archer 1.8, brute
 1.67 blocks/s; `*_STRIDE` in `HollowUndeadClips`). The controller plays the walk at
 travel speed divided by that stride, clamped to 0.2–2×. A wander plays at about 0.65×,

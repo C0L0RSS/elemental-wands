@@ -19,7 +19,7 @@ public final class NecromancerCommands {
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         var root = CommandManager.literal("necromancer").requires(source -> source.hasPermissionLevel(2));
-        for (String action : new String[]{"fight", "stop", "status", "transform", "siege", "bolt", "hands", "drain", "blink", "shift", "ambush", "swipe", "grab", "rush"})
+        for (String action : new String[]{"fight", "stop", "status", "transform", "siege", "split", "rain", "bolt", "hands", "drain", "blink", "shift", "ambush", "swipe", "grab", "rush", "dive", "harvest"})
             root.then(CommandManager.literal(action).executes(context -> run(context.getSource(), action)));
         root.then(CommandManager.literal("wave").then(CommandManager.argument("number", IntegerArgumentType.integer(1, 4))
                 .executes(context -> wave(context.getSource(), IntegerArgumentType.getInteger(context, "number")))));
@@ -67,6 +67,16 @@ public final class NecromancerCommands {
                 if (!boss.isBossAggressive()) boss.startFight(); // Starting the fight clears pending state, so it comes first.
                 if (!boss.requestSiege()) yield "no siege left to start: it is " + boss.stage().name().toLowerCase() + (boss.isColossus() ? " (colossus)" : "") + ".";
                 yield "starting the current duel's siege: it takes its perch and raises waves. Kill them to bring it down.";
+            }
+            case "split" -> {
+                if (!boss.isColossus()) yield "split needs the colossus; use /ew necromancer transform first.";
+                if (!boss.isBossAggressive()) boss.startFight();
+                if (!boss.requestSplit()) yield "its soul is already out.";
+                yield "its soul tears free after the current action. Deal enough damage to the soul to drag it back.";
+            }
+            case "rain" -> {
+                int markers = boss.testRain(source.getPlayerOrThrow());
+                yield "one Soul Fire Rain volley (" + markers + " markers) at the nearby party, then passive.";
             }
             default -> {
                 Action cast = Action.valueOf(action.toUpperCase());

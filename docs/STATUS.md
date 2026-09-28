@@ -3,19 +3,20 @@
 Reviewed September 28, 2026. This page contains outstanding work, not release history.
 It records known verification limits; it is not a fresh installation receipt.
 
-- **Hollow Necromancer (in progress):** redesigned after the first co-op playtest. The
-  robed fight now alternates duels (blinks, shifts, an ambush from behind, 4-block Grasping
-  Hands followed by that ambush) with two sieges of escalating undead waves while the caster
-  stands on a crypt bough, crashing down exposed after the first and transforming after the
-  second. Every soul bolt now counts, the colossus rush has a 1.5-second windup and lane, and
-  the colossus raises no army. Server fixtures cover the full two-siege flow and phase two;
-  the crypt client fixture shows the perched caster and its soul-fire column from nearby
-  and from the far rim, where fog hides the caster itself.
-  Pending: a solo and co-op Lunar playtest with `/ew necromancer log on` to tune health, wave
-  sizes and damage (the Hands→ambush and Hands→bite combos cost an iron-armored player about
-  three quarters of their health); in-game review of the new siege, ambush and phase-two animations (approved in the workshop); and human review of the art, rush steering and bite/throw timing.
+- **Hollow Necromancer (in progress):** reworked after the first co-op playtest (duels and
+  sieges, heavier telegraphed hits) and again after a solo playtest where phase two felt
+  easier than phase one and the siege waves were easy. Sieges now bring larger waves,
+  reinforcement crawlers, quickened undead and Soul Fire Rain from the perch. The colossus
+  charge tells only through body language with a random windup, and phase two adds Grave
+  Dive, Soul Harvest and the soul split at a quarter health. Server fixtures cover the
+  full two-siege flow with rain, and every phase-two mechanic.
+  Pending: user approval of the new clips (workshop) and the fireball and soul models
+  (`/.local-previews/soul-fire/`), then install and client checks; a solo and co-op Lunar
+  playtest with `/ew necromancer log on` to tune health, wave sizes, rain damage, dive and
+  split timing (the Hands→ambush and Hands→bite combos cost an iron-armored player about
+  three quarters of their health).
 - **Hollow undead:** the crawler, archer and brute form the Necromancer's siege waves
-  and spawn at night. The GeckoLib files are proven to match the approved
+  (quickened there) and spawn at night. The GeckoLib files are proven to match the approved
   preview and the server fixture covers their combat rules. The walks were re-authored
   at chase speed with long strides and play at travel speed, fixing the foot sliding.
   Pending: human Lunar review of how they look and move in game, spawn frequency and balance.

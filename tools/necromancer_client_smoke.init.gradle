@@ -9,6 +9,7 @@ allprojects {
         if (project.hasProperty('rushRecord')) loom.runs.client.vmArg('-Dnecro.rushRecord=true')
         if (project.hasProperty('drainRecord')) loom.runs.client.vmArg('-Dnecro.drainRecord=true')
         if (project.hasProperty('soulBoltRecord')) loom.runs.client.vmArg('-Dnecro.soulRecord=true')
+        if (project.hasProperty('necroMechanics')) loom.runs.client.vmArg('-Dnecro.mechanics=true')
         if (existingAssets) {
             loom.runs.client.vmArg('-Dfabric.dli.config='+new File(smokeRoot,'launch.cfg').absolutePath)
         }

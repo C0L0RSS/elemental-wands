@@ -75,5 +75,14 @@
   "death.attack.necromancer_drain": "%1$s had their life drained by %2$s",
   "death.attack.necromancer_burst": "%1$s was torn apart by %2$s’s soul burst",
   "necromancer.elementalwands.wave": "The dead rise: wave %s",
-  "necromancer.elementalwands.exposed": "The Necromancer has fallen. Strike now!"
+  "necromancer.elementalwands.exposed": "The Necromancer has fallen. Strike now!",
+  "necromancer.elementalwands.stuck": "It is stuck in the earth. Strike now!",
+  "necromancer.elementalwands.soul_free": "The Necromancer’s soul tears free. Strike it down!",
+  "necromancer.elementalwands.soul_back": "The soul is dragged back. The body collapses!",
+  "necromancer.elementalwands.harvest": "Souls drift toward the colossus. Destroy them!",
+  "entity.elementalwands.soul_fireball": "Soul Fireball",
+  "entity.elementalwands.harvest_soul": "Harvested Soul",
+  "entity.elementalwands.necromancer_soul": "Necromancer’s Soul",
+  "death.attack.necromancer_fireball": "%1$s was burned to ash by %2$s’s soul fire",
+  "death.attack.necromancer_erupt": "%1$s was caught by %2$s bursting from the grave"
 }

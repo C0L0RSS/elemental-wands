@@ -16,6 +16,7 @@ import java.util.UUID;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.block.Blocks;
+import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.server.MinecraftServer;
@@ -33,7 +34,7 @@ public final class NecromancerServerSmoke implements ModInitializer {
     private NecromancerEntity boss;
     private float bossBefore;
     private List<UUID> firstRaised = List.of();
-    private boolean sniped;
+    private boolean sniped, rained;
 
     public void onInitialize() {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
@@ -144,6 +145,8 @@ public final class NecromancerServerSmoke implements ModInitializer {
             require(minions.stream().filter(m -> m instanceof HollowCrawlerEntity).count() == expected.crawlers()
                     && minions.stream().filter(m -> m instanceof HollowArcherEntity).count() == expected.archers()
                     && minions.stream().filter(m -> m instanceof HollowBruteEntity).count() == expected.brutes(), "Wave 3 composition wrong: " + minions.size());
+            require(minions.stream().allMatch(m -> m.getAttributeValue(EntityAttributes.MOVEMENT_SPEED) > m.getAttributeBaseValue(EntityAttributes.MOVEMENT_SPEED) + 1e-4),
+                    "Siege bodies were not quickened");
             boss.stopFight();
         }
         if (t == 347) {
@@ -172,8 +175,22 @@ public final class NecromancerServerSmoke implements ModInitializer {
             require(boss.distanceTo(target) >= NecromancerRules.SHIFT_CLEAR - .5 && boss.distanceTo(second) >= NecromancerRules.SHIFT_CLEAR - .5, "Shift landed beside a player");
             require(at.subtract(.5, 100, .5).horizontalLength() <= NecromancerRules.BLINK_LEASH + .01, "Shift left the leash");
         }
-        // Player spells damage the boss as any WandBoss.
+        // Soul Fire Rain: a marker on each player; the one who stays is blasted, the one who leaves is spared.
         if (t == 395) {
+            target.setPosition(10.5, 100, .5); second.setPosition(.5, 100, 20.5); heal(target); heal(second);
+            boss.refreshPositionAndAngles(.5, 100, .5, 0, 0);
+            require(boss.testRain(target) == NecromancerRules.rainMarkers(2, Stage.SIEGE_1), "Rain volley size wrong");
+            require(count(w, SoulFireballEntity.class) == NecromancerRules.rainMarkers(2, Stage.SIEGE_1), "Rain fireballs missing");
+        }
+        if (t == 400) second.setPosition(40.5, 100, 40.5);
+        if (t == 395 + NecromancerRules.RAIN_WARNING + 3) {
+            require(target.getHealth() <= 20 - NecromancerRules.RAIN_DAMAGE + .01 && target.getHealth() >= 20 - NecromancerRules.RAIN_DAMAGE - 1.01,
+                    "Soul fireball missed the player under its marker: " + target.getHealth());
+            require(second.getHealth() == 20, "Soul fireball hit a player who left its marker");
+            require(count(w, SoulFireballEntity.class) == 0, "Soul fireballs outlived their landing");
+        }
+        // Player spells damage the boss as any WandBoss.
+        if (t == 440) {
             boss.setHealth(boss.getMaxHealth()); // The drain check left it below the first duel's gate.
             float health = boss.getHealth();
             require(SpellCombat.damage(boss, w, w.getDamageSources().playerAttack(target), 10, target, WizardAffinity.FIRE), "Wand damage rejected");
@@ -189,6 +206,9 @@ public final class NecromancerServerSmoke implements ModInitializer {
 
     /** The full robed fight in fight mode: two sieges with their waves, the exposed crash and the transformation. */
     private void siegeFlow(ServerWorld w, int t, int s) throws Exception {
+        // The rain and the army keep hitting both players; this run checks flow, not survival.
+        if (siege >= 2) for (var p : List.of(target, second)) if (p.getHealth() < 10) heal(p);
+        if (count(w, SoulFireballEntity.class) > 0) rained = true;
         switch (siege) {
             case 1 -> { // Engage, then burst: the first duel holds at 75% and starts the siege.
                 if (s == 25) {
@@ -210,7 +230,7 @@ public final class NecromancerServerSmoke implements ModInitializer {
             case 2 -> { // Wave 1 (duo), a perch bolt for the hovering player, then clear it.
                 var minions = minions(w);
                 if (target.getHealth() < 12) heal(target); // Risen crawlers reach the grounded player meanwhile.
-                if (!sniped && second.getHealth() < 20) sniped = true;
+                if (!sniped && count(w, SoulBoltEntity.class) > 0) sniped = true; // Only the perch shoots bolts in a siege.
                 if (s == 50) require(minions.size() == NecromancerRules.wave(1, 2).total(), "Siege wave 1 size wrong: " + minions.size());
                 if (s == 50) require(minions.stream().allMatch(m -> m.squaredDistanceTo(boss) > 1), "Wave bodies rose on the perch");
                 if (s >= 110 && sniped) { minions.forEach(m -> m.kill(w)); heal(second); second.setPosition(.5, 100, 14.5); next(); }
@@ -226,6 +246,7 @@ public final class NecromancerServerSmoke implements ModInitializer {
                 require(s < NecromancerRules.WAVE_BREATHER + 120, "Siege wave 2 never filled: " + minions.size() + ", " + boss.status());
             }
             case 4 -> { // The crash: back on the ground in the second duel, exposed to extra damage.
+                require(rained, "No Soul Fire Rain fell during the siege");
                 if (boss.stage() == Stage.DUEL_B && boss.isOnGround() && !boss.hasNoGravity()) {
                     require(Math.abs(boss.getY() - 100) < .1, "Caster did not land on the floor: " + boss.getY());
                     float health = boss.getHealth();
@@ -258,7 +279,7 @@ public final class NecromancerServerSmoke implements ModInitializer {
                     require(boss.stage() == Stage.DONE && minions(w).isEmpty(), "Transformation began with the siege unfinished");
                     boss.stopFight();
                     require(!boss.hasNoGravity(), "Stopped caster kept its perch");
-                    Files.writeString(Path.of("NECROMANCER_PASSED.txt"), "Hollow Necromancer passed: cover stops soul bolts; every skull of an open volley lands; drain damages, heals within its cap, is tracked for clients and breaks on lost sight; wide grasping hands root a player who stays, spare one who steps out and are followed by an ambush burst from behind; siege waves rise on the floor away from players with the duo compositions, share the caster's side, cannot hurt it, finish rising with AI, do not burn at noon and dissolve on stop; blink escapes within the leash and leaves a curse; shift repositions away from everyone; wand damage applies; the fight gates at 75% into a shielded perched siege whose hovering target draws a perch bolt, waves 1-2 advance and a cleared siege crashes the caster down exposed; half health starts the second siege whose waves 3-4 bring brutes, and clearing it begins the transformation.\n");
+                    Files.writeString(Path.of("NECROMANCER_PASSED.txt"), "Hollow Necromancer passed: cover stops soul bolts; every skull of an open volley lands; drain damages, heals within its cap, is tracked for clients and breaks on lost sight; wide grasping hands root a player who stays, spare one who steps out and are followed by an ambush burst from behind; siege waves rise on the floor away from players with the duo compositions, share the caster's side, cannot hurt it, finish rising with AI, do not burn at noon and dissolve on stop; blink escapes within the leash and leaves a curse; shift repositions away from everyone; wand damage applies; siege bodies are quickened; a Soul Fire Rain volley blasts the player who stays under a marker and spares one who leaves; the fight gates at 75% into a shielded perched siege where fireballs rain and a hovering target draws a perch bolt, waves 1-2 advance and a cleared siege crashes the caster down exposed; half health starts the second siege whose waves 3-4 bring brutes, and clearing it begins the transformation.\n");
                     w.getServer().stop(false);
                 }
                 require(s < 200, "Second siege never ended in the transformation: " + boss.status());
@@ -273,7 +294,7 @@ public final class NecromancerServerSmoke implements ModInitializer {
         var w = (ServerWorld)boss.getEntityWorld();
         for (int y = 100; y <= 103; y++) for (int z = -3; z <= 3; z++) w.setBlockState(new BlockPos(x, y, z), block.getDefaultState());
     }
-    private static void heal(ServerPlayerEntity player) { player.setHealth(20); player.timeUntilRegen = 0; player.clearStatusEffects(); }
+    private static void heal(ServerPlayerEntity player) { player.setHealth(20); player.timeUntilRegen = 0; player.clearStatusEffects(); player.extinguish(); }
     private static List<MobEntity> minions(ServerWorld w) { return w.getEntitiesByClass(MobEntity.class, AREA, e -> e instanceof NecromancerMinion && e.isAlive()); }
     private static int count(ServerWorld w, Class<? extends net.minecraft.entity.Entity> type) { return w.getEntitiesByClass(type, AREA, e -> !e.isRemoved()).size(); }
     private static ServerPlayerEntity player(MinecraftServer s, String name, double x, double y, double z) throws Exception {

@@ -26,7 +26,10 @@ public final class NecromancerPhaseSmoke implements ModInitializer {
     private ServerPlayerEntity target, second;
     private NecromancerEntity boss;
     private Vec3d origin, pinned;
-    private boolean caughtRush, thrownRush;
+    private boolean caughtRush, thrownRush, sidestepped, erupted, stepped;
+    private int eruptedAt;
+    private float bossBefore;
+    private NecromancerSoulEntity freed;
 
     public void onInitialize() {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
@@ -175,7 +178,8 @@ public final class NecromancerPhaseSmoke implements ModInitializer {
         }
         // Sidestep after commitment: limited steering cannot snap onto a player behind it.
         if (stage == 7) {
-            if (g == NecromancerRules.RUSH_WARNING + 1) target.setPosition(10.5, 100, -4.5); // After the aim locks.
+            // Its warning is random: step behind it once it has locked on and launched.
+            if (!sidestepped && boss.getZ() > 1.2) { target.setPosition(10.5, 100, -4.5); sidestepped = true; }
             require(boss.getGrabbed() == -1, "Dodged rush still grabbed");
             if (g == 60) {
                 require(target.getHealth() == 20, "Missed rush dealt damage");
@@ -228,8 +232,109 @@ public final class NecromancerPhaseSmoke implements ModInitializer {
         if (stage == 11) require(g < 80, "Cancellation test never grabbed");
         if (stage == 12 && g == 5) {
             require(target.getEntityPos().distanceTo(pinned) < .01 && target.getHealth() == 20, "Cancelled rush still pinned or bit");
-            Files.writeString(Path.of("NECROMANCER_PASSED.txt"), "Phase two passed: transformation and save, original grab/slam and teammate rescue, swipe; grounded rush, single bite, throw, no team interrupt, sidestep, wall collision, hands visuals and nearest caught target combo against iron armor, escape, expiry and cancellation.\n");
-            server.stop(false);
+            // Grave Dive on a player standing still: it tunnels under them and erupts.
+            boss.stopFight(); boss.refreshPositionAndAngles(.5, 100, .5, 0, 0);
+            target.setPosition(.5, 100, 16.5); target.setVelocity(Vec3d.ZERO); heal(target); second.setPosition(30.5, 100, 30.5);
+            boss.testAction(target, Action.DIVE); mark = t; stage = 13; erupted = false;
+        }
+        if (stage == 13) {
+            if (g == NecromancerRules.DIVE_SINK + 2) {
+                require(boss.isBuried() && boss.status().contains("dive tunnel"), "Dive did not go underground: " + boss.status());
+                float health = boss.getHealth();
+                require(!boss.damage(w, w.getDamageSources().playerAttack(target), 20) && boss.getHealth() == health, "Buried colossus took damage");
+                require(!boss.canHit() && !boss.canBeHitByProjectile(), "Buried colossus can still be targeted");
+            }
+            if (!erupted && g > NecromancerRules.DIVE_SINK + 2 && !boss.isBuried()) { erupted = true; eruptedAt = g; }
+            if (erupted && g == eruptedAt + 2) {
+                require(Math.abs(target.getHealth() - (20 - NecromancerRules.DIVE_DAMAGE)) < .01, "Eruption missed a player standing still: " + target.getHealth());
+                require(target.getVelocity().y > .5, "Eruption did not throw the player");
+                require(boss.getEntityPos().distanceTo(new Vec3d(.5, 100, 16.5)) < NecromancerRules.DIVE_CATCH + 3.2, "Dive surfaced away from its target: " + boss.getEntityPos());
+            }
+            if (erupted && g == eruptedAt + NecromancerRules.DIVE_ERUPT + 2) require(!boss.status().contains("stuck"), "A landed dive left it stuck");
+            if (erupted && g == eruptedAt + NecromancerRules.DIVE_ERUPT + NecromancerRules.DIVE_HAUL + 4) {
+                require(boss.status().contains("idle") && !boss.noClip && !boss.hasNoGravity() && Math.abs(boss.getY() - 100) < .1,
+                        "Dive did not finish on its feet: " + boss.status() + " " + boss.getEntityPos());
+                boss.refreshPositionAndAngles(.5, 100, .5, 0, 0);
+                target.setPosition(.5, 100, 16.5); target.setVelocity(Vec3d.ZERO); heal(target);
+                boss.testAction(target, Action.DIVE); mark = t; stage = 14; erupted = stepped = false;
+            }
+            require(g < 220, "Dive never finished: " + boss.status());
+        }
+        // A player who keeps moving through the crack warning leaves it stuck and exposed.
+        if (stage == 14) {
+            if (!stepped && boss.status().contains("dive warn")) { target.setPosition(target.getX() + 8, 100, target.getZ()); stepped = true; }
+            if (stepped && !erupted && !boss.isBuried()) { erupted = true; eruptedAt = g; }
+            if (erupted && g == eruptedAt + NecromancerRules.DIVE_ERUPT + 3) {
+                require(target.getHealth() == 20, "A dodged eruption dealt damage");
+                require(boss.status().contains("dive stuck"), "A missed dive did not leave it stuck: " + boss.status());
+                float health = boss.getHealth();
+                require(boss.damage(w, w.getDamageSources().playerAttack(target), 10), "Stuck colossus rejected damage");
+                require(Math.abs(health - boss.getHealth() - 10 * NecromancerRules.EXPOSED_MULTIPLIER) < .01, "Stuck colossus took no extra damage");
+                boss.stopFight();
+                require(!boss.status().contains("dive") && !boss.noClip, "Stopping mid-dive left it in the ground");
+                // Soul Harvest: souls rise away from the players; a hit destroys one, one that arrives heals.
+                boss.refreshPositionAndAngles(.5, 100, .5, 0, 0);
+                target.setPosition(.5, 100, 10.5); second.setPosition(10.5, 100, 20.5); heal(target); heal(second);
+                boss.testAction(target, Action.HARVEST); mark = t; stage = 15;
+            }
+            require(g < 220, "Dodged dive never erupted: " + boss.status());
+        }
+        if (stage == 15) {
+            if (g == NecromancerRules.HARVEST_SCREAM + 3)
+                require(w.getEntitiesByClass(HarvestSoulEntity.class, boss.getBoundingBox().expand(40), e -> true).isEmpty(),
+                        "Souls rose before the called spots finished glowing");
+            if (g == NecromancerRules.HARVEST_SCREAM + NecromancerRules.HARVEST_GLOW + 3) {
+                var souls = w.getEntitiesByClass(HarvestSoulEntity.class, boss.getBoundingBox().expand(40), e -> e.isAlive());
+                require(souls.size() == NecromancerRules.harvestSouls(2), "Harvest raised " + souls.size() + " souls");
+                require(souls.stream().allMatch(soul -> soul.distanceTo(target) >= NecromancerRules.WAVE_CLEAR - 1 && soul.distanceTo(second) >= NecromancerRules.WAVE_CLEAR - 1),
+                        "A harvested soul rose beside a player");
+                var hit = souls.getFirst();
+                require(SpellCombat.damage(hit, w, w.getDamageSources().playerAttack(target), 5, target, WizardAffinity.FIRE) && hit.isRemoved(), "A harvested soul survived a hit");
+                boss.setHealth(boss.getMaxHealth() * .6f); bossBefore = boss.getHealth();
+                var arriving = souls.get(1);
+                arriving.setPosition(boss.getX(), boss.getY() + 2.6, boss.getZ());
+            }
+            if (g == NecromancerRules.HARVEST_SCREAM + NecromancerRules.HARVEST_GLOW + NecromancerRules.HARVEST_RISE + 4) {
+                require(Math.abs(boss.getHealth() - bossBefore - boss.getMaxHealth() * NecromancerRules.HARVEST_HEAL) < .01,
+                        "An absorbed soul did not heal the colossus: " + (boss.getHealth() - bossBefore));
+                boss.stopFight();
+                require(w.getEntitiesByClass(HarvestSoulEntity.class, boss.getBoundingBox().expand(40), e -> !e.isRemoved()).isEmpty(), "Harvested souls outlived the encounter");
+                // The caster inside: fight mode, burst to a quarter health.
+                boss.refreshPositionAndAngles(.5, 100, .5, 0, 0);
+                target.setPosition(.5, 100, 12.5); second.setPosition(8.5, 100, 12.5); heal(target); heal(second);
+                boss.startFight(); mark = t; stage = 16;
+                return; // The split's clock starts next tick.
+            }
+        }
+        if (stage == 16) {
+            for (var p : List.of(target, second)) if (p.getHealth() < 10) heal(p);
+            int release = 3 + NecromancerRules.SPLIT_RELEASE;
+            if (g == 2) {
+                SpellCombat.damage(boss, w, w.getDamageSources().playerAttack(target), 5000, target, WizardAffinity.FIRE);
+                require(Math.abs(boss.getHealth() - boss.getMaxHealth() * NecromancerRules.SPLIT_GATE) < .01, "Burst skipped the soul split: " + boss.getHealth());
+            }
+            if (g == 4) require(boss.status().contains("soul tearing free"), "Quarter health did not free the soul: " + boss.status());
+            if (g == release + 3) {
+                freed = w.getEntitiesByClass(NecromancerSoulEntity.class, boss.getBoundingBox().expand(20), e -> e.isAlive()).stream().findFirst().orElse(null);
+                require(freed != null && boss.isSplit(), "The soul did not tear free: " + boss.status());
+                float health = boss.getHealth();
+                require(!boss.damage(w, w.getDamageSources().playerAttack(target), 20) && boss.getHealth() == health, "The body took damage while its soul was out");
+                require(freed.damage(w, w.getDamageSources().playerAttack(target), 30)
+                        && Math.abs(health - 30 - boss.getHealth()) < .01, "A hit on the soul did not wound the boss: " + (health - boss.getHealth()));
+                require(boss.isSplit(), "One hit dragged the soul back");
+            }
+            if (g == release + 16) {
+                require(SpellCombat.damage(freed, w, w.getDamageSources().playerAttack(second), 60, second, WizardAffinity.FIRE), "Second soul hit rejected");
+            }
+            if (g == release + 16 + NecromancerRules.SOUL_RETURN + 3) {
+                require(freed.isRemoved() && !boss.isSplit() && boss.status().contains("collapsed"), "Knocked-down soul did not collapse the body: " + boss.status());
+                float health = boss.getHealth();
+                require(boss.damage(w, w.getDamageSources().playerAttack(target), 10)
+                        && Math.abs(health - boss.getHealth() - 10 * NecromancerRules.EXPOSED_MULTIPLIER) < .01, "The collapsed body took no extra damage");
+                boss.stopFight();
+                Files.writeString(Path.of("NECROMANCER_PASSED.txt"), "Phase two passed: transformation and save, original grab/slam and teammate rescue, swipe; grounded rush with a random windup, single bite, throw, no team interrupt, sidestep, wall collision, hands visuals and nearest caught target combo against iron armor, escape, expiry and cancellation; grave dive shielded underground, erupting under a still player and stuck, exposed after a dodge, cancelled safely; soul harvest raised away from players, destroyed by a hit, healing on arrival and cleared on stop; the soul split at a quarter health shields the body, passes soul hits to the boss and collapses it exposed when knocked down.\n");
+                server.stop(false);
+            }
         }
     }
 
@@ -250,7 +355,7 @@ public final class NecromancerPhaseSmoke implements ModInitializer {
     private static void armor(ServerPlayerEntity player, boolean on) {
         player.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.ARMOR).setBaseValue(on ? 15 : 0);
     }
-    private static void heal(ServerPlayerEntity player) { player.setHealth(20); player.timeUntilRegen = 0; player.clearStatusEffects(); player.setVelocity(Vec3d.ZERO); }
+    private static void heal(ServerPlayerEntity player) { player.setHealth(20); player.timeUntilRegen = 0; player.clearStatusEffects(); player.extinguish(); player.setVelocity(Vec3d.ZERO); }
     private static ServerPlayerEntity player(MinecraftServer s, String name, double x, double y, double z) throws Exception {
         var f = com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player", MinecraftServer.class, UUID.class, String.class, double.class, double.class, double.class);
         f.setAccessible(true);

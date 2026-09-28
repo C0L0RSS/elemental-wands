@@ -552,3 +552,5 @@ switchVersion(params.get('version') || 'candidate').then(() => {
   dirty = true;
 }).catch(err => fail(err.message));
 requestAnimationFrame(frame);
+// Scripted review (contact sheets from the console or automation): the viewer's own state and renderer.
+window.workshop = {state, draw, setClip, syncPlay, canvas};

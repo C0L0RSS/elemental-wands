@@ -7,11 +7,11 @@ import software.bernie.geckolib.renderer.base.GeoRenderState;
 import java.util.HashMap;
 import java.util.Map;
 
-public class NecromancerRenderState extends LivingEntityRenderState implements GeoRenderState {
+/** The freed soul: a living render state so hits flash it red. */
+public class NecromancerSoulRenderState extends LivingEntityRenderState implements GeoRenderState {
 
     private final Map<DataTicket<?>, Object> geckolibData = new HashMap<>();
-    public boolean colossus, split, buried;
-    public float transformTime = -1;
+    public float yaw, pitch;
 
     @Override
     public <D> void addGeckolibData(DataTicket<D> ticket, D data) {

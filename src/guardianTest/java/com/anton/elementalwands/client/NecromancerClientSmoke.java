@@ -37,6 +37,12 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
     private boolean sawRushGrip, sawHandGrip, sawHandModels;
     private final boolean soulRecord = Boolean.getBoolean("necro.soulRecord");
     private final boolean drainRecord = Boolean.getBoolean("necro.drainRecord");
+    private final boolean mechanics = Boolean.getBoolean("necro.mechanics");
+    private volatile UUID target;
+    private volatile int warnAt = -1, eruptAt = -1;
+    private volatile boolean sawFireball, sawSoul, sawHarvest;
+    private volatile String serverFireballs = "not cast";
+    private int mechanicsTick;
     private boolean sawDrain, sawDrainClear;
     private final boolean record = Boolean.getBoolean("necro.record") || soulRecord || rushRecord || drainRecord;
     private boolean sawSoulFlight, sawSoulBite;
@@ -95,6 +101,7 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
             c.setScreen(null); WandWelcome.reset();
             c.options.hudHidden = true;
             if (drainRecord) { drainScene(c, t); return; }
+            if (mechanics) { mechanicsScene(c, t); return; }
             if (soulRecord) { soulScene(c, t); return; }
             if (rushRecord) { rushScene(c, t); return; }
             if (t < 40) look(c, 0, -5);
@@ -398,6 +405,151 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
             Files.writeString(Path.of("NECRO_PASSED.txt"), "Soul Bolt native client passed: custom GeckoLib renderer, moving flight, synchronized stationary wall bite, expiry; 160 frames at 20 fps. Human Lunar review pending.\n");
             done = true; c.scheduleStop();
         }
+    }
+
+    /**
+     * Second-playtest mechanics from a side camera: a Soul Fire Rain volley, the colossus charge
+     * windup, a dodged Grave Dive, the soul split and a Soul Harvest, against a scripted player.
+     */
+    private void mechanicsScene(MinecraftClient c, int tick) throws Exception {
+        var server = c.getServer();
+        var observer = c.player.getUuid();
+        // The scene's clock starts once the scripted player exists on the server.
+        int t = target == null ? 0 : ++mechanicsTick;
+        if (tick == 1) server.execute(() -> {
+            try {
+                var boss = (NecromancerEntity)server.getOverworld().getEntity(bossId);
+                boss.refreshPositionAndAngles(.5, floor, 4.5, 0, 0); boss.setBodyYaw(0);
+                var f = com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player", net.minecraft.server.MinecraftServer.class,
+                        UUID.class, String.class, double.class, double.class, double.class);
+                f.setAccessible(true);
+                var victim = (net.minecraft.server.network.ServerPlayerEntity)f.invoke(null, server, UUID.randomUUID(), "Target", .5, (double)floor, 14.5);
+                victim.changeGameMode(GameMode.SURVIVAL); victim.setNoGravity(true);
+                var watcher = server.getPlayerManager().getPlayer(observer);
+                watcher.networkHandler.sendPacket(net.minecraft.network.packet.s2c.play.PlayerListS2CPacket.entryFromPlayer(java.util.List.of(victim)));
+                watcher.networkHandler.sendPacket(new net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket(victim.getId(), victim.getUuid(), victim.getX(), victim.getY(), victim.getZ(), victim.getPitch(), victim.getYaw(), victim.getType(), 0, victim.getVelocity(), victim.getHeadYaw()));
+                watcher.changeGameMode(GameMode.SPECTATOR);
+                victim.setLoaded(true); victim.onTeleportationDone(); victim.getHungerManager().setFoodLevel(10);
+                target = victim.getUuid();
+                watcher.networkHandler.requestTeleport(-11.5, floor + 3, 9.5, -90, 12);
+            } catch (Throwable e) { serverFailure = e.toString(); }
+        });
+        if (t == 0) return;
+        // The scripted player only has to stand in for a party: keep it alive and in place.
+        server.execute(() -> {
+            var victim = server.getPlayerManager().getPlayer(target);
+            if (victim != null && victim.getHealth() < 12) { victim.setHealth(20); victim.extinguish(); }
+        });
+        NecromancerEntity boss = boss(c);
+        // Soul Fire Rain: the robed caster lobs the model fireball, trailing flames, onto its marker.
+        if (t == 5) server.execute(() -> {
+            try {
+                var w = server.getOverworld();
+                int markers = ((NecromancerEntity)w.getEntity(bossId)).testRain(server.getPlayerManager().getPlayer(target));
+                serverFireballs = markers + " markers, " + w.getEntitiesByClass(com.anton.elementalwands.entity.necromancer.SoulFireballEntity.class,
+                        new net.minecraft.util.math.Box(-40, floor - 10, -40, 40, floor + 30, 40), e -> true).size() + " fireballs spawned";
+            } catch (Throwable e) { serverFailure = e.toString(); }
+        });
+        if (t == 12) server.execute(() -> serverFireballs += ", " + server.getOverworld().getEntitiesByClass(com.anton.elementalwands.entity.necromancer.SoulFireballEntity.class,
+                new net.minecraft.util.math.Box(-40, floor - 10, -40, 40, floor + 30, 40), e -> true).size() + " alive at tick 12");
+        if (t > 5 && t < 50) lookAt(c, new net.minecraft.util.math.Vec3d(.5, floor + 1.5, 9.5));
+        if (t >= 8 && t < 30) for (var e : c.world.getEntities())
+            if (e instanceof com.anton.elementalwands.entity.necromancer.SoulFireballEntity) {
+                require((Object)c.getEntityRenderDispatcher().getRenderer(e) instanceof com.anton.elementalwands.client.renderer.SoulFireballRenderer, "Fireball uses the wrong renderer");
+                sawFireball = true;
+            }
+        if (t == 14) shot(c, "mechanics-rain-launch.png");
+        if (t == 24) shot(c, "mechanics-rain-flight.png");
+        if (t == 36) shot(c, "mechanics-rain-landing.png");
+        if (t == 50) { require(sawFireball, "No Soul Fire Rain fireball reached the client (server: " + serverFireballs + ")"); server.execute(() -> ((NecromancerEntity)server.getOverworld().getEntity(bossId)).requestTransform()); }
+        if (t > 50 && t < 230) lookAtBoss(c);
+        // The charge windup: crouch, then the rocking coil.
+        if (t == 230) cast(server, target, Action.RUSH);
+        if (t > 230 && t < 290) lookAtBoss(c);
+        if (t == 238) shot(c, "mechanics-rush-crouch.png");
+        if (t == 248) shot(c, "mechanics-rush-coil-a.png");
+        if (t == 256) shot(c, "mechanics-rush-coil-b.png");
+        // Grave Dive: the target steps out as the ground cracks, so it ends stuck.
+        if (t == 300) server.execute(() -> {
+            var b = (NecromancerEntity)server.getOverworld().getEntity(bossId);
+            b.stopFight(); b.refreshPositionAndAngles(.5, floor, 1.5, 0, 0); b.setBodyYaw(0);
+            server.getPlayerManager().getPlayer(target).networkHandler.requestTeleport(.5, floor, 15.5, 180, 0);
+        });
+        if (t == 304) cast(server, target, Action.DIVE);
+        if (t > 300 && t < 470) lookAt(c, boss == null ? new net.minecraft.util.math.Vec3d(.5, floor, 8) : boss.getEntityPos().add(0, 1.2, 0));
+        if (t == 314) shot(c, "mechanics-dive-rear.png");
+        if (t == 322) shot(c, "mechanics-dive-plunge.png");
+        if (t == 345) shot(c, "mechanics-dive-tunnel.png");
+        if (t > 304 && warnAt < 0) server.execute(() -> {
+            var b = (NecromancerEntity)server.getOverworld().getEntity(bossId);
+            if (warnAt < 0 && b.status().contains("dive warn")) {
+                warnAt = scene;
+                var victim = server.getPlayerManager().getPlayer(target);
+                victim.networkHandler.requestTeleport(victim.getX() + 8, floor, victim.getZ(), 180, 0);
+            }
+        });
+        if (warnAt > 0 && eruptAt < 0 && t > warnAt) server.execute(() -> {
+            if (eruptAt < 0 && ((NecromancerEntity)server.getOverworld().getEntity(bossId)).status().contains("dive erupt")) eruptAt = scene;
+        });
+        if (warnAt > 0 && t == warnAt + 12) shot(c, "mechanics-dive-cracks.png");
+        if (eruptAt > 0 && t == eruptAt + 3) shot(c, "mechanics-dive-erupt.png");
+        if (eruptAt > 0 && t == eruptAt + 10) shot(c, "mechanics-dive-burst.png");
+        if (eruptAt > 0 && t == eruptAt + 40) {
+            require(boss != null && !boss.isBuried(), "Client still hides the colossus after the eruption");
+            shot(c, "mechanics-dive-stuck.png");
+        }
+        if (t == 470) require(warnAt > 0 && eruptAt > 0, "The dive never cracked the ground or erupted: warn " + warnAt + ", erupt " + eruptAt);
+        // The soul split: in fight mode, the soul tears out of the ribcage and hovers.
+        if (t == 475) server.execute(() -> {
+            var b = (NecromancerEntity)server.getOverworld().getEntity(bossId);
+            b.stopFight(); b.refreshPositionAndAngles(.5, floor, 4.5, 0, 0); b.setBodyYaw(0);
+            server.getPlayerManager().getPlayer(target).networkHandler.requestTeleport(.5, floor, 16.5, 180, 0);
+            b.startFight(); b.requestSplit();
+        });
+        if (t > 475 && t < 560) lookAt(c, boss == null ? new net.minecraft.util.math.Vec3d(.5, floor + 2, 6) : boss.getEntityPos().add(0, 3, 2));
+        if (t == 490) shot(c, "mechanics-split-rear.png");
+        if (t == 500) shot(c, "mechanics-split-release.png");
+        for (var e : c.world.getEntities())
+            if (e instanceof com.anton.elementalwands.entity.necromancer.NecromancerSoulEntity) {
+                require((Object)c.getEntityRenderDispatcher().getRenderer(e) instanceof com.anton.elementalwands.client.renderer.NecromancerSoulRenderer, "Soul uses the wrong renderer");
+                sawSoul = true;
+                if (t == 520 || t == 545) {
+                    lookAt(c, e.getEntityPos());
+                    shot(c, "mechanics-soul-" + t + ".png");
+                }
+            }
+        if (t == 555) require(sawSoul && boss != null && boss.isSplit(), "The freed soul never reached the client");
+        // Soul Harvest: souls claw out of the ground and drift toward the ribcage.
+        if (t == 560) server.execute(() -> {
+            var b = (NecromancerEntity)server.getOverworld().getEntity(bossId);
+            b.stopFight(); b.refreshPositionAndAngles(.5, floor, 4.5, 0, 0);
+        });
+        // At night, like the dark crypt, so the glowing spots show as they will in the fight.
+        if (t == 561) server.execute(() -> {
+            server.getOverworld().setTimeOfDay(18000);
+            server.getPlayerManager().getPlayer(observer).networkHandler.requestTeleport(-14.5, floor + 16, -10.5, -45, 40);
+        });
+        if (t == 563) cast(server, target, Action.HARVEST);
+        if (t > 563) lookAt(c, new net.minecraft.util.math.Vec3d(.5, floor, 6));
+        if (t >= 590) for (var e : c.world.getEntities())
+            if (e instanceof com.anton.elementalwands.entity.necromancer.HarvestSoulEntity) {
+                require((Object)c.getEntityRenderDispatcher().getRenderer(e) instanceof com.anton.elementalwands.client.renderer.HarvestSoulRenderer, "Soul uses the wrong renderer");
+                sawHarvest = true;
+            }
+        if (t == 581) shot(c, "mechanics-harvest-scream.png");
+        if (t == 592) shot(c, "mechanics-harvest-glow.png");
+        if (t == 606) shot(c, "mechanics-harvest-rise.png");
+        if (t == 645) shot(c, "mechanics-harvest-drift.png");
+        if (t == 660) {
+            require(sawHarvest, "No harvested soul reached the client");
+            Files.writeString(Path.of("NECRO_PASSED.txt"), "Hollow Necromancer second-playtest mechanics passed in the native client: model fireball rain, colossus charge crouch and coil, grave dive rear/plunge/tunnel/cracks/eruption/stuck, the soul split with the freed soul rendered, and a soul harvest with rendered souls; screenshots for visual review.\n");
+            done = true; c.scheduleStop();
+        }
+    }
+
+    private static void lookAt(MinecraftClient c, net.minecraft.util.math.Vec3d point) {
+        var delta = point.subtract(c.player.getEyePos());
+        look(c, (float)Math.toDegrees(Math.atan2(-delta.x, delta.z)), (float)-Math.toDegrees(Math.atan2(delta.y, delta.horizontalLength())));
     }
 
     private void cast(net.minecraft.server.MinecraftServer server, UUID player, Action action) {

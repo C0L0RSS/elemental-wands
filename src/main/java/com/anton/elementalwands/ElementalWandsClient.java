@@ -109,6 +109,9 @@ public class ElementalWandsClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.HOLLOW_NECROMANCER, com.anton.elementalwands.client.renderer.NecromancerRenderer::new);
         EntityRendererRegistry.register(ModEntities.SOUL_BOLT, com.anton.elementalwands.client.renderer.SoulBoltRenderer::new);
         EntityRendererRegistry.register(ModEntities.GRASPING_HAND, com.anton.elementalwands.client.renderer.GraspingHandRenderer::new);
+        EntityRendererRegistry.register(ModEntities.SOUL_FIREBALL, com.anton.elementalwands.client.renderer.SoulFireballRenderer::new);
+        EntityRendererRegistry.register(ModEntities.HARVEST_SOUL, com.anton.elementalwands.client.renderer.HarvestSoulRenderer::new);
+        EntityRendererRegistry.register(ModEntities.NECROMANCER_SOUL, com.anton.elementalwands.client.renderer.NecromancerSoulRenderer::new);
         EntityRendererRegistry.register(ModEntities.HOLLOW_CRAWLER, context -> new com.anton.elementalwands.client.renderer.HollowUndeadRenderer<>(context, "hollow_crawler", .6f));
         EntityRendererRegistry.register(ModEntities.HOLLOW_ARCHER, context -> new com.anton.elementalwands.client.renderer.HollowUndeadRenderer<>(context, "hollow_archer", .4f));
         EntityRendererRegistry.register(ModEntities.HOLLOW_BRUTE, context -> new com.anton.elementalwands.client.renderer.HollowUndeadRenderer<>(context, "hollow_brute", .6f));

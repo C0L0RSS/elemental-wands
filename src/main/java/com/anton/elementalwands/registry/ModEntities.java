@@ -249,6 +249,27 @@ public final class ModEntities {
                         .dimensions(EntityDimensions.fixed(.5f, .5f)).trackRangeBlocks(96).trackedUpdateRate(1).disableSaving()
                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "grasping_hand"))));
 
+        public static final EntityType<com.anton.elementalwands.entity.necromancer.SoulFireballEntity> SOUL_FIREBALL = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "soul_fireball"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.necromancer.SoulFireballEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.necromancer.SoulFireballEntity::new)
+                        .dimensions(EntityDimensions.fixed(.6f, .6f)).trackRangeBlocks(128).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "soul_fireball"))));
+
+        public static final EntityType<com.anton.elementalwands.entity.necromancer.HarvestSoulEntity> HARVEST_SOUL = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "harvest_soul"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.necromancer.HarvestSoulEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.necromancer.HarvestSoulEntity::new)
+                        .dimensions(EntityDimensions.fixed(.7f, .9f)).trackRangeBlocks(96).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "harvest_soul"))));
+
+        public static final EntityType<com.anton.elementalwands.entity.necromancer.NecromancerSoulEntity> NECROMANCER_SOUL = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "necromancer_soul"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.necromancer.NecromancerSoulEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.necromancer.NecromancerSoulEntity::new)
+                        .dimensions(EntityDimensions.fixed(1.1f, 1.1f)).trackRangeBlocks(128).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "necromancer_soul"))));
+
         // Hollow undead: night spawns in the Overworld and the Necromancer's raised army.
         public static final EntityType<com.anton.elementalwands.entity.undead.HollowCrawlerEntity> HOLLOW_CRAWLER = Registry.register(
                 Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "hollow_crawler"),

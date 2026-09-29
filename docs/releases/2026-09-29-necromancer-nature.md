@@ -1,5 +1,7 @@
-# Necromancer tuning and a support Nature wand
+# Necromancer intro and tuning, and Nature support
 
+- The Necromancer faces you during a slower, more deliberate intro ending, with a longer name reveal on a sliding black card.
+- A stronger soul-fire wave lights the darkened arena as the rim braziers ignite.
 - The Necromancer's Life Drain now only starts when you are within 10 blocks, and his hand rises for a second and a half before it bites. Step back past 14 blocks to break it.
 - When the giant skeleton's soul tears free, it happens once. The blind body stays put and swings at random instead of hunting you, so you can focus on the soul.
 - Nature is now the support wand. Seed and Thornbite hit a little harder, Thornbite heals more, and thorns bite bosses harder and reach their whole body.

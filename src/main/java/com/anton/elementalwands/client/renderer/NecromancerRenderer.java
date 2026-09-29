@@ -4,6 +4,7 @@ import com.anton.elementalwands.client.model.NecromancerModel;
 import com.anton.elementalwands.entity.necromancer.NecromancerEntity;
 import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.util.math.BlockPos;
+import software.bernie.geckolib.constant.DataTickets;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
 import software.bernie.geckolib.renderer.layer.AutoGlowingGeoLayer;
 
@@ -29,6 +30,17 @@ public class NecromancerRenderer extends GeoEntityRenderer<NecromancerEntity, Ne
         state.transformTime = entity.getTransformTime(partialTick);
         state.split = entity.isSplit();
         state.buried = entity.isBuried();
+    }
+
+    @Override
+    public void addRenderData(NecromancerEntity entity, Void relatedObject, NecromancerRenderState state, float partialTick) {
+        if (!entity.inIntro()) return;
+        // A stationary mob's vanilla body turn lags its head. The cinematic turns the whole
+        // caster together, so follow the synchronized entity yaw during the staff slam too.
+        state.bodyYaw = entity.getLerpedYaw(partialTick);
+        state.relativeHeadYaw = 0;
+        state.addGeckolibData(DataTickets.ENTITY_BODY_YAW, state.bodyYaw);
+        state.addGeckolibData(DataTickets.ENTITY_YAW, 0f);
     }
 
     @Override

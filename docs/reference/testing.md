@@ -111,7 +111,7 @@ agent owns Gradle runs and the Minecraft test client in that checkout; do not
 overlap builds, `clean`, or test clients sharing its generated files. The main
 agent can review source and edit unrelated documentation during verification.
 
-Use `gpt-6-sol` with medium reasoning and a fresh context (`fork_turns="none"`
+Use `gpt-6.1-sol` with medium reasoning and a fresh context (`fork_turns="none"`
 when supported). Supply the following information rather than the full history:
 
 ```text
@@ -209,6 +209,13 @@ Blink Rift return and destruction poof. A dev player's supplied skin is used;
 this does not verify the user's authenticated Lunar skin or multiplayer feel.
 
 ## Evidence retention
+
+The Crypt client runner accepts `-PintroVideo` with `hubClientAssets` to record the
+Necromancer intro in a hidden native window. It captures 383 consecutive frames,
+`build/crypt-client-smoke/screenshots/intro-video-000.png` through `intro-video-382.png`;
+encode at 20 fps for 19.15 seconds. It checks the dark opening, restored lighting
+at the end of the fire wave, and rendered facing during the staff slam. Require a
+fresh `build/crypt-client-smoke/CRYPT_PASSED.txt` and no `CRYPT_FAILED.txt`.
 
 The Necromancer client runner accepts `-PnecroRecord` with `hubClientAssets`.
 It captures 450 framebuffer frames at 20 fps (22.5 seconds), covering the

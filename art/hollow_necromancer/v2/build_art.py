@@ -448,6 +448,11 @@ def validate(data):
                 assert all(0 <= float(t) <= clip['animation_length'] for t in frames), name
                 assert all(math.isfinite(v) for frame in frames.values() for v in frame), name
     assert data['animations']['animation.hollow_necromancer.transform']['animation_length'] == 8
+    intro = data['animations']['animation.hollow_necromancer.intro']
+    assert intro['animation_length'] == 378 / 20, 'Intro does not share the director timeline'
+    for channels in intro['bones'].values():
+        for channel in channels.values():
+            assert math.dist(sample(channel, 242 / 20, [0, 0, 0]), sample(channel, 262 / 20, [0, 0, 0])) < .001, 'Pointing pose does not hold'
     assert 'shoulder_rag' not in names, 'Dark shoulder panel returned'
     for name, time in [('colossus_idle', 0), ('colossus_walk', 0),
                        ('transform', 5.5), ('colossus_lunge', 1.3)]:

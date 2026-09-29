@@ -53,6 +53,7 @@ public final class CryptClientSmoke implements ClientModInitializer {
             if (!started) {
                 started = true; c.options.pauseOnLostFocus = false; c.options.tutorialStep = net.minecraft.client.tutorial.TutorialStep.NONE;
                 GLFW.glfwSetWindowSize(c.getWindow().getHandle(), 1280, 720);
+                if (INTRO_VIDEO) GLFW.glfwHideWindow(c.getWindow().getHandle());
                 c.options.getFov().setValue(70);
                 c.options.getNarrator().setValue(net.minecraft.client.option.NarratorMode.OFF);
                 c.getNarratorManager().clear();
@@ -425,9 +426,27 @@ public final class CryptClientSmoke implements ClientModInitializer {
     private static void introShots(MinecraftClient c, int t) {
         c.options.hudHidden = false;
         if (t == 20) require(com.anton.elementalwands.client.NecromancerIntroClient.cinematic(), "The intro did not take the camera");
+        if (t == 30) require(com.anton.elementalwands.client.NecromancerIntroClient.arenaLight(0) == 0,
+                "The crypt was not dark before ignition");
+        if (t == com.anton.elementalwands.entity.necromancer.NecromancerIntro.RING_END + 4) require(com.anton.elementalwands.client.NecromancerIntroClient.arenaLight(0) == 1,
+                "The fire wave did not restore the arena lighting");
+        if (t == com.anton.elementalwands.entity.necromancer.NecromancerIntro.SLAM || t == com.anton.elementalwands.entity.necromancer.NecromancerIntro.RING_END - 4) {
+            NecromancerEntity boss = null;
+            for (var e : c.world.getEntities()) if (e instanceof NecromancerEntity n && n.inIntro()) { boss = n; break; }
+            require(boss != null, "Intro boss missing at the staff slam");
+            var renderer = (com.anton.elementalwands.client.renderer.NecromancerRenderer)c.getEntityRenderDispatcher().getRenderer(boss);
+            var state = renderer.getAndUpdateRenderState(boss, 0);
+            float yaw = state.getGeckolibData(software.bernie.geckolib.constant.DataTickets.ENTITY_BODY_YAW);
+            require(Math.abs(net.minecraft.util.math.MathHelper.wrapDegrees(yaw)) < 5,
+                    "Rendered caster is not facing the players during the staff slam: " + yaw);
+        }
         if (INTRO_VIDEO && t >= 0 && t <= com.anton.elementalwands.entity.necromancer.NecromancerIntro.LENGTH + 4)
             shot(c, String.format("intro-video-%03d.png", t));
-        for (int[] at : new int[][]{{30, 1}, {84, 2}, {110, 3}, {130, 4}, {146, 5}, {170, 6}, {190, 7}, {232, 8}, {250, 9}})
+        for (int[] at : new int[][]{{30, 1}, {84, 2}, {110, 3}, {130, 4}, {146, 5},
+                {com.anton.elementalwands.entity.necromancer.NecromancerIntro.EYES + 4, 6},
+                {com.anton.elementalwands.entity.necromancer.NecromancerIntro.TURN + 4, 7},
+                {com.anton.elementalwands.entity.necromancer.NecromancerIntro.TITLE + 16, 8},
+                {com.anton.elementalwands.entity.necromancer.NecromancerIntro.RETURN + 6, 9}})
             if (t == at[0]) shot(c, "crypt-intro-" + at[1] + ".png");
     }
     private static void shot(MinecraftClient c, String name) { ScreenshotRecorder.saveScreenshot(c.runDirectory, name, c.getFramebuffer(), 1, t -> {}); }

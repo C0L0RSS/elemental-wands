@@ -21,7 +21,7 @@ import net.minecraft.util.math.Vec3d;
 public final class NecromancerIntroClient {
     public record Pose(Vec3d pos, float yaw, float pitch) {}
     private static final float FOV = 55;
-    private static final int SKIP_HOLD = 16, HAND_BACK = 8;
+    private static final int SKIP_HOLD = 16, HAND_BACK = 8, TITLE_FADE = 10;
     private static final double BARS = .11;
     private static Vec3d centre;
     private static float frame;
@@ -94,6 +94,18 @@ public final class NecromancerIntroClient {
                 MathHelper.lerp((float)back, shot.pitch(), player.getPitch(tickDelta)));
     }
 
+    /** Normal lighting outside the crypt cinematic, including a skip or cancelled scene. */
+    public static float arenaLight(float tickDelta) {
+        var world = MinecraftClient.getInstance().world;
+        if (!active || skipped || world == null || world.getRegistryKey() != com.anton.elementalwands.crypt.HollowCryptRealm.WORLD) return 1;
+        return (float)ringProgress(time(tickDelta));
+    }
+
+    /** Dim the constant ambient fill, while the soul effects and lantern pools remain readable. */
+    public static float ambientLight(float normal, float tickDelta) {
+        return MathHelper.lerp(arenaLight(tickDelta), Math.min(normal, .025f), normal);
+    }
+
     public static float fov(float fov, float tickDelta) {
         return active ? (float)MathHelper.lerp(handBack(tickDelta), FOV, fov) : fov;
     }
@@ -102,7 +114,7 @@ public final class NecromancerIntroClient {
      * The five shots, authored around the circle with the players to the south (+Z): the zombie,
      * with the circle behind the camera; its soul torn out toward the lens; a pan after the soul that
      * finds the Necromancer hauling it into his staff; a low hero angle as it burns inside; and
-     * over his shoulder as the slam's ring rolls out toward the players.
+     * from the players' side as he levels the staff and the slam's ring rolls out.
      */
     static Pose shot(double t) {
         Vec3d toward = new Vec3d(VICTIM_TO.x, 0, VICTIM_TO.z).normalize(), side = new Vec3d(toward.z, 0, -toward.x);
@@ -135,13 +147,13 @@ public final class NecromancerIntroClient {
         }
         if (t < HERO_END) {
             // Low and close enough to fill the frame, far enough to keep the raised flame in it.
-            double s = smooth((t - SOUL_ARRIVE) / (HERO_END - SOUL_ARRIVE)), lower = smooth((t - 172) / 14);
+            double s = smooth((t - SOUL_ARRIVE) / (HERO_END - SOUL_ARRIVE)), lower = smooth((t - STAFF_LOWER) / (TURN - STAFF_LOWER));
             double shake = .03 * Math.exp(-(t - SOUL_ARRIVE) / 8);
             return look(toward.multiply(4.2 - .5 * s).add(side.multiply(1.2)).add(0, .7, 0), new Vec3d(0, 2.55 - .6 * lower, 0), shake);
         }
-        // Over his shoulder, the boss on the left third and the players small in the distance.
+        // From the players' side: keep his face and the staff in view, then pull back as the ring spreads.
         double s = smooth((t - HERO_END) / (LENGTH - HERO_END)), shake = t >= SLAM ? .14 * Math.exp(-(t - SLAM) / 5) : 0;
-        return look(new Vec3d(-1.9 + .3 * s, 2.35 - .15 * s, -4.4 + .5 * s), new Vec3d(0, 1.3, 30), shake);
+        return look(new Vec3d(2.4 + .4 * s, 1.05 + .35 * s, 6.4 + 2 * s), new Vec3d(0, 1.65, 0), shake);
     }
 
     private static Pose look(Vec3d eye, Vec3d target, double shake) {
@@ -165,19 +177,28 @@ public final class NecromancerIntroClient {
         context.fill(0, h - bar, w, h, 0xFF000000);
         double dark = 1 - smooth(t / 14);
         if (dark > 0) context.fill(0, 0, w, h, alpha(dark) | 0x000000);
-        double title = smooth((t - TITLE) / 8) * (1 - smooth((t - (TITLE_END - 8)) / 8)) * (1 - back);
+        double titleEnter = smooth((t - TITLE) / TITLE_FADE);
+        double title = titleEnter * (1 - smooth((t - (TITLE_END - TITLE_FADE)) / TITLE_FADE)) * (1 - back);
         if (title > 0) {
             Text name = Text.translatable("entity.elementalwands.hollow_necromancer");
             String upper = name.getString().toUpperCase(java.util.Locale.ROOT);
+            int width = client.textRenderer.getWidth(upper);
+            float scale = Math.min(2.6f, (w - 48f) / Math.max(1, width));
+            float centreY = h * .7f + (float)(16 * (1 - titleEnter));
+            int halfCard = (int)Math.ceil(width * scale / 2) + 12;
+            int cardTop = (int)Math.floor(centreY - 4 * scale) - 9;
+            int cardBottom = (int)Math.ceil(centreY + (client.textRenderer.fontHeight - 4) * scale) + 10;
+            // The padded black card and title slide upward together, clear of the brightest wave.
+            context.fill(w / 2 - halfCard, cardTop, w / 2 + halfCard, cardBottom, alpha(title * .9));
             var m = context.getMatrices();
             m.pushMatrix();
-            m.translate(w / 2f, h * .7f);
-            m.scale(2.6f, 2.6f);
-            int width = client.textRenderer.getWidth(upper);
+            m.translate(w / 2f, centreY);
+            m.scale(scale, scale);
             context.drawText(client.textRenderer, upper, -width / 2, -4, alpha(title) | 0xD8F4FF, true);
             m.popMatrix();
-            int line = (int)(width * 2.6 * .6 * smooth((t - TITLE) / 14));
-            context.fill(w / 2 - line, (int)(h * .7f) + 12, w / 2 + line, (int)(h * .7f) + 13, alpha(title * .8) | 0x6AF2FF);
+            int line = (int)(width * scale / 2 * smooth((t - TITLE) / 14));
+            int lineY = cardBottom - 6;
+            context.fill(w / 2 - line, lineY, w / 2 + line, lineY + 1, alpha(title * .8) | 0x6AF2FF);
         }
         if (!skipped && t > 10 && back <= 0) {
             Text hint = Text.translatable("necromancer.elementalwands.intro_skip", client.options.sneakKey.getBoundKeyLocalizedText());

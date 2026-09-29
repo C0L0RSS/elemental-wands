@@ -344,19 +344,21 @@ def second_playtest_clips(clip, rot, pos, scale, claw, clips):
 
 
 def intro_clip(clips):
-    """The opening cinematic, 260 ticks (13 s) from the moment the players land; keys are written
-    in ticks to match the director's timeline. He stands robed in the circle throughout; the
+    """The opening cinematic, 378 ticks (18.9 s). The original keys below are authored in ticks,
+    then retimed at the end to match NecromancerIntro. The soul absorption keeps its first
+    148 ticks; the flare, lowering and turn run at two-thirds speed. The levelled staff holds
+    for an extra second before the hoist and slam, and the title has a long, patient recovery. He stands robed in the circle throughout; the
     skeleton inside stays the phase-two surprise. The game turns the entity: toward the zombie
-    for the pull (0-186), then about 107 degrees to the players (186-206). Everything here is
+    for the pull (0-205), then about 107 degrees to the players (205-235). Everything here is
     local, with the model's front (-Z) forward.
 
-    0-60 menacing stance; 60-72 staff raised overhead, left claw reaching for the zombie;
+    Original authored ticks before retiming: 0-60 menacing stance; 60-72 staff raised overhead, left claw reaching for the zombie;
     72-148 the pull (staff and body held still so the soul has a fixed target, the claw hauling
     the soul in on an invisible rope); 148 the soul strikes the flame; 166 eyes flare; 172-186
     staff lowered, head bowed at the low camera; 186-206 shuffling turn; 208 staff levelled at
     the players, 213 hoisted, 216 slammed down; eased into the idle's first pose by 260."""
     zero = (0, 0, 0)
-    clip = clips['intro'] = {'loop': False, 'animation_length': 13, 'bones': {}}
+    clip = clips['intro'] = {'loop': False, 'animation_length': 18.9, 'bones': {}}
     end = 260
 
     def put(part, channel, frames):
@@ -480,6 +482,32 @@ def intro_clip(clips):
     for side, sign in (('right', -1), ('left', 1)):
         rot('hood_' + side, [(0, zero), (148, zero), (150, (0, sign * 16, sign * 6)), (160, (0, sign * 8, sign * 3)),
                              (186, zero), (end, zero)])
+
+    # (Runtime tick, original authored tick). Preserve every pre-absorption key; sample the
+    # ending at 20 Hz so all joints share the slower beats and the stationary pointing hold.
+    timing = [(148, 148), (238, 208), (242, 210), (262, 210), (274, 216),
+              (294, 236), (354, 244), (378, 260)]
+    source_ticks = []
+    for (start, a), (stop, b) in zip(timing, timing[1:]):
+        source_ticks.extend(a + (b - a) * (t - start) / (stop - start) for t in range(start, stop))
+    source_ticks.append(260)
+    for channels in clip['bones'].values():
+        for channel, frames in channels.items():
+            poses = sorted((float(t), v) for t, v in frames.items())
+            values, at = [], 0
+            for tick in source_ticks:
+                time = tick / 20
+                while at + 1 < len(poses) - 1 and poses[at + 1][0] < time:
+                    at += 1
+                (a, x), (b, y) = poses[at:at + 2]
+                f = max(0, min(1, (time - a) / (b - a)))
+                values.append([round(v + (w - v) * f, 4) for v, w in zip(x, y)])
+            retimed = {t: v for t, v in frames.items() if float(t) < 148 / 20}
+            for i, value in enumerate(values):
+                # Keep the endpoints of holds instead of hundreds of redundant keys.
+                if i == 0 or i == len(values) - 1 or value != values[i - 1] or value != values[i + 1]:
+                    retimed[f'{(148 + i) / 20:.4f}'] = value
+            channels[channel] = retimed
 
 
 def animations():

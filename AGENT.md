@@ -110,7 +110,7 @@ reference, and whitespace checks; they do not require a gameplay build.
 
 ## Delegating tests and gameplay recordings
 
-The user prefers one **GPT-6 Sol (`gpt-6-sol`) subagent** for established test and
+The user prefers one **GPT-6.1 Sol (`gpt-6.1-sol`) subagent** for established test and
 recording work together when the main agent has useful independent work, such as
 reviewing the implementation or updating documentation. This is standing project
 authorization for that bounded delegation; no new confirmation is needed.

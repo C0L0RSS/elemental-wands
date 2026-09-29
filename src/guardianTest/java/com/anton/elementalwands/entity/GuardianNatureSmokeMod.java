@@ -96,6 +96,9 @@ public final class GuardianNatureSmokeMod implements ModInitializer {
             player.setPosition(10.5,floor+1,18.5);
             var source = SeedlingManager.getActiveSeedlingsForCaster(world,player.getUuid()).stream().filter(s -> s.anchorPos().equals(remote)).findFirst().orElseThrow();
             player.setAttached(com.anton.elementalwands.data.EWAttachments.AFFINITY,"NATURE");
+            // Tendril sources end unless the caster has the purchasable secondary equipped.
+            WandProgression.grant(player,3);
+            require(WandLoadouts.get(player).contains("tendril_bloom"),"Fixture could not equip Tendril Bloom");
             TendrilBloomManager.startTendril(world,player,source.seedlingId(),Vec3d.ofCenter(remote),guardian);
             guardian.testAttack(player,GuardianCombatRules.Attack.SHOCKWAVE);attackStarted=world.getTime();
             for(int i=0;i<5;i++)EntangleTracker.addStack(world,guardian);

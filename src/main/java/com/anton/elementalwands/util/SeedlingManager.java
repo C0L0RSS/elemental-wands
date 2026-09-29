@@ -75,6 +75,8 @@ public final class SeedlingManager {
         int currentRadius;
         boolean amplifiedByOvergrowth;
         boolean active;
+        /** Health its thorns have taken, returned to the owner who pops it. */
+        float stored;
         final Set<BlockPos> placedPositions = new HashSet<>();
         final Map<BlockPos, TemporaryBlockManager.TemporaryPlacement> placements = new HashMap<>();
 
@@ -110,6 +112,34 @@ public final class SeedlingManager {
         ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register((player, origin, destination) ->
                 syncActiveSeedlings(player));
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> ACTIVE.clear());
+        // Left-clicking your own flower pops it and returns what it banked (even where blocks cannot be broken).
+        net.fabricmc.fabric.api.event.player.AttackBlockCallback.EVENT.register((player, world, hand, pos, direction) -> {
+            if (!world.getBlockState(pos).isOf(ModSpellBlocks.NATURE_SEEDLING)) return net.minecraft.util.ActionResult.PASS;
+            if (!(world instanceof ServerWorld server)) return net.minecraft.util.ActionResult.PASS; // The client asks first (ElementalWandsClient).
+            Seedling seedling = at(server, pos);
+            if (seedling == null || !seedling.casterUuid.equals(player.getUuid())) return net.minecraft.util.ActionResult.PASS;
+            destroySeedlingAtAnchor(server, pos, player);
+            return net.minecraft.util.ActionResult.SUCCESS;
+        });
+    }
+
+    private static Seedling at(ServerWorld world, BlockPos anchorPos) {
+        List<Seedling> list = ACTIVE.get(world.getRegistryKey());
+        if (list == null) return null;
+        for (Seedling s : list) if (s.active && s.anchorPos.equals(anchorPos)) return s;
+        return null;
+    }
+
+    /** Its owner popped it: the banked health returns to them. Anyone else's break wastes it. */
+    private static void release(ServerWorld world, Seedling seedling, PlayerEntity breaker) {
+        if (breaker == null || !breaker.isAlive() || !breaker.getUuid().equals(seedling.casterUuid) || seedling.stored <= 0) return;
+        float amount = seedling.stored;
+        seedling.stored = 0;
+        SpellCombat.heal(breaker, amount, breaker, com.anton.elementalwands.data.WizardAffinity.NATURE);
+        Vec3d at = Vec3d.ofCenter(seedling.anchorPos);
+        world.spawnParticles(net.minecraft.particle.ParticleTypes.HEART, at.x, at.y + .3, at.z, Math.max(1, Math.round(amount / 2)), .3, .2, .3, .02);
+        world.spawnParticles(net.minecraft.particle.ParticleTypes.HEART, breaker.getX(), breaker.getBodyY(.8), breaker.getZ(), 3, .3, .3, .3, .02);
+        world.playSound(null, seedling.anchorPos, SoundEvents.BLOCK_SWEET_BERRY_BUSH_PICK_BERRIES, SoundCategory.PLAYERS, 1f, 1.1f);
     }
 
     public static boolean tryPlantSeedling(ServerWorld world, PlayerEntity caster, BlockHitResult hit) {
@@ -230,6 +260,7 @@ public final class SeedlingManager {
                         .thenComparingInt(s -> s.plantTick)).orElse(null);
         if (nearest == null) return java.util.Optional.empty();
         var snapshot = new SeedlingSnapshot(nearest.seedlingId, nearest.anchorPos, nearest.plantTick);
+        release(world, nearest, world.getPlayerByUuid(caster)); // Feeding your own oak also collects the flower.
         cleanupSeedling(world, nearest);
         return java.util.Optional.of(snapshot);
     }
@@ -286,10 +317,15 @@ public final class SeedlingManager {
     }
 
     public static boolean destroySeedlingAtAnchor(ServerWorld world, BlockPos anchorPos) {
+        return destroySeedlingAtAnchor(world, anchorPos, null);
+    }
+
+    public static boolean destroySeedlingAtAnchor(ServerWorld world, BlockPos anchorPos, PlayerEntity breaker) {
         List<Seedling> list = ACTIVE.get(world.getRegistryKey());
         if (list == null) return false;
         for (Seedling s : list) {
             if (s.active && s.anchorPos.equals(anchorPos)) {
+                release(world, s, breaker);
                 cleanupSeedlingInternal(world, s);
                 syncActiveSeedlings(world, s.casterUuid);
                 return true;
@@ -491,6 +527,12 @@ public final class SeedlingManager {
             }
             boolean growthPulseSpawned = pulseIfDue(world, seedling, now);
             applyZoneEffects(world, seedling, now);
+            // A flower holding stolen health shows it: more hearts as it fills.
+            if (seedling.stored > 0 && (now - seedling.plantTick) % 30 == 0) {
+                Vec3d at = Vec3d.ofCenter(seedling.anchorPos);
+                world.spawnParticles(net.minecraft.particle.ParticleTypes.HEART, at.x, at.y + .6, at.z,
+                        seedling.stored >= NatureCombat.FLOWER_STORE_CAP ? 2 : 1, .15, .1, .15, 0);
+            }
 
             // The staged custom flower is the visual anchor; sparse pollen indicates amplification.
             int phase = Math.floorMod(seedling.anchorPos.getX() * 3
@@ -571,21 +613,19 @@ public final class SeedlingManager {
                 e -> e.isAlive() && !e.isSpectator());
 
         for (LivingEntity e : entities) {
-            BlockPos feet = e.getBlockPos();
-            boolean inZone = seedling.placedPositions.contains(feet) || seedling.placedPositions.contains(feet.down());
-            if (!inZone) continue;
+            if (!NatureCombat.standsIn(e, seedling.placedPositions)) continue;
 
             if (WandAllies.protectedFrom(world, seedling.casterUuid, e)) continue;
 
             EntangleTracker.applyNatureSlow(e, 40, 3);
 
-            applyThorns(world, e, seedling.casterUuid);
+            seedling.stored = Math.min(NatureCombat.FLOWER_STORE_CAP, seedling.stored + applyThorns(world, e, seedling.casterUuid));
         }
     }
 
     /** Periodic bramble damage from standing in the thicket, credited to the caster's wand. */
-    static void applyThorns(ServerWorld world, LivingEntity target, UUID casterUuid) {
-        NatureCombat.thornContact(world, target, casterUuid);
+    static float applyThorns(ServerWorld world, LivingEntity target, UUID casterUuid) {
+        return NatureCombat.thornContact(world, target, casterUuid);
     }
 
     public static void crushGrowth(ServerWorld world, java.util.function.Predicate<BlockPos> hit) {

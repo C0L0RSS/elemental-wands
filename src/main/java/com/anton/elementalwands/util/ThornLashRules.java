@@ -10,9 +10,9 @@ public final class ThornLashRules {
     public static final int RETRACT_TICKS = 4;
     public static final int LIFETIME = EXTEND_TICKS + BITE_TICKS + RETRACT_TICKS;
     public static final double RANGE = 4.5;
-    public static final float DAMAGE = 3;
-    public static final float LIFESTEAL = .5f;
-    public static final float HEAL_CAP = 2;
+    public static final float DAMAGE = 4;
+    public static final float LIFESTEAL = .75f;
+    public static final float HEAL_CAP = 3;
     public static final double WIDTH = .22;
 
     public static Vec3d tip(float yaw, float pitch, double progress) {

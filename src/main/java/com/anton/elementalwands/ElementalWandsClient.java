@@ -46,6 +46,11 @@ public class ElementalWandsClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        // Left-clicking one of your own flowers pops it on the server instead of mining it.
+        net.fabricmc.fabric.api.event.player.AttackBlockCallback.EVENT.register((player, world, hand, pos, direction) ->
+                world.isClient() && com.anton.elementalwands.client.ClientPlayerData.getNatureSeedlings().contains(pos)
+                        && world.getBlockState(pos).isOf(com.anton.elementalwands.registry.ModSpellBlocks.NATURE_SEEDLING)
+                        ? net.minecraft.util.ActionResult.SUCCESS : net.minecraft.util.ActionResult.PASS);
         com.anton.elementalwands.client.wand.WandItemModel.register();
         ModParticleFactories.registerAll();
         StoneParticleFactories.registerAll();

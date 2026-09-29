@@ -1,6 +1,6 @@
 # Current status
 
-Reviewed September 28, 2026. This page contains outstanding work, not release history.
+Reviewed September 29, 2026. This page contains outstanding work, not release history.
 It records known verification limits; it is not a fresh installation receipt.
 
 - **Hollow Necromancer (in progress):** reworked after the first co-op playtest (duels and
@@ -15,11 +15,20 @@ It records known verification limits; it is not a fresh installation receipt.
   dragged-soul clip await workshop approval; the camera shots await review from the crypt
   client fixture's `crypt-intro-*.png` frames. Necromancer spells now cast soul light (real
   block light plus a blue ground pool); FPS on weaker machines is untested.
+  After a third (solo) playtest, Life Drain only starts within 10 blocks, with a 1.5-second
+  windup, and breaks at 14 blocks. The soul split now happens once, and the blind body swings at
+  random headings instead of fighting alongside the soul (30 soul damage solo). Pending a playtest.
   Pending: user approval of the new clips (workshop) and the fireball and soul models
   (`/.local-previews/soul-fire/`), then install and client checks; a solo and co-op Lunar
   playtest with `/ew necromancer log on` to tune health, wave sizes, rain damage, dive and
   split timing (the Hands→ambush and Hands→bite combos cost an iron-armored player about
   three quarters of their health).
+- **Nature support pass (September 29):** Nature is the support element. Seed and Thornbite
+  deal 4, Thornbite heals 75%, thorns deal ×1.5 to bosses and test the whole body footprint,
+  and flowers bank up to 8 stolen health that their owner collects by left-clicking the
+  flower or popping it with their own Seed. Springbloom launches on a run into its side, lasts 8
+  seconds with a 6-second cooldown and flies flatter and farther. Pending: a Lunar playtest
+  of Nature against the Necromancer, the new launch arc's feel and whether banking feels worth it.
 - **Hollow undead:** the crawler, archer and brute form the Necromancer's siege waves
   (quickened there) and spawn at night. The GeckoLib files are proven to match the approved
   preview and the server fixture covers their combat rules. The walks were re-authored

@@ -163,7 +163,7 @@ public class SeedProjectileEntity extends ProjectileEntity {
 
         Entity owner = getOwner();
         if (owner instanceof PlayerEntity caster) {
-            if (!SeedlingManager.destroySeedlingAtAnchor(sw, blockHitResult.getBlockPos())) {
+            if (!SeedlingManager.destroySeedlingAtAnchor(sw, blockHitResult.getBlockPos(), caster)) {
                 SeedlingManager.tryPlantSeedling(sw, caster, blockHitResult);
             }
         } else {

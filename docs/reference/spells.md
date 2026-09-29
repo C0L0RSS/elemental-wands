@@ -173,15 +173,24 @@ and shared temporary-block ownership.
 
 ## Nature
 
-Seed is a winged pod that damages enemies or plants staged flowers. Flowers and
-Tendril Bloom brambles provide the sustained damage/Entangle loop. Thornbite
+Seed is a winged pod that damages enemies (4) or plants staged flowers. Flowers and
+Tendril Bloom brambles provide the sustained damage/Entangle loop. Nature is the support
+element: its damage stays below Wind and Stone, and its flowers bank health. A thorn deals
+1, rising to 2 at five Entangle stacks, ×1.5 against a `WandBoss` (bosses ignore the root).
+A patch bites anything with any block column of its body over it (at the feet or just
+below), so a wide body is not tested by its centre alone. Each flower banks the health its
+own patch's thorns take, up to 8, and shows hearts while it holds some. Its owner collects
+it by left-clicking the flower (this works where blocks cannot be broken, such as the
+Hollow Crypt) or popping it with their own Seed, or by feeding it to their Overgrowth; the
+health heals them. Expiry, anyone else's break or a stray projectile wastes it. Tendril
+Bloom brambles bite but bank nothing. Thornbite
 (stable saved ID `thorn_lash`) is a separate Basic: a Venus flytrap on three
 braided vines extends immediately with a slight upward arc and snaps at the first
 non-allied target. Aim and damage origin commit on press; turning or moving does
 not sweep the attack. Only the mouth deals damage, at most once per cast, and
 solid cover stops it. An invulnerable first target also consumes the bite.
-It does not plant seeds. Base damage is 3, range 4.5 blocks, cooldown one second,
-and healing is 50% of actual health damage, capped at one heart. Extension takes
+It does not plant seeds. Base damage is 4, range 4.5 blocks, cooldown one second,
+and healing is 75% of actual health damage, capped at one and a half hearts. Extension takes
 three ticks, closure one tick, and retraction four ticks; an early contact shortens
 the cast. Both the decorative mouth and stem use the held wand's actual render
 transform: the flytrap grows out along the casting-hand side and retracts into
@@ -207,18 +216,20 @@ blocked neighboring columns trim the flower instead of rejecting it. A nine-cell
 mask controls both the capped visual mesh and the smaller collision/landing area,
 and updates when adjacent blocks change. Obstacles, fluids and other spell growth
 are left intact; no launch or catch exists on a clipped section. Its shallow yellow cushion is 0.6875 blocks high, with thick basal leaves;
-the cushion stays rigid on launch and emits pollen. The raised solid center cannot
-be walked onto. A player landing from above is caught without incoming fall damage
-and launched upward, including hostile players and last-second pod catches.
-Incoming horizontal movement chooses the direction and scales the launch up to its
-cap. During the flight, movement input steers with ordinary vanilla air control,
+the cushion stays rigid on launch and emits pollen. The cushion is too tall to step
+onto, so a grounded player who walks or runs into its side (any movement key held, not
+sneaking, within 0.08 blocks of its collision edge) is launched along their facing, at
+full strength when sprinting and about three quarters when walking. A player landing from
+above is caught without incoming fall damage and launched upward, including hostile
+players and last-second pod catches; incoming horizontal movement chooses that direction
+and scales the launch up to its cap. The launch is 1.7 up and at most 1.9 across (blocks a
+tick). During the flight, movement input steers with ordinary vanilla air control,
 as in any fall; normal gravity and collision still apply. On level ground, flights
-rise roughly 20 blocks; steering alone covers about 8–10 blocks from a standing
-launch, and holding forward after a full-speed launch reaches roughly 23–25.
-A drop to lower terrain can extend the travel.
+rise roughly 15 blocks, and a full-speed launch coasts about 21 blocks forward without
+steering (the earlier 2.0/1.35 launch rose 20 and coasted 15). A drop to lower terrain can extend the travel.
 
-Each pad is reusable, breakable in one hit, and lasts 80 ticks from opening. Slot 1
-can also break an aimed pad with a wand. The 200-tick throw cooldown is keyed to the
+Each pad is reusable, breakable in one hit, and lasts 160 ticks from opening. Slot 1
+can also break an aimed pad with a wand. The 120-tick throw cooldown is keyed to the
 player as well as the casting wand, survives death/reconnects, and is not refunded
 for failed placement. Each caster can have one active pad. There is no caster-order
 or ground-touch chain restriction. Fall protection ends after the next actual

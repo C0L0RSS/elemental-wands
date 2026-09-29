@@ -124,9 +124,19 @@ It records known verification limits; it is not a fresh installation receipt.
 - **Human playtesting:** free-slot combinations, progression pace, recent Fire
   Leap/Flashover and Nature changes, and multiplayer timing remain balance/feel
   work. Automated mechanics checks do not settle these questions.
-- **Guardian/church:** user approval of the arena floor and overall two-phase
-  fight is recorded. Later attack pressure, party combat, pedestal discovery,
-  and varied-seed terrain integration still need broader human feedback.
+- **Guardian/church:** the fight moved from the sky floor into its own dimension, the
+  Shattered Nave, on September 29; the user approved the hall in the browser preview. The
+  nave, church (with its restart pass), cover and Nature server fixtures passed, and the
+  native client tour photographed the hall. Every fight now opens with the "effigy wakes" intro
+  (the heart flies from the caller's hand into the kneeling Guardian, which wakes in lightning
+  and slams its fists together); the nave fixture plays it in full and skipped, and the native
+  client fixture recorded it. Pending: the user's look at the intro video and a Lunar playtest
+  of realm and intro together, including the fog distance, brightness (ambient light 0.3) and
+  light shafts, which read fainter in the client screenshots than in the preview; how the
+  caller's raised arm reads in third person with real skins; and a co-op check that every
+  watcher's camera stays in step and that a partial skip waits for the rest. Earlier: user
+  approval of the overall two-phase fight is recorded; later attack pressure, party combat,
+  pedestal discovery and varied-seed terrain integration still need broader human feedback.
 
 Do not infer the installed Lunar version from this page or archived release hashes.
 Verify source/installed files when deployment status matters. Remove resolved items

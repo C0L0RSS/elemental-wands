@@ -161,7 +161,7 @@ public final class SpringbloomServerSmoke implements ModInitializer {
     private static final int L=SpringbloomRules.LIFETIME,C=SpringbloomRules.COOLDOWN,F=64+L+11;
     private int pods(){return owner.getEntityWorld().getEntitiesByClass(SpringbloomEntity.class,new Box(-30,90,-30,30,140,30),e->!e.open()&&!e.isRemoved()).size();}
     private static ServerPlayerEntity player(MinecraftServer s,String name,double x,double y,double z)throws Exception {
-        var f=com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);f.setAccessible(true);return (ServerPlayerEntity)f.invoke(null,s,UUID.randomUUID(),name,x,y,z);
+        var f=com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);f.setAccessible(true);return (ServerPlayerEntity)f.invoke(null,s,UUID.randomUUID(),name,x,y,z);
     }
     private static void require(boolean c,String why){if(!c)throw new AssertionError(why);}
 }

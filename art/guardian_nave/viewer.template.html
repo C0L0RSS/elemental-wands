@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shattered Nave Preview</title>
+<style>
+  :root { --bg: #0c0e12; --panel: rgba(16, 19, 25, .86); --ink: #dbe1e8; --muted: #8d97a6; --accent: #7fe3ff; --line: #262c37; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 14px/1.4 system-ui, sans-serif; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 100vh; touch-action: none; }
+  #panel { position: fixed; top: 12px; left: 12px; width: 310px; max-width: calc(100vw - 24px); max-height: calc(100vh - 24px); overflow: auto;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; backdrop-filter: blur(6px); }
+  h1 { font-size: 17px; margin: 0 0 2px; letter-spacing: .02em; }
+  .sub { color: var(--muted); font-size: 12px; margin-bottom: 10px; }
+  .group { margin: 12px 0 4px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; }
+  button { background: #1b2130; color: var(--ink); border: 1px solid var(--line); border-radius: 5px; padding: 6px 9px; cursor: pointer; font: inherit; font-size: 12.5px; }
+  button:hover { border-color: #3a4357; }
+  button.on { border-color: var(--accent); color: var(--accent); }
+  label { display: flex; align-items: center; gap: 8px; font-size: 12.5px; margin: 6px 0; }
+  label input[type=range] { flex: 1; }
+  .facts { font-size: 12px; color: var(--muted); margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+  .facts b { color: var(--ink); font-weight: 600; }
+  #hint { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); background: var(--panel); border: 1px solid var(--line);
+    border-radius: 6px; padding: 6px 12px; font-size: 12px; color: var(--muted); pointer-events: none; white-space: nowrap; }
+  #toggle { display: none; }
+  @media (max-width: 640px) {
+    #panel { width: auto; right: 12px; max-height: 45vh; }
+    #panel.collapsed > :not(#toggle):not(h1) { display: none; }
+    #toggle { display: inline-block; position: absolute; top: 10px; right: 10px; }
+    #hint { white-space: normal; width: calc(100vw - 24px); text-align: center; }
+  }
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="panel">
+  <button id="toggle">Hide</button>
+  <h1>Shattered Nave</h1>
+  <div class="sub">The Fractured Guardian's realm. Block layout preview; Minecraft does the real lighting and fog.</div>
+  <div class="group">Viewpoint</div>
+  <div class="row" id="views"></div>
+  <div class="group">Look</div>
+  <div class="row" id="moods"></div>
+  <label>Fog distance <input id="fog" type="range" min="40" max="1500" value="160"><span id="fogv"></span></label>
+  <label>Brightness <input id="bright" type="range" min="5" max="100" value="34"><span id="brightv"></span></label>
+  <label><input id="shafts" type="checkbox" checked> Light shafts (mod effect, not blocks)</label>
+  <label><input id="cut" type="checkbox"> Cut away above the pillars' mid-height</label>
+  <label><input id="barrier" type="checkbox"> Show invisible wall</label>
+  <label><input id="player" type="checkbox" checked> Show player and Guardian scale</label>
+  <div class="facts" id="facts"></div>
+</div>
+<div id="hint"></div>
+<script src="viewer.js"></script>
+</body>
+</html>

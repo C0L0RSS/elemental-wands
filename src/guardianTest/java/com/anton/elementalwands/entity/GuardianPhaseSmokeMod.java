@@ -118,7 +118,7 @@ public final class GuardianPhaseSmokeMod implements ModInitializer {
     private void countWaves(){for(int slot=0;slot<2;slot++)if(boss.getWaveTime(0,slot)==GuardianCombatRules.SLAM_IMPACT)waveCount++;}
     private void reset(){boss.stopReview();boss.setPosition(.5,ground,.5);boss.setVelocity(Vec3d.ZERO);boss.setHealth(boss.getMaxHealth());boss.setNoGravity(false);}
     private static ServerPlayerEntity player(MinecraftServer server,String name,double x,double y,double z)throws Exception {
-        var method=com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);method.setAccessible(true);
+        var method=com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);method.setAccessible(true);
         var player=(ServerPlayerEntity)method.invoke(null,server,UUID.randomUUID(),name,x,y,z);player.onTeleportationDone();return player;
     }
     private static void require(boolean ok,String reason){if(!ok)throw new AssertionError(reason);}

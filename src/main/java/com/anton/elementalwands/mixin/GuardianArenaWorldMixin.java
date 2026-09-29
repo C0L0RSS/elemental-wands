@@ -20,6 +20,6 @@ public abstract class GuardianArenaWorldMixin {
     @Inject(method="setBlockState(Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/block/BlockState;II)Z",at=@At("HEAD"),cancellable=true)
     private void protectFoundation(BlockPos pos,BlockState state,int flags,int depth,CallbackInfoReturnable<Boolean> ci) {
         if (!com.anton.elementalwands.church.GuardianChurchManager.isMutating() && (Object)this instanceof ServerWorld world &&
-                (com.anton.elementalwands.church.GuardianChurchManager.protectedBlock(world,pos) || (GuardianArenaManager.protectedBlock(world,pos) && !GuardianArenaManager.authorizedSpellWrite(world,pos,state)) || GuardianArenaManager.rejectPlacement(world,pos,state))) ci.setReturnValue(false);
+                (com.anton.elementalwands.church.GuardianChurchManager.protectedBlock(world,pos) || (GuardianArenaManager.protectedBlock(world,pos) && !GuardianArenaManager.authorizedSpellWrite(world,pos,state)))) ci.setReturnValue(false);
     }
 }

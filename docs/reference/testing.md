@@ -64,7 +64,7 @@ inspect their assertions when behavior changes instead of trusting an old name.
 | Hollow Necromancer | `necromancer_server_smoke.init.gradle` (spells, Hands→ambush, waves and their quickening, a Soul Fire Rain volley, blink/shift, the full two-siege fight flow with rain into the transformation, soul light on bolts, fireballs and markers and its cleanup), `necromancer_phase_smoke.init.gradle` (phase two; starts past the sieges: grab, swipe, the random-windup rush, Grave Dive hit and dodge, Soul Harvest, the soul split and collapse, soul light on the souls and its cleanup) | `necromancer_client_smoke.init.gradle` (screenshots; `-PnecroRecord` for hidden recording; `-PnecroMechanics` for the Soul Fire Rain fireball, charge windup, Grave Dive, soul split and Soul Harvest against a scripted player, then soul light under a night rain and skull volley); siege perch views are in `crypt_client_smoke` |
 | Hollow undead | `hollow_undead_server_smoke.init.gradle` (rise, chase, hit-frame damage and arrow timing, daylight burning, loot, held death clip, bound-minion rules) | `hollow_undead_client_smoke.init.gradle` (hidden window; rise, idle front/side, walk, attack key frames, death screenshots) |
 | Hollow Crypt realm | — | `crypt_client_smoke.init.gradle` (realm build, enter, summon, a siege on an exported bough perch with near and far-rim screenshots, wall, reset, leave, `/locate`, headstone ritual, wipe with kept items, victory rewards and spell book; screenshots) |
-| Church / arena | `guardian_church_smoke.init.gradle`, `guardian_arena_smoke.init.gradle` | Guardian floor client with visual options |
+| Church / Shattered Nave | `guardian_church_smoke.init.gradle` (ritual into the nave, wipe/retry, victory, restoration, loot), `guardian_nave_smoke.init.gradle` (layout, arrival, the Guardian's intro played in full then skipped, casting/damage gates, floor and hall protection, containment, spectating with kept items, victory, wipe, restart) | `nave_client_smoke.init.gradle` (screenshots of the hall from six viewpoints; the intro's camera, raised arm and hand-back into the fight; `-PintroVideo` saves every tick for a review video); Guardian floor client with visual options |
 | Worldgen / locate | `guardian_church_worldgen_smoke.init.gradle`, `guardian_church_locate_smoke.init.gradle` | Human terrain review |
 | Parties / audit regressions | `party_server_smoke.init.gradle`, `audit_fixes_smoke.init.gradle` | Human co-op review |
 
@@ -87,13 +87,21 @@ exiting successfully is insufficient if the fixture did not produce its receipt.
 Recovery pairs must run in sequence against their intended saved fixture:
 
 ```sh
-./gradlew -I tools/guardian_arena_smoke.init.gradle runServer --args nogui
-./gradlew -I tools/guardian_arena_smoke.init.gradle -ParenaRecovery runServer --args nogui
+./gradlew -I tools/guardian_nave_smoke.init.gradle runServer --args nogui
+./gradlew -I tools/guardian_nave_smoke.init.gradle -PnaveRecovery runServer --args nogui
 ./gradlew -I tools/guardian_church_smoke.init.gradle runServer --args nogui
 ./gradlew -I tools/guardian_church_smoke.init.gradle -PchurchRecovery runServer --args nogui
 ./gradlew -I tools/party_server_smoke.init.gradle runServer --args nogui
 ./gradlew -I tools/party_server_smoke.init.gradle -PpartyResume runServer --args nogui
 ```
+
+Simulated players moved into a realm (the crypt or the nave) must call
+`onTeleportationDone()` afterwards, as a client's confirmation would: until then they
+cannot be hurt, which silently passes damage checks. A boss intro teleports its watchers too
+(to face the boss and to hold them), so confirm again once it ends. Fixtures that are not about
+the intro skip it with `GuardianIntro.skip` for each watcher. Casts aim with the head, so set the
+head yaw as well as the yaw before an aimed cast. Fixtures that need realm entities to
+tick force-load the slot's chunks, as they do in the Overworld.
 
 ## Test and recording handoff
 

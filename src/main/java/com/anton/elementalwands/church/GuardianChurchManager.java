@@ -13,7 +13,6 @@ import java.util.*;
 import net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder;
 import net.fabricmc.fabric.api.event.lifecycle.v1.*;
 import net.fabricmc.fabric.api.event.player.*;
-import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.minecraft.block.*;
 import net.minecraft.block.entity.*;
 import net.minecraft.component.DataComponentTypes;
@@ -60,6 +59,8 @@ public final class GuardianChurchManager {
         public List<Long> forced=new ArrayList<>();
         transient int cursor;
         public BlockPos anchor() { return new BlockPos(x,y,z); }
+        /** Stable identity for the nave fight this church's ritual starts. */
+        public String key() { return x+"|"+y+"|"+z; }
         public BlockPos at(int x,int y,int z) { return ChurchLayout.at(anchor(),rotation,new BlockPos(x,y,z)); }
         boolean contains(BlockPos p) {
             var q=p.subtract(anchor()).rotate(inverse(rotation));
@@ -104,17 +105,6 @@ public final class GuardianChurchManager {
                 return ActionResult.FAIL;
             }
             return ActionResult.PASS;
-        });
-        ServerLivingEntityEvents.AFTER_DEATH.register((entity,source) -> {
-            if (entity instanceof FracturedGuardianEntity guardian && GuardianArenaManager.isFighting(guardian)) {
-                for (Site s:sites()) if (guardian.getUuidAsString().equals(s.guardian) && s.phase==Phase.ACTIVE) {
-                    s.rewardPlayers=new ArrayList<>(GuardianArenaManager.enrolledPlayers(guardian));
-                    s.phase=Phase.RESTORING; s.cursor=0;
-                    // Commit victory before either restoration or reward inventories are changed.
-                    if (!save()) { s.phase=Phase.ACTIVE; return; }
-                    force((ServerWorld)guardian.getEntityWorld(),s);
-                }
-            }
         });
     }
     private static void load(MinecraftServer server) {
@@ -177,51 +167,6 @@ public final class GuardianChurchManager {
                 || block.isOf(Blocks.VINE) || block.isOf(Blocks.BAMBOO) || block.isOf(Blocks.BAMBOO_SAPLING)
                 || block.isOf(Blocks.MANGROVE_ROOTS) || block.isOf(Blocks.BEE_NEST);
     }
-    private static void clearRitualVegetation(ServerWorld world,FracturedGuardianEntity guardian) {
-        List<Box> shafts=new ArrayList<>();
-        var body=guardian.getBoundingBox();
-        shafts.add(new Box(body.minX,body.minY,body.minZ,body.maxX,world.getTopYInclusive()+1,body.maxZ));
-        var players=world.getPlayers(p -> p.isAlive() && !p.isCreative() && !p.isSpectator()
-                && !guardian.isTeammate(p) && p.squaredDistanceTo(guardian)<=20*20);
-        var seats=com.anton.elementalwands.arena.GuardianArenaRules.liftSeats(players.stream().map(p -> p.getEntityPos()).toList(),guardian.getEntityPos());
-        for (int i=0;i<players.size();i++) {
-            var b=players.get(i).getBoundingBox();var seat=seats.get(i);
-            shafts.add(new Box(b.minX,b.minY,b.minZ,b.maxX,world.getTopYInclusive()+1,b.maxZ));
-            shafts.add(new Box(seat.x-.3,b.minY,seat.z-.3,seat.x+.3,world.getTopYInclusive()+1,seat.z+.3));
-        }
-        // Only clear the actual lift shafts, preserving the overgrowth elsewhere in the ruins.
-        mutation=true;
-        try {
-            for (Box shaft:shafts) for (int x=(int)Math.floor(shaft.minX);x<(int)Math.ceil(shaft.maxX);x++)
-                for (int z=(int)Math.floor(shaft.minZ);z<(int)Math.ceil(shaft.maxZ);z++) {
-                    if (world.getChunkManager().getWorldChunk(x>>4,z>>4)==null) continue;
-                    int top=world.getTopY(Heightmap.Type.WORLD_SURFACE,x,z);
-                    for (int y=(int)Math.floor(shaft.minY);y<top;y++) {
-                        var pos=new BlockPos(x,y,z);
-                        if (vegetation(world.getBlockState(pos)) && world.getBlockEntity(pos)==null)
-                            world.setBlockState(pos,Blocks.AIR.getDefaultState(),Block.NOTIFY_ALL);
-                    }
-                }
-        } finally { mutation=false; }
-    }
-    private static boolean ritualShaftClear(ServerWorld world, net.minecraft.entity.Entity entity, Box box) {
-        if (!world.getWorldBorder().contains(box) || !world.getEntityCollisions(entity, box).isEmpty()) return false;
-        var shape = net.minecraft.util.shape.VoxelShapes.cuboid(box);
-        var context = net.minecraft.block.ShapeContext.of(entity);
-        // Include adjacent cells because fences and other collision shapes can extend outside their cell.
-        for (BlockPos pos : BlockPos.iterate(BlockPos.ofFloored(box.minX-1,box.minY-1,box.minZ-1),
-                BlockPos.ofFloored(box.maxX+1,box.maxY+1,box.maxZ+1))) {
-            var state = world.getBlockState(pos);
-            boolean insideShaft = pos.getX()>=Math.floor(box.minX) && pos.getX()<Math.ceil(box.maxX)
-                    && pos.getZ()>=Math.floor(box.minZ) && pos.getZ()<Math.ceil(box.maxZ)
-                    && pos.getY()>=Math.floor(box.minY);
-            if (insideShaft && vegetation(state) && world.getBlockEntity(pos)==null) continue;
-            if (net.minecraft.util.shape.VoxelShapes.matchesAnywhere(shape,
-                    state.getCollisionShape(world,pos,context).offset(pos.getX(),pos.getY(),pos.getZ()),
-                    net.minecraft.util.function.BooleanBiFunction.AND)) return false;
-        }
-        return true;
-    }
     public static String interact(ServerPlayerEntity player,BlockPos socket) {
         var target=ritualSocket(player.getEntityWorld(),socket);
         if(target==null) return "The offering pedestal is incomplete.";
@@ -243,26 +188,39 @@ public final class GuardianChurchManager {
         }
         if (!held.isOf(ModItems.GUARDIAN_HEART) || !held.getOrDefault(DataComponentTypes.CUSTOM_DATA,NbtComponent.DEFAULT).copyNbt().getString("church_token","").equals(s.token))
             return "Place this church's Guardian Heart in the socket. Lost it? Sneak-use the socket with an empty hand to recall it.";
-        if (busy() || GuardianArenaManager.hasActiveArena()) return "Another ritual is underway. Wait until it ends.";
         ServerWorld world=(ServerWorld)player.getEntityWorld();
-        var guardian=keeper(world,s);
-        if (guardian==null) return "The keeper is taking shape on its plinth. Try again in a moment.";
         s.phase=Phase.ACTIVE;
         if (!save()) { s.phase=Phase.RUINED; return "The ritual could not be saved. Your heart was not consumed."; }
-        String result=GuardianArenaManager.start(player,guardian,() -> {
+        String result=GuardianArenaManager.ritual(player,s.key(),s.socket(),() -> {
             preparePlinth(world,s);
-            clearRitualVegetation(world,guardian);
             held.decrement(1);
-        }, (entity, box) -> ritualShaftClear(world,entity,box));
-        if (!GuardianArenaManager.owns(guardian)) { s.phase=Phase.RUINED;save();return result; }
+        });
+        if (!GuardianArenaManager.hosts(s.key())) { s.phase=Phase.RUINED;save();return result; }
         s.offeringTicks=1;
         updateOffering(world,s);
         world.playSound(null,s.socket(),SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME,SoundCategory.BLOCKS,.8f,.85f);
-        return "The heart answers. The keeper will test everyone gathered in the courtyard.";
+        return result;
     }
-    public static void arenaFinished(String guardianId) {
+    /**
+     * The church's fight in the nave was won: commit the victory, then restore the church while the
+     * party is still in the nave, so they return to it finished. Returns a line for the victors.
+     */
+    public static String naveVictory(MinecraftServer server,String site,List<String> players) {
+        if (state==null || error!=null) return "";
+        for (Site s:state.sites) if (site.equals(s.key()) && s.phase==Phase.ACTIVE) {
+            s.rewardPlayers=new ArrayList<>(players);
+            s.phase=Phase.RESTORING; s.cursor=0;
+            // Commit victory before either restoration or reward inventories are changed.
+            if (!save()) { s.phase=Phase.ACTIVE; return ""; }
+            force(server.getOverworld(),s);
+            return " The church is being restored; your reward waits in its sanctuary chests.";
+        }
+        return "";
+    }
+    /** The church's fight in the nave ended without a victory: offer a fresh heart. */
+    public static void naveFinished(String site) {
         if (state==null || error!=null) return;
-        for (Site s:state.sites) if (guardianId.equals(s.guardian) && s.phase==Phase.ACTIVE) {
+        for (Site s:state.sites) if (site.equals(s.key()) && s.phase==Phase.ACTIVE) {
             s.phase=Phase.RUINED;s.stocked=false;s.token=UUID.randomUUID().toString();save();
         }
     }
@@ -292,7 +250,7 @@ public final class GuardianChurchManager {
         for (Site s:state.sites) {
             if (!s.forced.isEmpty() && s.phase!=Phase.BUILDING && s.phase!=Phase.RESTORING) release(world,s);
             if (!loaded(world,s)) continue;
-            if(s.phase==Phase.RUINED && s.layoutVersion<2 && !GuardianArenaManager.hasActiveArena() && !moveStatue(world,s)) continue;
+            if(s.phase==Phase.RUINED && s.layoutVersion<2 && !moveStatue(world,s)) continue;
             if (s.phase==Phase.BUILDING || s.phase==Phase.RESTORING) {
                 boolean whole=s.phase==Phase.RESTORING;
                 mutation=true;
@@ -321,10 +279,11 @@ public final class GuardianChurchManager {
                     }
                 } finally { mutation=false; }
             } else if (s.phase==Phase.RUINED && !s.stocked) stock(world,s,false);
-            if (s.phase==Phase.RUINED && !s.terrainBlended && !GuardianArenaManager.hasActiveArena()) blendTerrain(world,s);
+            if (s.phase==Phase.RUINED && !s.terrainBlended) blendTerrain(world,s);
             if(s.phase==Phase.RUINED && !s.statuePrepared) { preparePlinth(world,s);s.statuePrepared=true; }
-            if(s.phase==Phase.RUINED && !GuardianArenaManager.hasActiveArena()) upgradePedestal(world,s);
+            if(s.phase==Phase.RUINED) upgradePedestal(world,s);
             updateOffering(world,s);
+            // Worlds from the sky arena may still hold its hidden keeper at the church; it is discarded.
             UUID keeperId=uuid(s.guardian);
             if ((s.phase==Phase.RUINED || s.phase==Phase.RESTORED) && keeperId!=null) {
                 var entity=world.getEntity(keeperId);
@@ -336,33 +295,6 @@ public final class GuardianChurchManager {
     private static UUID uuid(String text) {
         if (text==null) return null;
         try { return UUID.fromString(text); } catch (IllegalArgumentException invalid) { return null; }
-    }
-    /** Create the hidden ritual actor only after a valid heart is offered. */
-    private static FracturedGuardianEntity keeper(ServerWorld world,Site s) {
-        FracturedGuardianEntity guardian=null;
-        UUID keeperId=uuid(s.guardian);
-        if (keeperId!=null && world.getEntity(keeperId) instanceof FracturedGuardianEntity g && g.isAlive()) guardian=g;
-        if (guardian!=null && GuardianArenaManager.owns(guardian)) return guardian;
-        
-        if(guardian==null) {
-            guardian=new FracturedGuardianEntity(ModEntities.FRACTURED_GUARDIAN,world);
-            s.guardian=guardian.getUuidAsString();
-            if(!save())return null;
-            var pos=s.at(0,-1,s.layoutVersion>=2?-3:3);guardian.setPosition(pos.getX()+.5,pos.getY(),pos.getZ()+.5);
-            guardian.stopReview();guardian.setAiDisabled(true);guardian.setNoGravity(true);guardian.setInvulnerable(true);
-            guardian.addCommandTag("ew_church_keeper");guardian.setArenaHidden(true);world.spawnEntity(guardian);
-        }
-        var pos=s.at(0,-1,s.layoutVersion>=2?-3:3);
-        boolean displaced=guardian.squaredDistanceTo(pos.getX()+.5,pos.getY(),pos.getZ()+.5)>.000001;
-        if(displaced)guardian.setPosition(pos.getX()+.5,pos.getY(),pos.getZ()+.5);
-        guardian.setArenaHidden(true);
-        guardian.setVelocity(Vec3d.ZERO);
-        float yaw=switch(s.rotation) {case NONE -> 180;case CLOCKWISE_90 -> 270;case CLOCKWISE_180 -> 0;default -> 90;};
-        guardian.setYaw(yaw);guardian.setBodyYaw(yaw);guardian.setHeadYaw(yaw);
-        if(guardian.isBossAggressive() || !guardian.isAiDisabled() || !guardian.hasNoGravity() || !guardian.isInvulnerable()) {
-            guardian.stopReview();guardian.setAiDisabled(true);guardian.setNoGravity(true);guardian.setInvulnerable(true);
-        }
-        return guardian;
     }
     private static void preparePlinth(ServerWorld world,Site s) {
         // Refresh only the authored effigy on older unfinished sites; leave the socket and chest intact.
@@ -520,7 +452,7 @@ public final class GuardianChurchManager {
         ServerWorld world=source.getWorld();
         if (error!=null || state==null) return "Church storage is unavailable.";
         if (world.getRegistryKey()!=World.OVERWORLD) return "Place the church in the Overworld.";
-        if (busy() || GuardianArenaManager.hasActiveArena()) return "Wait for the current build or encounter to finish.";
+        if (busy()) return "Wait for the current build or encounter to finish.";
         int x=BlockPos.ofFloored(source.getPosition()).getX(),z=BlockPos.ofFloored(source.getPosition()).getZ()+40;
         // Placement validates the entire footprint before reserving or modifying it.
         int low=Integer.MAX_VALUE,high=Integer.MIN_VALUE;

@@ -20,7 +20,7 @@ import net.minecraft.world.Heightmap;
 import java.nio.file.*;
 import java.util.*;
 
-/** Actual arena/spell writes and attacks; isolated from player saves by the optional init script. */
+/** Actual nave floor/spell writes and attacks; isolated from player saves by the optional init script. */
 public final class GuardianNatureSmokeMod implements ModInitializer {
     private int tick, phase, started, floor;
     private long attackStarted;
@@ -29,6 +29,7 @@ public final class GuardianNatureSmokeMod implements ModInitializer {
     private GuardianBossCombat combat;
     private ItemStack wand;
     private BlockPos seed, remote, distant, coals;
+    private net.minecraft.block.BlockState coalsFloor;
     private AwakenedTreeEntity tree;
     private float treeHealth;
     private boolean sawClearing;
@@ -40,28 +41,47 @@ public final class GuardianNatureSmokeMod implements ModInitializer {
         });
     }
     private void run(MinecraftServer server) throws Exception {
-        tick++; var world=server.getOverworld();
-        require(tick<2000,"Nature fixture timed out: "+phase+" "+GuardianArenaManager.status());
+        tick++; ServerWorld world=player!=null && GuardianArenaManager.inRealm(player)?(ServerWorld)player.getEntityWorld():server.getOverworld();
+        require(tick<2600,"Nature fixture timed out: "+phase+" "+GuardianArenaManager.status());
         if(player!=null && player.isAlive() && phase!=8)player.setHealth(player.getMaxHealth());
         if(tick==30) {
             for(int x=-5;x<=5;x++)for(int z=-5;z<=5;z++){world.getChunk(x,z);world.setChunkForced(x,z,true);}
             int ground=world.getTopY(Heightmap.Type.MOTION_BLOCKING,0,0);
-            var factory=com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);
+            var factory=com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);
             factory.setAccessible(true);
             player=(ServerPlayerEntity)factory.invoke(null,server,UUID.randomUUID(),"NatureTester",8.5,(double)ground,.5);
             player.onTeleportationDone(); player.setOnGround(true);
-            guardian=new FracturedGuardianEntity(ModEntities.FRACTURED_GUARDIAN,world);
-            guardian.setPosition(.5,ground,.5);guardian.stopReview();world.spawnEntity(guardian);
-            var field=FracturedGuardianEntity.class.getDeclaredField("combat");field.setAccessible(true);combat=(GuardianBossCombat)field.get(guardian);
-            require(GuardianArenaManager.start(player,guardian).startsWith("Arena sealed"),"Could not start arena"); phase=1;
-        }
-        if(phase==1 && GuardianArenaManager.isFighting(guardian)) {
-            guardian.stopReview();floor=player.getBlockY()-1;
-            player.setPosition(-20.5,floor+1,-20.5); player.setYaw(0);player.setPitch(0);
             wand=new ItemStack(ModItems.FRACTURED_WAND);player.equipStack(EquipmentSlot.MAINHAND,wand);
-            testRootVisualOwnership(world);
+            // Water growth needs ordinary Overworld water, so it runs before the party enters the nave.
             testWaterGrowth(world);
+            // Slot 0 of a fresh nave is centred on x=0, z=0, like the fixture's authored positions.
+            GuardianArenaManager.enter(player,0); phase=10;
+        }
+        if(phase==10 && GuardianArenaManager.inRealm(player)) {
+            // A real client confirms the move into the nave; until then a player cannot be hurt.
+            player.onTeleportationDone();
+            require(GuardianArenaManager.summon(player).startsWith("The Guardian wakes"),"Could not summon the nave's Guardian");
+            // Simulated players do not keep chunks ticking as a real client does; hold the floor loaded like the Overworld's.
+            for(int x=-5;x<=4;x++)for(int z=-5;z<=4;z++)((ServerWorld)player.getEntityWorld()).setChunkForced(x,z,true); phase=11;
+        }
+        if(phase==11) {
+            guardian=world.getEntitiesByClass(FracturedGuardianEntity.class,player.getBoundingBox().expand(80),e->e.isAlive()).stream().findFirst().orElse(null);
+            // The nave fixture plays the intro; here it is skipped.
+            if(guardian!=null && guardian.inIntro()) GuardianIntro.skip(player);
+            if(guardian!=null && GuardianArenaManager.isFighting(guardian)) {
+                var field=FracturedGuardianEntity.class.getDeclaredField("combat");field.setAccessible(true);combat=(GuardianBossCombat)field.get(guardian);phase=1;
+            }
+        }
+        if(phase==1) {
+            guardian.stopReview();floor=player.getBlockY()-1;
+            // Casts aim with the head, which the arrival teleport turned toward the seat; a client would turn it back.
+            player.setPosition(-20.5,floor+1,-20.5); player.setYaw(0);player.setHeadYaw(0);player.setPitch(0);
+            player.equipStack(EquipmentSlot.MAINHAND,wand);
+            testRootVisualOwnership(world);
+            coalsFloor=world.getBlockState(new BlockPos(-21,floor,-15));
             FireAbilityHandler.castSecondary(world,player,wand);
+            require(!world.getEntitiesByClass(FireAbilityHandler.PyreSchedulerEntity.class,player.getBoundingBox().expand(4),e->true).isEmpty(),
+                    "Fire secondary did not start its Pyre in the nave");
             seed=new BlockPos(10,floor+1,10);remote=new BlockPos(20,floor+1,10);
             distant=new BlockPos(50,floor+1,10);
             plant(world,seed);plant(world,remote);plant(world,distant);
@@ -75,7 +95,7 @@ public final class GuardianNatureSmokeMod implements ModInitializer {
             coals=new BlockPos(-21,floor,-15);started=tick;phase=2;
         }
         if(phase==2 && tick-started==50) {
-            require(world.getBlockState(coals).isOf(ModSpellBlocks.PYRE_COALS),"Real Fire secondary has no coals on arena floor");
+            require(world.getBlockState(coals).isOf(ModSpellBlocks.PYRE_COALS),"Real Fire secondary has no coals on the nave floor");
             require(world.getBlockState(coals.up()).isOf(ModSpellBlocks.PYRE_FLAME),"Real Fire secondary has no flames");
             player.setPosition(coals.getX()+.5,floor+1,coals.getZ()+.5);
             FireAbilityHandler.inventoryTick(wand,world,player,EquipmentSlot.MAINHAND);
@@ -154,12 +174,13 @@ public final class GuardianNatureSmokeMod implements ModInitializer {
             if(tick-started==180) {
                 require(sawClearing,"Sustained real thorns did not make the Guardian clear while players were distant");
                 require(world.getBlockState(new BlockPos(30,floor+1,32)).isAir(),"Automatic clearing left seedling intact");
-                guardian.stopReview();GuardianArenaManager.stop();phase=6;
+                guardian.stopReview();GuardianArenaManager.leave(player);phase=6;
             }
         }
-        if(phase==6 && !GuardianArenaManager.hasActiveArena()) {
-            require(world.getBlockState(coals).isAir(),"Arena cleanup left spell floor behind");
-            Files.writeString(Path.of("NATURE_PASSED.txt"),"Real arena: Fire coals/flames/buffs; protected tracked floor restoration; Nature planting/growth/survival; local slam destruction and distant preservation; exact extended recovery; damageable ultimate tree; uninterrupted rooted leap; arena cleanup.\n");
+        // The Pyre's coals expire on their own; the nave floor comes back exactly as it was.
+        if(phase==6 && !GuardianArenaManager.status().contains("fight:")
+                && server.getWorld(com.anton.elementalwands.arena.ShatteredNave.WORLD).getBlockState(coals).equals(coalsFloor)) {
+            Files.writeString(Path.of("NATURE_PASSED.txt"),"Real nave floor: Fire coals/flames/buffs; protected tracked floor restoration; Nature planting/growth/survival; local slam destruction and distant preservation; exact extended recovery; damageable ultimate tree; uninterrupted rooted leap; floor restored after the fight.\n");
             System.out.println("GUARDIAN NATURE ARENA CHECK PASSED");server.stop(false);
         }
     }

@@ -218,7 +218,7 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
                     var boss = (NecromancerEntity)w.getEntity(bossId);
                     boss.refreshPositionAndAngles(.5, floor, 2.5, 0, 0);
                     boss.setBodyYaw(0); boss.requestTransform();
-                    var f = com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player", net.minecraft.server.MinecraftServer.class,
+                    var f = com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player", net.minecraft.server.MinecraftServer.class,
                             UUID.class, String.class, double.class, double.class, double.class);
                     f.setAccessible(true);
                     var victim = (net.minecraft.server.network.ServerPlayerEntity)f.invoke(null, server, UUID.randomUUID(), "RushTarget", .5, (double)floor, 16.5);
@@ -302,7 +302,7 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
                 try {
                     var w=server.getOverworld();
                     w.setTimeOfDay(18000);
-                    var f=com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player",net.minecraft.server.MinecraftServer.class,
+                    var f=com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player",net.minecraft.server.MinecraftServer.class,
                             UUID.class,String.class,double.class,double.class,double.class);
                     f.setAccessible(true);
                     var victim=(net.minecraft.server.network.ServerPlayerEntity)f.invoke(null,server,UUID.randomUUID(),"DrainTarget",.5,(double)floor,-2.5);
@@ -420,7 +420,7 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
             try {
                 var boss = (NecromancerEntity)server.getOverworld().getEntity(bossId);
                 boss.refreshPositionAndAngles(.5, floor, 4.5, 0, 0); boss.setBodyYaw(0);
-                var f = com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player", net.minecraft.server.MinecraftServer.class,
+                var f = com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player", net.minecraft.server.MinecraftServer.class,
                         UUID.class, String.class, double.class, double.class, double.class);
                 f.setAccessible(true);
                 var victim = (net.minecraft.server.network.ServerPlayerEntity)f.invoke(null, server, UUID.randomUUID(), "Target", .5, (double)floor, 14.5);

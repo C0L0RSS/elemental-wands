@@ -39,7 +39,7 @@ public final class WindPressureSmokeMod implements ModInitializer {
         if(tick==25) {
             for(int x=-4;x<=4;x++)for(int z=-4;z<=4;z++){world.getChunk(x,z);world.setChunkForced(x,z,true);}
             y=world.getTopY(Heightmap.Type.MOTION_BLOCKING,0,0);
-            var factory=com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);factory.setAccessible(true);
+            var factory=com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);factory.setAccessible(true);
             player=(ServerPlayerEntity)factory.invoke(null,server,UUID.randomUUID(),"WindPressure",.5,(double)y,.5);player.onTeleportationDone();player.setInvulnerable(true);player.setYaw(0);player.setHeadYaw(0);player.setBodyYaw(0);player.setPitch(0);
             wand=new ItemStack(ModItems.FRACTURED_WAND);
             WindAbilityHandler.castSecondary(world,player,wand);WindAbilityHandler.castSecondary(world,player,wand);

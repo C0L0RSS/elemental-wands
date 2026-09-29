@@ -1,6 +1,6 @@
 package com.anton.elementalwands.mixin;
 
-import com.anton.elementalwands.client.NecromancerIntroClient;
+import com.anton.elementalwands.client.BossIntroCamera;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
 import org.spongepowered.asm.mixin.Mixin;
@@ -13,6 +13,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class IntroLookMixin {
     @Inject(method = "changeLookDirection", at = @At("HEAD"), cancellable = true)
     private void introLook(double cursorDeltaX, double cursorDeltaY, CallbackInfo ci) {
-        if ((Object)this == MinecraftClient.getInstance().player && NecromancerIntroClient.cinematic()) ci.cancel();
+        if ((Object)this == MinecraftClient.getInstance().player && BossIntroCamera.cinematic()) ci.cancel();
     }
 }

@@ -158,7 +158,7 @@ public final class HollowUndeadServerSmoke implements ModInitializer {
     }
 
     private static ServerPlayerEntity player(MinecraftServer s, String name, double x, double y, double z) throws Exception {
-        var f = com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player", MinecraftServer.class, UUID.class, String.class, double.class, double.class, double.class);
+        var f = com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player", MinecraftServer.class, UUID.class, String.class, double.class, double.class, double.class);
         f.setAccessible(true);
         return (ServerPlayerEntity)f.invoke(null, s, UUID.randomUUID(), name, x, y, z);
     }

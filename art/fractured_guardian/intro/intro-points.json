@@ -1,0 +1,33 @@
+{
+  "beats": {
+    "length": 260,
+    "impact": 108,
+    "wake": 124,
+    "head": 140,
+    "rise": 152,
+    "stand": 186,
+    "wind": 196,
+    "clap": 216,
+    "release": 236
+  },
+  "core_kneeling": [
+    -0.0,
+    2.8532,
+    0.7196
+  ],
+  "fists_at_clap": [
+    -0.0,
+    2.4775,
+    1.9589
+  ],
+  "head_kneeling": [
+    -0.0,
+    3.172,
+    1.273
+  ],
+  "head_standing": [
+    -0.0,
+    4.4682,
+    0.5289
+  ]
+}

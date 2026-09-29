@@ -132,6 +132,6 @@ public final class GravityWellServerSmoke implements ModInitializer {
     }
     private void aim(){owner.setYaw(0);owner.setHeadYaw(0);owner.setPitch(0);}
     private void reset(){GravityWellManager.cancel(owner);owner.setAttached(EWAttachments.GRAVITY_STATE,new NbtCompound());owner.setStackInHand(Hand.MAIN_HAND,new ItemStack(ModItems.FRACTURED_WAND));owner.setPosition(.5,100,.5);aim();for(var p:List.of(target,ally,covered)){p.setPosition(30,100,30);p.setHealth(20);p.timeUntilRegen=0;p.setVelocity(Vec3d.ZERO);}}
-    private static ServerPlayerEntity player(MinecraftServer s,String name,double x,double y,double z)throws Exception{var f=com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);f.setAccessible(true);return (ServerPlayerEntity)f.invoke(null,s,UUID.randomUUID(),name,x,y,z);}
+    private static ServerPlayerEntity player(MinecraftServer s,String name,double x,double y,double z)throws Exception{var f=com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);f.setAccessible(true);return (ServerPlayerEntity)f.invoke(null,s,UUID.randomUUID(),name,x,y,z);}
     private static void require(boolean b,String why){if(!b)throw new AssertionError(why);}
 }

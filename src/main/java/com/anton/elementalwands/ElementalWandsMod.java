@@ -89,6 +89,7 @@ public class ElementalWandsMod implements ModInitializer {
         FabricDefaultAttributeRegistry.register(ModEntities.INTRO_ZOMBIE, net.minecraft.entity.mob.ZombieEntity.createZombieAttributes().build());
         FabricDefaultAttributeRegistry.register(ModEntities.INTRO_SOUL, com.anton.elementalwands.entity.necromancer.IntroSoulEntity.createAttributes().build());
         com.anton.elementalwands.entity.necromancer.NecromancerIntro.register();
+        com.anton.elementalwands.entity.GuardianIntro.register();
         com.anton.elementalwands.entity.undead.HollowUndeadSpawns.register();
         FabricDefaultAttributeRegistry.register(ModEntities.AWAKENED_TREE, AwakenedTreeEntity.createAttributes().build());
         FabricDefaultAttributeRegistry.register(ModEntities.STONE_ZOMBIE, StoneZombieEntity.createAttributes().build());
@@ -166,6 +167,7 @@ public class ElementalWandsMod implements ModInitializer {
             GuardianCommands.register(dispatcher);
             com.anton.elementalwands.command.NecromancerCommands.register(dispatcher);
             com.anton.elementalwands.command.CryptCommands.register(dispatcher);
+            com.anton.elementalwands.command.NaveCommands.register(dispatcher);
             com.anton.elementalwands.command.PartyCommands.register(dispatcher);
             dispatcher.register(
                 CommandManager.literal("ew")

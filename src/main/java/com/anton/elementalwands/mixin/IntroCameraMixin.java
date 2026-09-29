@@ -1,6 +1,6 @@
 package com.anton.elementalwands.mixin;
 
-import com.anton.elementalwands.client.NecromancerIntroClient;
+import com.anton.elementalwands.client.BossIntroCamera;
 import net.minecraft.client.render.Camera;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.Vec3d;
@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** The Necromancer intro flies the camera; the player's own body is then drawn like any other. */
+/** A boss intro flies the camera; the player's own body is then drawn like any other. */
 @Mixin(Camera.class)
 public abstract class IntroCameraMixin {
     @Shadow private boolean thirdPerson;
@@ -20,7 +20,7 @@ public abstract class IntroCameraMixin {
 
     @Inject(method = "update", at = @At("TAIL"))
     private void introShot(BlockView area, Entity focusedEntity, boolean thirdPerson, boolean inverseView, float tickProgress, CallbackInfo ci) {
-        NecromancerIntroClient.Pose pose = NecromancerIntroClient.pose(tickProgress);
+        BossIntroCamera.Pose pose = BossIntroCamera.pose(tickProgress);
         if (pose == null) return;
         setRotation(pose.yaw(), pose.pitch());
         setPos(pose.pos());

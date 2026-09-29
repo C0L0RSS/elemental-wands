@@ -16,7 +16,6 @@
     "ScreenHandlerMixin",
     "GuardianArenaPlayerMixin",
     "GuardianArenaWorldMixin",
-    "GuardianLiftPassengerMixin",
     "GuardianChurchExplosionMixin",
     "WandExplosionFireMixin",
     "GuardianChurchPistonMixin",
@@ -25,7 +24,7 @@
     "GuardianChurchLocateMixin",
     "SpellBurnDamageMixin",
     "SpellRegenerationMixin",
-    "HollowCryptDeathMixin"
+    "BossRealmDeathMixin"
   ],
   "injectors": {
     "defaultRequire": 1
@@ -40,6 +39,9 @@
     "IntroHudMixin",
     "IntroGameRendererMixin",
     "IntroInputMixin",
-    "IntroLookMixin"
+    "IntroLookMixin",
+    "IntroHeartArmMixin",
+    "IntroHeartHandMixin",
+    "NaveFogMixin"
   ]
 }

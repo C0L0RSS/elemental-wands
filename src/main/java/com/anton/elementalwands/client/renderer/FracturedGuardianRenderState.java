@@ -15,6 +15,8 @@ public class FracturedGuardianRenderState extends LivingEntityRenderState implem
     public float beamTime = -1;
     public boolean holdingRock, arenaHidden, burning;
     public float leapTime = -1;
+    /** Ticks into the intro cinematic, or -1 outside one. */
+    public float introTime = -1;
     public java.util.List<GuardianLeapVisual.Mark> leapMarks = java.util.List.of();
     public java.util.List<GuardianWaveVisual.Stone> waveStones = java.util.List.of();
     public float beamPitch;

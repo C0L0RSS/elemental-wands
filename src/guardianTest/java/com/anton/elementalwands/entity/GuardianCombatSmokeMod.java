@@ -27,7 +27,7 @@ public final class GuardianCombatSmokeMod implements ModInitializer {
         if(tick==25) {
             for(int x=-3;x<=3;x++)for(int z=-3;z<=3;z++){world.getChunk(x,z);world.setChunkForced(x,z,true);}
             ground=world.getTopY(Heightmap.Type.MOTION_BLOCKING,0,0);
-            var method=com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);method.setAccessible(true);
+            var method=com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);method.setAccessible(true);
             target=(ServerPlayerEntity)method.invoke(null,server,UUID.randomUUID(),"AttackTarget",.5,(double)ground,18.5);
             guardian=new FracturedGuardianEntity(com.anton.elementalwands.registry.ModEntities.FRACTURED_GUARDIAN,world);
             guardian.setPosition(.5,ground,.5);guardian.stopReview();world.spawnEntity(guardian);

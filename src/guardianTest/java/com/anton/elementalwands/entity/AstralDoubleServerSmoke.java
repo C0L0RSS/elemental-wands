@@ -86,6 +86,6 @@ public final class AstralDoubleServerSmoke implements ModInitializer {
     private AstralDoubleEntity place(Vec3d at){require(AstralDoubleManager.cast(owner),"Placement setup cast failed");AstralDoubleManager.land(owner,orbs().getFirst(),at);var d=AstralDoubleManager.active(owner);require(d!=null,"Placement rejected "+at);return d;}
     private List<AstralOrbEntity> orbs(){return owner.getEntityWorld().getEntitiesByClass(AstralOrbEntity.class,new Box(-80,90,-80,90,120,80),e->!e.isRemoved());}
     private List<SingularityBoltEntity> bolts(){return owner.getEntityWorld().getEntitiesByClass(SingularityBoltEntity.class,new Box(-80,90,-80,90,120,80),e->!e.isRemoved());}
-    private static ServerPlayerEntity player(MinecraftServer s,String name,double x,double y,double z)throws Exception{var f=com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);f.setAccessible(true);return (ServerPlayerEntity)f.invoke(null,s,UUID.randomUUID(),name,x,y,z);}
+    private static ServerPlayerEntity player(MinecraftServer s,String name,double x,double y,double z)throws Exception{var f=com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);f.setAccessible(true);return (ServerPlayerEntity)f.invoke(null,s,UUID.randomUUID(),name,x,y,z);}
     private static void require(boolean b,String why){if(!b)throw new AssertionError(why);}
 }

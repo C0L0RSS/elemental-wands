@@ -15,71 +15,125 @@ The courtyard holds a stone effigy, an offering chest, and a carved pedestal.
 The chest supplies the site-specific Guardian Heart; the short interaction hint
 replaces old lore-book onboarding. Use that heart on the bowl or column to begin.
 The seated heart and cyan trail communicate acceptance. No living dormant boss
-stands in the courtyard: players ascend first, then the Guardian arrives above.
+stands in the courtyard: the ritual takes the group to the Shattered Nave, where
+the Guardian drops onto the effigy seat.
 
-Admission checks the group, ground, loaded area, build height, and open lift paths
-before consuming a heart or changing vegetation. Recall a lost heart by sneaking
-and using the socket with an empty main hand; old copies are invalidated. A wipe
-or abort resets the offering. Only one arena may run on a server at a time.
+The ritual seals every living, non-spectator player within 20 blocks of the socket
+into a fight, records where each stood, and only then consumes the heart; Creative
+players come along but are not sealed in. Peaceful refuses it. Nothing at the church
+is cleared or built for the fight. Recall a lost heart by sneaking and using the
+socket with an empty main hand; old copies are invalidated. A wipe, an abort or a
+restart resets the offering with a fresh heart. Each church runs its own fight, and
+up to eight run at once, one per nave slot.
 
 The visual direction is ornate fictional stone architecture, colored glass and a
 teal roof, with a broken-ring emblem. Preserve the approved geometry and stone
 palette. Do not restore real-world religious symbols, gold/quartz masonry, or a
 smooth non-Minecraft statue from earlier concepts.
 
-## Arena lifecycle
+## The Shattered Nave
 
-The eligible nearby Survival/Adventure group is sealed at admission. Invisible
-passenger carriers share motion with the visual floor during ascent and descent;
-do not reintroduce per-tick teleport movement. Players retain camera control, and
-casting is suspended without spending resources during cinematic stages.
+The Guardian is fought in its own dimension, `elementalwands:shattered_nave`: an endless
+ruined cathedral. The fight floor is a flat 128-block square (blocks −64 to 63 around the
+centre) in the crossing of a grid of pillars about 20 blocks thick, 44 apart and 84 tall
+to their capitals, whose rib vaults and a broken-ring keystone fade into darkness overhead.
+Many pillars are snapped, bitten, stripped of an outer column or collapsed, with fallen drums
+across the aisles and masonry hanging in the air, all outside the fight floor. An invisible
+barrier wall and lid 40 blocks up enclose the floor. The dimension borrows the Nether's thick
+fog so it has no sky; `NaveFogMixin` sets the haze to end about 150 blocks out (or sooner
+with a shorter render distance), so the grid reads as endless. Ambient light is 0.3, and the
+floor is lit by sea-lantern inlays in the seat, the border band and the glowing cracks.
+Coloured light shafts fall from unseen windows; Minecraft light has no colour, so
+`client/NaveShaftEffects` draws them (additive, fading with distance) and invisible light
+blocks light their floor pools. Owners are `arena/ShatteredNave` (geometry) and
+`arena/GuardianArenaManager` (fights).
 
-The fight takes place on a roofless 128-block-square floor above the terrain.
-A single batched visible surface uses ordinary one-block texture repetitions;
-invisible backing supplies collision. Avoid duplicate visible meshes and their
-z-fighting. Use `Atlases.BLOCKS` when requesting the block atlas from AtlasManager;
-the render layer uses the texture-file ID. These identifiers are not interchangeable.
+`art/guardian_nave/build_layout.py` authors the hall. Its default run writes the browser
+preview to `.local-previews/guardian-nave/` (launch entry `guardian-nave-preview`, port 8370).
+`--install` writes the hall as 121 structure tiles of 48×48 plus the generated light shafts
+(`arena/ShatteredNaveShafts.java`), and `--check` detects drift. The half-width, ceiling and
+tile grid are duplicated in `ShatteredNave` and must stay in step. The builder only draws the
+hall out to about 220 blocks; the fog hides the edge, and the dimension's flat floor continues.
 
-Spells work within the arena while world travel, blinks and other escape paths
-respect its bounds. Ordinary player block building is disabled. Temporary spell
-structures must not replace the protected foundation.
+A slot is laid out the first time it is used, one tile per server tick (about six seconds),
+and is then reused. When the installed tiles change, every slot moves to untouched ground.
+The group arrives side by side south of the seat, facing it. Two seconds later the Guardian
+appears kneeling on the seat as a stone statue and its intro cinematic plays (see below); the
+fight starts when it ends. Until then nobody in the fight casts or takes damage, and the
+Guardian cannot be hurt. Only the sealed players still standing can damage it, and it only
+targets them.
 
-Death eliminates a fighter, who respawns as a spectator inside the arena. They can
-watch but cannot fight or rejoin. Disconnect also eliminates; reconnecting permits
-spectating rather than re-entry. A full wipe ends the encounter. Return restores
-recorded positions and game modes, including offline players on reconnection.
-Wait for the respawn connection to reference the replacement player before moving
-it; validate loaded ground rather than trusting a raw world-spawn fallback.
+### The intro: "the effigy wakes"
 
-A real boss death during combat commits victory. Removal, Peaceful, an operator
-abort, or a wipe do not. Restoration proceeds beneath the returning group; the ward
-ends afterward. Seeded treasure cannot be rerolled by recall/restart and collected
-chests never refill. Eligible enrolled players also claim one personal spell book
-per site when opening its restored reward chest; require inventory space before
-recording the receipt. See [progression](progression-and-controls.md).
+`entity/GuardianIntro` runs a 13-second scene (260 ticks) on the server's clock; each watcher's
+client (`client/GuardianIntroClient`) flies its camera along the same timeline, so a party sees
+it together. The camera frames the caller's outstretched arm with the heart on it (the player who
+offered it; `IntroHeartArmMixin` raises their main arm and empties their hands). The heart
+(`IntroHeartEntity`, a scripted path both sides compute from world time) trembles harder and
+harder, floats up and flies down the nave, the camera chasing it until it strikes the kneeling
+Guardian's core. Its eyes and veins stutter alight, lightning crawls over the stone and jumps to
+the floor (`GuardianAwakeningVisual`), and it lifts its head, rises, spreads its arms and slams
+its fists together; the slam sends a ring of sparks across the floor and the title appears.
+
+Watchers are held still, unhurt and unable to cast. Anyone can hold Sneak to skip; the fight
+starts early only once every watcher has. It plays every fight. An operator control that stops
+the Guardian mid-scene releases everyone without starting the fight, and a restart comes back
+fighting. `/ew guardian intro` replays it on the nearest Guardian anywhere, with the operator
+holding the heart. The Guardian's clip (`animation.fractured_guardian.intro`) is authored by
+`art/fractured_guardian/intro/build_intro.py` on the approved rig, sharing the scene's beats; it
+also measures the points the scene aims at (`intro-points.json`), which the contract test checks
+against `GuardianIntro`. Rebuild with that script, then `python3 tools/prepare_guardian_assets.py`.
+The shared camera, HUD and input hooks (`IntroCameraMixin` and friends) ask `BossIntroCamera`,
+which defers to whichever boss's scene is playing.
+
+Every player teleport (spells, pearls, commands, portals) stays on the walled floor and cannot
+cross into or out of the nave, except the nave's own moves; a player who escapes is pulled back.
+A Guardian that strays off the floor or falls beneath it returns to the seat, but its high leap
+is left alone. Survival players cannot break or place blocks. The floor and everything outside
+the walled volume are protected against any block write: spells may place and clear their own
+blocks above the floor, and temporary spell blocks may cover the floor and restore it, but never
+open a hole in it or reach outside the walls. Explosions and Hollow Purple destroy no blocks.
+
+- **Death:** nothing drops in the nave; inventory and experience carry over to the respawn.
+  A fallen fighter respawns as a spectator above the floor, sees the Guardian's health bar,
+  cannot leave the slot, and gets their game mode back when the fight ends. Disconnecting
+  also counts as falling; rejoining mid-fight puts the player back as a spectator.
+- **Wipe:** when nobody is left standing, the Guardian vanishes and everyone is sent back to
+  where they stood at the church three seconds later. The church offers a fresh heart.
+- **Victory:** the Guardian's death commits the win before any block changes, then the church
+  is restored in the Overworld while the party waits ten seconds in the nave, so they return
+  to the finished church. Seeded treasure cannot be rerolled by recall/restart and collected
+  chests never refill. Each enrolled player may claim one personal spell book per site from
+  its restored reward chest; require inventory space before recording the receipt. See
+  [progression](progression-and-controls.md). Removal, Peaceful, an operator reset and a
+  wipe are not victories.
+- **Restart:** a fight is never resumed. Players still in the nave go home with their game
+  mode restored when they join, and the church offers its heart again.
+
+Worlds from the retired sky arena are upgraded on start: players it still owed a return or a
+game mode are sent home when they next join, its record is renamed
+`guardian-arena.retired.json`, and a hidden keeper left at a church is discarded.
 
 ## Persistence and terrain constraints
 
 `GuardianChurchManager` journals sites in `elementalwands/guardian-churches.json`.
-`GuardianArenaManager` independently journals recovery in
-`elementalwands/guardian-arena.json`, both beneath the world save.
+`GuardianArenaManager` independently journals `elementalwands/guardian-nave.json`: built
+slots, return points, game modes to restore and fights in progress, beneath the world save.
 
-- Commit recovery/return records before admission or destructive transitions.
+- Commit return records before admission, and victory before restoration or rewards.
 - Replay interrupted builds/restorations idempotently. Restart aborts a running
   fight safely; committed victory must not become a fresh loot roll.
 - Save world/player changes before retiring their recovery records.
-- Release only chunk force flags owned by this encounter; preserve pre-existing ones.
-- Sweep only the originally empty arena prism, not surrounding buildings/containers.
+- Release only chunk force flags owned by the church; preserve pre-existing ones.
 - Preserve temporary-block ownership, equipment recovery, and offline returns.
 - Use site accessors such as `Site.socket()` and `Site.offering()` rather than
   assuming that the saved building anchor is the current interaction position.
+  A site's fight is keyed by `Site.key()` (its anchor), not by the heart's token.
 
 Unfinished old sites upgrade with replayable inventory/layout receipts, preserving
 heart identity and offering contents. Completed player-modified sites are left alone.
 Terrain blending skips water, trees, containers, roads and artificial surfaces;
 saved absolute target heights avoid repeatedly expanding earthwork on reload.
-Ritual clearing permits natural vegetation in lift columns without clearing stone
-roofs or arbitrary structures. Admission must precede those world mutations.
 
 ## Hollow Crypt realm
 
@@ -175,7 +229,9 @@ pedestal models. Offline building previews lack real surrounding terrain and
 Minecraft lighting; use native checks for those.
 
 Operator commands: `/ew guardian church place|locate|cancel`,
-`/locate structure elementalwands:guardian_church`, and
-`/ew guardian arena start|status|stop`. Placement mutates the world, so use a
-suitable disposable area. `arena stop` is the emergency return operation.
+`/locate structure elementalwands:guardian_church`, and `/ew nave enter [slot]|summon|reset|status`
+(`summon` drops a Guardian for the survival players already in the slot; `reset` ends the slot's
+fight, clears its entities and lays it out again). `/ew nave leave` is open to anyone in the nave
+and returns them to where they entered. Placement mutates the world, so use a suitable
+disposable area.
 See [testing](testing.md) for lifecycle, restart, worldgen, and client fixtures.

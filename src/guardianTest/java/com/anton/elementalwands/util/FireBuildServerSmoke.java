@@ -32,7 +32,7 @@ public final class FireBuildServerSmoke implements ModInitializer {
     private void run(MinecraftServer server) throws Exception {
         int tick=++ticks;
         if (tick==30) {
-            var factory=com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);
+            var factory=com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);
             factory.setAccessible(true);player=(ServerPlayerEntity)factory.invoke(null,server,UUID.randomUUID(),"FireBuildTester",0.5,100.0,0.5);
             player.setNoGravity(true);player.setYaw(0);player.setPitch(10);player.setAttached(EWAttachments.AFFINITY,"FIRE");
             player.setStackInHand(Hand.MAIN_HAND,new ItemStack(ModItems.FRACTURED_WAND));

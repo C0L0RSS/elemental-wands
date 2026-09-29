@@ -96,7 +96,7 @@ public final class GaleDaggersServerSmoke implements ModInitializer {
     private long flying(){return daggers().stream().filter(GaleDaggerEntity::fired).count();}
     private long prepared(){return daggers().stream().filter(e->!e.fired()).count();}
     private static ServerPlayerEntity player(MinecraftServer s,String name,double x,double y,double z)throws Exception{
-        var f=com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);f.setAccessible(true);return (ServerPlayerEntity)f.invoke(null,s,UUID.randomUUID(),name,x,y,z);
+        var f=com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);f.setAccessible(true);return (ServerPlayerEntity)f.invoke(null,s,UUID.randomUUID(),name,x,y,z);
     }
     private static void require(boolean c,String why){if(!c)throw new AssertionError(why);}
 }

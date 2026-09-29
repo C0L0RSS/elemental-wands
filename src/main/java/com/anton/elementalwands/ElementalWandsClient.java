@@ -120,14 +120,14 @@ public class ElementalWandsClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.INTRO_ZOMBIE, com.anton.elementalwands.client.renderer.IntroZombieRenderer::new);
         EntityRendererRegistry.register(ModEntities.INTRO_SOUL, com.anton.elementalwands.client.renderer.IntroSoulRenderer::new);
         com.anton.elementalwands.client.NecromancerIntroClient.init();
+        EntityRendererRegistry.register(ModEntities.INTRO_HEART, com.anton.elementalwands.client.renderer.IntroHeartRenderer::new);
+        com.anton.elementalwands.client.GuardianIntroClient.init();
         EntityRendererRegistry.register(ModEntities.HOLLOW_CRAWLER, context -> new com.anton.elementalwands.client.renderer.HollowUndeadRenderer<>(context, "hollow_crawler", .6f));
         EntityRendererRegistry.register(ModEntities.HOLLOW_ARCHER, context -> new com.anton.elementalwands.client.renderer.HollowUndeadRenderer<>(context, "hollow_archer", .4f));
         EntityRendererRegistry.register(ModEntities.HOLLOW_BRUTE, context -> new com.anton.elementalwands.client.renderer.HollowUndeadRenderer<>(context, "hollow_brute", .6f));
-        EntityRendererRegistry.register(ModEntities.GUARDIAN_LIFT, EmptyEntityRenderer::new);
         com.anton.elementalwands.client.FireLeapClient.init();
         com.anton.elementalwands.client.FireLeapPreview.init();
         EntityRendererRegistry.register(ModEntities.FLASHOVER_EMBER, com.anton.elementalwands.client.renderer.FlashoverEmberRenderer::new);
-        EntityRendererRegistry.register(ModEntities.GUARDIAN_ARENA, com.anton.elementalwands.client.renderer.GuardianArenaRenderer::new);
         EntityRendererRegistry.register(ModEntities.GUARDIAN_ROCK, com.anton.elementalwands.client.renderer.GuardianRockRenderer::new);
         EntityRendererRegistry.register(ModEntities.STONE_CLUSTER, com.anton.elementalwands.client.renderer.StoneClusterRenderer::new);
 
@@ -193,6 +193,7 @@ public class ElementalWandsClient implements ClientModInitializer {
         HudRenderCallback.EVENT.register(new com.anton.elementalwands.client.overlay.WandHudOverlay());
         HudRenderCallback.EVENT.register(new EntangleHudOverlay());
         com.anton.elementalwands.client.NecromancerDrainEffects.register();
+        com.anton.elementalwands.client.NaveShaftEffects.register();
         HudRenderCallback.EVENT.register(new com.anton.elementalwands.client.overlay.NecromancerDrainOverlay());
     }
 

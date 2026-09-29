@@ -1,0 +1,18 @@
+{
+  "type": "elementalwands:shattered_nave",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "elementalwands:shattered_nave",
+      "features": false,
+      "lakes": false,
+      "layers": [
+        {"block": "minecraft:bedrock", "height": 1},
+        {"block": "minecraft:deepslate", "height": 59},
+        {"block": "minecraft:stone", "height": 3},
+        {"block": "minecraft:polished_andesite", "height": 1}
+      ],
+      "structure_overrides": []
+    }
+  }
+}

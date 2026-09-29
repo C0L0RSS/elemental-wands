@@ -158,7 +158,7 @@ public final class GuardianGuardSmokeMod implements ModInitializer {
         if(tick>800)throw new AssertionError("Guard test timed out");
     }
     private void addPlayer(MinecraftServer server,int index) throws Exception {
-        var method=com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);method.setAccessible(true);
+        var method=com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);method.setAccessible(true);
         var player=(ServerPlayerEntity)method.invoke(null,server,UUID.randomUUID(),"GuardTest"+index, .5+index*3,(double)ground,18.5);
         player.onTeleportationDone();player.setInvulnerable(true);players.add(player);
     }

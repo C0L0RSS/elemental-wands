@@ -1,0 +1,52 @@
+// Native Shattered Nave look: enters a slot, photographs the hall, plays the Guardian's intro, then leaves.
+// Screenshots: build/nave-client-smoke/screenshots/ (-PintroVideo also saves every tick of the intro)
+// ./gradlew -I tools/nave_client_smoke.init.gradle runClient -PhubClientAssets="$HOME/.lunarclient/shared/assets" --offline
+allprojects {
+    plugins.withId('fabric-loom') {
+        def smokeRoot=layout.buildDirectory.dir('nave-client-smoke').get().asFile
+        // Optional existing cache for offline verification (for example Lunar shared/assets).
+        def existingAssets=project.findProperty('hubClientAssets')
+        if (project.hasProperty('introVideo')) loom.runs.client.vmArg('-Dnave.introVideo=true')
+        if (existingAssets) {
+            loom.runs.client.vmArg('-Dfabric.dli.config='+new File(smokeRoot,'launch.cfg').absolutePath)
+        }
+        tasks.register('naveClientMetadata') {
+            if (existingAssets) dependsOn generateDLIConfig
+            doLast {
+                def metadata=new File(smokeRoot,'metadata')
+                metadata.mkdirs()
+                new File(metadata,'fabric.mod.json').text='''{
+  "schemaVersion": 1, "id": "nave_client_smoke", "version": "1.0.0", "environment": "client",
+  "entrypoints": {"client": ["com.anton.elementalwands.client.NaveClientSmoke"]},
+  "depends": {"elementalwands": "*"}
+}'''
+                new File(smokeRoot,'NAVE_CLIENT_PASSED.txt').delete()
+                new File(smokeRoot,'NAVE_CLIENT_FAILED.txt').delete()
+                if (existingAssets) {
+                    def assets=file(existingAssets)
+                    if (!new File(assets,'indexes/27.json').exists()) throw new GradleException('Existing asset cache needs indexes/27.json')
+                    def launch=file('.gradle/loom-cache/launch.cfg').text
+                    launch=launch.replaceAll(/(?m)(\t--assetIndex\r?\n)\t[^\r\n]+/, { match, prefix -> prefix+'\t27' })
+                    launch=launch.replaceAll(/(?m)(\t--assetsDir\r?\n)\t[^\r\n]+/, { match, prefix -> prefix+'\t'+assets.absolutePath })
+                    new File(smokeRoot,'launch.cfg').text=launch
+                }
+            }
+        }
+        tasks.register('naveClientJar',Jar) {
+            dependsOn guardianTestClasses, naveClientMetadata
+            archiveFileName='nave-client-smoke.jar'
+            destinationDirectory=smokeRoot
+            from sourceSets.guardianTest.output
+            from new File(smokeRoot,'metadata')
+        }
+        loom.runs.client.runDir('build/nave-client-smoke')
+        loom.runs.client.vmArg('-Dfabric.addMods='+new File(smokeRoot,'nave-client-smoke.jar').absolutePath)
+        tasks.named('runClient') {
+            dependsOn naveClientJar
+            doLast {
+                if (!new File(smokeRoot,'NAVE_CLIENT_PASSED.txt').exists() || new File(smokeRoot,'NAVE_CLIENT_FAILED.txt').exists())
+                    throw new GradleException('Nave client check failed; inspect build/nave-client-smoke/logs/latest.log')
+            }
+        }
+    }
+}

@@ -187,7 +187,7 @@ public final class StoneTechniqueSmokeMod implements ModInitializer {
         return StoneChargeManager.breakCone(caster,new Vec3d(.5,121.5,.2),new Vec3d(0,0,1),1,121);
     }
     private static ServerPlayerEntity player(MinecraftServer server,String name,double x,double y,double z)throws Exception {
-        var method=com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);
+        var method=com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);
         method.setAccessible(true);return (ServerPlayerEntity)method.invoke(null,server,UUID.randomUUID(),name,x,y,z);
     }
 }

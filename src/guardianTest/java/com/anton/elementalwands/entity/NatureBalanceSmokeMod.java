@@ -167,7 +167,7 @@ public final class NatureBalanceSmokeMod implements ModInitializer {
         entity.setPosition(x, 100, .5); world.spawnEntity(entity); return entity;
     }
     private static ServerPlayerEntity player(MinecraftServer server, String name, double x) throws Exception {
-        var factory = com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player",
+        var factory = com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player",
                 MinecraftServer.class, UUID.class, String.class, double.class, double.class, double.class);
         factory.setAccessible(true);
         var player = (ServerPlayerEntity) factory.invoke(null, server, UUID.randomUUID(), name, x, 100.0, .5);

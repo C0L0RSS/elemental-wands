@@ -2,6 +2,8 @@ package com.anton.elementalwands.client;
 
 import com.anton.elementalwands.crypt.HollowCryptManager;
 import com.anton.elementalwands.crypt.HollowCryptRealm;
+import com.anton.elementalwands.crypt.MausoleumVeilBlock;
+import com.anton.elementalwands.registry.ModBlocks;
 import com.anton.elementalwands.data.EWAttachments;
 import com.anton.elementalwands.entity.necromancer.NecromancerEntity;
 import com.anton.elementalwands.entity.necromancer.NecromancerRules;
@@ -29,14 +31,16 @@ import net.minecraft.world.gen.WorldPresets;
 import net.minecraft.world.level.LevelInfo;
 import org.lwjgl.glfw.GLFW;
 
-/** Native Hollow Crypt harness: build a slot, enter, summon, contain, reset, leave, then locate the graveyard and use its headstone. */
+/** Native Hollow Crypt harness: build a slot, enter, summon, contain, reset, leave, then locate the graveyard and walk into its mausoleum veil. */
 public final class CryptClientSmoke implements ClientModInitializer {
     private boolean started, done;
     private int ticks, scene, stage;
     private volatile String serverFailure;
     private volatile boolean serverStep;
     private Vec3d home;
-    private volatile BlockPos headstone, graveyard;
+    private volatile BlockPos door, graveyard;
+    private volatile net.minecraft.util.math.Direction doorFacing;
+    private volatile Vec3d doorEye;
     private volatile Vec3d rewardView;
     private int risen, waited;
 
@@ -213,32 +217,72 @@ public final class CryptClientSmoke implements ClientModInitializer {
                     });
                     if (scene == 20) onServer(server, () -> {
                         var p = player(server, uuid); var world = server.getOverworld();
-                        headstone = null;
+                        door = null;
                         // The yard sits within 32 blocks of its chunk centre, in any rotation, on the surface.
-                        for (int x = graveyard.getX() - 64; x <= graveyard.getX() + 64 && headstone == null; x++)
-                            for (int z = graveyard.getZ() - 64; z <= graveyard.getZ() + 64 && headstone == null; z++) {
+                        // The door is the veil's bottom-centre cell; the mausoleum rises well above it.
+                        for (int x = graveyard.getX() - 64; x <= graveyard.getX() + 64 && door == null; x++)
+                            for (int z = graveyard.getZ() - 64; z <= graveyard.getZ() + 64 && door == null; z++) {
                                 int top = world.getTopY(net.minecraft.world.Heightmap.Type.WORLD_SURFACE, x, z);
-                                for (int y = top - 1; y >= top - 6; y--)
-                                    if (world.getBlockState(new BlockPos(x, y, z)).isOf(Blocks.SKELETON_SKULL)) { headstone = new BlockPos(x, y, z); break; }
+                                for (int y = top - 1; y >= top - 30; y--) {
+                                    var state = world.getBlockState(new BlockPos(x, y, z));
+                                    if (state.isOf(ModBlocks.MAUSOLEUM_VEIL) && state.get(MausoleumVeilBlock.PIECE) == 1) { door = new BlockPos(x, y, z); break; }
+                                }
                             }
-                        require(headstone != null, "Natural graveyard has no headstone skull");
+                        require(door != null, "Natural graveyard has no mausoleum veil");
+                        doorFacing = world.getBlockState(door).get(MausoleumVeilBlock.FACING);
+                        doorEye = MausoleumVeilBlock.eye(door, doorFacing);
+                        require(MausoleumVeilBlock.anchor(world.getBlockState(door.up(3).offset(doorFacing.rotateYClockwise())), door.up(3).offset(doorFacing.rotateYClockwise())).equals(door),
+                                "Veil cells do not agree on their anchor");
+                        // The woods around the yard are dead: no leaves anywhere near the door.
+                        java.util.List<String> leaves = new java.util.ArrayList<>();
+                        var yard = world.getStructureAccessor().getStructureContaining(door, s -> s.value() instanceof com.anton.elementalwands.world.HollowGraveyardStructure);
+                        var footprint = yard.hasChildren() ? yard.getChildren().get(0).getBoundingBox() : null;
+                        for (BlockPos q : BlockPos.iterate(door.add(-14, -6, -14), door.add(14, 40, 14)))
+                            if (q.isWithinDistance(door.withY(q.getY()), 14) && world.getBlockState(q).isIn(net.minecraft.registry.tag.BlockTags.LEAVES))
+                                leaves.add(q.toShortString() + " " + world.getBlockState(q).getBlock().getTranslationKey().replace("block.minecraft.", "")
+                                        + (footprint == null ? "" : " dx=" + Math.max(Math.max(footprint.getMinX() - q.getX(), q.getX() - footprint.getMaxX()), 0)
+                                        + " dz=" + Math.max(Math.max(footprint.getMinZ() - q.getZ(), q.getZ() - footprint.getMaxZ()), 0)));
+                        require(leaves.isEmpty(), leaves.size() + " leaves survive within 14 blocks of the mausoleum door " + door.toShortString()
+                                + " (footprint " + footprint + ", start box " + yard.getBoundingBox() + "): " + leaves.subList(0, Math.min(8, leaves.size())));
                         // Hover for the camera: the graveyard may generate in any rotation.
                         p.getAbilities().allowFlying = true; p.getAbilities().flying = true; p.sendAbilitiesUpdate();
-                        p.networkHandler.requestTeleport(headstone.getX() + 18.5, headstone.getY() + 10, headstone.getZ() + 18.5, 0, 0);
+                        Vec3d view = doorEye.add(Vec3d.of(doorFacing.getVector()).multiply(18)).add(0, 9, 0);
+                        p.networkHandler.requestTeleport(view.x, view.y, view.z, 0, 0);
                     });
-                    if (scene > 23 && headstone != null) lookAt(c, Vec3d.ofCenter(headstone).add(0, -4, 0));
+                    if (scene > 23 && doorEye != null) lookAt(c, doorEye);
                     if (scene == 60) shot(c, "crypt-graveyard.png");
-                    if (scene == 62) onServer(server, () -> player(server, uuid).networkHandler.requestTeleport(headstone.getX() - 7.5, headstone.getY() + 1, headstone.getZ() - 7.5, 0, 0));
-                    if (scene == 75) shot(c, "crypt-headstone.png");
-                    if (scene == 80) next();
+                    if (scene == 62) onServer(server, () -> {
+                        Vec3d court = Vec3d.ofBottomCenter(door.offset(doorFacing, 6).down());
+                        player(server, uuid).networkHandler.requestTeleport(court.x, court.y, court.z, 0, 0);
+                    });
+                    if (scene == 75) {
+                        shot(c, "crypt-mausoleum.png");
+                        // Aimed at the doorway from the court, the hint says how to start the fight.
+                        c.options.hudHidden = false;
+                        require(MausoleumHint.message(c) != null, "No hint while looking at the mausoleum door from " + c.player.getEntityPos());
+                        c.options.hudHidden = true;
+                    }
+                    if (scene == 76) onServer(server, () -> {
+                        // The mausoleum can't be mined, even in survival.
+                        var p = player(server, uuid); var world = server.getOverworld();
+                        p.getAbilities().allowFlying = false; p.getAbilities().flying = false; p.sendAbilitiesUpdate();
+                        // Floor, veil and a carved frame piece: mining never progresses and explosions can't touch them.
+                        for (BlockPos q : new BlockPos[]{door.down(), door, door.up(4).offset(doorFacing).offset(doorFacing.rotateYClockwise(), 2)}) {
+                            var state = world.getBlockState(q);
+                            require(!state.isAir(), "Nothing to test at " + q);
+                            require(state.calcBlockBreakingDelta(p, world, q) == 0 && state.getBlock().getBlastResistance() >= 1200,
+                                    "A survival player could break the mausoleum's " + state.getBlock() + " at " + q);
+                        }
+                    });
+                    if (scene == 80) { require(serverStep, "Mausoleum checks did not run"); next(); }
                 }
-                case 7 -> { // a wipe: the headstone takes the party in, the boss rises, the party falls
+                case 7 -> { // a wipe: the veil takes the party in, the boss rises, the party falls
                     if (scene == 0) onServer(server, () -> {
                         var p = player(server, uuid);
                         p.getAbilities().allowFlying = false; p.getAbilities().flying = false; p.sendAbilitiesUpdate();
                         p.getInventory().insertStack(new net.minecraft.item.ItemStack(net.minecraft.item.Items.DIAMOND, 7));
                         p.experienceLevel = 5;
-                        useHeadstone(server, p);
+                        enterVeil(p);
                     });
                     scene++;
                     if (!inRealm && risen <= 100) return; // after the death, keep counting wherever the player is
@@ -256,7 +300,9 @@ public final class CryptClientSmoke implements ClientModInitializer {
                     // Checked soon after the return, so the next ritual lands before the wiped fight has finished.
                     if (++scene == 5) onServer(server, () -> {
                         var p = player(server, uuid);
-                        require(p.getBlockPos().isWithinDistance(headstone, 24), "Wipe returned the player away from the graveyard: " + p.getBlockPos());
+                        require(p.getBlockPos().isWithinDistance(door, 24), "Wipe returned the player away from the graveyard: " + p.getBlockPos());
+                        // Taken from the doorway, they come back to the court, not into the veil again.
+                        require(!p.getBlockPos().isWithinDistance(door, 4), "Wipe returned the player into the doorway: " + p.getBlockPos());
                         require(p.interactionManager.getGameMode() == GameMode.SURVIVAL, "Game mode not restored: " + p.interactionManager.getGameMode());
                         require(p.getInventory().count(net.minecraft.item.Items.DIAMOND) == 7, "Items were lost in the crypt");
                         require(p.experienceLevel == 5, "Experience was lost in the crypt: " + p.experienceLevel);
@@ -268,14 +314,13 @@ public final class CryptClientSmoke implements ClientModInitializer {
                 }
                 case 9 -> { // a victory: try again straight away, while the wiped fight is still ending, and win
                     if (scene == 0) onServer(server, () -> {
-                        var p = player(server, uuid);
-                        int before = fights(HollowCryptManager.status());
-                        useHeadstone(server, p);
-                        int after = fights(HollowCryptManager.status());
-                        // A held right-click repeats the use while the slot builds: it must not seal the party into a second fight.
-                        useHeadstone(server, p);
+                        require(standing(HollowCryptManager.status()) == 0, "A fight is still standing before the second ritual: " + HollowCryptManager.status());
+                        enterVeil(player(server, uuid));
+                    });
+                    // Standing in the veil while the slot is laid out touches it every tick: that must seal one fight only.
+                    if (scene == 15) onServer(server, () -> {
                         String status = HollowCryptManager.status();
-                        require(after == before + 1 && fights(status) == after, "A repeated headstone use started a second fight: " + status);
+                        require(standing(status) == 1, "Walking into the veil sealed " + standing(status) + " fights: " + status);
                     });
                     scene++;
                     if (!inRealm) {
@@ -283,7 +328,8 @@ public final class CryptClientSmoke implements ClientModInitializer {
                         require(scene < 400, "Second ritual did not take the player in");
                         return;
                     }
-                    if (++risen == 220) onServer(server, () -> {
+                    // The boss can't die during its intro in a real fight, so the forced victory waits for it to end.
+                    if (++risen == VICTORY_AT) onServer(server, () -> {
                         var p = player(server, uuid);
                         var realm = server.getWorld(HollowCryptRealm.WORLD);
                         var bosses = realm.getEntitiesByClass(NecromancerEntity.class, p.getBoundingBox().expand(60), e -> e.isAlive());
@@ -293,7 +339,7 @@ public final class CryptClientSmoke implements ClientModInitializer {
                         net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.AFTER_DEATH.invoker().afterDeath(boss, realm.getDamageSources().generic());
                         boss.discard();
                     });
-                    if (risen > 220) next();
+                    if (risen > VICTORY_AT) next();
                 }
                 case 10 -> { // home again, with reward chests at the grave and a spell book to claim
                     if (inRealm) { require(++waited < 400, "Victory did not send the player home"); return; }
@@ -301,9 +347,9 @@ public final class CryptClientSmoke implements ClientModInitializer {
                         var p = player(server, uuid);
                         var world = server.getOverworld();
                         java.util.List<BlockPos> chests = new java.util.ArrayList<>();
-                        for (BlockPos q : BlockPos.iterate(headstone.add(-8, -6, -8), headstone.add(8, 0, 8)))
+                        for (BlockPos q : BlockPos.iterate(door.add(-8, -6, -8), door.add(8, 0, 8)))
                             if (world.getBlockEntity(q) instanceof net.minecraft.block.entity.ChestBlockEntity chest && !chest.isEmpty()) chests.add(q.toImmutable());
-                        require(chests.size() == 2, "Expected two filled reward chests at the grave, found " + chests.size());
+                        require(chests.size() == 2, "Expected two filled reward chests beside the mausoleum steps, found " + chests.size());
                         int bones = 0;
                         for (BlockPos q : chests) if (world.getBlockEntity(q) instanceof net.minecraft.block.entity.ChestBlockEntity chest)
                             for (int i = 0; i < chest.size(); i++) if (chest.getStack(i).isOf(net.minecraft.item.Items.BONE) || chest.getStack(i).isOf(net.minecraft.item.Items.BONE_BLOCK)) bones++;
@@ -320,8 +366,9 @@ public final class CryptClientSmoke implements ClientModInitializer {
                     if (scene < 80) return; // let the screenshot finish writing
                     require(serverStep && rewardView != null, "Reward checks did not run");
                     Files.writeString(Path.of("CRYPT_PASSED.txt"), "Hollow Crypt native client passed: slot build, layout spot checks, arrival, summon at circle, siege on an exported bough perch and back, wall pull-back, "
-                            + "spell teleport limits, survival block protection, reset restoration, return, /locate, graveyard placement, headstone ritual, "
-                            + "wipe (boss vanishes, return to the graveyard with items, XP and game mode), second ritual before the wiped fight ends (it keeps the player; a repeated headstone use seals no second fight), victory return, "
+                            + "spell teleport limits, survival block protection, reset restoration, return, /locate, graveyard placement, withered woods, "
+                            + "unbreakable mausoleum, door hint, walk-in veil ritual, "
+                            + "wipe (boss vanishes, return to the court with items, XP and game mode), second ritual before the wiped fight ends (it keeps the player; standing in the veil seals no second fight), victory return, "
                             + "reward chests with bones and loot, one spell book per victor. Screenshots: crypt-*.png. Human Lunar review pending.\n");
                     done = true; c.scheduleStop();
                 }
@@ -334,15 +381,17 @@ public final class CryptClientSmoke implements ClientModInitializer {
         }
     }
 
-    private static int fights(String status) { return status.split(" fight: ", -1).length - 1; }
+    /** Ticks in the realm before the second ritual's forced victory: after the rise delay and the intro. */
+    private static final int VICTORY_AT = com.anton.elementalwands.entity.necromancer.NecromancerIntro.LENGTH + 80;
 
     private void next() { stage++; scene = 0; risen = 0; waited = 0; serverStep = false; }
 
-    private void useHeadstone(MinecraftServer server, ServerPlayerEntity p) {
-        BlockPos stone = headstone.down(); // chiseled deepslate under the skull
-        var hit = new net.minecraft.util.hit.BlockHitResult(Vec3d.ofCenter(stone), net.minecraft.util.math.Direction.SOUTH, stone, false);
-        var result = net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.invoker().interact(p, server.getOverworld(), net.minecraft.util.Hand.MAIN_HAND, hit);
-        require(result == net.minecraft.util.ActionResult.SUCCESS, "Headstone did not respond: " + result);
+    /** Fights with anyone still standing; a wiped fight lingers, with nobody, until its end. */
+    private static int standing(String status) { return status.split(" fight: [1-9]", -1).length - 1; }
+
+    /** Step into the veil's bottom-centre cell; the server sees the collision as the client moves. */
+    private void enterVeil(ServerPlayerEntity p) {
+        p.networkHandler.requestTeleport(door.getX() + .5, door.getY(), door.getZ() + .5, doorFacing.getOpposite().getPositiveHorizontalDegrees(), 0);
     }
 
     private void onServer(MinecraftServer server, Runnable action) {

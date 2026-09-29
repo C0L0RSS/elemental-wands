@@ -1,7 +1,7 @@
 # Hollow Necromancer combat
 
 The Hollow Necromancer is a second cooperative boss in progress, fought in the Hollow
-Crypt realm after the overworld graveyard's headstone ritual (see
+Crypt realm after walking into the veil of the overworld graveyard's mausoleum (see
 [Church and arena](church-and-arena.md#hollow-crypt-realm)). Operators also test it with
 `/summon` or `/ew crypt`.
 Java owners are under `src/main/java/com/anton/elementalwands/entity/necromancer/`.

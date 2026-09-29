@@ -1,7 +1,7 @@
 {
   "type": "elementalwands:hollow_graveyard",
   "biomes": "#elementalwands:has_hollow_graveyard",
-  "step": "surface_structures",
+  "step": "top_layer_modification",
   "spawn_overrides": {},
   "terrain_adaptation": "beard_thin",
   "start_pool": "elementalwands:hollow_graveyard",

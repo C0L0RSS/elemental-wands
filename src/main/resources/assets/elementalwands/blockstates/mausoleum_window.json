@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "elementalwands:block/mausoleum/window"
+    },
+    "facing=east": {
+      "model": "elementalwands:block/mausoleum/window",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "elementalwands:block/mausoleum/window",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "elementalwands:block/mausoleum/window",
+      "y": 270
+    }
+  }
+}

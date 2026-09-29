@@ -69,6 +69,8 @@ public final class ModParticles {
 
     public static final SimpleParticleType NECROMANCER_SOUL_WISP = register("necromancer_soul_wisp");
     public static final SimpleParticleType NECROMANCER_BITE_SHARD = register("necromancer_bite_shard");
+    /** Faint motes drawn into the graveyard mausoleum's veil; client-only ambience. */
+    public static final SimpleParticleType MAUSOLEUM_MOTE = register("mausoleum_mote");
 
     private ModParticles() {
     }

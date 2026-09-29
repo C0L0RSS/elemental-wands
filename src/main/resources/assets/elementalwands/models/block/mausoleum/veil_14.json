@@ -1,0 +1,33 @@
+{
+  "ambientocclusion": false,
+  "textures": {
+    "veil": "elementalwands:block/mausoleum_veil",
+    "particle": "elementalwands:block/mausoleum_veil"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        1
+      ],
+      "to": [
+        16,
+        16,
+        2
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            10.6667,
+            2.6667,
+            16.0,
+            5.3333
+          ],
+          "texture": "#veil"
+        }
+      },
+      "light_emission": 15
+    }
+  ]
+}

@@ -1,0 +1,694 @@
+{
+  "variants": {
+    "facing=north,piece=0": {
+      "model": "elementalwands:block/mausoleum/arch_0"
+    },
+    "facing=north,piece=1": {
+      "model": "elementalwands:block/mausoleum/arch_1"
+    },
+    "facing=north,piece=2": {
+      "model": "elementalwands:block/mausoleum/arch_2"
+    },
+    "facing=north,piece=3": {
+      "model": "elementalwands:block/mausoleum/arch_3"
+    },
+    "facing=north,piece=4": {
+      "model": "elementalwands:block/mausoleum/arch_4"
+    },
+    "facing=north,piece=5": {
+      "model": "elementalwands:block/mausoleum/arch_5"
+    },
+    "facing=north,piece=6": {
+      "model": "elementalwands:block/mausoleum/arch_6"
+    },
+    "facing=north,piece=7": {
+      "model": "elementalwands:block/mausoleum/arch_7"
+    },
+    "facing=north,piece=8": {
+      "model": "elementalwands:block/mausoleum/arch_8"
+    },
+    "facing=north,piece=9": {
+      "model": "elementalwands:block/mausoleum/arch_9"
+    },
+    "facing=north,piece=10": {
+      "model": "elementalwands:block/mausoleum/arch_10"
+    },
+    "facing=north,piece=11": {
+      "model": "elementalwands:block/mausoleum/arch_11"
+    },
+    "facing=north,piece=12": {
+      "model": "elementalwands:block/mausoleum/arch_12"
+    },
+    "facing=north,piece=13": {
+      "model": "elementalwands:block/mausoleum/arch_13"
+    },
+    "facing=north,piece=14": {
+      "model": "elementalwands:block/mausoleum/arch_14"
+    },
+    "facing=north,piece=15": {
+      "model": "elementalwands:block/mausoleum/arch_15"
+    },
+    "facing=north,piece=16": {
+      "model": "elementalwands:block/mausoleum/arch_16"
+    },
+    "facing=north,piece=17": {
+      "model": "elementalwands:block/mausoleum/arch_17"
+    },
+    "facing=north,piece=18": {
+      "model": "elementalwands:block/mausoleum/arch_18"
+    },
+    "facing=north,piece=19": {
+      "model": "elementalwands:block/mausoleum/arch_19"
+    },
+    "facing=north,piece=20": {
+      "model": "elementalwands:block/mausoleum/arch_20"
+    },
+    "facing=north,piece=21": {
+      "model": "elementalwands:block/mausoleum/arch_21"
+    },
+    "facing=north,piece=22": {
+      "model": "elementalwands:block/mausoleum/arch_22"
+    },
+    "facing=north,piece=23": {
+      "model": "elementalwands:block/mausoleum/arch_23"
+    },
+    "facing=north,piece=24": {
+      "model": "elementalwands:block/mausoleum/arch_24"
+    },
+    "facing=north,piece=25": {
+      "model": "elementalwands:block/mausoleum/arch_25"
+    },
+    "facing=north,piece=26": {
+      "model": "elementalwands:block/mausoleum/arch_26"
+    },
+    "facing=north,piece=27": {
+      "model": "elementalwands:block/mausoleum/arch_27"
+    },
+    "facing=north,piece=28": {
+      "model": "elementalwands:block/mausoleum/arch_28"
+    },
+    "facing=north,piece=29": {
+      "model": "elementalwands:block/mausoleum/arch_29"
+    },
+    "facing=north,piece=30": {
+      "model": "elementalwands:block/mausoleum/arch_30"
+    },
+    "facing=north,piece=31": {
+      "model": "elementalwands:block/mausoleum/arch_31"
+    },
+    "facing=north,piece=32": {
+      "model": "elementalwands:block/mausoleum/arch_32"
+    },
+    "facing=north,piece=33": {
+      "model": "elementalwands:block/mausoleum/arch_33"
+    },
+    "facing=north,piece=34": {
+      "model": "elementalwands:block/mausoleum/arch_34"
+    },
+    "facing=north,piece=35": {
+      "model": "elementalwands:block/mausoleum/arch_35"
+    },
+    "facing=north,piece=36": {
+      "model": "elementalwands:block/mausoleum/arch_36"
+    },
+    "facing=north,piece=37": {
+      "model": "elementalwands:block/mausoleum/arch_37"
+    },
+    "facing=north,piece=38": {
+      "model": "elementalwands:block/mausoleum/arch_38"
+    },
+    "facing=north,piece=39": {
+      "model": "elementalwands:block/mausoleum/arch_39"
+    },
+    "facing=north,piece=40": {
+      "model": "elementalwands:block/mausoleum/arch_40"
+    },
+    "facing=north,piece=41": {
+      "model": "elementalwands:block/mausoleum/arch_41"
+    },
+    "facing=north,piece=42": {
+      "model": "elementalwands:block/mausoleum/arch_42"
+    },
+    "facing=north,piece=43": {
+      "model": "elementalwands:block/mausoleum/arch_43"
+    },
+    "facing=north,piece=44": {
+      "model": "elementalwands:block/mausoleum/arch_44"
+    },
+    "facing=north,piece=45": {
+      "model": "elementalwands:block/mausoleum/arch_45"
+    },
+    "facing=east,piece=0": {
+      "model": "elementalwands:block/mausoleum/arch_0",
+      "y": 90
+    },
+    "facing=east,piece=1": {
+      "model": "elementalwands:block/mausoleum/arch_1",
+      "y": 90
+    },
+    "facing=east,piece=2": {
+      "model": "elementalwands:block/mausoleum/arch_2",
+      "y": 90
+    },
+    "facing=east,piece=3": {
+      "model": "elementalwands:block/mausoleum/arch_3",
+      "y": 90
+    },
+    "facing=east,piece=4": {
+      "model": "elementalwands:block/mausoleum/arch_4",
+      "y": 90
+    },
+    "facing=east,piece=5": {
+      "model": "elementalwands:block/mausoleum/arch_5",
+      "y": 90
+    },
+    "facing=east,piece=6": {
+      "model": "elementalwands:block/mausoleum/arch_6",
+      "y": 90
+    },
+    "facing=east,piece=7": {
+      "model": "elementalwands:block/mausoleum/arch_7",
+      "y": 90
+    },
+    "facing=east,piece=8": {
+      "model": "elementalwands:block/mausoleum/arch_8",
+      "y": 90
+    },
+    "facing=east,piece=9": {
+      "model": "elementalwands:block/mausoleum/arch_9",
+      "y": 90
+    },
+    "facing=east,piece=10": {
+      "model": "elementalwands:block/mausoleum/arch_10",
+      "y": 90
+    },
+    "facing=east,piece=11": {
+      "model": "elementalwands:block/mausoleum/arch_11",
+      "y": 90
+    },
+    "facing=east,piece=12": {
+      "model": "elementalwands:block/mausoleum/arch_12",
+      "y": 90
+    },
+    "facing=east,piece=13": {
+      "model": "elementalwands:block/mausoleum/arch_13",
+      "y": 90
+    },
+    "facing=east,piece=14": {
+      "model": "elementalwands:block/mausoleum/arch_14",
+      "y": 90
+    },
+    "facing=east,piece=15": {
+      "model": "elementalwands:block/mausoleum/arch_15",
+      "y": 90
+    },
+    "facing=east,piece=16": {
+      "model": "elementalwands:block/mausoleum/arch_16",
+      "y": 90
+    },
+    "facing=east,piece=17": {
+      "model": "elementalwands:block/mausoleum/arch_17",
+      "y": 90
+    },
+    "facing=east,piece=18": {
+      "model": "elementalwands:block/mausoleum/arch_18",
+      "y": 90
+    },
+    "facing=east,piece=19": {
+      "model": "elementalwands:block/mausoleum/arch_19",
+      "y": 90
+    },
+    "facing=east,piece=20": {
+      "model": "elementalwands:block/mausoleum/arch_20",
+      "y": 90
+    },
+    "facing=east,piece=21": {
+      "model": "elementalwands:block/mausoleum/arch_21",
+      "y": 90
+    },
+    "facing=east,piece=22": {
+      "model": "elementalwands:block/mausoleum/arch_22",
+      "y": 90
+    },
+    "facing=east,piece=23": {
+      "model": "elementalwands:block/mausoleum/arch_23",
+      "y": 90
+    },
+    "facing=east,piece=24": {
+      "model": "elementalwands:block/mausoleum/arch_24",
+      "y": 90
+    },
+    "facing=east,piece=25": {
+      "model": "elementalwands:block/mausoleum/arch_25",
+      "y": 90
+    },
+    "facing=east,piece=26": {
+      "model": "elementalwands:block/mausoleum/arch_26",
+      "y": 90
+    },
+    "facing=east,piece=27": {
+      "model": "elementalwands:block/mausoleum/arch_27",
+      "y": 90
+    },
+    "facing=east,piece=28": {
+      "model": "elementalwands:block/mausoleum/arch_28",
+      "y": 90
+    },
+    "facing=east,piece=29": {
+      "model": "elementalwands:block/mausoleum/arch_29",
+      "y": 90
+    },
+    "facing=east,piece=30": {
+      "model": "elementalwands:block/mausoleum/arch_30",
+      "y": 90
+    },
+    "facing=east,piece=31": {
+      "model": "elementalwands:block/mausoleum/arch_31",
+      "y": 90
+    },
+    "facing=east,piece=32": {
+      "model": "elementalwands:block/mausoleum/arch_32",
+      "y": 90
+    },
+    "facing=east,piece=33": {
+      "model": "elementalwands:block/mausoleum/arch_33",
+      "y": 90
+    },
+    "facing=east,piece=34": {
+      "model": "elementalwands:block/mausoleum/arch_34",
+      "y": 90
+    },
+    "facing=east,piece=35": {
+      "model": "elementalwands:block/mausoleum/arch_35",
+      "y": 90
+    },
+    "facing=east,piece=36": {
+      "model": "elementalwands:block/mausoleum/arch_36",
+      "y": 90
+    },
+    "facing=east,piece=37": {
+      "model": "elementalwands:block/mausoleum/arch_37",
+      "y": 90
+    },
+    "facing=east,piece=38": {
+      "model": "elementalwands:block/mausoleum/arch_38",
+      "y": 90
+    },
+    "facing=east,piece=39": {
+      "model": "elementalwands:block/mausoleum/arch_39",
+      "y": 90
+    },
+    "facing=east,piece=40": {
+      "model": "elementalwands:block/mausoleum/arch_40",
+      "y": 90
+    },
+    "facing=east,piece=41": {
+      "model": "elementalwands:block/mausoleum/arch_41",
+      "y": 90
+    },
+    "facing=east,piece=42": {
+      "model": "elementalwands:block/mausoleum/arch_42",
+      "y": 90
+    },
+    "facing=east,piece=43": {
+      "model": "elementalwands:block/mausoleum/arch_43",
+      "y": 90
+    },
+    "facing=east,piece=44": {
+      "model": "elementalwands:block/mausoleum/arch_44",
+      "y": 90
+    },
+    "facing=east,piece=45": {
+      "model": "elementalwands:block/mausoleum/arch_45",
+      "y": 90
+    },
+    "facing=south,piece=0": {
+      "model": "elementalwands:block/mausoleum/arch_0",
+      "y": 180
+    },
+    "facing=south,piece=1": {
+      "model": "elementalwands:block/mausoleum/arch_1",
+      "y": 180
+    },
+    "facing=south,piece=2": {
+      "model": "elementalwands:block/mausoleum/arch_2",
+      "y": 180
+    },
+    "facing=south,piece=3": {
+      "model": "elementalwands:block/mausoleum/arch_3",
+      "y": 180
+    },
+    "facing=south,piece=4": {
+      "model": "elementalwands:block/mausoleum/arch_4",
+      "y": 180
+    },
+    "facing=south,piece=5": {
+      "model": "elementalwands:block/mausoleum/arch_5",
+      "y": 180
+    },
+    "facing=south,piece=6": {
+      "model": "elementalwands:block/mausoleum/arch_6",
+      "y": 180
+    },
+    "facing=south,piece=7": {
+      "model": "elementalwands:block/mausoleum/arch_7",
+      "y": 180
+    },
+    "facing=south,piece=8": {
+      "model": "elementalwands:block/mausoleum/arch_8",
+      "y": 180
+    },
+    "facing=south,piece=9": {
+      "model": "elementalwands:block/mausoleum/arch_9",
+      "y": 180
+    },
+    "facing=south,piece=10": {
+      "model": "elementalwands:block/mausoleum/arch_10",
+      "y": 180
+    },
+    "facing=south,piece=11": {
+      "model": "elementalwands:block/mausoleum/arch_11",
+      "y": 180
+    },
+    "facing=south,piece=12": {
+      "model": "elementalwands:block/mausoleum/arch_12",
+      "y": 180
+    },
+    "facing=south,piece=13": {
+      "model": "elementalwands:block/mausoleum/arch_13",
+      "y": 180
+    },
+    "facing=south,piece=14": {
+      "model": "elementalwands:block/mausoleum/arch_14",
+      "y": 180
+    },
+    "facing=south,piece=15": {
+      "model": "elementalwands:block/mausoleum/arch_15",
+      "y": 180
+    },
+    "facing=south,piece=16": {
+      "model": "elementalwands:block/mausoleum/arch_16",
+      "y": 180
+    },
+    "facing=south,piece=17": {
+      "model": "elementalwands:block/mausoleum/arch_17",
+      "y": 180
+    },
+    "facing=south,piece=18": {
+      "model": "elementalwands:block/mausoleum/arch_18",
+      "y": 180
+    },
+    "facing=south,piece=19": {
+      "model": "elementalwands:block/mausoleum/arch_19",
+      "y": 180
+    },
+    "facing=south,piece=20": {
+      "model": "elementalwands:block/mausoleum/arch_20",
+      "y": 180
+    },
+    "facing=south,piece=21": {
+      "model": "elementalwands:block/mausoleum/arch_21",
+      "y": 180
+    },
+    "facing=south,piece=22": {
+      "model": "elementalwands:block/mausoleum/arch_22",
+      "y": 180
+    },
+    "facing=south,piece=23": {
+      "model": "elementalwands:block/mausoleum/arch_23",
+      "y": 180
+    },
+    "facing=south,piece=24": {
+      "model": "elementalwands:block/mausoleum/arch_24",
+      "y": 180
+    },
+    "facing=south,piece=25": {
+      "model": "elementalwands:block/mausoleum/arch_25",
+      "y": 180
+    },
+    "facing=south,piece=26": {
+      "model": "elementalwands:block/mausoleum/arch_26",
+      "y": 180
+    },
+    "facing=south,piece=27": {
+      "model": "elementalwands:block/mausoleum/arch_27",
+      "y": 180
+    },
+    "facing=south,piece=28": {
+      "model": "elementalwands:block/mausoleum/arch_28",
+      "y": 180
+    },
+    "facing=south,piece=29": {
+      "model": "elementalwands:block/mausoleum/arch_29",
+      "y": 180
+    },
+    "facing=south,piece=30": {
+      "model": "elementalwands:block/mausoleum/arch_30",
+      "y": 180
+    },
+    "facing=south,piece=31": {
+      "model": "elementalwands:block/mausoleum/arch_31",
+      "y": 180
+    },
+    "facing=south,piece=32": {
+      "model": "elementalwands:block/mausoleum/arch_32",
+      "y": 180
+    },
+    "facing=south,piece=33": {
+      "model": "elementalwands:block/mausoleum/arch_33",
+      "y": 180
+    },
+    "facing=south,piece=34": {
+      "model": "elementalwands:block/mausoleum/arch_34",
+      "y": 180
+    },
+    "facing=south,piece=35": {
+      "model": "elementalwands:block/mausoleum/arch_35",
+      "y": 180
+    },
+    "facing=south,piece=36": {
+      "model": "elementalwands:block/mausoleum/arch_36",
+      "y": 180
+    },
+    "facing=south,piece=37": {
+      "model": "elementalwands:block/mausoleum/arch_37",
+      "y": 180
+    },
+    "facing=south,piece=38": {
+      "model": "elementalwands:block/mausoleum/arch_38",
+      "y": 180
+    },
+    "facing=south,piece=39": {
+      "model": "elementalwands:block/mausoleum/arch_39",
+      "y": 180
+    },
+    "facing=south,piece=40": {
+      "model": "elementalwands:block/mausoleum/arch_40",
+      "y": 180
+    },
+    "facing=south,piece=41": {
+      "model": "elementalwands:block/mausoleum/arch_41",
+      "y": 180
+    },
+    "facing=south,piece=42": {
+      "model": "elementalwands:block/mausoleum/arch_42",
+      "y": 180
+    },
+    "facing=south,piece=43": {
+      "model": "elementalwands:block/mausoleum/arch_43",
+      "y": 180
+    },
+    "facing=south,piece=44": {
+      "model": "elementalwands:block/mausoleum/arch_44",
+      "y": 180
+    },
+    "facing=south,piece=45": {
+      "model": "elementalwands:block/mausoleum/arch_45",
+      "y": 180
+    },
+    "facing=west,piece=0": {
+      "model": "elementalwands:block/mausoleum/arch_0",
+      "y": 270
+    },
+    "facing=west,piece=1": {
+      "model": "elementalwands:block/mausoleum/arch_1",
+      "y": 270
+    },
+    "facing=west,piece=2": {
+      "model": "elementalwands:block/mausoleum/arch_2",
+      "y": 270
+    },
+    "facing=west,piece=3": {
+      "model": "elementalwands:block/mausoleum/arch_3",
+      "y": 270
+    },
+    "facing=west,piece=4": {
+      "model": "elementalwands:block/mausoleum/arch_4",
+      "y": 270
+    },
+    "facing=west,piece=5": {
+      "model": "elementalwands:block/mausoleum/arch_5",
+      "y": 270
+    },
+    "facing=west,piece=6": {
+      "model": "elementalwands:block/mausoleum/arch_6",
+      "y": 270
+    },
+    "facing=west,piece=7": {
+      "model": "elementalwands:block/mausoleum/arch_7",
+      "y": 270
+    },
+    "facing=west,piece=8": {
+      "model": "elementalwands:block/mausoleum/arch_8",
+      "y": 270
+    },
+    "facing=west,piece=9": {
+      "model": "elementalwands:block/mausoleum/arch_9",
+      "y": 270
+    },
+    "facing=west,piece=10": {
+      "model": "elementalwands:block/mausoleum/arch_10",
+      "y": 270
+    },
+    "facing=west,piece=11": {
+      "model": "elementalwands:block/mausoleum/arch_11",
+      "y": 270
+    },
+    "facing=west,piece=12": {
+      "model": "elementalwands:block/mausoleum/arch_12",
+      "y": 270
+    },
+    "facing=west,piece=13": {
+      "model": "elementalwands:block/mausoleum/arch_13",
+      "y": 270
+    },
+    "facing=west,piece=14": {
+      "model": "elementalwands:block/mausoleum/arch_14",
+      "y": 270
+    },
+    "facing=west,piece=15": {
+      "model": "elementalwands:block/mausoleum/arch_15",
+      "y": 270
+    },
+    "facing=west,piece=16": {
+      "model": "elementalwands:block/mausoleum/arch_16",
+      "y": 270
+    },
+    "facing=west,piece=17": {
+      "model": "elementalwands:block/mausoleum/arch_17",
+      "y": 270
+    },
+    "facing=west,piece=18": {
+      "model": "elementalwands:block/mausoleum/arch_18",
+      "y": 270
+    },
+    "facing=west,piece=19": {
+      "model": "elementalwands:block/mausoleum/arch_19",
+      "y": 270
+    },
+    "facing=west,piece=20": {
+      "model": "elementalwands:block/mausoleum/arch_20",
+      "y": 270
+    },
+    "facing=west,piece=21": {
+      "model": "elementalwands:block/mausoleum/arch_21",
+      "y": 270
+    },
+    "facing=west,piece=22": {
+      "model": "elementalwands:block/mausoleum/arch_22",
+      "y": 270
+    },
+    "facing=west,piece=23": {
+      "model": "elementalwands:block/mausoleum/arch_23",
+      "y": 270
+    },
+    "facing=west,piece=24": {
+      "model": "elementalwands:block/mausoleum/arch_24",
+      "y": 270
+    },
+    "facing=west,piece=25": {
+      "model": "elementalwands:block/mausoleum/arch_25",
+      "y": 270
+    },
+    "facing=west,piece=26": {
+      "model": "elementalwands:block/mausoleum/arch_26",
+      "y": 270
+    },
+    "facing=west,piece=27": {
+      "model": "elementalwands:block/mausoleum/arch_27",
+      "y": 270
+    },
+    "facing=west,piece=28": {
+      "model": "elementalwands:block/mausoleum/arch_28",
+      "y": 270
+    },
+    "facing=west,piece=29": {
+      "model": "elementalwands:block/mausoleum/arch_29",
+      "y": 270
+    },
+    "facing=west,piece=30": {
+      "model": "elementalwands:block/mausoleum/arch_30",
+      "y": 270
+    },
+    "facing=west,piece=31": {
+      "model": "elementalwands:block/mausoleum/arch_31",
+      "y": 270
+    },
+    "facing=west,piece=32": {
+      "model": "elementalwands:block/mausoleum/arch_32",
+      "y": 270
+    },
+    "facing=west,piece=33": {
+      "model": "elementalwands:block/mausoleum/arch_33",
+      "y": 270
+    },
+    "facing=west,piece=34": {
+      "model": "elementalwands:block/mausoleum/arch_34",
+      "y": 270
+    },
+    "facing=west,piece=35": {
+      "model": "elementalwands:block/mausoleum/arch_35",
+      "y": 270
+    },
+    "facing=west,piece=36": {
+      "model": "elementalwands:block/mausoleum/arch_36",
+      "y": 270
+    },
+    "facing=west,piece=37": {
+      "model": "elementalwands:block/mausoleum/arch_37",
+      "y": 270
+    },
+    "facing=west,piece=38": {
+      "model": "elementalwands:block/mausoleum/arch_38",
+      "y": 270
+    },
+    "facing=west,piece=39": {
+      "model": "elementalwands:block/mausoleum/arch_39",
+      "y": 270
+    },
+    "facing=west,piece=40": {
+      "model": "elementalwands:block/mausoleum/arch_40",
+      "y": 270
+    },
+    "facing=west,piece=41": {
+      "model": "elementalwands:block/mausoleum/arch_41",
+      "y": 270
+    },
+    "facing=west,piece=42": {
+      "model": "elementalwands:block/mausoleum/arch_42",
+      "y": 270
+    },
+    "facing=west,piece=43": {
+      "model": "elementalwands:block/mausoleum/arch_43",
+      "y": 270
+    },
+    "facing=west,piece=44": {
+      "model": "elementalwands:block/mausoleum/arch_44",
+      "y": 270
+    },
+    "facing=west,piece=45": {
+      "model": "elementalwands:block/mausoleum/arch_45",
+      "y": 270
+    }
+  }
+}

@@ -142,7 +142,9 @@ world with a fixed night, no weather or skylight, Nether-style thick fog and dri
 Ambient light is 0.2 and the fog is a dim grey-teal, so unlit ground stays a readable night.
 Each fight slot is a clearing 88 blocks across. Ten soul-fire braziers ring its rim, dark until
 the Necromancer's intro slam lights them (see [Necromancer combat](necromancer-combat.md#intro-cinematic)), and seven
-soul lanterns on existing cover (one per grave-marker group, one per stump) light the interior. It sits inside a dead forest of about 200
+soul lanterns on existing cover (one per grave-marker group, one per stump) light the interior.
+The intro temporarily dims the ambient fill and fog, then restores this lighting as the
+soul-fire wave ignites the braziers. It sits inside a dead forest of about 200
 cosmetic trees that reaches 124 blocks out, with some giants whose high boughs arch over the rim.
 An invisible barrier shell and lid keep players and the boss within 44 blocks of the centre and
 30 blocks above the ground. The one exception is the boss's siege perch: eight bough tops above
@@ -150,10 +152,14 @@ the lid, seen from the clearing but never reached (see [Necromancer combat](necr
 
 `art/hollow_crypt/build_layout.py` authors the clearing and forest. Its default run writes
 the browser preview to `.local-previews/hollow-crypt/` (launch entry `hollow-crypt-preview`,
-port 8360), which also shows the overworld graveyard. `--install` writes the realm as
-48×48 structure tiles plus `hollow_graveyard.nbt` and the generated siege perches
-(`crypt/HollowCryptPerches.java`), and `--check` detects drift in all of them. The radius, ceiling and tile grid are
-duplicated in `HollowCryptRealm` and must stay in step.
+port 8360), which also shows the overworld graveyard with its animated veil and motes.
+`--install` writes the realm as 48×48 structure tiles plus `hollow_graveyard.nbt` and the
+generated siege perches (`crypt/HollowCryptPerches.java`). It also writes the mausoleum's block
+models, block states, veil/void/glow textures, wither and dragon immunity tags and
+`crypt/MausoleumModel.java` (the doorway pieces' cells and collision boxes). `--check`
+detects drift in all of them. The radius, ceiling and tile grid are duplicated in
+`HollowCryptRealm` and must stay in step. The sealed-stone list (`SEALED`) is duplicated in
+`ModBlocks.SEALED`, in the same order.
 
 A slot is laid out the first time it is used, one tile per server tick, and is then reused.
 `elementalwands/hollow-crypt.json` records the built slots and each player's return point.
@@ -177,16 +183,44 @@ the region's chunk. It refuses any spot where a sample is more than 3 blocks fro
 water or lava covers the footprint, or the biome is wrong, and seats the one-layer floor at
 the median ground height. `beard_thin` levels the land to the floor, and cave gaps under it
 are filled with dirt. A region with no suitable spot has no graveyard, and
-`/place structure` fails on unsuitable ground. `/locate` can take several seconds. Entry is free: using
-the headstone altar seals every living non-Creative player within 16 blocks into a fight in
-a free slot. It records their return points first and blinds them for a moment on the way in.
-Anyone already sealed into a fight or waiting for a slot to open stays with it, so a held
-right-click or a second party member using the altar while the slot is laid out starts no
-second fight. A player who dies or disconnects before the slot opens drops out of that fight,
-and their return point is forgotten.
-The boss rises on the circle three seconds after they arrive. The altar is recognised by its
-block pattern in any rotation, not by the structure record, so `/place structure` copies work
-too. A player-built copy of the pattern would work as well.
+`/place structure` fails on unsuitable ground. `/locate` can take several seconds.
+
+The graveyard generates in the last feature step, after trees, so its template clears any
+tree that grew in the yard. Its post-placement (`world/GraveyardBlight`) then kills the woods
+around it: within 18 blocks of the footprint every tree is bare and the ground is scarred with
+coarse dirt, podzol, dry grass, dead bushes and leaf litter; out to 34 blocks the canopy thins
+and the ground recovers. The edge wanders by a few blocks. Every choice hashes the block
+position, and each chunk also treats an 8-block margin of its neighbours, so the result doesn't
+depend on chunk order. To reach the blight, the structure's box extends 40 blocks past the
+footprint; the terrain beard still follows the piece alone. `/place structure` therefore needs
+the chunks around the yard loaded too.
+
+A gothic mausoleum stands at the north end of the yard, with the path from the lychgate leading
+to its steps. It is solid and unbreakable: its stone is `sealed_*` look-alikes of the vanilla
+blocks (hardness −1, immovable by pistons, immune to withers and the dragon). Its carved
+pale-marble doorway (`mausoleum_arch`, 46 pieces of one sliced model) frames the veil
+(`mausoleum_veil`): a slowly turning dark vortex with no collision. Its windows
+(`mausoleum_window`) show the same dark void, set back in the wall. The soul lanterns, the
+braziers' soul campfires, the moss and the spire's skull are ordinary blocks. Faint motes drift into the veil (client-side, from its
+random display ticks), and aiming at the doorway from up to 12 blocks shows
+"Walk through the veil to challenge the Hollow Necromancer" and "Everyone within 16 blocks is
+drawn in" (`client/MausoleumHint`).
+
+Entry is free: walking into the veil seals every living non-Creative player within 16 blocks
+into a fight in a free slot. It records their return points first and blinds them for a moment
+on the way in. Anyone taken from the doorway (within 3.5 blocks of the veil's bottom-centre
+cell) returns to the court six blocks in front of it, facing the door, so they don't walk
+straight back in. Anyone already sealed into a fight or waiting for a slot to open stays with
+it, so standing in the veil or a second party member walking in while the slot is laid out
+starts no second fight. A refusal (such as a full crypt) repeats only after the player has
+stepped out of the veil for two seconds. A player who dies or disconnects before the slot opens
+drops out of that fight, and their return point is forgotten. The boss rises on the circle
+three seconds after they arrive. The graveyard is identified by the veil's bottom-centre cell,
+not by the structure record, so `/place structure` copies work too.
+
+Graveyards generated before the mausoleum keep their headstone altar: right-clicking it
+starts the same ritual. It is recognised by its block pattern in any rotation, and its
+rewards go beside its open grave.
 
 - **Death:** nothing drops in the realm; inventory and experience carry over to the respawn,
   also after quitting from the death screen or a restart before respawning. The crypt handles
@@ -197,16 +231,17 @@ too. A player-built copy of the pattern would work as well.
   as falling; rejoining mid-fight puts the player back as a spectator.
 - **Wipe:** when nobody is left standing (dead, disconnected or gone), the boss and its army
   vanish. Everyone is sent back to where they entered and the slot's layout is rebuilt. The
-  group may use the headstone again straight away; a fight's end releases only the players in
+  group may walk into the veil again straight away; a fight's end releases only the players in
   its own slot, so the lost fight never pulls them out of the new one.
 - **Victory:** ten seconds after the boss dies, everyone is sent back. As with a wipe, that
-  means everyone in the clearing, not only the sealed party: Creative players the headstone
+  means everyone in the clearing, not only the sealed party: Creative players the ritual
   brought along and players who entered by command are released and messaged too. Anyone
-  without a recorded return point (such as an operator who teleported in) is left alone. The first win at a
-  graveyard places two chests beside the open grave. They hold the church's seeded treasure
-  roll plus bones and never refill. Every player who has won at that graveyard may claim one
-  personal spell book there (free Basic or Technique spell) by opening a chest; the
-  receipt key is `graveyard:<site>`. The graveyard is otherwise unchanged.
+  without a recorded return point (such as an operator who teleported in) is left alone. The
+  first win at a graveyard places two chests on the ground either side of the mausoleum steps,
+  facing them. They hold the church's seeded treasure roll plus bones and never refill. Every
+  player who has won at that graveyard may claim one personal spell book there (free Basic or
+  Technique spell) by opening a chest; the receipt key is `graveyard:<site>`. The graveyard is
+  otherwise unchanged.
 - **Restart:** a fight is never resumed. On startup its slot is marked for rebuilding, and
   each player still in the realm goes home with their game mode restored when they join.
 

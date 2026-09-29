@@ -48,8 +48,12 @@ import net.minecraft.world.gen.structure.StructureType;
  * <p>The piece reports its floor as the ground level, so the structure's terrain adaptation
  * ({@code beard_thin}) levels the land under and around the footprint to the floor itself rather
  * than to the template's bottom layer. After placement, cave carvers' air or fluid directly under
- * the floor is filled with dirt. The ritual finds its altar by block pattern, not by this
- * structure's position.
+ * the floor is filled with dirt.
+ *
+ * <p>The graveyard generates in the last feature step, after trees, so its template clears any
+ * that grew in the yard and {@link GraveyardBlight} can kill the woods around it. For that the
+ * structure's box reaches {@link GraveyardBlight#REACH} blocks past the footprint, which makes
+ * every chunk in the blight place it; the terrain beard still follows the piece alone.
  */
 public final class HollowGraveyardStructure extends Structure {
     public static final MapCodec<HollowGraveyardStructure> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
@@ -128,10 +132,16 @@ public final class HollowGraveyardStructure extends Structure {
         return Optional.of(new StructurePosition(centre, collector -> collector.addPiece(piece)));
     }
 
+    /** The whole blight, not just the piece; it also covers the terrain beard's usual 12 blocks. */
+    @Override
+    public BlockBox expandBoxIfShouldAdaptNoise(BlockBox box) {
+        return box.expand(Math.max(12, GraveyardBlight.REACH));
+    }
+
     /**
      * Carvers run after the terrain beard and can hollow out the ground under the one-block floor.
-     * Fill that air or fluid with dirt, column by column, until natural ground is reached. The open
-     * grave (air in the floor layer) is left alone.
+     * Fill that air or fluid with dirt, column by column, until natural ground is reached. Then
+     * blight this chunk's share of the woods around the yard.
      */
     @Override
     public void postPlace(StructureWorldAccess world, StructureAccessor structureAccessor, ChunkGenerator chunkGenerator,
@@ -151,6 +161,7 @@ public final class HollowGraveyardStructure extends Structure {
                     }
                 }
             }
+            GraveyardBlight.apply(world, box, footprint, floor);
         }
     }
 

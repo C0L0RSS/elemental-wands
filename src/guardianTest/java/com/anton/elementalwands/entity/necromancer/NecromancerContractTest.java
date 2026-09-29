@@ -244,8 +244,12 @@ public final class NecromancerContractTest {
                 NecromancerIntro.REVEAL, NecromancerIntro.SOUL_ARRIVE, NecromancerIntro.EYES, NecromancerIntro.TURN, NecromancerIntro.HERO_END,
                 NecromancerIntro.TURN_END, NecromancerIntro.LEVEL, NecromancerIntro.SLAM, NecromancerIntro.RING_END, NecromancerIntro.RETURN, NecromancerIntro.LENGTH};
         for (int i = 1; i < beats.length; i++) require(beats[i - 1] < beats[i], "Intro beats out of order at " + i);
-        require(NecromancerIntro.LENGTH <= 20 * 16 && NecromancerIntro.SKIP_AFTER < NecromancerIntro.WALK_END, "Intro too long or unskippable");
-        require(NecromancerIntro.TITLE > NecromancerIntro.SLAM && NecromancerIntro.TITLE_END <= NecromancerIntro.LENGTH, "Title outside the last shot");
+        require(NecromancerIntro.LENGTH <= 20 * 20 && NecromancerIntro.SKIP_AFTER < NecromancerIntro.WALK_END, "Intro too long or unskippable");
+        require(NecromancerIntro.TITLE > NecromancerIntro.SLAM && NecromancerIntro.TITLE_END <= NecromancerIntro.RETURN,
+                "Title must finish before the camera hands back");
+        require(NecromancerIntro.TITLE_END - NecromancerIntro.TITLE >= 20 * 3
+                && NecromancerIntro.LEVEL_RELEASE - NecromancerIntro.LEVEL_HOLD >= 20,
+                "The ending needs a readable title and a patient pointing hold");
         var staff = NecromancerIntro.STAFF_HEAD;
         var chest = NecromancerIntro.VICTIM_TO.add(0, NecromancerIntro.VICTIM_CHEST, 0);
         require(NecromancerIntro.tornAt(chest, staff, NecromancerIntro.SOUL_ARRIVE - NecromancerIntro.PULL).distanceTo(staff) < .01, "Torn soul misses the staff");
@@ -253,6 +257,11 @@ public final class NecromancerContractTest {
         require(NecromancerIntro.victimAt(NecromancerIntro.WALK_END).distanceTo(NecromancerIntro.VICTIM_TO) < .01, "Zombie does not stop at its mark");
         require(Math.abs(NecromancerIntro.facing(NecromancerIntro.PULL) - NecromancerIntro.PULL_FACING) < .01 && NecromancerIntro.PULL_FACING > 90
                 && Math.abs(NecromancerIntro.facing(NecromancerIntro.TURN_END)) < .01, "He must face the zombie while hauling and the players before the slam");
+        require(NecromancerIntro.ringProgress(NecromancerIntro.SLAM - 1) == 0
+                && NecromancerIntro.ringProgress(NecromancerIntro.SLAM) == 0
+                && NecromancerIntro.ringProgress(NecromancerIntro.RING_END) == 1
+                && NecromancerIntro.ringProgress(NecromancerIntro.RING_END + 1) == 1,
+                "Arena lighting must reveal with the fire front and settle at normal brightness");
         System.out.println("Necromancer checks passed: intro beats, torn soul path and skip window; scaling, stages and gates, solo/duo/party waves, reinforcements, quickening, soul fire rain, soul light, drain cap, drain windup and range, blink/shift/ambush priority, vision, target rotation, telegraph timing, hands buff and follow-up, sidestep window, siege timing, colossus priorities without an army, dive/rush/harvest choice, soul-split restrictions, colossus pace, grave dive, harvest, soul knockdown, one blind-swinging split, transformation clock, grab caps, jumpable swipe, random rush windup, timing and cover.");
     }
 

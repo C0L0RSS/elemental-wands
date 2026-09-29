@@ -1,27 +1,29 @@
 # Hollow Necromancer combat
 
 The Hollow Necromancer is a second cooperative boss in progress, fought in the Hollow
-Crypt realm after the overworld graveyard's headstone ritual (see
+Crypt realm after walking into the veil of the overworld graveyard's mausoleum (see
 [Church and arena](church-and-arena.md#hollow-crypt-realm)). Operators also test it with
 `/summon` or `/ew crypt`.
 Java owners are under `src/main/java/com/anton/elementalwands/entity/necromancer/`.
 
 ## Intro cinematic
 
-A crypt fight opens with a 13-second scene (`NecromancerIntro`, 260 ticks) that replaces the old
+A crypt fight opens with a 18.9-second scene (`NecromancerIntro`, 378 ticks) that replaces the old
 pop-in rise. The Necromancer is already standing in the circle but stays out of frame until the
 reveal, and his skeleton never shows, so the transformation stays a surprise:
 
 | Ticks | Shot |
 | --- | --- |
-| 0–60 | Low in front of a zombie shuffling between the graves west of the circle; the circle is behind the camera |
-| 60–96 | The zombie is lifted and arched back as its soul is torn out toward the lens; the body crumbles to bone dust |
-| 96–150 | The camera pans after the soul and follows it in, revealing him hauling it into his raised staff |
-| 150–196 | Low hero angle: the staff flares, his eyes light, he lowers the staff |
-| 196–260 | Over his shoulder: he turns on the players, levels the staff and slams it; a soul-fire ring lights the rim braziers; title, then the camera returns to the player |
+| 0–64 | Low in front of a zombie shuffling between the graves west of the circle; the circle is behind the camera |
+| 64–108 | The zombie is lifted and arched back as its soul is torn out toward the lens; the body crumbles to bone dust |
+| 108–150 | The camera pans after the soul and follows it in, revealing him hauling it into his raised staff |
+| 150–220 | Low hero angle: the staff flares, his eyes light, he lowers the staff |
+| 220–378 | From the players’ side, drawing back as the ring spreads: he turns on the players, levels the staff and slams it; a dense crest of soul fire, trailing souls and pale sparks lights the rim braziers; the title slides up on a padded black card, then the camera returns to the player |
 
 The server runs the timeline (`NecromancerIntro`, ticked by the boss). It turns him to face the
-zombie while he hauls and to the players from tick 186, and holds every watcher in place: they
+zombie while he hauls and to the players over ticks 205–235. During the scene, the renderer follows
+the synchronized entity yaw directly so the stationary mob’s usual body-turn delay cannot leave
+him facing away during the staff slam. The server holds every watcher in place: they
 cannot move, cast or take damage (except `/kill` and the void), and the boss is passive and
 untouchable. A watcher caught mid-jump builds no fall distance while held. A watcher who disconnects
 is let go at once, and a boss that unloads, changes dimension or is removed mid-scene releases
@@ -40,7 +42,17 @@ the scene lights every soul campfire in its ring's reach, putting out any lit on
 frame. Elsewhere it only borrows soul campfires that are burning and relights just those, and a
 cancelled scene relights what it put out, so a replay outside the crypt leaves them as it found
 them. The boss clip `animation.hollow_necromancer.intro`
-shares the timeline. `/ew necromancer intro` replays it for players within 64 blocks.
+shares the timeline. In the crypt cinematic, ambient fill falls from 0.2 to 0.025 and the fog
+colour dims to 22% of normal while the soul effects and lantern pools remain visible. The slam’s
+expanding fire front restores both to their normal level over ticks 274–294, as the braziers
+ignite in larger bursts. This is a client cinematic effect: a skip, cancellation or dimension
+change restores normal lighting, and other dimensions keep their existing lighting.
+After the soul arrives at tick 148, his staff lowering and turn take 50% longer than the
+original clip. He holds the levelled staff from ticks 242–262 before hoisting and slamming it
+at tick 274. The name card is visible from ticks 278–354 (3.8 seconds, with half-second entrance
+and exit fades), and the camera returns over ticks 354–378. The fire front keeps its one-second
+expansion, so the blast remains forceful even with the caster’s slower movements.
+`/ew necromancer intro` replays it for players within 64 blocks.
 
 ## Encounter intent
 

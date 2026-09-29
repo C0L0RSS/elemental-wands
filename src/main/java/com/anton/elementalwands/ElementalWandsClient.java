@@ -71,6 +71,7 @@ public class ElementalWandsClient implements ClientModInitializer {
 
         com.anton.elementalwands.client.WandControls.init();
         com.anton.elementalwands.client.GuardianOfferingHint.init();
+        com.anton.elementalwands.client.MausoleumHint.init();
         for(var block:new net.minecraft.block.Block[]{com.anton.elementalwands.registry.ModBlocks.GUARDIAN_SOCKET,
                 com.anton.elementalwands.registry.ModBlocks.GUARDIAN_PEDESTAL,
                 com.anton.elementalwands.registry.ModBlocks.GUARDIAN_CHEST_RUNE})

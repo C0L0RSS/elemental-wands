@@ -121,6 +121,47 @@ void main() {
   float f = smoothstep(fogEnd * .12, fogEnd, dist);
   color = vec4(mix(c, fogColor, f), 1);
 }`;
+// Modelled blocks (stairs, the mausoleum doorway and its veil) as plain textured triangles.
+const PART_VS = `#version 300 es
+precision highp float; precision highp int;
+layout(location=0) in vec3 pos; layout(location=1) in vec2 uv; layout(location=2) in vec3 info;
+uniform mat4 viewProj; uniform int veilFrame; uniform int veilStride;
+out vec2 vUv; out vec3 vWorld; out float vShade; flat out int vTex; flat out int vFlag;
+void main() {
+  vFlag = int(info.z + .5);
+  vTex = int(info.x + .5) + (vFlag == 2 ? veilFrame * veilStride : vFlag == 3 ? veilFrame : 0);
+  vUv = uv; vShade = info.y; vWorld = pos;
+  gl_Position = viewProj * vec4(pos, 1);
+}`;
+const PART_FS = `#version 300 es
+precision highp float; precision highp int;
+in vec2 vUv; in vec3 vWorld; in float vShade; flat in int vTex; flat in int vFlag;
+uniform sampler2D atlas; uniform vec2 atlasSize;
+uniform vec3 eye; uniform vec3 fogColor; uniform float fogEnd; uniform float ambient;
+uniform vec4 lightPos[64]; uniform vec3 lightCol[64]; uniform int lightCount;
+out vec4 color;
+void main() {
+  vec2 tile = vec2(vTex % int(atlasSize.x), vTex / int(atlasSize.x));
+  vec4 t = texture(atlas, (tile + clamp(vUv, .002, .998)) / atlasSize);
+  if (t.a < .5) discard;
+  vec3 light = vec3(ambient);
+  for (int i = 0; i < 64; i++) {
+    if (i >= lightCount) break;
+    vec3 d = abs(vWorld - lightPos[i].xyz);
+    float reach = lightPos[i].w - (d.x + d.y + d.z) * .9;
+    if (reach > 0.) light += lightCol[i] * pow(reach / 15., 1.4) * 1.3;
+  }
+  vec3 c = t.rgb * (vFlag >= 1 ? vec3(vFlag >= 2 ? 1. : 1.15) : vShade * min(light, vec3(1.25)));
+  float f = smoothstep(fogEnd * .12, fogEnd, length(vWorld - eye));
+  color = vec4(mix(c, fogColor, f), 1);
+}`;
+// Faint motes drifting into the doorway: they mark it without pulling the eye.
+const MOTE_VS = `#version 300 es
+layout(location=0) in vec4 mote; uniform mat4 viewProj; uniform float scale; out float vA;
+void main() { vA = mote.w; gl_Position = viewProj * vec4(mote.xyz, 1); gl_PointSize = scale / gl_Position.w; }`;
+const MOTE_FS = `#version 300 es
+precision highp float; in float vA; out vec4 color;
+void main() { float r = length(gl_PointCoord - .5) * 2.; if (r > 1.) discard; color = vec4(.78, .93, .95, vA * (1. - r * r)); }`;
 const SKY_VS = `#version 300 es
 out vec2 ndc; void main() { vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2) * 2. - 1.; ndc = p; gl_Position = vec4(p, .9999, 1); }`;
 const SKY_FS = `#version 300 es
@@ -161,7 +202,8 @@ const MOODS = {
   inspect: {label: 'Daylight', fog: 400, bright: 100, fogColor: [.62, .66, .72], zenith: [.36, .46, .6]},
 };
 const cam = {mode: 'orbit', target: [0, 8, 0], yaw: 0.6, pitch: .55, dist: 150, eye: [0, 1.62, 30], lookYaw: Math.PI, lookPitch: 0};
-let data, voxel, sky, box, atlasTex, layouts = {}, current = 'realm', mood = 'target';
+let data, voxel, sky, box, part, moteProg, moteBuf, moteVao, atlasTex, layouts = {}, current = 'realm', mood = 'target';
+const motes = [];
 const keys = new Set();
 
 function eyeAndForward() {
@@ -182,9 +224,11 @@ const VIEWS = {
     ['Overhead', () => orbit([0, 0, 0], 0, 1.52, 230)],
   ],
   graveyard: [
-    ['Orbit', () => orbit([0, 3, -2], .7, .5, 45)],
-    ['Gate', () => walk([0, 1.62, 19], Math.PI, -.05)],
-    ['At the grave', () => walk([0, 1.62, -8], Math.PI, -.12)],
+    ['Orbit', () => orbit([0, 7, -8], .7, .38, 52)],
+    ['Gate', () => walk([0, 1.62, 19], Math.PI, .06)],
+    ['At the steps', () => walk([0, 1.62, -4], Math.PI, .1)],
+    ['Doorway', () => walk([2.2, 2.62, -8.6], Math.PI * 1.1, .14)],
+    ['From afar', () => orbit([0, 8, -6], .45, .1, 120)],
   ],
 };
 function walk(eye, yaw, pitch) { Object.assign(cam, {mode: 'walk', eye: [...eye], lookYaw: yaw, lookPitch: pitch}); hint(); draw(); }
@@ -200,6 +244,10 @@ async function load() {
   data = await (await fetch('layouts.json?v=' + Date.now())).json();
   const img = new Image(); img.src = 'atlas.png?v=' + Date.now(); await img.decode();
   voxel = program(VOXEL_VS, VOXEL_FS); sky = program(SKY_VS, SKY_FS); box = program(BOX_VS, BOX_FS);
+  part = program(PART_VS, PART_FS); moteProg = program(MOTE_VS, MOTE_FS);
+  moteVao = gl.createVertexArray(); gl.bindVertexArray(moteVao);
+  moteBuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, moteBuf);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 4, gl.FLOAT, false, 16, 0);
   atlasTex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, atlasTex);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
@@ -209,13 +257,24 @@ async function load() {
     const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, bytes, gl.STATIC_DRAW);
     gl.enableVertexAttribArray(0); gl.vertexAttribIPointer(0, 4, gl.SHORT, 8, 0); gl.vertexAttribDivisor(0, 1);
     const lights = lay.lights.map(([x, y, z, m]) => ({p: [x + .5, y + .5, z + .5], c: data.materials[m].light}));
-    layouts[name] = {vao, count: lay.count, blocks: lay.blocks, lights};
+    for (const [x, y, z, r, g, b, reach] of lay.partLights) lights.push({p: [x, y, z], c: [r, g, b, reach]});
+    let partVao = null;
+    if (lay.partVertices) {
+      const floats = new Float32Array(Uint8Array.from(atob(lay.parts), c => c.charCodeAt(0)).buffer);
+      partVao = gl.createVertexArray(); gl.bindVertexArray(partVao);
+      const pbuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, pbuf); gl.bufferData(gl.ARRAY_BUFFER, floats, gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 32, 0);
+      gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 32, 12);
+      gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 3, gl.FLOAT, false, 32, 20);
+    }
+    layouts[name] = {vao, count: lay.count, blocks: lay.blocks, lights, partVao, partVertices: lay.partVertices, door: lay.door};
   }
   gl.bindVertexArray(null);
   const mats = new Int32Array(96 * 4), emissive = new Int32Array(96);
   data.materials.forEach((m, i) => { mats.set([m.shape, ...m.tex], i * 4); emissive[i] = m.light && m.name !== 'soul_lantern' ? 1 : 0; });
   gl.useProgram(voxel.p); gl.uniform4iv(voxel.u.mats, mats); gl.uniform1iv(voxel.u.emissive, emissive);
   gl.uniform2f(voxel.u.atlasSize, data.atlasCols, data.atlasRows);
+  gl.useProgram(part.p); gl.uniform2f(part.u.atlasSize, data.atlasCols, data.atlasRows);
   buildUi(); select('realm');
 }
 
@@ -232,7 +291,7 @@ function buildUi() {
   group('#layouts', [['realm', 'Crypt realm'], ['graveyard', 'Overworld graveyard']], current, select);
   group('#moods', Object.entries(MOODS).map(([k, m]) => [k, m.label]), mood, setMood);
   for (const id of ['fog', 'bright']) $('#' + id).oninput = () => { labels(); draw(); };
-  $('#barrier').onchange = $('#player').onchange = draw;
+  $('#barrier').onchange = $('#player').onchange = $('#animate').onchange = draw;
   $('#toggle').onclick = () => { $('#panel').classList.toggle('collapsed'); $('#toggle').textContent = $('#panel').classList.contains('collapsed') ? 'Show' : 'Hide'; };
   setMood(mood);
 }
@@ -248,7 +307,7 @@ function select(name) {
   const r = data.realm, lay = layouts[name];
   $('#facts').innerHTML = name === 'realm'
     ? `<b>${lay.blocks.toLocaleString()}</b> blocks · clearing radius <b>${r.playRadius}</b> (≈${r.playRadius * 2} across) · invisible wall at <b>${r.barrierRadius}</b>, lid <b>${r.ceiling}</b> up · forest out to <b>${r.forestOuter}</b>.<br>Cyan box: colossus hitbox (3.2 × 4.5). Small boxes: player and robed necromancer.`
-    : `<b>${lay.blocks.toLocaleString()}</b> blocks · 27 × 31 footprint. The offering goes on the ledge of the headstone altar above the open grave. Terrain blending is not shown.`;
+    : `<b>${lay.blocks.toLocaleString()}</b> blocks · 27 × 38 footprint. Walking into the veil in the mausoleum doorway takes you and everyone within 16 blocks to the Necromancer. The mausoleum can't be broken. Not shown: terrain blending and the withered trees around the yard (worldgen).`;
 }
 
 // ---------- render ----------
@@ -294,15 +353,42 @@ function frame(t) {
   gl.bindVertexArray(lay.vao);
   gl.uniform1i(voxel.u.passKind, 0);
   gl.drawArraysInstanced(gl.TRIANGLES, 0, 36, lay.count);
+  const animate = $('#animate').checked && !!lay.door;
+  if (lay.partVao) {
+    gl.useProgram(part.p);
+    gl.uniformMatrix4fv(part.u.viewProj, false, viewProj);
+    gl.uniform3fv(part.u.eye, eye); gl.uniform3fv(part.u.fogColor, m.fogColor);
+    gl.uniform1f(part.u.fogEnd, fogEnd); gl.uniform1f(part.u.ambient, ambient);
+    gl.uniform4fv(part.u.lightPos, lp); gl.uniform3fv(part.u.lightCol, lc); gl.uniform1i(part.u.lightCount, lights.length);
+    gl.uniform1i(part.u.atlas, 0);
+    // Minecraft steps the veil one frame every two ticks.
+    gl.uniform1i(part.u.veilFrame, animate ? Math.floor(t / 100) % data.veil.frames : 0);
+    gl.uniform1i(part.u.veilStride, data.veil.stride);
+    gl.bindVertexArray(lay.partVao);
+    gl.drawArrays(gl.TRIANGLES, 0, lay.partVertices);
+    gl.useProgram(voxel.p);
+  }
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
   if ($('#barrier').checked) { gl.uniform1i(voxel.u.passKind, 1); gl.drawArraysInstanced(gl.TRIANGLES, 0, 36, lay.count); }
   gl.bindVertexArray(null);
+  if (animate) {
+    stepMotes(lay.door, t, dt || 1 / 60);
+    const buf = new Float32Array(motes.length * 4);
+    motes.forEach((q, i) => buf.set(q.draw, i * 4));
+    gl.useProgram(moteProg.p); gl.uniformMatrix4fv(moteProg.u.viewProj, false, viewProj);
+    gl.uniform1f(moteProg.u.scale, h * .09);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    gl.bindVertexArray(moteVao); gl.bindBuffer(gl.ARRAY_BUFFER, moteBuf); gl.bufferData(gl.ARRAY_BUFFER, buf, gl.DYNAMIC_DRAW);
+    gl.drawArrays(gl.POINTS, 0, motes.length);
+    gl.bindVertexArray(null); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    draw();
+  }
   if ($('#player').checked) {
     gl.useProgram(box.p); gl.uniformMatrix4fv(box.u.viewProj, false, viewProj);
     const boxes = current === 'realm'
       ? [[[-1.6, 1, -1.6 - 8], [1.6, 5.5, 1.6 - 8], [.45, .9, 1, .35]], [[-.35, 1, -.35], [.35, 2.45, .35], [.55, .35, .8, .9]],
          [[2.7, 1, 27.7], [3.3, 2.8, 28.3], [.95, .8, .4, .9]]]
-      : [[[1.7, 1, 6.7], [2.3, 2.8, 7.3], [.95, .8, .4, .9]]];
+      : [[[2.9, 2, -10.8], [3.5, 3.8, -10.2], [.95, .8, .4, .9]]];
     for (const [lo, hi, tint] of boxes) {
       gl.uniform3fv(box.u.lo, lo); gl.uniform3fv(box.u.hi, hi); gl.uniform4fv(box.u.tint, tint);
       gl.drawArrays(gl.TRIANGLES, 0, 36);
@@ -311,6 +397,26 @@ function frame(t) {
   gl.depthMask(true); gl.disable(gl.BLEND);
 }
 const dist2 = (a, b) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
+
+// A slow trickle, a few at a time: each mote fades in a few blocks out, is drawn in over
+// three to six seconds, and fades as it reaches the veil.
+function stepMotes(door, t, dt) {
+  if (Math.random() < dt * 4) {
+    const a = (Math.random() - .5) * Math.PI * .9, r = 2.2 + Math.random() * 2.8;
+    motes.push({start: [door[0] + Math.sin(a) * r, door[1] - 1.6 + Math.random() * 3.4, door[2] + Math.cos(a) * r],
+                age: 0, life: 3 + Math.random() * 3, phase: Math.random() * 6.3, draw: [0, 0, 0, 0]});
+  }
+  for (let i = motes.length - 1; i >= 0; i--) {
+    const q = motes[i]; q.age += dt;
+    const k = q.age / q.life;
+    if (k >= 1) { motes.splice(i, 1); continue; }
+    const pull = 1 - k ** 1.6, sway = (1 - k) * .15;
+    q.draw = [door[0] + (q.start[0] - door[0]) * pull + Math.sin(q.phase + q.age * 1.3) * sway,
+              door[1] + (q.start[1] - door[1]) * pull + Math.cos(q.phase + q.age * 1.1) * sway * .7,
+              door[2] + (q.start[2] - door[2]) * pull,
+              Math.min(1, k / .2) * Math.min(1, (1 - k) / .15) * .55];
+  }
+}
 
 // ---------- input ----------
 let drag = null;

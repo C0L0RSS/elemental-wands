@@ -63,7 +63,7 @@ inspect their assertions when behavior changes instead of trusting an old name.
 | Guardian cover / Nature / walls | `guardian_cover_smoke.init.gradle`, `guardian_nature_smoke.init.gradle`, `guardian_wall_smoke.init.gradle` | Relevant native visual fixture |
 | Hollow Necromancer | `necromancer_server_smoke.init.gradle` (spells, Hands→ambush, waves and their quickening, a Soul Fire Rain volley, blink/shift, the full two-siege fight flow with rain into the transformation, soul light on bolts, fireballs and markers and its cleanup), `necromancer_phase_smoke.init.gradle` (phase two; starts past the sieges: grab, swipe, the random-windup rush, Grave Dive hit and dodge, Soul Harvest, the soul split and collapse, soul light on the souls and its cleanup) | `necromancer_client_smoke.init.gradle` (screenshots; `-PnecroRecord` for hidden recording; `-PnecroMechanics` for the Soul Fire Rain fireball, charge windup, Grave Dive, soul split and Soul Harvest against a scripted player, then soul light under a night rain and skull volley); siege perch views are in `crypt_client_smoke` |
 | Hollow undead | `hollow_undead_server_smoke.init.gradle` (rise, chase, hit-frame damage and arrow timing, daylight burning, loot, held death clip, bound-minion rules) | `hollow_undead_client_smoke.init.gradle` (hidden window; rise, idle front/side, walk, attack key frames, death screenshots) |
-| Hollow Crypt realm | — | `crypt_client_smoke.init.gradle` (realm build, enter, summon, a siege on an exported bough perch with near and far-rim screenshots, wall, reset, leave, `/locate`, headstone ritual, wipe with kept items, victory rewards and spell book; screenshots) |
+| Hollow Crypt realm | — | `crypt_client_smoke.init.gradle` (realm build, enter, summon, a siege on an exported bough perch with near and far-rim screenshots, wall, reset, leave, `/locate`, withered woods around the yard, the unbreakable mausoleum and its door hint, the walk-in veil ritual, wipe with kept items and a return to the court, victory rewards and spell book; screenshots) |
 | Church / Shattered Nave | `guardian_church_smoke.init.gradle` (ritual into the nave, wipe/retry, victory, restoration, loot), `guardian_nave_smoke.init.gradle` (layout, arrival, the Guardian's intro played in full then skipped, casting/damage gates, floor and hall protection, containment, spectating with kept items, victory, wipe, restart) | `nave_client_smoke.init.gradle` (screenshots of the hall from six viewpoints; the intro's camera, raised arm and hand-back into the fight; `-PintroVideo` saves every tick for a review video); Guardian floor client with visual options |
 | Worldgen / locate | `guardian_church_worldgen_smoke.init.gradle`, `guardian_church_locate_smoke.init.gradle` | Human terrain review |
 | Parties / audit regressions | `party_server_smoke.init.gradle`, `audit_fixes_smoke.init.gradle` | Human co-op review |
@@ -119,7 +119,7 @@ agent owns Gradle runs and the Minecraft test client in that checkout; do not
 overlap builds, `clean`, or test clients sharing its generated files. The main
 agent can review source and edit unrelated documentation during verification.
 
-Use `gpt-6-sol` with medium reasoning and a fresh context (`fork_turns="none"`
+Use `gpt-6.1-sol` with medium reasoning and a fresh context (`fork_turns="none"`
 when supported). Supply the following information rather than the full history:
 
 ```text
@@ -217,6 +217,13 @@ Blink Rift return and destruction poof. A dev player's supplied skin is used;
 this does not verify the user's authenticated Lunar skin or multiplayer feel.
 
 ## Evidence retention
+
+The Crypt client runner accepts `-PintroVideo` with `hubClientAssets` to record the
+Necromancer intro in a hidden native window. It captures 383 consecutive frames,
+`build/crypt-client-smoke/screenshots/intro-video-000.png` through `intro-video-382.png`;
+encode at 20 fps for 19.15 seconds. It checks the dark opening, restored lighting
+at the end of the fire wave, and rendered facing during the staff slam. Require a
+fresh `build/crypt-client-smoke/CRYPT_PASSED.txt` and no `CRYPT_FAILED.txt`.
 
 The Necromancer client runner accepts `-PnecroRecord` with `hubClientAssets`.
 It captures 450 framebuffer frames at 20 fps (22.5 seconds), covering the

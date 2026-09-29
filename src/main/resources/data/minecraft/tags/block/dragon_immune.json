@@ -1,0 +1,20 @@
+{
+  "replace": false,
+  "values": [
+    "elementalwands:mausoleum_arch",
+    "elementalwands:mausoleum_veil",
+    "elementalwands:mausoleum_window",
+    "elementalwands:sealed_cobbled_deepslate",
+    "elementalwands:sealed_polished_deepslate",
+    "elementalwands:sealed_deepslate_tiles",
+    "elementalwands:sealed_deepslate_bricks",
+    "elementalwands:sealed_cracked_deepslate_bricks",
+    "elementalwands:sealed_chiseled_deepslate",
+    "elementalwands:sealed_polished_blackstone_bricks",
+    "elementalwands:sealed_chiseled_polished_blackstone",
+    "elementalwands:sealed_deepslate_brick_stairs",
+    "elementalwands:sealed_deepslate_tile_stairs",
+    "elementalwands:sealed_deepslate_brick_slab",
+    "elementalwands:sealed_polished_deepslate_wall"
+  ]
+}

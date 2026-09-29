@@ -6,7 +6,8 @@ use [current guides](../README.md) for today’s behavior and [status](../STATUS
 for outstanding verification. Detailed historical reports are optional background.
 
 - [2026-09-29 — The Shattered Nave](2026-09-29-guardian-nave.md)
-- [2026-09-29 — Necromancer tuning and a support Nature wand](2026-09-29-necromancer-nature.md)
+- [2026-09-29 — The graveyard mausoleum](2026-09-29-graveyard-mausoleum.md)
+- [2026-09-29 — Necromancer intro and tuning, and Nature support](2026-09-29-necromancer-nature.md)
 - [2026-09-28 — Hollow Necromancer fight redesign](2026-09-28-necromancer-fight.md)
 - [2026-09-24 — Hollow Necromancer redesign](2026-09-24-necromancer.md)
 - [2026-09-24 — Space: Gravity Well](2026-09-24-gravity-well.md)

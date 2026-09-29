@@ -252,7 +252,8 @@ public final class CryptClientSmoke implements ClientModInitializer {
                 }
                 case 8 -> { // ...and comes back to the graveyard, as themselves, with everything they carried
                     if (inRealm || c.player.isDead()) { if (c.player.isDead()) c.player.requestRespawn(); require(++waited < 400, "Wipe did not send the player home"); return; }
-                    if (++scene == 20) onServer(server, () -> {
+                    // Checked soon after the return, so the next ritual lands before the wiped fight has finished.
+                    if (++scene == 5) onServer(server, () -> {
                         var p = player(server, uuid);
                         require(p.getBlockPos().isWithinDistance(headstone, 24), "Wipe returned the player away from the graveyard: " + p.getBlockPos());
                         require(p.interactionManager.getGameMode() == GameMode.SURVIVAL, "Game mode not restored: " + p.interactionManager.getGameMode());
@@ -262,12 +263,25 @@ public final class CryptClientSmoke implements ClientModInitializer {
                         require(realm.getEntitiesByClass(NecromancerEntity.class, HollowCryptRealm.footprint(HollowCryptRealm.nearestCentre(Vec3d.ZERO)), e -> true).isEmpty(),
                                 "The boss did not vanish after the wipe");
                     });
-                    if (scene == 25) { require(serverStep, "Wipe return checks did not run"); next(); }
+                    if (scene == 8) { require(serverStep, "Wipe return checks did not run"); next(); }
                 }
-                case 9 -> { // a victory: try again, and win
-                    if (scene == 0) onServer(server, () -> useHeadstone(server, player(server, uuid)));
+                case 9 -> { // a victory: try again straight away, while the wiped fight is still ending, and win
+                    if (scene == 0) onServer(server, () -> {
+                        var p = player(server, uuid);
+                        int before = fights(HollowCryptManager.status());
+                        useHeadstone(server, p);
+                        int after = fights(HollowCryptManager.status());
+                        // A held right-click repeats the use while the slot builds: it must not seal the party into a second fight.
+                        useHeadstone(server, p);
+                        String status = HollowCryptManager.status();
+                        require(after == before + 1 && fights(status) == after, "A repeated headstone use started a second fight: " + status);
+                    });
                     scene++;
-                    if (!inRealm) { require(scene < 400, "Second ritual did not take the player in"); return; }
+                    if (!inRealm) {
+                        require(risen == 0, "The wiped fight's end pulled the player out of their new fight: " + HollowCryptManager.status());
+                        require(scene < 400, "Second ritual did not take the player in");
+                        return;
+                    }
                     if (++risen == 220) onServer(server, () -> {
                         var p = player(server, uuid);
                         var realm = server.getWorld(HollowCryptRealm.WORLD);
@@ -306,7 +320,7 @@ public final class CryptClientSmoke implements ClientModInitializer {
                     require(serverStep && rewardView != null, "Reward checks did not run");
                     Files.writeString(Path.of("CRYPT_PASSED.txt"), "Hollow Crypt native client passed: slot build, layout spot checks, arrival, summon at circle, siege on an exported bough perch and back, wall pull-back, "
                             + "spell teleport limits, survival block protection, reset restoration, return, /locate, graveyard placement, headstone ritual, "
-                            + "wipe (boss vanishes, return to the graveyard with items, XP and game mode), second ritual, victory return, "
+                            + "wipe (boss vanishes, return to the graveyard with items, XP and game mode), second ritual before the wiped fight ends (it keeps the player; a repeated headstone use seals no second fight), victory return, "
                             + "reward chests with bones and loot, one spell book per victor. Screenshots: crypt-*.png. Human Lunar review pending.\n");
                     done = true; c.scheduleStop();
                 }
@@ -318,6 +332,8 @@ public final class CryptClientSmoke implements ClientModInitializer {
             done = true; c.scheduleStop();
         }
     }
+
+    private static int fights(String status) { return status.split(" fight: ", -1).length - 1; }
 
     private void next() { stage++; scene = 0; risen = 0; waited = 0; serverStep = false; }
 

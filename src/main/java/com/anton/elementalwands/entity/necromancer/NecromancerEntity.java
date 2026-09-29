@@ -137,14 +137,14 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
 
     @Override public boolean isBossAggressive() { return !getCommandTags().contains(PASSIVE_TAG); }
 
-    public void startFight() { removeCommandTag(PASSIVE_TAG); combat.start(); }
+    public void startFight() { cancelIntro(); removeCommandTag(PASSIVE_TAG); combat.start(); }
     /**
      * Opens the fight with the intro cinematic: the boss stands passive and untouchable while the
      * watchers see it form, then the fight starts on its own (or early, once everyone skips).
      */
     public void beginIntro(java.util.List<ServerPlayerEntity> watchers) {
         if (!(getEntityWorld() instanceof ServerWorld world)) return;
-        if (intro != null) intro.cancel();
+        cancelIntro();
         addCommandTag(PASSIVE_TAG);
         combat.cancel();
         setAiDisabled(true);
@@ -158,16 +158,27 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
         if (early) stopTriggeredAnim(CONTROLLER, "intro");
         startFight();
     }
+    /** An operator control takes over mid-scene: the watchers go free and the scene never starts the fight. */
+    private void cancelIntro() {
+        if (intro == null) return;
+        intro.cancel();
+        intro = null;
+        dataTracker.set(INTRO_START, -1L);
+        stopTriggeredAnim(CONTROLLER, "intro");
+        setAiDisabled(false);
+    }
     public boolean inIntro() { return dataTracker.get(INTRO_START) >= 0; }
     NecromancerIntro intro() { return intro; }
-    public void stopFight() { addCommandTag(PASSIVE_TAG); combat.cancel(); }
+    public void stopFight() { cancelIntro(); addCommandTag(PASSIVE_TAG); combat.cancel(); }
     public void testAction(ServerPlayerEntity player, NecromancerRules.Action action) {
+        cancelIntro();
         addCommandTag(PASSIVE_TAG);
         combat.cancel();
         combat.testAction(player, action);
     }
     /** Raises one siege wave for the nearby party and stays passive; used by the operator rehearsal command. */
     public int testWave(ServerPlayerEntity player, int number) {
+        cancelIntro();
         addCommandTag(PASSIVE_TAG);
         combat.cancel();
         return combat.testWave(player, number);
@@ -180,6 +191,7 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
     public boolean requestSplit() { return combat.requestSplit(); }
     /** Fires one Soul Fire Rain volley at the nearby party and stays passive; used by the operator rehearsal command. */
     public int testRain(ServerPlayerEntity player) {
+        cancelIntro();
         addCommandTag(PASSIVE_TAG);
         combat.cancel();
         return combat.testRain(player);
@@ -322,6 +334,9 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
             combat.restoreHome(new net.minecraft.util.math.Vec3d(view.getDouble("NecromancerHomeX", 0), view.getDouble("NecromancerHomeY", 0), view.getDouble("NecromancerHomeZ", 0)));
         dataTracker.set(TRANSFORM_START, -1L);
         calculateDimensions();
+        // A scene saved mid-way has lost its watchers: come back fighting, as the scene would have
+        // ended, rather than keep its passive tag and NoAI and stand stuck at the first gate.
+        if (view.getBoolean("NecromancerIntro", false)) removeCommandTag(PASSIVE_TAG);
         // A saved lunge, dive or mid-cast NoAI flag must not strand the next encounter.
         setNoGravity(false);
         noClip = false;
@@ -337,6 +352,7 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
         // The split happens once; one saved before its collapse plays again on the next hit.
         view.putBoolean("NecromancerSoulFreed", soulFreed && !combat.splitUnfinished());
         view.putInt("NecromancerStage", stage.ordinal());
+        view.putBoolean("NecromancerIntro", intro != null);
         var home = combat.home();
         view.putBoolean("NecromancerHasHome", home != null);
         if (home != null) {

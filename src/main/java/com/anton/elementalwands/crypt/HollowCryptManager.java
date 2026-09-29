@@ -146,8 +146,10 @@ public final class HollowCryptManager {
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
             if (state == null) return;
             if (entity instanceof NecromancerEntity boss) victory(boss);
-            else if (entity instanceof ServerPlayerEntity player && fightOf(player) != null)
-                eliminate(player, "You fell. You can watch the rest of the fight.");
+            else if (entity instanceof ServerPlayerEntity player) {
+                abandon(player);
+                if (fightOf(player) != null) eliminate(player, "You fell. You can watch the rest of the fight.");
+            }
         });
         ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) -> {
             // The set is lost on a restart; the body still lying in the realm is what survives a quit from the death screen.
@@ -158,12 +160,15 @@ public final class HollowCryptManager {
             newPlayer.experienceProgress = oldPlayer.experienceProgress;
         });
         ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> {
+            // Only a death in the crypt or in a fight: a return point alone must not pull a later death elsewhere back to it.
             // Wait a tick: the connection still points at the dead player at this moment.
-            if (!alive && state != null && (rosterOf(newPlayer) != null || state.returns.containsKey(newPlayer.getUuidAsString())))
+            if (!alive && state != null && (rosterOf(newPlayer) != null || inRealm(oldPlayer)))
                 respawns.add(newPlayer.getUuid());
         });
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
-            if (state != null && fightOf(handler.getPlayer()) != null) eliminate(handler.getPlayer(), null);
+            if (state == null) return;
+            abandon(handler.getPlayer());
+            if (fightOf(handler.getPlayer()) != null) eliminate(handler.getPlayer(), null);
         });
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> server.execute(() -> {
             if (state != null) joins.add(handler.getPlayer().getUuid());
@@ -237,16 +242,22 @@ public final class HollowCryptManager {
 
     private static boolean carved(World world, BlockPos pos) { return world.getBlockState(pos).isOf(Blocks.CHISELED_DEEPSLATE); }
 
-    /** The headstone seals every living player near it into a fight in a free slot; the boss rises shortly after. */
+    /**
+     * The headstone seals every living player near it into a fight in a free slot; the boss rises
+     * shortly after. Anyone already sealed into a fight or waiting for a slot to open stays with it.
+     */
     static String ritual(ServerPlayerEntity caller, BlockPos headstone) {
         ServerWorld here = (ServerWorld) caller.getEntityWorld();
         ServerWorld realm = realm(here.getServer());
         if (realm == null || state == null) return "The grave is silent. (The crypt is unavailable; see the server log.)";
+        // A held right-click repeats while the slot builds; a second fight would share the first one's party.
+        if (rosterOf(caller) != null || pending(caller.getUuid())) return "The grave is already dragging you under...";
         refreshGeneration();
         int slot = freeSlot(realm);
         if (slot < 0) return "The crypt is full. Try again when a fight ends.";
         List<ServerPlayerEntity> group = here.getPlayers(p -> p.isAlive() && !p.isSpectator()
-                && p.squaredDistanceTo(Vec3d.ofCenter(headstone)) <= RITUAL_RADIUS * RITUAL_RADIUS);
+                && p.squaredDistanceTo(Vec3d.ofCenter(headstone)) <= RITUAL_RADIUS * RITUAL_RADIUS
+                && rosterOf(p) == null && !pending(p.getUuid()));
         Fight fight = new Fight();
         fight.site = siteKey(here, headstone);
         for (ServerPlayerEntity p : group) {
@@ -280,6 +291,32 @@ public final class HollowCryptManager {
             if (realm.getPlayers(p -> !p.isSpectator() && area.contains(p.getEntityPos())).isEmpty()) return slot;
         }
         return -1;
+    }
+
+    /** Waiting to be taken into a slot that is still building. */
+    private static boolean pending(UUID id) {
+        for (Build build : builds.values()) if (build.waiting.contains(id)) return true;
+        return false;
+    }
+
+    /**
+     * A player who dies or leaves before their slot opens never went in: they drop out of the
+     * waiting fight, and a return point recorded outside the crypt is forgotten.
+     */
+    private static void abandon(ServerPlayerEntity player) {
+        boolean waited = false;
+        for (Build build : builds.values()) {
+            if (!build.waiting.remove(player.getUuid())) continue;
+            waited = true;
+            Fight fight = build.ritual ? state.fights.get(String.valueOf(build.slot)) : null;
+            if (fight != null) {
+                fight.roster.remove(player.getUuidAsString());
+                fight.standing.remove(player.getUuidAsString());
+            }
+        }
+        if (!waited) return;
+        if (!inRealm(player)) state.returns.remove(player.getUuidAsString());
+        persist();
     }
 
     private static String siteKey(ServerWorld world, BlockPos skull) {
@@ -410,9 +447,11 @@ public final class HollowCryptManager {
         Set<ServerPlayerEntity> members = members(fight, slot, server, realm);
         state.fights.remove(String.valueOf(slot));
         persist();
+        var area = HollowCryptRealm.footprint(HollowCryptRealm.centre(state.generation, slot));
         for (ServerPlayerEntity p : members)
-            // Offline or still on the death screen: handled on join or respawn.
-            if (p.isAlive() && p.networkHandler.player == p && inRealm(p)) leave(p);
+            // Offline or still on the death screen: handled on join or respawn. A wiped party is home
+            // before its fight ends and may already be in a new one in another slot; that one keeps them.
+            if (p.isAlive() && p.networkHandler.player == p && p.getEntityWorld() == realm && area.contains(p.getEntityPos())) leave(p);
         if (!fight.won) build(realm, slot);
     }
 
@@ -568,16 +607,20 @@ public final class HollowCryptManager {
         return "Cleared " + cleared + " entities; restoring " + build.tiles.size() + " sections of slot " + slot + ".";
     }
 
-    /** Ends a slot's fight without sending anyone home; watchers get their game mode back at the rim. */
+    /**
+     * Ends a slot's fight without sending anyone home; watchers get their game mode back at the rim.
+     * An offline watcher keeps the record, so rejoining sends them home with their game mode.
+     */
     private static void abort(ServerWorld realm, int slot) {
         risings.remove(slot);
         endings.remove(slot);
         Fight fight = state.fights.remove(String.valueOf(slot));
         if (fight == null) return;
         for (String id : fight.roster) {
-            String mode = state.modes.remove(id);
             ServerPlayerEntity p = realm.getServer().getPlayerManager().getPlayer(UUID.fromString(id));
-            if (mode != null && p != null) {
+            if (p == null) continue;
+            String mode = state.modes.remove(id);
+            if (mode != null) {
                 p.changeGameMode(GameMode.byId(mode, GameMode.SURVIVAL));
                 arrive(p, realm, slot);
             }

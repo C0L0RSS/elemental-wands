@@ -116,6 +116,9 @@ public final class SeedlingManager {
         net.fabricmc.fabric.api.event.player.AttackBlockCallback.EVENT.register((player, world, hand, pos, direction) -> {
             if (!world.getBlockState(pos).isOf(ModSpellBlocks.NATURE_SEEDLING)) return net.minecraft.util.ActionResult.PASS;
             if (!(world instanceof ServerWorld server)) return net.minecraft.util.ActionResult.PASS; // The client asks first (ElementalWandsClient).
+            // Fabric asks before vanilla's own reach and game-mode checks: a modified client could pop it from anywhere.
+            if (player.isSpectator() || !(player instanceof ServerPlayerEntity caster) || !caster.canInteractWithBlockAt(pos, 1.0))
+                return net.minecraft.util.ActionResult.PASS;
             Seedling seedling = at(server, pos);
             if (seedling == null || !seedling.casterUuid.equals(player.getUuid())) return net.minecraft.util.ActionResult.PASS;
             destroySeedlingAtAnchor(server, pos, player);

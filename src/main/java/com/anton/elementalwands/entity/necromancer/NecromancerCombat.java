@@ -13,6 +13,7 @@ import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -168,10 +169,10 @@ final class NecromancerCombat {
     String status() {
         prune();
         String form = boss.isTransforming() ? "transforming" : boss.isColossus() ? "colossus" + (soul != null ? ", soul freed" : splitStarted >= 0 ? ", soul tearing free"
-                : now() < collapseUntil ? ", collapsed" : "") + (dive != null ? ", dive " + dive.name().toLowerCase() : "") : boss.phasePending() ? "robed, transformation pending"
-                : "robed, " + boss.stage().name().toLowerCase().replace('_', ' ') + (step == null ? "" : " (" + step.name().toLowerCase()
+                : now() < collapseUntil ? ", collapsed" : "") + (dive != null ? ", dive " + dive.name().toLowerCase(Locale.ROOT) : "") : boss.phasePending() ? "robed, transformation pending"
+                : "robed, " + boss.stage().name().toLowerCase(Locale.ROOT).replace('_', ' ') + (step == null ? "" : " (" + step.name().toLowerCase(Locale.ROOT)
                 + (wave > 0 ? ", wave " + wave : "") + ")");
-        return "Hollow Necromancer (" + form + "): " + (active == null ? "idle" : active.name().toLowerCase())
+        return "Hollow Necromancer (" + form + "): " + (active == null ? "idle" : active.name().toLowerCase(Locale.ROOT))
                 + ", health " + Math.round(boss.getHealth()) + "/" + Math.round(boss.getMaxHealth())
                 + ", minions " + minions.size() + (harvest.isEmpty() ? "" : ", harvested souls " + harvest.size())
                 + ", " + (boss.isBossAggressive() ? engaged ? "fighting" : "waiting for players" : "passive");
@@ -656,7 +657,7 @@ final class NecromancerCombat {
             }
             return;
         }
-        log.note(world.getTime(), "no room for a " + kind.name().toLowerCase());
+        log.note(world.getTime(), "no room for a " + kind.name().toLowerCase(Locale.ROOT));
     }
 
     /** Counts how long each player has hovered above the floor, out of the army's reach. */
@@ -798,11 +799,11 @@ final class NecromancerCombat {
             castsSinceBlink = 0;
             shiftEvery = SHIFT_EVERY_MIN + boss.getRandom().nextInt(SHIFT_EVERY_MAX - SHIFT_EVERY_MIN + 1);
         } else castsSinceBlink++;
-        log.cast(now, action.name().toLowerCase(), player.getName().getString());
+        log.cast(now, action.name().toLowerCase(Locale.ROOT), player.getName().getString());
         if (action != Action.SHIFT && action != Action.AMBUSH) face(player.getEntityPos());
         lockedYaw = boss.getYaw();
         String clip = switch (action) {
-            case BOLT, HANDS, DRAIN -> (colossus ? "colossus_" : "") + action.name().toLowerCase();
+            case BOLT, HANDS, DRAIN -> (colossus ? "colossus_" : "") + action.name().toLowerCase(Locale.ROOT);
             case BLINK -> "blink";
             case SHIFT, AMBUSH -> null; // The blink clip plays just before the teleport.
             case SWIPE -> "swipe";

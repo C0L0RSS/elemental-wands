@@ -126,18 +126,25 @@ are filled with dirt. A region with no suitable spot has no graveyard, and
 `/place structure` fails on unsuitable ground. `/locate` can take several seconds. Entry is free: using
 the headstone altar seals every living non-Creative player within 16 blocks into a fight in
 a free slot. It records their return points first and blinds them for a moment on the way in.
+Anyone already sealed into a fight or waiting for a slot to open stays with it, so a held
+right-click or a second party member using the altar while the slot is laid out starts no
+second fight. A player who dies or disconnects before the slot opens drops out of that fight,
+and their return point is forgotten.
 The boss rises on the circle three seconds after they arrive. The altar is recognised by its
 block pattern in any rotation, not by the structure record, so `/place structure` copies work
 too. A player-built copy of the pattern would work as well.
 
 - **Death:** nothing drops in the realm; inventory and experience carry over to the respawn,
-  also after quitting from the death screen or a restart before respawning.
+  also after quitting from the death screen or a restart before respawning. The crypt handles
+  only a death in the realm or in a fight; a return point alone never pulls a later death
+  elsewhere back to the graveyard.
   A fallen fighter respawns as a spectator above their own clearing. They cannot leave it or
   teleport away, and get their game mode back when the fight ends. Disconnecting also counts
   as falling; rejoining mid-fight puts the player back as a spectator.
 - **Wipe:** when nobody is left standing (dead, disconnected or gone), the boss and its army
   vanish. Everyone is sent back to where they entered and the slot's layout is rebuilt. The
-  group may use the headstone again straight away.
+  group may use the headstone again straight away; a fight's end releases only the players in
+  its own slot, so the lost fight never pulls them out of the new one.
 - **Victory:** ten seconds after the boss dies, everyone is sent back. As with a wipe, that
   means everyone in the clearing, not only the sealed party: Creative players the headstone
   brought along and players who entered by command are released and messaged too. Anyone
@@ -156,7 +163,9 @@ Commands: `/ew crypt leave` is open to anyone in the realm and forfeits their pl
 fight. Operators also have `enter [slot]` and `summon`, which raises a fighting boss on the
 circle; the non-Creative players already in the slot become its sealed party, and a summon
 with none fights until reset. They also have `reset` (ends the slot's fight, clears
-entities and restores the layout) and `status`. The graveyard's gate chest is empty.
+entities and restores the layout) and `status`. When `reset` or `summon` ends a fight, its
+online watchers get their game mode back at the rim; an offline watcher keeps the record and
+is sent home with their game mode on rejoining. The graveyard's gate chest is empty.
 
 ## Authoring and tests
 

@@ -88,7 +88,9 @@ world with a fixed night, no weather or skylight, Nether-style thick fog and dri
 Ambient light is 0.2 and the fog is a dim grey-teal, so unlit ground stays a readable night.
 Each fight slot is a clearing 88 blocks across. Ten soul-fire braziers ring its rim, dark until
 the Necromancer's intro slam lights them (see [Necromancer combat](necromancer-combat.md#intro-cinematic)), and seven
-soul lanterns on existing cover (one per grave-marker group, one per stump) light the interior. It sits inside a dead forest of about 200
+soul lanterns on existing cover (one per grave-marker group, one per stump) light the interior.
+The intro temporarily dims the ambient fill and fog, then restores this lighting as the
+soul-fire wave ignites the braziers. It sits inside a dead forest of about 200
 cosmetic trees that reaches 124 blocks out, with some giants whose high boughs arch over the rim.
 An invisible barrier shell and lid keep players and the boss within 44 blocks of the centre and
 30 blocks above the ground. The one exception is the boss's siege perch: eight bough tops above

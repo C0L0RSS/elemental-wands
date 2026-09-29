@@ -37,6 +37,8 @@
     "WandMouseMixin",
     "WandKeyboardMixin",
     "IntroCameraMixin",
+    "IntroLightmapMixin",
+    "IntroFogMixin",
     "IntroHudMixin",
     "IntroGameRendererMixin",
     "IntroInputMixin",

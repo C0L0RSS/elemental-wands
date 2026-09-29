@@ -50,9 +50,10 @@ import net.minecraft.util.math.Vec3d;
  */
 public final class NecromancerIntro {
     /** Timeline, in ticks from the first frame. The Necromancer's intro clip shares this clock. */
-    public static final int LENGTH = 260, WALK_END = 64, ARCH = 66, PULL = 72, FREE = 104, CRUMBLE = 106, REVEAL = 108,
-            SOUL_ARRIVE = 148, EYES = 166, HERO_END = 196, TURN = 186, TURN_END = 206, LEVEL = 208, SLAM = 216, RING_END = 236,
-            TITLE = 220, TITLE_END = 252, RETURN = 244;
+    public static final int LENGTH = 378, WALK_END = 64, ARCH = 66, PULL = 72, FREE = 104, CRUMBLE = 106, REVEAL = 108,
+            SOUL_ARRIVE = 148, EYES = 175, STAFF_LOWER = 184, HERO_END = 220, TURN = 205, TURN_END = 235,
+            LEVEL = 238, LEVEL_HOLD = 242, LEVEL_RELEASE = 262, SLAM = 274, RING_END = 294,
+            TITLE = 278, TITLE_END = 354, RETURN = 354;
     /** A unanimous skip ends the scene no sooner than this, so a key still held from before can't. */
     public static final int SKIP_AFTER = 20;
     static final double RING_REACH = 44;
@@ -285,7 +286,7 @@ public final class NecromancerIntro {
             sound(world, head, SoundEvents.BLOCK_RESPAWN_ANCHOR_CHARGE, 1.6f, .7f);
             SoulGlow.light(world, head, NecromancerRules.GLOW_IMPACT, NecromancerRules.GLOW_IMPACT_TICKS);
         }
-        if (t > SOUL_ARRIVE && t < TURN && t % 2 == 0) {
+        if (t > SOUL_ARRIVE && t < STAFF_LOWER && t % 2 == 0) {
             // The staff burns brighter with the soul inside it.
             Vec3d head = place(STAFF_HEAD);
             world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, true, false, head.x, head.y, head.z, 3, .12, .15, .12, .02);
@@ -340,19 +341,35 @@ public final class NecromancerIntro {
         sound(world, at, SoundEvents.ITEM_MACE_SMASH_GROUND_HEAVY, 3f, .6f);
         sound(world, at, SoundEvents.ENTITY_BLAZE_SHOOT, 2.5f, .5f);
         sound(world, at, SoundEvents.ITEM_FIRECHARGE_USE, 2.5f, .5f);
+        // Keep the earth kick close to the impact; fast debris would cross the low cinematic lens.
         world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, floor(world, at)), true, false,
-                at.x, at.y + .2, at.z, 60, 1.2, .2, 1.2, .2);
-        world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, true, false, at.x, at.y + .3, at.z, 50, .6, .2, .6, .15);
+                at.x, at.y + .2, at.z, 40, .75, .12, .75, .03);
+        world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, true, false, at.x, at.y + .3, at.z, 100, .9, .3, .9, .18);
+        world.spawnParticles(ParticleTypes.SOUL, true, false, at.x, at.y + .5, at.z, 36, .7, .35, .7, .08);
+    }
+
+    /** Shared by the fire front and the client's arena-light reveal. */
+    public static double ringProgress(double t) {
+        double s = MathHelper.clamp((t - SLAM) / (RING_END - SLAM), 0, 1);
+        return 1 - (1 - s) * (1 - s);
     }
 
     /** The slam's soul-fire ring rolls out across the clearing and lights each brazier it reaches. */
     private void ring(ServerWorld world, int t) {
-        double s = (t - SLAM) / (double)(RING_END - SLAM), eased = 1 - (1 - s) * (1 - s), radius = 1.5 + (RING_REACH - 1.5) * eased;
-        int points = Math.min(160, (int)(radius * 3.5));
+        double progress = ringProgress(t), radius = 1.5 + (RING_REACH - 1.5) * progress;
+        int points = Math.min(192, (int)(radius * 5));
+        double crest = .3 + .45 * Math.sin(progress * Math.PI);
         for (int i = 0; i < points; i++) {
-            double angle = i * Math.PI * 2 / points + t * .05;
-            world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, true, false, centre.x + Math.cos(angle) * radius, centre.y + .15,
-                    centre.z + Math.sin(angle) * radius, 1, 0, .05, 0, .01);
+            double angle = i * Math.PI * 2 / points + t * .05, dx = Math.cos(angle), dz = Math.sin(angle);
+            // A broad, rising flame front rather than a single dotted line; keep it below his face.
+            world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, true, false, centre.x + dx * radius, centre.y + crest,
+                    centre.z + dz * radius, 3, .38, .22, .38, .025);
+            if (i % 2 == 0) world.spawnParticles(ParticleTypes.SOUL, true, false,
+                    centre.x + dx * (radius - 1.2), centre.y + .55, centre.z + dz * (radius - 1.2),
+                    2, .35, .3, .35, .04);
+            if (i % 4 == 0) world.spawnParticles(ParticleTypes.END_ROD, true, false,
+                    centre.x + dx * radius, centre.y + crest + .25, centre.z + dz * radius,
+                    1, .2, .25, .2, .035);
         }
         for (var it = braziers.iterator(); it.hasNext();) {
             BlockPos pos = it.next();
@@ -368,7 +385,8 @@ public final class NecromancerIntro {
         if (!state.isOf(Blocks.SOUL_CAMPFIRE)) return;
         world.setBlockState(pos, state.with(CampfireBlock.LIT, true));
         if (!loud) return;
-        world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, true, false, pos.getX() + .5, pos.getY() + .8, pos.getZ() + .5, 20, .2, .3, .2, .08);
+        world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, true, false, pos.getX() + .5, pos.getY() + .8, pos.getZ() + .5, 48, .3, .5, .3, .1);
+        world.spawnParticles(ParticleTypes.SOUL, true, false, pos.getX() + .5, pos.getY() + 1, pos.getZ() + .5, 12, .2, .4, .2, .05);
         world.playSound(null, pos, SoundEvents.ITEM_FIRECHARGE_USE, SoundCategory.HOSTILE, 1.4f, .7f);
     }
 

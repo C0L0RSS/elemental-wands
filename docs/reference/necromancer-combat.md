@@ -23,7 +23,9 @@ reveal, and his skeleton never shows, so the transformation stays a surprise:
 The server runs the timeline (`NecromancerIntro`, ticked by the boss). It turns him to face the
 zombie while he hauls and to the players from tick 186, and holds every watcher in place: they
 cannot move, cast or take damage (except `/kill` and the void), and the boss is passive and
-untouchable. The zombie (`IntroZombieEntity`) and its soul (`IntroSoulEntity`, drawn with the Soul
+untouchable. A watcher caught mid-jump builds no fall distance while held. A watcher who disconnects
+is let go at once, and a boss that unloads, changes dimension or is removed mid-scene releases
+everyone. The zombie (`IntroZombieEntity`) and its soul (`IntroSoulEntity`, drawn with the Soul
 Harvest model and its `dragged` loop) never save; the soul's path is a function of world time,
 so it stays in step with the camera and lands in the raised staff's flame (`STAFF_RAISED`, from
 the intro clip's pose). Each client (`NecromancerIntroClient` with the `Intro*Mixin` classes) flies

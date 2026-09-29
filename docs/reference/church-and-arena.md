@@ -112,7 +112,8 @@ passes through without erasing blocks, and explosions (such as Meteor) destroy n
 start no fires. Temporary spell blocks still work and restore themselves as usual.
 
 Graveyards generate in plains, meadow, savanna, snowy plains, forest, birch forest,
-dark forest, taiga and swamp biomes (random spread 20/8 chunks). They're found with
+dark forest, taiga and swamp biomes (random spread 20/8 chunks, never within 4 chunks of a
+Guardian church, so a yard's cleared air cannot cut into one). They're found with
 `/locate structure elementalwands:hollow_graveyard`, and new chunks only.
 Placement uses the custom structure type `elementalwands:hollow_graveyard`
 (`world/HollowGraveyardStructure`) instead of vanilla jigsaw, which sampled one column and
@@ -129,7 +130,8 @@ The boss rises on the circle three seconds after they arrive. The altar is recog
 block pattern in any rotation, not by the structure record, so `/place structure` copies work
 too. A player-built copy of the pattern would work as well.
 
-- **Death:** nothing drops in the realm; inventory and experience carry over to the respawn.
+- **Death:** nothing drops in the realm; inventory and experience carry over to the respawn,
+  also after quitting from the death screen or a restart before respawning.
   A fallen fighter respawns as a spectator above their own clearing. They cannot leave it or
   teleport away, and get their game mode back when the fight ends. Disconnecting also counts
   as falling; rejoining mid-fight puts the player back as a spectator.

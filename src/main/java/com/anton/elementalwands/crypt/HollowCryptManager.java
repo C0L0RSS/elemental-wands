@@ -150,7 +150,8 @@ public final class HollowCryptManager {
                 eliminate(player, "You fell. You can watch the rest of the fight.");
         });
         ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) -> {
-            if (alive || !kept.remove(oldPlayer.getUuid())) return;
+            // The set is lost on a restart; the body still lying in the realm is what survives a quit from the death screen.
+            if (alive || !kept.remove(oldPlayer.getUuid()) && !inRealm(oldPlayer)) return;
             newPlayer.getInventory().clone(oldPlayer.getInventory());
             newPlayer.experienceLevel = oldPlayer.experienceLevel;
             newPlayer.totalExperience = oldPlayer.totalExperience;

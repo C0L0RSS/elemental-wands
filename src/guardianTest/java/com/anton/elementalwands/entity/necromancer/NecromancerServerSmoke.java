@@ -37,7 +37,7 @@ public final class NecromancerServerSmoke implements ModInitializer {
     private static final List<BlockPos> BRAZIERS = List.of(new BlockPos(20, 100, 3), new BlockPos(-12, 100, -30));
     private int tick, siege, since, intro = -1;
     private ServerPlayerEntity target, second;
-    private NecromancerEntity boss;
+    private NecromancerEntity boss, spare;
     private float bossBefore;
     private List<UUID> firstRaised = List.of();
     private boolean sniped, rained, litBolt, litBall, litMarker;
@@ -239,8 +239,12 @@ public final class NecromancerServerSmoke implements ModInitializer {
             require(!target.damage(w, w.getDamageSources().mobAttack(boss), 6) && target.getHealth() == 20, "A watcher took damage in the intro");
             target.setPosition(14.5, 100, 4.5);
             NecromancerIntro.skip(target);
+            second.fallDistance = 12; // As if caught mid-jump and put back while sinking.
         }
-        if (t == 435) require(target.getEntityPos().squaredDistanceTo(10.5, 100, .5) < .01, "A watcher walked away during the intro: " + target.getEntityPos());
+        if (t == 435) {
+            require(target.getEntityPos().squaredDistanceTo(10.5, 100, .5) < .01, "A watcher walked away during the intro: " + target.getEntityPos());
+            require(second.fallDistance == 0, "The intro hold let a watcher build fall distance: " + second.fallDistance);
+        }
         if (t == 445) {
             require(boss.inIntro(), "One player's skip ended the intro for everyone");
             NecromancerIntro.skip(second);
@@ -251,6 +255,19 @@ public final class NecromancerServerSmoke implements ModInitializer {
             require(BRAZIERS.stream().allMatch(pos -> w.getBlockState(pos).get(CampfireBlock.LIT)), "Skipped intro left the braziers dark");
             boss.stopFight();
         }
+        // A chunk unload or a portal skips remove(); the unloaded boss must still let its watchers go.
+        if (t == 455) {
+            spare = new NecromancerEntity(ModEntities.HOLLOW_NECROMANCER, w);
+            spare.refreshPositionAndAngles(.5, 100, -8.5, 0, 0);
+            w.spawnEntity(spare);
+            spare.stopFight();
+            spare.beginIntro(List.of(target));
+        }
+        if (t == 457) {
+            require(NecromancerIntro.watching(target) && count(w, IntroZombieEntity.class) == 1, "The spare boss's intro did not start");
+            spare.setRemoved(net.minecraft.entity.Entity.RemovalReason.UNLOADED_TO_CHUNK);
+        }
+        if (t == 458) require(!NecromancerIntro.watching(target) && count(w, IntroZombieEntity.class) == 0, "An unloaded boss left its watcher held");
         // Player spells damage the boss as any WandBoss.
         if (t == 460) {
             boss.setHealth(boss.getMaxHealth()); // The drain check left it below the first duel's gate.
@@ -363,7 +380,7 @@ public final class NecromancerServerSmoke implements ModInitializer {
                     require(boss.stage() == Stage.DONE && minions(w).isEmpty(), "Transformation began with the siege unfinished");
                     boss.stopFight();
                     require(!boss.hasNoGravity(), "Stopped caster kept its perch");
-                    Files.writeString(Path.of("NECROMANCER_PASSED.txt"), "Hollow Necromancer passed: the intro holds the boss and both players still and unhurt, puts out the braziers, ends early only when everyone skips, tears the zombie's soul out while he faces it, lands it in the staff, turns him to the players, and its ring relights the braziers before the fight starts; cover stops soul bolts; every skull of an open volley lands; drain damages, heals within its cap, is tracked for clients and breaks on lost sight; wide grasping hands root a player who stays, spare one who steps out and are followed by an ambush burst from behind; siege waves rise on the floor away from players with the duo compositions, share the caster's side, cannot hurt it, finish rising with AI, do not burn at noon and dissolve on stop; blink escapes within the leash and leaves a curse; shift repositions away from everyone; wand damage applies; siege bodies are quickened; a Soul Fire Rain volley blasts the player who stays under a marker and spares one who leaves; soul light rides the bolts, fireballs and markers, flashes on impact, never replaces a block and clears itself, orphans included; the fight gates at 75% into a shielded perched siege where fireballs rain and a hovering target draws a perch bolt, waves 1-2 advance and a cleared siege crashes the caster down exposed; half health starts the second siege whose waves 3-4 bring brutes, and clearing it begins the transformation.\n");
+                    Files.writeString(Path.of("NECROMANCER_PASSED.txt"), "Hollow Necromancer passed: the intro holds the boss and both players still and unhurt with no fall distance, puts out the braziers, ends early only when everyone skips, releases its watchers when its boss unloads, tears the zombie's soul out while he faces it, lands it in the staff, turns him to the players, and its ring relights the braziers before the fight starts; cover stops soul bolts; every skull of an open volley lands; drain damages, heals within its cap, is tracked for clients and breaks on lost sight; wide grasping hands root a player who stays, spare one who steps out and are followed by an ambush burst from behind; siege waves rise on the floor away from players with the duo compositions, share the caster's side, cannot hurt it, finish rising with AI, do not burn at noon and dissolve on stop; blink escapes within the leash and leaves a curse; shift repositions away from everyone; wand damage applies; siege bodies are quickened; a Soul Fire Rain volley blasts the player who stays under a marker and spares one who leaves; soul light rides the bolts, fireballs and markers, flashes on impact, never replaces a block and clears itself, orphans included; the fight gates at 75% into a shielded perched siege where fireballs rain and a hovering target draws a perch bolt, waves 1-2 advance and a cleared siege crashes the caster down exposed; half health starts the second siege whose waves 3-4 bring brutes, and clearing it begins the transformation.\n");
                     w.getServer().stop(false);
                 }
                 require(s < 200, "Second siege never ended in the transformation: " + boss.status());

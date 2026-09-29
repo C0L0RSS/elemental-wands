@@ -297,14 +297,15 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
         else combat.tickReview(world);
     }
 
+    /** Every removal passes here, including a chunk unload or a portal, which skip {@link #remove}. */
     @Override
-    public void remove(Entity.RemovalReason reason) {
+    public void onRemove(Entity.RemovalReason reason) {
         if (getEntityWorld() instanceof ServerWorld) {
             if (intro != null) intro.cancel();
             intro = null;
             combat.cancel();
         }
-        super.remove(reason);
+        super.onRemove(reason);
     }
 
     @Override

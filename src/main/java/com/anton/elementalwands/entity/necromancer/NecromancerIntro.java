@@ -13,6 +13,7 @@ import java.util.Set;
 import java.util.UUID;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -99,6 +100,7 @@ public final class NecromancerIntro {
             float face = (float)Math.toDegrees(Math.atan2(-(centre.x - at.x), centre.z - at.z));
             player.teleport(world, at.x, at.y, at.z, Set.of(), face, 0, false);
             player.setVelocity(Vec3d.ZERO);
+            player.fallDistance = 0;
             watchers.put(player, at);
         }
         findBraziers(world);
@@ -110,6 +112,11 @@ public final class NecromancerIntro {
         ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> !(entity instanceof PlayerEntity
                 && WATCHING.containsKey(entity.getUuid()) && !source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY)));
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> WATCHING.clear());
+        // A leaver is let go at once: an unloaded boss can no longer tick them out, and they must not rejoin still held.
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+            NecromancerIntro intro = WATCHING.remove(handler.getPlayer().getUuid());
+            if (intro != null) intro.watchers.remove(handler.getPlayer());
+        });
     }
 
     /** A player held in an intro: frozen, unhurt and unable to cast. */
@@ -220,6 +227,8 @@ public final class NecromancerIntro {
             if (player.getEntityPos().squaredDistanceTo(lock) > .01)
                 player.teleport(world, lock.x, lock.y, lock.z, Set.of(), player.getYaw(), player.getPitch(), false);
             player.setVelocity(Vec3d.ZERO);
+            // A watcher caught mid-jump keeps sinking toward the ground and being put back; none of that is a fall.
+            player.fallDistance = 0;
         }
     }
 
@@ -399,6 +408,7 @@ public final class NecromancerIntro {
     private void release() {
         for (ServerPlayerEntity player : watchers.keySet()) {
             WATCHING.remove(player.getUuid(), this);
+            player.fallDistance = 0;
             if (!player.isRemoved() && ServerPlayNetworking.canSend(player, ModNetworking.NecromancerIntroPayload.ID))
                 ServerPlayNetworking.send(player, new ModNetworking.NecromancerIntroPayload(boss.getId(), start, yaw, centre, false));
         }

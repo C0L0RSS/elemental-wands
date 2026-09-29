@@ -62,7 +62,7 @@ public final class GuardianWallSmokeMod implements ModInitializer {
         if(tick==30) {
             for(int x=-2;x<=2;x++)for(int z=-2;z<=2;z++)world.getChunk(x,z);
             for(int x=-8;x<=8;x++)for(int z=-8;z<=25;z++)world.setBlockState(new BlockPos(x,80,z),Blocks.STONE.getDefaultState());
-            var factory=com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);factory.setAccessible(true);
+            var factory=com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);factory.setAccessible(true);
             player=(ServerPlayerEntity)factory.invoke(null,server,UUID.randomUUID(),"WallCaster",.5,81.,10.5);
             other=(ServerPlayerEntity)factory.invoke(null,server,UUID.randomUUID(),"WallAlly",.5,81.,11.5);
             for(var p:List.of(player,other)) {

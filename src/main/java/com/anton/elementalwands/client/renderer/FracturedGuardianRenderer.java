@@ -14,8 +14,28 @@ public class FracturedGuardianRenderer extends GeoEntityRenderer<FracturedGuardi
     public FracturedGuardianRenderer(EntityRendererFactory.Context context) {
         super(context, new FracturedGuardianModel());
         this.shadowRadius = 1.5f;
-        withRenderLayer(AutoGlowingGeoLayer::new);
+        withRenderLayer(Glow::new);
         withRenderLayer(GuardianHeldRockLayer::new);
+    }
+
+    /** The eyes and veins stay dark while the Guardian is still stone in its intro. */
+    private static final class Glow extends AutoGlowingGeoLayer<FracturedGuardianEntity, Void, FracturedGuardianRenderState> {
+        Glow(software.bernie.geckolib.renderer.base.GeoRenderer<FracturedGuardianEntity, Void, FracturedGuardianRenderState> renderer) { super(renderer); }
+        @Override
+        public void submitRenderTask(FracturedGuardianRenderState state, MatrixStack matrices, software.bernie.geckolib.cache.object.BakedGeoModel model,
+                                     OrderedRenderCommandQueue queue, CameraRenderState camera, int light, int overlay, int color, boolean didRender) {
+            if (GuardianAwakeningVisual.dormant(state.introTime)) return;
+            super.submitRenderTask(state, matrices, model, queue, camera, light, overlay, color, didRender);
+        }
+    }
+
+    /**
+     * GeckoLib only advances a clip while its entity renders, so the intro keeps drawing the Guardian
+     * when the camera looks away (at the caller's hand) and its clip stays on the scene's clock.
+     */
+    @Override
+    public boolean shouldRender(FracturedGuardianEntity entity, net.minecraft.client.render.Frustum frustum, double x, double y, double z) {
+        return entity.inIntro() || super.shouldRender(entity, frustum, x, y, z);
     }
 
     @Override
@@ -57,6 +77,7 @@ public class FracturedGuardianRenderer extends GeoEntityRenderer<FracturedGuardi
         state.beamPitch = entity.getBeamPitch();
         state.beamOrigin = entity.getBeamOrigin();
         state.beamEnd = entity.getBeamEnd();
+        state.introTime = entity.getIntroTime(partialTick);
     }
 
     @Override
@@ -69,6 +90,7 @@ public class FracturedGuardianRenderer extends GeoEntityRenderer<FracturedGuardi
         if (state.deathTime == 0 && !state.invisibleToPlayer) GuardianUnstableVisual.submit(state,matrices,queue);
         if (state.deathTime == 0 && !state.invisibleToPlayer) GuardianFanVisual.submit(state,matrices,queue);
         super.render(state,matrices,queue,cameraState);
+        if (state.introTime >= 0 && state.deathTime == 0) GuardianAwakeningVisual.submit(state,matrices,queue,cameraState);
         GuardianBurnVisual.submit(state,matrices,queue,cameraState);
     }
 

@@ -43,7 +43,7 @@ public final class AuditFixSmokeMod implements ModInitializer {
         if(tick==30) {
             for(int x=-3;x<=3;x++)for(int z=-3;z<=3;z++){world.getChunk(x,z);world.setChunkForced(x,z,true);}
             int ground=world.getTopY(Heightmap.Type.MOTION_BLOCKING,0,0);
-            var factory=com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);
+            var factory=com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);
             factory.setAccessible(true);
             player=(ServerPlayerEntity)factory.invoke(null,server,UUID.randomUUID(),"AuditTester",.5,(double)ground,.5);
             player.onTeleportationDone();player.setOnGround(true);

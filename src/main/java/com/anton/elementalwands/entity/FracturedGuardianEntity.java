@@ -58,6 +58,8 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
     private static final TrackedData<Long> LEAP_START = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.LONG);
     private static final TrackedData<BlockPos> LEAP_BLOCK = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.BLOCK_POS);
     private static final TrackedData<Vector3f> LEAP_ORIGIN = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.VECTOR_3F);
+    private static final TrackedData<Long> INTRO_START = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.LONG);
+    private GuardianIntro intro;
     private record HurtWindow(long until, float damage) {}
     private final java.util.Map<UUID, HurtWindow> guardHurtWindows = new java.util.HashMap<>();
     private static final UUID ENVIRONMENT_DAMAGE = new UUID(0,0);
@@ -94,6 +96,7 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
         builder.add(LEAP_START, -1L);
         builder.add(LEAP_BLOCK, BlockPos.ORIGIN);
         builder.add(LEAP_ORIGIN, new Vector3f());
+        builder.add(INTRO_START, -1L);
 
         builder.add(ROCK_HELD, false);
         builder.add(WAVE_UNSTABLE, false);
@@ -162,6 +165,7 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
     public boolean damage(ServerWorld world, net.minecraft.entity.damage.DamageSource source, float amount) {
         if (source.isIn(net.minecraft.registry.tag.DamageTypeTags.BYPASSES_INVULNERABILITY))
             return super.damage(world, source, amount);
+        if (intro != null) return false; // Still stone, waking in the intro cinematic.
         // Preserve vanilla's duplicate-hit protection for each attacker, without
         // one teammate's hit swallowing everyone else's simultaneous ultimate.
         long now = world.getTime();
@@ -275,6 +279,44 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
         combat.start();
     }
 
+    /**
+     * Opens the fight with the intro cinematic: the Guardian kneels passive and untouchable while
+     * the watchers see the caller's heart wake it, then the fight starts on its own (or early, once
+     * everyone skips). {@code caller} holds the heart out; without one, the first watcher does.
+     */
+    public void beginIntro(java.util.List<ServerPlayerEntity> watchers, ServerPlayerEntity caller) {
+        if (!(getEntityWorld() instanceof ServerWorld world)) return;
+        stopReview();
+        setAiDisabled(true);
+        intro = new GuardianIntro(this, world, watchers, caller);
+        dataTracker.set(INTRO_START, world.getTime() + 1);
+        triggerAnim(CONTROLLER, "intro");
+    }
+    void syncIntroStart(long start) { dataTracker.set(INTRO_START, start); }
+    void endIntro(boolean early) {
+        intro = null;
+        dataTracker.set(INTRO_START, -1L);
+        if (early) stopTriggeredAnim(CONTROLLER, "intro");
+        setAiDisabled(false);
+        startFight();
+    }
+    /** An operator control takes over mid-scene: the watchers go free and the scene never starts the fight. */
+    private void cancelIntro() {
+        if (intro == null) return;
+        intro.cancel();
+        intro = null;
+        dataTracker.set(INTRO_START, -1L);
+        stopTriggeredAnim(CONTROLLER, "intro");
+        setAiDisabled(false);
+    }
+    public boolean inIntro() { return dataTracker.get(INTRO_START) >= 0; }
+    GuardianIntro intro() { return intro; }
+    /** Ticks into the intro cinematic, or -1 outside one. */
+    public float getIntroTime(float partialTick) {
+        long start = dataTracker.get(INTRO_START);
+        return start < 0 ? -1 : getEntityWorld().getTime() - start + partialTick;
+    }
+
     public void testAttack(ServerPlayerEntity player, GuardianCombatRules.Attack attack) {
         stopReview();
         combat.testAttack(player, attack);
@@ -317,6 +359,7 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
     }
 
     public void stopReview() {
+        cancelIntro();
         finishGuard();
         followPlayer = null;
         addCommandTag(PASSIVE_TAG);
@@ -342,6 +385,7 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
         super.tick();
         if (!(getEntityWorld() instanceof ServerWorld world)) return;
         if (!isAlive()) { combat.cancel(); return; }
+        if (intro != null) { if (!intro.tick(world)) intro = null; return; }
         if (!getCommandTags().contains(PASSIVE_TAG)) combat.tick(world);
         else combat.tickReview(world);
         combat.tickEffects(world);
@@ -382,6 +426,16 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
         super.remove(reason);
     }
 
+    /** Every removal passes here, including a chunk unload or a portal, which skip {@link #remove}. */
+    @Override
+    public void onRemove(net.minecraft.entity.Entity.RemovalReason reason) {
+        if (getEntityWorld() instanceof ServerWorld && intro != null) {
+            intro.cancel();
+            intro = null;
+        }
+        super.onRemove(reason);
+    }
+
     @Override
     protected void readCustomData(net.minecraft.storage.ReadView view) {
         super.readCustomData(view);
@@ -399,6 +453,8 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
         if (getCommandTags().contains("ew_guardian_leap_gravity")) {
             setNoGravity(false); removeCommandTag("ew_guardian_leap_gravity");
         }
+        // A scene saved mid-way has lost its watchers: come back fighting, as it would have ended.
+        if (view.getBoolean("GuardianIntro", false)) removeCommandTag(PASSIVE_TAG);
         // A saved mid-cast NoAI flag must not immobilize the next encounter.
         if (!getCommandTags().contains(PASSIVE_TAG)) setAiDisabled(false);
     }
@@ -406,6 +462,7 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
     @Override
     protected void writeCustomData(net.minecraft.storage.WriteView view) {
         super.writeCustomData(view);
+        view.putBoolean("GuardianIntro", intro != null);
         view.putBoolean("GuardianUnstable", isUnstable());
         view.putBoolean("GuardianPhasePending", phasePending);
         view.putInt("GuardianPhaseRemaining", getPhaseTime(0) < 0 ? 0 : Math.max(0, GuardianPhaseRules.TRANSITION_TICKS-(int)getPhaseTime(0)));
@@ -455,13 +512,12 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
                     state.controller().transitionLength(4);
                     return state.setAndContinue(state.isMoving() ? WALK : IDLE);
                 }).receiveTriggeredAnimations()
+                .triggerableAnim("intro", RawAnimation.begin().thenPlay("animation.fractured_guardian.intro"))
                 .triggerableAnim("fan", RawAnimation.begin().thenPlay("animation.fractured_guardian.fan"))
                 .triggerableAnim("phase_change", RawAnimation.begin().thenPlay("animation.fractured_guardian.phase_change"))
                 .triggerableAnim("slam_fast", RawAnimation.begin().thenPlay("animation.fractured_guardian.slam_fast"))
                 .triggerableAnim("throw_fast", RawAnimation.begin().thenPlay("animation.fractured_guardian.throw_fast"))
                 .triggerableAnim("guard_break", RawAnimation.begin().thenPlay("animation.fractured_guardian.guard_break"))
-                .triggerableAnim("arrival_fall", RawAnimation.begin().thenPlay("animation.fractured_guardian.arrival_fall"))
-                .triggerableAnim("arrival_land", RawAnimation.begin().thenPlay("animation.fractured_guardian.arrival_land"))
                 .triggerableAnim("awaken", RawAnimation.begin().thenPlay("animation.fractured_guardian.awaken"))
                 .triggerableAnim("slam", RawAnimation.begin().thenPlay("animation.fractured_guardian.slam"))
                 .triggerableAnim("throw", RawAnimation.begin().thenPlay("animation.fractured_guardian.throw"))

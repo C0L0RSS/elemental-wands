@@ -154,7 +154,7 @@ public final class StoneClusterSmokeMod implements ModInitializer {
         world.setBlockState(obstacle,Blocks.AIR.getDefaultState(),2);
     }
     private static ServerPlayerEntity player(MinecraftServer server,String name,double x,double y,double z)throws Exception {
-        var method=com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);
+        var method=com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);
         method.setAccessible(true);return (ServerPlayerEntity)method.invoke(null,server,UUID.randomUUID(),name,x,y,z);
     }
 }

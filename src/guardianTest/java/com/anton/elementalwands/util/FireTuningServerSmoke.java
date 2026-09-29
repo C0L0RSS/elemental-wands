@@ -25,7 +25,7 @@ public final class FireTuningServerSmoke implements ModInitializer {
     private void run(MinecraftServer s)throws Exception {
         int t=++ticks;
         if(t==30) {
-            var f=com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);
+            var f=com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);
             f.setAccessible(true);p=(ServerPlayerEntity)f.invoke(null,s,UUID.randomUUID(),"FireTuning",.5,100,.5);
             p.setLoaded(true);p.onTeleportationDone();p.setNoGravity(true);
             var w=p.getEntityWorld();for(int x=-4;x<=4;x++)for(int z=-4;z<=66;z++) {

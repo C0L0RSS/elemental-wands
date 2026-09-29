@@ -5,6 +5,7 @@ are not claims of public publication. Older entries describe what changed then;
 use [current guides](../README.md) for today’s behavior and [status](../STATUS.md)
 for outstanding verification. Detailed historical reports are optional background.
 
+- [2026-09-29 — The Shattered Nave](2026-09-29-guardian-nave.md)
 - [2026-09-29 — The graveyard mausoleum](2026-09-29-graveyard-mausoleum.md)
 - [2026-09-29 — Necromancer intro and tuning, and Nature support](2026-09-29-necromancer-nature.md)
 - [2026-09-28 — Hollow Necromancer fight redesign](2026-09-28-necromancer-fight.md)

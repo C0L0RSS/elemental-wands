@@ -1,297 +1,282 @@
 package com.anton.elementalwands.arena;
 
+import com.anton.elementalwands.ElementalWandsMod;
+import com.anton.elementalwands.arena.GuardianArenaJournal.Point;
+import com.anton.elementalwands.church.GuardianChurchManager;
 import com.anton.elementalwands.entity.FracturedGuardianEntity;
-import com.anton.elementalwands.entity.GuardianArenaEntity;
-import com.anton.elementalwands.entity.GuardianLiftEntity;
-import com.anton.elementalwands.registry.ModBlocks;
 import com.anton.elementalwands.registry.ModEntities;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.zip.CRC32;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.ExperienceOrbEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.BlockItem;
+import net.minecraft.item.BoneMealItem;
+import net.minecraft.item.BucketItem;
+import net.minecraft.item.FireChargeItem;
+import net.minecraft.item.FlintAndSteelItem;
+import net.minecraft.item.Item;
+import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.tag.DamageTypeTags;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.structure.StructurePlacementData;
+import net.minecraft.structure.StructureTemplate;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.WorldSavePath;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.Difficulty;
-import net.minecraft.world.Heightmap;
 import net.minecraft.world.GameMode;
+import net.minecraft.world.Heightmap;
 import net.minecraft.world.World;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static com.anton.elementalwands.arena.GuardianArenaRules.*;
 
-/** One prototype encounter per server. Only initially empty sky is ever edited. */
+/**
+ * The Fractured Guardian's arena, fought in the Shattered Nave. A church ritual seals the gathered
+ * group into a free slot of the endless hall; the Guardian drops onto the effigy seat and the
+ * fight begins. The fallen watch as spectators, a wipe sends everyone back to the church with
+ * their belongings, and a victory restores the church. Fighters and their teleports stay inside
+ * the walled floor, and nothing damages the hall's blocks.
+ */
 public final class GuardianArenaManager {
-    private static final Logger LOG=LoggerFactory.getLogger("elementalwands-arena");
-    private static GuardianArenaJournal journal;
-    private static GuardianArenaJournal.State saved;
-    private static Session active;
-    private static boolean internalMutation, internalTeleport;
-    private static String storageError;
-    private static final Set<UUID> respawnReturns=new java.util.HashSet<>();
+    private static final Logger LOG = LoggerFactory.getLogger("elementalwands-arena");
+    private static final Gson JSON = new GsonBuilder().setPrettyPrinting().create();
 
-    private static final class Session {
-        final GuardianArenaJournal.Arena receipt;
-        final ServerWorld world;
-        final GuardianArenaRoster roster;
-        final Map<UUID,Vec3d> seats=new HashMap<>();
-        final Map<UUID,Vec3d> safe=new HashMap<>();
-        final Map<UUID,GuardianLiftEntity> lifts=new HashMap<>();
-        long phaseStarted;
-        FracturedGuardianEntity guardian;
-        GuardianArenaEntity visual;
-        Phase phase=Phase.WALLS;
-        int tick, buildCursor, cleanupColumn, cleanupY=Integer.MIN_VALUE;
-        boolean cleaned;
-        double feet;
-        String outcome="Encounter underway";
-        Session(GuardianArenaJournal.Arena receipt, ServerWorld world, GuardianArenaRoster roster) {
-            this.receipt=receipt; this.world=world; this.roster=roster; feet=receipt.base()+1; phaseStarted=world.getTime();
-        }
-        Box volume() { var a=receipt; return new Box(a.x()-HALF-1,a.floor(),a.z()-HALF-1,a.x()+HALF+1,a.top()+1,a.z()+HALF+1); }
+    static final class State {
+        int version = 1;
+        /** Bumped when the layout changes, which moves every slot to untouched ground. */
+        int generation;
+        String layout = "";
+        List<Integer> built = new ArrayList<>();
+        /** Where each player entered from; the nave always sends them back here. */
+        Map<String, Point> returns = new LinkedHashMap<>();
+        /** Game modes to restore for players made spectators by a fight. */
+        Map<String, String> modes = new LinkedHashMap<>();
+        /** Fights in progress, by slot. A restart cancels them and sends everyone home. */
+        Map<String, Fight> fights = new LinkedHashMap<>();
     }
 
-    public static java.util.List<String> enrolledPlayers(FracturedGuardianEntity guardian){
-        return active!=null && active.guardian==guardian ? active.roster.enrolled().stream().map(UUID::toString).toList() : java.util.List.of();
+    static final class Fight {
+        /** The church whose ritual started it; null for an operator summon. */
+        String site;
+        /** Sealed when the fight begins. */
+        List<String> roster = new ArrayList<>();
+        List<String> standing = new ArrayList<>();
+        /** A party fight wipes when nobody is left standing; an empty operator summon never does. */
+        boolean party;
+        String boss;
+        /** Who offered the heart; they hold it out in the intro. Null for an operator summon from the console. */
+        String caller;
+        /** The Guardian has woken and the fight is on; until then nobody casts or takes damage. */
+        boolean fighting;
+        boolean won;
     }
+
+    private static final class Build {
+        final int slot;
+        final BlockPos centre;
+        final List<Identifier> tiles = new ArrayList<>();
+        final List<BlockPos> origins = new ArrayList<>();
+        final Set<UUID> waiting = new LinkedHashSet<>();
+        boolean ritual;
+        int next;
+        Build(int slot, BlockPos centre) { this.slot = slot; this.centre = centre; }
+    }
+
+    /** The Guardian kneeling on the seat through its intro, until the fight starts. */
+    private record Arrival(FracturedGuardianEntity guardian) {}
+
+    private static Path path;
+    private static State state;
+    private static String layout = "";
+    private static final Map<Integer, Build> builds = new HashMap<>();
+    private static final Map<Integer, Arrival> arrivals = new HashMap<>();
+    private static boolean internalTeleport, internalMutation;
+    /** Server tick at which a slot's Guardian wakes, and at which an ended fight sends its players home. */
+    private static final Map<Integer, Integer> risings = new HashMap<>(), endings = new HashMap<>();
+    /** Players whose respawn the nave handles (spectate or go home), and whose belongings it carries over. */
+    private static final Set<UUID> respawns = new LinkedHashSet<>(), joins = new LinkedHashSet<>(), kept = new HashSet<>();
+    /** Players the retired sky arena still owed a trip home when this world was upgraded. */
+    private static final Set<String> legacy = new HashSet<>();
+
     private GuardianArenaManager() {}
 
     public static void init() {
         ServerLifecycleEvents.SERVER_STARTED.register(GuardianArenaManager::load);
+        ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resources, success) -> layout = fingerprint(server));
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+            state = null; path = null; builds.clear(); arrivals.clear(); risings.clear(); endings.clear();
+            respawns.clear(); joins.clear(); kept.clear(); legacy.clear();
+        });
         ServerTickEvents.END_SERVER_TICK.register(GuardianArenaManager::tick);
-        ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
-            if (active!=null) {
-                releaseLifts(active);
-                recoverGuardian(active);
-                returnOnline(server);
-                // Retain the receipt until a subsequent world save has persisted all cleanup.
-                // Startup always repeats this idempotent sweep; no partial fight resumes.
+        ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
+            if (state == null) return;
+            if (entity instanceof FracturedGuardianEntity guardian) victory(guardian);
+            else if (entity instanceof ServerPlayerEntity player) {
+                abandon(player);
+                if (fightOf(player) != null) eliminate(player, "You fell. You can watch the rest of the fight.");
             }
-        });
-        ServerLifecycleEvents.SERVER_STOPPED.register(server -> { active=null; saved=null; journal=null; storageError=null; respawnReturns.clear(); });
-        ServerPlayConnectionEvents.DISCONNECT.register((handler,server) -> eliminate(handler.getPlayer(),"Disconnected"));
-        ServerPlayConnectionEvents.JOIN.register((handler,sender,server) -> server.execute(() -> {
-            ServerPlayerEntity player=handler.getPlayer();
-            if (active!=null && active.roster.enrolled(player.getUuid()) && active.phase.ordinal()<Phase.WITHDRAW.ordinal()) {
-                active.roster.eliminate(player.getUuid());
-                releaseLift(active,player.getUuid());
-                spectate(player);
-            } else returnPending(player);
-        }));
-        ServerLivingEntityEvents.AFTER_DEATH.register((entity,source) -> {
-            if (entity instanceof ServerPlayerEntity player && active!=null && active.roster.enrolled(player.getUuid())) {
-                eliminate(player,"You fell. You can now watch the fight.");
-                respawnReturns.add(player.getUuid());
-            }
-        });
-        ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer,newPlayer,alive) -> {
-            // PlayerManager fires this before ServerPlayNetworkHandler replaces its dead player.
-            // Teleport only on a later tick, once the connection points at the replacement entity.
-            if (!alive) respawnReturns.add(newPlayer.getUuid());
         });
         ServerLivingEntityEvents.ALLOW_DAMAGE.register(GuardianArenaManager::allowDamage);
-        UseBlockCallback.EVENT.register((player,world,hand,hit) -> {
-            if (active!=null && world==active.world && active.volume().contains(Vec3d.ofCenter(hit.getBlockPos()))
-                    && player.getStackInHand(hand).getItem() instanceof BlockItem) return ActionResult.FAIL;
-            return ActionResult.PASS;
+        ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) -> {
+            // The set is lost on a restart; the body still lying in the nave is what survives a quit from the death screen.
+            if (alive || !kept.remove(oldPlayer.getUuid()) && !inRealm(oldPlayer)) return;
+            newPlayer.getInventory().clone(oldPlayer.getInventory());
+            newPlayer.experienceLevel = oldPlayer.experienceLevel;
+            newPlayer.totalExperience = oldPlayer.totalExperience;
+            newPlayer.experienceProgress = oldPlayer.experienceProgress;
+        });
+        ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> {
+            // Only a death in the nave or in a fight; wait a tick for the connection to reference the new player.
+            if (!alive && state != null && (rosterOf(newPlayer) != null || inRealm(oldPlayer)))
+                respawns.add(newPlayer.getUuid());
+        });
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+            if (state == null) return;
+            abandon(handler.getPlayer());
+            if (fightOf(handler.getPlayer()) != null) eliminate(handler.getPlayer(), null);
+        });
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> server.execute(() -> {
+            if (state != null) joins.add(handler.getPlayer().getUuid());
+        }));
+        PlayerBlockBreakEvents.BEFORE.register((world, player, pos, block, entity) -> !restricted(world, player));
+        UseBlockCallback.EVENT.register((player, world, hand, hit) -> {
+            Item item = player.getStackInHand(hand).getItem();
+            return restricted(world, player) && (item instanceof BlockItem || item instanceof BucketItem || item instanceof FlintAndSteelItem
+                    || item instanceof FireChargeItem || item instanceof BoneMealItem) ? ActionResult.FAIL : ActionResult.PASS;
         });
     }
 
-    private static void load(MinecraftServer server) {
-        active=null; storageError=null;
-        journal=new GuardianArenaJournal(server.getSavePath(WorldSavePath.ROOT).resolve("elementalwands/guardian-arena.json"));
-        try {
-            saved=journal.read();
-            if (saved.arena!=null) {
-                ServerWorld world=world(server,saved.arena.dimension());
-                if (world==null) throw new IOException("Arena dimension is unavailable");
-                active=new Session(saved.arena,world,new GuardianArenaRoster(Set.of()));
-                active.phase=Phase.CLEANUP;
-                forceChunks(active,true);
-                LOG.info("Recovering interrupted Guardian arena at {}, {}",saved.arena.x(),saved.arena.z());
-            }
-        } catch (Exception e) { // a corrupt receipt (bad dimension id, malformed JSON) must not abort server start
-            storageError=e.getMessage(); LOG.error("Arena recovery requires attention; new encounters disabled",e); }
+    // ------------------------------------------------------------------ rules other systems ask
+
+    public static boolean inRealm(Entity entity) { return entity.getEntityWorld().getRegistryKey() == ShatteredNave.WORLD; }
+
+    private static boolean restricted(World world, PlayerEntity player) {
+        return world.getRegistryKey() == ShatteredNave.WORLD && !player.isCreative();
     }
 
-    /** Validates the complete sky footprint before sealing the party or changing any block. */
-    public static String start(ServerPlayerEntity caller, FracturedGuardianEntity guardian) {
-        return start(caller,guardian,() -> {});
-    }
-    public static String start(ServerPlayerEntity caller, FracturedGuardianEntity guardian,Runnable accepted) {
-        return start(caller, guardian, accepted, (entity, box) -> caller.getEntityWorld().isSpaceEmpty(entity, box));
-    }
-    /** Ritual callers may plan removable shaft vegetation without touching the world before admission. */
-    public static String start(ServerPlayerEntity caller, FracturedGuardianEntity guardian, Runnable accepted,
-            java.util.function.BiPredicate<Entity, Box> shaftClear) {
-        if (storageError!=null || saved==null) return "Arena unavailable: "+(storageError==null?"world is not ready":storageError);
-        if (active!=null) return "An arena is already active or recovering. Use /ew guardian arena status.";
-        ServerWorld world=(ServerWorld)caller.getEntityWorld();
-        if (!world.getRegistryKey().equals(World.OVERWORLD)) return "The prototype needs the Overworld's open sky.";
-        if (world.getDifficulty()==Difficulty.PEACEFUL) return "Switch out of Peaceful before starting a Guardian encounter.";
-        if (caller.isCreative() || caller.isSpectator()) return "Use Survival or Adventure to join the prototype.";
-        int cx=guardian.getBlockX(), cz=guardian.getBlockZ();
-        List<ServerPlayerEntity> players=world.getPlayers(p -> p.isAlive() && !p.isCreative() && !p.isSpectator()
-                && !guardian.isTeammate(p) && p.squaredDistanceTo(guardian)<=GATHER_RADIUS*GATHER_RADIUS);
-        if (!players.contains(caller)) return "Gather within "+GATHER_RADIUS+" blocks of the Guardian first.";
-        List<Entity> carried=new ArrayList<>(players); carried.add(guardian);
-        var plannedSeats=liftSeats(players.stream().map(Entity::getEntityPos).toList(),guardian.getEntityPos());
-        int base=(int)Math.ceil(carried.stream().mapToDouble(Entity::getY).max().orElse(guardian.getY()));
-        int highest=base;
-        Box footprint=new Box(cx-HALF-2,base,cz-HALF-2,cx+HALF+2,world.getTopYInclusive(),cz+HALF+2);
-        if (!world.getWorldBorder().contains(footprint)) return "The arena would cross the world border. Move farther inside.";
-        List<Long> forced=new ArrayList<>();
-        for (int x=(cx-HALF-1)>>4;x<=(cx+HALF)>>4;x++) for (int z=(cz-HALF-1)>>4;z<=(cz+HALF)>>4;z++) {
-            if (world.getChunkManager().getWorldChunk(x,z)==null) return "Load the surrounding area first (about five chunks in every direction).";
-            long key=ChunkPos.toLong(x,z);
-            if (!world.getForcedChunks().contains(key)) forced.add(key);
-        }
-        for (int x=cx-HALF-1;x<=cx+HALF;x++) for (int z=cz-HALF-1;z<=cz+HALF;z++)
-            highest=Math.max(highest,world.getTopY(Heightmap.Type.WORLD_SURFACE,x,z));
-        int floor=Math.max(base+40,highest+8), top=world.getTopYInclusive();
-        if (floor>top-64) return "This location is too high for the tower. Find lower ground with at least 64 blocks of open sky above the arena.";
-        for (var p:players) if (com.anton.elementalwands.util.HollowPurpleChargeManager.isCharging(world,p))
-            return "Finish charging Hollow Purple before starting the encounter.";
-        for (Entity entity:carried) {
-            if (entity.hasVehicle() || entity.hasPassengers()) return "Everyone, including the Guardian, must dismount first.";
-            Box box=entity.getBoundingBox();
-            if (entity instanceof ServerPlayerEntity player) {
-                Vec3d seat=plannedSeats.get(players.indexOf(player));
-                if(!shaftClear.test(player,new Box(seat.x-.3,base+1,seat.z-.3,seat.x+.3,floor+7,seat.z+.3)))
-                    return "The lift needs a clear starting position away from the Guardian. Gather in the open courtyard.";
-            }
-            if (!(entity==guardian && guardian.getCommandTags().contains("ew_church_keeper"))
-                    && !shaftClear.test(entity,new Box(box.minX,box.maxY,box.minZ,box.maxX,floor+7,box.maxZ)))
-                return "The gathering spot needs open sky above each player and the Guardian. Move out from beneath roofs or trees.";
-            if (entity instanceof ServerPlayerEntity p && (p.isGliding() || world.isSpaceEmpty(p,p.getBoundingBox().offset(0,-.08,0)))) return "Everyone must stand on the ground before starting.";
-        }
-        // Admission already verified the caller is standing on ground. This is the drop-return
-        // point only; eliminated players spectate, so no unrelated exterior terrain is required.
-        Vec3d waiting=caller.getEntityPos();
-        var receipt=new GuardianArenaJournal.Arena(world.getRegistryKey().getValue().toString(),guardian.getUuidAsString(),
-                cx,cz,base,floor,top,point(guardian),point(world,waiting,0,0),guardian.hasNoGravity(),guardian.isInvulnerable(),guardian.isAiDisabled(),guardian.getAttributeBaseValue(net.minecraft.entity.attribute.EntityAttributes.FOLLOW_RANGE),forced);
-        saved.arena=receipt;
-        for (var p:players) {
-            saved.returns.put(p.getUuidAsString(),point(p));
-            saved.gameModes.put(p.getUuidAsString(),p.interactionManager.getGameMode().getId());
-        }
-        if (!persist()) { saved.arena=null; for (var p:players) { saved.returns.remove(p.getUuidAsString());saved.gameModes.remove(p.getUuidAsString()); } return "Could not save the recovery receipt. Nothing was spawned."; }
-        Session s=new Session(receipt,world,new GuardianArenaRoster(players.stream().map(Entity::getUuid).toList()));
-        accepted.run(); // Consume the ritual item before temporary spell equipment moves inventory stacks.
-        for (var p:players) cancelEncounterEffects(p);
-        active=s; s.guardian=guardian;
-        forceChunks(s,true);
-        guardian.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.MAX_HEALTH).setBaseValue(200);
-        guardian.setHealth(200);
-        guardian.setPosition(guardian.getX(),floor+49,guardian.getZ());
-        guardian.setArenaHidden(true);
-        guardian.stopReview(); guardian.setAiDisabled(true); guardian.setNoGravity(true); guardian.setInvulnerable(true);
-        for (int i=0;i<players.size();i++) s.seats.put(players.get(i).getUuid(),plannedSeats.get(i));
-        s.visual=new GuardianArenaEntity(ModEntities.GUARDIAN_ARENA,world);
-        s.visual.setPosition(cx,base,cz); world.spawnEntity(s.visual);
-        sound(s,SoundEvents.BLOCK_RESPAWN_ANCHOR_CHARGE,1.5f,.5f);
-        announce(s,"The threshold is sealed.");
-        carry(s);
-        return "Arena sealed for "+players.size()+" player(s). Fallen players spectate until the encounter ends. Emergency return: /ew guardian arena stop";
+    /** Nothing drops in the nave: the respawned player gets their inventory and experience back. */
+    public static boolean keepsBelongings(PlayerEntity player) {
+        if (!(player instanceof ServerPlayerEntity) || !inRealm(player)) return false;
+        kept.add(player.getUuid());
+        return true;
     }
 
-    public static boolean hasActiveArena() { return active!=null; }
-    public static boolean isFighting(FracturedGuardianEntity guardian) { return owns(guardian) && active.phase==Phase.FIGHT; }
-
-    public static String status() {
-        if (storageError!=null) return "Arena storage error: "+storageError;
-        if (active==null) return "No active arena.";
-        var s=active; var a=s.receipt;
-        return "Arena: "+s.phase+" — "+s.roster.survivors().size()+" surviving; 128 × 128; floor Y="+a.floor()+", walls to Y="+a.top()+". "+s.outcome;
-    }
-    public static void stop() { if (active!=null && active.phase.ordinal()<Phase.DESCENT.ordinal()) descend(active,"Encounter stopped"); }
-    public static boolean owns(FracturedGuardianEntity guardian) { return active!=null && guardian.getUuidAsString().equals(active.receipt.guardian()) && guardian.getEntityWorld()==active.world; }
-    public static boolean eligible(FracturedGuardianEntity guardian, ServerPlayerEntity player) {
-        return !owns(guardian) || (active.phase==Phase.FIGHT && active.roster.alive(player.getUuid()));
-    }
-    public static double encounterRange(FracturedGuardianEntity guardian) { return owns(guardian)?192:48; }
-    public static double movementRange(FracturedGuardianEntity guardian) { return owns(guardian)?HALF-6:14; }
-    public static boolean validLanding(FracturedGuardianEntity guardian, Vec3d home, Vec3d target) {
-        if (!owns(guardian)) return target.squaredDistanceTo(home)<=36*36;
-        var a=active.receipt;
-        return contains(a.x(),a.z(),a.floor()+.8,a.top()-guardian.getHeight(),target,4);
-    }
-
-    public static boolean canCast(PlayerEntity player) {
-        if(player.isSpectator()) return false;
-        return active==null || !active.roster.enrolled(player.getUuid())
-                || (active.roster.alive(player.getUuid()) && active.phase==Phase.FIGHT);
-    }
-
-    public static boolean isParticipant(PlayerEntity player) {
-        return active != null && active.roster.enrolled(player.getUuid());
-    }
-
+    /**
+     * Every player teleport (spells, pearls, commands, portals, spectator jumps) stays inside the
+     * walled floor and never crosses into or out of the nave; only the nave's own moves do that.
+     * Fallen players watching a fight may roam the slot but not leave it. The Hollow Crypt applies
+     * its own rules first.
+     */
     public static boolean canTeleport(PlayerEntity player, ServerWorld destination, Vec3d target) {
         if (!com.anton.elementalwands.crypt.HollowCryptManager.canTeleport(player, destination, target)) return false;
-        if (internalTeleport || active==null || !player.isAlive()) return true;
-        Session s=active; var a=s.receipt;
-        if(isWatching(player)) return destination==s.world && contains(a.x(),a.z(),a.floor()+2,a.top()-2,target,2);
-        if (s.roster.alive(player.getUuid())) {
-            if (s.phase!=Phase.FIGHT) return false;
-            return destination==s.world && contains(a.x(),a.z(),a.floor()+1,a.top()-2,target,.4);
-        }
-        // Elimination and late arrival never enroll a new participant, even by portal or pearl.
-        return destination!=s.world || !s.volume().expand(0,1,0).contains(target);
+        if (internalTeleport) return true;
+        boolean from = inRealm(player), to = destination.getRegistryKey() == ShatteredNave.WORLD;
+        if (state != null && state.modes.containsKey(player.getUuidAsString()) && from)
+            return to && ShatteredNave.footprint(ShatteredNave.nearestCentre(player.getEntityPos())).contains(target);
+        if (player.isCreative() || player.isSpectator()) return true;
+        if (!from && !to) return true;
+        return from && to && ShatteredNave.inPlay(ShatteredNave.nearestCentre(player.getEntityPos()), target, .4);
+    }
+
+    /** Sealed fighters cast only once the Guardian has woken, and only while still standing. */
+    public static boolean canCast(PlayerEntity player) {
+        if (player.isSpectator()) return false;
+        Fight fight = rosterOf(player);
+        return fight == null || fight.fighting && fight.standing.contains(player.getUuidAsString());
+    }
+
+    public static boolean isParticipant(PlayerEntity player) { return rosterOf(player) != null; }
+
+    /** A Guardian this arena raised in the nave for a fight that has not ended. */
+    public static boolean owns(FracturedGuardianEntity guardian) { return fightOf(guardian) != null; }
+
+    public static boolean isFighting(FracturedGuardianEntity guardian) {
+        Fight fight = fightOf(guardian);
+        return fight != null && fight.fighting && !fight.won;
+    }
+
+    public static List<String> enrolledPlayers(FracturedGuardianEntity guardian) {
+        Fight fight = fightOf(guardian);
+        return fight == null ? List.of() : List.copyOf(fight.roster);
+    }
+
+    /** An arena Guardian only fights the sealed players still standing; any other Guardian fights anyone. */
+    public static boolean eligible(FracturedGuardianEntity guardian, ServerPlayerEntity player) {
+        Fight fight = fightOf(guardian);
+        return fight == null || fight.fighting && fight.standing.contains(player.getUuidAsString());
+    }
+
+    public static double encounterRange(FracturedGuardianEntity guardian) { return owns(guardian) ? 192 : 48; }
+    public static double movementRange(FracturedGuardianEntity guardian) { return owns(guardian) ? ShatteredNave.HALF - 6 : 14; }
+
+    public static boolean validLanding(FracturedGuardianEntity guardian, Vec3d home, Vec3d target) {
+        if (!owns(guardian)) return target.squaredDistanceTo(home) <= 36 * 36;
+        BlockPos centre = ShatteredNave.nearestCentre(guardian.getEntityPos());
+        return ShatteredNave.inPlay(centre, target, 4) && target.y >= ShatteredNave.SURFACE_Y + .8
+                && target.y <= ShatteredNave.SURFACE_Y + 1 + ShatteredNave.CEILING - guardian.getHeight();
+    }
+
+    /** Fallen fighters see the Guardian's bar while they watch its fight. */
+    public static boolean spectatorViewer(FracturedGuardianEntity guardian, ServerPlayerEntity player) {
+        Fight fight = fightOf(guardian);
+        return fight != null && player.isAlive() && player.isSpectator() && inRealm(player)
+                && fight.roster.contains(player.getUuidAsString()) && !fight.standing.contains(player.getUuidAsString());
     }
 
     private record SpellWrite(World world, BlockPos pos, BlockState state) {}
     private static SpellWrite spellWrite;
 
-    private static boolean combatFloor(World world, BlockPos pos) {
-        if (active == null || world != active.world) return false;
-        var a = active.receipt;
-        return pos.getY() == a.floor() && pos.getX() >= a.x()-HALF && pos.getX() < a.x()+HALF
-                && pos.getZ() >= a.z()-HALF && pos.getZ() < a.z()+HALF;
-    }
-
-    /** Only the tracked spell manager may reskin an intact combat floor; never make a hole. */
+    /**
+     * Temporary spell blocks write through here. In the nave they may cover and then restore the
+     * fight floor, but never open a hole in it or reach into the rest of the hall; everywhere else
+     * this is an ordinary block write.
+     */
     public static boolean setTemporarySpellBlock(ServerWorld world, BlockPos pos, BlockState state) {
-        BlockState current = world.getBlockState(pos);
-        boolean coals = state.isOf(com.anton.elementalwands.registry.ModSpellBlocks.PYRE_COALS);
-        boolean restoring = current.isOf(com.anton.elementalwands.registry.ModSpellBlocks.PYRE_COALS)
-                && (state.isOf(ModBlocks.ARENA_STONE) || state.isOf(ModBlocks.ARENA_DARK) || state.isOf(ModBlocks.ARENA_LIGHT));
-        if (!combatFloor(world,pos) || active.phase != Phase.FIGHT || (!coals && !restoring))
-            return world.setBlockState(pos,state,3);
+        if (!ShatteredNave.keepsTerrain(world)) return world.setBlockState(pos, state, Block.NOTIFY_ALL);
+        if (protectedBlock(world, pos) && (state.isAir() || !fightFloor(pos))) return false;
         SpellWrite previous = spellWrite;
-        spellWrite = new SpellWrite(world,pos.toImmutable(),state);
-        try { return world.setBlockState(pos,state,3); }
+        spellWrite = new SpellWrite(world, pos.toImmutable(), state);
+        try { return world.setBlockState(pos, state, Block.NOTIFY_ALL); }
         finally { spellWrite = previous; }
     }
 
@@ -299,434 +284,707 @@ public final class GuardianArenaManager {
         return spellWrite != null && spellWrite.world == world && spellWrite.pos.equals(pos) && spellWrite.state.equals(state);
     }
 
-    public static boolean protectedBlock(World world,BlockPos pos) {
-        return !internalMutation && (combatFloor(world,pos) || world.getBlockState(pos).isOf(ModBlocks.ARENA_STONE)
-                || world.getBlockState(pos).isOf(ModBlocks.ARENA_DARK) || world.getBlockState(pos).isOf(ModBlocks.ARENA_LIGHT));
-    }
-    public static boolean rejectPlacement(World world,BlockPos pos,BlockState state) {
-        return !internalMutation && active!=null && world==active.world && active.phase!=Phase.FIGHT
-                && !state.isAir() && pos.getY()>=active.receipt.base() && pos.getY()<=active.receipt.top()
-                && pos.getX()>=active.receipt.x()-65 && pos.getX()<=active.receipt.x()+64
-                && pos.getZ()>=active.receipt.z()-65 && pos.getZ()<=active.receipt.z()+64;
+    /**
+     * The hall itself: the floor and everything outside the walled fight volume. Spells may still
+     * place and clear their own blocks above the floor.
+     */
+    public static boolean protectedBlock(World world, BlockPos pos) {
+        if (internalMutation || world.getRegistryKey() != ShatteredNave.WORLD) return false;
+        if (pos.getY() <= ShatteredNave.SURFACE_Y) return true;
+        BlockPos centre = ShatteredNave.nearestCentre(Vec3d.ofCenter(pos));
+        int dx = pos.getX() - centre.getX(), dz = pos.getZ() - centre.getZ();
+        return dx < -ShatteredNave.HALF || dx >= ShatteredNave.HALF || dz < -ShatteredNave.HALF || dz >= ShatteredNave.HALF
+                || pos.getY() > ShatteredNave.SURFACE_Y + ShatteredNave.CEILING;
     }
 
-    private static boolean allowDamage(LivingEntity entity,DamageSource source,float amount) {
-        if (active==null) return true;
-        Session s=active;
-        if (entity instanceof ServerPlayerEntity p && (isWatching(p) || (s.roster.alive(p.getUuid()) && s.phase!=Phase.FIGHT))) return false;
-        if (entity instanceof FracturedGuardianEntity g && owns(g)) {
-            if (s.phase!=Phase.FIGHT) return false;
-            if (source.getAttacker() instanceof ServerPlayerEntity p) return s.roster.alive(p.getUuid());
+    /** The walkable top layer of a slot's fight floor. */
+    private static boolean fightFloor(BlockPos pos) {
+        BlockPos centre = ShatteredNave.nearestCentre(Vec3d.ofCenter(pos));
+        int dx = pos.getX() - centre.getX(), dz = pos.getZ() - centre.getZ();
+        return pos.getY() == ShatteredNave.SURFACE_Y && dx >= -ShatteredNave.HALF && dx < ShatteredNave.HALF
+                && dz >= -ShatteredNave.HALF && dz < ShatteredNave.HALF;
+    }
+
+    /** Until the Guardian wakes nobody in its fight takes damage; afterwards only its fighters may hurt it. */
+    private static boolean allowDamage(LivingEntity entity, DamageSource source, float amount) {
+        if (state == null || source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY)) return true;
+        if (entity instanceof ServerPlayerEntity player && inRealm(player)) {
+            Fight fight = rosterOf(player);
+            if (fight != null && !fight.fighting) return false;
+        }
+        if (entity instanceof FracturedGuardianEntity guardian) {
+            Fight fight = fightOf(guardian);
+            if (fight == null) return true;
+            if (!fight.fighting) return false;
+            if (source.getAttacker() instanceof ServerPlayerEntity player) return fight.standing.contains(player.getUuidAsString());
         }
         return true;
     }
 
-    private static void tick(MinecraftServer server) {
-        for(UUID id:List.copyOf(respawnReturns)) {
-            var player=server.getPlayerManager().getPlayer(id);
-            if(player==null) {respawnReturns.remove(id);continue;}
-            if(player.networkHandler.player!=player) continue;
-            if(!player.isAlive()) {
-                if(saved==null || !saved.returns.containsKey(id.toString())) {respawnReturns.remove(id);continue;}
-                var handler=player.networkHandler;
-                player=server.getPlayerManager().respawnPlayer(player,false,Entity.RemovalReason.KILLED);
-                handler.player=player; // Same ordering as vanilla's respawn packet handler.
-            }
-            if(active!=null && active.roster.enrolled(id) && active.phase.ordinal()<Phase.WITHDRAW.ordinal()) spectate(player); else returnPending(player);
-            respawnReturns.remove(id);
-        }
-        Session s=active;
-        if (s==null) {
-            if(saved!=null && server.getOverworld().getTime()%20==0) returnOnline(server);
-            return;
-        }
-        maintainSpectators(s);
-        if (s.phase==Phase.CLEANUP) {
-            recoverGuardian(s); returnOnline(server); moveDrops(s); clean(s);
-            if (s.cleaned) complete(s);
-            return;
-        }
-        for (UUID id:s.roster.survivors()) {
-            ServerPlayerEntity p=server.getPlayerManager().getPlayer(id);
-            if (p==null || !p.isAlive() || p.isSpectator() || p.isCreative()) {
-                s.roster.eliminate(id); releaseLift(s,id);
-                if(p!=null)cancelEncounterEffects(p);
-            }
-        }
-        if (s.phase.ordinal()<Phase.DESCENT.ordinal()) {
-            if (s.roster.wiped()) descend(s,"The party fell");
-            else if (s.guardian==null || s.guardian.isRemoved() || !s.guardian.isAlive()) descend(s,"The Guardian is defeated");
-            else if (s.world.getDifficulty()==Difficulty.PEACEFUL) descend(s,"Encounter ended: Peaceful difficulty");
-        }
-        var a=s.receipt;
-        s.tick++;
-        switch (s.phase) {
-            case WALLS -> {
-                carry(s);
-                if (s.tick==1) sound(s,SoundEvents.ENTITY_GENERIC_EXPLODE.value(),2,.55f);
-                if (s.tick>=WALL_TICKS) phase(s,Phase.FLOOR);
-            }
-            case FLOOR -> { carry(s); build(s); if (s.phase==Phase.FLOOR && s.tick>=FLOOR_TICKS) phase(s,Phase.ASCENT); }
-            case ASCENT -> {
-                s.feet=a.base()+1+(a.floor()-a.base())*ease(s.tick/(double)LIFT_TICKS); carry(s); build(s);
-                if (s.phase==Phase.ASCENT && s.tick>=LIFT_TICKS) phase(s,Phase.SETTLE);
-            }
-            case SETTLE -> {
-                carry(s); build(s);
-                if (s.phase==Phase.SETTLE && s.tick>=SETTLE_TICKS && s.buildCursor>=buildCount(s)) {
-                    phase(s,Phase.ARRIVAL);
-                    var lift=new GuardianLiftEntity(ModEntities.GUARDIAN_LIFT,s.world);
-                    lift.setPosition(a.guardianHome().x(),a.floor()+49,a.guardianHome().z());
-                    lift.drop(a.floor()+49,a.floor()+1,s.phaseStarted,ARRIVAL_TICKS);
-                    s.world.spawnEntity(lift);s.lifts.put(s.guardian.getUuid(),lift);
-                    s.guardian.setPosition(lift.getEntityPos());
-                    s.guardian.startRiding(lift,true,true);
-                    s.guardian.setArenaHidden(false);
-                    s.guardian.triggerAnim("guardian","arrival_fall");
-                    announce(s,"Something stirs above the sanctuary.");
-                    sound(s,SoundEvents.ENTITY_PHANTOM_FLAP,2,.5f);
-                }
-            }
-            case ARRIVAL -> {
-                if(s.tick>=ARRIVAL_TICKS) {
-                    releaseLift(s,s.guardian.getUuid());
-                    s.guardian.setPosition(a.guardianHome().x(),a.floor()+1,a.guardianHome().z());
-                    s.guardian.setVelocity(Vec3d.ZERO);s.guardian.fallDistance=0;
-                    s.guardian.triggerAnim("guardian","arrival_land");
-                    sound(s,SoundEvents.ENTITY_GENERIC_EXPLODE.value(),2,.65f);
-                    s.world.spawnParticles(net.minecraft.particle.ParticleTypes.CLOUD,s.guardian.getX(),s.feet+.2,s.guardian.getZ(),90,4,.15,4,.1);
-                    s.world.spawnParticles(net.minecraft.particle.ParticleTypes.END_ROD,s.guardian.getX(),s.feet+1,s.guardian.getZ(),50,2,1,2,.08);
-                    phase(s,Phase.LANDING);
-                }
-            }
-            case LANDING -> {
-                if(s.tick>=LANDING_TICKS) {
-                    releaseLifts(s);
-                    phase(s,Phase.FIGHT);
-                    s.guardian.setNoGravity(false); s.guardian.setInvulnerable(false); s.guardian.setAiDisabled(false);
-                    s.guardian.startFight();
-                    announce(s,"The keeper awakens.");
-                }
-            }
-            case FIGHT -> contain(s);
-            case DESCENT -> {
-                // Death-animation XP and late drops can appear after descent has already started.
-                moveDrops(s); clean(s);
-                s.feet=a.floor()+1-(a.floor()-a.base())*ease(s.tick/(double)DESCEND_TICKS); carry(s);
-                if (s.world.getTime()-s.phaseStarted>=DESCEND_TICKS && s.cleaned) {
-                    releaseLifts(s); recoverGuardian(s); returnOnline(server); phase(s,Phase.WITHDRAW);
-                    sound(s,SoundEvents.BLOCK_BELL_USE,2,.6f);
-                }
-            }
-            case WITHDRAW -> { if (s.tick>=WITHDRAW_TICKS) complete(s); }
-            default -> {}
-        }
-        if (active==s) {
-            updateVisual(s);
-            if ((s.phase==Phase.ASCENT || s.phase==Phase.DESCENT || s.phase==Phase.FLOOR) && s.tick%20==0)
-                sound(s,SoundEvents.BLOCK_STONE_BREAK,1.5f,.5f);
-        }
+    // ------------------------------------------------------------------ church ritual
+
+    /** Whether a church's ritual currently has a fight in the nave. */
+    public static boolean hosts(String site) {
+        return state != null && site != null && state.fights.values().stream().anyMatch(f -> site.equals(f.site));
     }
 
-    private static void phase(Session s,Phase phase) {
-        s.phase=phase; s.tick=0; s.phaseStarted=s.world.getTime();
-        if (phase==Phase.ASCENT || phase==Phase.DESCENT) {
-            boolean descending=phase==Phase.DESCENT;
-            double from=descending?s.receipt.floor()+1:s.receipt.base()+1;
-            double to=descending?s.receipt.base()+1:s.receipt.floor()+1;
-            int duration=descending?DESCEND_TICKS:LIFT_TICKS;
-            if (s.visual!=null) s.visual.animateFloor((float)(from-s.receipt.base()),(float)(to-s.receipt.base()),s.phaseStarted,duration);
-            for (var lift:s.lifts.values()) lift.animate(from,to,s.phaseStarted,duration);
+    /**
+     * The church ritual seals every living player gathered around the socket into a fight in a
+     * free slot; shortly after they arrive the Guardian's intro wakes it on its seat. {@code accepted}
+     * consumes the heart once the fight is recorded. Anyone already sealed into a fight or
+     * waiting for a slot to open stays with it.
+     */
+    public static String ritual(ServerPlayerEntity caller, String site, BlockPos socket, Runnable accepted) {
+        ServerWorld here = (ServerWorld) caller.getEntityWorld();
+        ServerWorld realm = realm(here.getServer());
+        if (realm == null || state == null) return "The heart is silent. (The nave is unavailable; see the server log.)";
+        if (here.getDifficulty() == Difficulty.PEACEFUL) return "Switch out of Peaceful before awakening the keeper.";
+        // A held right-click repeats while the slot builds; a second fight would share the first one's party.
+        if (rosterOf(caller) != null || pending(caller.getUuid())) return "The heart is already carrying you away...";
+        refreshGeneration();
+        int slot = freeSlot(realm);
+        if (slot < 0) return "Every nave is occupied. Try again when a fight ends.";
+        List<ServerPlayerEntity> group = here.getPlayers(p -> p.isAlive() && !p.isSpectator()
+                && p.squaredDistanceTo(Vec3d.ofCenter(socket)) <= GATHER_RADIUS * GATHER_RADIUS
+                && rosterOf(p) == null && !pending(p.getUuid()));
+        Fight fight = new Fight();
+        fight.site = site;
+        fight.caller = caller.getUuidAsString();
+        for (ServerPlayerEntity p : group) {
+            state.returns.put(p.getUuidAsString(), point(p));
+            if (!p.isCreative()) fight.roster.add(p.getUuidAsString());
         }
+        fight.standing.addAll(fight.roster);
+        fight.party = !fight.roster.isEmpty();
+        state.fights.put(String.valueOf(slot), fight);
+        if (!persist()) { state.fights.remove(String.valueOf(slot)); return "The ritual could not be saved. Your heart was not consumed."; }
+        accepted.run();
+        here.playSound(null, socket, SoundEvents.BLOCK_RESPAWN_ANCHOR_CHARGE, SoundCategory.BLOCKS, 1.5f, .5f);
+        here.playSound(null, socket, SoundEvents.BLOCK_BEACON_ACTIVATE, SoundCategory.BLOCKS, 1.4f, .7f);
+        here.spawnParticles(ParticleTypes.END_ROD, socket.getX() + .5, socket.getY() + 1, socket.getZ() + .5, 80, 1.2, 1.5, 1.2, .06);
+        for (ServerPlayerEntity p : group) {
+            cancelEncounterEffects(p);
+            p.addStatusEffect(new StatusEffectInstance(StatusEffects.BLINDNESS, 50, 0, false, false));
+        }
+        if (ready(slot)) {
+            arriveAll(group, realm, slot);
+            risings.put(slot, here.getServer().getTicks() + RISE_DELAY);
+        } else {
+            Build build = build(realm, slot);
+            build.ritual = true;
+            group.forEach(p -> build.waiting.add(p.getUuid()));
+        }
+        return "The heart pulls " + (group.size() == 1 ? "you" : group.size() + " of you") + " into the nave...";
     }
+
+    /** A slot with no fight, nothing building or pending, and nobody standing in it. */
+    private static int freeSlot(ServerWorld realm) {
+        for (int slot = 0; slot < ShatteredNave.SLOTS; slot++) {
+            if (state.fights.containsKey(String.valueOf(slot)) || builds.containsKey(slot) || risings.containsKey(slot)
+                    || endings.containsKey(slot) || arrivals.containsKey(slot)) continue;
+            var area = ShatteredNave.footprint(ShatteredNave.centre(state.generation, slot));
+            if (realm.getPlayers(p -> !p.isSpectator() && area.contains(p.getEntityPos())).isEmpty()) return slot;
+        }
+        return -1;
+    }
+
+    /** Waiting to be taken into a slot that is still building. */
+    private static boolean pending(UUID id) {
+        for (Build build : builds.values()) if (build.waiting.contains(id)) return true;
+        return false;
+    }
+
+    /**
+     * A player who dies or leaves before their slot opens never went in: they drop out of the
+     * waiting fight, and a return point recorded outside the nave is forgotten.
+     */
+    private static void abandon(ServerPlayerEntity player) {
+        boolean waited = false;
+        for (Build build : builds.values()) {
+            if (!build.waiting.remove(player.getUuid())) continue;
+            waited = true;
+            Fight fight = build.ritual ? state.fights.get(String.valueOf(build.slot)) : null;
+            if (fight != null) {
+                fight.roster.remove(player.getUuidAsString());
+                fight.standing.remove(player.getUuidAsString());
+            }
+        }
+        if (!waited) return;
+        if (!inRealm(player)) state.returns.remove(player.getUuidAsString());
+        persist();
+    }
+
     private static void cancelEncounterEffects(ServerPlayerEntity player) {
         com.anton.elementalwands.util.ZephyrStrikeManager.cancel(player);
         com.anton.elementalwands.util.TitanDomeManager.cancelForEncounter(player);
         com.anton.elementalwands.util.HollowPurpleChargeManager.cancel(player);
     }
-    private static void descend(Session s,String outcome) {
-        if (s.phase.ordinal()>=Phase.DESCENT.ordinal()) return;
-        s.outcome=outcome;
-        for (UUID id:s.roster.survivors()) {
-            var player=s.world.getServer().getPlayerManager().getPlayer(id);
-            if(player!=null) cancelEncounterEffects(player);
-        }
-        // An interrupted formation returns from its actual height, never jumps to the top first.
-        if (s.feet<s.receipt.floor()+.9) { recoverGuardian(s); returnOnline(s.world.getServer()); phase(s,Phase.CLEANUP); return; }
-        phase(s,Phase.DESCENT);
-        if (s.guardian!=null && s.guardian.isAlive()) { s.guardian.stopReview(); s.guardian.setArenaHidden(true); s.guardian.setInvulnerable(true); s.guardian.setNoGravity(true); }
-        for (UUID id:s.roster.survivors()) {
-            ServerPlayerEntity p=s.world.getServer().getPlayerManager().getPlayer(id);
-            if (p!=null) { com.anton.elementalwands.util.ZephyrStrikeManager.cancel(p); s.seats.put(id,new Vec3d(p.getX(),0,p.getZ())); }
-        }
-        announce(s,outcome+". Returning to the sanctuary.");
-        moveDrops(s);
-        for (Entity e:s.world.getOtherEntities(null,s.volume(),e -> e instanceof net.minecraft.entity.projectile.ProjectileEntity)) e.discard();
+
+    // ------------------------------------------------------------------ fights
+
+    private static Integer slotOf(Fight fight) {
+        for (var entry : state.fights.entrySet()) if (entry.getValue() == fight) return Integer.valueOf(entry.getKey());
+        return null;
     }
 
-    private static void carry(Session s) {
-        for (UUID id:s.roster.survivors()) {
-            ServerPlayerEntity player=s.world.getServer().getPlayerManager().getPlayer(id);
-            if (player!=null && player.isAlive()) carryMember(s,player);
-        }
-        if (s.phase==Phase.DESCENT && s.guardian!=null && s.guardian.isAlive()) carryMember(s,s.guardian);
+    /** The fight a player is still standing in, if any. */
+    private static Fight fightOf(PlayerEntity player) {
+        if (state == null) return null;
+        for (Fight fight : state.fights.values()) if (fight.standing.contains(player.getUuidAsString())) return fight;
+        return null;
     }
 
-    private static void carryMember(Session s,Entity member) {
-        GuardianLiftEntity lift=s.lifts.get(member.getUuid());
-        if (lift==null || lift.isRemoved()) {
-            lift=new GuardianLiftEntity(ModEntities.GUARDIAN_LIFT,s.world);
-            Vec3d seat=s.seats.getOrDefault(member.getUuid(),new Vec3d(s.receipt.guardianHome().x(),0,s.receipt.guardianHome().z()));
-            lift.setPosition(seat.x,s.feet,seat.z);
-            if (s.phase==Phase.ASCENT) lift.animate(s.receipt.base()+1,s.receipt.floor()+1,s.phaseStarted,LIFT_TICKS);
-            else if (s.phase==Phase.DESCENT) lift.animate(s.receipt.floor()+1,s.receipt.base()+1,s.phaseStarted,DESCEND_TICKS);
-            else lift.animate(s.feet,s.feet,s.world.getTime(),0);
-            s.world.spawnEntity(lift); s.lifts.put(member.getUuid(),lift);
-        }
-        if (member.getVehicle()!=lift) {
-            if (member instanceof ServerPlayerEntity player) player.stopGliding();
-            internalTeleport=true;
-            try { member.startRiding(lift,true,true); }
-            finally { internalTeleport=false; }
-        }
-        lift.advance();
-        member.setVelocity(Vec3d.ZERO); member.fallDistance=0;
+    /** The fight a Guardian was raised for, if it has not ended. */
+    private static Fight fightOf(FracturedGuardianEntity guardian) {
+        if (state == null || !inRealm(guardian)) return null;
+        for (var entry : state.fights.entrySet())
+            if (guardian.getUuidAsString().equals(entry.getValue().boss) && !endings.containsKey(Integer.valueOf(entry.getKey()))) return entry.getValue();
+        return null;
     }
 
-    private static void releaseLift(Session s,UUID id) {
-        GuardianLiftEntity lift=s.lifts.remove(id);
-        if (lift==null) return;
-        var riders=List.copyOf(lift.getPassengerList());
-        Vec3d position=lift.getEntityPos();
-        lift.release();
-        for (Entity rider:riders) if (rider.isAlive()) {
-            if (rider instanceof ServerPlayerEntity player) transfer(player,s.world,position,player.getYaw(),player.getPitch());
-            else { rider.setPosition(position); rider.setVelocity(Vec3d.ZERO); rider.fallDistance=0; }
-        }
-    }
-    private static void releaseLifts(Session s) {
-        for (UUID id:List.copyOf(s.lifts.keySet())) releaseLift(s,id);
+    /** The fight a player was sealed into, standing or fallen, if it has not ended. */
+    private static Fight rosterOf(PlayerEntity player) {
+        if (state == null) return null;
+        for (var entry : state.fights.entrySet())
+            if (entry.getValue().roster.contains(player.getUuidAsString()) && !endings.containsKey(Integer.valueOf(entry.getKey()))) return entry.getValue();
+        return null;
     }
 
-    private static void contain(Session s) {
-        var a=s.receipt;
-        for (UUID id:s.roster.survivors()) {
-            ServerPlayerEntity p=s.world.getServer().getPlayerManager().getPlayer(id);
-            if (p==null || !p.isAlive()) continue;
-            Vec3d position=p.getEntityPos();
-            if (p.getEntityWorld()!=s.world || !contains(a.x(),a.z(),a.floor()+.9,a.top()-2,position,.4)) {
-                Vec3d fallback=s.safe.getOrDefault(id,new Vec3d(a.x()+8.5,a.floor()+1,a.z()+.5));
-                Vec3d proposed=clamp(a.x(),a.z(),a.floor()+1,a.top()-2,position,1);
-                if (p.getEntityWorld()!=s.world || !s.world.isSpaceEmpty(p,p.getBoundingBox().offset(proposed.subtract(position)))) proposed=fallback;
-                transfer(p,s.world,proposed,p.getYaw(),p.getPitch());
-                p.sendMessage(Text.literal("The sanctuary's binding holds you inside."),true);
-            } else if (p.isOnGround()) s.safe.put(id,position);
+    private static void eliminate(ServerPlayerEntity player, String message) {
+        Fight fight = fightOf(player);
+        if (fight == null) return;
+        fight.standing.remove(player.getUuidAsString());
+        cancelEncounterEffects(player);
+        persist();
+        // The last to fall hears about the wipe instead.
+        if (message != null && !fight.standing.isEmpty()) player.sendMessage(Text.literal(message), false);
+    }
+
+    private static void victory(FracturedGuardianEntity guardian) {
+        for (var entry : state.fights.entrySet()) {
+            Fight fight = entry.getValue();
+            if (fight.won || !fight.fighting || !guardian.getUuidAsString().equals(fight.boss)) continue;
+            int slot = Integer.parseInt(entry.getKey());
+            fight.won = true;
+            MinecraftServer server = guardian.getEntityWorld().getServer();
+            // Commit the victory before the church changes a block or a reward inventory.
+            persist();
+            String reward = fight.site == null ? "" : GuardianChurchManager.naveVictory(server, fight.site, fight.roster);
+            endings.put(slot, server.getTicks() + VICTORY_DELAY);
+            tell(fight, server, "The Fractured Guardian falls. The nave releases you in 10 seconds." + reward);
+            return;
         }
-        for (var p:s.world.getPlayers()) if (!s.roster.alive(p.getUuid()) && !p.isSpectator()
-                && s.volume().expand(0,1,0).contains(p.getEntityPos())) sendOutside(p);
-        if (s.guardian!=null && !validLanding(s.guardian,new Vec3d(a.x(),a.floor()+1,a.z()),s.guardian.getEntityPos())) {
-            // Preserve the high leap; only horizontal escape or falling beneath the floor is corrected.
-            if (Math.abs(s.guardian.getX()-a.x())>HALF-3 || Math.abs(s.guardian.getZ()-a.z())>HALF-3 || s.guardian.getY()<a.floor()) {
-                s.guardian.stopReview(); s.guardian.setPosition(a.x(),a.floor()+1,a.z()); s.guardian.startFight();
+    }
+
+    /** Each tick: wake the Guardian, drop the fallen, detect a wipe or a lost boss, and finish ended fights. */
+    private static void tickFights(MinecraftServer server, ServerWorld realm) {
+        int now = server.getTicks();
+        risings.entrySet().removeIf(rise -> {
+            if (now < rise.getValue()) return false;
+            Fight fight = state.fights.get(String.valueOf(rise.getKey()));
+            if (fight != null) {
+                FracturedGuardianEntity guardian = raise(realm, rise.getKey(), fight);
+                if (guardian != null) {
+                    fight.boss = guardian.getUuidAsString();
+                    persist();
+                }
+            }
+            return true;
+        });
+        arrivals.entrySet().removeIf(entry -> wake(server, realm, entry.getKey(), entry.getValue()));
+        for (var entry : List.copyOf(state.fights.entrySet())) {
+            int slot = Integer.parseInt(entry.getKey());
+            Fight fight = entry.getValue();
+            if (fight.boss == null || fight.won || endings.containsKey(slot)) continue;
+            BlockPos centre = ShatteredNave.centre(state.generation, slot);
+            var area = ShatteredNave.footprint(centre);
+            for (String id : List.copyOf(fight.standing)) {
+                ServerPlayerEntity p = server.getPlayerManager().getPlayer(UUID.fromString(id));
+                if (p == null || !p.isAlive() || p.getEntityWorld() != realm || !area.contains(p.getEntityPos()) || p.isSpectator()) {
+                    fight.standing.remove(id);
+                    if (p != null) cancelEncounterEffects(p);
+                    persist();
+                }
+            }
+            Entity boss = realm.getEntity(UUID.fromString(fight.boss));
+            if (fight.party && fight.standing.isEmpty()) {
+                // A wipe: the Guardian vanishes and everyone goes back with their belongings.
+                clearEntities(realm, slot);
+                endings.put(slot, now + WIPE_DELAY);
+                tell(fight, server, "The nave swallows the Guardian. You are cast back to the church.");
+            } else if (boss == null && !arrivals.containsKey(slot) || boss != null && !boss.isAlive()
+                    || realm.getDifficulty() == Difficulty.PEACEFUL) {
+                clearEntities(realm, slot);
+                endings.put(slot, now + WIPE_DELAY);
+                tell(fight, server, "The fight is over. The nave releases you.");
+            } else if (boss instanceof FracturedGuardianEntity guardian && fight.fighting && strayed(centre, guardian)) {
+                // Preserve the high leap; only a horizontal escape or a fall beneath the floor is corrected.
+                guardian.stopReview();
+                guardian.setPosition(ShatteredNave.seat(centre));
+                guardian.startFight();
             }
         }
+        endings.entrySet().removeIf(ending -> {
+            if (now < ending.getValue()) return false;
+            finish(server, realm, ending.getKey());
+            return true;
+        });
     }
 
-    private static void eliminate(ServerPlayerEntity player,String reason) {
-        if (active!=null && active.roster.eliminate(player.getUuid())) { releaseLift(active,player.getUuid()); cancelEncounterEffects(player); player.sendMessage(Text.literal(reason),false); }
+    private static boolean strayed(BlockPos centre, FracturedGuardianEntity guardian) {
+        return Math.abs(guardian.getX() - centre.getX() - .5) > ShatteredNave.HALF - 3
+                || Math.abs(guardian.getZ() - centre.getZ() - .5) > ShatteredNave.HALF - 3 || guardian.getY() < ShatteredNave.SURFACE_Y;
     }
-    public static boolean spectatorViewer(FracturedGuardianEntity guardian,ServerPlayerEntity player) {
-        return owns(guardian) && isWatching(player) && player.isAlive() && player.isSpectator() && player.getEntityWorld()==active.world;
+
+    /** Sends everyone in the fight home and retires it; a lost ritual lets the church offer its heart again. */
+    private static void finish(MinecraftServer server, ServerWorld realm, int slot) {
+        Fight fight = state.fights.get(String.valueOf(slot));
+        if (fight == null) return;
+        Set<ServerPlayerEntity> members = members(fight, slot, server, realm);
+        state.fights.remove(String.valueOf(slot));
+        persist();
+        if (!fight.won && fight.site != null) GuardianChurchManager.naveFinished(fight.site);
+        var area = ShatteredNave.footprint(ShatteredNave.centre(state.generation, slot));
+        for (ServerPlayerEntity p : members)
+            // Offline or still on the death screen: handled on join or respawn. A wiped party is home
+            // before its fight ends and may already be in a new one in another slot; that one keeps them.
+            if (p.isAlive() && p.networkHandler.player == p && p.getEntityWorld() == realm && area.contains(p.getEntityPos())) leave(p);
     }
-    private static boolean isWatching(PlayerEntity player) {
-        return active!=null && active.roster.enrolled(player.getUuid()) && !active.roster.alive(player.getUuid())
-                && saved!=null && saved.returns.containsKey(player.getUuidAsString());
+
+    /**
+     * The sealed roster plus anyone else the nave brought into the slot, such as Creative players
+     * the ritual took along; a fight's end releases them all. Without a realm, only the roster.
+     */
+    private static Set<ServerPlayerEntity> members(Fight fight, int slot, MinecraftServer server, ServerWorld realm) {
+        Set<ServerPlayerEntity> members = new LinkedHashSet<>();
+        for (String id : fight.roster) {
+            ServerPlayerEntity p = server.getPlayerManager().getPlayer(UUID.fromString(id));
+            if (p != null) members.add(p);
+        }
+        if (realm != null && slot >= 0) {
+            var area = ShatteredNave.footprint(ShatteredNave.centre(state.generation, slot));
+            // Only those the nave brought in (it recorded where they came from), not an operator who /tp'd in.
+            members.addAll(realm.getPlayers(p -> area.contains(p.getEntityPos()) && state.returns.containsKey(p.getUuidAsString())));
+        }
+        return members;
     }
-    private static void spectate(ServerPlayerEntity player) {
-        if(active==null || !player.isAlive()) return;
-        releaseLift(active,player.getUuid());
+
+    /** Fallen fighters watch from above the floor until the fight ends. */
+    private static void spectate(ServerPlayerEntity player, int slot, ServerWorld realm) {
+        if (!state.modes.containsKey(player.getUuidAsString()) && !player.isSpectator()) {
+            state.modes.put(player.getUuidAsString(), player.interactionManager.getGameMode().getId());
+            persist();
+        }
         cancelEncounterEffects(player);
         player.changeGameMode(GameMode.SPECTATOR);
         player.setCameraEntity(player);
-        var a=active.receipt;
-        transfer(player,active.world,new Vec3d(a.x()+18.5,Math.min(a.top()-3,a.floor()+10),a.z()+18.5),player.getYaw(),player.getPitch());
-        player.sendMessage(Text.literal("You are watching the fight. Fly around to spectate; you will return when the encounter ends."),false);
-    }
-    private static void maintainSpectators(Session s) {
-        if(s.phase==Phase.WITHDRAW || s.phase==Phase.CLEANUP) return;
-        var a=s.receipt;
-        for(var player:s.world.getServer().getPlayerManager().getPlayerList()) {
-            if(!player.isAlive() || !isWatching(player) || player.networkHandler.player!=player) continue;
-            if(!player.isSpectator()) {spectate(player);continue;}
-            var pos=player.getEntityPos();
-            if(player.getEntityWorld()!=s.world || !contains(a.x(),a.z(),a.floor()+2,a.top()-2,pos,2)) {
-                player.setCameraEntity(player);
-                transfer(player,s.world,clamp(a.x(),a.z(),a.floor()+2,a.top()-2,pos,3),player.getYaw(),player.getPitch());
-            }
-        }
-    }
-    private static void sendOutside(ServerPlayerEntity player) {
-        if (active==null || !player.isAlive()) return;
-        if(isWatching(player)) {spectate(player);return;}
-        var p=active.receipt.waiting();
-        Vec3d destination=findSafe(active.world,new Vec3d(p.x(),p.y(),p.z()),player,pos -> !active.volume().expand(2,2,2).contains(pos));
-        if(destination==null) return;
-        transfer(player,active.world,destination,player.getYaw(),player.getPitch());
-        player.sendMessage(Text.literal(active.roster.wiped()?"The encounter has ended. The tower is withdrawing.":"You are outside the encounter. Surviving players must finish the fight."),false);
+        transfer(player, realm, ShatteredNave.gallery(ShatteredNave.centre(state.generation, slot)), 180, 25);
+        player.sendMessage(Text.literal("You are watching the fight. You will return with your belongings when it ends."), false);
     }
 
-    private static void updateVisual(Session s) {
-        if (s.visual==null || s.visual.isRemoved()) return;
-        var a=s.receipt;
-        float wall=a.top()+1-a.base(), radius=HALF;
-        if (s.phase==Phase.WALLS) { wall*=Math.min(1,s.tick/(float)WALL_TICKS); radius=0; }
-        if (s.phase==Phase.FLOOR) radius=(float)(HALF*ease(s.tick/(double)FLOOR_TICKS));
-        if (s.phase==Phase.WITHDRAW) { wall*=1-ease(s.tick/(double)WITHDRAW_TICKS); radius=0; }
-        s.visual.update((float)(s.feet-a.base()),radius,wall,true);
-    }
-
-    private static int buildCount(Session s) { return constructionCount(s.receipt.floor(),s.receipt.top()); }
-    private static BlockPos buildPosition(Session s,int index) {
-        var a=s.receipt; return constructionPosition(a.x(),a.z(),a.floor(),a.top(),index);
-    }
-    private static void build(Session s) {
-        internalMutation=true;
-        try {
-            for (int i=0;i<BUILD_BUDGET && s.buildCursor<buildCount(s);i++,s.buildCursor++) {
-                BlockPos p=buildPosition(s,s.buildCursor);
-                if (!s.world.getBlockState(p).isAir()) { descend(s,"Arena formation obstructed; returning safely"); return; }
-                boolean floor=p.getY()==s.receipt.floor();
-                Block material=(Math.floorMod(p.getX()-s.receipt.x(),16)==0 || Math.floorMod(p.getZ()-s.receipt.z(),16)==0)
-                        ? ModBlocks.ARENA_DARK : ModBlocks.ARENA_STONE;
-                if (floor && Math.floorMod(p.getX()-s.receipt.x(),16)==0 && Math.floorMod(p.getZ()-s.receipt.z(),16)==0) material=ModBlocks.ARENA_LIGHT;
-                s.world.setBlockState(p,material.getDefaultState(),Block.NOTIFY_LISTENERS|Block.FORCE_STATE|Block.SKIP_DROPS);
-            }
-        } finally { internalMutation=false; }
-    }
-
-    /** The entire final prism was air at admission; sweep it to remove interrupted temporary spells too. */
-    private static void clean(Session s) {
-        if (s.cleaned) return;
-        internalMutation=true;
-        try {
-            int budget=CLEAN_BUDGET;
-            while (budget-->0 && s.cleanupColumn<130*130) {
-                int x=s.receipt.x()-65+s.cleanupColumn%130,z=s.receipt.z()-65+s.cleanupColumn/130;
-                if (s.cleanupY==Integer.MIN_VALUE) s.cleanupY=Math.min(s.receipt.top(),s.world.getTopY(Heightmap.Type.WORLD_SURFACE,x,z));
-                if (s.cleanupY<s.receipt.floor()) { s.cleanupColumn++; s.cleanupY=Integer.MIN_VALUE; continue; }
-                BlockPos pos=new BlockPos(x,s.cleanupY--,z);
-                if (!s.world.getBlockState(pos).isAir()) s.world.setBlockState(pos,Blocks.AIR.getDefaultState(),Block.NOTIFY_LISTENERS|Block.FORCE_STATE|Block.SKIP_DROPS);
-            }
-            s.cleaned=s.cleanupColumn>=130*130;
-        } finally { internalMutation=false; }
-    }
-
-    private static void moveDrops(Session s) {
-        for (Entity e:s.world.getOtherEntities(null,s.volume(),e -> e instanceof ItemEntity || e instanceof ExperienceOrbEntity)) {
-            var p=s.receipt.waiting(); e.setPosition(p.x(),p.y()+.3,p.z()); e.setVelocity(Vec3d.ZERO);
+    /**
+     * Respawned players go back into their fight as spectators, or to where they entered. Rejoining
+     * players who are still in the nave do the same; a rejoin elsewhere is left alone.
+     */
+    private static void tickReturns(MinecraftServer server, ServerWorld realm) {
+        for (Set<UUID> queue : List.of(respawns, joins)) for (UUID id : List.copyOf(queue)) {
+            ServerPlayerEntity p = server.getPlayerManager().getPlayer(id);
+            if (p == null) { queue.remove(id); continue; }
+            if (!p.isAlive() || p.networkHandler.player != p) continue;
+            queue.remove(id);
+            if (queue == joins && legacy.remove(id.toString())) { sendHome(p); continue; }
+            if (queue == joins && !inRealm(p)) continue;
+            Fight fight = rosterOf(p);
+            Integer slot = fight == null ? null : slotOf(fight);
+            if (slot != null) { fight.standing.remove(p.getUuidAsString()); spectate(p, slot, realm); }
+            else if (state.modes.containsKey(id.toString()) || !p.isCreative() && state.returns.containsKey(id.toString())) sendHome(p);
+        }
+        // Watchers stay above their own floor.
+        for (ServerPlayerEntity p : server.getPlayerManager().getPlayerList()) {
+            if (!state.modes.containsKey(p.getUuidAsString()) || !p.isAlive()) continue;
+            Fight fight = rosterOf(p);
+            Integer slot = fight == null ? null : slotOf(fight);
+            if (slot == null) continue;
+            var area = ShatteredNave.footprint(ShatteredNave.centre(state.generation, slot));
+            if (p.getEntityWorld() != realm || !area.contains(p.getEntityPos())) spectate(p, slot, realm);
         }
     }
-    private static void recoverGuardian(Session s) {
-        if (s.guardian==null) {
-            Entity e=null;
-            try { e=s.world.getEntity(UUID.fromString(s.receipt.guardian())); }
-            catch (IllegalArgumentException invalid) { LOG.warn("Arena receipt holds an invalid guardian id: {}",s.receipt.guardian()); }
-            if (e instanceof FracturedGuardianEntity g) s.guardian=g;
+
+    // ------------------------------------------------------------------ the Guardian's arrival
+
+    /**
+     * Clears leftovers from any earlier fight and kneels the Guardian on the effigy seat as a
+     * statue; its intro cinematic plays for everyone in the slot, with the caller holding out the
+     * heart that wakes it. It stays untouchable until the intro hands over to the fight.
+     */
+    private static FracturedGuardianEntity raise(ServerWorld realm, int slot, Fight fight) {
+        clearEntities(realm, slot);
+        BlockPos centre = ShatteredNave.centre(state.generation, slot);
+        Vec3d seat = ShatteredNave.seat(centre);
+        FracturedGuardianEntity guardian = ModEntities.FRACTURED_GUARDIAN.create(realm, net.minecraft.entity.SpawnReason.COMMAND);
+        if (guardian == null) return null;
+        // Facing south, toward the players at the arrival point.
+        guardian.refreshPositionAndAngles(seat.x, seat.y, seat.z, 0, 0);
+        guardian.setHeadYaw(0);
+        guardian.setBodyYaw(0);
+        guardian.stopReview();
+        guardian.setInvulnerable(true);
+        realm.spawnEntity(guardian);
+        var area = ShatteredNave.footprint(centre);
+        List<ServerPlayerEntity> watchers = realm.getPlayers(p -> p.isAlive() && !p.isSpectator() && area.contains(p.getEntityPos()));
+        ServerPlayerEntity caller = fight.caller == null ? null : realm.getServer().getPlayerManager().getPlayer(UUID.fromString(fight.caller));
+        guardian.beginIntro(watchers, caller);
+        arrivals.put(slot, new Arrival(guardian));
+        return guardian;
+    }
+
+    /** Starts the fight once the Guardian's intro has handed over. Returns true when done. */
+    private static boolean wake(MinecraftServer server, ServerWorld realm, int slot, Arrival arrival) {
+        Fight fight = state.fights.get(String.valueOf(slot));
+        FracturedGuardianEntity guardian = arrival.guardian();
+        if (fight == null || endings.containsKey(slot) || !guardian.isAlive() || guardian.isRemoved()) return true;
+        if (guardian.inIntro()) return false;
+        guardian.setInvulnerable(false);
+        // The intro starts the fight itself; one an operator interrupted is started here.
+        if (!guardian.isBossAggressive()) guardian.startFight();
+        fight.fighting = true;
+        persist();
+        tell(fight, server, "The keeper awakens.");
+        return true;
+    }
+
+    private static void sound(ServerWorld world, Vec3d at, SoundEvent event, float volume, float pitch) {
+        world.playSound(null, at.x, at.y, at.z, event, SoundCategory.HOSTILE, volume, pitch);
+    }
+
+    // ------------------------------------------------------------------ moving players
+
+    /** Back to the recorded entry point (or world spawn), restoring any game mode the nave changed. */
+    private static boolean sendHome(ServerPlayerEntity player) {
+        MinecraftServer server = player.getEntityWorld().getServer();
+        String id = player.getUuidAsString();
+        Point point = state.returns.get(id);
+        ServerWorld world = point == null ? null : server.getWorld(RegistryKey.of(RegistryKeys.WORLD, Identifier.of(point.dimension())));
+        if (world != null && world.getRegistryKey() != ShatteredNave.WORLD) {
+            transfer(player, world, new Vec3d(point.x(), point.y(), point.z()), point.yaw(), point.pitch());
+        } else {
+            world = null;
+            ServerWorld spawn = server.getSpawnWorld();
+            BlockPos pos = server.getSpawnPoint().getPos();
+            spawn.getChunk(pos.getX() >> 4, pos.getZ() >> 4);
+            int y = spawn.getTopY(Heightmap.Type.MOTION_BLOCKING, pos.getX(), pos.getZ());
+            transfer(player, spawn, new Vec3d(pos.getX() + .5, y, pos.getZ() + .5), server.getSpawnPoint().yaw(), 0);
         }
-        if (s.guardian!=null && s.guardian.isAlive()) {
-            releaseLift(s,s.guardian.getUuid());
-            if (s.guardian.getVehicle() instanceof GuardianLiftEntity lift) lift.release();
-            var a=s.receipt; var p=a.guardianHome();
-            s.guardian.setArenaHidden(s.guardian.getCommandTags().contains("ew_church_keeper"));
-            s.guardian.stopReview(); s.guardian.setPosition(p.x(),p.y(),p.z());
-            s.guardian.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.FOLLOW_RANGE).setBaseValue(a.followRange()>0?a.followRange():16);
-            s.guardian.setNoGravity(a.gravity()); s.guardian.setInvulnerable(a.invulnerable()); s.guardian.setAiDisabled(a.noAi());
-            s.guardian.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.MAX_HEALTH).setBaseValue(200);
-            s.guardian.setHealth(200);
-            s.guardian.setVelocity(Vec3d.ZERO); s.guardian.fallDistance=0;
-        }
-    }
-    private static void complete(Session s) {
-        releaseLifts(s); moveDrops(s);
-        if (s.visual!=null) s.visual.discard();
-        // Flush world changes before retiring the write-ahead receipt. A crash during this flush replays cleanup.
-        forceChunks(s,false);
-        s.world.save(null,true,false);
-        saved.arena=null;
-        persist(); active=null;
-        com.anton.elementalwands.church.GuardianChurchManager.arenaFinished(s.receipt.guardian());
-    }
-    private static void returnOnline(MinecraftServer server) {
-        if (saved==null) return;
-        for (var p:server.getPlayerManager().getPlayerList()) returnPending(p);
-    }
-    private static void returnPending(ServerPlayerEntity player) {
-        if (saved==null || !player.isAlive() || player.networkHandler.player!=player) return;
-        var point=saved.returns.get(player.getUuidAsString());
-        if (point==null) return;
-        ServerWorld destination=world(player.getEntityWorld().getServer(),point.dimension());
-        if (destination==null) return;
-        Vec3d safe=findSafe(destination,new Vec3d(point.x(),point.y(),point.z()),player);
-        if(safe==null) return; // Keep the recovery receipt until supported ground becomes available.
-        transfer(player,destination,safe,point.yaw(),point.pitch());
-        String originalMode=saved.gameModes.get(player.getUuidAsString());
-        if(originalMode!=null) {
+        String mode = state.modes.remove(id);
+        if (mode != null) {
             player.setCameraEntity(player);
-            player.changeGameMode(GameMode.byId(originalMode,GameMode.SURVIVAL));
+            player.changeGameMode(GameMode.byId(mode, GameMode.SURVIVAL));
         }
-        // Player data must reach disk before removing its recovery point from the receipt.
-        destination.getServer().getPlayerManager().saveAllPlayerData();
-        saved.returns.remove(player.getUuidAsString());saved.gameModes.remove(player.getUuidAsString()); persist();
+        state.returns.remove(id);
+        persist();
+        return world != null;
     }
-    private static Vec3d findSafe(ServerWorld world,Vec3d preferred,Entity entity) {
-        return findSafe(world,preferred,entity,pos -> true);
+
+    private static void arriveAll(List<ServerPlayerEntity> group, ServerWorld realm, int slot) {
+        for (int i = 0; i < group.size(); i++) arrive(group.get(i), realm, slot, i - (group.size() - 1) / 2.0);
     }
-    private static Vec3d findSafe(ServerWorld world,Vec3d preferred,Entity entity,java.util.function.Predicate<Vec3d> allowed) {
-        BlockPos feet=BlockPos.ofFloored(preferred);
-        world.getChunk(feet.getX()>>4,feet.getZ()>>4);
-        if (allowed.test(preferred) && world.getBlockState(feet.down()).isSolidBlock(world,feet.down())
-                && world.isSpaceEmpty(entity,new Box(preferred.x-.4,preferred.y,preferred.z-.4,preferred.x+.4,preferred.y+2,preferred.z+.4))) return preferred;
-        for (int radius=0;radius<=24;radius++) for (int dx=-radius;dx<=radius;dx++) for (int dz=-radius;dz<=radius;dz++) {
-            if (Math.abs(dx)!=radius && Math.abs(dz)!=radius) continue;
-            int x=feet.getX()+dx,z=feet.getZ()+dz;
-            // Unloaded heightmaps can report bottom Y. Load the terrain BEFORE querying it.
-            world.getChunk(x>>4,z>>4);
-            int y=world.getTopY(Heightmap.Type.MOTION_BLOCKING,x,z);
-            BlockPos support=new BlockPos(x,y-1,z);
-            Vec3d candidate=new Vec3d(x+.5,y,z+.5);
-            if (allowed.test(candidate) && y>world.getBottomY() && y<world.getTopYInclusive()-2 && world.getFluidState(support).isEmpty() && world.getBlockState(support).isSolidBlock(world,support)
-                    && world.getWorldBorder().contains(support) && world.isSpaceEmpty(entity,new Box(x+.1,y,z+.1,x+.9,y+2,z+.9))) return candidate;
-        }
-        // Never send a player to an unvalidated heightmap fallback (including world spawn).
-        return null;
+
+    /** Players arrive side by side, two blocks apart, facing the seat. */
+    private static void arrive(ServerPlayerEntity player, ServerWorld realm, int slot, double place) {
+        Vec3d at = ShatteredNave.arrival(ShatteredNave.centre(state.generation, slot)).add(Math.clamp(place, -8, 8) * 2, 0, 0);
+        transfer(player, realm, at, ShatteredNave.ARRIVAL_YAW, 0);
     }
-    private static void transfer(ServerPlayerEntity player,ServerWorld world,Vec3d p,float yaw,float pitch) {
-        if (player.getVehicle() instanceof GuardianLiftEntity lift) lift.release();
+
+    private static void transfer(ServerPlayerEntity player, ServerWorld world, Vec3d pos, float yaw, float pitch) {
         player.stopRiding();
-        internalTeleport=true;
-        try { player.teleport(world,p.x,p.y,p.z,Set.of(),yaw,pitch,true); player.setVelocity(Vec3d.ZERO); player.fallDistance=0; player.velocityModified=true; }
-        finally { internalTeleport=false; }
+        internalTeleport = true;
+        try { player.teleport(world, pos.x, pos.y, pos.z, Set.of(), yaw, pitch, true); }
+        finally { internalTeleport = false; }
+        player.setVelocity(Vec3d.ZERO);
+        player.fallDistance = 0;
+        player.velocityModified = true;
     }
-    private static GuardianArenaJournal.Point point(Entity entity) { return point((ServerWorld)entity.getEntityWorld(),entity.getEntityPos(),entity.getYaw(),entity.getPitch()); }
-    private static GuardianArenaJournal.Point point(ServerWorld world,Vec3d pos,float yaw,float pitch) { return new GuardianArenaJournal.Point(world.getRegistryKey().getValue().toString(),pos.x,pos.y,pos.z,yaw,pitch); }
-    private static ServerWorld world(MinecraftServer server,String id) { return server.getWorld(RegistryKey.of(RegistryKeys.WORLD,Identifier.of(id))); }
-    private static void forceChunks(Session s,boolean forced) {
-        for (long key:s.receipt.forcedChunks()) { ChunkPos p=new ChunkPos(key); s.world.setChunkForced(p.x,p.z,forced); }
+
+    // ------------------------------------------------------------------ commands
+
+    public static String enter(ServerPlayerEntity player, int slot) {
+        ServerWorld realm = realm(player.getEntityWorld().getServer());
+        if (realm == null) return "The Shattered Nave dimension is not loaded.";
+        if (state == null) return "Shattered Nave storage is unavailable; see the server log.";
+        if (!inRealm(player)) {
+            state.returns.put(player.getUuidAsString(), point(player));
+            if (!persist()) return "Could not record your return point, so you were not moved.";
+        }
+        if (ready(slot)) {
+            arrive(player, realm, slot, 0);
+            return "Entered nave slot " + slot + ". /ew nave summon wakes the Guardian; /ew nave leave takes you back.";
+        }
+        Build build = build(realm, slot);
+        build.waiting.add(player.getUuid());
+        return "Raising nave slot " + slot + " (" + build.tiles.size() + " sections); you will be taken in when it is ready.";
     }
-    private static boolean persist() {
-        try { journal.write(saved); return true; }
-        catch (IOException e) { storageError=e.getMessage(); LOG.error("Could not save Guardian arena recovery receipt",e); return false; }
+
+    public static String leave(ServerPlayerEntity player) {
+        if (!inRealm(player)) return "You are not in the Shattered Nave.";
+        if (state == null) return "Shattered Nave storage is unavailable; see the server log.";
+        Fight fight = rosterOf(player);
+        if (fight != null) {
+            fight.standing.remove(player.getUuidAsString());
+            fight.roster.remove(player.getUuidAsString());
+            persist();
+        }
+        cancelEncounterEffects(player);
+        return sendHome(player) ? "Returned to where you entered." : "No return point was recorded; sent to world spawn.";
     }
-    private static void sound(Session s,net.minecraft.sound.SoundEvent event,float volume,float pitch) {
-        for (UUID id:s.roster.survivors()) {
-            var p=s.world.getServer().getPlayerManager().getPlayer(id);
-            if (p!=null) p.playSoundToPlayer(event,SoundCategory.BLOCKS,volume,pitch);
+
+    /** Operator summon: the survival players already in the slot become the fight's sealed party. */
+    public static String summon(ServerPlayerEntity player) {
+        if (!inRealm(player)) return "Enter the nave first with /ew nave enter.";
+        ServerWorld realm = (ServerWorld) player.getEntityWorld();
+        BlockPos centre = ShatteredNave.nearestCentre(player.getEntityPos());
+        int slot = slotAt(centre);
+        if (slot < 0) return "This slot is from an older layout; /ew nave enter a current one.";
+        abort(realm, slot);
+        Fight fight = new Fight();
+        fight.caller = player.getUuidAsString();
+        var area = ShatteredNave.footprint(centre);
+        for (ServerPlayerEntity p : realm.getPlayers(p -> p.isAlive() && !p.isSpectator() && !p.isCreative() && area.contains(p.getEntityPos())))
+            fight.roster.add(p.getUuidAsString());
+        fight.standing.addAll(fight.roster);
+        fight.party = !fight.roster.isEmpty();
+        state.fights.put(String.valueOf(slot), fight);
+        persist();
+        risings.put(slot, realm.getServer().getTicks());
+        return "The Guardian wakes on its seat" + (fight.roster.isEmpty() ? " (no survival players here, so it waits until reset)." : ".");
+    }
+
+    public static String reset(ServerPlayerEntity player) {
+        if (!inRealm(player)) return "Stand in the nave slot you want to reset.";
+        ServerWorld realm = (ServerWorld) player.getEntityWorld();
+        BlockPos centre = ShatteredNave.nearestCentre(player.getEntityPos());
+        int slot = slotAt(centre);
+        if (slot < 0) return "This slot is from an older layout, so it was not reset.";
+        int cleared = clearEntities(realm, slot);
+        abort(realm, slot);
+        Build build = build(realm, slot);
+        return "Cleared " + cleared + " entities; restoring " + build.tiles.size() + " sections of slot " + slot + ".";
+    }
+
+    /**
+     * Ends a slot's fight without sending anyone home; watchers get their game mode back on the
+     * floor. An offline watcher keeps the record, so rejoining sends them home with their game mode.
+     */
+    private static void abort(ServerWorld realm, int slot) {
+        risings.remove(slot);
+        endings.remove(slot);
+        arrivals.remove(slot);
+        Fight fight = state.fights.remove(String.valueOf(slot));
+        if (fight == null) return;
+        if (!fight.won && fight.site != null) GuardianChurchManager.naveFinished(fight.site);
+        for (String id : fight.roster) {
+            ServerPlayerEntity p = realm.getServer().getPlayerManager().getPlayer(UUID.fromString(id));
+            if (p == null) continue;
+            String mode = state.modes.remove(id);
+            if (mode != null) {
+                p.changeGameMode(GameMode.byId(mode, GameMode.SURVIVAL));
+                arrive(p, realm, slot, 0);
+            }
+        }
+        persist();
+    }
+
+    public static String status() {
+        if (state == null) return "Shattered Nave storage is unavailable.";
+        StringBuilder out = new StringBuilder("Shattered Nave: layout generation " + state.generation
+                + (state.layout.equals(layout) ? "" : " (layout changed; slots rebuild on next entry)")
+                + ", built slots " + state.built + ", " + state.returns.size() + " return point(s) held.");
+        builds.values().forEach(b -> out.append(" Slot ").append(b.slot).append(" building ").append(b.next).append('/').append(b.tiles.size()).append('.'));
+        state.fights.forEach((slot, f) -> out.append(" Slot ").append(slot).append(" fight: ").append(f.standing.size()).append('/')
+                .append(f.roster.size()).append(" standing").append(f.fighting ? "" : ", Guardian waking").append(f.won ? ", won" : "")
+                .append(f.site == null ? ", operator summon" : "").append('.'));
+        return out.toString();
+    }
+
+    // ------------------------------------------------------------------ building
+
+    private static boolean ready(int slot) {
+        refreshGeneration();
+        return state.built.contains(slot) && !builds.containsKey(slot);
+    }
+
+    /** A changed layout never overwrites an old one in place: it moves to untouched ground. */
+    private static void refreshGeneration() {
+        if (state.layout.equals(layout)) return;
+        if (!state.layout.isEmpty()) state.generation++;
+        state.layout = layout;
+        state.built.clear();
+        persist();
+    }
+
+    private static Build build(ServerWorld realm, int slot) {
+        refreshGeneration();
+        Build existing = builds.get(slot);
+        if (existing != null) return existing;
+        Build build = new Build(slot, ShatteredNave.centre(state.generation, slot));
+        var templates = realm.getStructureTemplateManager();
+        for (int i = 0; i < ShatteredNave.TILE_COUNT; i++)
+            for (int j = 0; j < ShatteredNave.TILE_COUNT; j++) {
+                Identifier id = ShatteredNave.tile(i, j);
+                if (templates.getTemplate(id).isPresent()) {
+                    build.tiles.add(id);
+                    build.origins.add(ShatteredNave.tileOrigin(build.centre, i, j));
+                }
+            }
+        state.built.remove(Integer.valueOf(slot));
+        persist();
+        builds.put(slot, build);
+        return build;
+    }
+
+    private static void tick(MinecraftServer server) {
+        ServerWorld realm = realm(server);
+        if (realm == null || state == null) return;
+        // One 48x48 section per tick lays out a fresh slot in about six seconds without a long stall.
+        for (var it = builds.values().iterator(); it.hasNext(); ) {
+            Build build = it.next();
+            if (build.next < build.tiles.size()) {
+                place(realm, build.tiles.get(build.next), build.origins.get(build.next));
+                build.next++;
+                continue;
+            }
+            it.remove();
+            if (!state.built.contains(build.slot)) state.built.add(build.slot);
+            persist();
+            List<ServerPlayerEntity> arriving = new ArrayList<>();
+            for (UUID id : build.waiting) {
+                ServerPlayerEntity player = server.getPlayerManager().getPlayer(id);
+                if (player != null && player.isAlive()) arriving.add(player);
+            }
+            arriveAll(arriving, realm, build.slot);
+            arriving.forEach(p -> p.sendMessage(Text.literal("The Shattered Nave opens."), true));
+            if (build.ritual) risings.put(build.slot, server.getTicks() + RISE_DELAY);
+        }
+        tickReturns(server, realm);
+        tickFights(server, realm);
+        for (ServerPlayerEntity player : realm.getPlayers()) {
+            if (player.isCreative() || player.isSpectator() || !player.isAlive()) continue;
+            BlockPos centre = ShatteredNave.nearestCentre(player.getEntityPos());
+            if (!ShatteredNave.inPlay(centre, player.getEntityPos(), 0)) {
+                Vec3d inside = ShatteredNave.clampToPlay(centre, player.getEntityPos());
+                player.networkHandler.requestTeleport(inside.x, inside.y, inside.z, player.getYaw(), player.getPitch());
+                player.setVelocity(Vec3d.ZERO);
+                player.velocityModified = true;
+                player.fallDistance = 0;
+            }
         }
     }
-    private static void announce(Session s,String message) {
-        for (UUID id:s.roster.survivors()) {
-            var p=s.world.getServer().getPlayerManager().getPlayer(id);
-            if (p!=null) p.sendMessage(Text.literal(message),false);
+
+    private static void place(ServerWorld realm, Identifier id, BlockPos origin) {
+        StructureTemplate template = realm.getStructureTemplateManager().getTemplate(id).orElse(null);
+        if (template == null) return;
+        internalMutation = true;
+        try {
+            template.place(realm, origin, origin, new StructurePlacementData().setIgnoreEntities(true).setUpdateNeighbors(false),
+                    realm.getRandom(), Block.NOTIFY_LISTENERS | Block.FORCE_STATE);
+        } finally { internalMutation = false; }
+    }
+
+    private static int clearEntities(ServerWorld realm, int slot) {
+        List<Entity> leftovers = realm.getOtherEntities(null, ShatteredNave.footprint(ShatteredNave.centre(state.generation, slot)),
+                e -> !(e instanceof PlayerEntity));
+        leftovers.forEach(Entity::discard);
+        return leftovers.size();
+    }
+
+    private static int slotAt(BlockPos centre) {
+        for (int slot = 0; slot < ShatteredNave.SLOTS; slot++)
+            if (ShatteredNave.centre(state.generation, slot).equals(centre)) return slot;
+        return -1;
+    }
+
+    private static void tell(Fight fight, MinecraftServer server, String message) {
+        Integer slot = slotOf(fight);
+        for (ServerPlayerEntity p : members(fight, slot == null ? -1 : slot, server, slot == null ? null : realm(server)))
+            p.sendMessage(Text.literal(message), false);
+    }
+
+    // ------------------------------------------------------------------ storage
+
+    private static ServerWorld realm(MinecraftServer server) { return server.getWorld(ShatteredNave.WORLD); }
+
+    private static Point point(ServerPlayerEntity player) {
+        Vec3d pos = player.getEntityPos();
+        return new Point(player.getEntityWorld().getRegistryKey().getValue().toString(), pos.x, pos.y, pos.z, player.getYaw(), player.getPitch());
+    }
+
+    /** Identifies the installed layout so a changed builder output never mixes with an old slot. */
+    private static String fingerprint(MinecraftServer server) {
+        CRC32 crc = new CRC32();
+        for (int i = 0; i < ShatteredNave.TILE_COUNT; i++)
+            for (int j = 0; j < ShatteredNave.TILE_COUNT; j++) {
+                var resource = server.getResourceManager().getResource(
+                        Identifier.of(ElementalWandsMod.MOD_ID, "structure/shattered_nave/nave_" + i + "_" + j + ".nbt"));
+                if (resource.isEmpty()) continue;
+                try (var in = resource.get().getInputStream()) {
+                    crc.update(i * 31 + j);
+                    crc.update(in.readAllBytes());
+                } catch (IOException e) { LOG.error("Could not read Shattered Nave tile {} {}", i, j, e); }
+            }
+        return Long.toHexString(crc.getValue());
+    }
+
+    private static void load(MinecraftServer server) {
+        builds.clear(); arrivals.clear(); risings.clear(); endings.clear(); respawns.clear(); joins.clear(); kept.clear(); legacy.clear();
+        layout = fingerprint(server);
+        Path root = server.getSavePath(WorldSavePath.ROOT).resolve("elementalwands");
+        path = root.resolve("guardian-nave.json");
+        try {
+            state = Files.exists(path) ? JSON.fromJson(Files.readString(path), State.class) : new State();
+            if (state == null || state.version != 1 || state.built == null || state.returns == null || state.layout == null
+                    || state.modes == null || state.fights == null)
+                throw new IOException("Invalid Shattered Nave record");
+            if (!state.fights.isEmpty()) {
+                // A restart never resumes a fight: everyone goes home on join, and the church offers its heart again.
+                LOG.info("Cancelling {} interrupted Guardian fight(s)", state.fights.size());
+                state.fights.clear();
+            }
+            retireSkyArena(root.resolve("guardian-arena.json"));
+            persist();
+        } catch (Exception e) {
+            state = null;
+            LOG.error("Shattered Nave storage needs attention; Guardian rituals are disabled", e);
+        }
+    }
+
+    /**
+     * The Guardian used to be fought on a floor raised into the sky. Players that arena still owed a
+     * trip home (or a game mode) when the world was upgraded are sent home when they next join.
+     */
+    private static void retireSkyArena(Path old) throws IOException {
+        if (!Files.exists(old)) return;
+        JsonObject record = JSON.fromJson(Files.readString(old), JsonObject.class);
+        if (record != null && record.has("returns")) for (var entry : record.getAsJsonObject("returns").entrySet()) {
+            state.returns.putIfAbsent(entry.getKey(), JSON.fromJson(entry.getValue(), Point.class));
+            legacy.add(entry.getKey());
+        }
+        if (record != null && record.has("gameModes")) for (var entry : record.getAsJsonObject("gameModes").entrySet())
+            state.modes.putIfAbsent(entry.getKey(), entry.getValue().getAsString());
+        if (record != null && record.has("arena") && !record.get("arena").isJsonNull())
+            LOG.warn("The retired sky arena was interrupted; its players are sent home when they join");
+        Files.move(old, old.resolveSibling("guardian-arena.retired.json"), StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    private static boolean persist() {
+        if (state == null || path == null) return false;
+        try {
+            Files.createDirectories(path.getParent());
+            Path temporary = path.resolveSibling(path.getFileName() + ".tmp");
+            Files.writeString(temporary, JSON.toJson(state), StandardCharsets.UTF_8);
+            Files.move(temporary, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            return true;
+        } catch (IOException e) {
+            LOG.error("Could not save the Shattered Nave record", e);
+            return false;
         }
     }
 }

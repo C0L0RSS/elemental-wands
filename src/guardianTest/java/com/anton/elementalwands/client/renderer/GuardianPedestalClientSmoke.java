@@ -23,7 +23,7 @@ import net.minecraft.world.level.LevelInfo;
 /** Real native models, targeting hint, rotation and placement packet in a disposable world. */
 public final class GuardianPedestalClientSmoke {
     private int ticks,sceneTicks,floor;private boolean started,arranged,done;
-    private volatile boolean ready;private volatile GuardianChurchManager.Site site;
+    private volatile boolean ready,left;private volatile GuardianChurchManager.Site site;
     public static void start(MinecraftClient client) {
         var fixture=new GuardianPedestalClientSmoke();ClientTickEvents.END_CLIENT_TICK.register(fixture::tick);
         client.options.pauseOnLostFocus=false;client.options.hudHidden=false;
@@ -79,8 +79,12 @@ public final class GuardianPedestalClientSmoke {
                 require(GuardianOfferingHint.message(c)==null,"Active offering retained the use hint");
                 screenshot(c,"pedestal-heart-accepted.png");
             }
-            // Let the existing ritual begin, then verify a returned empty pedestal after abort.
-            if(t==160)server.execute(()->com.anton.elementalwands.arena.GuardianArenaManager.stop());
+            // Let the ritual take the player into the nave, then leave: a solo wipe returns an empty pedestal.
+            if(t>=160 && t<400 && !left)server.execute(()->{
+                var p=server.getPlayerManager().getPlayer(uuid);
+                if(!left && com.anton.elementalwands.arena.GuardianArenaManager.inRealm(p)){com.anton.elementalwands.arena.GuardianArenaManager.leave(p);left=true;}
+            });
+            if(t==400)require(left,"The ritual never took the player into the nave");
             if(t==400)server.execute(()->{
                 var p=server.getPlayerManager().getPlayer(uuid);p.changeGameMode(GameMode.SPECTATOR);
                 p.networkHandler.requestTeleport(-4,floor+4,-13,0,0);

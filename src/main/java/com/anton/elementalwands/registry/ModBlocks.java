@@ -24,19 +24,6 @@ public class ModBlocks {
     }
 
 
-    public static final net.minecraft.block.Block ARENA_STONE=arena("guardian_arena_stone");
-    public static final net.minecraft.block.Block ARENA_DARK=arena("guardian_arena_dark");
-    public static final net.minecraft.block.Block ARENA_LIGHT=arena("guardian_arena_light");
-
-    private static net.minecraft.block.Block arena(String name) {
-        var id=net.minecraft.util.Identifier.of("elementalwands",name);
-        var key=net.minecraft.registry.RegistryKey.of(net.minecraft.registry.RegistryKeys.BLOCK,id);
-        var block=new com.anton.elementalwands.block.GuardianArenaBlock(net.minecraft.block.AbstractBlock.Settings.create()
-                .registryKey(key).strength(-1,3600000).nonOpaque().dropsNothing().allowsSpawning((state,world,pos,type) -> false)
-                .pistonBehavior(net.minecraft.block.piston.PistonBehavior.BLOCK));
-        return net.minecraft.registry.Registry.register(net.minecraft.registry.Registries.BLOCK,id,block);
-    }
-
     // The graveyard mausoleum: its carved doorway, the veil that starts the Necromancer's ritual,
     // the void windows, and unbreakable look-alikes of the vanilla stone it is built from.
     public static final net.minecraft.block.Block MAUSOLEUM_ARCH=mausoleum("mausoleum_arch",

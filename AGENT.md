@@ -101,6 +101,7 @@ python3 art/hollow_necromancer/grasping_hands/build_preview.py --check
 python3 art/hollow_necromancer/life_drain/build_runtime.py --check
 python3 art/hollow_necromancer/undead/build_runtime.py --check
 python3 art/hollow_crypt/build_layout.py --check
+python3 art/guardian_nave/build_layout.py --check
 unzip -t build/libs/elementalwands-2.2.0.jar
 ```
 

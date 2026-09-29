@@ -26,7 +26,7 @@ public final class UpdraftServerSmoke implements ModInitializer {
         if(t==25) {
             var w=s.getOverworld();for(int x=-2;x<=2;x++)for(int z=-2;z<=2;z++){w.getChunk(x,z);w.setChunkForced(x,z,true);}
             for(int x=-16;x<=16;x++)for(int z=-16;z<=16;z++)w.setBlockState(new BlockPos(x,99,z),Blocks.STONE.getDefaultState());
-            var f=com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);
+            var f=com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);
             f.setAccessible(true);p=(ServerPlayerEntity)f.invoke(null,s,UUID.randomUUID(),"UpdraftCaster",.5,100,.5);
             p.setLoaded(true);p.onTeleportationDone();p.setNoGravity(true);p.setHealth(20);p.getHungerManager().setFoodLevel(10);
             p.setAttached(EWAttachments.AFFINITY,"WIND");p.setStackInHand(Hand.MAIN_HAND,new ItemStack(ModItems.FRACTURED_WAND));

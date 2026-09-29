@@ -200,7 +200,7 @@ public final class PartyServerSmoke implements ModInitializer {
         for(var player:List.of(a,b,c,d)) {player.setHealth(200);player.timeUntilRegen=0;player.setVelocity(Vec3d.ZERO);player.extinguish();player.clearStatusEffects();EntangleTracker.clearStacks(world,player);}
     }
     private ServerPlayerEntity player(UUID id,String name,double x,double y,double z)throws Exception {
-        var factory=GuardianArenaSmokeModClass().getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);factory.setAccessible(true);
+        var factory=playerFactory().getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);factory.setAccessible(true);
         var player=(ServerPlayerEntity)factory.invoke(null,server,id,name,x,y,z);
         player.setLoaded(true);player.onTeleportationDone();player.getHungerManager().setFoodLevel(10);
         player.setNoGravity(true);player.changeGameMode(net.minecraft.world.GameMode.SURVIVAL);
@@ -208,7 +208,7 @@ public final class PartyServerSmoke implements ModInitializer {
         player.setStackInHand(Hand.MAIN_HAND,new net.minecraft.item.ItemStack(ModItems.FRACTURED_WAND));
         PartyManager.get(server).remember(player);return player;
     }
-    private static Class<?> GuardianArenaSmokeModClass(){return com.anton.elementalwands.arena.GuardianArenaSmokeMod.class;}
+    private static Class<?> playerFactory(){return com.anton.elementalwands.arena.GuardianNaveSmokeMod.class;}
     private int command(ServerPlayerEntity player,String command)throws Exception {return server.getCommandManager().getDispatcher().execute(command,player.getCommandSource());}
     private static Object invoke(Class<?> type,String name,Class<?>[] params,Object receiver,Object...args)throws Exception {
         var method=type.getDeclaredMethod(name,params);method.setAccessible(true);return method.invoke(receiver,args);

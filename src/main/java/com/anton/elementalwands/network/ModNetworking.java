@@ -58,6 +58,8 @@ public final class ModNetworking {
         PayloadTypeRegistry.playS2C().register(StoneStaggerPayload.ID, StoneStaggerPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(NecromancerIntroPayload.ID, NecromancerIntroPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(NecromancerIntroSkipPayload.ID, NecromancerIntroSkipPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(GuardianIntroPayload.ID, GuardianIntroPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(GuardianIntroSkipPayload.ID, GuardianIntroSkipPayload.CODEC);
     }
 
     public static void registerC2SReceivers() {
@@ -78,6 +80,8 @@ public final class ModNetworking {
                 (payload, context) -> handleHub(context.player(), payload));
         ServerPlayNetworking.registerGlobalReceiver(NecromancerIntroSkipPayload.ID,
                 (payload, context) -> com.anton.elementalwands.entity.necromancer.NecromancerIntro.skip(context.player()));
+        ServerPlayNetworking.registerGlobalReceiver(GuardianIntroSkipPayload.ID,
+                (payload, context) -> com.anton.elementalwands.entity.GuardianIntro.skip(context.player()));
     }
 
     // -----------------------------------------------------------------------
@@ -282,6 +286,26 @@ public final class ModNetworking {
         public static final NecromancerIntroSkipPayload INSTANCE = new NecromancerIntroSkipPayload();
         public static final Id<NecromancerIntroSkipPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"necromancer_intro_skip"));
         public static final PacketCodec<RegistryByteBuf,NecromancerIntroSkipPayload> CODEC = PacketCodec.unit(INSTANCE);
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
+    /**
+     * The Guardian's intro cinematic for this watcher: its first frame's world time, the Guardian's
+     * place and facing, and who holds the heart out and where; active=false ends it.
+     */
+    public record GuardianIntroPayload(int guardianId, int callerId, long start, float yaw, net.minecraft.util.math.Vec3d centre,
+                                       net.minecraft.util.math.Vec3d hand, boolean leftHanded, boolean active) implements CustomPayload {
+        public static final Id<GuardianIntroPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"guardian_intro"));
+        public static final PacketCodec<RegistryByteBuf,GuardianIntroPayload> CODEC = PacketCodec.tuple(
+                PacketCodecs.VAR_INT,GuardianIntroPayload::guardianId,PacketCodecs.VAR_INT,GuardianIntroPayload::callerId,
+                PacketCodecs.VAR_LONG,GuardianIntroPayload::start,PacketCodecs.FLOAT,GuardianIntroPayload::yaw,
+                net.minecraft.util.math.Vec3d.PACKET_CODEC,GuardianIntroPayload::centre,net.minecraft.util.math.Vec3d.PACKET_CODEC,GuardianIntroPayload::hand,
+                PacketCodecs.BOOLEAN,GuardianIntroPayload::leftHanded,PacketCodecs.BOOLEAN,GuardianIntroPayload::active,GuardianIntroPayload::new);
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
+    public record GuardianIntroSkipPayload() implements CustomPayload {
+        public static final GuardianIntroSkipPayload INSTANCE = new GuardianIntroSkipPayload();
+        public static final Id<GuardianIntroSkipPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"guardian_intro_skip"));
+        public static final PacketCodec<RegistryByteBuf,GuardianIntroSkipPayload> CODEC = PacketCodec.unit(INSTANCE);
         @Override public Id<? extends CustomPayload> getId() { return ID; }
     }
     public record StoneMotionPayload(int entityId, float yaw, float speed, int mode) implements CustomPayload {

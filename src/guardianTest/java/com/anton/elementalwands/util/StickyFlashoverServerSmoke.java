@@ -95,7 +95,7 @@ public final class StickyFlashoverServerSmoke implements ModInitializer {
     private void ready() {var state=FireBuildManager.state(p);state.putInt("flash_duration",0);for(int i=0;i<3;i++)state.putInt("flash_slot_"+i+"_duration",0);p.setAttached(EWAttachments.FIRE_BUILD_STATE,state);p.setStackInHand(Hand.MAIN_HAND,new ItemStack(ModItems.FRACTURED_WAND));}
     private static void aim(ServerPlayerEntity p,float yaw,float pitch){p.setYaw(yaw);p.setHeadYaw(yaw);p.setPitch(pitch);}
     private static ServerPlayerEntity player(MinecraftServer s,String name,double x,double y,double z)throws Exception {
-        var f=com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);f.setAccessible(true);
+        var f=com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);f.setAccessible(true);
         return (ServerPlayerEntity)f.invoke(null,s,UUID.randomUUID(),name,x,y,z);
     }
     private static void require(boolean b,String why){if(!b)throw new AssertionError(why);}

@@ -371,7 +371,7 @@ public final class NecromancerPhaseSmoke implements ModInitializer {
     }
     private static void heal(ServerPlayerEntity player) { player.setHealth(20); player.timeUntilRegen = 0; player.clearStatusEffects(); player.extinguish(); player.setVelocity(Vec3d.ZERO); }
     private static ServerPlayerEntity player(MinecraftServer s, String name, double x, double y, double z) throws Exception {
-        var f = com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player", MinecraftServer.class, UUID.class, String.class, double.class, double.class, double.class);
+        var f = com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player", MinecraftServer.class, UUID.class, String.class, double.class, double.class, double.class);
         f.setAccessible(true);
         return (ServerPlayerEntity)f.invoke(null, s, UUID.randomUUID(), name, x, y, z);
     }

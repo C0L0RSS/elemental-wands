@@ -25,7 +25,7 @@ public final class ProgressionServerSmoke implements ModInitializer {
     private static void check(boolean value,String message){if(!value)throw new AssertionError(message);}
     private static void near(double a,double b,String message){check(Math.abs(a-b)<.001,message+": "+a+" != "+b);}
     private static ServerPlayerEntity player(MinecraftServer server,String name,double x)throws Exception{
-        var m=com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);
+        var m=com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);
         m.setAccessible(true);var p=(ServerPlayerEntity)m.invoke(null,server,UUID.randomUUID(),name,x,100.,.5);p.setNoGravity(true);p.setStackInHand(Hand.MAIN_HAND,new ItemStack(ModItems.FRACTURED_WAND));return p;
     }
     private ZombieEntity zombie(){var z=new ZombieEntity(EntityType.ZOMBIE,player.getEntityWorld());z.setPosition(30,100,0);z.setAiDisabled(true);z.setNoGravity(true);z.getAttributeInstance(EntityAttributes.ARMOR).setBaseValue(0);return z;}

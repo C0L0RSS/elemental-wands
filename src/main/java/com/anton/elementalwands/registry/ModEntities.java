@@ -147,21 +147,6 @@ public final class ModEntities {
                                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
                                                         Identifier.of(ElementalWandsMod.MOD_ID, "fractured_guardian"))));
 
-        public static final EntityType<com.anton.elementalwands.entity.GuardianArenaEntity> GUARDIAN_ARENA = Registry.register(
-                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID,"guardian_arena"),
-                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.GuardianArenaEntity>create(SpawnGroup.MISC,
-                        com.anton.elementalwands.entity.GuardianArenaEntity::new)
-                        .dimensions(EntityDimensions.fixed(128,1)).trackRangeBlocks(256).trackedUpdateRate(1)
-                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"guardian_arena"))));
-
-        public static final EntityType<com.anton.elementalwands.entity.GuardianLiftEntity> GUARDIAN_LIFT = Registry.register(
-                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID,"guardian_lift"),
-                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.GuardianLiftEntity>create(SpawnGroup.MISC,
-                        com.anton.elementalwands.entity.GuardianLiftEntity::new)
-                        .dimensions(EntityDimensions.fixed(.1f,.1f)).trackRangeBlocks(256).trackedUpdateRate(1)
-                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"guardian_lift"))));
-
-
         public static final EntityType<com.anton.elementalwands.entity.FlashoverEmberEntity> FLASHOVER_EMBER = Registry.register(
                 Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID,"flashover_ember"),
                 FabricEntityTypeBuilder.<com.anton.elementalwands.entity.FlashoverEmberEntity>create(SpawnGroup.MISC,
@@ -284,6 +269,14 @@ public final class ModEntities {
                         com.anton.elementalwands.entity.necromancer.IntroSoulEntity::new)
                         .dimensions(EntityDimensions.fixed(.7f, .9f)).trackRangeBlocks(128).trackedUpdateRate(1).disableSaving()
                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "intro_soul"))));
+
+        // The Guardian's intro cinematic: the heart that flies from the caller's hand into its core.
+        public static final EntityType<com.anton.elementalwands.entity.IntroHeartEntity> INTRO_HEART = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "intro_heart"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.IntroHeartEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.IntroHeartEntity::new)
+                        .dimensions(EntityDimensions.fixed(.3f, .3f)).trackRangeBlocks(128).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "intro_heart"))));
 
         // Hollow undead: night spawns in the Overworld and the Necromancer's raised army.
         public static final EntityType<com.anton.elementalwands.entity.undead.HollowCrawlerEntity> HOLLOW_CRAWLER = Registry.register(

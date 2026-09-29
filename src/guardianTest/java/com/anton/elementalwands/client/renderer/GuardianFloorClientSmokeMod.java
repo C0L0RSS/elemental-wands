@@ -23,16 +23,6 @@ public final class GuardianFloorClientSmokeMod implements ClientModInitializer {
             if (done || client.getOverlay()!=null) return;
             done=true;
             try {
-                var manager=client.getAtlasManager();
-                boolean oldLookupRejected=false;
-                try { manager.getAtlasTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE); }
-                catch (IllegalArgumentException expected) { oldLookupRejected=true; }
-                require(oldLookupRejected,"Fixture no longer reproduces the reported invalid atlas ID");
-                var atlas=manager.getAtlasTexture(Atlases.BLOCKS);
-                for (String texture:new String[]{"quartz_block_bottom","polished_deepslate","polished_andesite"}) {
-                    var id=Identifier.ofVanilla("block/"+texture);
-                    require(atlas.getSprite(id).getContents().getId().equals(id),"Missing floor texture: "+id);
-                }
                 var socketModel=client.getBlockRenderManager().getModel(com.anton.elementalwands.registry.ModBlocks.GUARDIAN_SOCKET.getDefaultState());
                 require(socketModel.particleSprite().getContents().getId().equals(Identifier.ofVanilla("block/chiseled_deepslate")),"Church socket model is missing");
                 for(var rotation:net.minecraft.util.BlockRotation.values())for(int ritual=0;ritual<=2;ritual++) {
@@ -50,7 +40,7 @@ public final class GuardianFloorClientSmokeMod implements ClientModInitializer {
                 require(heartState.getParticleSprite(net.minecraft.util.math.random.Random.create()).getContents().getId().equals(Identifier.ofVanilla("item/heart_of_the_sea")),"Guardian Heart texture is missing");
                 var animations=software.bernie.geckolib.cache.GeckoLibResources.getBakedAnimations().get(Identifier.of("elementalwands","fractured_guardian"));
                 require(animations!=null,"Guardian animation package was not baked");
-                for(String clip:new String[]{"arrival_fall","arrival_land","awaken","guard_break","phase_change","slam_fast","throw_fast","fan"}) require(animations.getAnimation("animation.fractured_guardian."+clip)!=null,"Missing baked entrance clip: "+clip);
+                for(String clip:new String[]{"intro","awaken","guard_break","phase_change","slam_fast","throw_fast","fan"}) require(animations.getAnimation("animation.fractured_guardian."+clip)!=null,"Missing baked entrance clip: "+clip);
                 for (int stage=1;stage<=3;stage++) for(String suffix:new String[]{"","_glowmask"}) {
                     var id=Identifier.of("elementalwands","textures/entity/fractured_guardian_cracks_"+stage+suffix+".png");
                     require(client.getResourceManager().getResource(id).isPresent(),"Missing guard material: "+id);
@@ -84,10 +74,8 @@ public final class GuardianFloorClientSmokeMod implements ClientModInitializer {
                 checkStoneCluster();
                 NatureClientChecks.check(client);
                 FireClientChecks.check(client);
-                for (float radius:new float[]{0,1.25f,4,64}) checkFloor(radius, java.util.Set.of());
-                checkFloor(64,java.util.Set.of(net.minecraft.util.math.ChunkPos.toLong(0,0)));
                 Files.writeString(Path.of("FLOOR_CLIENT_PASSED.txt"),
-                        "Old atlas lookup rejected; production lookup and all three sprites resolved. Actual floor submission built valid entity vertex buffers at hidden, partial, small, and full 138x138 extents. Church socket and Guardian Heart models and the two arrival clips/awakening also resolved from actual client assets. No world opened.\n");
+                        "Church socket, pedestal and Guardian Heart models, the Guardian's arrival clips, awakening, guard materials and visuals resolved from actual client assets. No world opened.\n");
                 System.out.println("GUARDIAN FLOOR CLIENT CHECK PASSED");
             } catch (Throwable failure) {
                 failure.printStackTrace();
@@ -161,37 +149,6 @@ public final class GuardianFloorClientSmokeMod implements ClientModInitializer {
         require(submissions[0]==6,"Phase discharge submission count changed");
         state.beamTime=10;GuardianUnstableVisual.submit(state,new MatrixStack(),queue);
         require(submissions[0]==6,"Phase discharges obscure beam telegraph");
-    }
-    private static void checkFloor(float radius, java.util.Set<Long> hidden) {
-        int[] submissions={0};
-        var queue=(OrderedRenderCommandQueue)Proxy.newProxyInstance(OrderedRenderCommandQueue.class.getClassLoader(),
-                new Class<?>[]{OrderedRenderCommandQueue.class},(proxy,method,args) -> {
-                    require(method.getName().equals("submitCustom") && args.length==3,"Unexpected floor submission");
-                    submissions[0]++;
-                    try (var allocator=new BufferAllocator(4*1024*1024)) {
-                        var vertices=new BufferBuilder(allocator,VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL);
-                        ((OrderedRenderCommandQueue.Custom)args[2]).render(((MatrixStack)args[0]).peek(),vertices);
-                        try (var buffer=vertices.end()) {
-                            int side=radius>=64?138:2*(int)Math.ceil(radius);
-                            require(buffer.getDrawParameters().vertexCount()==(side*side-hidden.size())*4,"Floor vertex count/extent changed unexpectedly");
-                            var data=buffer.getBuffer();
-                            int stride=VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL.getVertexSize();
-                            for (int quad=0;quad<side*side-hidden.size();quad++) {
-                                float minX=Float.POSITIVE_INFINITY,maxX=Float.NEGATIVE_INFINITY,minZ=minX,maxZ=maxX;
-                                for (int corner=0;corner<4;corner++) {
-                                    int offset=(quad*4+corner)*stride;
-                                    float x=data.getFloat(offset),y=data.getFloat(offset+4),z=data.getFloat(offset+8);
-                                    require(Float.isFinite(x) && Float.isFinite(z) && y==37,"Invalid floor vertex or floor-height drift");
-                                    minX=Math.min(minX,x); maxX=Math.max(maxX,x); minZ=Math.min(minZ,z); maxZ=Math.max(maxZ,z);
-                                }
-                                require(maxX-minX<=1 && maxZ-minZ<=1,"A floor tile is larger than one Minecraft block");
-                            }
-                        }
-                    }
-                    return null;
-                });
-        GuardianArenaFloor.submit(new MatrixStack(),queue,37,radius,hidden);
-        require(submissions[0]==(radius==0?0:1),"Floor stopped batching its surface into one submission");
     }
     private static void checkStoneCluster() {
         for(int mass:new int[]{0,1,25,50,75,100})for(float age:new float[]{0,5,20}) {

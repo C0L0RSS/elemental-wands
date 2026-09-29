@@ -1,6 +1,6 @@
 package com.anton.elementalwands.mixin;
 
-import com.anton.elementalwands.client.NecromancerIntroClient;
+import com.anton.elementalwands.client.BossIntroCamera;
 import net.minecraft.client.input.Input;
 import net.minecraft.client.input.KeyboardInput;
 import net.minecraft.util.PlayerInput;
@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class IntroInputMixin extends Input {
     @Inject(method = "tick", at = @At("TAIL"))
     private void introHold(CallbackInfo ci) {
-        if (!NecromancerIntroClient.frozen()) return;
+        if (!BossIntroCamera.frozen()) return;
         playerInput = PlayerInput.DEFAULT;
         movementVector = Vec2f.ZERO;
     }

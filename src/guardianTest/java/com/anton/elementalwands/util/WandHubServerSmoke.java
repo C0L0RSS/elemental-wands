@@ -32,7 +32,7 @@ public final class WandHubServerSmoke implements ModInitializer {
     }
     private void run(MinecraftServer server) throws Exception {
         if (++tick == 30) {
-            var factory = com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player", MinecraftServer.class,
+            var factory = com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player", MinecraftServer.class,
                     UUID.class, String.class, double.class, double.class, double.class);
             factory.setAccessible(true);
             var legacy = (ServerPlayerEntity)factory.invoke(null, server, UUID.randomUUID(), "LegacyTester", 4.5, 100.0, .5);

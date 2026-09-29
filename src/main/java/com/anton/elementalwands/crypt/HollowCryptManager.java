@@ -132,7 +132,7 @@ public final class HollowCryptManager {
     private static final Map<Integer, Integer> risings = new HashMap<>(), endings = new HashMap<>();
     /** Players whose respawn the crypt handles (spectate or go home), and whose belongings it carries over. */
     private static final Set<UUID> respawns = new LinkedHashSet<>(), joins = new LinkedHashSet<>(), kept = new HashSet<>();
-    private static final int RISE_DELAY = 60, VICTORY_DELAY = 200, WIPE_DELAY = 60, RITUAL_RADIUS = 16;
+    private static final int RISE_DELAY = 40, VICTORY_DELAY = 200, WIPE_DELAY = 60, RITUAL_RADIUS = 16;
 
     private HollowCryptManager() {}
 
@@ -676,7 +676,10 @@ public final class HollowCryptManager {
                 realm.getRandom(), Block.NOTIFY_LISTENERS | Block.FORCE_STATE);
     }
 
-    /** Clears leftovers from any earlier fight and raises a fighting boss on the circle. */
+    /**
+     * Clears leftovers from any earlier fight and stands the boss on the circle; its intro
+     * cinematic plays for everyone in the clearing, then the fight starts.
+     */
     private static NecromancerEntity raise(ServerWorld realm, BlockPos centre) {
         clearEntities(realm, centre);
         NecromancerEntity boss = ModEntities.HOLLOW_NECROMANCER.create(realm, SpawnReason.COMMAND);
@@ -685,9 +688,8 @@ public final class HollowCryptManager {
         boss.refreshPositionAndAngles(at.x, at.y, at.z, 0, 0);
         boss.setHeadYaw(0);
         realm.spawnEntity(boss);
-        boss.startFight();
-        realm.spawnParticles(ParticleTypes.SOUL, at.x, at.y + .5, at.z, 80, 1.2, .4, 1.2, .04);
-        realm.playSound(null, BlockPos.ofFloored(at), SoundEvents.ENTITY_WARDEN_EMERGE, SoundCategory.HOSTILE, 3f, .5f);
+        var area = HollowCryptRealm.footprint(centre);
+        boss.beginIntro(realm.getPlayers(p -> p.isAlive() && !p.isSpectator() && area.contains(p.getEntityPos())));
         return boss;
     }
 

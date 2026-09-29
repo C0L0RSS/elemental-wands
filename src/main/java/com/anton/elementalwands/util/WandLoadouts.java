@@ -65,6 +65,7 @@ public final class WandLoadouts {
     public static void cast(ServerPlayerEntity player, int slot) { cast(player, slot, true); }
     public static void cast(ServerPlayerEntity player, int slot, boolean deliberate) {
         if (!player.isAlive() || player.isSpectator() || !com.anton.elementalwands.arena.GuardianArenaManager.canCast(player)) return;
+        if (com.anton.elementalwands.entity.necromancer.NecromancerIntro.watching(player)) return; // Held by the boss intro.
         ServerWorld world = player.getEntityWorld();
         if (HollowPurpleChargeManager.isCharging(world, player) || FireLeapManager.flying(player) || StoneChargeManager.active(player)) return;
         var stack = player.getMainHandStack();

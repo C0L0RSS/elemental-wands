@@ -1,5 +1,6 @@
 package com.anton.elementalwands.entity.necromancer;
 
+import com.anton.elementalwands.util.SoulGlow;
 import java.util.UUID;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
@@ -73,6 +74,7 @@ public class NecromancerSoulEntity extends MobEntity implements GeoEntity {
             return;
         }
         if (boss == null || !(getEntityWorld() instanceof ServerWorld world) || !(world.getEntity(boss) instanceof NecromancerEntity owner)
-                || !owner.isAlive()) discard();
+                || !owner.isAlive()) { discard(); return; }
+        SoulGlow.light(world, getBoundingBox().getCenter(), NecromancerRules.GLOW_SOUL, NecromancerRules.GLOW_LINGER);
     }
 }

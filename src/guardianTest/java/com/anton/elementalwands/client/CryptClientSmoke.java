@@ -94,49 +94,63 @@ public final class CryptClientSmoke implements ClientModInitializer {
                     if (scene == 70) shot(c, "crypt-rim.png");
                     if (scene == 75) next();
                 }
-                case 2 -> { // summon the boss at the circle and keep it passive for the camera
+                case 2 -> { // summon: the intro cinematic plays, then the boss is kept passive for the camera
                     if (++scene == 1) onServer(server, () -> {
                         var p = player(server, uuid);
                         run(server, p, "ew crypt summon");
                         var realm = server.getWorld(HollowCryptRealm.WORLD);
                         var bosses = realm.getEntitiesByClass(NecromancerEntity.class, p.getBoundingBox().expand(60), e -> e.isAlive());
                         require(bosses.size() == 1, "Expected one summoned necromancer, found " + bosses.size());
-                        bosses.get(0).stopFight();
                         BlockPos centre = HollowCryptRealm.nearestCentre(p.getEntityPos());
                         require(bosses.get(0).getBlockPos().isWithinDistance(centre.up(), 2), "Boss did not rise at the circle");
+                        require(bosses.get(0).inIntro(), "Summon did not open with the intro");
+                    });
+                    if (scene < INTRO_END) { introShots(c, scene - 2); return; }
+                    if (scene == INTRO_END) onServer(server, () -> {
+                        var p = player(server, uuid);
+                        var boss = crypt(server, p);
+                        require(!boss.inIntro() && boss.isBossAggressive(), "The fight did not start after the intro: " + boss.status());
+                        var realm = server.getWorld(HollowCryptRealm.WORLD);
+                        BlockPos centre = HollowCryptRealm.nearestCentre(p.getEntityPos());
+                        int lit = 0;
+                        for (BlockPos q : BlockPos.iterate(centre.add(-44, 1, -44), centre.add(44, 4, 44)))
+                            if (realm.getBlockState(q).isOf(Blocks.SOUL_CAMPFIRE) && realm.getBlockState(q).get(net.minecraft.block.CampfireBlock.LIT)) lit++;
+                        require(lit >= 8, "The intro's ring lit only " + lit + " braziers");
+                        boss.stopFight();
                         p.networkHandler.requestTeleport(centre.getX() + 6.5, HollowCryptRealm.SURFACE_Y + 1, centre.getZ() + 12.5, 150, 0);
                     });
-                    if (scene > 5) lookAtBoss(c);
-                    if (scene == 40) shot(c, "crypt-boss.png");
+                    int s = scene - INTRO_END + 1;
+                    if (s > 5) lookAtBoss(c);
+                    if (s == 40) shot(c, "crypt-boss.png");
                     // A siege from a shielded player: the caster takes a bough above the lid and raises wave 1.
-                    if (scene == 45) onServer(server, () -> {
+                    if (s == 45) onServer(server, () -> {
                         var p = player(server, uuid);
                         p.getAbilities().invulnerable = true; p.sendAbilitiesUpdate();
                         var boss = crypt(server, p);
                         boss.startFight();
                         require(boss.requestSiege(), "Siege could not start: " + boss.status());
                     });
-                    if (scene == 90) onServer(server, () -> {
+                    if (s == 90) onServer(server, () -> {
                         var p = player(server, uuid);
                         var boss = crypt(server, p);
                         BlockPos centre = HollowCryptRealm.nearestCentre(p.getEntityPos());
                         require(boss.stage() == NecromancerRules.Stage.SIEGE_1 && boss.hasNoGravity()
                                 && boss.getY() > HollowCryptRealm.SURFACE_Y + HollowCryptRealm.PLAY_CEILING + 1, "Caster is not on a bough perch: " + boss.status());
-                        require(HollowCryptRealm.perches(centre).stream().anyMatch(s -> s.distanceTo(boss.getEntityPos()) < .1), "Caster is off the exported perches");
+                        require(HollowCryptRealm.perches(centre).stream().anyMatch(spot -> spot.distanceTo(boss.getEntityPos()) < .1), "Caster is off the exported perches");
                         // Across the clearing from the perch, on the far rim.
                         Vec3d away = centre.toCenterPos().subtract(boss.getEntityPos()).multiply(1, 0, 1).normalize().multiply(HollowCryptRealm.PLAY_RADIUS - 3);
                         p.networkHandler.requestTeleport(centre.getX() + .5 + away.x, HollowCryptRealm.SURFACE_Y + 1, centre.getZ() + .5 + away.z, 0, 0);
                     });
-                    if (scene == 85) shot(c, "crypt-siege-perch-near.png");
-                    if (scene == 115) shot(c, "crypt-siege-perch-far-rim.png");
-                    if (scene == 120) onServer(server, () -> {
+                    if (s == 85) shot(c, "crypt-siege-perch-near.png");
+                    if (s == 115) shot(c, "crypt-siege-perch-far-rim.png");
+                    if (s == 120) onServer(server, () -> {
                         var p = player(server, uuid);
                         var boss = crypt(server, p);
                         boss.stopFight();
                         require(!boss.hasNoGravity() && boss.getY() < HollowCryptRealm.SURFACE_Y + 3, "Stopped caster stayed on its perch");
                         p.getAbilities().invulnerable = false; p.sendAbilitiesUpdate();
                     });
-                    if (scene == 125) next();
+                    if (s == 125) next();
                 }
                 case 3 -> { // containment, teleport limits and block protection
                     if (++scene == 1) onServer(server, () -> {
@@ -342,6 +356,18 @@ public final class CryptClientSmoke implements ClientModInitializer {
             var d = boss.getEntityPos().add(0, 1.2, 0).subtract(c.player.getEyePos());
             look(c, (float) Math.toDegrees(Math.atan2(-d.x, d.z)), (float) -Math.toDegrees(Math.atan2(d.y, d.horizontalLength())));
         }
+    }
+    /** Scene ticks since the summon: the intro's shots, with its letterbox, for review. */
+    private static final int INTRO_END = com.anton.elementalwands.entity.necromancer.NecromancerIntro.LENGTH + 20;
+    /** -PintroVideo also saves every tick of the intro, for a review video (ffmpeg -framerate 20). */
+    private static final boolean INTRO_VIDEO = Boolean.getBoolean("crypt.introVideo");
+    private static void introShots(MinecraftClient c, int t) {
+        c.options.hudHidden = false;
+        if (t == 20) require(com.anton.elementalwands.client.NecromancerIntroClient.cinematic(), "The intro did not take the camera");
+        if (INTRO_VIDEO && t >= 0 && t <= com.anton.elementalwands.entity.necromancer.NecromancerIntro.LENGTH + 4)
+            shot(c, String.format("intro-video-%03d.png", t));
+        for (int[] at : new int[][]{{30, 1}, {84, 2}, {110, 3}, {130, 4}, {146, 5}, {170, 6}, {190, 7}, {232, 8}, {250, 9}})
+            if (t == at[0]) shot(c, "crypt-intro-" + at[1] + ".png");
     }
     private static void shot(MinecraftClient c, String name) { ScreenshotRecorder.saveScreenshot(c.runDirectory, name, c.getFramebuffer(), 1, t -> {}); }
     private static void require(boolean b, String why) { if (!b) throw new AssertionError(why); }

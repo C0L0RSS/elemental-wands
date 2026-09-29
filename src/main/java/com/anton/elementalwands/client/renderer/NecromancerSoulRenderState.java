@@ -12,6 +12,7 @@ public class NecromancerSoulRenderState extends LivingEntityRenderState implemen
 
     private final Map<DataTicket<?>, Object> geckolibData = new HashMap<>();
     public float yaw, pitch;
+    public SoulLightPool pool;
 
     @Override
     public <D> void addGeckolibData(DataTicket<D> ticket, D data) {

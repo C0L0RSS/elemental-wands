@@ -110,6 +110,14 @@ public final class NecromancerRules {
     public static final int RAIN_START = 60, RAIN_WARNING = 30, RAIN_BURN = 40;
     public static final double RAIN_RADIUS = 2.5, RAIN_BURN_RADIUS = 1.6, RAIN_ARC = 3, RAIN_SPREAD_MIN = 3, RAIN_SPREAD_MAX = 6;
     public static final float RAIN_DAMAGE = 10;
+    /**
+     * Soul light: block light levels the spells carry through the dark crypt. A light outlives its
+     * last refresh by GLOW_LINGER ticks, so a moving spell leaves only a short trail of glows.
+     */
+    public static final int GLOW_FIREBALL = 14, GLOW_BOLT = 11, GLOW_HARVEST = 9, GLOW_SOUL = 13, GLOW_LINGER = 3,
+            GLOW_IMPACT = 15, GLOW_IMPACT_TICKS = 8;
+    /** A rain marker brightens in four steps as its fireball closes in (6, 9, 12, 15): few light rebuilds. */
+    public static int rainGlow(int age) { return 6 + 3 * Math.clamp(age * 4L / RAIN_WARNING, 0, 3); }
     /** A flare marks the perch or landing point this long before the caster moves. */
     public static final int SIEGE_FLARE = 12, SIEGE_FIRST_WAVE = 20;
     /** Outside the crypt there are no boughs: the caster hovers this far above home. */

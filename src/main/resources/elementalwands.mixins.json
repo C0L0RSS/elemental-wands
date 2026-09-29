@@ -35,6 +35,11 @@
     "ThornbiteProjectionAccessor",
     "ThornbiteVisibilityMixin",
     "WandMouseMixin",
-    "WandKeyboardMixin"
+    "WandKeyboardMixin",
+    "IntroCameraMixin",
+    "IntroHudMixin",
+    "IntroGameRendererMixin",
+    "IntroInputMixin",
+    "IntroLookMixin"
   ]
 }

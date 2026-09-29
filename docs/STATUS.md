@@ -9,7 +9,12 @@ It records known verification limits; it is not a fresh installation receipt.
   reinforcement crawlers, quickened undead and Soul Fire Rain from the perch. The colossus
   charge tells only through body language with a random windup, and phase two adds Grave
   Dive, Soul Harvest and the soul split at a quarter health. Server fixtures cover the
-  full two-siege flow with rain, and every phase-two mechanic.
+  full two-siege flow with rain, and every phase-two mechanic. A skippable intro cinematic
+  now opens each crypt fight: a zombie's soul is torn out and a pan reveals the Necromancer
+  hauling it into his staff, then his slam lights the rim braziers. The intro clip and the
+  dragged-soul clip await workshop approval; the camera shots await review from the crypt
+  client fixture's `crypt-intro-*.png` frames. Necromancer spells now cast soul light (real
+  block light plus a blue ground pool); FPS on weaker machines is untested.
   Pending: user approval of the new clips (workshop) and the fireball and soul models
   (`/.local-previews/soul-fire/`), then install and client checks; a solo and co-op Lunar
   playtest with `/ew necromancer log on` to tune health, wave sizes, rain damage, dive and

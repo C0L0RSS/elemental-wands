@@ -11,6 +11,8 @@ public class SoulBoltRenderState extends EntityRenderState implements GeoRenderS
 
     private final Map<DataTicket<?>, Object> geckolibData = new HashMap<>();
     public float yaw, pitch;
+    /** Soul light on the ground under the skull or fireball, and under a fireball's marker. */
+    public SoulLightPool pool, marker;
 
     @Override
     public <D> void addGeckolibData(DataTicket<D> ticket, D data) {

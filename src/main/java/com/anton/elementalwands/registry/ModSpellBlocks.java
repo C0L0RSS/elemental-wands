@@ -121,6 +121,22 @@ public final class ModSpellBlocks {
                     .pistonBehavior(PistonBehavior.BLOCK)
                     .dropsNothing());
 
+    /** Invisible, self-clearing light carried by the Necromancer's soul spells; see {@code SoulGlow}. */
+    public static final Block SOUL_GLOW = register("soul_glow", com.anton.elementalwands.block.SoulGlowBlock::new,
+            AbstractBlock.Settings.create()
+                    .replaceable()
+                    .noCollision()
+                    .nonOpaque()
+                    .strength(-1.0f, 3600000.0f)
+                    .luminance(state -> state.get(com.anton.elementalwands.block.SoulGlowBlock.LEVEL))
+                    .ticksRandomly()
+                    .suffocates((state, world, pos) -> false)
+                    .blockVision((state, world, pos) -> false)
+                    .allowsSpawning((state, world, pos, type) -> false)
+                    .sounds(BlockSoundGroup.INTENTIONALLY_EMPTY)
+                    .pistonBehavior(PistonBehavior.DESTROY)
+                    .dropsNothing());
+
     private ModSpellBlocks() {
     }
 

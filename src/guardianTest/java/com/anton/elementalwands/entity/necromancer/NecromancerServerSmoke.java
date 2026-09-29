@@ -7,7 +7,10 @@ import com.anton.elementalwands.entity.necromancer.NecromancerRules.Stage;
 import com.anton.elementalwands.entity.undead.HollowArcherEntity;
 import com.anton.elementalwands.entity.undead.HollowBruteEntity;
 import com.anton.elementalwands.entity.undead.HollowCrawlerEntity;
+import com.anton.elementalwands.block.SoulGlowBlock;
 import com.anton.elementalwands.registry.ModEntities;
+import com.anton.elementalwands.registry.ModSpellBlocks;
+import com.anton.elementalwands.util.SoulGlow;
 import com.anton.elementalwands.util.SpellCombat;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -16,6 +19,7 @@ import java.util.UUID;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.block.Blocks;
+import net.minecraft.block.CampfireBlock;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.MobEntity;
@@ -23,18 +27,20 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 
 /** Real-server spell, wave, siege and lifecycle regression for the Hollow Necromancer. */
 public final class NecromancerServerSmoke implements ModInitializer {
     private static final Box AREA = new Box(-30, 90, -30, 50, 130, 50);
-    private int tick, siege, since;
+    private static final List<BlockPos> BRAZIERS = List.of(new BlockPos(20, 100, 3), new BlockPos(-12, 100, -30));
+    private int tick, siege, since, intro = -1;
     private ServerPlayerEntity target, second;
     private NecromancerEntity boss;
     private float bossBefore;
     private List<UUID> firstRaised = List.of();
-    private boolean sniped, rained;
+    private boolean sniped, rained, litBolt, litBall, litMarker;
 
     public void onInitialize() {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
@@ -63,10 +69,16 @@ public final class NecromancerServerSmoke implements ModInitializer {
             require(boss instanceof WandBoss, "Necromancer is not a WandBoss");
             wall(5, Blocks.STONE);
             boss.testAction(target, Action.BOLT);
+            // A glow nothing refreshes, as a crash or reload would leave one, clears itself.
+            w.setBlockState(new BlockPos(-5, 100, -5), ModSpellBlocks.SOUL_GLOW.getDefaultState());
         }
         if (boss == null) return;
+        if (t == 25 + SoulGlow.CHECK + 1) require(w.getBlockState(new BlockPos(-5, 100, -5)).isAir(), "An orphaned soul light did not clear itself");
+        if (t > 25 && t < 90 && !litBolt) for (var bolt : w.getEntitiesByClass(SoulBoltEntity.class, AREA, e -> !e.isRemoved()))
+            if (glows(w).stream().anyMatch(p -> p.toCenterPos().squaredDistanceTo(bolt.getBoundingBox().getCenter()) < 3)) litBolt = true;
         // Cover: every bolt of the volley stops at the wall.
         if (t == 90) {
+            require(litBolt, "Soul bolts carried no light");
             require(target.getHealth() == 20, "Soul bolt passed through cover: " + target.getHealth());
             require(count(w, SoulBoltEntity.class) == 0, "Blocked bolts lingered");
             wall(5, Blocks.AIR);
@@ -177,6 +189,8 @@ public final class NecromancerServerSmoke implements ModInitializer {
         }
         // Soul Fire Rain: a marker on each player; the one who stays is blasted, the one who leaves is spared.
         if (t == 395) {
+            require(glows(w).isEmpty(), "Soul light left behind by earlier spells: " + glows(w));
+            w.setBlockState(new BlockPos(10, 100, 0), Blocks.COBWEB.getDefaultState()); // Soul light must work around it, never replace it.
             target.setPosition(10.5, 100, .5); second.setPosition(.5, 100, 20.5); heal(target); heal(second);
             boss.refreshPositionAndAngles(.5, 100, .5, 0, 0);
             require(boss.testRain(target) == NecromancerRules.rainMarkers(2, Stage.SIEGE_1), "Rain volley size wrong");
@@ -188,9 +202,57 @@ public final class NecromancerServerSmoke implements ModInitializer {
                     "Soul fireball missed the player under its marker: " + target.getHealth());
             require(second.getHealth() == 20, "Soul fireball hit a player who left its marker");
             require(count(w, SoulFireballEntity.class) == 0, "Soul fireballs outlived their landing");
+            var flash = w.getBlockState(new BlockPos(10, 101, 0));
+            require(flash.isOf(ModSpellBlocks.SOUL_GLOW) && flash.get(SoulGlowBlock.LEVEL) == NecromancerRules.GLOW_IMPACT, "No soul light flash over the blast: " + flash);
+        }
+        // Soul light rides every fireball and its marker, only ever in air, and all of it clears after the landing.
+        if (t > 395 && t < 395 + NecromancerRules.RAIN_WARNING) {
+            var lit = glows(w);
+            require(lit.stream().allMatch(p -> p.getY() >= 100), "Soul light replaced the floor: " + lit);
+            for (var ball : w.getEntitiesByClass(SoulFireballEntity.class, AREA, e -> !e.isRemoved())) {
+                Vec3d at = ball.getEntityPos().add(0, .3, 0);
+                if (lit.stream().anyMatch(p -> p.toCenterPos().squaredDistanceTo(at) < 3)) litBall = true;
+                if (lit.stream().anyMatch(p -> p.toCenterPos().squaredDistanceTo(ball.target()) < 3)) litMarker = true;
+            }
+        }
+        if (t == 395 + NecromancerRules.RAIN_WARNING + NecromancerRules.GLOW_IMPACT_TICKS + 6) {
+            require(litBall && litMarker, "Soul Fire Rain carried no light: ball " + litBall + ", marker " + litMarker);
+            require(glows(w).isEmpty(), "Soul light outlived the rain: " + glows(w));
+            require(w.getBlockState(new BlockPos(10, 100, 0)).isOf(Blocks.COBWEB), "Soul light replaced a block under the marker");
+            w.setBlockState(new BlockPos(10, 100, 0), Blocks.AIR.getDefaultState());
+        }
+        // The intro cinematic holds both players still and unhurt; the fight starts early only when both skip.
+        if (t == 430) {
+            heal(target); heal(second);
+            target.setPosition(10.5, 100, .5); second.setPosition(.5, 100, 14.5);
+            boss.refreshPositionAndAngles(.5, 100, .5, 0, 0);
+            for (BlockPos pos : BRAZIERS) w.setBlockState(pos, Blocks.SOUL_CAMPFIRE.getDefaultState());
+            boss.beginIntro(List.of(target, second));
+        }
+        if (t == 433) {
+            require(boss.inIntro() && !boss.isBossAggressive() && boss.isAiDisabled(), "Intro did not hold the boss");
+            require(NecromancerIntro.watching(target) && NecromancerIntro.watching(second), "Intro did not hold the players");
+            require(count(w, IntroZombieEntity.class) == 1, "Intro zombie missing");
+            require(BRAZIERS.stream().noneMatch(pos -> w.getBlockState(pos).get(CampfireBlock.LIT)), "Intro did not put out the braziers");
+            float health = boss.getHealth();
+            require(!boss.damage(w, w.getDamageSources().playerAttack(target), 20) && boss.getHealth() == health, "Boss took damage in its intro");
+            require(!target.damage(w, w.getDamageSources().mobAttack(boss), 6) && target.getHealth() == 20, "A watcher took damage in the intro");
+            target.setPosition(14.5, 100, 4.5);
+            NecromancerIntro.skip(target);
+        }
+        if (t == 435) require(target.getEntityPos().squaredDistanceTo(10.5, 100, .5) < .01, "A watcher walked away during the intro: " + target.getEntityPos());
+        if (t == 445) {
+            require(boss.inIntro(), "One player's skip ended the intro for everyone");
+            NecromancerIntro.skip(second);
+        }
+        if (t == 453) {
+            require(!boss.inIntro() && boss.isBossAggressive() && !NecromancerIntro.watching(target), "A unanimous skip did not start the fight");
+            require(count(w, IntroZombieEntity.class) == 0 && count(w, IntroSoulEntity.class) == 0, "Skipped intro left its actors behind");
+            require(BRAZIERS.stream().allMatch(pos -> w.getBlockState(pos).get(CampfireBlock.LIT)), "Skipped intro left the braziers dark");
+            boss.stopFight();
         }
         // Player spells damage the boss as any WandBoss.
-        if (t == 440) {
+        if (t == 460) {
             boss.setHealth(boss.getMaxHealth()); // The drain check left it below the first duel's gate.
             float health = boss.getHealth();
             require(SpellCombat.damage(boss, w, w.getDamageSources().playerAttack(target), 10, target, WizardAffinity.FIRE), "Wand damage rejected");
@@ -198,10 +260,32 @@ public final class NecromancerServerSmoke implements ModInitializer {
             boss.refreshPositionAndAngles(.5, 100, .5, 0, 0);
             target.setPosition(10.5, 100, .5); second.setPosition(.5, 100, 14.5);
             heal(target); heal(second);
-            boss.startFight();
-            siege = 1; since = t;
+            for (BlockPos pos : BRAZIERS) w.setBlockState(pos, Blocks.SOUL_CAMPFIRE.getDefaultState());
+            boss.beginIntro(List.of(target, second));
+            intro = t;
         }
+        if (intro >= 0) introFlow(w, t - intro);
         if (siege > 0) siegeFlow(w, t, t - since);
+    }
+
+    /** The whole intro plays out: the zombie's soul, the grave souls, the ring lighting the braziers, then the fight. */
+    private void introFlow(ServerWorld w, int i) {
+        NecromancerIntro scene = boss.intro();
+        if (i == 30) require(scene != null && scene.victimAlive() && scene.watcherCount() == 2, "Intro lost its zombie or watchers");
+        if (i == 40) require(Math.abs(MathHelper.wrapDegrees(boss.getBodyYaw() - NecromancerIntro.PULL_FACING)) < 1, "He does not face the zombie: " + boss.getBodyYaw());
+        if (i == NecromancerIntro.PULL + 3) require(scene.soulTorn() && count(w, IntroSoulEntity.class) == 1, "The zombie's soul was not torn out");
+        if (i == NecromancerIntro.CRUMBLE + 2) require(!scene.victimAlive() && count(w, IntroZombieEntity.class) == 0, "The emptied zombie did not crumble");
+        if (i == NecromancerIntro.SOUL_ARRIVE + 2) require(!scene.soulTorn() && count(w, IntroSoulEntity.class) == 0, "The soul did not reach the staff");
+        if (i == NecromancerIntro.TURN_END + 2) require(Math.abs(MathHelper.wrapDegrees(boss.getBodyYaw())) < 1, "He did not turn to the players: " + boss.getBodyYaw());
+        if (i == NecromancerIntro.SLAM) require(BRAZIERS.stream().noneMatch(pos -> w.getBlockState(pos).get(CampfireBlock.LIT)), "Braziers lit before the slam");
+        if (i == NecromancerIntro.RING_END + 1) require(BRAZIERS.stream().allMatch(pos -> w.getBlockState(pos).get(CampfireBlock.LIT)), "The ring did not light the braziers");
+        if (i == NecromancerIntro.LENGTH - 5) require(boss.inIntro() && target.getHealth() == 20 && second.getHealth() == 20, "Intro ended early or let a watcher be hurt");
+        if (i == NecromancerIntro.LENGTH + 2) {
+            require(!boss.inIntro() && boss.isBossAggressive() && !boss.isAiDisabled(), "The fight did not start after the intro");
+            require(!NecromancerIntro.watching(target) && !NecromancerIntro.watching(second), "Players were still held after the intro");
+            intro = -1;
+            siege = 1; since = tick;
+        }
     }
 
     /** The full robed fight in fight mode: two sieges with their waves, the exposed crash and the transformation. */
@@ -279,7 +363,7 @@ public final class NecromancerServerSmoke implements ModInitializer {
                     require(boss.stage() == Stage.DONE && minions(w).isEmpty(), "Transformation began with the siege unfinished");
                     boss.stopFight();
                     require(!boss.hasNoGravity(), "Stopped caster kept its perch");
-                    Files.writeString(Path.of("NECROMANCER_PASSED.txt"), "Hollow Necromancer passed: cover stops soul bolts; every skull of an open volley lands; drain damages, heals within its cap, is tracked for clients and breaks on lost sight; wide grasping hands root a player who stays, spare one who steps out and are followed by an ambush burst from behind; siege waves rise on the floor away from players with the duo compositions, share the caster's side, cannot hurt it, finish rising with AI, do not burn at noon and dissolve on stop; blink escapes within the leash and leaves a curse; shift repositions away from everyone; wand damage applies; siege bodies are quickened; a Soul Fire Rain volley blasts the player who stays under a marker and spares one who leaves; the fight gates at 75% into a shielded perched siege where fireballs rain and a hovering target draws a perch bolt, waves 1-2 advance and a cleared siege crashes the caster down exposed; half health starts the second siege whose waves 3-4 bring brutes, and clearing it begins the transformation.\n");
+                    Files.writeString(Path.of("NECROMANCER_PASSED.txt"), "Hollow Necromancer passed: the intro holds the boss and both players still and unhurt, puts out the braziers, ends early only when everyone skips, tears the zombie's soul out while he faces it, lands it in the staff, turns him to the players, and its ring relights the braziers before the fight starts; cover stops soul bolts; every skull of an open volley lands; drain damages, heals within its cap, is tracked for clients and breaks on lost sight; wide grasping hands root a player who stays, spare one who steps out and are followed by an ambush burst from behind; siege waves rise on the floor away from players with the duo compositions, share the caster's side, cannot hurt it, finish rising with AI, do not burn at noon and dissolve on stop; blink escapes within the leash and leaves a curse; shift repositions away from everyone; wand damage applies; siege bodies are quickened; a Soul Fire Rain volley blasts the player who stays under a marker and spares one who leaves; soul light rides the bolts, fireballs and markers, flashes on impact, never replaces a block and clears itself, orphans included; the fight gates at 75% into a shielded perched siege where fireballs rain and a hovering target draws a perch bolt, waves 1-2 advance and a cleared siege crashes the caster down exposed; half health starts the second siege whose waves 3-4 bring brutes, and clearing it begins the transformation.\n");
                     w.getServer().stop(false);
                 }
                 require(s < 200, "Second siege never ended in the transformation: " + boss.status());
@@ -297,6 +381,13 @@ public final class NecromancerServerSmoke implements ModInitializer {
     private static void heal(ServerPlayerEntity player) { player.setHealth(20); player.timeUntilRegen = 0; player.clearStatusEffects(); player.extinguish(); }
     private static List<MobEntity> minions(ServerWorld w) { return w.getEntitiesByClass(MobEntity.class, AREA, e -> e instanceof NecromancerMinion && e.isAlive()); }
     private static int count(ServerWorld w, Class<? extends net.minecraft.entity.Entity> type) { return w.getEntitiesByClass(type, AREA, e -> !e.isRemoved()).size(); }
+    /** Soul lights anywhere a rain volley or bolt can reach from the fixture's positions. */
+    private static List<BlockPos> glows(ServerWorld w) {
+        List<BlockPos> lit = new java.util.ArrayList<>();
+        for (BlockPos pos : BlockPos.iterate(-10, 99, -10, 20, 115, 30))
+            if (w.getBlockState(pos).isOf(ModSpellBlocks.SOUL_GLOW)) lit.add(pos.toImmutable());
+        return lit;
+    }
     private static ServerPlayerEntity player(MinecraftServer s, String name, double x, double y, double z) throws Exception {
         var f = com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player", MinecraftServer.class, UUID.class, String.class, double.class, double.class, double.class);
         f.setAccessible(true);

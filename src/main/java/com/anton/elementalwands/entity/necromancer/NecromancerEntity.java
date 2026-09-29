@@ -44,6 +44,7 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
     private static final TrackedData<Integer> GRABBED = DataTracker.registerData(NecromancerEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Boolean> SPLIT = DataTracker.registerData(NecromancerEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Boolean> BURIED = DataTracker.registerData(NecromancerEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    private static final TrackedData<Long> INTRO_START = DataTracker.registerData(NecromancerEntity.class, TrackedDataHandlerRegistry.LONG);
     private static final EntityDimensions COLOSSUS_SIZE = EntityDimensions.fixed(NecromancerRules.COLOSSUS_WIDTH, NecromancerRules.COLOSSUS_HEIGHT);
     private boolean phasePending, soulFreed, soulHitting;
     private NecromancerRules.Stage stage = NecromancerRules.Stage.DUEL_A;
@@ -51,6 +52,7 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
     private final Map<UUID, HurtWindow> hurtWindows = new HashMap<>();
     private static final UUID ENVIRONMENT_DAMAGE = new UUID(0, 0);
     private final NecromancerCombat combat = new NecromancerCombat(this);
+    private NecromancerIntro intro;
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
     public NecromancerEntity(EntityType<? extends NecromancerEntity> type, World world) {
@@ -78,6 +80,7 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
         builder.add(GRABBED, -1);
         builder.add(SPLIT, false);
         builder.add(BURIED, false);
+        builder.add(INTRO_START, -1L);
     }
 
     /** The giant skeleton: set partway through the transformation, when its body has grown out. */
@@ -136,6 +139,28 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
     @Override public boolean isBossAggressive() { return !getCommandTags().contains(PASSIVE_TAG); }
 
     public void startFight() { removeCommandTag(PASSIVE_TAG); combat.start(); }
+    /**
+     * Opens the fight with the intro cinematic: the boss stands passive and untouchable while the
+     * watchers see it form, then the fight starts on its own (or early, once everyone skips).
+     */
+    public void beginIntro(java.util.List<ServerPlayerEntity> watchers) {
+        if (!(getEntityWorld() instanceof ServerWorld world)) return;
+        if (intro != null) intro.cancel();
+        addCommandTag(PASSIVE_TAG);
+        combat.cancel();
+        setAiDisabled(true);
+        intro = new NecromancerIntro(this, world, watchers);
+        dataTracker.set(INTRO_START, world.getTime() + 1);
+        triggerAnim(CONTROLLER, "intro");
+    }
+    void endIntro(boolean early) {
+        intro = null;
+        dataTracker.set(INTRO_START, -1L);
+        if (early) stopTriggeredAnim(CONTROLLER, "intro");
+        startFight();
+    }
+    public boolean inIntro() { return dataTracker.get(INTRO_START) >= 0; }
+    NecromancerIntro intro() { return intro; }
     public void stopFight() { addCommandTag(PASSIVE_TAG); combat.cancel(); }
     public void testAction(ServerPlayerEntity player, NecromancerRules.Action action) {
         addCommandTag(PASSIVE_TAG);
@@ -175,6 +200,7 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
     @Override
     public boolean damage(ServerWorld world, DamageSource source, float amount) {
         if (source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY)) return super.damage(world, source, amount);
+        if (intro != null) return false; // Still forming in the intro cinematic.
         Entity attacker = source.getAttacker();
         // Its own army and spells never wear it down.
         if (attacker == this || NecromancerMinion.belongsTo(attacker, this)) return false;
@@ -267,13 +293,18 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
         }
         if (!(getEntityWorld() instanceof ServerWorld world)) return;
         if (!isAlive()) { combat.cancel(); return; }
+        if (intro != null) { if (!intro.tick(world)) intro = null; return; }
         if (isBossAggressive()) combat.tick(world);
         else combat.tickReview(world);
     }
 
     @Override
     public void remove(Entity.RemovalReason reason) {
-        if (getEntityWorld() instanceof ServerWorld) combat.cancel();
+        if (getEntityWorld() instanceof ServerWorld) {
+            if (intro != null) intro.cancel();
+            intro = null;
+            combat.cancel();
+        }
         super.remove(reason);
     }
 
@@ -327,6 +358,7 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
                     if (state.animatable().isColossus()) return state.setAndContinue(state.isMoving() ? COLOSSUS_WALK : COLOSSUS_IDLE);
                     return state.setAndContinue(state.isMoving() ? WALK : IDLE);
                 }).receiveTriggeredAnimations()
+                .triggerableAnim("intro", RawAnimation.begin().thenPlay("animation.hollow_necromancer.intro"))
                 .triggerableAnim("bolt", RawAnimation.begin().thenPlay("animation.hollow_necromancer.cast_bolt"))
                 .triggerableAnim("hands", RawAnimation.begin().thenPlay("animation.hollow_necromancer.cast_hands"))
                 .triggerableAnim("drain", RawAnimation.begin().thenPlay("animation.hollow_necromancer.drain"))

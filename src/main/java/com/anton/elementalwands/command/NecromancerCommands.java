@@ -19,7 +19,7 @@ public final class NecromancerCommands {
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         var root = CommandManager.literal("necromancer").requires(source -> source.hasPermissionLevel(2));
-        for (String action : new String[]{"fight", "stop", "status", "transform", "siege", "split", "rain", "bolt", "hands", "drain", "blink", "shift", "ambush", "swipe", "grab", "rush", "dive", "harvest"})
+        for (String action : new String[]{"fight", "intro", "stop", "status", "transform", "siege", "split", "rain", "bolt", "hands", "drain", "blink", "shift", "ambush", "swipe", "grab", "rush", "dive", "harvest"})
             root.then(CommandManager.literal(action).executes(context -> run(context.getSource(), action)));
         root.then(CommandManager.literal("wave").then(CommandManager.argument("number", IntegerArgumentType.integer(1, 4))
                 .executes(context -> wave(context.getSource(), IntegerArgumentType.getInteger(context, "number")))));
@@ -56,6 +56,11 @@ public final class NecromancerCommands {
         NecromancerEntity boss = nearest(source);
         String message = switch (action) {
             case "fight" -> { boss.startFight(); yield "fighting nearby Survival/Adventure players. /ew necromancer stop to end."; }
+            case "intro" -> {
+                var world = source.getWorld();
+                boss.beginIntro(world.getPlayers(p -> p.isAlive() && !p.isSpectator() && p.squaredDistanceTo(boss) <= 64 * 64));
+                yield "playing the intro cinematic for players within 64 blocks, then fighting. Hold Sneak to skip.";
+            }
             case "stop" -> { boss.stopFight(); yield "passive; its army dissolved. Stays passive after reload."; }
             case "status" -> boss.status();
             case "transform" -> {

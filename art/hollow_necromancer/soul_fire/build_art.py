@@ -202,6 +202,103 @@ soul_bones = {
 for i in range(4):
     soul_bones[f'tail_{i}'] = {'rotation': keys([(DRIFT * k / 8, (6 * math.sin(2 * math.pi * k / 8 - i * .7),
                                                                (10 + 6 * i) * math.sin(2 * math.pi * k / 8 - i * .9), 0)) for k in range(9)])}
+
+def cycle(length, pose, steps=16):
+    """One loop of `pose(angle)`, sampled evenly; angle runs 0 to 2 pi over the loop."""
+    return keys([(length * k / steps, pose(2 * math.pi * k / steps)) for k in range(steps + 1)])
+
+
+# Dragged (the intro): torn from a body and hauled backward by the chest into the staff. The
+# entity faces back the way it came (model -Z toward its origin), so the pull runs along +Z: the
+# tail leads in, stretched thin along the path, while the head strains back toward where it
+# came from, jaw wide, wisps clawing after it.
+DRAG = .8
+dragged_bones = {
+    'soul': {'rotation': cycle(DRAG, lambda a: (3 * math.sin(2 * a), 6 * math.sin(a), 5 * math.sin(a + 1))),
+             'scale': cycle(DRAG, lambda a: (.86 - .04 * math.sin(2 * a), .9, 1.28 + .08 * math.sin(2 * a)))},
+    'head': {'position': cycle(DRAG, lambda a: (.3 * math.sin(3 * a), .4 * math.sin(2 * a), -1 - .4 * math.sin(2 * a))),
+             'rotation': cycle(DRAG, lambda a: (-18 + 5 * math.sin(2 * a), 9 * math.sin(4 * a), 7 * math.sin(3 * a + .5)))},
+    'mouth': {'scale': cycle(DRAG, lambda a: (1.25, 2.3 + .35 * math.sin(4 * a), 1))},
+}
+for side, sign in (('left', 1), ('right', -1)):
+    # Swung round from trailing to reaching forward, flailing out of step with each other.
+    shift = 0 if sign > 0 else math.pi
+    dragged_bones[f'wisp_{side}'] = {'rotation': cycle(DRAG, lambda a, s=sign, p=shift: (
+        25 * math.sin(2 * a + p), s * (135 + 30 * math.sin(2 * a + 1 + p)), s * 20 * math.sin(2 * a + p)))}
+for i in range(4):
+    # Each segment stretches along the pull and whips faster than in the drift, the tip widest.
+    dragged_bones[f'tail_{i}'] = {
+        'rotation': cycle(DRAG, lambda a, i=i: (8 * math.sin(2 * a - i * .9), (14 + 8 * i) * math.sin(2 * a - i * 1.1), 0)),
+        'scale': keys([(0, (.85, .85, 1.35 if i == 0 else 1.1)), (DRAG, (.85, .85, 1.35 if i == 0 else 1.1))])}
+
+
+def eased(frames):
+    """Tick-timed poses, eased in and out between them and baked to one key per tick."""
+    out = []
+    for (t0, a), (t1, b) in zip(frames, frames[1:]):
+        for t in range(t0, t1):
+            f = (t - t0) / (t1 - t0)
+            f = f * f * (3 - 2 * f)
+            out.append((t / 20, [x + (y - x) * f for x, y in zip(a, b)]))
+    return keys(out + [(frames[-1][0] / 20, list(frames[-1][1]))])
+
+
+def shudder(start, stop, base, grow_from, grow_to, step=2):
+    """A slow, heavy tremble around `base` whose swing grows from one amplitude to another."""
+    out = []
+    for t in range(start, stop, step):
+        f = (t - start) / (stop - start)
+        sign = 1 if (t - start) // step % 2 else -1
+        out.append((t, [b + sign * (lo + (hi - lo) * f) for b, lo, hi in zip(base, grow_from, grow_to)]))
+    return out
+
+
+# Torn out (the intro, before `dragged`): 32 ticks from the moment the soul starts leaving the
+# zombie's chest, played once and held. The entity faces forward, away from the body, and the
+# renderer grows it from 0.35 to full size over the first 12 ticks. The head pushes out face
+# first and opens into a scream (0-10); it strains against the body with its wisps clawing back
+# toward the chest and its tail stretched taut behind it, shuddering harder and harder (10-26);
+# the tail draws out to its longest and snaps, the tip whipping forward (26-32). The last pose
+# is the first of `dragged`, apart from the tail's recoil, which the loop's blend carries on.
+TORN = 32
+start_of = lambda bone, channel: dragged_bones[bone][channel]['0.0000']
+torn_bones = {
+    'soul': {'rotation': eased([(0, (0, 0, 0)), (10, (0, 0, 0))] + shudder(12, 28, (0, 0, 0), (.4, 0, .8), (1.5, 0, 3)) +
+                               [(28, (-2, 0, 0)), (30, (-3, 0, 1)), (TORN, start_of('soul', 'rotation'))]),
+             'scale': eased([(0, (1, 1, 1)), (10, (.97, .97, 1.03)), (26, (.94, .95, 1.07)), (30, (.9, .92, 1.1)),
+                             (TORN, start_of('soul', 'scale'))])},
+    # Face down as it breaches, then lifted and a little tipped so the face reads.
+    'head': {'position': eased([(0, (0, -.5, -1)), (10, (0, 0, -1.2)), (26, (0, .2, -1.8)), (30, (0, .3, -2.6)),
+                                (31, (0, .2, -3.2)), (TORN, start_of('head', 'position'))]),
+             'rotation': eased([(0, (22, 0, 0)), (6, (6, 0, 2)), (10, (-6, 0, 6))] +
+                               shudder(12, 26, (-8, 0, 7), (1.5, 1.5, 1), (4, 5, 3.5), 3) +
+                               [(26, (-10, 0, 8)), (28, (-12, 4, 5)), (30, (-14, -4, 8)), (31, (-26, 0, 4)),
+                                (TORN, start_of('head', 'rotation'))])},
+    'mouth': {'scale': eased([(0, (1, .8, 1)), (4, (1.1, 1.3, 1)), (10, (1.25, 2.2, 1))] +
+                             shudder(12, 26, (1.25, 2.25, 1), (0, .08, 0), (0, .2, 0), 3) +
+                             [(26, (1.3, 2.4, 1)), (30, (1.35, 2.6, 1)), (TORN, start_of('mouth', 'scale'))])},
+}
+for side, sign in (('left', 1), ('right', -1)):
+    # Tucked back as it breaches, then clawing back toward the chest in turn, harder each time;
+    # flung forward by the snap into the loop's reaching pose.
+    lag = 0 if sign > 0 else 2
+    claws = [(10 + lag + 4 * k, (-18 - 4 * k, sign * (18 + 4 * k), 0) if k % 2 == 0 else (16 + 3 * k, -sign * (10 + 2 * k), 0))
+             for k in range(4)]
+    torn_bones[f'wisp_{side}'] = {'rotation': eased([(0, (0, -sign * 20, 0)), (8, (0, -sign * 12, 0))] + claws +
+                                                    [(28, (-34, sign * 34, 0)), (30, (-10, sign * 20, 0)), (31, (0, sign * 90, 0)),
+                                                     (TORN, start_of(f'wisp_{side}', 'rotation'))])}
+for i in range(4):
+    # Straight and taut behind it, humming rather than flailing, thinned and drawn a little
+    # longer (its tip stays about inside the chest it comes from); at the snap the tip whips
+    # up and forward. Segments inherit tail_0's stretch, so only it lengthens.
+    stretch = [(0, (.9, .9, 1)), (10, (.85, .85, 1.06 if i == 0 else 1)), (26, (.78, .78, 1.12 if i == 0 else 1)),
+               (30, (.7, .7, 1.18 if i == 0 else 1.02)), (31, (.8, .8, 1.25 if i == 0 else 1.05)), (TORN, start_of(f'tail_{i}', 'scale'))]
+    hum = shudder(10, 28, (0, 0, 0), (0, .3 * i, 0), (0, 1.2 * i, 0)) if i else [(10, (0, 0, 0))]
+    recoil = {0: 0, 1: 12, 2: 35, 3: 70}[i]
+    torn_bones[f'tail_{i}'] = {'scale': eased(stretch),
+                               'rotation': eased([(0, (0, 0, 0))] + hum + [(28, (0, 0, 0)), (30, (0, 0, 0)), (31, (recoil, 0, 0)),
+                                                                          (TORN, (recoil / 2, 0, 0))])}
+
 ANIMATIONS = {
     'soul_fireball': {'animation.soul_fireball.flight': {'animation_length': FLIGHT, 'loop': True, 'bones': fire_bones}},
     'harvest_soul': {
@@ -212,6 +309,8 @@ ANIMATIONS = {
             'head': {'rotation': keys([(0, (-25, 0, 0)), (.7, (5, 0, 0)), (1, (0, 0, 0))])},
             'tail_0': {'rotation': keys([(0, (30, 0, 0)), (1, (0, 0, 0))])},
             'mouth': {'scale': keys([(0, (1, 2, 1)), (1, (1, 1, 1))])}}},
+        'animation.harvest_soul.dragged': {'animation_length': DRAG, 'loop': True, 'bones': dragged_bones},
+        'animation.harvest_soul.torn_out': {'animation_length': TORN / 20, 'loop': 'hold_on_last_frame', 'bones': torn_bones},
     },
 }
 

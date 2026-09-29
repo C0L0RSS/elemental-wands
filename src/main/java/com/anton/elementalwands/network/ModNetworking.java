@@ -56,6 +56,8 @@ public final class ModNetworking {
         PayloadTypeRegistry.playS2C().register(SyncEntangleStacksPayload.ID, SyncEntangleStacksPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncStoneClusterPayload.ID, SyncStoneClusterPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(StoneStaggerPayload.ID, StoneStaggerPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(NecromancerIntroPayload.ID, NecromancerIntroPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(NecromancerIntroSkipPayload.ID, NecromancerIntroSkipPayload.CODEC);
     }
 
     public static void registerC2SReceivers() {
@@ -74,6 +76,8 @@ public final class ModNetworking {
                 (payload, context) -> com.anton.elementalwands.util.WandLoadouts.cast(context.player(), payload.slot(), payload.deliberate()));
         ServerPlayNetworking.registerGlobalReceiver(HubActionPayload.ID,
                 (payload, context) -> handleHub(context.player(), payload));
+        ServerPlayNetworking.registerGlobalReceiver(NecromancerIntroSkipPayload.ID,
+                (payload, context) -> com.anton.elementalwands.entity.necromancer.NecromancerIntro.skip(context.player()));
     }
 
     // -----------------------------------------------------------------------
@@ -263,6 +267,21 @@ public final class ModNetworking {
         public static final PacketCodec<RegistryByteBuf,FireLeapPayload> CODEC = PacketCodec.tuple(
                 PacketCodecs.VAR_INT,FireLeapPayload::entityId,net.minecraft.util.math.Vec3d.PACKET_CODEC,FireLeapPayload::from,
                 net.minecraft.util.math.Vec3d.PACKET_CODEC,FireLeapPayload::to,PacketCodecs.BOOLEAN,FireLeapPayload::active,FireLeapPayload::new);
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
+    /** The Necromancer's intro cinematic for this watcher: its first frame's world time and the circle it plays around; active=false ends it. */
+    public record NecromancerIntroPayload(int bossId, long start, float yaw, net.minecraft.util.math.Vec3d centre, boolean active) implements CustomPayload {
+        public static final Id<NecromancerIntroPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"necromancer_intro"));
+        public static final PacketCodec<RegistryByteBuf,NecromancerIntroPayload> CODEC = PacketCodec.tuple(
+                PacketCodecs.VAR_INT,NecromancerIntroPayload::bossId,PacketCodecs.VAR_LONG,NecromancerIntroPayload::start,
+                PacketCodecs.FLOAT,NecromancerIntroPayload::yaw,net.minecraft.util.math.Vec3d.PACKET_CODEC,NecromancerIntroPayload::centre,
+                PacketCodecs.BOOLEAN,NecromancerIntroPayload::active,NecromancerIntroPayload::new);
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
+    public record NecromancerIntroSkipPayload() implements CustomPayload {
+        public static final NecromancerIntroSkipPayload INSTANCE = new NecromancerIntroSkipPayload();
+        public static final Id<NecromancerIntroSkipPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"necromancer_intro_skip"));
+        public static final PacketCodec<RegistryByteBuf,NecromancerIntroSkipPayload> CODEC = PacketCodec.unit(INSTANCE);
         @Override public Id<? extends CustomPayload> getId() { return ID; }
     }
     public record StoneMotionPayload(int entityId, float yaw, float speed, int mode) implements CustomPayload {

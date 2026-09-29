@@ -40,7 +40,7 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
     private final boolean mechanics = Boolean.getBoolean("necro.mechanics");
     private volatile UUID target;
     private volatile int warnAt = -1, eruptAt = -1;
-    private volatile boolean sawFireball, sawSoul, sawHarvest;
+    private volatile boolean sawFireball, sawSoul, sawHarvest, sawGlow;
     private volatile String serverFireballs = "not cast";
     private int mechanicsTick;
     private boolean sawDrain, sawDrainClear;
@@ -530,7 +530,7 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
             server.getPlayerManager().getPlayer(observer).networkHandler.requestTeleport(-14.5, floor + 16, -10.5, -45, 40);
         });
         if (t == 563) cast(server, target, Action.HARVEST);
-        if (t > 563) lookAt(c, new net.minecraft.util.math.Vec3d(.5, floor, 6));
+        if (t > 563 && t < 660) lookAt(c, new net.minecraft.util.math.Vec3d(.5, floor, 6));
         if (t >= 590) for (var e : c.world.getEntities())
             if (e instanceof com.anton.elementalwands.entity.necromancer.HarvestSoulEntity) {
                 require((Object)c.getEntityRenderDispatcher().getRenderer(e) instanceof com.anton.elementalwands.client.renderer.HarvestSoulRenderer, "Soul uses the wrong renderer");
@@ -540,9 +540,30 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
         if (t == 592) shot(c, "mechanics-harvest-glow.png");
         if (t == 606) shot(c, "mechanics-harvest-rise.png");
         if (t == 645) shot(c, "mechanics-harvest-drift.png");
-        if (t == 660) {
-            require(sawHarvest, "No harvested soul reached the client");
-            Files.writeString(Path.of("NECRO_PASSED.txt"), "Hollow Necromancer second-playtest mechanics passed in the native client: model fireball rain, colossus charge crouch and coil, grave dive rear/plunge/tunnel/cracks/eruption/stuck, the soul split with the freed soul rendered, and a soul harvest with rendered souls; screenshots for visual review.\n");
+        if (t == 660) require(sawHarvest, "No harvested soul reached the client");
+        // Soul light at night: a rain volley and a skull volley light the floor and pool blue on it.
+        if (t == 662) server.execute(() -> {
+            var b = (NecromancerEntity)server.getOverworld().getEntity(bossId);
+            b.stopFight(); b.refreshPositionAndAngles(.5, floor, 3.5, 0, 0); b.setBodyYaw(0);
+            server.getPlayerManager().getPlayer(target).networkHandler.requestTeleport(.5, floor, 13.5, 180, 0);
+            server.getPlayerManager().getPlayer(observer).networkHandler.requestTeleport(-7.5, floor + 4.5, 6.5, -60, 30);
+        });
+        if (t == 666) server.execute(() -> ((NecromancerEntity)server.getOverworld().getEntity(bossId)).testRain(server.getPlayerManager().getPlayer(target)));
+        if (t > 662 && t < 740) lookAt(c, new net.minecraft.util.math.Vec3d(.5, floor + .5, 11.5));
+        if (t >= 668 && t < 696) for (var e : c.world.getEntities())
+            if (e instanceof com.anton.elementalwands.entity.necromancer.SoulFireballEntity ball)
+                for (BlockPos pos : BlockPos.iterate(ball.getBlockPos().add(-1, -1, -1), ball.getBlockPos().add(1, 1, 1)))
+                    if (c.world.getBlockState(pos).isOf(com.anton.elementalwands.registry.ModSpellBlocks.SOUL_GLOW)) sawGlow = true;
+        if (t == 676) shot(c, "mechanics-night-rain-flight.png");
+        if (t == 686) shot(c, "mechanics-night-rain-closing.png");
+        if (t == 694) shot(c, "mechanics-night-rain-marker.png");
+        if (t == 698) shot(c, "mechanics-night-rain-impact.png");
+        if (t == 706) cast(server, target, Action.BOLT);
+        if (t == 726) shot(c, "mechanics-night-bolts.png");
+        if (t == 732) shot(c, "mechanics-night-bolts-late.png");
+        if (t == 745) {
+            require(sawGlow, "No soul light reached the client around a fireball");
+            Files.writeString(Path.of("NECRO_PASSED.txt"), "Hollow Necromancer second-playtest mechanics passed in the native client: model fireball rain, colossus charge crouch and coil, grave dive rear/plunge/tunnel/cracks/eruption/stuck, the soul split with the freed soul rendered, a soul harvest with rendered souls, and soul light (glow blocks and blue ground pools) under a night rain and skull volley; screenshots for visual review.\n");
             done = true; c.scheduleStop();
         }
     }

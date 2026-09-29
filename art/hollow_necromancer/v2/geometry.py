@@ -201,3 +201,14 @@ for side, name in ((-1, 'right'), (1, 'left')):
     for k in range(4):
         x = side * 8 + (k - 1.5)
         link(foot, [x, 1.3, 0], [x, 1.3, -4 - (k % 2)], 1)
+
+
+# ---------------- Intro eye flares ----------------
+# Buried inside the robed face, so they stay unseen until an animation pushes them forward and
+# swells them (the intro's awakening). Set symmetrically over the eye texels painted on the
+# face, so a flare covers them. They reuse the colossus eyes' texture region (uv_of), so the
+# atlas never changes.
+colossus_eyes = [c['raw'] for c in cubes if c['bone'] == 'skull' and c['material'] == 'soul']
+for (x, name), source in zip(((-1, 'right'), (1, 'left')), colossus_eyes):
+    eye = bone('mage_eye_' + name, [x, 32, 0], 'mage_face')
+    cube(eye, [x, 32, 0], [1, 1, 1], 'soul', uv_of=source)

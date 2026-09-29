@@ -343,6 +343,145 @@ def second_playtest_clips(clip, rot, pos, scale, claw, clips):
     scale('perch_cast', 'staff_flame', [(0, 1.5), (.2, 1.8), (.35, 2.6), (.5, 1.4), (.8, 1.5)])
 
 
+def intro_clip(clips):
+    """The opening cinematic, 260 ticks (13 s) from the moment the players land; keys are written
+    in ticks to match the director's timeline. He stands robed in the circle throughout; the
+    skeleton inside stays the phase-two surprise. The game turns the entity: toward the zombie
+    for the pull (0-186), then about 107 degrees to the players (186-206). Everything here is
+    local, with the model's front (-Z) forward.
+
+    0-60 menacing stance; 60-72 staff raised overhead, left claw reaching for the zombie;
+    72-148 the pull (staff and body held still so the soul has a fixed target, the claw hauling
+    the soul in on an invisible rope); 148 the soul strikes the flame; 166 eyes flare; 172-186
+    staff lowered, head bowed at the low camera; 186-206 shuffling turn; 208 staff levelled at
+    the players, 213 hoisted, 216 slammed down; eased into the idle's first pose by 260."""
+    zero = (0, 0, 0)
+    clip = clips['intro'] = {'loop': False, 'animation_length': 13, 'bones': {}}
+    end = 260
+
+    def put(part, channel, frames):
+        """Eased like keys(), in ticks, without baking steps across a held value."""
+        frames = [(t / 20, (v, v, v) if isinstance(v, (int, float)) else tuple(v)) for t, v in frames]
+        out = {}
+        for (t0, a), (t1, b) in zip(frames, frames[1:]):
+            steps = 1 if a == b else max(1, math.ceil((t1 - t0) * 20 - 1e-9))
+            for i in range(steps):
+                f = i / steps
+                f = f * f * (3 - 2 * f)
+                out[f'{t0 + (t1 - t0) * i / steps:.4f}'] = [round(x + (y - x) * f, 4) for x, y in zip(a, b)]
+        out[f'{frames[-1][0]:.4f}'] = [round(v, 4) for v in frames[-1][1]]
+        clip['bones'].setdefault(part, {})[channel] = out
+
+    def rot(part, frames):
+        put(part, 'rotation', frames)
+
+    def pos(part, frames):
+        put(part, 'position', frames)
+
+    def strain(start, stop, a, b, shake, step=2):
+        """Ease from pose a to b over start-stop while shuddering every `step` ticks."""
+        out = []
+        for t in range(start + step, stop, step):
+            f = (t - start) / (stop - start)
+            f = f * f * (3 - 2 * f)
+            sign = 1 if (t - start) // step % 2 else -1
+            out.append((t, tuple(x + (y - x) * f + sign * s for x, y, s in zip(a, b, shake))))
+        return out + [(stop, b)]
+
+    def billow(start, stop, low, high, period):
+        """Alternate between two poses every half period: cloth snapping in the soul wind."""
+        return [(t, low if (t - start) // (period // 2) % 2 == 0 else high) for t in range(start, stop, period // 2)]
+
+    # World tilt of the staff is body + arm + forearm + staff (forward positive; the rest pose
+    # nets to zero): upright at his side, raised overhead leaning 15 degrees toward the zombie,
+    # levelled at 90, upright again when hoisted and when planted ten pixels ahead.
+    # With the arm pointing up, negative roll carries the staff out to his right side.
+    raised = {'body': (-10, 0, 0), 'right_arm': (-168, 0, -12), 'mage_forearm_right': (-10, 0, 0)}
+    staff_up = 15 + 10 + 168 + 10
+
+    # ---- Body. Still from 72 to 148, so the staff head is a fixed target for the soul.
+    rot('body', [(0, (3, 0, 0)), (30, (4.5, 0, 0)), (60, (3, 0, 0)), (66, (-2, 0, 0)), (72, raised['body']),
+                 (148, raised['body']), (150, (-18, 0, 0)), (153, (-7, 0, 0)), (156, (-12, 0, 0)), (160, (-10, 0, 0)),
+                 (172, (-10, 0, 0)), (186, (6, 0, 0)), (190, (5, 0, 2)), (196, (5, 0, -2)), (202, (5, 0, 1)),
+                 (208, (7, 0, 0)), (210, (9, 0, 0)), (213, (-12, 0, 0)), (215, (22, 0, 0)), (216, (40, 0, 0)),
+                 (218, (43, 0, 0)), (222, (38, 0, 0)), (234, (37, 0, 0)), (end, zero)])
+    pos('robe', [(0, zero), (148, zero), (150, (0, .9, 0)), (154, zero), (186, zero), (190, (0, .5, 0)), (193, zero),
+                 (196, (0, .5, 0)), (199, zero), (210, zero), (213, (0, 1.5, 0)), (215, (0, .3, 0)), (216, (0, -.5, 0)),
+                 (218, (0, -.8, 0)), (222, (0, -.6, 0)), (234, (0, -.5, 0)), (end, zero)])
+    # Hood: bowed and patient, lifted toward the zombie through the pull, snapped up by the
+    # strike, bowed at the low camera, then glaring at the players.
+    rot('hood', [(0, (8, 0, 0)), (60, (8, 0, 0)), (72, (-2, 0, 0))] + strain(72, 148, (-2, 0, 0), (-4, 0, 0), (1.2, 0, 1)) +
+        [(150, (-32, 0, 0)), (154, (-24, 0, 0)), (160, (-20, 0, 0)), (172, (-18, 0, 0)), (186, (20, 0, 0)), (202, (16, 0, 0)),
+         (208, (-2, 0, 0)), (210, (-2, 0, 0)), (213, (-18, 0, 0)), (216, (-22, 0, 0)), (222, (-26, 0, 0)), (234, (-26, 0, 0)),
+         (end, (-3, -3, 0))])
+
+    # ---- Right arm and staff: raised overhead and held steady, lowered to his side, levelled,
+    # hoisted and driven down butt first.
+    rot('right_arm', [(0, zero), (60, zero), (66, (-120, 0, -4)), (72, raised['right_arm']), (148, raised['right_arm']),
+                      (150, (-172, 0, -16)), (154, raised['right_arm']), (172, raised['right_arm']), (186, zero),
+                      (202, zero), (208, (-88, 0, 6)), (210, (-92, 0, 6)), (213, (-165, 0, 8)), (215, (-84, 0, 8)),
+                      (216, (-40, 0, 8)), (218, (-38, 0, 8)), (234, (-40, 0, 8)), (end, zero)])
+    rot('mage_forearm_right', [(0, zero), (60, zero), (66, (-5, 0, 0)), (72, raised['mage_forearm_right']),
+                               (172, raised['mage_forearm_right']), (186, zero), (202, zero), (208, (15, 0, 0)),
+                               (210, (15, 0, 0)), (213, (-10, 0, 0)), (215, (-16, 0, 0)), (216, (-20, 0, 0)),
+                               (234, (-20, 0, 0)), (end, zero)])
+    rot('staff', [(0, zero), (60, zero), (66, (130, 0, 0)), (72, (staff_up, 0, 0)), (172, (staff_up, 0, 0)), (186, zero),
+                  (202, zero), (208, (156, 0, 0)), (210, (158, 0, 0)), (213, (182, 0, 0)), (215, (78, 0, 0)),
+                  (216, (20, 0, 0)), (218, (15, 0, 0)), (234, (23, 0, 0)), (end, zero)])
+    put('staff_flame', 'scale', [(0, 1), (20, (.85, 1.2, .85)), (40, 1), (60, 1.1), (72, 1.6)] +
+        billow(76, 146, (1.4, 2, 1.4), 1.8, 12) + [(146, (1.9, 2.4, 1.9)), (148, 1.9), (150, 3.2), (152, 2), (154, 2.7),
+                                                    (157, 1.8), (160, 1.6), (164, 1.6), (166, 2.1), (170, 1.6), (186, 1.3),
+                                                    (206, 1.3), (208, 2.4), (212, 1.8), (216, 3), (219, 1.4), (226, 1.6),
+                                                    (234, 1.3), (end, 1)])
+
+    # ---- Left arm: reaches for the zombie, claw open; clenches on the soul and hauls it in
+    # hand over fist toward the chest, shaking; flung open by the strike.
+    reach, chest = (-95, 0, -6), (-55, 0, 12)
+    rot('left_arm', [(0, zero), (60, zero), (66, (-50, 0, -8)), (72, reach), (80, reach)] +
+        strain(80, 146, reach, chest, (1.8, 0, 1.5)) +
+        [(148, chest), (150, (-20, 0, -45)), (156, (-16, 0, -34)), (172, (-10, 0, -24)), (186, (-4, 0, -6)), (202, (-4, 0, -6)),
+         (208, (18, 0, -22)), (210, (18, 0, -22)), (213, (-140, 0, -18)), (215, (-60, 0, -25)), (216, (-12, 0, -32)),
+         (218, (-8, 0, -36)), (234, (-10, 0, -30)), (end, zero)])
+    rot('mage_forearm_left', [(0, zero), (60, zero), (72, (12, 0, 0)), (80, (12, 0, 0))] +
+        strain(80, 146, (12, 0, 0), (-88, 0, 0), (1.5, 0, 0)) +
+        [(148, (-88, 0, 0)), (150, (0, 0, 0)), (172, (-6, 0, 0)), (186, zero), (208, zero), (213, (-15, 0, 0)),
+         (216, (-5, 0, 0)), (234, (-5, 0, 0)), (end, zero)])
+    rot('mage_hand_left', [(0, zero), (60, zero), (72, (-15, 0, 0)), (80, (10, 0, 0)), (146, (25, 0, 0)), (150, (-20, 0, 0)),
+                           (160, zero), (end, zero)])
+    for k in range(3):
+        spread = (k - 1) * 16
+        rot(f'mage_finger_left_{k}', [(0, zero), (60, zero), (70, (-30, 0, spread)), (76, (-30, 0, spread)), (80, (75, 0, spread / 5)),
+                                       (146, (80, 0, spread / 5)), (148, (80, 0, spread / 5)), (150, (-35, 0, spread)),
+                                       (160, (-10, 0, spread / 2)), (186, (20, 0, 0)), (206, (20, 0, 0)), (213, (-25, 0, spread)),
+                                       (218, (-25, 0, spread)), (end, zero)])
+
+    # ---- Eyes: a low glow once his gaze lifts for the pull, a flare at 166, back inside by 252.
+    for side in ('right', 'left'):
+        eye = 'mage_eye_' + side
+        pos(eye, [(0, zero), (70, zero), (74, (0, 0, -1.5)), (240, (0, 0, -1.5)), (252, zero), (end, zero)])
+        put(eye, 'scale', [(0, 1), (70, 1), (74, 1.12), (148, 1.12), (151, 1.3), (164, 1.2), (166, 1.55), (169, 1.3),
+                           (186, 1.3), (208, 1.35), (216, 1.45), (220, 1.25), (240, 1.15), (252, 1), (end, 1)])
+
+    # ---- Robe: braced stance and cloth streaming in the soul wind through the pull, burst out
+    # by the strike, swung by the turning steps, blown out by the slam.
+    for side, sign, brace, stance in (('right', 1, -14, -24), ('left', -1, 10, -8)):
+        rot('mage_leg_' + side, [(0, zero), (60, zero), (70, (brace, 0, 0)), (186, (brace, 0, 0)), (188, zero),
+                                 (190 if sign > 0 else 196, (-14, 0, 0)), (193 if sign > 0 else 199, zero), (213, zero),
+                                 (216, (stance, 0, 0)), (234, (stance, 0, 0)), (end, zero)])
+        rot('skirt_' + side, [(0, zero), (60, zero), (72, (6, 0, sign * 4))] +
+            billow(76, 146, (10, 0, sign * 7), (4, 0, sign * 3), 10 if sign > 0 else 14) +
+            [(148, (6, 0, sign * 4)), (150, (14, 0, sign * 12)), (156, (6, 0, sign * 5)), (186, zero),
+             (190, (4, 0, sign * 5)), (196, (4, 0, -sign * 3)), (202, (2, 0, sign * 2)), (206, zero), (213, zero),
+             (216, (14, 0, sign * 12)), (220, (8, 0, sign * 7)), (234, (6, 0, sign * 5)), (end, zero)])
+    rot('robe_tail', [(0, zero), (60, zero), (72, (12, 0, 0))] + billow(76, 146, (22, 0, 4), (12, 0, -4), 12) +
+        [(148, (14, 0, 0)), (150, (28, 0, 0)), (156, (14, 0, 0)), (186, (6, 0, 0)), (192, (16, 0, 5)), (198, (10, 0, -5)),
+         (204, (12, 0, 2)), (208, (6, 0, 0)), (213, (4, 0, 0)), (216, (24, 0, 0)), (220, (14, 0, 0)), (234, (10, 0, 0)),
+         (end, zero)])
+    for side, sign in (('right', -1), ('left', 1)):
+        rot('hood_' + side, [(0, zero), (148, zero), (150, (0, sign * 16, sign * 6)), (160, (0, sign * 8, sign * 3)),
+                             (186, zero), (end, zero)])
+
+
 def animations():
     clips = {}
 
@@ -551,5 +690,6 @@ def animations():
     plant(bite, 'left', [(t / 20, [-20, 5, -43], 1, -65) for t in range(45)])
     siege_and_windup_clips(clip, rot, pos, scale, claw, clips)
     second_playtest_clips(clip, rot, pos, scale, claw, clips)
+    intro_clip(clips)
 
     return {'format_version': '1.8.0', 'animations': {'animation.hollow_necromancer.' + k: v for k, v in clips.items()}}

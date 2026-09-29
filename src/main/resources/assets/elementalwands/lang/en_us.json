@@ -27,6 +27,7 @@
   "block.elementalwands.stone_spike": "Stone Spike",
   "block.elementalwands.stone_wall": "Stone Wall",
   "block.elementalwands.titan_dome": "Titan Dome",
+  "block.elementalwands.soul_glow": "Soul Light",
   "block.elementalwands.guardian_arena_stone": "Guardian Arena Stone",
   "block.elementalwands.guardian_arena_dark": "Guardian Arena Dark Stone",
   "block.elementalwands.guardian_arena_light": "Guardian Arena Light Stone",
@@ -82,6 +83,10 @@
   "necromancer.elementalwands.harvest": "Souls drift toward the colossus. Destroy them!",
   "entity.elementalwands.soul_fireball": "Soul Fireball",
   "entity.elementalwands.harvest_soul": "Harvested Soul",
+  "entity.elementalwands.intro_zombie": "Zombie",
+  "entity.elementalwands.intro_soul": "Soul",
+  "necromancer.elementalwands.intro_skip": "Hold %s to skip",
+  "necromancer.elementalwands.intro_waiting": "Waiting for your party to finish the intro...",
   "entity.elementalwands.necromancer_soul": "Necromancer’s Soul",
   "death.attack.necromancer_fireball": "%1$s was burned to ash by %2$s’s soul fire",
   "death.attack.necromancer_erupt": "%1$s was caught by %2$s bursting from the grave"

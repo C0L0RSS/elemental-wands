@@ -30,6 +30,7 @@ public final class NecromancerPhaseSmoke implements ModInitializer {
     private int eruptedAt;
     private float bossBefore;
     private NecromancerSoulEntity freed;
+    private boolean litHarvest;
 
     public void onInitialize() {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
@@ -280,6 +281,8 @@ public final class NecromancerPhaseSmoke implements ModInitializer {
             require(g < 220, "Dodged dive never erupted: " + boss.status());
         }
         if (stage == 15) {
+            for (var soul : w.getEntitiesByClass(HarvestSoulEntity.class, boss.getBoundingBox().expand(40), e -> !e.isRemoved()))
+                if (lit(w, soul)) litHarvest = true;
             if (g == NecromancerRules.HARVEST_SCREAM + 3)
                 require(w.getEntitiesByClass(HarvestSoulEntity.class, boss.getBoundingBox().expand(40), e -> true).isEmpty(),
                         "Souls rose before the called spots finished glowing");
@@ -297,6 +300,7 @@ public final class NecromancerPhaseSmoke implements ModInitializer {
             if (g == NecromancerRules.HARVEST_SCREAM + NecromancerRules.HARVEST_GLOW + NecromancerRules.HARVEST_RISE + 4) {
                 require(Math.abs(boss.getHealth() - bossBefore - boss.getMaxHealth() * NecromancerRules.HARVEST_HEAL) < .01,
                         "An absorbed soul did not heal the colossus: " + (boss.getHealth() - bossBefore));
+                require(litHarvest, "Harvested souls carried no light");
                 boss.stopFight();
                 require(w.getEntitiesByClass(HarvestSoulEntity.class, boss.getBoundingBox().expand(40), e -> !e.isRemoved()).isEmpty(), "Harvested souls outlived the encounter");
                 // The caster inside: fight mode, burst to a quarter health.
@@ -317,6 +321,7 @@ public final class NecromancerPhaseSmoke implements ModInitializer {
             if (g == release + 3) {
                 freed = w.getEntitiesByClass(NecromancerSoulEntity.class, boss.getBoundingBox().expand(20), e -> e.isAlive()).stream().findFirst().orElse(null);
                 require(freed != null && boss.isSplit(), "The soul did not tear free: " + boss.status());
+                require(lit(w, freed), "The freed soul carried no light");
                 float health = boss.getHealth();
                 require(!boss.damage(w, w.getDamageSources().playerAttack(target), 20) && boss.getHealth() == health, "The body took damage while its soul was out");
                 require(freed.damage(w, w.getDamageSources().playerAttack(target), 30)
@@ -331,10 +336,17 @@ public final class NecromancerPhaseSmoke implements ModInitializer {
                 float health = boss.getHealth();
                 require(boss.damage(w, w.getDamageSources().playerAttack(target), 10)
                         && Math.abs(health - boss.getHealth() - 10 * NecromancerRules.EXPOSED_MULTIPLIER) < .01, "The collapsed body took no extra damage");
-                boss.stopFight();
-                Files.writeString(Path.of("NECROMANCER_PASSED.txt"), "Phase two passed: transformation and save, original grab/slam and teammate rescue, swipe; grounded rush with a random windup, single bite, throw, no team interrupt, sidestep, wall collision, hands visuals and nearest caught target combo against iron armor, escape, expiry and cancellation; grave dive shielded underground, erupting under a still player and stuck, exposed after a dodge, cancelled safely; soul harvest raised away from players, destroyed by a hit, healing on arrival and cleared on stop; the soul split at a quarter health shields the body, passes soul hits to the boss and collapses it exposed when knocked down.\n");
-                server.stop(false);
+                boss.stopFight(); mark = t; stage = 17;
             }
+        }
+        // Every soul light of the phase clears once its spells are gone.
+        if (stage == 17 && g == NecromancerRules.GLOW_LINGER + 2 * com.anton.elementalwands.util.SoulGlow.CHECK + 2) {
+            List<BlockPos> left = new java.util.ArrayList<>();
+            for (BlockPos pos : BlockPos.iterate(-30, 99, -30, 45, 120, 45))
+                if (w.getBlockState(pos).isOf(com.anton.elementalwands.registry.ModSpellBlocks.SOUL_GLOW)) left.add(pos.toImmutable());
+            require(left.isEmpty(), "Soul light outlived phase two: " + left);
+            Files.writeString(Path.of("NECROMANCER_PASSED.txt"), "Phase two passed: transformation and save, original grab/slam and teammate rescue, swipe; grounded rush with a random windup, single bite, throw, no team interrupt, sidestep, wall collision, hands visuals and nearest caught target combo against iron armor, escape, expiry and cancellation; grave dive shielded underground, erupting under a still player and stuck, exposed after a dodge, cancelled safely; soul harvest raised away from players, destroyed by a hit, healing on arrival and cleared on stop; the soul split at a quarter health shields the body, passes soul hits to the boss and collapses it exposed when knocked down; harvested and freed souls carry soul light and none outlives the phase.\n");
+            server.stop(false);
         }
     }
 
@@ -360,6 +372,13 @@ public final class NecromancerPhaseSmoke implements ModInitializer {
         var f = com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player", MinecraftServer.class, UUID.class, String.class, double.class, double.class, double.class);
         f.setAccessible(true);
         return (ServerPlayerEntity)f.invoke(null, s, UUID.randomUUID(), name, x, y, z);
+    }
+    /** A soul light within two blocks of the soul's centre. */
+    private static boolean lit(ServerWorld w, net.minecraft.entity.Entity soul) {
+        Vec3d at = soul.getBoundingBox().getCenter();
+        for (BlockPos pos : BlockPos.iterate(BlockPos.ofFloored(at).add(-2, -2, -2), BlockPos.ofFloored(at).add(2, 2, 2)))
+            if (w.getBlockState(pos).isOf(com.anton.elementalwands.registry.ModSpellBlocks.SOUL_GLOW)) return true;
+        return false;
     }
     private static void require(boolean b, String why) { if (!b) throw new AssertionError(why); }
 }

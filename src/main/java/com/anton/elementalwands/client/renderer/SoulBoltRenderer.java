@@ -2,16 +2,20 @@ package com.anton.elementalwands.client.renderer;
 
 import com.anton.elementalwands.client.model.SoulBoltModel;
 import com.anton.elementalwands.entity.necromancer.SoulBoltEntity;
+import net.minecraft.client.render.command.OrderedRenderCommandQueue;
 import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.state.CameraRenderState;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.RotationAxis;
+import net.minecraft.util.math.Vec3d;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
 import software.bernie.geckolib.renderer.layer.AutoGlowingGeoLayer;
 
 /** Authored skull and hinged jaw, with emissive eyes and mouth fissures. */
 public final class SoulBoltRenderer extends GeoEntityRenderer<SoulBoltEntity, SoulBoltRenderState> {
+    private static final double POOL = 2.25;
+
     public SoulBoltRenderer(EntityRendererFactory.Context context) {
         super(context, new SoulBoltModel());
         shadowRadius = 0;
@@ -26,6 +30,13 @@ public final class SoulBoltRenderer extends GeoEntityRenderer<SoulBoltEntity, So
         super.updateRenderState(entity, state, partialTick);
         state.yaw = entity.getLerpedYaw(partialTick);
         state.pitch = entity.getLerpedPitch(partialTick);
+        Vec3d origin = new Vec3d(state.x, state.y, state.z);
+        state.pool = SoulLightPool.sample(entity.getEntityWorld(), origin, origin.add(0, entity.getHeight() / 2, 0), POOL, .9f);
+    }
+
+    @Override public void render(SoulBoltRenderState state, MatrixStack matrices, OrderedRenderCommandQueue queue, CameraRenderState camera) {
+        super.render(state, matrices, queue, camera);
+        SoulLightPool.submit(state.pool, matrices, queue);
     }
 
     @Override protected void applyRotations(SoulBoltRenderState state, MatrixStack matrices,
@@ -36,6 +47,6 @@ public final class SoulBoltRenderer extends GeoEntityRenderer<SoulBoltEntity, So
     }
 
     @Override protected Box getBoundingBox(SoulBoltEntity entity) {
-        return entity.getBoundingBox().expand(.6); // Include the open mandible.
+        return SoulLightPool.reach(entity.getBoundingBox().expand(.6), POOL); // Include the open mandible and its light.
     }
 }

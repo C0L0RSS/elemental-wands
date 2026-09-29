@@ -3,6 +3,7 @@ package com.anton.elementalwands.entity.necromancer;
 import com.anton.elementalwands.ElementalWandsMod;
 import com.anton.elementalwands.entity.AstralDoubleEntity;
 import com.anton.elementalwands.registry.ModParticles;
+import com.anton.elementalwands.util.SoulGlow;
 import java.util.UUID;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
@@ -75,6 +76,7 @@ public class SoulBoltEntity extends ProjectileEntity implements GeoEntity {
         if (getEntityWorld() instanceof ServerWorld world) {
             if (loadedFromSave || age > NecromancerRules.BOLT_LIFE || !(getOwner() instanceof NecromancerEntity boss)
                     || !boss.isAlive()) { discard(); return; }
+            SoulGlow.light(world, getBoundingBox().getCenter(), NecromancerRules.GLOW_BOLT, NecromancerRules.GLOW_LINGER);
             // Contact is resolved once. Keep only the harmless visual for the jaw snap.
             if (isBiting()) {
                 if (++impactTicks >= 8) discard();

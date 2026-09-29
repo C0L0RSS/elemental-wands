@@ -62,6 +62,21 @@ public final class NecromancerContractTest {
                 && NecromancerRules.rainEvery(Stage.SIEGE_2) > NecromancerRules.RAIN_WARNING, "Rain volleys overlap or do not escalate");
         require((NecromancerRules.RAIN_WARNING - 10) * .2 > NecromancerRules.RAIN_RADIUS + .3 && NecromancerRules.RAIN_DAMAGE >= 10,
                 "A fireball marker cannot be walked out of, or its blast is chip damage");
+        // Soul light: real block light levels; a rain marker brightens to full in at most four light
+        // changes; a glow outlives a tick's refresh (block ticks run before entities) but not much more.
+        for (int level : new int[] {NecromancerRules.GLOW_FIREBALL, NecromancerRules.GLOW_BOLT, NecromancerRules.GLOW_HARVEST,
+                NecromancerRules.GLOW_SOUL, NecromancerRules.GLOW_IMPACT}) require(level >= 1 && level <= 15, "Soul light level out of range: " + level);
+        int glowSteps = 0;
+        for (int age = 0, last = 0; age <= NecromancerRules.RAIN_WARNING; age++) {
+            int glow = NecromancerRules.rainGlow(age);
+            require(glow >= last, "A rain marker dimmed as its fireball closed in");
+            if (glow != last) glowSteps++;
+            last = glow;
+        }
+        require(glowSteps <= 4 && NecromancerRules.rainGlow(NecromancerRules.RAIN_WARNING) == 15 && NecromancerRules.GLOW_IMPACT == 15,
+                "Rain marker light rebuilds too often or never reaches full: " + glowSteps);
+        require(NecromancerRules.GLOW_LINGER >= 2 && NecromancerRules.GLOW_LINGER <= 5 && NecromancerRules.GLOW_IMPACT_TICKS <= 20,
+                "Soul light flickers between refreshes or lingers behind its spell");
 
         // Drain healing stops at its per-channel share however long the channel runs.
         float healed = 0;
@@ -216,7 +231,21 @@ public final class NecromancerContractTest {
         require(!NecromancerRules.canTarget(Action.RUSH, new Candidate(a, 12, false)), "Rush targeted through cover");
         require(NecromancerRules.boltCount(true) > NecromancerRules.boltCount(false) && NecromancerRules.handsRadius(true) > NecromancerRules.handsRadius(false), "Colossus spells are not stronger");
         require(Action.BOLT.impact + (NecromancerRules.boltCount(true) - 1) * NecromancerRules.boltInterval(true) < Action.BOLT.duration, "Colossus volley truncated");
-        System.out.println("Necromancer checks passed: scaling, stages and gates, solo/duo/party waves, reinforcements, quickening, soul fire rain, drain cap, blink/shift/ambush priority, vision, target rotation, telegraph timing, hands buff and follow-up, sidestep window, siege timing, colossus priorities without an army, dive/rush/harvest choice, soul-split restrictions, colossus pace, grave dive, harvest, soul knockdown, transformation clock, grab caps, jumpable swipe, random rush windup, timing and cover.");
+        // Intro cinematic: the shots follow the plan's order, the soul lands in the staff on time, and everyone may skip.
+        int[] beats = {0, NecromancerIntro.WALK_END, NecromancerIntro.ARCH, NecromancerIntro.PULL, NecromancerIntro.FREE, NecromancerIntro.CRUMBLE,
+                NecromancerIntro.REVEAL, NecromancerIntro.SOUL_ARRIVE, NecromancerIntro.EYES, NecromancerIntro.TURN, NecromancerIntro.HERO_END,
+                NecromancerIntro.TURN_END, NecromancerIntro.LEVEL, NecromancerIntro.SLAM, NecromancerIntro.RING_END, NecromancerIntro.RETURN, NecromancerIntro.LENGTH};
+        for (int i = 1; i < beats.length; i++) require(beats[i - 1] < beats[i], "Intro beats out of order at " + i);
+        require(NecromancerIntro.LENGTH <= 20 * 16 && NecromancerIntro.SKIP_AFTER < NecromancerIntro.WALK_END, "Intro too long or unskippable");
+        require(NecromancerIntro.TITLE > NecromancerIntro.SLAM && NecromancerIntro.TITLE_END <= NecromancerIntro.LENGTH, "Title outside the last shot");
+        var staff = NecromancerIntro.STAFF_HEAD;
+        var chest = NecromancerIntro.VICTIM_TO.add(0, NecromancerIntro.VICTIM_CHEST, 0);
+        require(NecromancerIntro.tornAt(chest, staff, NecromancerIntro.SOUL_ARRIVE - NecromancerIntro.PULL).distanceTo(staff) < .01, "Torn soul misses the staff");
+        require(NecromancerIntro.tornAt(chest, staff, 0).distanceTo(chest) < .1, "Torn soul does not start in the chest");
+        require(NecromancerIntro.victimAt(NecromancerIntro.WALK_END).distanceTo(NecromancerIntro.VICTIM_TO) < .01, "Zombie does not stop at its mark");
+        require(Math.abs(NecromancerIntro.facing(NecromancerIntro.PULL) - NecromancerIntro.PULL_FACING) < .01 && NecromancerIntro.PULL_FACING > 90
+                && Math.abs(NecromancerIntro.facing(NecromancerIntro.TURN_END)) < .01, "He must face the zombie while hauling and the players before the slam");
+        System.out.println("Necromancer checks passed: intro beats, torn soul path and skip window; scaling, stages and gates, solo/duo/party waves, reinforcements, quickening, soul fire rain, soul light, drain cap, blink/shift/ambush priority, vision, target rotation, telegraph timing, hands buff and follow-up, sidestep window, siege timing, colossus priorities without an army, dive/rush/harvest choice, soul-split restrictions, colossus pace, grave dive, harvest, soul knockdown, transformation clock, grab caps, jumpable swipe, random rush windup, timing and cover.");
     }
 
     private static void require(boolean value, String reason) { if (!value) throw new AssertionError(reason); }

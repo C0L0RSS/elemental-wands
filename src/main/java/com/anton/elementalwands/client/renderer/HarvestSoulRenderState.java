@@ -10,6 +10,7 @@ import java.util.Map;
 public class HarvestSoulRenderState extends LivingEntityRenderState implements GeoRenderState {
 
     private final Map<DataTicket<?>, Object> geckolibData = new HashMap<>();
+    public SoulLightPool pool;
 
     @Override
     public <D> void addGeckolibData(DataTicket<D> ticket, D data) {

@@ -331,13 +331,14 @@ def build_realm(seed=0x4011_0C27):
                 marker(cx + i * 2 * round(math.cos(a + 1.57)), cz + i * 2 * round(math.sin(a + 1.57)), a)
             lay.put(cx, 3, cz, 'soul_lantern')  # A grave light on the first marker, replacing any cap.
 
-    # Soul-fire braziers light the rim; the lanterns on the cover above light the clearing.
+    # Soul-fire braziers ring the rim, dark until the intro's slam lights them; the lanterns on the
+    # cover above light the clearing.
     for i in range(10):
         a = i / 10 * math.tau + .12
         cx, cz = round(math.cos(a) * 41), round(math.sin(a) * 41)
         lay.put(cx, 1, cz, 'polished_blackstone_bricks')
         lay.put(cx, 2, cz, 'chiseled_polished_blackstone')
-        lay.put(cx, 3, cz, 'soul_campfire[lit=true]')
+        lay.put(cx, 3, cz, 'soul_campfire[lit=false]')  # Lit by the Necromancer's intro slam.
 
     # The dead forest. Nearer trees lean in; the farthest ones are the tallest.
     trees = TreeBuilder(lay, rng)

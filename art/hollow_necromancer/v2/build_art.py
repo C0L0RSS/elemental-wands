@@ -61,7 +61,9 @@ def box_uv_size(size):
 
 
 def pack(width):
-    order = sorted(range(len(cubes)), key=lambda i: (-box_uv_size(cubes[i]['raw']['size'])[1], -box_uv_size(cubes[i]['raw']['size'])[0], i))
+    # Copies (the planted staff, eye flares) share their source cube's texture region.
+    order = sorted((i for i in range(len(cubes)) if 'uv_of' not in cubes[i]['opts']),
+                   key=lambda i: (-box_uv_size(cubes[i]['raw']['size'])[1], -box_uv_size(cubes[i]['raw']['size'])[0], i))
     x = y = row = 0
     for i in order:
         w, h = box_uv_size(cubes[i]['raw']['size'])
@@ -70,6 +72,10 @@ def pack(width):
         cubes[i]['raw']['uv'] = [x, y]
         x += w
         row = max(row, h)
+    for entry in cubes:
+        if 'uv_of' in entry['opts']:
+            assert entry['raw']['size'] == entry['opts']['uv_of']['size'], 'Texture copy has another size'
+            entry['raw']['uv'] = list(entry['opts']['uv_of']['uv'])
     used = y + row
     height = 64
     while height < used:
@@ -389,6 +395,8 @@ def texture():
     glow = Image.new('RGBA', (TEX_W, TEX_H), (0, 0, 0, 0))
     px, gx = image.load(), glow.load()
     for index, entry in enumerate(cubes):
+        if 'uv_of' in entry['opts']:
+            continue
         for direction, (x, y, w, h) in faces_of(entry).items():
             if w <= 0 or h <= 0:
                 continue

@@ -53,6 +53,7 @@ Runtime resources live under `src/main/resources/assets/elementalwands/`.
 | `art/hollow_necromancer/soul_bolt/build_preview.py` | Authored skull, hinged jaw, flight/impact animations, glow mask and prepared particle frames; `--install` exports mod resources, `--check` verifies them |
 | `art/hollow_necromancer/grasping_hands/build_preview.py` | Three skeletal hand proportions, articulated claw animation and cyan glow masks; `--install` exports, `--check` verifies |
 | `art/hollow_necromancer/undead/build_preview.py`, `upright.py`, `build_runtime.py` | Hollow Crawler, Risen Archer and Hunched Brute models, textures, glow masks and clips; `build_preview.py` writes the review candidate, `build_runtime.py` installs GeckoLib files and the generated `HollowUndeadClips` timings (`--check` verifies and re-proves the GeckoLib pose matches the review viewer) |
+| `tools/prepare_soul_light.py` | Stepped soul-cyan ground pool under the Necromancer's glowing spells; `--check` verifies it |
 | `tools/build_guardian_church.py` | Ruined/restored church layouts and structure resources |
 
 Do not run generators with replacement options unless intentionally changing their

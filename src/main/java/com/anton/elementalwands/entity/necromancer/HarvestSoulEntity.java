@@ -1,5 +1,6 @@
 package com.anton.elementalwands.entity.necromancer;
 
+import com.anton.elementalwands.util.SoulGlow;
 import java.util.UUID;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
@@ -82,6 +83,7 @@ public class HarvestSoulEntity extends MobEntity implements GeoEntity {
             discard();
             return;
         }
+        SoulGlow.light(world, getBoundingBox().getCenter(), NecromancerRules.GLOW_HARVEST, NecromancerRules.GLOW_LINGER);
         if (age < NecromancerRules.HARVEST_RISE) {
             // Claws its way up out of the soil before it starts to drift.
             setPosition(getX(), getY() + 1.6 / NecromancerRules.HARVEST_RISE, getZ());

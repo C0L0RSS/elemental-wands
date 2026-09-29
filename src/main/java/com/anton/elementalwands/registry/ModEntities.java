@@ -270,6 +270,21 @@ public final class ModEntities {
                         .dimensions(EntityDimensions.fixed(1.1f, 1.1f)).trackRangeBlocks(128).trackedUpdateRate(1).disableSaving()
                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "necromancer_soul"))));
 
+        // The Necromancer's intro cinematic: the zombie whose soul is torn out, and the souls that build him.
+        public static final EntityType<com.anton.elementalwands.entity.necromancer.IntroZombieEntity> INTRO_ZOMBIE = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "intro_zombie"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.necromancer.IntroZombieEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.necromancer.IntroZombieEntity::new)
+                        .dimensions(EntityDimensions.fixed(.6f, 1.95f)).trackRangeBlocks(128).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "intro_zombie"))));
+
+        public static final EntityType<com.anton.elementalwands.entity.necromancer.IntroSoulEntity> INTRO_SOUL = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "intro_soul"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.necromancer.IntroSoulEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.necromancer.IntroSoulEntity::new)
+                        .dimensions(EntityDimensions.fixed(.7f, .9f)).trackRangeBlocks(128).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "intro_soul"))));
+
         // Hollow undead: night spawns in the Overworld and the Necromancer's raised army.
         public static final EntityType<com.anton.elementalwands.entity.undead.HollowCrawlerEntity> HOLLOW_CRAWLER = Registry.register(
                 Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "hollow_crawler"),

@@ -1280,6 +1280,7 @@ final class NecromancerCombat {
         world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, true, false, center.x, center.y + .3, center.z, 40, RAIN_RADIUS * .4, .3, RAIN_RADIUS * .4, .12);
         world.spawnParticles(ParticleTypes.SCULK_SOUL, true, false, center.x, center.y + .4, center.z, 12, .8, .3, .8, .05);
         world.spawnParticles(ParticleTypes.LARGE_SMOKE, center.x, center.y + .5, center.z, 8, .6, .3, .6, .02);
+        com.anton.elementalwands.util.SoulGlow.light(world, center, GLOW_IMPACT, GLOW_IMPACT_TICKS);
         for (LivingEntity victim : world.getEntitiesByClass(LivingEntity.class, new Box(center, center).expand(RAIN_RADIUS + 1, 2.5, RAIN_RADIUS + 1),
                 e -> rainVictim(e) && inside(e, center, RAIN_RADIUS))) {
             if (hurt(world, victim, source(world, FIREBALL, fireball), RAIN_DAMAGE, "soul fireball")) {

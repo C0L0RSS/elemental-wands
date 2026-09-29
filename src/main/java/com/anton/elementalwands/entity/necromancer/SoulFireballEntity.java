@@ -1,5 +1,6 @@
 package com.anton.elementalwands.entity.necromancer;
 
+import com.anton.elementalwands.util.SoulGlow;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
@@ -79,6 +80,9 @@ public class SoulFireballEntity extends ProjectileEntity implements GeoEntity {
         if (loadedFromSave || !(getOwner() instanceof NecromancerEntity boss) || !boss.isAlive()) { discard(); return; }
         Vec3d target = target();
         if (age % 2 == 0) marker(world, target);
+        // Real light for the ball and its marker; the marker brightens in steps as the ball closes in.
+        SoulGlow.light(world, getEntityPos().add(0, .3, 0), NecromancerRules.GLOW_FIREBALL, NecromancerRules.GLOW_LINGER);
+        SoulGlow.light(world, target, NecromancerRules.rainGlow(age), NecromancerRules.GLOW_LINGER);
         // A thin trail sent to everyone in the clearing; each client adds the dense flames up close.
         world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, true, false, getX(), getY() + .3, getZ(), 1, .15, .15, .15, .01);
         if (age >= NecromancerRules.RAIN_WARNING) {

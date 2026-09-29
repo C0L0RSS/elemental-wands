@@ -6235,6 +6235,60 @@
             }
           ],
           "parent": "shin_left"
+        },
+        {
+          "name": "mage_eye_right",
+          "pivot": [
+            -1,
+            32,
+            0
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -1.5,
+                31.5,
+                -0.5
+              ],
+              "size": [
+                1,
+                1,
+                1
+              ],
+              "uv": [
+                14,
+                84
+              ]
+            }
+          ],
+          "parent": "mage_face"
+        },
+        {
+          "name": "mage_eye_left",
+          "pivot": [
+            1,
+            32,
+            0
+          ],
+          "cubes": [
+            {
+              "origin": [
+                0.5,
+                31.5,
+                -0.5
+              ],
+              "size": [
+                1,
+                1,
+                1
+              ],
+              "uv": [
+                18,
+                84
+              ]
+            }
+          ],
+          "parent": "mage_face"
         }
       ]
     }

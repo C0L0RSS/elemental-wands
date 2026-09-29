@@ -38,6 +38,15 @@ public class NecromancerRenderer extends GeoEntityRenderer<NecromancerEntity, Ne
         super.render(state, matrices, queue, camera);
     }
 
+    /**
+     * GeckoLib only advances animations while the entity renders; the intro keeps him off-screen
+     * for its first shots, so he is never culled then and his clip stays on the scene's clock.
+     */
+    @Override
+    public boolean shouldRender(NecromancerEntity entity, net.minecraft.client.render.Frustum frustum, double x, double y, double z) {
+        return entity.inIntro() || super.shouldRender(entity, frustum, x, y, z);
+    }
+
     @Override
     protected float getShadowRadius(NecromancerRenderState state) {
         return state.buried ? 0 : super.getShadowRadius(state);

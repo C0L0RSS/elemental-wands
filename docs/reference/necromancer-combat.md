@@ -48,7 +48,7 @@ contract checks exercise without a world.
 ROBED     Duel A (100→75%) → Siege 1 (waves 1–2) → crash, exposed → Duel B (75→50%)
           → Siege 2 (waves 3–4) → crash → transformation
 COLOSSUS  swipe / grab / rush / grave dive / soul harvest and its larger spells; no army
-          → at 25% its soul tears free (repeats until it dies)
+          → at 25% its soul tears free once while the blind body swings at random
 ```
 
 Health is 800 plus 500 per extra participant, grows when players join and never
@@ -67,7 +67,7 @@ of home); its blinks, shifts and ambushes reach 30 blocks from home.
 | --- | --- |
 | Soul bolt | Three slow homing skulls, 0.4 seconds apart, with glowing eyes and chomping jaws. They turn a little each tick, so cover and a late sidestep both beat them. Every skull that bites deals its 5 damage: the damage type bypasses hit immunity. |
 | Grasping hands | About twelve articulated skeletal claws rise around a 4-block ring under each of up to three players. Walking out before it closes (1.6 seconds) avoids its 10 damage and 2-second root. A caught player is followed at once by an ambush behind them, whatever its cooldown. Overlapping rings punish players who stand together. |
-| Life drain | Two braided soul strands flow from the target into a focus above the mage’s animated hand (the colossus uses its jaw focus). The drained player sees smooth mist and curling wisps in first person. Damage and boss healing remain capped per channel; losing line of sight or range breaks it. |
+| Life drain | Only starts on a player within 10 blocks. The hand rises, a heartbeat sounds and motes gather at the focus for 1.5 seconds before the first pulse, and it stands still while it channels, so walking out to 14 blocks (or behind cover) breaks it. Otherwise two braided soul strands flow from the target into a focus above the mage’s animated hand (the colossus uses its jaw focus): six pulses of 2 damage, half a second apart, healing it by twice the damage up to 3% of its maximum health per channel. The drained player sees smooth mist and curling wisps in first person. |
 | Blink | When a player gets within 4.5 blocks it teleports away and leaves a Slowness/Wither curse patch. A soul-fire flare marks where it lands. |
 | Shift | Every two or three casts it teleports to a new spot 10–24 blocks from the party and at least 8 from everyone. A flare and sound mark the spot 0.6 seconds early. |
 | Ambush | A whisper and a flare follow the target’s back for 0.6 seconds, then it appears behind them. After a 0.7-second windup (a soul ring at its feet) a burst deals 14 plus knockback within 4.5 blocks. A player who keeps moving escapes; one standing still to cast is caught. It then stands still for a second. Teammate damage during the windup (the grab-escape amount) interrupts and staggers it. |
@@ -162,13 +162,13 @@ grab pulls the victim to its jaws for a bite and forward throw:
 | Rush | Only its body tells the charge: no lane and no roar until it goes. It sinks its chest and coils its hind legs, then rocks its weight from side to side while each forefoot digs into the dirt and its skull stays fixed on the target. The rocking lasts a random 1.2–2 seconds in total, so it cannot be counted. For the last 0.3 seconds it goes still with its jaws clamped as the aim locks, then roars and runs, steering 1.2° a tick. Contact grabs one player, bites once for 14 damage after 0.9 seconds, throws them forward at 1.4 seconds, and recovers by 2.2 seconds. Walls stop the run; sidestepping after the lock makes it miss. Teammate damage does not interrupt this sequence. |
 | Grave Dive | Used when every player stands at least 9 blocks off; it needs no sight. It rears and plunges head first into the ground (shielded from 0.8 seconds, gone by 1.2), then tunnels toward its target at 7.2 blocks a second, faster than a sprint, leaving cracked earth and soul fire along the surface. Beneath the target, or after four seconds, it stops: the ground cracks in a 3.5-block ring for one second, then it bursts out jaws first for 16 damage and throws everyone in the ring into the air. A player who keeps moving through the warning leaves the ring. If nobody is caught it is stuck half out of the ground for 3.5 seconds, taking ×1.5 damage, before it hauls itself free. While underground it cannot be hit or targeted. |
 | Soul Harvest | Every 20 seconds or so (never while its soul is out) it kneels up, draws a breath and at 0.8 seconds screams at the sky, arms swept behind its back (a sculk shriek, a ghast scream and a warden roar; a sonic boom above its skull and a ring of souls rolling out over the ground). The spots it calls, 16–28 blocks away and at least 6 from every player (three souls solo, one more per extra player, at most six), glow with a ring and a low column of soul fire for one second and crack; then the souls claw out of them and drift toward its ribcage at 1.8 blocks a second. Each one that arrives heals 3% of its maximum health. Any hit destroys a soul; interrupting the call raises none. |
-| Spells | Four-skull bolt volleys (jaws kindling first), 5-block hands (both claws strike the floor) and the drain (a sniff and heartbeat). When Hands catches a player, the skeleton rushes the nearest caught player after a 0.5-second windup, then uses the same bite and throw. Only one victim is pursued per cast. Escape the ring before it closes to avoid the combo. |
+| Spells | Four-skull bolt volleys (jaws kindling first), 5-block hands (both claws strike the floor) and the drain (a sniff and heartbeat; the same 10-block range and 1.5-second windup). When Hands catches a player, the skeleton rushes the nearest caught player after a 0.5-second windup, then uses the same bite and throw. Only one victim is pursued per cast. Escape the ring before it closes to avoid the combo. |
 
 In full iron armor (15 points) the Hands + bite combo costs about 15.5 of 20 health.
 
 ### The caster inside
 
-The first time the colossus reaches a quarter of its health it holds there, rears onto
+Once, when the colossus reaches a quarter of its health, it holds there, rears onto
 its hind legs with its arms thrown wide and convulses; 1.1 seconds later the Necromancer's
 soul tears out of the ribcage (the core there goes dark). The soul is the Soul Bolt skull
 at 2.4× with a crown of soul fire. It hovers 3–6 blocks above the ground and 8–14 blocks
@@ -177,12 +177,16 @@ a second ahead) every four seconds or when a player comes within 4 blocks, and e
 seconds alternates a three-bolt volley with a 4-block ring of grasping hands. A faint
 tether of souls runs back to the ribcage.
 
-While the soul is out the body is shielded (hits flash off it) and fights only with its
-arms, the rush and the dive. Hits on the soul wound the boss. Once the soul has taken
-6% of the boss's maximum health (at least 40) it is dragged back along the tether and the
-body collapses onto its chest for five seconds, taking ×1.5 damage, before it pushes
-itself up. Twenty seconds later, if it is still at or below a quarter health, the soul
-tears free again.
+While the soul is out the body is shielded (hits flash off it) and blind: it stays where
+it is and does not rush, dive or grab. Two seconds after the soul leaves, and then every
+2.3–3.3 seconds, it throws a swipe at a random heading, aimed at no one. The marked arc
+appears at the new heading at once and the body turns into it (20° a tick), so anyone
+standing beside it has the swipe's full windup to step out. Hits on the soul wound the boss.
+Once the soul has taken 30 damage solo (6% of the boss's maximum health, at least 40, with
+more players) it is dragged back along the tether and the body collapses onto its chest for
+five seconds, taking ×1.5 damage, before it pushes itself up. The split never repeats: the
+colossus fights on with its whole moveset until it dies. A save while the soul is out
+forgets the split, and it tears free again on the next hit.
 
 One entity and one combined model carry both forms, so health, the boss bar and saving
 stay continuous; the model hides whichever body is inactive. So the boss stays findable in the
@@ -263,7 +267,10 @@ eight ticks. Cover, homing, damage and volley sizes retain their existing rules.
 
 Life Drain rendering is owned by `NecromancerDrainEffects` and
 `NecromancerDrainOverlay`. The server tracks the victim and cast start tick; the
-client follows the 0.7-second windup and 0.5-second pulse spacing. The braid is
+client follows the 1.5-second windup (`Action.DRAIN.impact`) and 0.5-second pulse spacing.
+The robed and colossus drain clips were authored for the earlier 0.7-second windup, so the
+raised hand holds for a moment before the first pulse and the colossus claw curls do not
+land exactly on the pulses. The braid is
 full-bright soul cyan with a soft additive halo, so it reads in the dark crypt; a
 bright bead travels victim → focus each pulse and both ends flare as it lands.
 Full-bright soul wisps gather at the focus during the windup, then flow along the

@@ -109,8 +109,7 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
     /** Tunnelling during a Grave Dive: nothing to draw, nothing to hit. */
     public boolean isBuried() { return dataTracker.get(BURIED); }
     void setBuried(boolean buried) { dataTracker.set(BURIED, buried); }
-    /** The soul has torn free at least once; later splits run on a timer rather than a health gate. */
-    boolean soulFreed() { return soulFreed; }
+    /** The soul has torn free; the split happens once. */
     void setSoulFreed(boolean freed) { soulFreed = freed; }
 
     @Override
@@ -334,7 +333,8 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
         view.putBoolean("NecromancerColossus", isColossus());
         view.putBoolean("NecromancerTransforming", isTransforming());
         view.putBoolean("NecromancerPhasePending", phasePending);
-        view.putBoolean("NecromancerSoulFreed", soulFreed);
+        // The split happens once; one saved before its collapse plays again on the next hit.
+        view.putBoolean("NecromancerSoulFreed", soulFreed && !combat.splitUnfinished());
         view.putInt("NecromancerStage", stage.ordinal());
         var home = combat.home();
         view.putBoolean("NecromancerHasHome", home != null);

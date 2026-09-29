@@ -32,6 +32,8 @@ public final class NecromancerDrainEffects {
     private static final int CORE = 0x0e5a64, STRAND = 0x3fd2dc, STRAND_DIM = 0x21a2ae, BRIGHT = 0x7ff0f5,
             MOTE = 0x6ee6ec, PALE = 0xc6fcff, HOT = 0xf0ffff, HALO = 0x2fc8d6;
     private static final int IMPACT = NecromancerRules.Action.DRAIN.impact, INTERVAL = NecromancerRules.DRAIN_INTERVAL;
+    /** Seconds from the cast to the first pulse: the braid forms over this windup. */
+    public static final double WINDUP = IMPACT / 20.0;
     private record Cube(Vec3d position, double size, int color, boolean glow) {}
     /** One frame's cubes; those near a first-person lens fade instead of clipping it. */
     private record Emit(List<Cube> cubes, boolean lens, boolean victim) {
@@ -186,28 +188,28 @@ public final class NecromancerDrainEffects {
         for(int i=0;i<18;i++)if(i%7!=3) out.add(p.add(side.multiply(Math.cos(i*TAU/18)*radius)).add(up.multiply(Math.sin(i*TAU/18)*radius)),.055,MOTE,.78*alpha);
     }
     private static void stream(Emit out,Vec3d src,Vec3d dst,Vec3d hand,float t,float breaking) {
-        double windup=Math.clamp(t/.7,0,1),amount=1-breaking,settle=t<.7?windup:1;
+        double windup=Math.clamp(t/WINDUP,0,1),amount=1-breaking,settle=t<WINDUP?windup:1;
         Vec3d axis=dst.subtract(src).normalize(),side=axis.crossProduct(new Vec3d(0,1,0));
         if(side.lengthSquared()<.001)side=new Vec3d(1,0,0);else side=side.normalize();
         Vec3d up=side.crossProduct(axis).normalize();
         // A bright bead leaves the victim on each 0.5 s damage pulse and lands in the focus as the
         // next one leaves; both ends flare at that moment (the focus only once a bead has arrived).
-        double bead=t<.7?0:((t-.7)%.5)/.5;
-        double flare=t<.7||breaking>0?0:Math.exp(-Math.pow(Math.min(bead,1-bead)/.1,2)),landed=t<1.1?0:flare;
+        double bead=t<WINDUP?0:((t-WINDUP)%.5)/.5;
+        double flare=t<WINDUP||breaking>0?0:Math.exp(-Math.pow(Math.min(bead,1-bead)/.1,2)),landed=t<WINDUP+.4?0:flare;
         if(!out.victim()) {
-            ring(out,src,side,up,.30,(t<.7?windup:.72)*amount);
+            ring(out,src,side,up,.30,(t<WINDUP?windup:.72)*amount);
             out.glow(src,.5,HALO,(.10+.14*flare)*settle*amount);
         }
-        ring(out,dst,side,up,.17,(t<.7?windup:.72)*amount);
+        ring(out,dst,side,up,.17,(t<WINDUP?windup:.72)*amount);
         out.add(dst,.12,PALE,.85*amount);
         out.glow(dst,.55,HALO,(.14+.10*landed)*settle*amount);
         out.glow(dst,.28,BRIGHT,(.14+.24*landed)*settle*amount);
         for(int i=1;i<=5;i++)out.add(dst.lerp(hand,i/6.0),.038,0x5fdde4,.6*amount);
-        if(t<.7) {
+        if(t<WINDUP) {
             for(int i=0;i<20;i++)out.add(curve(src,dst,i/20.0),.035,STRAND_DIM,.3*windup*amount);
             return;
         }
-        int count=(int)(82*Math.clamp((t-.7)/.24,0,1));
+        int count=(int)(82*Math.clamp((t-WINDUP)/.24,0,1));
         // About one soft halo every third of a block, whatever the stream length.
         int haloStep=Math.max(1,(int)Math.round(.34*82/Math.max(src.distanceTo(dst),.1)));
         for(int i=0;i<=count;i++) {
@@ -226,7 +228,7 @@ public final class NecromancerDrainEffects {
         }
         if(breaking==0) {
             for(int i=0;i<16;i++) {
-                double u=((t-.7)*.43+i/16.0)%1;
+                double u=((t-WINDUP)*.43+i/16.0)%1;
                 out.add(curve(src,dst,u).add(side.multiply((hash(i*13)-.5)*.3)).add(up.multiply((hash(i*31)-.5)*.3)),.045,i%4==0?HOT:MOTE,.9);
             }
             Vec3d p=curve(src,dst,bead);

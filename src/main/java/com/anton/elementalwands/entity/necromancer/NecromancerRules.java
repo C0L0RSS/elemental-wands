@@ -17,7 +17,8 @@ public final class NecromancerRules {
         SHIFT(20, 12, 0),
         /** A whisper behind the target, then he appears there and bursts after a short windup. */
         AMBUSH(46, 26, 180),
-        DRAIN(84, 14, 200),
+        /** The staff hand rises and motes gather for 1.5 s before the first pulse, so a player can step out of range. */
+        DRAIN(84, 30, 200),
         HANDS(48, 32, 110),
         BOLT(40, 12, 40),
         // Colossus-only: the giant skeleton trades the blinks for its long arms and rush.
@@ -81,7 +82,7 @@ public final class NecromancerRules {
     public static final int HANDS_MAX_TARGETS = 3, ROOT_TICKS = 40;
     public static final float HANDS_DAMAGE = 10;
 
-    public static final double DRAIN_RANGE = 18, DRAIN_BREAK_RANGE = 22;
+    public static final double DRAIN_RANGE = 10, DRAIN_BREAK_RANGE = 14;
     public static final int DRAIN_INTERVAL = 10;
     public static final float DRAIN_DAMAGE = 2, DRAIN_HEAL_SHARE = .03f;
 
@@ -172,11 +173,14 @@ public final class NecromancerRules {
     public static final float HARVEST_HEAL = .03f, HARVEST_SOUL_HEALTH = 4;
 
     /**
-     * The caster inside: at a quarter health the Necromancer's soul tears out of the ribcage. The
-     * body is shielded until the soul takes {@link #soulKnockdown}; then it collapses, exposed.
+     * The caster inside: once, at a quarter health, the Necromancer's soul tears out of the ribcage.
+     * The body is shielded until the soul takes {@link #soulKnockdown}; then it collapses, exposed.
+     * While the soul is out the body is blind: every FLAIL_GAP_MIN..MAX ticks after a swing it turns
+     * FLAIL_TURN degrees a tick toward a random heading and sweeps there, aimed at no one.
      */
-    public static final float SPLIT_GATE = .25f;
-    public static final int SPLIT_TELL = 30, SPLIT_RELEASE = 22, SPLIT_AGAIN = 400, COLLAPSE_TICKS = 100, SOUL_RETURN = 16;
+    public static final float SPLIT_GATE = .25f, FLAIL_TURN = 20;
+    public static final int SPLIT_TELL = 30, SPLIT_RELEASE = 22, COLLAPSE_TICKS = 100, SOUL_RETURN = 16;
+    public static final int FLAIL_GAP_MIN = 10, FLAIL_GAP_MAX = 30;
     public static final int SOUL_CAST = 60, SOUL_BLINK = 80;
     public static final double SOUL_NEAR = 8, SOUL_FAR = 14, SOUL_LOW = 3, SOUL_HIGH = 6, SOUL_SPEED = .25, SOUL_THREAT = 4;
 
@@ -218,8 +222,11 @@ public final class NecromancerRules {
     /** Souls per harvest: three solo, one more per extra player, at most six. */
     public static int harvestSouls(int players) { return Math.min(6, Math.max(1, players) + 2); }
 
-    /** Damage the freed soul must take before it is dragged back and the body collapses. */
-    public static float soulKnockdown(float bossMaxHealth) { return Math.max(40, bossMaxHealth * .06f); }
+    /** Damage the freed soul must take before it is dragged back and the body collapses: 30 solo. */
+    public static float soulKnockdown(float bossMaxHealth) {
+        return bossMaxHealth <= health(1) ? SOLO_SOUL_KNOCKDOWN : Math.max(40, bossMaxHealth * .06f);
+    }
+    public static final float SOLO_SOUL_KNOCKDOWN = 30;
 
     /** A charge's warning, drawn at random so its rhythm cannot be counted. */
     public static int rushWarning(java.util.Random random) { return RUSH_WARNING_MIN + random.nextInt(RUSH_WARNING_MAX - RUSH_WARNING_MIN + 1); }

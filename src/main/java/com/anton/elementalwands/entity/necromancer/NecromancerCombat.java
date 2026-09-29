@@ -122,8 +122,8 @@ final class NecromancerCombat {
     private final List<HarvestSoulEntity> harvest = new ArrayList<>();
     private final List<Vec3d> harvestSpots = new ArrayList<>();
     private NecromancerSoulEntity soul;
-    private boolean splitPending;
-    private long splitStarted = -1, collapseUntil, nextSplit, soulReturning = -1, nextSoulCast, nextSoulBlink, soulBlinkAt = -1, nextSoulGoal;
+    private boolean splitPending, flailing;
+    private long splitStarted = -1, collapseUntil, nextFlail, soulReturning = -1, nextSoulCast, nextSoulBlink, soulBlinkAt = -1, nextSoulGoal;
     private float soulDamage;
     private int soulBolts, soulCasts;
     private long nextSoulBolt;
@@ -264,6 +264,9 @@ final class NecromancerCombat {
 
     /** The colossus reached a quarter health: its soul tears free once the current action allows. */
     void splitReached() { if (boss.isColossus() && soul == null && splitStarted < 0) splitPending = true; }
+
+    /** The soul is tearing free or still out: the one-time split has not collapsed yet. */
+    boolean splitUnfinished() { return soul != null || splitStarted >= 0; }
 
     /** Operator rehearsal: the colossus's soul tears free now. */
     boolean requestSplit() {
@@ -788,7 +791,7 @@ final class NecromancerCombat {
         interrupt();
         boolean colossus = boss.isColossus();
         active = action; last = action; started = now; target = player.getUuid();
-        boltsFired = 0; drained = 0; rushCaught = -1; handsRush = false; ambushDamage = 0; diveHit = false;
+        boltsFired = 0; drained = 0; rushCaught = -1; handsRush = false; ambushDamage = 0; diveHit = false; flailing = false;
         lastTargeted.put(target, now);
         ready.put(action, now + action.duration + action.cooldown);
         if (action == Action.BLINK || action == Action.SHIFT || action == Action.AMBUSH) {
@@ -879,7 +882,8 @@ final class NecromancerCombat {
             case RUSH, DIVE, HARVEST -> false;
             default -> true;
         };
-        if (valid && tracking) { face(player.getEntityPos()); lockedYaw = boss.getYaw(); }
+        if (flailing) hold(MathHelper.stepUnwrappedAngleTowards(boss.getYaw(), lockedYaw, FLAIL_TURN)); // The marked arc leads the turn.
+        else if (valid && tracking) { face(player.getEntityPos()); lockedYaw = boss.getYaw(); }
         else hold(lockedYaw);
         switch (active) {
             case BOLT -> {
@@ -935,7 +939,7 @@ final class NecromancerCombat {
         if (held != null && boss.getEntityWorld() instanceof ServerWorld world) release(world, false);
         if (active == Action.RUSH) { halt(); boss.stopTriggeredAnim(NecromancerEntity.CONTROLLER, null); }
         if (active == Action.DIVE) surface();
-        active = null;
+        active = null; flailing = false;
         nextAction = now + RECOVERY_GAP;
     }
 
@@ -943,7 +947,7 @@ final class NecromancerCombat {
         if (held != null && boss.getEntityWorld() instanceof ServerWorld world) release(world, false);
         if (active == Action.RUSH) { halt(); boss.stopTriggeredAnim(NecromancerEntity.CONTROLLER, null); }
         if (active == Action.DIVE || dive != null) surface();
-        active = null; blinkTo = null; ambushTo = null; rushCaught = -1; handsRush = false;
+        active = null; blinkTo = null; ambushTo = null; rushCaught = -1; handsRush = false; flailing = false;
         harvestSpots.clear(); // An interrupted call raises nothing.
         boss.setDrainTarget(-1);
         halt();
@@ -1471,8 +1475,13 @@ final class NecromancerCombat {
             return true;
         }
         if (splitStarted >= 0) { tickSplitTell(world, now); return true; }
-        if (!splitPending && soul == null && boss.soulFreed() && now >= nextSplit && boss.getHealth() <= boss.getMaxHealth() * SPLIT_GATE)
-            splitPending = true;
+        if (soul != null && soulReturning < 0) {
+            // The soul is the one fighting; the blind body only swings where it happens to face.
+            if (active != null) tickAction(world, now);
+            else if (now >= nextFlail) flail(world, now, players);
+            else halt();
+            return true;
+        }
         if (!splitPending || soul != null || active == Action.DIVE) return false; // A dive surfaces first.
         beginSplit(world, now);
         return true;
@@ -1504,6 +1513,7 @@ final class NecromancerCombat {
                 boss.setSplit(true);
                 soulDamage = 0; soulReturning = -1; soulBolts = 0; soulCasts = 0; soulBlinkAt = -1;
                 soulGoal = null; nextSoulGoal = now; nextSoulCast = now + 30; nextSoulBlink = now + SOUL_BLINK;
+                nextFlail = now + 40;
                 world.playSound(null, ribs.x, ribs.y, ribs.z, SoundEvents.ENTITY_VEX_CHARGE, SoundCategory.HOSTILE, 2.5f, .5f);
                 world.playSound(null, ribs.x, ribs.y, ribs.z, SoundEvents.PARTICLE_SOUL_ESCAPE.value(), SoundCategory.HOSTILE, 3f, .6f);
                 world.spawnParticles(ParticleTypes.SCULK_SOUL, true, false, ribs.x, ribs.y, ribs.z, 30, .6, .6, .6, .08);
@@ -1595,6 +1605,19 @@ final class NecromancerCombat {
         }
     }
 
+    /** A blind sweep: the body turns toward a random heading and swipes there, whoever stands in it. */
+    private void flail(ServerWorld world, long now, List<ServerPlayerEntity> players) {
+        halt();
+        if (players.isEmpty()) return;
+        float facing = boss.getYaw();
+        begin(world, Action.SWIPE, players.get(boss.getRandom().nextInt(players.size())), now);
+        hold(facing); // begin() faces the target; a blind swing starts from wherever it was looking.
+        flailing = true;
+        lockedYaw = boss.getRandom().nextFloat() * 360 - 180;
+        nextFlail = now + Action.SWIPE.duration + FLAIL_GAP_MIN + boss.getRandom().nextInt(FLAIL_GAP_MAX - FLAIL_GAP_MIN + 1);
+        log.note(now, "blind swipe");
+    }
+
     /** A vantage point for the soul: a short run from a player, above head height, inside the leash. */
     private Vec3d soulSpot(ServerWorld world, List<ServerPlayerEntity> players) {
         Vec3d focus = players.isEmpty() ? anchor() : players.get(boss.getRandom().nextInt(players.size())).getEntityPos();
@@ -1615,7 +1638,6 @@ final class NecromancerCombat {
         interrupt();
         collapseUntil = now + COLLAPSE_TICKS;
         exposedUntil = collapseUntil;
-        nextSplit = collapseUntil + SPLIT_AGAIN;
         nextAction = collapseUntil + 10;
         lockedYaw = boss.getYaw();
         boss.triggerAnim(NecromancerEntity.CONTROLLER, "collapse");

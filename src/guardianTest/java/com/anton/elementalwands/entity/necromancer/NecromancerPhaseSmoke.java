@@ -328,10 +328,12 @@ public final class NecromancerPhaseSmoke implements ModInitializer {
                         && Math.abs(health - 30 - boss.getHealth()) < .01, "A hit on the soul did not wound the boss: " + (health - boss.getHealth()));
                 require(boss.isSplit(), "One hit dragged the soul back");
             }
-            if (g == release + 16) {
+            // The blind body stays put and swings on its own two seconds after the soul leaves.
+            if (g == release + 46) require(boss.status().contains("swipe"), "The body did not swing while its soul was out: " + boss.status());
+            if (g == release + 50) {
                 require(SpellCombat.damage(freed, w, w.getDamageSources().playerAttack(second), 60, second, WizardAffinity.FIRE), "Second soul hit rejected");
             }
-            if (g == release + 16 + NecromancerRules.SOUL_RETURN + 3) {
+            if (g == release + 50 + NecromancerRules.SOUL_RETURN + 3) {
                 require(freed.isRemoved() && !boss.isSplit() && boss.status().contains("collapsed"), "Knocked-down soul did not collapse the body: " + boss.status());
                 float health = boss.getHealth();
                 require(boss.damage(w, w.getDamageSources().playerAttack(target), 10)
@@ -345,7 +347,7 @@ public final class NecromancerPhaseSmoke implements ModInitializer {
             for (BlockPos pos : BlockPos.iterate(-30, 99, -30, 45, 120, 45))
                 if (w.getBlockState(pos).isOf(com.anton.elementalwands.registry.ModSpellBlocks.SOUL_GLOW)) left.add(pos.toImmutable());
             require(left.isEmpty(), "Soul light outlived phase two: " + left);
-            Files.writeString(Path.of("NECROMANCER_PASSED.txt"), "Phase two passed: transformation and save, original grab/slam and teammate rescue, swipe; grounded rush with a random windup, single bite, throw, no team interrupt, sidestep, wall collision, hands visuals and nearest caught target combo against iron armor, escape, expiry and cancellation; grave dive shielded underground, erupting under a still player and stuck, exposed after a dodge, cancelled safely; soul harvest raised away from players, destroyed by a hit, healing on arrival and cleared on stop; the soul split at a quarter health shields the body, passes soul hits to the boss and collapses it exposed when knocked down; harvested and freed souls carry soul light and none outlives the phase.\n");
+            Files.writeString(Path.of("NECROMANCER_PASSED.txt"), "Phase two passed: transformation and save, original grab/slam and teammate rescue, swipe; grounded rush with a random windup, single bite, throw, no team interrupt, sidestep, wall collision, hands visuals and nearest caught target combo against iron armor, escape, expiry and cancellation; grave dive shielded underground, erupting under a still player and stuck, exposed after a dodge, cancelled safely; soul harvest raised away from players, destroyed by a hit, healing on arrival and cleared on stop; the soul split at a quarter health shields the body, passes soul hits to the boss, swings blind and collapses it exposed when knocked down; harvested and freed souls carry soul light and none outlives the phase.\n");
             server.stop(false);
         }
     }

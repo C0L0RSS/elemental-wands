@@ -18,11 +18,11 @@ public final class NecromancerDrainOverlay implements HudRenderCallback {
     @Override public void onHudRender(DrawContext context,RenderTickCounter counter) {
         var veil=NecromancerDrainEffects.localVeil(counter.getTickProgress(false));
         if(veil==null)return;
-        double t=veil.time(),fade=veil.fade();
-        double strength=(t<.7?.22+.50*Math.clamp(t/.7,0,1):.72)*(1-fade);
+        double t=veil.time(),fade=veil.fade(),W=NecromancerDrainEffects.WINDUP;
+        double strength=(t<W?.22+.50*Math.clamp(t/W,0,1):.72)*(1-fade);
         if(strength<=0)return;
-        double phase=t>=.7?(t-.7)%.5:.25;
-        double pulse=t>=.7&&fade==0?Math.exp(-Math.pow(Math.min(phase,.5-phase)/.075,2)):0;
+        double phase=t>=W?(t-W)%.5:.25;
+        double pulse=t>=W&&fade==0?Math.exp(-Math.pow(Math.min(phase,.5-phase)/.075,2)):0;
         int w=context.getScaledWindowWidth(),h=context.getScaledWindowHeight();
         draw(context,EDGE,0,0,w,h,strength*(.75+.55*pulse));
         for(int i=0;i<22;i++) {

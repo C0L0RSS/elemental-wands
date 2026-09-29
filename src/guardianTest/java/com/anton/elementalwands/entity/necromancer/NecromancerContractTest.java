@@ -97,6 +97,12 @@ public final class NecromancerContractTest {
         ready.put(Action.DRAIN, 100L);
         require(NecromancerRules.choose(spread, ready, 0, Action.HANDS, 0, 2) == Action.AMBUSH, "Ambush missing from the rotation");
         ready.clear();
+        // Drain only starts on a close player, and a sprint (5.6 blocks a second) through its windup escapes the break range.
+        require(!NecromancerRules.canTarget(Action.DRAIN, new Candidate(a, 12, true)) && NecromancerRules.canTarget(Action.DRAIN, new Candidate(a, 9, true)),
+                "Drain range moved");
+        require(Action.DRAIN.impact >= 30 && NecromancerRules.DRAIN_BREAK_RANGE - NecromancerRules.DRAIN_RANGE < 5.6 * Action.DRAIN.impact / 20.0,
+                "Drain windup too short to step out of");
+        require((Action.DRAIN.duration - Action.DRAIN.impact) / NecromancerRules.DRAIN_INTERVAL >= 5, "Drain lost its pulses");
         // Ambush needs no vision but never lands on top of a close player; hands need no vision; drain and bolt do.
         var hidden = List.of(new Candidate(a, 10, false));
         ready.put(Action.HANDS, 100L); ready.put(Action.AMBUSH, 100L);
@@ -194,10 +200,12 @@ public final class NecromancerContractTest {
         require(Action.HARVEST.impact == NecromancerRules.HARVEST_SCREAM && NecromancerRules.HARVEST_GLOW >= 20
                 && Action.HARVEST.duration > NecromancerRules.HARVEST_SCREAM + NecromancerRules.HARVEST_GLOW, "Harvest call out of order");
         // The caster inside: a knockdown within reach, a real collapse, and a soul out of melee but not out of range.
-        require(NecromancerRules.soulKnockdown(800) == 48 && NecromancerRules.soulKnockdown(1300) == 78 && NecromancerRules.soulKnockdown(300) == 40,
+        require(NecromancerRules.soulKnockdown(800) == 30 && NecromancerRules.soulKnockdown(1300) == 78 && NecromancerRules.soulKnockdown(300) == 30,
                 "Soul knockdown moved");
-        require(NecromancerRules.SPLIT_RELEASE < NecromancerRules.SPLIT_TELL && NecromancerRules.COLLAPSE_TICKS >= 80 && NecromancerRules.SPLIT_AGAIN > NecromancerRules.COLLAPSE_TICKS,
-                "Split clock out of order");
+        require(NecromancerRules.SPLIT_RELEASE < NecromancerRules.SPLIT_TELL && NecromancerRules.COLLAPSE_TICKS >= 80, "Split clock out of order");
+        // The blind body's marked arc leads its turn (at most ~9 ticks for a half turn) and lands after the turn.
+        require(180 / NecromancerRules.FLAIL_TURN < Action.SWIPE.impact && NecromancerRules.FLAIL_GAP_MIN >= 10
+                && NecromancerRules.FLAIL_GAP_MAX > NecromancerRules.FLAIL_GAP_MIN, "Blind swipes land before they turn or never rest");
         require(NecromancerRules.SOUL_NEAR > NecromancerRules.SOUL_THREAT && NecromancerRules.SOUL_LOW >= 2.5 && NecromancerRules.SOUL_HIGH <= 6
                 && NecromancerRules.SOUL_FAR < NecromancerRules.BOLT_RANGE, "The soul hovers out of reach or on top of players");
         // Transformation clock: the body grows before the roar, and both finish inside the cinematic.
@@ -245,7 +253,7 @@ public final class NecromancerContractTest {
         require(NecromancerIntro.victimAt(NecromancerIntro.WALK_END).distanceTo(NecromancerIntro.VICTIM_TO) < .01, "Zombie does not stop at its mark");
         require(Math.abs(NecromancerIntro.facing(NecromancerIntro.PULL) - NecromancerIntro.PULL_FACING) < .01 && NecromancerIntro.PULL_FACING > 90
                 && Math.abs(NecromancerIntro.facing(NecromancerIntro.TURN_END)) < .01, "He must face the zombie while hauling and the players before the slam");
-        System.out.println("Necromancer checks passed: intro beats, torn soul path and skip window; scaling, stages and gates, solo/duo/party waves, reinforcements, quickening, soul fire rain, soul light, drain cap, blink/shift/ambush priority, vision, target rotation, telegraph timing, hands buff and follow-up, sidestep window, siege timing, colossus priorities without an army, dive/rush/harvest choice, soul-split restrictions, colossus pace, grave dive, harvest, soul knockdown, transformation clock, grab caps, jumpable swipe, random rush windup, timing and cover.");
+        System.out.println("Necromancer checks passed: intro beats, torn soul path and skip window; scaling, stages and gates, solo/duo/party waves, reinforcements, quickening, soul fire rain, soul light, drain cap, drain windup and range, blink/shift/ambush priority, vision, target rotation, telegraph timing, hands buff and follow-up, sidestep window, siege timing, colossus priorities without an army, dive/rush/harvest choice, soul-split restrictions, colossus pace, grave dive, harvest, soul knockdown, one blind-swinging split, transformation clock, grab caps, jumpable swipe, random rush windup, timing and cover.");
     }
 
     private static void require(boolean value, String reason) { if (!value) throw new AssertionError(reason); }

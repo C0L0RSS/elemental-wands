@@ -1,6 +1,7 @@
 package com.anton.elementalwands.crypt;
 
 import com.anton.elementalwands.church.GuardianChurchLoot;
+import com.anton.elementalwands.registry.ModBlocks;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -16,13 +17,14 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.world.World;
 
 /**
- * The graveyard's victory chests: two chests beside the open grave, filled once with bones and
- * the same seeded treasure rolls as a restored church. They never refill.
+ * The graveyard's victory chests: two chests either side of the mausoleum steps (beside the open
+ * grave at an old headstone graveyard), filled once with bones and the same seeded treasure rolls
+ * as a restored church. They never refill.
  */
 final class HollowCryptRewards {
     private HollowCryptRewards() {}
 
-    /** The side of the altar that faces the grave: where the polished ledge sits. */
+    /** The side of the old altar that faces the grave: where the polished ledge sits. */
     static Direction front(World world, BlockPos skull) {
         BlockPos lower = skull.down(2);
         for (Direction d : Direction.Type.HORIZONTAL)
@@ -30,9 +32,21 @@ final class HollowCryptRewards {
         return null;
     }
 
-    /** Chest positions either side of the grave, two blocks in front of the headstone. */
-    static List<BlockPos> chestSpots(BlockPos skull, Direction front) {
-        BlockPos floor = skull.down(3).offset(front, 2);
+    /**
+     * Chest positions: on the ground either side of the mausoleum steps, facing them, for a site
+     * at the veil's bottom-centre cell; else either side of the old altar's grave.
+     */
+    static List<BlockPos> chestSpots(World world, BlockPos site) {
+        BlockState veil = world.getBlockState(site);
+        if (veil.isOf(ModBlocks.MAUSOLEUM_VEIL)) {
+            Direction facing = veil.get(MausoleumVeilBlock.FACING);
+            BlockPos floor = site.down().offset(facing, 4);
+            Direction left = facing.rotateYClockwise();
+            return List.of(floor.offset(left, 5), floor.offset(left, -5));
+        }
+        Direction front = front(world, site);
+        if (front == null) return List.of();
+        BlockPos floor = site.down(3).offset(front, 2);
         Direction side = front.rotateYClockwise();
         return List.of(floor.offset(side, 3), floor.offset(side, -3));
     }
@@ -40,16 +54,16 @@ final class HollowCryptRewards {
     /** Places and fills the chests. Returns the positions that hold a reward chest. */
     static List<BlockPos> place(ServerWorld world, BlockPos skull) {
         world.getChunk(skull.getX() >> 4, skull.getZ() >> 4);
-        Direction front = front(world, skull);
         List<BlockPos> placed = new ArrayList<>();
-        if (front == null) return placed;
-        Direction side = front.rotateYClockwise();
-        List<BlockPos> spots = chestSpots(skull, front);
+        List<BlockPos> spots = chestSpots(world, skull);
+        if (spots.isEmpty()) return placed;
+        // The first chest lies on this side of the second.
+        Direction side = Direction.getFacing(spots.get(0).getX() - spots.get(1).getX(), 0, spots.get(0).getZ() - spots.get(1).getZ());
         for (int i = 0; i < spots.size(); i++) {
             BlockPos pos = spots.get(i);
             BlockState here = world.getBlockState(pos);
             if (!here.isAir() && !here.isReplaceable()) continue;
-            // Each chest faces the grave between them.
+            // Each chest faces the steps (or grave) between them.
             Direction facing = i == 0 ? side.getOpposite() : side;
             world.setBlockState(pos, Blocks.CHEST.getDefaultState().with(ChestBlock.FACING, facing));
             if (!(world.getBlockEntity(pos) instanceof ChestBlockEntity chest)) continue;

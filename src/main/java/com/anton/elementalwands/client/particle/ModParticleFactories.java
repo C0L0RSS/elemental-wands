@@ -172,6 +172,7 @@ public final class ModParticleFactories {
                 sprites -> new ElementalParticleFactory(sprites, NECROMANCER_SOUL_WISP));
         factories.register(ModParticles.NECROMANCER_BITE_SHARD,
                 sprites -> new ElementalParticleFactory(sprites, NECROMANCER_BITE_SHARD));
+        factories.register(ModParticles.MAUSOLEUM_MOTE, MausoleumMoteParticle.Factory::new);
         factories.register(ModParticles.FIRE_EMBER,
                 sprites -> new ElementalParticleFactory(sprites, FIRE_EMBER));
         factories.register(ModParticles.FIRE_FLAME_RIBBON,

@@ -35,21 +35,28 @@ It records known verification limits; it is not a fresh installation receipt.
   at chase speed with long strides and play at travel speed, fixing the foot sliding.
   Pending: human Lunar review of how they look and move in game, spawn frequency and balance.
 - **Hollow Crypt realm:** the dimension, the dead-forest clearing, the naturally
-  generated graveyard and the full fight flow are in place. That covers free headstone entry,
+  generated graveyard and the full fight flow are in place. That covers free walk-in veil entry,
   a sealed party, spectating after death, kept belongings, the wipe reset, victory chests and
   one spell book per graveyard. The native client fixture passed all of these for a solo player,
   plus the operator commands, containment and protection. Pending: multi-player spectating
   (not automatable in the solo fixture), human Lunar review of brightness (ambient light 0.2,
   lifted fog and seven clearing soul lanterns), the Necromancer's body glow, the Life Drain glow,
-  fog density and whether non-explosive fire spells burn the clearing's logs. The graveyard
-  design is a first pass; its level-ground placement was checked on a dedicated server
-  (seed 12345) and `crypt_client_smoke` (now using the nearest natural graveyard) passed, but it
-  still needs a fresh-world Lunar look beside hills. Forest-biome yards can have natural trees
-  growing inside them. A fight's end now releases everyone the crypt brought into the slot, not
-  only the sealed party; the co-op victory release needs a human multi-player check, as does a
-  second party member using the headstone while the slot is laid out (the fixture covers one
-  player's repeated use). Known gaps: graveyard rewards are keyed by the skull's coordinates,
-  so moving the altar and winning again yields fresh chests and another spell book; and
+  fog density and whether non-explosive fire spells burn the clearing's logs. The graveyard's
+  level-ground placement was checked on a dedicated server (seed 12345). The mausoleum
+  (unbreakable, pale marble doorway, vortex veil, void windows, door hint, motes, court return)
+  and the withered woods around the yard passed `crypt_client_smoke` on the nearest natural
+  graveyard, including no leaves within 14 blocks of the door and no second fight while
+  standing in the veil. Pending: a fresh-world Lunar look at the mausoleum by day and night,
+  beside hills and in a forest; whether the motes are noticeable but quiet enough; the veil and
+  void animation speed; and how far the dead woods should reach (18 bare, fading out to 34
+  blocks). A fight's end now releases everyone the crypt brought into the slot, not only the
+  sealed party; the co-op victory release needs a human multi-player check, as does a second
+  party member walking into the veil while the slot is laid out (the fixture covers one player
+  standing in it). Known gaps: graveyards generated before the mausoleum keep the old headstone,
+  whose rewards are keyed by the skull's coordinates, so moving that altar and winning again
+  yields fresh chests and another spell book (the mausoleum can't be moved). A graveyard only
+  partly generated before this update may finish its missing chunks with the new, larger
+  layout. `/place structure` now needs the chunks about 40 blocks around the yard loaded. And
   graveyards have no exclusion from villages (the structure set's one exclusion zone is the
   Guardian church), so a village can overlap one.
 - **Gravity Well:** Space has five learnable spells; every current elemental

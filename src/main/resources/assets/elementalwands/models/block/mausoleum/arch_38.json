@@ -1,0 +1,158 @@
+{
+  "textures": {
+    "wall": "minecraft:block/deepslate_bricks",
+    "cornice": "minecraft:block/polished_deepslate",
+    "outer": "minecraft:block/calcite",
+    "inner": "minecraft:block/polished_diorite",
+    "carved": "minecraft:block/chiseled_stone_bricks",
+    "bone": "minecraft:block/bone_block_side",
+    "hood": "minecraft:block/polished_blackstone",
+    "glow": "elementalwands:block/mausoleum_glow",
+    "particle": "minecraft:block/calcite"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#cornice",
+          "cullface": "north"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#cornice",
+          "cullface": "south"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#cornice",
+          "cullface": "west"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#cornice",
+          "cullface": "east"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#cornice",
+          "cullface": "up"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#cornice",
+          "cullface": "down"
+        }
+      }
+    },
+    {
+      "from": [
+        2.5,
+        0,
+        -3
+      ],
+      "to": [
+        3.5,
+        8,
+        0
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            12.5,
+            8,
+            13.5,
+            16
+          ],
+          "texture": "#outer"
+        },
+        "south": {
+          "uv": [
+            2.5,
+            8,
+            3.5,
+            16
+          ],
+          "texture": "#outer"
+        },
+        "west": {
+          "uv": [
+            13,
+            8,
+            16,
+            16
+          ],
+          "texture": "#outer"
+        },
+        "east": {
+          "uv": [
+            0,
+            8,
+            3,
+            16
+          ],
+          "texture": "#outer"
+        },
+        "up": {
+          "uv": [
+            2.5,
+            13,
+            3.5,
+            16
+          ],
+          "texture": "#outer"
+        },
+        "down": {
+          "uv": [
+            2.5,
+            0,
+            3.5,
+            3
+          ],
+          "texture": "#outer",
+          "cullface": "down"
+        }
+      }
+    }
+  ]
+}

@@ -60,6 +60,7 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.WorldSavePath;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.GameMode;
@@ -70,8 +71,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * The Hollow Crypt. Lays out the clearing in a slot, moves players in and out with journaled
- * return points and keeps fighters inside the clearing. A graveyard headstone seals the nearby
- * group into a fight: the fallen watch as spectators, a wipe makes the boss vanish and sends
+ * return points and keeps fighters inside the clearing. Walking into a graveyard mausoleum's
+ * veil seals the nearby group into a fight: the fallen watch as spectators, a wipe makes the boss vanish and sends
  * everyone back with their belongings, and a victory fills the graveyard's reward chests.
  */
 public final class HollowCryptManager {
@@ -95,7 +96,7 @@ public final class HollowCryptManager {
     }
 
     static final class Fight {
-        /** The graveyard whose headstone started it; null for an operator summon. */
+        /** The graveyard whose mausoleum (or old headstone) started it; null for an operator summon. */
         String site;
         /** Sealed when the fight begins. */
         List<String> roster = new ArrayList<>();
@@ -132,7 +133,9 @@ public final class HollowCryptManager {
     private static final Map<Integer, Integer> risings = new HashMap<>(), endings = new HashMap<>();
     /** Players whose respawn the crypt handles (spectate or go home), and whose belongings it carries over. */
     private static final Set<UUID> respawns = new LinkedHashSet<>(), joins = new LinkedHashSet<>(), kept = new HashSet<>();
-    private static final int RISE_DELAY = 40, VICTORY_DELAY = 200, WIPE_DELAY = 60, RITUAL_RADIUS = 16;
+    /** The last server tick each player touched a mausoleum veil. */
+    private static final Map<UUID, Integer> veilTouches = new HashMap<>();
+    private static final int RISE_DELAY = 40, VICTORY_DELAY = 200, WIPE_DELAY = 60, RITUAL_RADIUS = 16, VEIL_REPEAT = 40;
 
     private HollowCryptManager() {}
 
@@ -141,6 +144,7 @@ public final class HollowCryptManager {
         ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resources, success) -> layout = fingerprint(server));
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
             state = null; path = null; builds.clear(); risings.clear(); endings.clear(); respawns.clear(); joins.clear(); kept.clear();
+            veilTouches.clear();
         });
         ServerTickEvents.END_SERVER_TICK.register(HollowCryptManager::tick);
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
@@ -166,6 +170,7 @@ public final class HollowCryptManager {
                 respawns.add(newPlayer.getUuid());
         });
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+            veilTouches.remove(handler.getPlayer().getUuid());
             if (state == null) return;
             abandon(handler.getPlayer());
             if (fightOf(handler.getPlayer()) != null) eliminate(handler.getPlayer(), null);
@@ -179,7 +184,7 @@ public final class HollowCryptManager {
             claimBook(caller, server, hit.getBlockPos());
             BlockPos skull = headstone(world, hit.getBlockPos());
             if (skull == null) return ActionResult.PASS;
-            caller.sendMessage(Text.literal(ritual(caller, skull)), true);
+            caller.sendMessage(Text.literal(ritual(caller, new Entrance(skull, new Vec3d(skull.getX() + .5, skull.getY() + .5, skull.getZ() + 1.5), null, 0))), true);
             return ActionResult.SUCCESS;
         });
         PlayerBlockBreakEvents.BEFORE.register((world, player, pos, block, entity) -> !restricted(world, player));
@@ -223,9 +228,32 @@ public final class HollowCryptManager {
     // ------------------------------------------------------------------ graveyard ritual
 
     /**
-     * The graveyard's headstone altar, recognised by its blocks so natural, /place'd and rebuilt
-     * copies all work in any rotation: a skeleton skull on two carved deepslate blocks, the lower
-     * one flanked by more carving, on a polished deepslate plinth. Returns the skull, or null.
+     * Where a ritual starts: the site that keys the graveyard's rewards, where its effects play,
+     * and for the mausoleum the court before its steps, where anyone taken from the doorway is
+     * sent back so they don't walk straight into the veil again.
+     */
+    private record Entrance(BlockPos site, Vec3d focus, Vec3d court, float courtYaw) {}
+
+    /**
+     * A player walked into the mausoleum's veil: the ritual starts once, as a right-click on the
+     * old headstone did. Standing in the veil while the slot is laid out does nothing more, and a
+     * refusal (such as a full crypt) repeats only after the player has stepped out for a moment.
+     */
+    public static void enterVeil(ServerPlayerEntity player, BlockPos anchor, Direction facing) {
+        if (state == null || player.isSpectator() || inRealm(player) || rosterOf(player) != null || pending(player.getUuid())) return;
+        int now = player.getEntityWorld().getServer().getTicks();
+        Integer last = veilTouches.put(player.getUuid(), now);
+        if (last != null && now - last < VEIL_REPEAT) return;
+        Vec3d court = Vec3d.ofBottomCenter(anchor.offset(facing, 6).down());
+        Entrance entrance = new Entrance(anchor, MausoleumVeilBlock.eye(anchor, facing), court, facing.getOpposite().getPositiveHorizontalDegrees());
+        player.sendMessage(Text.literal(ritual(player, entrance)), true);
+    }
+
+    /**
+     * The old graveyard's headstone altar, kept for graveyards generated before the mausoleum. It
+     * is recognised by its blocks, so natural, /place'd and rebuilt copies all work in any
+     * rotation: a skeleton skull on two carved deepslate blocks, the lower one flanked by more
+     * carving, on a polished deepslate plinth. Returns the skull, or null.
      */
     static BlockPos headstone(World world, BlockPos clicked) {
         BlockState state = world.getBlockState(clicked);
@@ -243,10 +271,11 @@ public final class HollowCryptManager {
     private static boolean carved(World world, BlockPos pos) { return world.getBlockState(pos).isOf(Blocks.CHISELED_DEEPSLATE); }
 
     /**
-     * The headstone seals every living player near it into a fight in a free slot; the boss rises
-     * shortly after. Anyone already sealed into a fight or waiting for a slot to open stays with it.
+     * The ritual seals every living player near the entrance into a fight in a free slot; the boss
+     * rises shortly after. Anyone already sealed into a fight or waiting for a slot to open stays with it.
      */
-    static String ritual(ServerPlayerEntity caller, BlockPos headstone) {
+    private static String ritual(ServerPlayerEntity caller, Entrance entrance) {
+        BlockPos site = entrance.site();
         ServerWorld here = (ServerWorld) caller.getEntityWorld();
         ServerWorld realm = realm(here.getServer());
         if (realm == null || state == null) return "The grave is silent. (The crypt is unavailable; see the server log.)";
@@ -256,21 +285,24 @@ public final class HollowCryptManager {
         int slot = freeSlot(realm);
         if (slot < 0) return "The crypt is full. Try again when a fight ends.";
         List<ServerPlayerEntity> group = here.getPlayers(p -> p.isAlive() && !p.isSpectator()
-                && p.squaredDistanceTo(Vec3d.ofCenter(headstone)) <= RITUAL_RADIUS * RITUAL_RADIUS
+                && p.squaredDistanceTo(Vec3d.ofCenter(site)) <= RITUAL_RADIUS * RITUAL_RADIUS
                 && rosterOf(p) == null && !pending(p.getUuid()));
         Fight fight = new Fight();
-        fight.site = siteKey(here, headstone);
+        fight.site = siteKey(here, site);
         for (ServerPlayerEntity p : group) {
-            state.returns.put(p.getUuidAsString(), point(p));
+            boolean doorway = entrance.court() != null && p.getEntityPos().distanceTo(Vec3d.ofBottomCenter(site)) <= 3.5;
+            state.returns.put(p.getUuidAsString(), doorway ? new Point(here.getRegistryKey().getValue().toString(),
+                    entrance.court().x, entrance.court().y, entrance.court().z, entrance.courtYaw(), 0) : point(p));
             if (!p.isCreative()) fight.roster.add(p.getUuidAsString());
         }
         fight.standing.addAll(fight.roster);
         fight.party = !fight.roster.isEmpty();
         state.fights.put(String.valueOf(slot), fight);
         if (!persist()) { state.fights.remove(String.valueOf(slot)); return "The grave is silent. (Could not record return points.)"; }
-        here.playSound(null, headstone, SoundEvents.ENTITY_WARDEN_EMERGE, SoundCategory.HOSTILE, 1.4f, .6f);
-        here.playSound(null, headstone, SoundEvents.PARTICLE_SOUL_ESCAPE.value(), SoundCategory.HOSTILE, 2f, .7f);
-        here.spawnParticles(ParticleTypes.SOUL, headstone.getX() + .5, headstone.getY() + .5, headstone.getZ() + 1.5, 60, 1.5, .6, 1.5, .03);
+        Vec3d focus = entrance.focus();
+        here.playSound(null, focus.x, focus.y, focus.z, SoundEvents.ENTITY_WARDEN_EMERGE, SoundCategory.HOSTILE, 1.4f, .6f);
+        here.playSound(null, focus.x, focus.y, focus.z, SoundEvents.PARTICLE_SOUL_ESCAPE.value(), SoundCategory.HOSTILE, 2f, .7f);
+        here.spawnParticles(ParticleTypes.SOUL, focus.x, focus.y, focus.z, 60, 1.5, .6, 1.5, .03);
         for (ServerPlayerEntity p : group) p.addStatusEffect(new StatusEffectInstance(StatusEffects.BLINDNESS, 50, 0, false, false));
         if (ready(slot)) {
             group.forEach(p -> arrive(p, realm, slot));
@@ -379,7 +411,7 @@ public final class HollowCryptManager {
         if (first) HollowCryptRewards.place(world, skull).forEach(pos -> site.chests.add(pos.asLong()));
         for (String id : fight.roster) if (!site.victors.contains(id)) site.victors.add(id);
         if (site.chests.isEmpty()) return "";
-        return first ? " Reward chests wait beside the open grave." : " Open the grave's chests to claim your spell book.";
+        return first ? " Reward chests wait at the graveyard." : " Open the graveyard's chests to claim your spell book.";
     }
 
     private static void claimBook(ServerPlayerEntity player, ServerWorld world, BlockPos pos) {
@@ -456,7 +488,7 @@ public final class HollowCryptManager {
     }
 
     /**
-     * The sealed roster plus anyone else in the slot, such as Creative players the headstone
+     * The sealed roster plus anyone else in the slot, such as Creative players the ritual
      * brought along or players who entered by command; a fight's end releases them all. Without a
      * realm, only the roster.
      */

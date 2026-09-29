@@ -25,15 +25,21 @@ zombie while he hauls and to the players from tick 186, and holds every watcher 
 cannot move, cast or take damage (except `/kill` and the void), and the boss is passive and
 untouchable. A watcher caught mid-jump builds no fall distance while held. A watcher who disconnects
 is let go at once, and a boss that unloads, changes dimension or is removed mid-scene releases
-everyone. The zombie (`IntroZombieEntity`) and its soul (`IntroSoulEntity`, drawn with the Soul
+everyone. Operator `fight`, `stop`, `intro` and the one-shot rehearsals (casts, `wave`, `rain`)
+end a running scene on the spot: its watchers go free and it never starts the fight later. The
+scene itself never saves: a boss saved mid-scene reloads fighting, as the scene would have
+ended, rather than passive, frozen and stuck at its first gate. The zombie (`IntroZombieEntity`) and its soul (`IntroSoulEntity`, drawn with the Soul
 Harvest model and its `dragged` loop) never save; the soul's path is a function of world time,
 so it stays in step with the camera and lands in the raised staff's flame (`STAFF_RAISED`, from
 the intro clip's pose). Each client (`NecromancerIntroClient` with the `Intro*Mixin` classes) flies
 the camera through the shots on the server's clock, letterboxes the view, hides the HUD, hand and
 block outline, and narrows the lens. Holding Sneak skips: the camera hands back at once, and the
 fight starts early only when every watcher has skipped (never before tick 20). A skip lands on
-the finished scene with the braziers lit. The rim braziers are authored unlit, and the scene
-also puts out any lit ones on its first frame. The boss clip `animation.hollow_necromancer.intro`
+the finished scene with the braziers lit. The rim braziers are authored unlit, and in the crypt
+the scene lights every soul campfire in its ring's reach, putting out any lit ones on its first
+frame. Elsewhere it only borrows soul campfires that are burning and relights just those, and a
+cancelled scene relights what it put out, so a replay outside the crypt leaves them as it found
+them. The boss clip `animation.hollow_necromancer.intro`
 shares the timeline. `/ew necromancer intro` replays it for players within 64 blocks.
 
 ## Encounter intent
@@ -293,7 +299,9 @@ Operator commands: `/summon elementalwands:hollow_necromancer`, then
 `bolt|hands|drain|blink|shift|ambush`, `wave <1-4>`, `rain` (one Soul Fire Rain volley at
 the nearby party) and, after transforming, colossus `swipe|grab|rush|dive|harvest` (spells
 also work) and `split`. One-shot casts, volleys and waves leave the boss passive; `siege`
-and `split` start the fight and the current duel's siege, or the soul split, at once.
+and `split` start the fight and the current duel's siege, or the soul split, at once. Each of
+these commands, `fight` and `stop` ends a running intro first; `stop` stays passive after a
+reload.
 
 `/ew necromancer log on|off` is a tuning aid. Fights that start while it is on record
 every cast, stage and wave, each hit on a player from the boss or its army (before and

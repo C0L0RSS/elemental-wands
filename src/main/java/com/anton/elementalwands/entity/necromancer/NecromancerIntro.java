@@ -1,5 +1,6 @@
 package com.anton.elementalwands.entity.necromancer;
 
+import com.anton.elementalwands.crypt.HollowCryptRealm;
 import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.registry.ModEntities;
 import com.anton.elementalwands.util.SoulGlow;
@@ -76,11 +77,15 @@ public final class NecromancerIntro {
     private static final Map<UUID, NecromancerIntro> WATCHING = new HashMap<>();
 
     private final NecromancerEntity boss;
+    private final ServerWorld world;
     private final Vec3d centre;
     private final float yaw;
     private final Map<ServerPlayerEntity, Vec3d> watchers = new LinkedHashMap<>();
     private final Set<UUID> skipped = new HashSet<>();
+    /** Braziers the ring has yet to light. */
     private final List<BlockPos> braziers = new ArrayList<>();
+    /** Those that were burning when the scene began; a cancelled scene relights just these. */
+    private final Set<BlockPos> doused = new HashSet<>();
     private IntroZombieEntity victim;
     private IntroSoulEntity torn;
     private long start;
@@ -88,6 +93,7 @@ public final class NecromancerIntro {
 
     NecromancerIntro(NecromancerEntity boss, ServerWorld world, List<ServerPlayerEntity> players) {
         this.boss = boss;
+        this.world = world;
         centre = boss.getEntityPos();
         yaw = boss.getYaw();
         for (ServerPlayerEntity player : players) {
@@ -366,8 +372,14 @@ public final class NecromancerIntro {
         world.playSound(null, pos, SoundEvents.ITEM_FIRECHARGE_USE, SoundCategory.HOSTILE, 1.4f, .7f);
     }
 
-    /** Puts out the clearing's soul-fire braziers, so the slam is what lights them. */
+    /**
+     * Puts out the clearing's soul-fire braziers, so the slam is what lights them. In the crypt
+     * every one is the ring's, and the rim's are authored unlit. Elsewhere (the operator command
+     * plays anywhere) the scene only borrows campfires that are burning and relights just those,
+     * so the world ends as it began.
+     */
     private void findBraziers(ServerWorld world) {
+        boolean crypt = world.getRegistryKey() == HollowCryptRealm.WORLD;
         int reach = (int)RING_REACH + 1;
         BlockPos c = BlockPos.ofFloored(centre);
         for (int cx = ChunkSectionPos.getSectionCoord(c.getX() - reach); cx <= ChunkSectionPos.getSectionCoord(c.getX() + reach); cx++)
@@ -376,9 +388,11 @@ public final class NecromancerIntro {
                 for (BlockPos pos : BlockPos.iterate(Math.max(cx << 4, c.getX() - reach), c.getY() - 1, Math.max(cz << 4, c.getZ() - reach),
                         Math.min((cx << 4) + 15, c.getX() + reach), c.getY() + 4, Math.min((cz << 4) + 15, c.getZ() + reach))) {
                     BlockState state = world.getBlockState(pos);
-                    if (!state.isOf(Blocks.SOUL_CAMPFIRE)) continue;
+                    if (!state.isOf(Blocks.SOUL_CAMPFIRE) || !crypt && !state.get(CampfireBlock.LIT)) continue;
                     braziers.add(pos.toImmutable());
-                    if (state.get(CampfireBlock.LIT)) world.setBlockState(pos, state.with(CampfireBlock.LIT, false));
+                    if (!state.get(CampfireBlock.LIT)) continue;
+                    doused.add(pos.toImmutable());
+                    world.setBlockState(pos, state.with(CampfireBlock.LIT, false));
                 }
             }
     }
@@ -392,9 +406,15 @@ public final class NecromancerIntro {
         boss.endIntro(early);
     }
 
-    /** The boss is gone mid-scene: tidy up and let everyone go without starting a fight. */
+    /** The boss is gone or an operator took over mid-scene: tidy up, relight, and let everyone go without starting a fight. */
     void cancel() {
         clear();
+        // An unloading boss may take the braziers' chunks with it; never load one back to relight it.
+        for (BlockPos pos : braziers)
+            if (doused.contains(pos) && world.isChunkLoaded(ChunkSectionPos.getSectionCoord(pos.getX()), ChunkSectionPos.getSectionCoord(pos.getZ())))
+                ignite(world, pos, false);
+        braziers.clear();
+        doused.clear();
         release();
     }
 

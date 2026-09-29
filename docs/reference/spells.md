@@ -180,8 +180,8 @@ element: its damage stays below Wind and Stone, and its flowers bank health. A t
 A patch bites anything with any block column of its body over it (at the feet or just
 below), so a wide body is not tested by its centre alone. Each flower banks the health its
 own patch's thorns take, up to 8, and shows hearts while it holds some. Its owner collects
-it by left-clicking the flower (this works where blocks cannot be broken, such as the
-Hollow Crypt) or popping it with their own Seed, or by feeding it to their Overgrowth; the
+it by left-clicking the flower within normal block reach, outside Spectator mode (this works
+where blocks cannot be broken, such as the Hollow Crypt) or popping it with their own Seed, or by feeding it to their Overgrowth; the
 health heals them. Expiry, anyone else's break or a stray projectile wastes it. Tendril
 Bloom brambles bite but bank nothing. Thornbite
 (stable saved ID `thorn_lash`) is a separate Basic: a Venus flytrap on three

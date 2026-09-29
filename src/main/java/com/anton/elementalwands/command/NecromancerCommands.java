@@ -8,6 +8,7 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import java.util.Comparator;
+import java.util.Locale;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
@@ -70,7 +71,7 @@ public final class NecromancerCommands {
             }
             case "siege" -> {
                 if (!boss.isBossAggressive()) boss.startFight(); // Starting the fight clears pending state, so it comes first.
-                if (!boss.requestSiege()) yield "no siege left to start: it is " + boss.stage().name().toLowerCase() + (boss.isColossus() ? " (colossus)" : "") + ".";
+                if (!boss.requestSiege()) yield "no siege left to start: it is " + boss.stage().name().toLowerCase(Locale.ROOT) + (boss.isColossus() ? " (colossus)" : "") + ".";
                 yield "starting the current duel's siege: it takes its perch and raises waves. Kill them to bring it down.";
             }
             case "split" -> {
@@ -84,7 +85,7 @@ public final class NecromancerCommands {
                 yield "one Soul Fire Rain volley (" + markers + " markers) at the nearby party, then passive.";
             }
             default -> {
-                Action cast = Action.valueOf(action.toUpperCase());
+                Action cast = Action.valueOf(action.toUpperCase(Locale.ROOT));
                 if (cast.colossusOnly() && !boss.isColossus() || cast.robedOnly() && boss.isColossus())
                     yield cast.colossusOnly() ? action + " needs the colossus; use /ew necromancer transform first." : action + " is a robed-form spell.";
                 boss.testAction(source.getPlayerOrThrow(), cast);

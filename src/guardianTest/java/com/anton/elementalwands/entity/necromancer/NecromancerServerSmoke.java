@@ -35,6 +35,8 @@ import net.minecraft.util.math.Vec3d;
 public final class NecromancerServerSmoke implements ModInitializer {
     private static final Box AREA = new Box(-30, 90, -30, 50, 130, 50);
     private static final List<BlockPos> BRAZIERS = List.of(new BlockPos(20, 100, 3), new BlockPos(-12, 100, -30));
+    /** A soul campfire already out when a scene begins: no intro may light it. */
+    private static final BlockPos UNLIT = new BlockPos(-6, 100, -16);
     private int tick, siege, since, intro = -1;
     private ServerPlayerEntity target, second;
     private NecromancerEntity boss, spare;
@@ -257,6 +259,7 @@ public final class NecromancerServerSmoke implements ModInitializer {
         }
         // A chunk unload or a portal skips remove(); the unloaded boss must still let its watchers go.
         if (t == 455) {
+            w.setBlockState(UNLIT, Blocks.SOUL_CAMPFIRE.getDefaultState().with(CampfireBlock.LIT, false));
             spare = new NecromancerEntity(ModEntities.HOLLOW_NECROMANCER, w);
             spare.refreshPositionAndAngles(.5, 100, -8.5, 0, 0);
             w.spawnEntity(spare);
@@ -265,9 +268,31 @@ public final class NecromancerServerSmoke implements ModInitializer {
         }
         if (t == 457) {
             require(NecromancerIntro.watching(target) && count(w, IntroZombieEntity.class) == 1, "The spare boss's intro did not start");
+            require(BRAZIERS.stream().noneMatch(pos -> w.getBlockState(pos).get(CampfireBlock.LIT)), "The spare boss's intro did not put out the braziers");
+            // Saved mid-scene, the boss comes back fighting rather than passive, frozen and stuck at its first gate.
+            NecromancerEntity saved = reload(w, spare);
+            require(saved.isBossAggressive() && !saved.isAiDisabled(), "A boss saved mid-intro reloaded passive or frozen");
             spare.setRemoved(net.minecraft.entity.Entity.RemovalReason.UNLOADED_TO_CHUNK);
         }
-        if (t == 458) require(!NecromancerIntro.watching(target) && count(w, IntroZombieEntity.class) == 0, "An unloaded boss left its watcher held");
+        if (t == 458) {
+            require(!NecromancerIntro.watching(target) && count(w, IntroZombieEntity.class) == 0, "An unloaded boss left its watcher held");
+            // A cancelled scene relights what it put out, and never lights a soul campfire that was already out.
+            require(BRAZIERS.stream().allMatch(pos -> w.getBlockState(pos).get(CampfireBlock.LIT)), "A cancelled intro left the braziers dark");
+            require(!w.getBlockState(UNLIT).get(CampfireBlock.LIT), "An intro lit a soul campfire that was out");
+            boss.beginIntro(List.of(target, second));
+        }
+        // An operator stop mid-scene is final: the scene must not start the fight when it would have ended.
+        if (t == 459) {
+            require(boss.inIntro() && NecromancerIntro.watching(target), "The stop check's intro did not start");
+            boss.stopFight();
+            require(!boss.inIntro() && boss.intro() == null && !boss.isBossAggressive() && !boss.isAiDisabled(), "Stop did not end the intro: " + boss.status());
+            require(!NecromancerIntro.watching(target) && !NecromancerIntro.watching(second) && count(w, IntroZombieEntity.class) == 0,
+                    "Stop mid-intro left its watchers or actors");
+            require(BRAZIERS.stream().allMatch(pos -> w.getBlockState(pos).get(CampfireBlock.LIT)) && !w.getBlockState(UNLIT).get(CampfireBlock.LIT),
+                    "Stop mid-intro did not restore the braziers");
+            require(!reload(w, boss).isBossAggressive(), "A stopped boss did not stay passive after reload");
+            w.setBlockState(UNLIT, Blocks.AIR.getDefaultState());
+        }
         // Player spells damage the boss as any WandBoss.
         if (t == 460) {
             boss.setHealth(boss.getMaxHealth()); // The drain check left it below the first duel's gate.
@@ -380,7 +405,7 @@ public final class NecromancerServerSmoke implements ModInitializer {
                     require(boss.stage() == Stage.DONE && minions(w).isEmpty(), "Transformation began with the siege unfinished");
                     boss.stopFight();
                     require(!boss.hasNoGravity(), "Stopped caster kept its perch");
-                    Files.writeString(Path.of("NECROMANCER_PASSED.txt"), "Hollow Necromancer passed: the intro holds the boss and both players still and unhurt with no fall distance, puts out the braziers, ends early only when everyone skips, releases its watchers when its boss unloads, tears the zombie's soul out while he faces it, lands it in the staff, turns him to the players, and its ring relights the braziers before the fight starts; cover stops soul bolts; every skull of an open volley lands; drain damages, heals within its cap, is tracked for clients and breaks on lost sight; wide grasping hands root a player who stays, spare one who steps out and are followed by an ambush burst from behind; siege waves rise on the floor away from players with the duo compositions, share the caster's side, cannot hurt it, finish rising with AI, do not burn at noon and dissolve on stop; blink escapes within the leash and leaves a curse; shift repositions away from everyone; wand damage applies; siege bodies are quickened; a Soul Fire Rain volley blasts the player who stays under a marker and spares one who leaves; soul light rides the bolts, fireballs and markers, flashes on impact, never replaces a block and clears itself, orphans included; the fight gates at 75% into a shielded perched siege where fireballs rain and a hovering target draws a perch bolt, waves 1-2 advance and a cleared siege crashes the caster down exposed; half health starts the second siege whose waves 3-4 bring brutes, and clearing it begins the transformation.\n");
+                    Files.writeString(Path.of("NECROMANCER_PASSED.txt"), "Hollow Necromancer passed: the intro holds the boss and both players still and unhurt with no fall distance, puts out the braziers, ends early only when everyone skips, releases its watchers and relights only the braziers it put out when its boss unloads or an operator stops it (a stop is final), comes back fighting when saved mid-scene, tears the zombie's soul out while he faces it, lands it in the staff, turns him to the players, and its ring relights the braziers before the fight starts; cover stops soul bolts; every skull of an open volley lands; drain damages, heals within its cap, is tracked for clients and breaks on lost sight; wide grasping hands root a player who stays, spare one who steps out and are followed by an ambush burst from behind; siege waves rise on the floor away from players with the duo compositions, share the caster's side, cannot hurt it, finish rising with AI, do not burn at noon and dissolve on stop; blink escapes within the leash and leaves a curse; shift repositions away from everyone; wand damage applies; siege bodies are quickened; a Soul Fire Rain volley blasts the player who stays under a marker and spares one who leaves; soul light rides the bolts, fireballs and markers, flashes on impact, never replaces a block and clears itself, orphans included; the fight gates at 75% into a shielded perched siege where fireballs rain and a hovering target draws a perch bolt, waves 1-2 advance and a cleared siege crashes the caster down exposed; half health starts the second siege whose waves 3-4 bring brutes, and clearing it begins the transformation.\n");
                     w.getServer().stop(false);
                 }
                 require(s < 200, "Second siege never ended in the transformation: " + boss.status());
@@ -397,6 +422,14 @@ public final class NecromancerServerSmoke implements ModInitializer {
     }
     private static void heal(ServerPlayerEntity player) { player.setHealth(20); player.timeUntilRegen = 0; player.clearStatusEffects(); player.extinguish(); }
     private static List<MobEntity> minions(ServerWorld w) { return w.getEntitiesByClass(MobEntity.class, AREA, e -> e instanceof NecromancerMinion && e.isAlive()); }
+    /** The boss as a save and reload would bring it back; the copy is never spawned. */
+    private static NecromancerEntity reload(ServerWorld w, NecromancerEntity boss) {
+        var out = net.minecraft.storage.NbtWriteView.create(net.minecraft.util.ErrorReporter.EMPTY, w.getRegistryManager());
+        boss.writeData(out);
+        var copy = new NecromancerEntity(ModEntities.HOLLOW_NECROMANCER, w);
+        copy.readData(net.minecraft.storage.NbtReadView.create(net.minecraft.util.ErrorReporter.EMPTY, w.getRegistryManager(), out.getNbt()));
+        return copy;
+    }
     private static int count(ServerWorld w, Class<? extends net.minecraft.entity.Entity> type) { return w.getEntitiesByClass(type, AREA, e -> !e.isRemoved()).size(); }
     /** Soul lights anywhere a rain volley or bolt can reach from the fixture's positions. */
     private static List<BlockPos> glows(ServerWorld w) {

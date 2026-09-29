@@ -46,7 +46,12 @@ It records known verification limits; it is not a fresh installation receipt.
   (seed 12345) and `crypt_client_smoke` (now using the nearest natural graveyard) passed, but it
   still needs a fresh-world Lunar look beside hills. Forest-biome yards can have natural trees
   growing inside them. A fight's end now releases everyone the crypt brought into the slot, not
-  only the sealed party; the co-op victory release needs a human multi-player check.
+  only the sealed party; the co-op victory release needs a human multi-player check, as does a
+  second party member using the headstone while the slot is laid out (the fixture covers one
+  player's repeated use). Known gaps: graveyard rewards are keyed by the skull's coordinates,
+  so moving the altar and winning again yields fresh chests and another spell book; and
+  graveyards have no exclusion from villages (the structure set's one exclusion zone is the
+  Guardian church), so a village can overlap one.
 - **Gravity Well:** Space has five learnable spells; every current elemental
   catalog now meets the five-spell minimum. Dedicated-server checks passed the
   12.25-block level throw, immediate floor/wall/entity impact, pull, early/automatic

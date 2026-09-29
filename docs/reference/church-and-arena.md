@@ -81,6 +81,83 @@ saved absolute target heights avoid repeatedly expanding earthwork on reload.
 Ritual clearing permits natural vegetation in lift columns without clearing stone
 roofs or arbitrary structures. Admission must precede those world mutations.
 
+## Hollow Crypt realm
+
+The Hollow Necromancer is fought in its own dimension, `elementalwands:hollow_crypt`: a flat
+world with a fixed night, no weather or skylight, Nether-style thick fog and drifting ash.
+Ambient light is 0.2 and the fog is a dim grey-teal, so unlit ground stays a readable night.
+Each fight slot is a clearing 88 blocks across. Ten soul-fire braziers ring its rim, dark until
+the Necromancer's intro slam lights them (see [Necromancer combat](necromancer-combat.md#intro-cinematic)), and seven
+soul lanterns on existing cover (one per grave-marker group, one per stump) light the interior. It sits inside a dead forest of about 200
+cosmetic trees that reaches 124 blocks out, with some giants whose high boughs arch over the rim.
+An invisible barrier shell and lid keep players and the boss within 44 blocks of the centre and
+30 blocks above the ground. The one exception is the boss's siege perch: eight bough tops above
+the lid, seen from the clearing but never reached (see [Necromancer combat](necromancer-combat.md#sieges)). Owners are under `src/main/java/com/anton/elementalwands/crypt/`.
+
+`art/hollow_crypt/build_layout.py` authors the clearing and forest. Its default run writes
+the browser preview to `.local-previews/hollow-crypt/` (launch entry `hollow-crypt-preview`,
+port 8360), which also shows the overworld graveyard. `--install` writes the realm as
+48×48 structure tiles plus `hollow_graveyard.nbt` and the generated siege perches
+(`crypt/HollowCryptPerches.java`), and `--check` detects drift in all of them. The radius, ceiling and tile grid are
+duplicated in `HollowCryptRealm` and must stay in step.
+
+A slot is laid out the first time it is used, one tile per server tick, and is then reused.
+`elementalwands/hollow-crypt.json` records the built slots and each player's return point.
+When the installed tiles change, every slot moves to untouched ground instead of being
+rebuilt over the old layout. Inside the realm, every player teleport (spells, pearls,
+commands, portals) must stay in the clearing and cannot cross into or out of the realm, except
+the crypt's own entry and exit. A player who escapes the clearing is pulled back. Survival
+players cannot break or place blocks there, and spells cause no world damage: Hollow Purple
+passes through without erasing blocks, and explosions (such as Meteor) destroy no blocks and
+start no fires. Temporary spell blocks still work and restore themselves as usual.
+
+Graveyards generate in plains, meadow, savanna, snowy plains, forest, birch forest,
+dark forest, taiga and swamp biomes (random spread 20/8 chunks, never within 4 chunks of a
+Guardian church, so a yard's cleared air cannot cut into one). They're found with
+`/locate structure elementalwands:hollow_graveyard`, and new chunks only.
+Placement uses the custom structure type `elementalwands:hollow_graveyard`
+(`world/HollowGraveyardStructure`) instead of vanilla jigsaw, which sampled one column and
+stood the yard on a dirt slab at slopes and cliff edges. It surveys ground height on an
+8-block grid over the footprint plus an 8-block rim, at up to 25 spots within 32 blocks of
+the region's chunk. It refuses any spot where a sample is more than 3 blocks from the floor,
+water or lava covers the footprint, or the biome is wrong, and seats the one-layer floor at
+the median ground height. `beard_thin` levels the land to the floor, and cave gaps under it
+are filled with dirt. A region with no suitable spot has no graveyard, and
+`/place structure` fails on unsuitable ground. `/locate` can take several seconds. Entry is free: using
+the headstone altar seals every living non-Creative player within 16 blocks into a fight in
+a free slot. It records their return points first and blinds them for a moment on the way in.
+The boss rises on the circle three seconds after they arrive. The altar is recognised by its
+block pattern in any rotation, not by the structure record, so `/place structure` copies work
+too. A player-built copy of the pattern would work as well.
+
+- **Death:** nothing drops in the realm; inventory and experience carry over to the respawn,
+  also after quitting from the death screen or a restart before respawning.
+  A fallen fighter respawns as a spectator above their own clearing. They cannot leave it or
+  teleport away, and get their game mode back when the fight ends. Disconnecting also counts
+  as falling; rejoining mid-fight puts the player back as a spectator.
+- **Wipe:** when nobody is left standing (dead, disconnected or gone), the boss and its army
+  vanish. Everyone is sent back to where they entered and the slot's layout is rebuilt. The
+  group may use the headstone again straight away.
+- **Victory:** ten seconds after the boss dies, everyone is sent back. As with a wipe, that
+  means everyone in the clearing, not only the sealed party: Creative players the headstone
+  brought along and players who entered by command are released and messaged too. Anyone
+  without a recorded return point (such as an operator who teleported in) is left alone. The first win at a
+  graveyard places two chests beside the open grave. They hold the church's seeded treasure
+  roll plus bones and never refill. Every player who has won at that graveyard may claim one
+  personal spell book there (free Basic or Technique spell) by opening a chest; the
+  receipt key is `graveyard:<site>`. The graveyard is otherwise unchanged.
+- **Restart:** a fight is never resumed. On startup its slot is marked for rebuilding, and
+  each player still in the realm goes home with their game mode restored when they join.
+
+`elementalwands/hollow-crypt.json` records the built slots, return points, game modes to
+restore, fights in progress and won graveyards.
+
+Commands: `/ew crypt leave` is open to anyone in the realm and forfeits their place in a
+fight. Operators also have `enter [slot]` and `summon`, which raises a fighting boss on the
+circle; the non-Creative players already in the slot become its sealed party, and a summon
+with none fights until reset. They also have `reset` (ends the slot's fight, clears
+entities and restores the layout) and `status`. The graveyard's gate chest is empty.
+
 ## Authoring and tests
 
 `tools/build_guardian_church.py` owns ruined/restored layouts and structure output;

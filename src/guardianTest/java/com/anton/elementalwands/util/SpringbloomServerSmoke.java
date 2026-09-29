@@ -48,7 +48,7 @@ public final class SpringbloomServerSmoke implements ModInitializer {
             enemy.setPosition(.22,125,.5);enemy.setOnGround(false);enemy.fallDistance=25;
             enemy.setVelocity(.28,-5,0);enemy.move(MovementType.SELF,new Vec3d(.28,-30,0));
             require(enemy.getHealth()==20,"Incoming fall damaged player");
-            require(enemy.getVelocity().y>1.9,"Pad did not launch descending enemy: "+enemy.getVelocity()+" at "+enemy.getEntityPos());
+            require(enemy.getVelocity().y>SpringbloomRules.UPWARD_SPEED-.1,"Pad did not launch descending enemy: "+enemy.getVelocity()+" at "+enemy.getEntityPos());
             require(SpringbloomManager.protectedFall(enemy),"Launch did not grant fall protection");
             double startY=enemy.getY(),startX=enemy.getX(),top=startY;Vec3d v=enemy.getVelocity();
             for(int i=0;i<65;i++){
@@ -56,12 +56,22 @@ public final class SpringbloomServerSmoke implements ModInitializer {
                 if(enemy.isOnGround())break;
                 v=new Vec3d(v.x*.91,(v.y-.08)*.98,v.z*.91);
             }
-            require(top-startY>19 && top-startY<22,"Wrong apex "+(top-startY));
-            require(enemy.getX()-startX>14 && enemy.getX()-startX<16,"Wrong horizontal distance "+(enemy.getX()-startX));
+            require(top-startY>14 && top-startY<16.5,"Wrong apex "+(top-startY));
+            require(enemy.getX()-startX>19.5 && enemy.getX()-startX<22,"Wrong horizontal distance "+(enemy.getX()-startX));
             enemy.handleFallDamage(25,1,enemy.getDamageSources().fall());
             require(enemy.getHealth()==20,"Launch landing damaged player");
             require(!SpringbloomManager.protectedFall(enemy),"Protection survived landing");
             enemy.timeUntilRegen=0;enemy.handleFallDamage(6,1,enemy.getDamageSources().fall());require(enemy.getHealth()<20,"Later ordinary fall remained protected");
+        }
+        if(t==52){
+            // Running into the cushion's side launches along the runner's facing (yaw -90 faces +X).
+            enemy.setPosition(-2,100,.5);enemy.setOnGround(true);enemy.setVelocity(0,0,0);enemy.setYaw(-90);enemy.setSprinting(true);
+            enemy.setPlayerInput(new net.minecraft.util.PlayerInput(true,false,false,false,false,false,true));
+            enemy.move(MovementType.SELF,new Vec3d(2,0,0));
+            require(enemy.getVelocity().y>SpringbloomRules.UPWARD_SPEED-.1 && enemy.getVelocity().x>SpringbloomRules.MAX_HORIZONTAL_SPEED-.1
+                    && Math.abs(enemy.getVelocity().z)<.01,"Run-in did not launch along facing: "+enemy.getVelocity());
+            require(SpringbloomManager.protectedFall(enemy),"Run-in launch did not grant fall protection");
+            enemy.setPlayerInput(net.minecraft.util.PlayerInput.DEFAULT);enemy.setSprinting(false);enemy.setVelocity(0,0,0);
         }
         if(t==55){
             enemy.setPosition(-2,100,.5);enemy.setOnGround(true);enemy.setVelocity(.28,0,0);
@@ -69,7 +79,7 @@ public final class SpringbloomServerSmoke implements ModInitializer {
             require(enemy.getVelocity().y<1,"Side contact launched");
             // Landing on the overhanging edge must be as safe as landing centrally.
             enemy.setHealth(20);enemy.setPosition(-.18,125,.5);enemy.setOnGround(false);enemy.fallDistance=25;
-            enemy.move(MovementType.SELF,new Vec3d(0,-30,0));require(enemy.getHealth()==20 && enemy.getVelocity().y>1.9,"Rim catch failed");
+            enemy.move(MovementType.SELF,new Vec3d(0,-30,0));require(enemy.getHealth()==20 && enemy.getVelocity().y>SpringbloomRules.UPWARD_SPEED-.1,"Rim catch failed");
             enemy.setPosition(5,100,5);enemy.setOnGround(true);
             require(owner.getEntityWorld().breakBlock(pad,false,enemy),"Enemy could not break flower");
         }
@@ -81,13 +91,13 @@ public final class SpringbloomServerSmoke implements ModInitializer {
         if(t==64){require(owner.getEntityWorld().getBlockState(pad).isAir(),"Support loss left pad");owner.getEntityWorld().setBlockState(pad.down(),Blocks.STONE.getDefaultState());
             owner.getEntityWorld().setBlockState(pad.up(2),Blocks.STONE.getDefaultState());require(!SpringbloomManager.plant(owner,pad),"Planted under ceiling");
             owner.getEntityWorld().setBlockState(pad.up(2),Blocks.AIR.getDefaultState());require(SpringbloomManager.plant(owner,pad),"Expiry placement failed");}
-        if(t==143)require(owner.getEntityWorld().getBlockState(pad).isOf(ModSpellBlocks.SPRINGBLOOM),"Pad expired early");
-        if(t==146){require(owner.getEntityWorld().getBlockState(pad).isAir(),"Pad exceeded four seconds");
+        if(t==64+L-1)require(owner.getEntityWorld().getBlockState(pad).isOf(ModSpellBlocks.SPRINGBLOOM),"Pad expired early");
+        if(t==64+L+2){require(owner.getEntityWorld().getBlockState(pad).isAir(),"Pad outlived its lifetime");
             owner.getEntityWorld().setBlockState(pad,ModSpellBlocks.SPRINGBLOOM.getDefaultState());}
-        if(t==150){require(owner.getEntityWorld().getBlockState(pad).isAir(),"Orphan pad survived reload cleanup");
+        if(t==64+L+6){require(owner.getEntityWorld().getBlockState(pad).isAir(),"Orphan pad survived reload cleanup");
             require(SpringbloomManager.plant(owner,pad),"Owner exit fixture failed");owner.setAttached(EWAttachments.AFFINITY,"FIRE");}
-        if(t==154){require(owner.getEntityWorld().getBlockState(pad).isAir(),"Affinity exit left pad");owner.setAttached(EWAttachments.AFFINITY,"NATURE");}
-        if(t==155){
+        if(t==64+L+10){require(owner.getEntityWorld().getBlockState(pad).isAir(),"Affinity exit left pad");owner.setAttached(EWAttachments.AFFINITY,"NATURE");}
+        if(t==F){
             var w=owner.getEntityWorld();
             for(int x=-1;x<=1;x++)for(int z=-1;z<=1;z++)w.setBlockState(forest.add(x,-1,z),Blocks.GRASS_BLOCK.getDefaultState());
             w.setBlockState(forest,Blocks.SHORT_GRASS.getDefaultState());w.setBlockState(forest.east(),Blocks.FERN.getDefaultState());
@@ -107,7 +117,7 @@ public final class SpringbloomServerSmoke implements ModInitializer {
             require(!SpringbloomManager.plant(owner,forest),"Solid leaf canopy allowed over pad");w.setBlockState(forest.up(2),Blocks.AIR.getDefaultState());
             require(SpringbloomManager.plant(owner,forest),"Tall grass expiry planting failed");
         }
-        if(t==238){
+        if(t==F+L+3){
             var w=owner.getEntityWorld();
             require(w.getBlockState(forest).isOf(Blocks.TALL_GRASS)&&w.getBlockState(forest.up()).isOf(Blocks.TALL_GRASS),"Tall grass lost on expiry");
             w.setBlockState(forest,Blocks.AIR.getDefaultState());w.setBlockState(forest.up(),Blocks.AIR.getDefaultState());
@@ -115,9 +125,11 @@ public final class SpringbloomServerSmoke implements ModInitializer {
             w.setBlockState(forest,Blocks.AIR.getDefaultState());
             w.setBlockState(forest,ModSpellBlocks.NATURE_ROOTS.getDefaultState());require(!SpringbloomManager.plant(owner,forest),"Existing Nature growth replaced");
         }
-        if(t==229)require(!SpringbloomManager.cast(owner),"Cooldown ended before 200 ticks");
-        if(t==231){owner.setPitch(-90);require(SpringbloomManager.cast(owner),"Cooldown failed to recover");}
-        if(t==242){
+        if(t==30+C-1)require(!SpringbloomManager.cast(owner),"Cooldown ended early");
+        // Recovered on time; the recovery cast waits until the pad fixtures are done, since a new pod replaces the owner's pad.
+        if(t==30+C+1)require(owner.getAttachedOrElse(EWAttachments.SPRINGBLOOM_READY,0L)<=server.getOverworld().getTime(),"Cooldown failed to recover");
+        if(t==F+L+15){owner.setPitch(-90);require(SpringbloomManager.cast(owner),"Recovered cooldown refused a cast");}
+        if(t==F+L+7){
             var w=owner.getEntityWorld();w.setBlockState(forest,Blocks.AIR.getDefaultState());
             w.setBlockState(forest.east(),Blocks.STONE.getDefaultState());w.setBlockState(forest.north(),Blocks.OAK_LOG.getDefaultState());
             require(SpringbloomManager.plant(owner,forest),"Neighbors prevented a partial flower");
@@ -127,25 +139,26 @@ public final class SpringbloomServerSmoke implements ModInitializer {
             require(!SpringbloomFootprint.overlaps(cells,forest,new Box(13.2,100,0.2,13.8,102,.8)),"Blocked edge still catches players");
             require(w.getBlockState(forest.east()).isOf(Blocks.STONE)&&w.getBlockState(forest.north()).isOf(Blocks.OAK_LOG),"Plant overwrote an obstacle");
             enemy.setHealth(20);enemy.setPosition(12.5,105,.5);enemy.setOnGround(false);enemy.fallDistance=20;
-            enemy.move(MovementType.SELF,new Vec3d(0,-8,0));require(enemy.getHealth()==20&&enemy.getVelocity().y>1.9,"Partial center failed to catch falling player");
+            enemy.move(MovementType.SELF,new Vec3d(0,-8,0));require(enemy.getHealth()==20&&enemy.getVelocity().y>SpringbloomRules.UPWARD_SPEED-.1,"Partial center failed to catch falling player");
             enemy.setPosition(5,100,5);enemy.setOnGround(true);
             w.setBlockState(forest.east(),Blocks.AIR.getDefaultState());
             w.setBlockState(forest.west(),Blocks.STONE.getDefaultState());
         }
-        if(t==245){
+        if(t==F+L+10){
             int cells=owner.getEntityWorld().getBlockState(forest).get(com.anton.elementalwands.block.SpringbloomBlock.OPEN_CELLS);
             require((cells&SpringbloomFootprint.bit(1,0))!=0&&(cells&SpringbloomFootprint.bit(-1,0))==0,"Footprint did not follow obstacle edits");
             owner.getEntityWorld().setBlockState(forest.east(),Blocks.STONE_SLAB.getDefaultState());
         }
-        if(t==248){
+        if(t==F+L+13){
             enemy.setPosition(13.5,101.5,.5);enemy.setOnGround(false);enemy.setVelocity(0,-1,0);enemy.fallDistance=0;
             enemy.move(MovementType.SELF,new Vec3d(0,-3,0));
             require(Math.abs(enemy.getY()-100.5)<.01&&enemy.getVelocity().y<1,"Invisible clipped edge launched player above slab: "+enemy.getEntityPos());
         }
-        if(t==251){
+        if(t==F+L+16){
 
-            Files.writeString(Path.of("HUB_PASSED.txt"),"Springbloom server passed: five Nature spells, ownership/purchase/equip, thrown pod planting, player-owned 200-tick cooldown, hostile high-fall catch, rim catch, ~20-block apex/~15-block travel, protected landing then ordinary fall damage, no walking/side activation, destruction, support/ceiling checks, exact 80-tick expiry, orphan and affinity cleanup, thrown pod through forest floor cover, grass/fern/leaf-litter placement, tall-plant restoration, canopy/fluid/growth rejection, partial placement beside obstacles, obstacle preservation, clipped collision, partial high-fall catch, and live footprint updates. Client physics needs its separate native fixture.\n");server.stop(false);}
+            Files.writeString(Path.of("HUB_PASSED.txt"),"Springbloom server passed: five Nature spells, ownership/purchase/equip, thrown pod planting, player-owned cooldown, hostile high-fall catch, rim catch, ~15-block apex/~21-block travel, run-in launch along facing, protected landing then ordinary fall damage, no side activation without movement input, destruction, support/ceiling checks, exact lifetime expiry, orphan and affinity cleanup, thrown pod through forest floor cover, grass/fern/leaf-litter placement, tall-plant restoration, canopy/fluid/growth rejection, partial placement beside obstacles, obstacle preservation, clipped collision, partial high-fall catch, and live footprint updates. Client physics needs its separate native fixture.\n");server.stop(false);}
     }
+    private static final int L=SpringbloomRules.LIFETIME,C=SpringbloomRules.COOLDOWN,F=64+L+11;
     private int pods(){return owner.getEntityWorld().getEntitiesByClass(SpringbloomEntity.class,new Box(-30,90,-30,30,140,30),e->!e.open()&&!e.isRemoved()).size();}
     private static ServerPlayerEntity player(MinecraftServer s,String name,double x,double y,double z)throws Exception {
         var f=com.anton.elementalwands.arena.GuardianArenaSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);f.setAccessible(true);return (ServerPlayerEntity)f.invoke(null,s,UUID.randomUUID(),name,x,y,z);

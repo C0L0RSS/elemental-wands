@@ -1,0 +1,51 @@
+// Native Hollow Crypt harness: builds a realm slot, enters, summons, contains, resets and leaves.
+// ./gradlew -I tools/crypt_client_smoke.init.gradle runClient -PhubClientAssets="$HOME/.lunarclient/shared/assets" --offline
+allprojects {
+    plugins.withId('fabric-loom') {
+        def smokeRoot=layout.buildDirectory.dir('crypt-client-smoke').get().asFile
+        // Optional existing cache for offline verification (for example Lunar shared/assets).
+        def existingAssets=project.findProperty('hubClientAssets')
+        if (project.hasProperty('introVideo')) loom.runs.client.vmArg('-Dcrypt.introVideo=true')
+        if (existingAssets) {
+            loom.runs.client.vmArg('-Dfabric.dli.config='+new File(smokeRoot,'launch.cfg').absolutePath)
+        }
+        tasks.register('cryptClientMetadata') {
+            if (existingAssets) dependsOn generateDLIConfig
+            doLast {
+                def metadata=new File(smokeRoot,'metadata')
+                metadata.mkdirs()
+                new File(metadata,'fabric.mod.json').text='''{
+  "schemaVersion": 1, "id": "crypt_client_smoke", "version": "1.0.0", "environment": "client",
+  "entrypoints": {"client": ["com.anton.elementalwands.client.CryptClientSmoke"]},
+  "depends": {"elementalwands": "*"}
+}'''
+                new File(smokeRoot,'CRYPT_PASSED.txt').delete()
+                new File(smokeRoot,'CRYPT_FAILED.txt').delete()
+                if (existingAssets) {
+                    def assets=file(existingAssets)
+                    if (!new File(assets,'indexes/27.json').exists()) throw new GradleException('Existing asset cache needs indexes/27.json')
+                    def launch=file('.gradle/loom-cache/launch.cfg').text
+                    launch=launch.replaceAll(/(?m)(\t--assetIndex\r?\n)\t[^\r\n]+/, { match, prefix -> prefix+'\t27' })
+                    launch=launch.replaceAll(/(?m)(\t--assetsDir\r?\n)\t[^\r\n]+/, { match, prefix -> prefix+'\t'+assets.absolutePath })
+                    new File(smokeRoot,'launch.cfg').text=launch
+                }
+            }
+        }
+        tasks.register('cryptClientJar',Jar) {
+            dependsOn guardianTestClasses, cryptClientMetadata
+            archiveFileName='crypt-client-smoke.jar'
+            destinationDirectory=smokeRoot
+            from sourceSets.guardianTest.output
+            from new File(smokeRoot,'metadata')
+        }
+        loom.runs.client.runDir('build/crypt-client-smoke')
+        loom.runs.client.vmArg('-Dfabric.addMods='+new File(smokeRoot,'crypt-client-smoke.jar').absolutePath)
+        tasks.named('runClient') {
+            dependsOn cryptClientJar
+            doLast {
+                if (!new File(smokeRoot,'CRYPT_PASSED.txt').exists() || new File(smokeRoot,'CRYPT_FAILED.txt').exists())
+                    throw new GradleException('Crypt client check failed; inspect build/crypt-client-smoke/logs/latest.log')
+            }
+        }
+    }
+}

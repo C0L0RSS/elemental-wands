@@ -24,9 +24,14 @@ Sneak + right mouse performs ordinary block interaction. Slot 1 also handles
 close aimed Flashover disarming and Nature root-knot/Springbloom breaking. While
 Gale Daggers is prepared, a fresh slot-1 press releases its volley instead. Holding
 that click does not also repeat Sky Shear. Updraft also requires a fresh press.
+Gravity Well requires fresh presses to throw and collapse early. Astral Double
+uses a fresh press to toss its orb and another fresh press to teleport to and
+consume the formed double.
 
 The HUD sits beside the hotbar, shows owned equipped spells without key labels,
-and hides empty slots. Controls > Move HUD permits dragging or arrow nudging;
+and hides empty slots. The hub marks Basic, Technique, and Ultimate spells with
+distinct colors in the spell list, selected details, and equipped slots.
+Controls > Move HUD permits dragging or arrow nudging;
 `config/elementalwands-hud.properties` stores the position.
 
 Purchases spend elemental Flux, not vanilla XP levels. Default Basics are free;

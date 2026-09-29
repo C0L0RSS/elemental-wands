@@ -1,7 +1,5 @@
 package com.anton.elementalwands.util;
 
-import com.anton.elementalwands.entity.FireLeapEntity;
-import com.anton.elementalwands.registry.ModEntities;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.*;
 import net.minecraft.entity.attribute.EntityAttributes;
@@ -40,16 +38,30 @@ final class FireLeapServerCases {
         for(int pass=0;pass<2;pass++)for(int age=0;age<9;age++)FireLeapManager.wave(p,to,age,hits);
         require(center.getHealth()==192 && outer.getHealth()==196,"Damage bands or once-per-wave wrong");
         require(jumping.getHealth()==200 && covered.getHealth()==200 && ally.getHealth()==200,"Wave hit jumping/covered/allied target");
-        var leap=new FireLeapEntity(ModEntities.FIRE_LEAP,w);leap.begin(p,to);
-        var save=net.minecraft.storage.NbtWriteView.create(net.minecraft.util.ErrorReporter.EMPTY,p.getRegistryManager());leap.writeData(save);
-        var loaded=new FireLeapEntity(ModEntities.FIRE_LEAP,w);
-        loaded.readData(net.minecraft.storage.NbtReadView.create(net.minecraft.util.ErrorReporter.EMPTY,p.getRegistryManager(),save.getNbt()));
-        loaded.tick();require(loaded.isRemoved(),"Reload resumed an orphaned leap");
+        arc();
+    }
+    /** Arc shape: constant horizontal speed, a real peak scaled by distance, and gravity-derived timing. */
+    private static void arc() {
+        Vec3d from=new Vec3d(0,100,0),near=new Vec3d(0,100,4),far=new Vec3d(0,100,FireLeapRules.RANGE),ledge=new Vec3d(0,103,10);
+        require(FireLeapRules.duration(from,near)<FireLeapRules.duration(from,far),"Short hop is not quicker than a full leap");
+        require(peak(from,near)<peak(from,far) && Math.abs(peak(from,far)-106.5)<.05,"Peak does not scale with distance: "+peak(from,near)+"/"+peak(from,far));
+        require(Math.abs(peak(from,ledge)-(103+FireLeapRules.apex(from,ledge)))<.05,"Raised landing peak is not above the ledge");
+        require(FireLeapRules.position(from,far,1).equals(far) && FireLeapRules.position(from,far,0).equals(from),"Arc endpoints moved");
+        require(Math.abs(FireLeapRules.position(from,far,.25).z-FireLeapRules.RANGE/4)<1e-9,"Horizontal travel is not constant speed");
+        require(FireLeapRules.offPath(from,far,FireLeapRules.position(from,far,.37))<.05 && FireLeapRules.offPath(from,far,new Vec3d(0,100,11))>4,"Path distance is wrong");
+    }
+    private static double peak(Vec3d from,Vec3d to) {
+        double best=-Double.MAX_VALUE;for(int i=0;i<=1000;i++)best=Math.max(best,FireLeapRules.position(from,to,i/1000.).y);return best;
+    }
+    /** Stands in for the caster's client: follow the committed arc and touch down at its end. */
+    static void fly(ServerPlayerEntity p,Vec3d from,Vec3d to,long age) {
+        int duration=FireLeapRules.duration(from,to);
+        p.setPosition(FireLeapRules.position(from,to,Math.min(age,duration)/(double)duration));p.setOnGround(age>=duration);
     }
     private static void targeting(ServerPlayerEntity p) {
         var w=p.getEntityWorld();
         // Isolated lane: clear terrain, then exercise the actual world raycasts.
-        for(int x=100;x<=104;x++)for(int z=100;z<=166;z++) {
+        for(int x=100;x<=104;x++)for(int z=100;z<=128;z++) {
             w.getChunk(new BlockPos(x,99,z));
             w.setBlockState(new BlockPos(x,99,z),Blocks.STONE.getDefaultState());
             for(int y=100;y<=110;y++)w.setBlockState(new BlockPos(x,y,z),Blocks.AIR.getDefaultState());
@@ -57,7 +69,7 @@ final class FireLeapServerCases {
         p.setPosition(102.5,100,100.5);p.setYaw(0);p.setHeadYaw(0);
         for(float pitch:new float[]{0, .5f, -15}) {
             p.setPitch(pitch);Vec3d target=FireLeapRules.target(p);
-            require(target!=null && Math.abs(target.z-160.5)<.01 && target.y==100
+            require(target!=null && Math.abs(target.z-(100.5+FireLeapRules.RANGE))<.01 && target.y==100
                     && FireLeapRules.validTarget(p,target),"Forward aim failed at pitch "+pitch+": "+target);
         }
         p.setPitch(20);Vec3d near=FireLeapRules.target(p);

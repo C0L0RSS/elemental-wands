@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hollow Necromancer Workshop</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand"><span class="mark">☥</span><div>ELEMENTAL WANDS<small>HOLLOW NECROMANCER · ART WORKSHOP</small></div></div>
+  <div class="versions" role="group" aria-label="Art version">
+    <button data-version="candidate" class="active">Candidate <small id="candidate-label"></small></button>
+    <button data-version="installed">Mod resources</button>
+  </div>
+</header>
+<main>
+  <section class="stage">
+    <canvas id="view" aria-label="Interactive 3D model"></canvas>
+    <div class="stage-top">
+      <label>Animation <select id="clip"></select></label>
+      <div class="group" role="group" aria-label="Lighting">
+        <button data-light="day">Day</button><button data-light="night" class="active">Night</button><button data-light="crypt">Crypt</button>
+      </div>
+    </div>
+    <div class="picked" id="picked">Hover the model to identify a part · click to select it in the texture</div>
+    <div class="stage-bottom">
+      <div class="transport">
+        <button id="play" aria-label="Pause">❚❚</button>
+        <button id="replay" aria-label="Replay">↺</button>
+        <input id="timeline" type="range" min="0" max="1" step=".01" value="0" aria-label="Animation time">
+        <span id="time">0.00 s</span>
+        <select id="speed" aria-label="Speed"><option value=".25">¼×</option><option value=".5">½×</option><option value="1" selected>1×</option></select>
+      </div>
+      <div class="group" role="group" aria-label="Camera">
+        <button data-view="hero" class="active">¾</button><button data-view="front">Front</button><button data-view="side">Side</button><button data-view="back">Back</button><button data-view="eye">Player eye</button>
+      </div>
+      <div class="group" role="group" aria-label="Display">
+        <button id="toggle-player" class="active" title="Steve-sized figure for scale">Scale ref</button>
+        <button id="toggle-glow" class="active" title="Emissive glowmask layer">Glow</button>
+        <button id="toggle-clay" title="Shape only, no texture">Clay</button>
+      </div>
+    </div>
+  </section>
+  <aside>
+    <div class="panel-head">
+      <h2>Texture</h2>
+      <div class="group small" role="group" aria-label="Texture layer">
+        <button data-layer="texture" class="active">Colour</button><button data-layer="glowmask">Glowmask</button>
+      </div>
+    </div>
+    <div class="atlas-tools">
+      <div class="group small" role="group" aria-label="Zoom">
+        <button data-zoom="2">2×</button><button data-zoom="3" class="active">3×</button><button data-zoom="5">5×</button><button data-zoom="8">8×</button>
+      </div>
+      <label class="check"><input type="checkbox" id="uv-lines" checked> UV outlines</label>
+    </div>
+    <div class="atlas-wrap"><canvas id="atlas" aria-label="Texture atlas"></canvas></div>
+    <p class="atlas-info" id="atlas-info">Hover the texture to see which part each pixel paints.</p>
+    <div class="notes">
+      <div class="panel-head"><h2>Notes</h2><button id="copy-notes" class="quiet">Copy</button></div>
+      <textarea id="notes" placeholder="Jot feedback here. Click a part, then “Add part” to reference it."></textarea>
+      <div class="notes-row"><button id="add-part" class="quiet" disabled>Add part</button><span id="notes-state"></span></div>
+    </div>
+    <div class="stats" id="stats"></div>
+  </aside>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>

@@ -12,7 +12,6 @@ public abstract class GuardianLiftPassengerMixin {
     @Inject(method="stopRiding",at=@At("HEAD"),cancellable=true)
     private void remainOnMovingFloor(CallbackInfo ci) {
         Entity entity=(Entity)(Object)this;
-        if (entity.isAlive() && ((entity.getVehicle() instanceof GuardianLiftEntity lift && lift.locksPassenger())
-                || (entity.getVehicle() instanceof com.anton.elementalwands.entity.FireLeapEntity leap && leap.locksPassenger()))) ci.cancel();
+        if (entity.isAlive() && entity.getVehicle() instanceof GuardianLiftEntity lift && lift.locksPassenger()) ci.cancel();
     }
 }

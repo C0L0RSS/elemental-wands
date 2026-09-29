@@ -1,7 +1,6 @@
 package com.anton.elementalwands.client;
 
 import com.anton.elementalwands.data.*;
-import com.anton.elementalwands.entity.FireLeapEntity;
 import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.registry.ModItems;
 import com.anton.elementalwands.util.*;

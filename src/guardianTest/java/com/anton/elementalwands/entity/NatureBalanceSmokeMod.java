@@ -60,13 +60,13 @@ public final class NatureBalanceSmokeMod implements ModInitializer {
             direct = cow(world, 8); ramp = cow(world, 10); crowd = cow(world, 12);
 
             hitSeed(world, direct);
-            close(direct.getHealth(), 197, "Unstacked direct seed damage");
+            close(direct.getHealth(), 200 - NatureCombat.SEED_DAMAGE, "Unstacked direct seed damage");
             require(EntangleTracker.getStacks(direct) == 0, "Direct seed creates Entangle");
             require(AbstractWandItem.getUltimateCharge(wand) == 1, "Seed must give one charge");
             for (int i=0; i<5; i++) EntangleTracker.addStack(world, direct);
             direct.timeUntilRegen = 0;
             hitSeed(world, direct);
-            close(direct.getHealth(), 194, "Stacked seed gained bonus damage");
+            close(direct.getHealth(), 200 - 2 * NatureCombat.SEED_DAMAGE, "Stacked seed gained bonus damage");
             require(AbstractWandItem.getUltimateCharge(wand) == 1, "Rapid seeds bypass charge cadence");
 
             NatureCombat.thornContact(world, ramp, player.getUuid());

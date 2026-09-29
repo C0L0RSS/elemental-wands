@@ -463,9 +463,7 @@ public final class TendrilBloomManager {
                 e -> e.isAlive() && !e.isSpectator());
 
         for (LivingEntity e : entities) {
-            BlockPos feet = e.getBlockPos();
-            boolean inZone = b.placedPositions.contains(feet) || b.placedPositions.contains(feet.down());
-            if (!inZone) continue;
+            if (!NatureCombat.standsIn(e, b.placedPositions)) continue;
 
             if (WandAllies.protectedFrom(world, b.casterUuid, e)) continue;
 

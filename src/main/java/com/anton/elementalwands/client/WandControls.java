@@ -107,15 +107,15 @@ public final class WandControls {
     private static boolean validLeapContext() {
         var c=MinecraftClient.getInstance();
         return c.player!=null && c.world!=null && c.currentScreen==null && c.isWindowFocused() && c.player.isAlive()
-                && !c.player.isSpectator() && !c.player.hasVehicle() && !c.player.isGliding() && !c.player.isTouchingWater()
+                && !c.player.isSpectator() && !c.player.hasVehicle() && !FireLeapClient.active() && !c.player.isGliding() && !c.player.isTouchingWater()
                 && c.player.getMainHandStack()==leapWand && heldHotbar==c.player.getInventory().getSelectedSlot()
                 && heldAffinity.equals(ClientPlayerData.getAffinity().name()) && ClientPlayerData.loadout().contains("fire_hop");
     }
     private static void releaseLeap() {
         var c=MinecraftClient.getInstance();
         if(aimingLeap()) {
-            var target=com.anton.elementalwands.util.FireLeapRules.target(c.player);
-            if(target!=null && com.anton.elementalwands.util.FireLeapRules.validTarget(c.player,target))
+            var target=FireLeapClient.aim(c.player);
+            if(target!=null)
                 ClientPlayNetworking.send(new ModNetworking.FireLeapCommitPayload(target.x,target.y,target.z));
             else c.player.sendMessage(Text.literal("No clear leap path. Aim toward open ground or a reachable ledge."),true);
         }

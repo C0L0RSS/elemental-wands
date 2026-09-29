@@ -25,7 +25,7 @@ import net.minecraft.util.math.Vec3d;
 public final class FireBuildServerSmoke implements ModInitializer {
     private int ticks; private ServerPlayerEntity player; private CowEntity near,covered,far,hopVictim;
     private net.minecraft.entity.passive.PigEntity pig;
-    private float heldHeat,healthAtRelease; private Vec3d launch;
+    private float heldHeat,healthAtRelease,putAwayHeat; private Vec3d launch; private ItemStack putAway;
     public void onInitialize() { ServerTickEvents.END_SERVER_TICK.register(server -> {
         try { run(server); } catch (Throwable t) { t.printStackTrace();try { Files.writeString(Path.of("HUB_FAILED.txt"),t.toString()); }catch(Exception ignored){}server.stop(false); }
     }); }
@@ -41,7 +41,7 @@ public final class FireBuildServerSmoke implements ModInitializer {
             WandProgression.purchase(player,"FIRE","flamethrower");WandProgression.purchase(player,"FIRE","fire_hop");
             require(WandProgression.flux(player)==0,"New spells did not spend exactly 1000 Fire Flux");
             WandLoadouts.equip(player,"FIRE",0,"flamethrower");WandLoadouts.equip(player,"FIRE",1,"fire_hop");
-            require(WandLoadouts.get(player).equals(List.of("flamethrower","fire_hop","meteor")),"New spell IDs did not equip independently");
+            require(WandLoadouts.get(player).subList(0,2).equals(List.of("flamethrower","fire_hop")),"New spell IDs did not equip independently: "+WandLoadouts.get(player));
             pig=EntityType.PIG.create(player.getEntityWorld(),SpawnReason.COMMAND);
             pig.setPosition(0.5,100,3);pig.setNoGravity(true);pig.setAiDisabled(true);player.getEntityWorld().spawnEntity(pig);
             near=cow(0.5,100,2);covered=cow(0.5,100,5.5);far=cow(0.5,100,8);
@@ -56,21 +56,27 @@ public final class FireBuildServerSmoke implements ModInitializer {
                     && FireBuildRules.flameDamage(200)==2.5f,"Damage ramp endpoints/cap are wrong");
             require(FireBuildManager.heat(player)>30 && near.getHealth()<200,"Held flame did not heat or damage nearby target");
             require(covered.getHealth()==200 && far.getHealth()==200,"Flame hit behind cover or beyond range");
-            FireBuildManager.stop(player);heldHeat=FireBuildManager.heat(player);healthAtRelease=near.getHealth();
+            WandLoadouts.cast(player,0);putAwayHeat=FireBuildManager.heat(player);putAway=player.getMainHandStack();player.setStackInHand(Hand.MAIN_HAND,ItemStack.EMPTY);
         }
-        if (tick==66) {
+        // Every way a spray ends (put away, release, lease expiry) starts the 20-tick Flamethrower recovery.
+        if (tick==63) {
+            require(!FireBuildManager.spraying(player) && FireBuildManager.heat(player)>20
+                    && FireBuildManager.heat(player)>=putAwayHeat-3*FireBuildRules.COOL_PER_TICK,"Putting away the wand did not stop spray, or it reset heat");
+            player.setStackInHand(Hand.MAIN_HAND,putAway); // recovery lives on the wand stack, so take the same one back out
+            WandLoadouts.cast(player,0);require(!FireBuildManager.spraying(player),"Putting away the wand skipped Flamethrower recovery");
+        }
+        if (tick>=82 && tick<=92) WandLoadouts.cast(player,0);
+        if (tick==83) require(FireBuildManager.spraying(player),"Flamethrower recovery did not end after 20 ticks");
+        if (tick==92) { FireBuildManager.stop(player);heldHeat=FireBuildManager.heat(player);healthAtRelease=near.getHealth(); }
+        if (tick==97) {
             require(FireBuildManager.heat(player)<heldHeat && !FireBuildManager.spraying(player) && near.getHealth()>=healthAtRelease-2,"Release failed to stop damage and cool");
-            WandLoadouts.cast(player,0);
+            WandLoadouts.cast(player,0);require(!FireBuildManager.spraying(player),"Release skipped Flamethrower recovery");
         }
-        if (tick==75) require(!FireBuildManager.spraying(player),"Held-input lease did not expire");
-        if (tick==76) { WandLoadouts.cast(player,0); player.setStackInHand(Hand.MAIN_HAND,ItemStack.EMPTY); }
-        if (tick==78) {
-            require(!FireBuildManager.spraying(player) && FireBuildManager.heat(player)>20,"Putting away the wand did not stop spray or reset heat");
-            player.setStackInHand(Hand.MAIN_HAND,new ItemStack(ModItems.FRACTURED_WAND));
-        }
-        if (tick>=80 && tick<=160) WandLoadouts.cast(player,0);
-        if (tick==150) require(FireBuildManager.overheated(player),"Continuous fire never overheated");
-        if (tick==161) {
+        if (tick==112) { WandLoadouts.cast(player,0);require(FireBuildManager.spraying(player),"Single held-input cast did not spray"); }
+        if (tick==120) require(!FireBuildManager.spraying(player),"Held-input lease did not expire");
+        if (tick>=121 && tick<=225) WandLoadouts.cast(player,0);
+        if (tick==222) require(FireBuildManager.overheated(player),"Continuous fire never overheated");
+        if (tick==226) {
             require(FireBuildManager.overheated(player) && !FireBuildManager.spraying(player),"Overheat allowed spraying");
             var state=FireBuildManager.state(player);
             var save=net.minecraft.storage.NbtWriteView.create(net.minecraft.util.ErrorReporter.EMPTY,player.getRegistryManager());player.writeData(save);
@@ -88,14 +94,14 @@ public final class FireBuildServerSmoke implements ModInitializer {
             require(!FireLeapManager.commit(player,new Vec3d(20,100,61)),"Out of range accepted");
             require(FireBuildManager.hopRemaining(player)==0,"Invalid aim spent cooldown");
             require(FireLeapManager.commit(player,new Vec3d(20,100,10)),"Valid leap rejected");
-            require(player.hasVehicle() && FireBuildManager.hopRemaining(player)>0,"Leap did not start flight/cooldown");
+            require(FireLeapManager.flying(player) && FireBuildManager.hopRemaining(player)>0,"Leap did not start flight/cooldown");
             require(hopVictim.getHealth()==200,"Leap damaged on takeoff");
             require(!FireLeapManager.commit(player,new Vec3d(20,100,10)),"Repeated cast bypassed cooldown");
-            player.stopRiding();require(player.hasVehicle(),"Sneaking escaped the locked arc");
         }
-        if(tick==290) require(player.hasVehicle() && player.getY()>104,"Flight missed apex");
+        if(tick>280 && tick<312 && FireLeapManager.flying(player)) FireLeapServerCases.fly(player,new Vec3d(20,100,0),new Vec3d(20,100,10),tick-280);
+        if(tick==290) require(FireLeapManager.flying(player) && player.getY()>103.5,"Flight missed apex");
         if(tick==312) {
-            require(!player.hasVehicle() && player.getEntityPos().distanceTo(new Vec3d(20,100,10))<.1,"Leap missed landing");
+            require(!FireLeapManager.flying(player) && player.getEntityPos().distanceTo(new Vec3d(20,100,10))<.1,"Leap missed landing");
             require(hopVictim.getHealth()==192,"Center did not take exactly one hit");
             var old=player;player=server.getPlayerManager().respawnPlayer(player,false,net.minecraft.entity.Entity.RemovalReason.KILLED);
             require(FireBuildManager.hopRemaining(player)>0,"Respawn reset leap cooldown");
@@ -107,12 +113,11 @@ public final class FireBuildServerSmoke implements ModInitializer {
             player.setPosition(20,100,0);player.setStackInHand(Hand.MAIN_HAND,new ItemStack(ModItems.FRACTURED_WAND));
             require(FireLeapManager.commit(player,new Vec3d(20,100,10)),"Second leap did not start");
         }
-        if(tick==435) {
-            var obstacle=FireLeapRules.position(new Vec3d(20,100,0),new Vec3d(20,100,10),.4);
-            player.getEntityWorld().setBlockState(BlockPos.ofFloored(obstacle),Blocks.STONE.getDefaultState());
-        }
-        if(tick==441) {
-            require(!player.hasVehicle(),"New obstruction did not abort flight");
+        if(tick>430 && tick<=433) FireLeapServerCases.fly(player,new Vec3d(20,100,0),new Vec3d(20,100,10),tick-430);
+        // A caster blocked midflight drops short of the mark: the leap must end without a wave.
+        if(tick>433 && FireLeapManager.flying(player)) { player.setPosition(player.getX(),100,player.getZ());player.setOnGround(true); }
+        if(tick==445) {
+            require(!FireLeapManager.flying(player),"Short landing did not end the leap");
             require(FireBuildManager.hopRemaining(player)>0,"Aborted flight refunded cooldown");
         }
         if(tick==460) {
@@ -120,7 +125,7 @@ public final class FireBuildServerSmoke implements ModInitializer {
             require(hopVictim.getHealth()==192,"Leap damaged twice");
             for(int x=-3;x<=3;x++)for(int z=0;z<=6;z++)for(int y=99;y<=102;y++)
                 require(!player.getEntityWorld().getBlockState(new BlockPos(x,y,z)).isOf(Blocks.FIRE),"Flamethrower placed ground fire");
-            Files.writeString(Path.of("HUB_PASSED.txt"),"Fire build passed: paid spell ownership/equip, cone damage and cover/range, held heat, release, heartbeat timeout, overheat/recovery, save/reload, committed leap arc, invalid destination rejection, no takeoff damage, single landing hit, cooldown and respawn persistence, full-body ceiling/water clearance, wave jump/cover/allies, midflight obstruction, orphan reload cleanup.\n");server.stop(false);
+            Files.writeString(Path.of("HUB_PASSED.txt"),"Fire build passed: paid spell ownership/equip, cone damage and cover/range, held heat, put-away heat retention, release, 20-tick recovery after every stop, heartbeat timeout, overheat/recovery, save/reload, committed leap arc, invalid destination rejection, no takeoff damage, single landing hit, cooldown and respawn persistence, full-body ceiling/water clearance, wave jump/cover/allies, short landing without wave.\n");server.stop(false);
         }
     }
     private CowEntity cow(double x,double y,double z) {

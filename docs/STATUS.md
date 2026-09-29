@@ -1,8 +1,70 @@
 # Current status
 
-Reviewed September 23, 2026. This page contains outstanding work, not release history.
+Reviewed September 29, 2026. This page contains outstanding work, not release history.
 It records known verification limits; it is not a fresh installation receipt.
 
+- **Hollow Necromancer (in progress):** reworked after the first co-op playtest (duels and
+  sieges, heavier telegraphed hits) and again after a solo playtest where phase two felt
+  easier than phase one and the siege waves were easy. Sieges now bring larger waves,
+  reinforcement crawlers, quickened undead and Soul Fire Rain from the perch. The colossus
+  charge tells only through body language with a random windup, and phase two adds Grave
+  Dive, Soul Harvest and the soul split at a quarter health. Server fixtures cover the
+  full two-siege flow with rain, and every phase-two mechanic. A skippable intro cinematic
+  now opens each crypt fight: a zombie's soul is torn out and a pan reveals the Necromancer
+  hauling it into his staff, then his slam lights the rim braziers. The intro clip and the
+  dragged-soul clip await workshop approval; the camera shots await review from the crypt
+  client fixture's `crypt-intro-*.png` frames. Necromancer spells now cast soul light (real
+  block light plus a blue ground pool); FPS on weaker machines is untested.
+  After a third (solo) playtest, Life Drain only starts within 10 blocks, with a 1.5-second
+  windup, and breaks at 14 blocks. The soul split now happens once, and the blind body swings at
+  random headings instead of fighting alongside the soul (30 soul damage solo). Pending a playtest.
+  Pending: user approval of the new clips (workshop) and the fireball and soul models
+  (`/.local-previews/soul-fire/`), then install and client checks; a solo and co-op Lunar
+  playtest with `/ew necromancer log on` to tune health, wave sizes, rain damage, dive and
+  split timing (the Hands→ambush and Hands→bite combos cost an iron-armored player about
+  three quarters of their health).
+- **Nature support pass (September 29):** Nature is the support element. Seed and Thornbite
+  deal 4, Thornbite heals 75%, thorns deal ×1.5 to bosses and test the whole body footprint,
+  and flowers bank up to 8 stolen health that their owner collects by left-clicking the
+  flower or popping it with their own Seed. Springbloom launches on a run into its side, lasts 8
+  seconds with a 6-second cooldown and flies flatter and farther. Pending: a Lunar playtest
+  of Nature against the Necromancer, the new launch arc's feel and whether banking feels worth it.
+- **Hollow undead:** the crawler, archer and brute form the Necromancer's siege waves
+  (quickened there) and spawn at night. The GeckoLib files are proven to match the approved
+  preview and the server fixture covers their combat rules. The walks were re-authored
+  at chase speed with long strides and play at travel speed, fixing the foot sliding.
+  Pending: human Lunar review of how they look and move in game, spawn frequency and balance.
+- **Hollow Crypt realm:** the dimension, the dead-forest clearing, the naturally
+  generated graveyard and the full fight flow are in place. That covers free headstone entry,
+  a sealed party, spectating after death, kept belongings, the wipe reset, victory chests and
+  one spell book per graveyard. The native client fixture passed all of these for a solo player,
+  plus the operator commands, containment and protection. Pending: multi-player spectating
+  (not automatable in the solo fixture), human Lunar review of brightness (ambient light 0.2,
+  lifted fog and seven clearing soul lanterns), the Necromancer's body glow, the Life Drain glow,
+  fog density and whether non-explosive fire spells burn the clearing's logs. The graveyard
+  design is a first pass; its level-ground placement was checked on a dedicated server
+  (seed 12345) and `crypt_client_smoke` (now using the nearest natural graveyard) passed, but it
+  still needs a fresh-world Lunar look beside hills. Forest-biome yards can have natural trees
+  growing inside them. A fight's end now releases everyone the crypt brought into the slot, not
+  only the sealed party; the co-op victory release needs a human multi-player check.
+- **Gravity Well:** Space has five learnable spells; every current elemental
+  catalog now meets the five-spell minimum. Dedicated-server checks passed the
+  12.25-block level throw, immediate floor/wall/entity impact, pull, early/automatic
+  collapse, damage/XP, cover/allies/double protection, Guardian resistance,
+  Blink chaining, impact recovery and covered cleanup cases. Native client checks
+  passed bound input, visible mob pull, both collapse modes, HUD and hub text.
+  The continuous inward stream, 0.4-second accelerated buildup and outward burst
+  were verified with fresh native client footage; server checks passed delayed
+  single-hit damage and cosmetic cleanup.
+  The native gameplay recording was visually reviewed. Human Lunar/multiplayer
+  balance and feel remain pending; this is not an installation receipt.
+- **Astral Double:** Space now has five spells with Gravity Well.
+  Dedicated-server checks passed the short toss, mirrored/simultaneous damage,
+  Blink Rift chaining, one-use return, delayed recovery, invalid placement,
+  ally protection, Guardian attack destruction and covered lifecycle cases.
+  Native client checks passed for bound input, the owner skin and wand, mirrored
+  fire, teleport chaining and HUD synchronization. Human Lunar/multiplayer feel
+  remains pending. This status is not an installation receipt.
 - **Updraft:** Wind now has five spells, with no cap on future additions. Native
   client checks measured a 10.00-block rise and passed normal horizontal control,
   midair activation, safe landing, and prepared-dagger/Waylay Dash combos. The

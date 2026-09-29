@@ -57,27 +57,27 @@ public final class NatureExpansionServerSmoke implements ModInitializer {
         if(t==31) {p.setYaw(90);p.setPitch(-30);}
         if(t==34) require(lashes()==1,"Cooldown bite count="+lashes()+" nbt="+p.getMainHandStack().get(net.minecraft.component.DataComponentTypes.CUSTOM_DATA));
         if(t==42) {
-            near(enemy.getHealth(),197,"Committed forward bite damage");near(p.getHealth(),11.5f,"Lifesteal ratio");near(ally.getHealth(),200,"Lash hit ally");
+            near(enemy.getHealth(),200-ThornLashRules.DAMAGE,"Committed forward bite damage");near(p.getHealth(),10+Math.min(ThornLashRules.DAMAGE*ThornLashRules.LIFESTEAL,ThornLashRules.HEAL_CAP),"Lifesteal ratio");near(ally.getHealth(),200,"Lash hit ally");
             require(SeedlingManager.getActiveSeedlingsForCaster(p.getEntityWorld(),p.getUuid()).isEmpty(),"Lash planted seed");
             p.setYaw(0);p.setPitch(0);enemy.setPosition(.5,100,-3);freshWand();p.setHealth(10);WandLoadouts.cast(p,0);
         }
-        if(t==54) {near(p.getHealth(),10,"Rear miss healed");near(enemy.getHealth(),197,"Lash hit behind caster");
+        if(t==54) {near(p.getHealth(),10,"Rear miss healed");near(enemy.getHealth(),200-ThornLashRules.DAMAGE,"Lash hit behind caster");
             enemy.setPosition(.5,100,3.5);enemy.setInvulnerable(true);freshWand();WandLoadouts.cast(p,0);}
         if(t==66) {near(p.getHealth(),10,"Invulnerable hit healed");enemy.setInvulnerable(false);
             for(int x=-2;x<=2;x++)for(int y=100;y<=103;y++)p.getEntityWorld().setBlockState(new BlockPos(x,y,2),Blocks.STONE.getDefaultState());
             freshWand();WandLoadouts.cast(p,0);}
         if(t==78) {
-            near(enemy.getHealth(),197,"Lash penetrated cover");near(p.getHealth(),10,"Covered hit healed");
+            near(enemy.getHealth(),200-ThornLashRules.DAMAGE,"Lash penetrated cover");near(p.getHealth(),10,"Covered hit healed");
             for(int x=-2;x<=2;x++)for(int y=100;y<=103;y++)p.getEntityWorld().setBlockState(new BlockPos(x,y,2),Blocks.AIR.getDefaultState());
             enemy.setHealth(1);freshWand();WandLoadouts.cast(p,0);
         }
         if(t==90) {
-            near(p.getHealth(),10.5f,"Overkill gave extra healing");
+            near(p.getHealth(),10+ThornLashRules.LIFESTEAL,"Overkill gave extra healing");
             mobs.add(zombie(-1,100,3));mobs.add(zombie(.5,100,3.5));mobs.add(zombie(.5,100,4.4));mobs.add(zombie(2,100,3));
             p.setHealth(10);freshWand();WandLoadouts.cast(p,0);
         }
         if(t==102) {
-            near(p.getHealth(),10+(200-mobs.get(1).getHealth())*.5f,"Single-target actual-damage healing");
+            near(p.getHealth(),10+Math.min((200-mobs.get(1).getHealth())*ThornLashRules.LIFESTEAL,ThornLashRules.HEAL_CAP),"Single-target actual-damage healing");
             require(mobs.get(1).getHealth()<200,"Bite missed aimed target");
             for(int i:new int[]{0,2,3})near(mobs.get(i).getHealth(),200,"Bite swept sideways or pierced a target");
             mobs.forEach(Entity::discard);mobs.clear();
@@ -168,7 +168,22 @@ public final class NatureExpansionServerSmoke implements ModInitializer {
         }
         if(t==542) {
             require(lashes()==0,"Unequipping retained bite");
-            Files.writeString(Path.of("HUB_PASSED.txt"),"Nature expansion passed: ownership, cooldown, committed single-target bite, allies, cover, miss/invulnerability/overkill healing, nearest-only contact, turning after cast, invulnerable obstruction, max range, unequip cleanup, no planting, three targets, moving/damaged caster, early/completed knot destruction, Guardian crush, enemy/allied wand disarm, support loss, source-specific flower cleanup, affinity exit, expiry and orphan cleanup.\n");
+            // A flower banks what its thorns take; popping it as the owner returns exactly that, capped.
+            mobs.forEach(Entity::discard);mobs.clear();freshWand();
+            plant(new BlockPos(4,99,1));
+            bank=SeedlingManager.getActiveSeedlingsForCaster(p.getEntityWorld(),p.getUuid()).getLast().anchorPos();
+            mobs.add(zombie(bank.getX()+1.5,100,bank.getZ()+.5));
+        }
+        if(t==662) {
+            float taken=200-mobs.getFirst().getHealth();
+            require(taken>0,"Flower thorns never bit the banked target");
+            p.setHealth(10);
+            require(SeedlingManager.destroySeedlingAtAnchor(p.getEntityWorld(),bank,p),"Owner could not pop the flower");
+            near(p.getHealth(),10+Math.min(taken,NatureCombat.FLOWER_STORE_CAP),"Popped flower returned the wrong health");
+        }
+        if(t==664) {
+            require(!p.getEntityWorld().getBlockState(bank).isOf(ModSpellBlocks.NATURE_SEEDLING),"Popped flower remained");
+            Files.writeString(Path.of("HUB_PASSED.txt"),"Nature expansion passed: ownership, cooldown, committed single-target bite, allies, cover, miss/invulnerability/overkill healing, nearest-only contact, turning after cast, invulnerable obstruction, max range, unequip cleanup, no planting, three targets, moving/damaged caster, early/completed knot destruction, Guardian crush, enemy/allied wand disarm, support loss, source-specific flower cleanup, affinity exit, expiry and orphan cleanup, and a flower banking its thorn damage for its owner to pop.\n");
             server.stop(false);
         }
     }
@@ -178,6 +193,7 @@ public final class NatureExpansionServerSmoke implements ModInitializer {
         player.setPitch((float)-Math.toDegrees(Math.atan2(delta.y,delta.horizontalLength())));
     }
     private void plant(BlockPos floor) {require(SeedlingManager.tryPlantSeedling(p.getEntityWorld(),p,new BlockHitResult(Vec3d.ofCenter(floor).add(0,.5,0),Direction.UP,floor,false)),"Could not plant fixture flower");}
+    private BlockPos bank;
     private void freshWand() {p.setStackInHand(Hand.MAIN_HAND,new ItemStack(ModItems.FRACTURED_WAND));}
     private int lashes() {return p.getEntityWorld().getEntitiesByClass(ThornLashEntity.class,new Box(-10,90,-10,10,110,10),e->!e.isRemoved()).size();}
     private ZombieEntity zombie(double x,double y,double z) {

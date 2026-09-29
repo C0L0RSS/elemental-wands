@@ -10,7 +10,27 @@ public final class SpellIcons {
     public static void draw(DrawContext ctx, WandSpells.Spell spell, int x, int y, int size) {
         if (spell==null || spell.affinity()==WizardAffinity.NONE) return;
         ctx.getMatrices().pushMatrix();ctx.getMatrices().translate(x,y);ctx.getMatrices().scale(size/32f,size/32f);
-        if (spell.id().equals("updraft")) {
+        if (spell.id().equals("gravity_well")) {
+            for(int i=0;i<40;i++) {
+                double a=i*Math.PI*2/40;
+                if(i%10>6)continue;
+                int px=16+(int)(Math.cos(a)*13),py=16+(int)(Math.sin(a)*8);
+                ctx.fill(px-1,py-1,px+2,py+2,0xFFB88AEF);
+            }
+            ctx.fill(12,10,21,23,0xFF50316D);ctx.fill(10,13,23,20,0xFF50316D);
+            ctx.fill(13,12,20,21,0xFF291D40);ctx.fill(13,11,18,13,0xFFE2C3FF);
+            ctx.fill(20,16,22,20,0xFF9462CF);
+        } else if (spell.id().equals("astral_double")) {
+            for(int i=0;i<2;i++) {
+                int x0=3+i*13,y0=6-i*3;
+                ctx.fill(x0+2,y0,x0+9,y0+7,0xFFC8A7ED);
+                ctx.fill(x0+3,y0+1,x0+8,y0+3,0xFFF3E8FF);
+                ctx.fill(x0,y0+9,x0+11,y0+20,0xFF8554C7);
+                ctx.fill(x0+3,y0+8,x0+8,y0+21,0xFFB58AE5);
+                ctx.fill(x0+2,y0+20,x0+5,30,0xFF693CAA);ctx.fill(x0+7,y0+20,x0+10,30,0xFF996CCD);
+            }
+            ctx.fill(2,2,4,4,0xFFF3E8FF);ctx.fill(27,11,30,14,0xFFE4CAFF);
+        } else if (spell.id().equals("updraft")) {
             // A pearl-white rising gust above a small stepped cloud.
             ctx.fill(4,24,28,29,0xFFB8CBD4);ctx.fill(2,23,9,27,0xFFD8E5E8);
             ctx.fill(6,20,14,27,0xFFF8FAF7);ctx.fill(13,23,24,28,0xFFE6EEF0);

@@ -1,0 +1,55 @@
+// Native Hollow Necromancer model, spell and minion screenshots in a disposable integrated world.
+// ./gradlew -I tools/necromancer_client_smoke.init.gradle runClient
+allprojects {
+    plugins.withId('fabric-loom') {
+        def smokeRoot=layout.buildDirectory.dir('necromancer-client-smoke').get().asFile
+        // Optional existing cache for offline verification (for example Lunar shared/assets).
+        def existingAssets=project.findProperty('hubClientAssets')
+        if (project.hasProperty('necroRecord')) loom.runs.client.vmArg('-Dnecro.record=true')
+        if (project.hasProperty('rushRecord')) loom.runs.client.vmArg('-Dnecro.rushRecord=true')
+        if (project.hasProperty('drainRecord')) loom.runs.client.vmArg('-Dnecro.drainRecord=true')
+        if (project.hasProperty('soulBoltRecord')) loom.runs.client.vmArg('-Dnecro.soulRecord=true')
+        if (project.hasProperty('necroMechanics')) loom.runs.client.vmArg('-Dnecro.mechanics=true')
+        if (existingAssets) {
+            loom.runs.client.vmArg('-Dfabric.dli.config='+new File(smokeRoot,'launch.cfg').absolutePath)
+        }
+        tasks.register('necroClientMetadata') {
+            if (existingAssets) dependsOn generateDLIConfig
+            doLast {
+                def metadata=new File(smokeRoot,'metadata')
+                metadata.mkdirs()
+                new File(metadata,'fabric.mod.json').text='''{
+  "schemaVersion": 1, "id": "necromancer_client_smoke", "version": "1.0.0", "environment": "client",
+  "entrypoints": {"client": ["com.anton.elementalwands.client.NecromancerClientSmoke"]},
+  "depends": {"elementalwands": "*"}
+}'''
+                new File(smokeRoot,'NECRO_PASSED.txt').delete()
+                new File(smokeRoot,'NECRO_FAILED.txt').delete()
+                if (existingAssets) {
+                    def assets=file(existingAssets)
+                    if (!new File(assets,'indexes/27.json').exists()) throw new GradleException('Existing asset cache needs indexes/27.json')
+                    def launch=file('.gradle/loom-cache/launch.cfg').text
+                    launch=launch.replaceAll(/(?m)(\t--assetIndex\r?\n)\t[^\r\n]+/, { match, prefix -> prefix+'\t27' })
+                    launch=launch.replaceAll(/(?m)(\t--assetsDir\r?\n)\t[^\r\n]+/, { match, prefix -> prefix+'\t'+assets.absolutePath })
+                    new File(smokeRoot,'launch.cfg').text=launch
+                }
+            }
+        }
+        tasks.register('necroClientJar',Jar) {
+            dependsOn guardianTestClasses, necroClientMetadata
+            archiveFileName='necromancer-client-smoke.jar'
+            destinationDirectory=smokeRoot
+            from sourceSets.guardianTest.output
+            from new File(smokeRoot,'metadata')
+        }
+        loom.runs.client.runDir('build/necromancer-client-smoke')
+        loom.runs.client.vmArg('-Dfabric.addMods='+new File(smokeRoot,'necromancer-client-smoke.jar').absolutePath)
+        tasks.named('runClient') {
+            dependsOn necroClientJar
+            doLast {
+                if (!new File(smokeRoot,'NECRO_PASSED.txt').exists() || new File(smokeRoot,'NECRO_FAILED.txt').exists())
+                    throw new GradleException('Necromancer client check failed; inspect build/necromancer-client-smoke/logs/latest.log')
+            }
+        }
+    }
+}

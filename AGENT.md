@@ -33,6 +33,8 @@ relevant to the task; the docs archive is optional history, not required context
 | Wand geometry, palettes, animation | [Wand rendering](docs/reference/wand-rendering.md) |
 | Pixel style, source assets, exporters | [Art and assets](docs/reference/art-and-assets.md) |
 | Guardian attacks and animation | [Guardian combat](docs/reference/guardian-combat.md) |
+| Hollow Necromancer boss | [Necromancer combat](docs/reference/necromancer-combat.md) |
+| Hollow undead night mobs | [Hollow undead](docs/reference/hollow-undead.md) |
 | Church, arena, recovery, rewards | [Church and arena](docs/reference/church-and-arena.md) |
 | Test runners and verification boundaries | [Testing](docs/reference/testing.md) |
 | What changed for players | [Release summaries](docs/releases/README.md) |
@@ -93,6 +95,12 @@ node tools/prepare_nature_models.mjs --check
 node tools/prepare_springbloom.mjs --check
 python3 tools/prepare_wand_hub_assets.py --check
 python3 tools/prepare_wand_assets.py --check
+python3 art/hollow_necromancer/v2/build_art.py --check
+python3 art/hollow_necromancer/soul_bolt/build_preview.py --check
+python3 art/hollow_necromancer/grasping_hands/build_preview.py --check
+python3 art/hollow_necromancer/life_drain/build_runtime.py --check
+python3 art/hollow_necromancer/undead/build_runtime.py --check
+python3 art/hollow_crypt/build_layout.py --check
 unzip -t build/libs/elementalwands-2.2.0.jar
 ```
 

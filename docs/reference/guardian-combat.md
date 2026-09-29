@@ -26,7 +26,10 @@ The standing slam remains a full circular wave by explicit design choice.
 Waves follow terrain and can be jumped. Small Nature growth does not provide
 cover, while Stone Wall and Nature ultimate trees do. A wall absorbs the current
 hit before breaking; preserve same-attack protection for delayed volley contacts.
-Server damage and client surfaces use shared cover rules.
+Server damage and client surfaces use shared cover rules. Astral Doubles are
+one-hit summons: local slams, traveling waves, beams, rocks and shards destroy
+them on contact using the attack's cover rules. They do not stop Guardian rocks
+or shards and do not change the boss's player-target selection.
 
 The beam tracks, commits, and pulses; each victim is consumed once per cast,
 including a shielded attempt. Rock throws and floating-stone bursts commit aim
@@ -78,3 +81,7 @@ The build includes geometry/timing contracts and socket comparisons; real-server
 fixtures exercise damage/lifecycle. Native screenshots test appearance separately.
 Neither is a substitute for human multiplayer timing and balance feedback.
 See [testing](testing.md) and [current status](../STATUS.md).
+
+Gravity Well's pull and collapse impulse do not displace the Guardian. Its
+collapse still deals normally attributed Space damage through the Guardian's
+existing damage rules, with arena eligibility and solid cover checked first.

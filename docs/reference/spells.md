@@ -37,9 +37,19 @@ Spell ground fire is owned and temporary so it cannot bypass allied protection.
 Flamethrower is a held close-range cone with gradual damage ramp, heat, overheat,
 and release/timeout handling. Fire Leap is hold-to-aim/release-to-commit, with
 terrain targeting, a validated full-body flight arc, and a jumpable landing wave.
-The current targeting accepts horizon aim and reachable ledge tops within its
-60-block horizontal cap; it retains elevation, cover, fluid, chunk, and arena
-safety checks. Keep the stable `fire_hop` ID for saved purchases.
+Targeting accepts horizon aim and reachable ledge tops within a 22-block
+horizontal cap. When the aimed arc is blocked, it pulls the landing back along
+the aim to the farthest clear leap. It keeps the elevation, cover, fluid, chunk
+and arena safety checks. The arc is a true parabola at constant horizontal speed.
+Its peak is 2.5–6.5 blocks above the higher end and grows with distance.
+Flight time comes from a fixed gravity, about 0.8 s for short hops and 1.2 s at
+full range. The server validates the arc, spends the cooldown and owns fall
+protection and the wave. The caster's client flies the committed arc with real
+collision, so there is no carrier entity and no seated pose. The wave fires only
+when the server sees the caster land on footing within 1.5 blocks of the mark.
+Leaving the arc, hitting something midair or never arriving ends the leap
+without a wave. Landing keeps a short skid. Keep the stable `fire_hop` ID for
+saved purchases.
 
 Flashover throws sticky embers onto surfaces or enemies and detonates them with
 Spell alternate. Bomb slots recover independently after blast or loss; pending
@@ -47,7 +57,7 @@ staggered blasts remain disarmable. Shared hit accounting caps a sequence's
 per-victim damage. Never add terrain destruction or unowned spreading fire.
 
 Owners: `FireAbilityHandler`, `FireBuildManager`/`FireBuildRules`,
-`FireLeapManager`/`FireLeapRules`/`FireLeapEntity`, `FlashoverManager`/
+`FireLeapManager`/`FireLeapRules`/`client/FireLeapClient`, `FlashoverManager`/
 `FlashoverRules`/`FlashoverEmberEntity`, `MeteorManager`.
 
 ## Wind
@@ -127,7 +137,7 @@ Faultline (`faultline`, 500 Flux) sends a twenty-block widening wave after a 0.1
 warning. It advances two one-block rows per tick (40 blocks per second), reaching
 its end about 0.6 seconds after casting. Its far-end width remains eight blocks.
 The custom non-solid spikes rise and immediately crumble. Each target
-can take one 4-damage hit per cast; non-Guardian enemies lose horizontal momentum,
+can take one 4-damage hit per cast; non-boss enemies lose horizontal momentum,
 receive an upward launch of roughly 1.4 blocks on open ground, and have movement
 interrupted for twelve ticks (0.6 seconds). They can still aim and cast; this is
 a movement interruption rather than an action lock. Forty ticks of interrupt
@@ -163,15 +173,24 @@ and shared temporary-block ownership.
 
 ## Nature
 
-Seed is a winged pod that damages enemies or plants staged flowers. Flowers and
-Tendril Bloom brambles provide the sustained damage/Entangle loop. Thornbite
+Seed is a winged pod that damages enemies (4) or plants staged flowers. Flowers and
+Tendril Bloom brambles provide the sustained damage/Entangle loop. Nature is the support
+element: its damage stays below Wind and Stone, and its flowers bank health. A thorn deals
+1, rising to 2 at five Entangle stacks, ×1.5 against a `WandBoss` (bosses ignore the root).
+A patch bites anything with any block column of its body over it (at the feet or just
+below), so a wide body is not tested by its centre alone. Each flower banks the health its
+own patch's thorns take, up to 8, and shows hearts while it holds some. Its owner collects
+it by left-clicking the flower (this works where blocks cannot be broken, such as the
+Hollow Crypt) or popping it with their own Seed, or by feeding it to their Overgrowth; the
+health heals them. Expiry, anyone else's break or a stray projectile wastes it. Tendril
+Bloom brambles bite but bank nothing. Thornbite
 (stable saved ID `thorn_lash`) is a separate Basic: a Venus flytrap on three
 braided vines extends immediately with a slight upward arc and snaps at the first
 non-allied target. Aim and damage origin commit on press; turning or moving does
 not sweep the attack. Only the mouth deals damage, at most once per cast, and
 solid cover stops it. An invulnerable first target also consumes the bite.
-It does not plant seeds. Base damage is 3, range 4.5 blocks, cooldown one second,
-and healing is 50% of actual health damage, capped at one heart. Extension takes
+It does not plant seeds. Base damage is 4, range 4.5 blocks, cooldown one second,
+and healing is 75% of actual health damage, capped at one and a half hearts. Extension takes
 three ticks, closure one tick, and retraction four ticks; an early contact shortens
 the cast. Both the decorative mouth and stem use the held wand's actual render
 transform: the flytrap grows out along the casting-hand side and retracts into
@@ -197,18 +216,20 @@ blocked neighboring columns trim the flower instead of rejecting it. A nine-cell
 mask controls both the capped visual mesh and the smaller collision/landing area,
 and updates when adjacent blocks change. Obstacles, fluids and other spell growth
 are left intact; no launch or catch exists on a clipped section. Its shallow yellow cushion is 0.6875 blocks high, with thick basal leaves;
-the cushion stays rigid on launch and emits pollen. The raised solid center cannot
-be walked onto. A player landing from above is caught without incoming fall damage
-and launched upward, including hostile players and last-second pod catches.
-Incoming horizontal movement chooses the direction and scales the launch up to its
-cap. During the flight, movement input steers with ordinary vanilla air control,
+the cushion stays rigid on launch and emits pollen. The cushion is too tall to step
+onto, so a grounded player who walks or runs into its side (any movement key held, not
+sneaking, within 0.08 blocks of its collision edge) is launched along their facing, at
+full strength when sprinting and about three quarters when walking. A player landing from
+above is caught without incoming fall damage and launched upward, including hostile
+players and last-second pod catches; incoming horizontal movement chooses that direction
+and scales the launch up to its cap. The launch is 1.7 up and at most 1.9 across (blocks a
+tick). During the flight, movement input steers with ordinary vanilla air control,
 as in any fall; normal gravity and collision still apply. On level ground, flights
-rise roughly 20 blocks; steering alone covers about 8–10 blocks from a standing
-launch, and holding forward after a full-speed launch reaches roughly 23–25.
-A drop to lower terrain can extend the travel.
+rise roughly 15 blocks, and a full-speed launch coasts about 21 blocks forward without
+steering (the earlier 2.0/1.35 launch rose 20 and coasted 15). A drop to lower terrain can extend the travel.
 
-Each pad is reusable, breakable in one hit, and lasts 80 ticks from opening. Slot 1
-can also break an aimed pad with a wand. The 200-tick throw cooldown is keyed to the
+Each pad is reusable, breakable in one hit, and lasts 160 ticks from opening. Slot 1
+can also break an aimed pad with a wand. The 120-tick throw cooldown is keyed to the
 player as well as the casting wand, survives death/reconnects, and is not refunded
 for failed placement. Each caster can have one active pad. There is no caster-order
 or ground-touch chain restriction. Fall protection ends after the next actual
@@ -221,7 +242,7 @@ Owners: `SpringbloomManager`, `SpringbloomRules`, `SpringbloomEntity`,
 `SpringbloomBlock`, the Springbloom movement/fall mixins and `SpringbloomRenderer`.
 
 `NatureCombat` owns per-caster damage/charge windows; prevent thorn spam or
-multiple wands from bypassing them. Guardian resistance prevents permanent rooting
+multiple wands from bypassing them. Boss resistance prevents permanent rooting
 while preserving earned recovery openings. Owners: `NatureAbilityHandler`,
 `SeedlingManager`, `TendrilBloomManager`, `ThornLashEntity`/`ThornLashRules`,
 `OvergrowthSeedEntity`/`OvergrowthManager`, `EntangleTracker`, `NatureCombat`.
@@ -233,11 +254,80 @@ retarget or U-turn and loses guidance through cover or invalid angles. Impact
 causes damage without restoring the retired pull/mobility-disruption mechanics.
 Blink Rift makes a safe teleport and leaves a temporary return rift.
 
+Astral Double (`astral_double`, 500 Flux) tosses a harmless, visible orb in a short
+arc (about seven blocks on level ground). A supported landing with clear standing
+room creates one stationary copy of the caster, using their skin and arm model,
+holding a Space wand with violet motes around it. Wall contacts drop the orb to
+the floor. Invalid, fluid, unloaded or unsupported landings fizzle and begin a
+three-second recovery. A fresh press is required; holding the input cannot
+consume the newly formed double.
+
+The double lasts 45 seconds from landing. Every successful Singularity Bolt cast
+also launches a full-strength bolt from the double toward the caster's crosshair
+hit point. Each projectile retains its own ordinary range, cover collision and
+limited guidance. The paired damage type lets both bolts deal damage even on the
+same tick, while preserving armor, shields, party protection and Space attribution.
+It does not copy Hollow Purple or fire autonomously.
+
+Recasting within 64 blocks teleports to the double and consumes it. Walls between
+the two positions do not prevent a return to a safe destination; arena containment
+still applies. The double neither consumes nor refreshes Blink Rift, and blinking
+does not remove the double. Blink, consume the double, then immediately use the
+still-open return rift is supported through the existing global input timing.
+
+A single hostile damaging hit, including Guardian beam, wave, slam, rock and shard
+contact, destroys the double in a magical poof. Owner/allied attacks are protected.
+Guardian projectiles destroy it without treating it as defensive cover. Destruction,
+teleport consumption and expiry start 15 seconds of recovery; the orb's flight and
+the live double do not start that timer. The player retains recovery across wand
+replacement, death and reconnects. Putting away the wand keeps the beacon, while
+death, affinity/loadout/world exit, disconnect, encounter exclusion, loss of safe
+support and server shutdown remove it with recovery. The entities are transient;
+a saved active marker recovers safely after an interrupted server run.
+Owners: `AstralDoubleManager`, `AstralOrbEntity`, `AstralDoubleEntity`, and the
+shared Singularity Bolt and Guardian collision paths.
+
+Gravity Well (`gravity_well`, 500 Flux) throws a violet gravity bomb in an arc,
+traveling about 12 blocks on a level throw. The first hostile living-entity,
+solid-surface or fluid impact creates a stationary well; it neither bounces nor
+follows a struck enemy. One bomb/well may exist per caster. A fresh press is
+required for both throwing and early collapse; held repeats do neither.
+
+The well lasts four seconds and pulls eligible living targets within four blocks
+of its center. Solid cover blocks both pull and burst. It deals no ticking damage.
+Recast to collapse early, or let the full duration expire: either begins a
+0.4-second buildup with accelerating inward particles, then deals six base damage
+with Space level/XP attribution and a stronger inward impulse. The visual burst
+explodes outward for 0.6 seconds; that debris is cosmetic and deals no extra hits.
+Pull continues during buildup. Repeated recasts cannot restart or duplicate it.
+Early collapse trades sustained control time for an earlier burst; it does not
+amplify damage.
+The caster, allies, owned summons and protected pets are unaffected. Knockback
+resistance reduces pull, and bosses take damage without displacement.
+Movement, primary fire, Astral Double and Blink Rift remain independent; Hollow
+Purple's existing charge lock still prevents manual casts during its commitment.
+
+Recovery begins on impact and lasts 16 seconds, including time spent pulling;
+collapse never restarts that timer. The live HUD shows TOSS / PULL plus time,
+BURST during buildup, then remaining recovery. Recovery is retained on both the original wand and a
+persistent player attachment, preventing replacement-wand resets. Losing a
+flying bomb to timeout, unloaded terrain or cancellation costs full recovery.
+Death, disconnect, affinity/loadout/world exit, encounter exclusion and server
+stop remove the effect without a damaging collapse. Rejoin clears stale active
+state and retains recovery; transient bombs are never saved. Putting away the
+wand does not cancel a valid well. No blocks are modified.
+Owners: `GravityWellManager`, `GravityBombEntity`, `GravityBombRenderer`.
+
 Hollow Purple commits for its complete charge. The player can aim but cannot
 walk, blink, or use items; switching/dropping the wand does not cancel or refund
 it. Death, world exit, and encounter teardown clean it up without a refund.
+The orb erases blocks along its path except in the Hollow Crypt realm, where it
+leaves the terrain intact (as do explosions there; see `HollowCryptRealm.keepsTerrain`).
 Owners: `SpaceAbilityHandler`, `SingularityBoltEntity`, `BlinkRiftManager`,
 `HollowPurpleChargeManager`. Keep arena containment in all teleport paths.
 
 Visual ownership is described in [art and assets](art-and-assets.md).
 Targeted test runners are listed in [testing](testing.md).
+
+Bosses implement `WandBoss` (the Guardian and Hollow Necromancer). Wand spells
+do not root, knock back, stagger or interrupt them; they still take normal damage.

@@ -161,12 +161,6 @@ public final class ModEntities {
                         .dimensions(EntityDimensions.fixed(.1f,.1f)).trackRangeBlocks(256).trackedUpdateRate(1)
                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"guardian_lift"))));
 
-        public static final EntityType<com.anton.elementalwands.entity.FireLeapEntity> FIRE_LEAP = Registry.register(
-                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID,"fire_leap"),
-                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.FireLeapEntity>create(SpawnGroup.MISC,
-                        com.anton.elementalwands.entity.FireLeapEntity::new)
-                        .dimensions(EntityDimensions.fixed(.1f,.1f)).trackRangeBlocks(96).trackedUpdateRate(1)
-                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"fire_leap"))));
 
         public static final EntityType<com.anton.elementalwands.entity.FlashoverEmberEntity> FLASHOVER_EMBER = Registry.register(
                 Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID,"flashover_ember"),
@@ -203,6 +197,26 @@ public final class ModEntities {
                         .dimensions(EntityDimensions.fixed(.18f,.18f)).trackRangeBlocks(96).trackedUpdateRate(1).disableSaving()
                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"gale_dagger"))));
 
+        public static final EntityType<com.anton.elementalwands.entity.AstralDoubleEntity> ASTRAL_DOUBLE = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID,"astral_double"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.AstralDoubleEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.AstralDoubleEntity::new)
+                        .dimensions(EntityDimensions.fixed(.6f,1.8f)).trackRangeBlocks(96).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"astral_double"))));
+        public static final EntityType<com.anton.elementalwands.entity.AstralOrbEntity> ASTRAL_ORB = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID,"astral_orb"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.AstralOrbEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.AstralOrbEntity::new)
+                        .dimensions(EntityDimensions.fixed(.25f,.25f)).trackRangeBlocks(96).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"astral_orb"))));
+
+        public static final EntityType<com.anton.elementalwands.entity.GravityBombEntity> GRAVITY_BOMB = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID,"gravity_bomb"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.GravityBombEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.GravityBombEntity::new)
+                        .dimensions(EntityDimensions.fixed(.3f,.3f)).trackRangeBlocks(96).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"gravity_bomb"))));
+
         private ModEntities() {
         }
 
@@ -212,6 +226,86 @@ public final class ModEntities {
                         com.anton.elementalwands.entity.FaultlineSpikeEntity::new)
                         .dimensions(EntityDimensions.fixed(1.1f, 1.3f)).trackRangeBlocks(64).trackedUpdateRate(1).disableSaving()
                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"faultline_spike"))));
+
+        // Small stooped caster; summon-only until its crypt exists.
+        public static final EntityType<com.anton.elementalwands.entity.necromancer.NecromancerEntity> HOLLOW_NECROMANCER = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "hollow_necromancer"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.necromancer.NecromancerEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.necromancer.NecromancerEntity::new)
+                        .dimensions(EntityDimensions.fixed(.7f, 2.15f)).trackRangeBlocks(128).trackedUpdateRate(1)
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "hollow_necromancer"))));
+
+        public static final EntityType<com.anton.elementalwands.entity.necromancer.SoulBoltEntity> SOUL_BOLT = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "soul_bolt"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.necromancer.SoulBoltEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.necromancer.SoulBoltEntity::new)
+                        .dimensions(EntityDimensions.fixed(.5f, .5f)).trackRangeBlocks(96).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "soul_bolt"))));
+
+        public static final EntityType<com.anton.elementalwands.entity.necromancer.GraspingHandEntity> GRASPING_HAND = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "grasping_hand"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.necromancer.GraspingHandEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.necromancer.GraspingHandEntity::new)
+                        .dimensions(EntityDimensions.fixed(.5f, .5f)).trackRangeBlocks(96).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "grasping_hand"))));
+
+        public static final EntityType<com.anton.elementalwands.entity.necromancer.SoulFireballEntity> SOUL_FIREBALL = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "soul_fireball"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.necromancer.SoulFireballEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.necromancer.SoulFireballEntity::new)
+                        .dimensions(EntityDimensions.fixed(.6f, .6f)).trackRangeBlocks(128).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "soul_fireball"))));
+
+        public static final EntityType<com.anton.elementalwands.entity.necromancer.HarvestSoulEntity> HARVEST_SOUL = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "harvest_soul"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.necromancer.HarvestSoulEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.necromancer.HarvestSoulEntity::new)
+                        .dimensions(EntityDimensions.fixed(.7f, .9f)).trackRangeBlocks(96).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "harvest_soul"))));
+
+        public static final EntityType<com.anton.elementalwands.entity.necromancer.NecromancerSoulEntity> NECROMANCER_SOUL = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "necromancer_soul"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.necromancer.NecromancerSoulEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.necromancer.NecromancerSoulEntity::new)
+                        .dimensions(EntityDimensions.fixed(1.1f, 1.1f)).trackRangeBlocks(128).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "necromancer_soul"))));
+
+        // The Necromancer's intro cinematic: the zombie whose soul is torn out, and the souls that build him.
+        public static final EntityType<com.anton.elementalwands.entity.necromancer.IntroZombieEntity> INTRO_ZOMBIE = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "intro_zombie"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.necromancer.IntroZombieEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.necromancer.IntroZombieEntity::new)
+                        .dimensions(EntityDimensions.fixed(.6f, 1.95f)).trackRangeBlocks(128).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "intro_zombie"))));
+
+        public static final EntityType<com.anton.elementalwands.entity.necromancer.IntroSoulEntity> INTRO_SOUL = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "intro_soul"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.necromancer.IntroSoulEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.necromancer.IntroSoulEntity::new)
+                        .dimensions(EntityDimensions.fixed(.7f, .9f)).trackRangeBlocks(128).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "intro_soul"))));
+
+        // Hollow undead: night spawns in the Overworld and the Necromancer's raised army.
+        public static final EntityType<com.anton.elementalwands.entity.undead.HollowCrawlerEntity> HOLLOW_CRAWLER = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "hollow_crawler"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.undead.HollowCrawlerEntity>create(SpawnGroup.MONSTER,
+                        com.anton.elementalwands.entity.undead.HollowCrawlerEntity::new)
+                        .dimensions(EntityDimensions.fixed(1f, .7f).withEyeHeight(.45f)).trackRangeBlocks(80).trackedUpdateRate(2)
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "hollow_crawler"))));
+
+        public static final EntityType<com.anton.elementalwands.entity.undead.HollowArcherEntity> HOLLOW_ARCHER = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "hollow_archer"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.undead.HollowArcherEntity>create(SpawnGroup.MONSTER,
+                        com.anton.elementalwands.entity.undead.HollowArcherEntity::new)
+                        .dimensions(EntityDimensions.fixed(.6f, 1.95f).withEyeHeight(1.7f)).trackRangeBlocks(80).trackedUpdateRate(2)
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "hollow_archer"))));
+
+        public static final EntityType<com.anton.elementalwands.entity.undead.HollowBruteEntity> HOLLOW_BRUTE = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "hollow_brute"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.undead.HollowBruteEntity>create(SpawnGroup.MONSTER,
+                        com.anton.elementalwands.entity.undead.HollowBruteEntity::new)
+                        .dimensions(EntityDimensions.fixed(.9f, 2.1f).withEyeHeight(1.85f)).trackRangeBlocks(80).trackedUpdateRate(2)
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "hollow_brute"))));
 
         public static void registerAll() {
                 // classload hook — field initializers run on class load

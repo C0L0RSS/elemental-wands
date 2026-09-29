@@ -154,11 +154,24 @@ public final class ModParticleFactories {
             0xE8FCFF, 0x6BC5FF,
             SpriteMode.BY_AGE, false, true);
 
+    private static final Profile NECROMANCER_SOUL_WISP = new Profile(
+            .055f, .10f, .3f, 8, 14, .8f, 0, .45f,
+            -.015f, .94f, -.07f, .07f, 0xFFFFFF, 0xFFFFFF,
+            SpriteMode.BY_AGE, false, true);
+    private static final Profile NECROMANCER_BITE_SHARD = new Profile(
+            .035f, .075f, .5f, 6, 11, 1, 0, .5f,
+            .035f, .93f, -.2f, .2f, 0xFFFFFF, 0xFFFFFF,
+            SpriteMode.RANDOM, false, true);
+
     private ModParticleFactories() {
     }
 
     public static void registerAll() {
         ParticleFactoryRegistry factories = ParticleFactoryRegistry.getInstance();
+        factories.register(ModParticles.NECROMANCER_SOUL_WISP,
+                sprites -> new ElementalParticleFactory(sprites, NECROMANCER_SOUL_WISP));
+        factories.register(ModParticles.NECROMANCER_BITE_SHARD,
+                sprites -> new ElementalParticleFactory(sprites, NECROMANCER_BITE_SHARD));
         factories.register(ModParticles.FIRE_EMBER,
                 sprites -> new ElementalParticleFactory(sprites, FIRE_EMBER));
         factories.register(ModParticles.FIRE_FLAME_RIBBON,

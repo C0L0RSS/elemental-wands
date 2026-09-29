@@ -83,6 +83,13 @@ public class ElementalWandsMod implements ModInitializer {
         ModBlocks.registerAll();
         ModEntities.registerAll();
         FabricDefaultAttributeRegistry.register(ModEntities.FRACTURED_GUARDIAN, FracturedGuardianEntity.createAttributes().build());
+        FabricDefaultAttributeRegistry.register(ModEntities.HOLLOW_NECROMANCER, com.anton.elementalwands.entity.necromancer.NecromancerEntity.createAttributes().build());
+        FabricDefaultAttributeRegistry.register(ModEntities.HARVEST_SOUL, com.anton.elementalwands.entity.necromancer.HarvestSoulEntity.createAttributes().build());
+        FabricDefaultAttributeRegistry.register(ModEntities.NECROMANCER_SOUL, com.anton.elementalwands.entity.necromancer.NecromancerSoulEntity.createAttributes().build());
+        FabricDefaultAttributeRegistry.register(ModEntities.INTRO_ZOMBIE, net.minecraft.entity.mob.ZombieEntity.createZombieAttributes().build());
+        FabricDefaultAttributeRegistry.register(ModEntities.INTRO_SOUL, com.anton.elementalwands.entity.necromancer.IntroSoulEntity.createAttributes().build());
+        com.anton.elementalwands.entity.necromancer.NecromancerIntro.register();
+        com.anton.elementalwands.entity.undead.HollowUndeadSpawns.register();
         FabricDefaultAttributeRegistry.register(ModEntities.AWAKENED_TREE, AwakenedTreeEntity.createAttributes().build());
         FabricDefaultAttributeRegistry.register(ModEntities.STONE_ZOMBIE, StoneZombieEntity.createAttributes().build());
         SpawnRestriction.register(
@@ -110,15 +117,21 @@ public class ElementalWandsMod implements ModInitializer {
         WaylayDashVfxManager.init();
         ZephyrStrikeManager.init();
         com.anton.elementalwands.util.GaleDaggers.init();
+        FabricDefaultAttributeRegistry.register(ModEntities.ASTRAL_DOUBLE, com.anton.elementalwands.entity.AstralDoubleEntity.createAttributes().build());
+        com.anton.elementalwands.util.AstralDoubleManager.init();
+        com.anton.elementalwands.util.GravityWellManager.init();
         com.anton.elementalwands.util.UpdraftManager.init();
         ModNetworking.registerPayloads();
         ModNetworking.registerC2SReceivers();
         com.anton.elementalwands.util.WandLoadouts.init();
         com.anton.elementalwands.util.FireBuildManager.init();
+        com.anton.elementalwands.util.FireLeapManager.init();
         com.anton.elementalwands.util.FlashoverManager.init();
         ModWorldGen.registerAll();
         com.anton.elementalwands.arena.GuardianArenaManager.init();
         com.anton.elementalwands.church.GuardianChurchManager.init();
+        com.anton.elementalwands.crypt.HollowCryptManager.init();
+        com.anton.elementalwands.entity.necromancer.NecromancerFightLog.init();
 
         // ── First-join starter kit ──────────────────────────────────────
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
@@ -151,6 +164,8 @@ public class ElementalWandsMod implements ModInitializer {
         // ── /ew unlock + /ew affinity + /ew admin commands ──────────────
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             GuardianCommands.register(dispatcher);
+            com.anton.elementalwands.command.NecromancerCommands.register(dispatcher);
+            com.anton.elementalwands.command.CryptCommands.register(dispatcher);
             com.anton.elementalwands.command.PartyCommands.register(dispatcher);
             dispatcher.register(
                 CommandManager.literal("ew")

@@ -28,7 +28,7 @@ import software.bernie.geckolib.animation.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 /** Summon-only cooperative boss, with explicit passive animation review controls. */
-public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntity {
+public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntity, WandBoss {
     private static final TrackedData<Long> NATURE_OPENING = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.LONG);
     private static final TrackedData<Float> GUARD = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.FLOAT);
     private static final TrackedData<Float> MAX_GUARD = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.FLOAT);
@@ -259,12 +259,13 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
 
     void beginCombatBeam(ServerPlayerEntity player) { beam.begin(player); }
     void cancelCombatBeam() { beam.cancel(); }
-    public boolean isBossAggressive() { return !getCommandTags().contains(PASSIVE_TAG); }
+    @Override public boolean isBossAggressive() { return !getCommandTags().contains(PASSIVE_TAG); }
+    @Override public boolean eligible(ServerPlayerEntity player) { return com.anton.elementalwands.arena.GuardianArenaManager.eligible(this, player); }
 
     public void setNatureOpening(long start){dataTracker.set(NATURE_OPENING,start);}
-    public boolean natureOpening(){long start=dataTracker.get(NATURE_OPENING),now=getEntityWorld().getTime();return start>=0 && now>=start && now<start+GuardianNatureResponse.EXTRA_RECOVERY;}
-    public void onNatureEntangle(int stacks) { combat.entangle(stacks); }
-    public void onNatureThorns() { combat.thorn(); }
+    @Override public boolean natureOpening(){long start=dataTracker.get(NATURE_OPENING),now=getEntityWorld().getTime();return start>=0 && now>=start && now<start+GuardianNatureResponse.EXTRA_RECOVERY;}
+    @Override public void onNatureEntangle(int stacks) { combat.entangle(stacks); }
+    @Override public void onNatureThorns() { combat.thorn(); }
 
     public String leapStatus() { return combat.leapStatus(); }
 

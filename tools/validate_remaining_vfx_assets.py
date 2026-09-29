@@ -120,6 +120,8 @@ def family_ids(element: str, family: str, count: int, reverse: bool = False) -> 
 
 
 EXPECTED_PARTICLE_DEFINITIONS: dict[str, list[str]] = {
+    "necromancer_soul_wisp": family_ids("necromancer", "wisp", 4),
+    "necromancer_bite_shard": family_ids("necromancer", "shard", 4),
     "arcane_mote": family_ids("arcane", "mote", 4),
     "arcane_thread": family_ids("arcane", "thread", 6),
 }
@@ -135,6 +137,7 @@ NEW_PARTICLE_CONSTANTS = (
     "FIRE_EMBER", "FIRE_FLAME_RIBBON", "FIRE_IMPACT_RING", "FIRE_PYRE_FRONT",
     "FIRE_METEOR_SHELL", "FIRE_METEOR_WARNING", "FIRE_METEOR_IMPACT",
     "WIND_SLIPSTREAM", "WIND_SHEAR_FEATHER",
+    "NECROMANCER_SOUL_WISP", "NECROMANCER_BITE_SHARD",
 )
 
 
@@ -171,8 +174,8 @@ def validate_json() -> list[str]:
         errors.append(f"missing particle definition: assets/elementalwands/particles/{missing}.json")
     for extra in sorted(actual_names - expected_names):
         errors.append(f"unexpected particle definition: {definitions[extra].relative_to(ROOT)}")
-    if len(definitions) != 41:
-        errors.append(f"particle definition count {len(definitions)}, expected 41")
+    if len(definitions) != 43:
+        errors.append(f"particle definition count {len(definitions)}, expected 43")
 
     for name, expected_textures in EXPECTED_PARTICLE_DEFINITIONS.items():
         path = definitions.get(name)

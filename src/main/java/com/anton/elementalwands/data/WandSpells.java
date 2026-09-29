@@ -22,6 +22,8 @@ public final class WandSpells {
         public String iconPath() { return "textures/gui/ability/" + affinity.name().toLowerCase(Locale.ROOT)
                 + "_" + ability.name().toLowerCase(Locale.ROOT) + ".png"; }
         public String timing() {
+            if (id.equals("gravity_well")) return "Cooldown: 16s on impact";
+            if (id.equals("astral_double")) return "Recovery: 15s / miss: 3s";
             if (id.equals("updraft")) return "Cooldown: 8s";
             if (id.equals("gale_daggers")) return "Cooldown: 12s after firing";
             if (id.equals("faultline")) return "Cooldown: 9s";
@@ -47,6 +49,8 @@ public final class WandSpells {
         }
         public String reach() {
             return switch(id) {
+                case "gravity_well" -> "4s / Radius: 4 blocks";
+                case "astral_double" -> "45s / Teleport: 64 blocks";
                 case "updraft" -> "Rise: ~10 blocks";
                 case "gale_daggers" -> "40 blocks / 3 x 5 damage";
                 case "sky_shear" -> "Range: 7 blocks";
@@ -102,6 +106,10 @@ public final class WandSpells {
         spell(WizardAffinity.NATURE, Ability.ULTIMATE, "overgrowth", "Overgrowth", "Throw an acorn to grow a healing oak. One nearby flower extends its duration."),
         spell(WizardAffinity.SPACE, Ability.PRIMARY, "singularity_bolt", "Singularity Bolt", "Launch a black star with subtle guidance and a damaging impact burst."),
         spell(WizardAffinity.SPACE, Ability.SECONDARY, "blink_rift", "Blink Rift", "Blink to a safe location, leaving a rift you can use to return."),
+        new Spell("astral_double", WizardAffinity.SPACE, Ability.SECONDARY, "Astral Double",
+                "Toss a fragile double that copies shots. Recast to consume it and teleport.", 500),
+        new Spell("gravity_well", WizardAffinity.SPACE, Ability.SECONDARY, "Gravity Well",
+                "Throw a gravity bomb to pull foes. Recast to collapse it early for burst damage.", 500),
         spell(WizardAffinity.SPACE, Ability.ULTIMATE, "hollow_purple", "Hollow Purple", "Commit to a charged release of spatial energy. Keep aiming as its power gathers.")
     );
     public static Spell find(String id) { return ALL.stream().filter(s -> s.id().equals(id)).findFirst().orElse(null); }

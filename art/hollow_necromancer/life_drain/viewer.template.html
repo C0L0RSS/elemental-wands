@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Life Drain · 3D Design Preview</title>
+<style>
+  :root { color-scheme:dark; font:15px/1.5 system-ui,sans-serif; background:#080b12; color:#e7e5df; }
+  * { box-sizing:border-box; } body { margin:0; }
+  button, input { font:inherit; } button { cursor:pointer; color:inherit; background:#161c29; border:1px solid #394455; border-radius:7px; padding:8px 13px; }
+  button:hover { border-color:#78cad3; } button.active { color:#ddfbfa; border-color:#4ecbd6; background:#16333b; }
+  header { padding:18px 28px; border-bottom:1px solid #28303d; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  .eyebrow { color:#70cbd1; letter-spacing:.16em; font-size:11px; font-weight:700; } h1 { font:600 clamp(23px,3vw,35px)/1.1 Georgia,serif; margin:4px 0 0; }
+  .tag { color:#a5b0bd; font-size:12px; border:1px solid #384452; border-radius:20px; padding:5px 10px; white-space:nowrap; }
+  main { display:grid; grid-template-columns:minmax(0,1fr) 310px; min-height:calc(100vh - 86px); }
+  .stage { position:relative; display:flex; flex-direction:column; min-height:620px; height:calc(100vh - 86px); background:radial-gradient(ellipse at 52% 34%,#202c3b 0%,#0a101c 58%,#070a11 100%); }
+  .canvas-wrap { position:relative; flex:1; min-height:0; display:grid; place-items:center; padding:20px; }
+  #view { grid-area:1/1; width:100%; max-width:1220px; aspect-ratio:16/9; display:block; touch-action:none; cursor:grab; border:1px solid #324656; border-radius:4px; box-shadow:0 20px 60px #0008; background:#101b25; }
+  #view.dragging { cursor:grabbing; }
+  #vignette { grid-area:1/1; width:100%; max-width:1220px; aspect-ratio:16/9; display:block; pointer-events:none; image-rendering:auto; border:1px solid transparent; border-radius:4px; z-index:1; }
+  .stage-label { position:absolute; z-index:2; top:36px; left:36px; background:#09111bc9; border:1px solid #2c4b55; padding:7px 10px; border-radius:5px; color:#b8cbd0; font-size:12px; }
+  .stage-label strong { color:#aafaff; }
+  .hint { position:absolute; z-index:2; top:36px; right:36px; background:#09111bc9; border:1px solid #2c4b55; padding:7px 10px; border-radius:5px; color:#b8cbd0; font-size:12px; }
+  .controls { flex-shrink:0; margin:0 20px 20px; padding:11px; display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:9px; background:#0b101cdd; border:1px solid #334253; border-radius:10px; }
+  .transport { width:100%; display:flex; align-items:center; gap:9px; border-bottom:1px solid #334253; padding-bottom:10px; }
+  #timeline { flex:1; min-width:120px; accent-color:#60c8cf; } #time { min-width:58px; text-align:right; color:#a9dce0; font-variant-numeric:tabular-nums; font-size:12px; }
+  .phase-controls { display:flex; gap:7px; flex-wrap:wrap; justify-content:center; }
+  .view-controls { display:flex; gap:7px; flex-wrap:wrap; justify-content:center; padding-left:7px; border-left:1px solid #334253; }
+  .distance { display:flex; align-items:center; gap:7px; color:#afbdc7; font-size:12px; padding-left:7px; border-left:1px solid #334253; }
+  #distance { width:100px; accent-color:#60c8cf; }
+  aside { padding:24px; border-left:1px solid #2d3746; background:#0e131e; overflow:auto; }
+  h2 { font:600 19px Georgia,serif; margin:0 0 12px; } p { color:#aab5c1; margin:0 0 18px; }
+  .fact { border-top:1px solid #2d3746; padding:11px 0; color:#adb7c1; font-size:13px; }
+  .fact strong { color:#e9e9e5; display:block; margin-bottom:2px; }
+  .palette { display:flex; gap:6px; margin:16px 0 22px; } .swatch { height:25px; flex:1; border:1px solid #ffffff30; border-radius:4px; }
+  .notice { margin-top:17px; font-size:12px; color:#aeb9c4; background:#16202c; border-left:3px solid #60c8cf; padding:12px; }
+  .legend { color:#81d4d8; text-transform:uppercase; font-size:11px; letter-spacing:.12em; font-weight:700; margin-top:10px; }
+  @media (max-width:900px) { main { display:block; } .stage { min-height:500px; height:auto; } .canvas-wrap { min-height:360px; } aside { border-left:0; border-top:1px solid #2d3746; } }
+  @media (max-width:600px) { header { padding:15px; } .tag { display:none; } .canvas-wrap { padding:12px; min-height:270px; } .stage-label { top:19px; left:19px; } .hint { top:53px; right:19px; } .controls { margin:0 12px 12px; } .distance,.view-controls { border-left:0; padding-left:0; } }
+</style>
+</head>
+<body>
+<header><div><div class="eyebrow">ELEMENTAL WANDS · HOLLOW NECROMANCER</div><h1>Life Drain · braided soul stream</h1></div><span class="tag">3D design preview</span></header>
+<main>
+  <section class="stage">
+    <div class="canvas-wrap">
+      <canvas id="view" width="800" height="450" aria-label="Orbitable 3D Life Drain scene with the Necromancer's animated model, a player-scale target, and a braided soul stream"></canvas>
+      <canvas id="vignette" width="320" height="180" aria-hidden="true"></canvas>
+      <div class="stage-label">SOUL FLOW <strong>PLAYER → NECROMANCER</strong></div>
+      <div class="hint">Drag to orbit · Scroll to zoom</div>
+    </div>
+    <div class="controls" aria-label="Preview controls">
+      <div class="transport">
+        <button id="motion" class="active">Pause</button><button id="replay">Replay</button>
+        <input id="timeline" type="range" min="0" max="5" step=".01" value="1.7" aria-label="Preview time">
+        <span id="time">1.70 s</span>
+      </div>
+      <div class="phase-controls" role="group" aria-label="Animation phases">
+        <button data-phase="windup">Windup</button><button data-phase="channel">Channel</button><button data-phase="pulse">Pulse</button><button data-phase="break">Break</button>
+      </div>
+      <div class="view-controls" role="group" aria-label="Camera views">
+        <button data-view="hero" class="active">¾ view</button><button data-view="front">Front</button><button data-view="side">Side</button><button data-view="above">Above</button><button data-view="player">Player eye</button>
+      </div>
+      <label class="distance">Spacing <input id="distance" type="range" min="0" max="100" value="55" aria-label="Target spacing"><span id="distance-label">Medium</span></label>
+    </div>
+  </section>
+  <aside>
+    <h2>Soul drawn toward the hand</h2>
+    <p>The actual Necromancer model plays its drain animation. Two uneven strands twist around a dark hollow center, carrying soul fragments from the player-scale target to a focus above its moving hand.</p>
+    <div class="legend">The visual beats</div>
+    <div class="fact"><strong>Windup · 0–0.7 seconds</strong>A small broken glyph opens over the target's chest while the Necromancer's hand gathers cyan light.</div>
+    <div class="fact"><strong>Channel · after 0.7 seconds</strong>Pixel clusters form a braided tether. One strand is broad and muted; the other carries broken mint highlights.</div>
+    <div class="fact"><strong>Damage pulse · every 0.5 seconds</strong>A brighter knot travels inward and briefly lights the caster's hand and ribs.</div>
+    <div class="fact"><strong>Break · concept beat</strong>The strands tear into loose fragments when the line of sight or range fails.</div>
+    <div class="fact"><strong>Player eye</strong>The near half of the stream fades so the caster stays visible. Dark mist and faint curling wisps gather around the edges, swelling with each damage pulse while the center stays clear.</div>
+    <div class="palette" aria-label="Soul stream palette"><span class="swatch" style="background:#12343d"></span><span class="swatch" style="background:#1b6971"></span><span class="swatch" style="background:#319da4"></span><span class="swatch" style="background:#55cdd0"></span><span class="swatch" style="background:#aafaff"></span></div>
+    <div class="notice">Browser art reference. The Necromancer model and drain animation come from mod resources; the target is a scale stand-in. The soul stream and mist also have an in-game renderer; this page approximates their appearance.</div>
+  </aside>
+</main>
+<script type="module" src="/art/hollow_necromancer/life_drain/viewer.js"></script>
+</body>
+</html>

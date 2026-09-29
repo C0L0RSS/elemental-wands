@@ -1,7 +1,6 @@
 package com.anton.elementalwands.client;
 
 import com.anton.elementalwands.data.*;
-import com.anton.elementalwands.entity.FireLeapEntity;
 import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.registry.ModItems;
 import com.anton.elementalwands.util.*;
@@ -67,25 +66,25 @@ public final class FireLeapClientSmoke implements ClientModInitializer {
                 require(WandControls.aimingLeap(),"Aim did not start");
                 target=FireLeapRules.target(c.player);require(FireLeapRules.validTarget(c.player,target),"Client destination invalid "+target+" position="+c.player.getEntityPos()+" floor="+floor+" pitch="+c.player.getPitch());
             }
-            if(t==51)require(target.subtract(c.player.getEntityPos()).horizontalLength()>59,"Client aim did not reach 60 blocks");
+            if(t==51)require(target.subtract(c.player.getEntityPos()).horizontalLength()>FireLeapRules.RANGE-1,"Client aim did not reach the range cap");
             if(t==65) screenshot(c,"fire-leap-aim.png");
             if(t==70) { WandControls.clear();require(!WandControls.aimingLeap(),"Cancel left preview active"); }
             if(t==75) {
-                require(!c.player.hasVehicle(),"Cancel launched the player");
+                require(!FireLeapClient.active(),"Cancel launched the player");
                 WandControls.input(true,1,GLFW.GLFW_PRESS);
             }
             if(t==85) WandControls.input(true,1,GLFW.GLFW_RELEASE);
             if(t>=86 && t<120) {
                 c.player.setPitch(45);
-                if(c.player.getVehicle() instanceof FireLeapEntity) {
+                if(FireLeapClient.active()) {
                     sawFlight=true;peak=Math.max(peak,c.player.getY()-floor);
                     if(t==93) screenshot(c,"fire-leap-flight.png");
                 }
                 if(t==109)screenshot(c,"fire-leap-wave.png");
             }
             if(t==130) {
-                require(sawFlight && peak>3.8,"Client did not receive full flight "+peak);
-                require(!c.player.hasVehicle() && c.player.getEntityPos().distanceTo(target)<.5,"Client missed destination "+c.player.getEntityPos()+" vs "+target);
+                require(sawFlight && peak>6,"Client did not receive full flight "+peak);
+                require(!FireLeapClient.active() && c.player.getEntityPos().distanceTo(target)<1.2,"Client missed destination "+c.player.getEntityPos()+" vs "+target);
                 require(c.player.getHealth()==20,"Ordinary landing hurt caster");
                 sawFlight=false;peak=0;var uuid=c.player.getUuid();
                 server.execute(()->{
@@ -105,11 +104,11 @@ public final class FireLeapClientSmoke implements ClientModInitializer {
             }
             if(t==170)screenshot(c,"fire-leap-ledge-aim.png");
             if(t==180)WandControls.input(true,1,GLFW.GLFW_RELEASE);
-            if(t>180 && t<215 && c.player.getVehicle() instanceof FireLeapEntity) {
+            if(t>180 && t<215 && FireLeapClient.active()) {
                 sawFlight=true;peak=Math.max(peak,c.player.getY()-floor);
             }
             if(t==220) {
-                require(sawFlight && peak>4 && !c.player.hasVehicle() && c.player.getEntityPos().distanceTo(target)<.5
+                require(sawFlight && peak>4 && !FireLeapClient.active() && c.player.getEntityPos().distanceTo(target)<1.2
                         && c.player.getHealth()==20,"Hidden ledge flight/landing failed: "+c.player.getEntityPos()+" vs "+target);
                 screenshot(c,"fire-leap-ledge-landed.png");
                 Files.writeString(Path.of("HUB_PASSED.txt"),"Actual integrated client: horizon aim at range cap, hold/preview, cancellation, release packet, synchronized full-range and hidden-ledge flights, safe landings and screenshots passed. Human combat feel pending.\n");

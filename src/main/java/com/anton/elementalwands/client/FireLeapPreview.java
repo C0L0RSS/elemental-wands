@@ -1,7 +1,6 @@
 package com.anton.elementalwands.client;
 
 import java.util.*;
-import com.anton.elementalwands.entity.FireLeapEntity;
 import com.anton.elementalwands.entity.GuardianWaveSurface;
 import com.anton.elementalwands.util.FireLeapRules;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
@@ -9,7 +8,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.util.math.Vec3d;
 
-/** Private aim geometry never goes over the network. Committed carriers reveal only the landing ring. */
+/** Private aim geometry never goes over the network. Committed leaps reveal only the landing ring. */
 public final class FireLeapPreview {
     public record Segment(Vec3d a,Vec3d b,double width,int color) {}
     private static List<Segment> frame=List.of();
@@ -20,9 +19,8 @@ public final class FireLeapPreview {
             camera=context.camera().getPos();
             if(client.player!=null) {
                 if(WandControls.aimingLeap()) {
-                    Vec3d to=FireLeapRules.target(client.player);
-                    boolean valid=to!=null && FireLeapRules.supported(client.world,client.player,client.player.getEntityPos(),1.5)
-                            && FireLeapRules.validTarget(client.player,to);
+                    Vec3d to=FireLeapClient.aim(client.player);
+                    boolean valid=to!=null;
                     if(to==null) to=client.player.getEyePos().add(client.player.getRotationVec(1).multiply(FireLeapRules.RANGE));
                     int color=valid ? 0x60ffc36a : 0x90ff5148;
                     Vec3d previous=client.player.getEntityPos();
@@ -39,11 +37,8 @@ public final class FireLeapPreview {
                         result.add(new Segment(to.add(-.3,.05,.3),to.add(.3,.05,-.3),.025,0xc0ff5148));
                     }
                 }
-                for(var entity:client.world.getEntities()) if(entity instanceof FireLeapEntity leap && leap.locksPassenger()
-                        && leap.squaredDistanceTo(client.player)<96*96) {
-                    Vec3d to=leap.destination();
-                    sigil(result,client,to,true,client.world.getTime()+context.tickCounter().getTickProgress(false));
-                }
+                for(var landing:FireLeapClient.landings())
+                    sigil(result,client,landing.to(),true,client.world.getTime()+context.tickCounter().getTickProgress(false));
             }
             frame=List.copyOf(result);
         });

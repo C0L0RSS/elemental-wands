@@ -190,7 +190,7 @@ public final class StoneClusterEntity extends ProjectileEntity {
     }
     private void stagger(ServerWorld world, LivingEntity target) {
         // Encounter bosses retain their authored motion; ordinary targets receive physical recoil.
-        if (target instanceof FracturedGuardianEntity) return;
+        if (target instanceof WandBoss) return;
         ((StoneStaggerAccess)target).elementalwands$staggerUntil(world.getTime()+StoneClusterRules.STAGGER_TICKS);
         target.setSprinting(false);
         var packet=new ModNetworking.StoneStaggerPayload(target.getId(),StoneClusterRules.STAGGER_TICKS);

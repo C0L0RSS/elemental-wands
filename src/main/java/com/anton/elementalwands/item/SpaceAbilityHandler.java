@@ -46,6 +46,8 @@ public final class SpaceAbilityHandler {
         }
 
         SingularityBoltEntity bolt = new SingularityBoltEntity(world, caster);
+        if (caster instanceof net.minecraft.server.network.ServerPlayerEntity p
+                && com.anton.elementalwands.util.AstralDoubleManager.mirror(p)) bolt.setAstralPair();
         world.spawnEntity(bolt);
 
         Vec3d castCenter = com.anton.elementalwands.util.SpellCastVisuals.burstOrigin(caster);

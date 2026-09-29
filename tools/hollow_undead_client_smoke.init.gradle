@@ -1,0 +1,50 @@
+// Native Hollow undead screenshots (rise, idle, walk, attacks, death) in a disposable integrated world; hidden window.
+// ./gradlew -I tools/hollow_undead_client_smoke.init.gradle runClient -PhubClientAssets="$HOME/.lunarclient/shared/assets" --offline
+allprojects {
+    plugins.withId('fabric-loom') {
+        def smokeRoot=layout.buildDirectory.dir('undead-client-smoke').get().asFile
+        // Optional existing cache for offline verification (for example Lunar shared/assets).
+        def existingAssets=project.findProperty('hubClientAssets')
+        if (existingAssets) {
+            loom.runs.client.vmArg('-Dfabric.dli.config='+new File(smokeRoot,'launch.cfg').absolutePath)
+        }
+        tasks.register('undeadClientMetadata') {
+            if (existingAssets) dependsOn generateDLIConfig
+            doLast {
+                def metadata=new File(smokeRoot,'metadata')
+                metadata.mkdirs()
+                new File(metadata,'fabric.mod.json').text='''{
+  "schemaVersion": 1, "id": "undead_client_smoke", "version": "1.0.0", "environment": "client",
+  "entrypoints": {"client": ["com.anton.elementalwands.client.HollowUndeadClientSmoke"]},
+  "depends": {"elementalwands": "*"}
+}'''
+                new File(smokeRoot,'UNDEAD_CLIENT_PASSED.txt').delete()
+                new File(smokeRoot,'UNDEAD_CLIENT_FAILED.txt').delete()
+                if (existingAssets) {
+                    def assets=file(existingAssets)
+                    if (!new File(assets,'indexes/27.json').exists()) throw new GradleException('Existing asset cache needs indexes/27.json')
+                    def launch=file('.gradle/loom-cache/launch.cfg').text
+                    launch=launch.replaceAll(/(?m)(\t--assetIndex\r?\n)\t[^\r\n]+/, { match, prefix -> prefix+'\t27' })
+                    launch=launch.replaceAll(/(?m)(\t--assetsDir\r?\n)\t[^\r\n]+/, { match, prefix -> prefix+'\t'+assets.absolutePath })
+                    new File(smokeRoot,'launch.cfg').text=launch
+                }
+            }
+        }
+        tasks.register('undeadClientJar',Jar) {
+            dependsOn guardianTestClasses, undeadClientMetadata
+            archiveFileName='undead-client-smoke.jar'
+            destinationDirectory=smokeRoot
+            from sourceSets.guardianTest.output
+            from new File(smokeRoot,'metadata')
+        }
+        loom.runs.client.runDir('build/undead-client-smoke')
+        loom.runs.client.vmArg('-Dfabric.addMods='+new File(smokeRoot,'undead-client-smoke.jar').absolutePath)
+        tasks.named('runClient') {
+            dependsOn undeadClientJar
+            doLast {
+                if (!new File(smokeRoot,'UNDEAD_CLIENT_PASSED.txt').exists() || new File(smokeRoot,'UNDEAD_CLIENT_FAILED.txt').exists())
+                    throw new GradleException('Hollow undead client check failed; inspect build/undead-client-smoke/logs/latest.log')
+            }
+        }
+    }
+}

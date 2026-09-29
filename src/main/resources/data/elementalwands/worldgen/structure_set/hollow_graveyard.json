@@ -1,0 +1,18 @@
+{
+  "structures": [
+    {
+      "structure": "elementalwands:hollow_graveyard",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 20,
+    "separation": 8,
+    "salt": 40110627,
+    "exclusion_zone": {
+      "other_set": "elementalwands:guardian_church",
+      "chunk_count": 4
+    }
+  }
+}

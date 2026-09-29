@@ -1,0 +1,68 @@
+// Optional real-server regression fixture. All worlds, players and metadata stay under build/.
+// ./gradlew -I tools/astral_double_smoke.init.gradle runServer --args nogui
+allprojects {
+    plugins.withId('fabric-loom') {
+        def smokeRoot = layout.buildDirectory.dir('astral-double-smoke').get().asFile
+        def runRoot = file('build/astral-double-smoke-run')
+        def recovery = false
+        tasks.register('astralDoubleSmokeSetup') {
+            doLast {
+                runRoot.mkdirs()
+                def oldWorld = new File(runRoot, 'astral-test')
+                if (!recovery && oldWorld.exists() && !oldWorld.renameTo(new File(runRoot, 'astral-test-before-' + System.currentTimeMillis()))) {
+                    throw new GradleException('Could not preserve the previous disposable test world.')
+                }
+                def acceptedEula = file('run/eula.txt')
+                if (!acceptedEula.exists() || !acceptedEula.text.contains('eula=true')) {
+                    throw new GradleException('Accept the Minecraft EULA in run/eula.txt before using this test server.')
+                }
+                new File(runRoot, 'eula.txt').text = acceptedEula.text
+                new File(runRoot, 'server.properties').text = '''server-ip=127.0.0.1
+server-port=0
+online-mode=false
+level-type=minecraft:flat
+generate-structures=false
+level-name=astral-test
+generator-settings={"layers":[{"block":"minecraft:bedrock","height":1},{"block":"minecraft:dirt","height":2},{"block":"minecraft:grass_block","height":1}],"biome":"minecraft:plains"}
+spawn-protection=0
+view-distance=8
+simulation-distance=8
+difficulty=normal
+max-tick-time=-1
+'''
+                new File(runRoot,'PRESSURE_FAILED.txt').delete()
+                new File(runRoot,'PRESSURE_PASSED.txt').delete()
+            }
+        }
+        tasks.register('astralDoubleSmokeMetadata') {
+            doLast {
+                def metadata = new File(smokeRoot,'metadata')
+                metadata.mkdirs()
+                new File(metadata,'fabric.mod.json').text = '''{
+  "schemaVersion": 1, "id": "astral_double_smoke", "version": "1.0.0", "environment": "server",
+  "entrypoints": {"main": ["com.anton.elementalwands.entity.AstralDoubleServerSmoke"]},
+  "depends": {"elementalwands": "*"}
+}'''
+            }
+        }
+        tasks.register('astralDoubleSmokeJar', Jar) {
+            dependsOn guardianTestClasses, astralDoubleSmokeMetadata
+            archiveFileName = 'astral-double-smoke.jar'
+            destinationDirectory = smokeRoot
+            from sourceSets.guardianTest.output
+            from new File(smokeRoot,'metadata')
+        }
+        loom.runs.server.runDir('build/astral-double-smoke-run')
+        loom.runs.server.vmArg('-Dfabric.addMods=' + new File(smokeRoot,'astral-double-smoke.jar').absolutePath)
+        tasks.named('runServer') {
+            dependsOn astralDoubleSmokeJar, astralDoubleSmokeSetup
+            standardInput = System.in
+            doLast {
+                def marker = new File(runRoot,'PRESSURE_PASSED.txt')
+                if (!marker.exists() || new File(runRoot,'PRESSURE_FAILED.txt').exists()) {
+                    throw new GradleException('Astral Double runtime checks did not pass; inspect build/astral-double-smoke-run/logs/latest.log')
+                }
+            }
+        }
+    }
+}

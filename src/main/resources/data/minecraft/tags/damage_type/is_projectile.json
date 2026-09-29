@@ -1,6 +1,8 @@
 {
   "replace": false,
   "values": [
-    "elementalwands:gale_dagger"
+    "elementalwands:gale_dagger",
+    "elementalwands:astral_bolt",
+    "elementalwands:necromancer_soul"
   ]
 }

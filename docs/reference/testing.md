@@ -36,7 +36,7 @@ silently accept terms or point a fixture at the user's real world.
 
 The complete standard build/VFX command list lives in [AGENT.md](../../AGENT.md).
 Use `--offline` only when dependencies/assets are already cached. `./gradlew build`
-includes `checkGuardianBeam` and `checkParties`; neither is a live gameplay test.
+includes `checkGuardianBeam`, `checkNecromancer` and `checkParties`; neither is a live gameplay test.
 For church layout changes also run `python3 tools/build_guardian_church.py --check`.
 
 ## Selecting a fixture
@@ -54,11 +54,16 @@ inspect their assertions when behavior changes instead of trusting an old name.
 | Nature Springbloom | `springbloom_server_smoke.init.gradle` | `springbloom_client_smoke.init.gradle` |
 | Nature Lash / Bloom / Overgrowth | `nature_expansion_server_smoke.init.gradle`, `overgrowth_throw_server_smoke.init.gradle` | `nature_expansion_client_smoke.init.gradle`, `nature_overgrowth_client_smoke.init.gradle` |
 | Stone | `stone_cluster_smoke.init.gradle`, `stone_technique_smoke.init.gradle` | `stone_technique_client_smoke.init.gradle`; Guardian floor client includes Stone cluster mesh checks |
+| Space Gravity Well | `gravity_well_server_smoke.init.gradle` | `gravity_well_client_smoke.init.gradle` |
+| Space Astral Double | `astral_double_server_smoke.init.gradle` | `astral_double_client_smoke.init.gradle` |
 | Wind Updraft / dash combos | `updraft_server_smoke.init.gradle` | `updraft_client_smoke.init.gradle` |
 | Wind daggers | `gale_daggers_server_smoke.init.gradle` | `gale_daggers_client_smoke.init.gradle` |
 | Wind | `wind_pressure_smoke.init.gradle` | `wind_visual_client_smoke.init.gradle` (guided visual review; leaves disposable world open) |
 | Guardian combat | `guardian_combat_smoke.init.gradle`, `guardian_guard_smoke.init.gradle`, `guardian_phase_smoke.init.gradle` | `guardian_floor_client_smoke.init.gradle` |
 | Guardian cover / Nature / walls | `guardian_cover_smoke.init.gradle`, `guardian_nature_smoke.init.gradle`, `guardian_wall_smoke.init.gradle` | Relevant native visual fixture |
+| Hollow Necromancer | `necromancer_server_smoke.init.gradle` (spells, Hands→ambush, waves and their quickening, a Soul Fire Rain volley, blink/shift, the full two-siege fight flow with rain into the transformation, soul light on bolts, fireballs and markers and its cleanup), `necromancer_phase_smoke.init.gradle` (phase two; starts past the sieges: grab, swipe, the random-windup rush, Grave Dive hit and dodge, Soul Harvest, the soul split and collapse, soul light on the souls and its cleanup) | `necromancer_client_smoke.init.gradle` (screenshots; `-PnecroRecord` for hidden recording; `-PnecroMechanics` for the Soul Fire Rain fireball, charge windup, Grave Dive, soul split and Soul Harvest against a scripted player, then soul light under a night rain and skull volley); siege perch views are in `crypt_client_smoke` |
+| Hollow undead | `hollow_undead_server_smoke.init.gradle` (rise, chase, hit-frame damage and arrow timing, daylight burning, loot, held death clip, bound-minion rules) | `hollow_undead_client_smoke.init.gradle` (hidden window; rise, idle front/side, walk, attack key frames, death screenshots) |
+| Hollow Crypt realm | — | `crypt_client_smoke.init.gradle` (realm build, enter, summon, a siege on an exported bough perch with near and far-rim screenshots, wall, reset, leave, `/locate`, headstone ritual, wipe with kept items, victory rewards and spell book; screenshots) |
 | Church / arena | `guardian_church_smoke.init.gradle`, `guardian_arena_smoke.init.gradle` | Guardian floor client with visual options |
 | Worldgen / locate | `guardian_church_worldgen_smoke.init.gradle`, `guardian_church_locate_smoke.init.gradle` | Human terrain review |
 | Parties / audit regressions | `party_server_smoke.init.gradle`, `audit_fixes_smoke.init.gradle` | Human co-op review |
@@ -72,6 +77,8 @@ Examples from the repository root:
 ```
 
 Client runners using `hubClientAssets` can reuse the local Lunar asset cache.
+A fresh run directory's first-launch accessibility screen turns the narrator on; set
+`narrator:0` in that runner's `options.txt` (the crypt runner switches it off itself).
 The floor runner uses `floorClientAssets` instead; supported visual switches
 include `guardianPedestalVisual`, `guardianBurnVisual`, and `natureVisual`.
 Check the runner for the required asset index and completion marker. A process
@@ -187,7 +194,37 @@ desktop capture. Preserve the final MP4 and concise receipts under ignored
 when choosing an output filename; generated raw frames need not be retained once
 the exported video is verified.
 
+### Astral Double recording
+
+`astral_double_client_smoke.init.gradle` accepts `-PastralRecord` and the same
+`hubClientAssets` option. It records 300 consecutive frames at 20 fps (15 seconds)
+from the game framebuffer into the directory named by
+`build/astral-double-client-smoke/RECORDING_DIR.txt`. Use the encoding recipe above
+with 300 frames and `.local-previews/astral-double/astral-double-gameplay.mp4`.
+The ordinary mode exercises bound inputs; recording sends scripted cast packets.
+Require fresh `build/astral-double-smoke-run/PRESSURE_PASSED.txt` and
+`build/astral-double-client-smoke/HUB_PASSED.txt`, with no failure markers.
+Scenes cover the orb toss, skin and wand, mirrored fire, consuming teleport,
+Blink Rift return and destruction poof. A dev player's supplied skin is used;
+this does not verify the user's authenticated Lunar skin or multiplayer feel.
+
 ## Evidence retention
+
+The Necromancer client runner accepts `-PnecroRecord` with `hubClientAssets`.
+It captures 450 framebuffer frames at 20 fps (22.5 seconds), covering the
+eight-second emergence, the standing skeleton, swipe, casting, rush and walking.
+`build/necromancer-client-smoke/RECORDING_DIR.txt` identifies the frame directory;
+require a fresh `NECRO_PASSED.txt` and no `NECRO_FAILED.txt`. Screenshots also cover
+the mage and transformation stages. This scripted recording does not verify
+human input, multiplayer feel or installation into Lunar.
+
+The same runner accepts `-PsoulBoltRecord` for an isolated skull view. It records
+160 frames at 20 fps (eight seconds), checking the custom Soul Bolt renderer,
+flight, synchronized stationary wall bite and removal. The deliberately slowed
+test projectile makes the repeating jaw motion visible; normal combat uses the
+existing faster homing volleys. Use the same recording directory and receipt paths
+as above and encode with 160 frames. Run the Necromancer server fixture as well
+to verify cover and player damage.
 
 Keep useful final native views, a concise result/limitation summary, and critical
 reproduction steps. Raw successful build/client logs are regenerable and usually
@@ -199,3 +236,48 @@ Do not delete `art/` sources, runtime assets, test fixtures, or the only explana
 of a recovery edge case while pruning screenshots. Check links and generator
 references first. `docs/archive/evidence/` holds selected historical evidence;
 `.local-previews/` and `build/` hold local outputs rather than required starting context.
+
+### Gravity Well recording
+
+`gravity_well_client_smoke.init.gradle` accepts `-PgravityRecord` and
+`-PhubClientAssets="$HOME/.lunarclient/shared/assets"`. Its hidden-window mode
+captures 240 frames at 20 fps (12 seconds), covering the throw, impact, pulling
+mobs, accelerating collapse buildup, outward burst, a second well and automatic
+collapse. Use the encoding
+recipe above with 240 frames and `.local-previews/gravity-well/gravity-well-gameplay.mp4`.
+`build/gravity-well-client-smoke/RECORDING_DIR.txt` identifies the raw frames.
+Require its fresh `HUB_PASSED.txt` and the dedicated fixture's
+`build/gravity-well-smoke-run/PRESSURE_PASSED.txt`, with no failure markers.
+The ordinary client mode exercises the bound fifth-slot input; recording sends
+scripted packets. Neither mode establishes human Lunar balance approval.
+
+### Necromancer rush and Grasping Hands recording
+
+Use `-PrushRecord` on `necromancer_client_smoke.init.gradle` with the existing
+`hubClientAssets` option. It captures 300 frames at 20 fps (15 seconds), showing
+an ordinary rush (with its windup lane)/grab/bite/throw and the phase-two Hands
+follow-up from a side camera; the scripted victim has iron-armor points so the combo
+is survivable, as in the playtest. The server fixture `necromancer_phase_smoke.init.gradle`
+checks the old slam and rescue, rush hit/miss after the aim locks, cover, single bite,
+throw, no teammate interrupt, nearest trapped target, the combo's damage against iron
+armor, Hands escape/visual expiry and cancellation. The native
+fixture also checks that all three hand rigs lean and curl their fingers during
+the grip, guarding against shared animation-processor state.
+
+The native recording uses a scripted player with no input client; the fixture
+integrates its released throw velocity. Actual combat owns the grip, bite and
+throw impulse. Require fresh `NECRO_PASSED.txt` and no failure receipt, then encode
+the current `RECORDING_DIR.txt` to `.local-previews/grasping-hands/necromancer-rush-gameplay.mp4`.
+This does not verify human movement input or multiplayer latency.
+
+### Life Drain recording
+
+Use `-PdrainRecord` with `necromancer_client_smoke.init.gradle` and the existing
+`hubClientAssets` option. It records 300 frames at 20 fps (15 seconds), showing
+the braid from an observer camera, first-person mist, a cover break and boss
+removal. Assertions check tracked cast timing, observer and third-person mist
+exclusion, fade completion and removal cleanup. Require a fresh `NECRO_PASSED.txt`
+and no failure receipt. Encode the current `RECORDING_DIR.txt` to
+`.local-previews/life-drain/life-drain-gameplay.mp4`; run the Necromancer server
+fixture for real damage, healing caps and cover rules. This does not establish
+human Lunar appearance or installation.

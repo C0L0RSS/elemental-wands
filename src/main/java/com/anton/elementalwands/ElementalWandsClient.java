@@ -46,6 +46,11 @@ public class ElementalWandsClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        // Left-clicking one of your own flowers pops it on the server instead of mining it.
+        net.fabricmc.fabric.api.event.player.AttackBlockCallback.EVENT.register((player, world, hand, pos, direction) ->
+                world.isClient() && com.anton.elementalwands.client.ClientPlayerData.getNatureSeedlings().contains(pos)
+                        && world.getBlockState(pos).isOf(com.anton.elementalwands.registry.ModSpellBlocks.NATURE_SEEDLING)
+                        ? net.minecraft.util.ActionResult.SUCCESS : net.minecraft.util.ActionResult.PASS);
         com.anton.elementalwands.client.wand.WandItemModel.register();
         ModParticleFactories.registerAll();
         StoneParticleFactories.registerAll();
@@ -72,6 +77,9 @@ public class ElementalWandsClient implements ClientModInitializer {
             net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry.BLOCK.register(
                     (state,world,pos,tint)->tint<0?-1:0xFF000000|tint,block);
 
+        EntityRendererRegistry.register(ModEntities.GRAVITY_BOMB,com.anton.elementalwands.client.renderer.GravityBombRenderer::new);
+        EntityRendererRegistry.register(ModEntities.ASTRAL_DOUBLE,com.anton.elementalwands.client.renderer.AstralDoubleRenderer::new);
+        EntityRendererRegistry.register(ModEntities.ASTRAL_ORB,com.anton.elementalwands.client.renderer.AstralOrbRenderer::new);
         EntityRendererRegistry.register(ModEntities.GALE_DAGGER,com.anton.elementalwands.client.renderer.GaleDaggerRenderer::new);
         EntityRendererRegistry.register(ModEntities.SPRINGBLOOM,com.anton.elementalwands.client.renderer.SpringbloomRenderer::new);
         EntityRendererRegistry.register(ModEntities.OVERGROWTH_SEED,com.anton.elementalwands.client.renderer.OvergrowthSeedRenderer::new);
@@ -103,8 +111,20 @@ public class ElementalWandsClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.STONE_ZOMBIE, StoneZombieRenderer::new);
         EntityRendererRegistry.register(ModEntities.FIRE_SPIRIT, FireSpiritRenderer::new);
         EntityRendererRegistry.register(ModEntities.FRACTURED_GUARDIAN, FracturedGuardianRenderer::new);
+        EntityRendererRegistry.register(ModEntities.HOLLOW_NECROMANCER, com.anton.elementalwands.client.renderer.NecromancerRenderer::new);
+        EntityRendererRegistry.register(ModEntities.SOUL_BOLT, com.anton.elementalwands.client.renderer.SoulBoltRenderer::new);
+        EntityRendererRegistry.register(ModEntities.GRASPING_HAND, com.anton.elementalwands.client.renderer.GraspingHandRenderer::new);
+        EntityRendererRegistry.register(ModEntities.SOUL_FIREBALL, com.anton.elementalwands.client.renderer.SoulFireballRenderer::new);
+        EntityRendererRegistry.register(ModEntities.HARVEST_SOUL, com.anton.elementalwands.client.renderer.HarvestSoulRenderer::new);
+        EntityRendererRegistry.register(ModEntities.NECROMANCER_SOUL, com.anton.elementalwands.client.renderer.NecromancerSoulRenderer::new);
+        EntityRendererRegistry.register(ModEntities.INTRO_ZOMBIE, com.anton.elementalwands.client.renderer.IntroZombieRenderer::new);
+        EntityRendererRegistry.register(ModEntities.INTRO_SOUL, com.anton.elementalwands.client.renderer.IntroSoulRenderer::new);
+        com.anton.elementalwands.client.NecromancerIntroClient.init();
+        EntityRendererRegistry.register(ModEntities.HOLLOW_CRAWLER, context -> new com.anton.elementalwands.client.renderer.HollowUndeadRenderer<>(context, "hollow_crawler", .6f));
+        EntityRendererRegistry.register(ModEntities.HOLLOW_ARCHER, context -> new com.anton.elementalwands.client.renderer.HollowUndeadRenderer<>(context, "hollow_archer", .4f));
+        EntityRendererRegistry.register(ModEntities.HOLLOW_BRUTE, context -> new com.anton.elementalwands.client.renderer.HollowUndeadRenderer<>(context, "hollow_brute", .6f));
         EntityRendererRegistry.register(ModEntities.GUARDIAN_LIFT, EmptyEntityRenderer::new);
-        EntityRendererRegistry.register(ModEntities.FIRE_LEAP, EmptyEntityRenderer::new);
+        com.anton.elementalwands.client.FireLeapClient.init();
         com.anton.elementalwands.client.FireLeapPreview.init();
         EntityRendererRegistry.register(ModEntities.FLASHOVER_EMBER, com.anton.elementalwands.client.renderer.FlashoverEmberRenderer::new);
         EntityRendererRegistry.register(ModEntities.GUARDIAN_ARENA, com.anton.elementalwands.client.renderer.GuardianArenaRenderer::new);
@@ -172,6 +192,8 @@ public class ElementalWandsClient implements ClientModInitializer {
 
         HudRenderCallback.EVENT.register(new com.anton.elementalwands.client.overlay.WandHudOverlay());
         HudRenderCallback.EVENT.register(new EntangleHudOverlay());
+        com.anton.elementalwands.client.NecromancerDrainEffects.register();
+        HudRenderCallback.EVENT.register(new com.anton.elementalwands.client.overlay.NecromancerDrainOverlay());
     }
 
     private static void tickClient(MinecraftClient client) {

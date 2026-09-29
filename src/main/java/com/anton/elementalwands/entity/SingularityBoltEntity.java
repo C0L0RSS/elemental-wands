@@ -41,6 +41,23 @@ public class SingularityBoltEntity extends ProjectileEntity {
     private static final double GUIDANCE_TURN_RADIANS = Math.toRadians(1.0);
     private static final double GUIDANCE_TOTAL_RADIANS = Math.toRadians(16.0);
 
+    private boolean astralPair;
+    private static final net.minecraft.registry.RegistryKey<net.minecraft.entity.damage.DamageType> ASTRAL_DAMAGE =
+            net.minecraft.registry.RegistryKey.of(net.minecraft.registry.RegistryKeys.DAMAGE_TYPE, net.minecraft.util.Identifier.of("elementalwands","astral_bolt"));
+    public void setAstralPair() { astralPair=true; }
+    public void useCastVisuals(LivingEntity caster) {
+        wake=com.anton.elementalwands.util.SpellCastVisuals.Wake.from(caster,startPos,launchDirection);
+    }
+    public SingularityBoltEntity(ServerWorld world, LivingEntity owner, Vec3d origin, Vec3d direction) {
+        this(world,owner);setPosition(origin);startPos=origin;launchDirection=direction;
+        setVelocity(direction.multiply(PROJECTILE_SPEED));
+        // Echoes originate at the double, never at their attribution owner's wand.
+        wake=com.anton.elementalwands.util.SpellCastVisuals.Wake.NONE;
+    }
+    private DamageSource impactSource(ServerWorld world) {
+        if(astralPair)return new DamageSource(world.getRegistryManager().getOrThrow(net.minecraft.registry.RegistryKeys.DAMAGE_TYPE).getOrThrow(ASTRAL_DAMAGE),this,getOwner());
+        return getOwner() instanceof LivingEntity owner ? world.getDamageSources().thrown(this,owner) : world.getDamageSources().magic();
+    }
     private Vec3d startPos;
     private Vec3d launchDirection;
     private com.anton.elementalwands.util.SpellCastVisuals.Wake wake = com.anton.elementalwands.util.SpellCastVisuals.Wake.NONE;
@@ -87,6 +104,8 @@ public class SingularityBoltEntity extends ProjectileEntity {
             return;
         }
 
+        if (astralPair && (!(getOwner() instanceof net.minecraft.server.network.ServerPlayerEntity p) || !p.isAlive() || p.isRemoved()
+                || p.getEntityWorld()!=serverWorld || !com.anton.elementalwands.arena.GuardianArenaManager.canCast(p))) { discard(); return; }
         if (startPos == null) {
             startPos = getEntityPos();
         }
@@ -139,9 +158,7 @@ public class SingularityBoltEntity extends ProjectileEntity {
         Entity owner = getOwner();
 
         if (directHit instanceof LivingEntity living && !protectsAlly(directHit)) {
-            DamageSource source = owner instanceof LivingEntity livingOwner
-                    ? world.getDamageSources().thrown(this, livingOwner)
-                    : world.getDamageSources().magic();
+            DamageSource source = impactSource(world);
             boolean damaged = damageWithoutKnockback(world, living, source, DIRECT_DAMAGE);
             if (damaged) {
                 com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(owner, DIRECT_DAMAGE, com.anton.elementalwands.data.WizardAffinity.SPACE);
@@ -158,9 +175,7 @@ public class SingularityBoltEntity extends ProjectileEntity {
             }
 
             if (living != directHit) {
-                DamageSource splashSource = owner instanceof LivingEntity livingOwner
-                        ? world.getDamageSources().thrown(this, livingOwner)
-                        : world.getDamageSources().magic();
+                DamageSource splashSource = impactSource(world);
                 boolean damaged = damageWithoutKnockback(world, living, splashSource, SPLASH_DAMAGE);
                 if (damaged) {
                     com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(owner, SPLASH_DAMAGE, com.anton.elementalwands.data.WizardAffinity.SPACE);
@@ -311,8 +326,8 @@ public class SingularityBoltEntity extends ProjectileEntity {
         if (target instanceof HostileEntity) {
             return true;
         }
-        if (target instanceof FracturedGuardianEntity guardian) {
-            return guardian.isBossAggressive() && !guardian.isTeammate(livingOwner);
+        if (target instanceof WandBoss boss) {
+            return boss.isBossAggressive() && !target.isTeammate(livingOwner);
         }
         return target instanceof MobEntity mob && mob.getTarget() == livingOwner;
     }

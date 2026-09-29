@@ -166,26 +166,45 @@ public final class SpringbloomManager {
     }
     public static void afterMove(ServerPlayerEntity p,Vec3d before,Vec3d requested,boolean grounded) {
         if(requested.lengthSquared()>1E-8)MOTION.put(p,requested);
-        if(grounded || requested.y>=0 || !p.isAlive() || p.isSpectator() || p.hasVehicle() || p.isGliding()
+        if((!grounded && requested.y>=0) || !p.isAlive() || p.isSpectator() || p.hasVehicle() || p.isGliding()
                 || p.getAbilities().flying || HollowPurpleChargeManager.isCharging(p.getEntityWorld(),p)
                 || !GuardianArenaManager.canCast(p))return;
         var world=p.getEntityWorld();var previous=FLIGHTS.get(p.getUuid());
         if(previous!=null && previous.launched==world.getTime())return;
-        for(var pad:PADS) {
-            double top=pad.pos.getY()+SpringbloomRules.HEIGHT;
-            if(pad.world!=world || pad.expires<=world.getTime() || !world.getBlockState(pad.pos).isOf(ModSpellBlocks.SPRINGBLOOM)
-                    || !supported(world,pad.pos) || before.y<top+.001 || Math.abs(p.getY()-top)>.035
-                    || !overlaps(pad,p))continue;
-            p.fallDistance=0; p.setOnGround(false);
-            p.setAttached(EWAttachments.SPRINGBLOOM_FLIGHT,true);
-            p.setVelocity(SpringbloomRules.launch(new Vec3d(p.getX()-before.x,0,p.getZ()-before.z)));
-            p.velocityModified=true;
-            p.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(p));
-            FLIGHTS.put(p.getUuid(),new Flight(p,world,world.getTime()));
-            pollen(world,p.getEntityPos(),false);
-            world.playSound(null,pad.pos,SoundEvents.BLOCK_SLIME_BLOCK_FALL,SoundCategory.PLAYERS,.85f,1.25f);
+        if(grounded) {
+            // The cushion is too tall to step onto: walking or running into its side sets it off,
+            // launching along the player's facing. Sneaking lets a player stand beside it.
+            var input=p.getPlayerInput();
+            if(p.isSneaking() || !(input.forward()||input.backward()||input.left()||input.right()))return;
+            var reach=p.getBoundingBox().expand(SpringbloomRules.CONTACT,0,SpringbloomRules.CONTACT);
+            for(var pad:PADS) {
+                if(!live(pad,world) || p.getY()<pad.pos.getY()-.01 || p.getY()>pad.pos.getY()+SpringbloomRules.HEIGHT-.05
+                        || !SpringbloomFootprint.overlaps(world.getBlockState(pad.pos).get(SpringbloomBlock.OPEN_CELLS),pad.pos,reach))continue;
+                launch(p,world,pad,SpringbloomRules.runLaunch(p.getYaw(),p.isSprinting()));
+                return;
+            }
             return;
         }
+        for(var pad:PADS) {
+            double top=pad.pos.getY()+SpringbloomRules.HEIGHT;
+            if(!live(pad,world) || before.y<top+.001 || Math.abs(p.getY()-top)>.035 || !overlaps(pad,p))continue;
+            launch(p,world,pad,SpringbloomRules.launch(new Vec3d(p.getX()-before.x,0,p.getZ()-before.z)));
+            return;
+        }
+    }
+    private static boolean live(Pad pad,ServerWorld world) {
+        return pad.world==world && pad.expires>world.getTime() && world.getBlockState(pad.pos).isOf(ModSpellBlocks.SPRINGBLOOM)
+                && supported(world,pad.pos);
+    }
+    private static void launch(ServerPlayerEntity p,ServerWorld world,Pad pad,Vec3d velocity) {
+        p.fallDistance=0; p.setOnGround(false);
+        p.setAttached(EWAttachments.SPRINGBLOOM_FLIGHT,true);
+        p.setVelocity(velocity);
+        p.velocityModified=true;
+        p.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(p));
+        FLIGHTS.put(p.getUuid(),new Flight(p,world,world.getTime()));
+        pollen(world,p.getEntityPos(),false);
+        world.playSound(null,pad.pos,SoundEvents.BLOCK_SLIME_BLOCK_FALL,SoundCategory.PLAYERS,.85f,1.25f);
     }
     public static boolean catching(ServerPlayerEntity p) {
         return PADS.stream().anyMatch(pad -> pad.world==p.getEntityWorld() && pad.expires>pad.world.getTime()

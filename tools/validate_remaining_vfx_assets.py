@@ -124,6 +124,7 @@ EXPECTED_PARTICLE_DEFINITIONS: dict[str, list[str]] = {
     "necromancer_bite_shard": family_ids("necromancer", "shard", 4),
     "arcane_mote": family_ids("arcane", "mote", 4),
     "arcane_thread": family_ids("arcane", "thread", 6),
+    # The graveyard mausoleum's drifting motes reuse the arcane mote sprites.
     "mausoleum_mote": family_ids("arcane", "mote", 2),
 }
 for _element, _families in PARTICLE_FAMILIES.items():

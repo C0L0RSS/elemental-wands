@@ -328,7 +328,8 @@ public final class CryptClientSmoke implements ClientModInitializer {
                         require(scene < 400, "Second ritual did not take the player in");
                         return;
                     }
-                    if (++risen == 220) onServer(server, () -> {
+                    // The boss can't die during its intro in a real fight, so the forced victory waits for it to end.
+                    if (++risen == VICTORY_AT) onServer(server, () -> {
                         var p = player(server, uuid);
                         var realm = server.getWorld(HollowCryptRealm.WORLD);
                         var bosses = realm.getEntitiesByClass(NecromancerEntity.class, p.getBoundingBox().expand(60), e -> e.isAlive());
@@ -338,7 +339,7 @@ public final class CryptClientSmoke implements ClientModInitializer {
                         net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.AFTER_DEATH.invoker().afterDeath(boss, realm.getDamageSources().generic());
                         boss.discard();
                     });
-                    if (risen > 220) next();
+                    if (risen > VICTORY_AT) next();
                 }
                 case 10 -> { // home again, with reward chests at the grave and a spell book to claim
                     if (inRealm) { require(++waited < 400, "Victory did not send the player home"); return; }
@@ -379,6 +380,9 @@ public final class CryptClientSmoke implements ClientModInitializer {
             done = true; c.scheduleStop();
         }
     }
+
+    /** Ticks in the realm before the second ritual's forced victory: after the rise delay and the intro. */
+    private static final int VICTORY_AT = com.anton.elementalwands.entity.necromancer.NecromancerIntro.LENGTH + 80;
 
     private void next() { stage++; scene = 0; risen = 0; waited = 0; serverStep = false; }
 

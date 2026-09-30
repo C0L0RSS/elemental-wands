@@ -47,15 +47,15 @@ public final class GuardianIntro {
      * Timeline, in ticks from the first frame. The Guardian's intro clip shares this clock
      * (art/fractured_guardian/intro/build_intro.py authors it from the same beats).
      */
-    public static final int LENGTH = 260, LIFT = 64, LAUNCH = 76, IMPACT = 108, WAKE = 124, HEAD = 140, RISE = 152,
-            STAND = 186, WIND = 196, CLAP = 216, RELEASE = 236, TITLE = 222, TITLE_END = 252, RETURN = 240;
+    public static final int LENGTH = 322, LIFT = 64, LAUNCH = 76, IMPACT = 108, WAKE = 124, HEAD = 140, RISE = 152,
+            STAND = 186, WIND = 196, CLAP = 216, RELEASE = 236, TITLE = 222, TITLE_END = 298, RETURN = 298;
     /** A unanimous skip ends the scene no sooner than this, so a key still held from before can't. */
     public static final int SKIP_AFTER = 20;
     /**
      * Points on the Guardian measured from the intro clip (intro-points.json), in blocks in its own
      * frame: +Z straight ahead of it, +Y up from its feet.
      */
-    public static final Vec3d CORE = new Vec3d(0, 2.8532, .7196), FISTS = new Vec3d(0, 2.4775, 1.9589),
+    public static final Vec3d CORE = new Vec3d(0, 2.8532, .7196), FISTS = new Vec3d(0, 2.958, 2.1311),
             HEAD_KNEELING = new Vec3d(0, 3.172, 1.273), HEAD_STANDING = new Vec3d(0, 4.4682, .5289);
     /**
      * Where the heart rests on the caller's outstretched arm, from their feet in their own frame:

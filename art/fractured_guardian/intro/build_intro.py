@@ -22,7 +22,8 @@ sys.path.insert(0, str(HERE))
 from rig_tools import rig, fingers, lowest, point, reach, leg, pos, rot, sheet, transforms  # noqa: E402
 
 # Beats, in ticks from the scene's first frame.
-LENGTH, IMPACT, WAKE, HEAD, RISE, STAND, WIND, CLAP, RELEASE = 260, 108, 124, 140, 152, 186, 196, 216, 236
+LENGTH, IMPACT, WAKE, HEAD, RISE, STAND, WIND, CLAP, RELEASE = 322, 108, 124, 140, 152, 186, 196, 216, 236
+RECOVERY_END = 260  # Preserve the performance; the extra scene time holds the recovered pose.
 RATE = 40  # samples per second before key reduction
 
 
@@ -81,8 +82,27 @@ def hanging(p, side, s):
     for b in bent: rot(p, side + b, mix(bent[b], [0, 0, 0], s))
 
 
+def slam_fingers(p, side, grip, closure):
+    """Intro-only fist: curl toward the palm and lay the thumb across the knuckles.
+
+    The shared v4 helper uses negative X, which swings these downward-pointing
+    finger bones away from the palm. Blend from that existing standing hand into
+    a positive-X curl before the windup, without changing the dormant statue.
+    """
+    fingers(p, side, grip, 0, 0)
+    sign = -1 if side == 'right' else 1
+    for i in range(1, 4):
+        for bone, target in ((f'{side}_finger_{i}', [96*(.76 + .06*i), 0, 0]),
+                             (f'{side}_finger_{i}_tip', [72, 0, 0])):
+            rot(p, bone, mix(p[bone]['rotation'], target, closure))
+    for bone, target in ((side + '_thumb', [0, 0, -sign*90]),
+                         (side + '_thumb_tip', [0, 0, -sign*50])):
+        rot(p, bone, mix(p[bone]['rotation'], target, closure))
+
+
 def pose(t):
     """The whole performance at tick t (fractional)."""
+    t = min(t, RECOVERY_END)
     p = {}
     impact = ramp(t, IMPACT, IMPACT + 3)*(1 - ramp(t, IMPACT + 3, IMPACT + 16))
     tremble = ramp(t, IMPACT, WAKE)*(1 - ramp(t, RISE + 10, STAND))
@@ -93,7 +113,7 @@ def pose(t):
     # the front foot back into the stance.
     wind = ramp(t, WIND, CLAP - 4)
     clap = ramp(t, CLAP - 3, CLAP)
-    after = ramp(t, CLAP, CLAP + 6)*(1 - ramp(t, RELEASE, LENGTH - 4))
+    after = ramp(t, CLAP, CLAP + 6)*(1 - ramp(t, RELEASE, RECOVERY_END - 4))
     crouch = 1.5*wind + 3*after
     pelvis, front, rear, toe = keys(t, LEG_KEYS)
     rear_step, front_step = ramp(t, RISE + 16, RISE + 26), ramp(t, RISE + 26, STAND)
@@ -107,10 +127,10 @@ def pose(t):
     # to wind up and driving forward into the slam.
     lean = -6*ramp(t, STAND - 4, WIND) - 6*wind  # standing tall, then arching back to wind up
     lean = lean*(1 - clap) + 10*clap  # driving forward into the slam
-    lean *= 1 - ramp(t, RELEASE, LENGTH - 6)
+    lean *= 1 - ramp(t, RELEASE, RECOVERY_END - 6)
     torso = KNEEL_TORSO*(1 - ramp(t, HEAD, STAND)) - 9*impact + lean
     head = KNEEL_HEAD*(1 - head_up) - 14*impact - 6*head_up*(1 - ramp(t, STAND, WIND)) - 4*wind*(1 - clap)
-    head -= 8*clap*(1 - ramp(t, RELEASE, LENGTH - 6))  # eyes stay on the players over the fists
+    head -= 8*clap*(1 - ramp(t, RELEASE, RECOVERY_END - 6))  # eyes stay on the players over the fists
     rot(p, 'torso', [torso + 1.4*tremble*shake(2.9), 1.2*tremble*shake(3.7, 1), .9*tremble*shake(4.3, 2)])
     rot(p, 'head', [head + 1.2*tremble*shake(3.3, 3), 3*tremble*shake(1.9, 4), 0])
     rot(p, 'jaw', [10*impact + 14*head_up*(1 - ramp(t, RISE, RISE + 10)) + 18*after, 0, 0])
@@ -135,7 +155,8 @@ def pose(t):
             fingers(p, side, 72 - 30*ramp(t, RISE + 4, STAND), 2, 0)
             hanging(p, side, ramp(t, RISE + 4, STAND - 4))
         else:
-            fingers(p, side, mix(42, 96, ramp(t, STAND, WIND)), 0, 0)
+            closure = ramp(t, STAND, WIND)
+            slam_fingers(p, side, mix(42, 96, closure), closure)
             spread = ramp(t, STAND, WIND + 10)
             hand = mix([0, 0, 0], [0, sign*-30, 0], clap)
             rot(p, side + '_hand', hand)
@@ -148,12 +169,12 @@ def pose(t):
                 pole = mix([sign*.3, -1, 1], [sign*1, -.6, .3], clap)
                 reach(p, side, target, pole)
             else:
-                release = ramp(t, RELEASE, LENGTH - 4)
+                release = ramp(t, RELEASE, RECOVERY_END - 4)
                 reach(p, side, [sign*CLAP_AT[0], CLAP_AT[1], CLAP_AT[2]], [sign*1, -.6, .3])
                 bent = {b: p[side + b]['rotation'].copy() for b in ['_upper_arm', '_forearm']}
                 for b in bent: rot(p, side + b, mix(bent[b], [0, 0, 0], release))
                 rot(p, side + '_hand', mix(hand, [0, 0, 0], release))
-                fingers(p, side, mix(96, 5, release), 0, 0)
+                slam_fingers(p, side, mix(96, 5, release), 1 - release)
         rot(p, side + '_shoulder', [0, 0, -sign*3*impact])
     # Long knuckles never drag through the floor while the body is low: shrug the shoulder instead,
     # as the other clips do. Planted fists already rest on it.

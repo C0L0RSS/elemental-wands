@@ -22,7 +22,7 @@ import net.minecraft.util.math.Vec3d;
  */
 public final class GuardianIntroClient {
     private static final float FOV = 55;
-    private static final int SKIP_HOLD = 16, HAND_BACK = 8;
+    private static final int SKIP_HOLD = 16, HAND_BACK = 8, TITLE_FADE = 10;
     private static final double BARS = .11;
     /** Lightning cracks that flash the screen, matching the server's thunder. */
     private static final int[] CRACKS = {WAKE, WAKE + 7, WAKE + 15, WAKE + 26, WAKE + 34, RISE + 8, RISE + 21};
@@ -211,19 +211,28 @@ public final class GuardianIntroClient {
         context.fill(0, h - bar, w, h, 0xFF000000);
         double dark = 1 - smooth(t / 16);
         if (dark > 0) context.fill(0, 0, w, h, alpha(dark) | 0x000000);
-        double title = smooth((t - TITLE) / 8) * (1 - smooth((t - (TITLE_END - 8)) / 8)) * (1 - back);
+        double titleEnter = smooth((t - TITLE) / TITLE_FADE);
+        double title = titleEnter * (1 - smooth((t - (TITLE_END - TITLE_FADE)) / TITLE_FADE)) * (1 - back);
         if (title > 0) {
             Text name = Text.translatable("entity.elementalwands.fractured_guardian");
             String upper = name.getString().toUpperCase(java.util.Locale.ROOT);
+            int width = client.textRenderer.getWidth(upper);
+            float scale = Math.min(2.6f, (w - 48f) / Math.max(1, width));
+            float centreY = h * .7f + (float)(16 * (1 - titleEnter));
+            int halfCard = (int)Math.ceil(width * scale / 2) + 12;
+            int cardTop = (int)Math.floor(centreY - 4 * scale) - 9;
+            int cardBottom = (int)Math.ceil(centreY + (client.textRenderer.fontHeight - 4) * scale) + 10;
+            // The padded black card and title slide upward together, clear of the brightest wave.
+            context.fill(w / 2 - halfCard, cardTop, w / 2 + halfCard, cardBottom, alpha(title * .9));
             var m = context.getMatrices();
             m.pushMatrix();
-            m.translate(w / 2f, h * .7f);
-            m.scale(2.6f, 2.6f);
-            int width = client.textRenderer.getWidth(upper);
+            m.translate(w / 2f, centreY);
+            m.scale(scale, scale);
             context.drawText(client.textRenderer, upper, -width / 2, -4, alpha(title) | 0xE4ECEC, true);
             m.popMatrix();
-            int line = (int)(width * 2.6 * .6 * smooth((t - TITLE) / 14));
-            context.fill(w / 2 - line, (int)(h * .7f) + 12, w / 2 + line, (int)(h * .7f) + 13, alpha(title * .8) | 0x6AF2FF);
+            int line = (int)(width * scale / 2 * smooth((t - TITLE) / 14));
+            int lineY = cardBottom - 6;
+            context.fill(w / 2 - line, lineY, w / 2 + line, lineY + 1, alpha(title * .8) | 0x6AF2FF);
         }
         if (!skipped && t > 10 && back <= 0) {
             Text hint = Text.translatable("guardian.elementalwands.intro_skip", client.options.sneakKey.getBoundKeyLocalizedText());

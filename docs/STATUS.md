@@ -151,7 +151,9 @@ It records known verification limits; it is not a fresh installation receipt.
   native client tour photographed the hall. Every fight now opens with the "effigy wakes" intro
   (the heart flies from the caller's hand into the kneeling Guardian, which wakes in lightning
   and slams its fists together); the nave fixture plays it in full and skipped, and the native
-  client fixture recorded it. Pending: the user's look at the intro video and a Lunar playtest
+  client fixture recorded it. The September 30 closed-fist slam and longer black title card
+  passed fresh build/asset checks and nave server/client fixtures; the updated intro was
+  recorded for review. Pending: the user's look at the updated intro video and a Lunar playtest
   of realm and intro together, including the fog distance, brightness (ambient light 0.3) and
   light shafts, which read fainter in the client screenshots than in the preview; how the
   caller's raised arm reads in third person with real skins; and a co-op check that every

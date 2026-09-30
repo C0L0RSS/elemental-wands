@@ -65,7 +65,7 @@ targets them.
 
 ### The intro: "the effigy wakes"
 
-`entity/GuardianIntro` runs a 13-second scene (260 ticks) on the server's clock; each watcher's
+`entity/GuardianIntro` runs a 16.1-second scene (322 ticks) on the server's clock; each watcher's
 client (`client/GuardianIntroClient`) flies its camera along the same timeline, so a party sees
 it together. The camera frames the caller's outstretched arm with the heart on it (the player who
 offered it; `IntroHeartArmMixin` raises their main arm and empties their hands). The heart
@@ -74,6 +74,10 @@ harder, floats up and flies down the nave, the camera chasing it until it strike
 Guardian's core. Its eyes and veins stutter alight, lightning crawls over the stone and jumps to
 the floor (`GuardianAwakeningVisual`), and it lifts its head, rises, spreads its arms and slams
 its fists together; the slam sends a ring of sparks across the floor and the title appears.
+The name slides up on a padded black card, matching the Necromancer's reveal: visible over
+ticks 222–298 (3.8 seconds), with half-second entrance and exit fades. The camera returns over
+ticks 298–322, after the card finishes. The rise and slam retain their original timing; the
+extra time holds the final standing pose for the title.
 
 Watchers are held still, unhurt and unable to cast. Anyone can hold Sneak to skip; the fight
 starts early only once every watcher has. It plays every fight. An operator control that stops

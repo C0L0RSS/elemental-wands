@@ -30,7 +30,7 @@ import org.lwjgl.glfw.GLFW;
  * light and shafts), then plays the Guardian's intro with this player holding the heart, checks it
  * hands over to the fight on the seat, and leaves. Screenshots land in
  * build/nave-client-smoke/screenshots/ for review; they are not a substitute for a Lunar look.
- * -PintroVideo also saves every tick of the intro, for a review video (ffmpeg -framerate 20).
+ * -PintroVideo hides the test window and saves every tick of the intro for review (ffmpeg -framerate 20).
  */
 public final class NaveClientSmoke implements ClientModInitializer {
     private boolean started, done;
@@ -43,8 +43,9 @@ public final class NaveClientSmoke implements ClientModInitializer {
             {-58.5, 58.5, 45, -12, 1}, {7.5, 8.5, -143, -4, 1}, {40.5, 40.5, 135, 38, 36}};
     private static final String[] NAMES = {"arrival", "look-up", "edge", "corner", "seat", "high"};
     private static final boolean INTRO_VIDEO = Boolean.getBoolean("nave.introVideo");
-    /** Scene ticks after the summon worth a still: hand, shaking heart, chase, strike, lightning, rise, wind-up, slam, title. */
-    private static final int[] STILLS = {30, 62, 86, 104, 113, 136, 168, 206, 220, 232};
+    /** Scene ticks after the summon: early beats, slam, fully visible title, late title hold and camera return. */
+    private static final int[] STILLS = {30, 62, 86, 104, 113, 136, 168, 206, 220,
+            GuardianIntro.TITLE + 16, GuardianIntro.TITLE_END - 16, GuardianIntro.RETURN + 6};
 
     public void onInitializeClient() { ClientTickEvents.END_CLIENT_TICK.register(this::tick); }
 
@@ -55,6 +56,7 @@ public final class NaveClientSmoke implements ClientModInitializer {
             if (!started) {
                 started = true; c.options.pauseOnLostFocus = false; c.options.tutorialStep = net.minecraft.client.tutorial.TutorialStep.NONE;
                 GLFW.glfwSetWindowSize(c.getWindow().getHandle(), 1280, 720);
+                if (INTRO_VIDEO) GLFW.glfwHideWindow(c.getWindow().getHandle());
                 c.options.getFov().setValue(70);
                 c.options.getViewDistance().setValue(16);
                 c.options.getNarrator().setValue(net.minecraft.client.option.NarratorMode.OFF);

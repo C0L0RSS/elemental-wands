@@ -1,6 +1,7 @@
 package com.anton.elementalwands.arena;
 
 import com.anton.elementalwands.entity.GuardianIntro;
+import com.anton.elementalwands.entity.necromancer.NecromancerIntro;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.io.InputStreamReader;
@@ -54,8 +55,10 @@ public final class GuardianArenaContractTest {
                 GuardianIntro.HEAD, GuardianIntro.RISE, GuardianIntro.STAND, GuardianIntro.WIND, GuardianIntro.CLAP, GuardianIntro.RELEASE,
                 GuardianIntro.LENGTH};
         for (int i = 1; i < beats.length; i++) require(beats[i] > beats[i - 1], "Intro beats out of order at " + i);
-        require(GuardianIntro.LENGTH <= 20 * 16, "Intro too long to sit through every fight");
-        require(GuardianIntro.TITLE > GuardianIntro.CLAP && GuardianIntro.TITLE_END <= GuardianIntro.LENGTH
+        require(GuardianIntro.TITLE_END - GuardianIntro.TITLE == NecromancerIntro.TITLE_END - NecromancerIntro.TITLE,
+                "The Guardian title does not hold as long as the Necromancer title");
+        require(GuardianIntro.LENGTH - GuardianIntro.RETURN == 24, "The Guardian camera hand-back must last 24 ticks");
+        require(GuardianIntro.TITLE > GuardianIntro.CLAP && GuardianIntro.TITLE_END <= GuardianIntro.RETURN
                 && GuardianIntro.RETURN > GuardianIntro.CLAP && GuardianIntro.RETURN < GuardianIntro.LENGTH, "Title or hand-back outside the scene");
 
         // From the middle of the arrival line, facing the seat (north), the heart rests ahead of the

@@ -1,6 +1,6 @@
 {
   "beats": {
-    "length": 260,
+    "length": 322,
     "impact": 108,
     "wake": 124,
     "head": 140,
@@ -17,8 +17,8 @@
   ],
   "fists_at_clap": [
     -0.0,
-    2.4775,
-    1.9589
+    2.958,
+    2.1311
   ],
   "head_kneeling": [
     -0.0,

@@ -218,6 +218,13 @@ this does not verify the user's authenticated Lunar skin or multiplayer feel.
 
 ## Evidence retention
 
+The Nave client runner accepts `-PintroVideo` with `hubClientAssets` to record the
+Guardian intro in a hidden native window. It captures 328 consecutive frames,
+`build/nave-client-smoke/screenshots/nave-intro-video-001.png` through
+`nave-intro-video-328.png`; encode at 20 fps for 16.4 seconds. Stills include the
+fist slam, the title's early and late hold, and the camera return. Require a fresh
+`build/nave-client-smoke/NAVE_CLIENT_PASSED.txt` and no `NAVE_CLIENT_FAILED.txt`.
+
 The Crypt client runner accepts `-PintroVideo` with `hubClientAssets` to record the
 Necromancer intro in a hidden native window. It captures 383 consecutive frames,
 `build/crypt-client-smoke/screenshots/intro-video-000.png` through `intro-video-382.png`;

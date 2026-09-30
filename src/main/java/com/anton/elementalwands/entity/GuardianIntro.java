@@ -28,86 +28,72 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.Arm;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 
 /**
- * The cinematic that opens a Guardian fight, "the effigy wakes". The camera finds the caller's
- * outstretched hand with the heart in it; the heart shakes itself loose and flies the length of the
- * nave into the chest of the Guardian kneeling on its seat. Lightning crawls over the stone as it
- * wakes; it lifts its head, rises and slams its fists together, and the fight begins. The server
- * runs the timeline and holds everyone still and unhurt; each watcher's client flies its camera
- * along the same clock, so a party sees it together. Everyone can skip; the fight starts early
- * only once all of them have.
+ * The cinematic that opens a Guardian fight. A zombie shuffles across the nave, stops, turns at a
+ * rumble overhead and looks up; the Guardian arcs down out of the vaults and hammers it flat with
+ * both fists. Then, slow and heavy, it hauls the zombie up by the head, looks at it, takes its feet,
+ * rips it in two, flings the legs away and hurls the rest over the players' heads, then points at them.
+ * <p>
+ * The server runs the timeline, holds everyone still and unhurt, and plays the sounds and dust;
+ * each watcher's client flies its camera along the same clock ({@link GuardianIntroTrack}), so a
+ * party sees it together. Everyone can skip; the fight starts early only once all of them have.
  */
 public final class GuardianIntro {
     /**
-     * Timeline, in ticks from the first frame. The Guardian's intro clip shares this clock
-     * (art/fractured_guardian/intro/build_intro.py authors it from the same beats).
+     * Timeline, in ticks from the first frame. Both actors' clips and the camera track share this
+     * clock (art/fractured_guardian/intro/build_intro.py authors them from the same beats).
      */
-    public static final int LENGTH = 322, LIFT = 64, LAUNCH = 76, IMPACT = 108, WAKE = 124, HEAD = 140, RISE = 152,
-            STAND = 186, WIND = 196, CLAP = 216, RELEASE = 236, TITLE = 222, TITLE_END = 298, RETURN = 298;
+    public static final int LENGTH = 476, STOP = 64, TURN = 70, LOOK = 88, FALL = 100, POV = 116, IMPACT = 156, RISE = 190,
+            GRIP = 208, SHOW = 232, GRAB = 260, TEAR = 288, TOSS = 312, HURL = 344, PLAYERS = 348, POINT = 366,
+            TITLE = 382, TITLE_END = 458, RETURN = 458;
     /** A unanimous skip ends the scene no sooner than this, so a key still held from before can't. */
     public static final int SKIP_AFTER = 20;
-    /**
-     * Points on the Guardian measured from the intro clip (intro-points.json), in blocks in its own
-     * frame: +Z straight ahead of it, +Y up from its feet.
-     */
-    public static final Vec3d CORE = new Vec3d(0, 2.8532, .7196), FISTS = new Vec3d(0, 2.958, 2.1311),
-            HEAD_KNEELING = new Vec3d(0, 3.172, 1.273), HEAD_STANDING = new Vec3d(0, 4.4682, .5289);
-    /**
-     * Where the heart rests on the caller's outstretched arm, from their feet in their own frame:
-     * +X toward their off hand, +Z ahead. The main arm is held out a little below level, as the
-     * player model draws it ({@code ARM_PITCH}).
-     */
-    public static final Vec3d HAND = new Vec3d(-.375, 1.38, .55);
-    /** The caller's arm pitch while holding the heart out, in the player model's radians. */
-    public static final float ARM_PITCH = -1.28f;
-    /** The heart floats this far above the hand before it flies. */
-    static final double HOVER = .4;
-    /** How far the fist slam's ring rolls out across the floor; past the players at the arrival line. */
+    /** How far the smash's ring rolls out across the floor; past the players at the arrival line. */
     static final double RING_REACH = 34;
 
     private static final Map<UUID, GuardianIntro> WATCHING = new HashMap<>();
 
     private final FracturedGuardianEntity guardian;
     private final ServerWorld world;
-    private final Vec3d centre, core;
+    private final Vec3d centre;
     private final float yaw;
     private final Map<ServerPlayerEntity, Vec3d> watchers = new LinkedHashMap<>();
     private final Set<UUID> skipped = new HashSet<>();
-    private final ServerPlayerEntity caller;
-    private final Vec3d hand;
-    private IntroHeartEntity heart;
+    private final GuardianIntroTrack track = GuardianIntroTrack.get();
+    private GuardianIntroZombieEntity zombie;
     private long start;
     private int clock = -1;
 
-    GuardianIntro(FracturedGuardianEntity guardian, ServerWorld world, List<ServerPlayerEntity> players, ServerPlayerEntity preferred) {
+    GuardianIntro(FracturedGuardianEntity guardian, ServerWorld world, List<ServerPlayerEntity> players, long start) {
         this.guardian = guardian;
         this.world = world;
+        this.start = start;
         centre = guardian.getEntityPos();
         yaw = guardian.getYaw();
-        core = place(centre, yaw, CORE);
-        ServerPlayerEntity chosen = null;
         for (ServerPlayerEntity player : players) {
             GuardianIntro previous = WATCHING.put(player.getUuid(), this);
             if (previous != null && previous != this) previous.watchers.remove(player);
             // The ritual's blindness would black out the whole scene; the client fades in from black instead.
             player.removeStatusEffect(StatusEffects.BLINDNESS);
             Vec3d at = player.getEntityPos();
-            // Everyone faces the Guardian, so the caller holds the heart out toward it and the
-            // camera's return lands on a view of it.
+            // Everyone faces the Guardian, so the camera's return lands on a view of it.
             player.teleport(world, at.x, at.y, at.z, Set.of(), facing(at, centre), 0, false);
             player.setVelocity(Vec3d.ZERO);
             player.fallDistance = 0;
             watchers.put(player, at);
-            if (chosen == null) chosen = player;
         }
-        caller = preferred != null && watchers.containsKey(preferred) ? preferred : chosen;
-        hand = caller == null ? place(centre, yaw, new Vec3d(0, HAND.y, 26)) : handOf(caller.getEntityPos(), facing(caller.getEntityPos(), centre), caller.getMainArm());
         hold(guardian);
+        // The zombie arrives a tick before the scene, so every client has it when the clips start.
+        GuardianIntroZombieEntity made = ModEntities.GUARDIAN_INTRO_ZOMBIE.create(world, SpawnReason.EVENT);
+        if (made != null) {
+            made.script(centre, yaw, start);
+            world.spawnEntity(made);
+            zombie = made;
+        }
     }
 
     public static void register() {
@@ -131,7 +117,7 @@ public final class GuardianIntro {
         if (intro != null) intro.skipped.add(player.getUuid());
     }
 
-    // ------------------------------------------------------------------ the shared script
+    // ------------------------------------------------------------------ the shared frame
 
     /** A point in a frame at {@code origin} turned to {@code yaw}: +Z ahead, +X to the left. */
     public static Vec3d place(Vec3d origin, float yaw, Vec3d local) {
@@ -142,34 +128,9 @@ public final class GuardianIntro {
     /** The yaw that looks from {@code from} toward {@code to}. */
     public static float facing(Vec3d from, Vec3d to) { return (float)Math.toDegrees(Math.atan2(-(to.x - from.x), to.z - from.z)); }
 
-    /** Where the heart rests on a player standing at {@code feet} facing {@code yaw}. */
-    public static Vec3d handOf(Vec3d feet, float yaw, Arm arm) {
-        return place(feet, yaw, arm == Arm.RIGHT ? HAND : new Vec3d(-HAND.x, HAND.y, HAND.z));
-    }
-
     public static double smooth(double s) {
         s = MathHelper.clamp(s, 0, 1);
         return s * s * (3 - 2 * s);
-    }
-
-    /** 0 while the heart lies still in the hand, rising to 1 as it shakes itself loose. */
-    public static double vibration(double t) { return smooth((t - 16) / (LIFT - 16)); }
-
-    /**
-     * The heart {@code t} ticks into the scene: it lies in the hand and trembles harder and harder,
-     * floats up off the palm, then flies faster and faster in a shallow arc into the core.
-     */
-    public static Vec3d heartAt(Vec3d hand, Vec3d core, double t) {
-        Vec3d hover = hand.add(0, HOVER, 0);
-        if (t < LIFT) return hand.add(jitter(t, vibration(t)));
-        if (t < LAUNCH) return hand.lerp(hover, smooth((t - LIFT) / (LAUNCH - LIFT - 3))).add(jitter(t, 1.4));
-        double flown = Math.pow(MathHelper.clamp((t - LAUNCH) / (IMPACT - LAUNCH), 0, 1), 1.7);
-        return hover.lerp(core, flown).add(0, 1.3 * 4 * flown * (1 - flown), 0);
-    }
-
-    private static Vec3d jitter(double t, double amount) {
-        double a = .032 * amount;
-        return new Vec3d(Math.sin(t * 2.9) * a, Math.sin(t * 3.7 + 1) * a * .7, Math.sin(t * 3.3 + 2) * a);
     }
 
     // ------------------------------------------------------------------ running the scene
@@ -191,22 +152,18 @@ public final class GuardianIntro {
     private void begin(ServerWorld world) {
         start = world.getTime();
         guardian.syncIntroStart(start);
+        // Both actors start drawing, and so start their clips, on this tick.
+        if (zombie != null) zombie.syncStart(start);
         for (ServerPlayerEntity player : watchers.keySet())
             if (ServerPlayNetworking.canSend(player, ModNetworking.GuardianIntroPayload.ID))
                 ServerPlayNetworking.send(player, payload(true));
-        IntroHeartEntity made = ModEntities.INTRO_HEART.create(world, SpawnReason.EVENT);
-        if (made == null) return;
-        made.script(hand, core, start);
-        world.spawnEntity(made);
-        heart = made;
     }
 
     private ModNetworking.GuardianIntroPayload payload(boolean active) {
-        return new ModNetworking.GuardianIntroPayload(guardian.getId(), caller == null ? -1 : caller.getId(), start, yaw, centre, hand,
-                caller != null && caller.getMainArm() == Arm.LEFT, active);
+        return new ModNetworking.GuardianIntroPayload(guardian.getId(), start, yaw, centre, active);
     }
 
-    /** The statue keeps its place and facing, whatever pushes on it. */
+    /** The Guardian keeps its place and facing, whatever pushes on it. */
     private void hold(FracturedGuardianEntity guardian) {
         guardian.setYaw(yaw); guardian.setBodyYaw(yaw); guardian.setHeadYaw(yaw);
         guardian.setVelocity(0, Math.min(0, guardian.getVelocity().y), 0);
@@ -239,89 +196,93 @@ public final class GuardianIntro {
         return true;
     }
 
-    private Vec3d local(double x, double y, double z) { return place(centre, yaw, new Vec3d(x, y, z)); }
+    private Vec3d local(Vec3d frame) { return place(centre, yaw, frame); }
+    private Vec3d local(double x, double y, double z) { return local(new Vec3d(x, y, z)); }
+    private Vec3d upper(int t) { return local(track.upper(t)); }
+    private Vec3d lower(int t) { return local(track.lower(t)); }
+    private Vec3d fists(int t) { return local(track.fists(t)); }
 
     private void stage(ServerWorld world, int t) {
-        Vec3d held = heartAt(hand, core, t);
-        if (t == 0) sound(world, hand, SoundEvents.BLOCK_CONDUIT_AMBIENT, 1.2f, .8f);
-        // The heart's beat quickens in the hand.
-        for (int beat : new int[]{8, 26, 40, 50, 57, 62, 66, 70, 73})
-            if (t == beat) sound(world, hand, SoundEvents.ENTITY_WARDEN_HEARTBEAT, 1f + t / 70f, .9f + t / 180f);
-        if (t >= 30 && t < LAUNCH && t % 3 == 0)
-            particles(world, ParticleTypes.ELECTRIC_SPARK, held, 1 + (int)(3 * vibration(t)), .12, .01);
-        if (t == LIFT) sound(world, hand, SoundEvents.BLOCK_CONDUIT_ACTIVATE, 1.6f, 1f);
-        if (t == LAUNCH) {
-            sound(world, held, SoundEvents.ENTITY_BREEZE_WIND_BURST, 1.6f, .7f);
-            sound(world, held, SoundEvents.ENTITY_ILLUSIONER_CAST_SPELL, 1.4f, .8f);
-            particles(world, ParticleTypes.END_ROD, held, 16, .15, .06);
+        // A zombie shuffling out of the dark, groaning.
+        if (t < STOP - 4 && t % 12 == 4) sound(world, lower(t), SoundEvents.ENTITY_ZOMBIE_STEP, .7f, .9f);
+        if (t == 14 || t == 50 || t == TURN + 4) sound(world, upper(t), SoundEvents.ENTITY_ZOMBIE_AMBIENT, 1.2f, .9f + t / 400f);
+        // Something heavy moving far overhead: thunder in the vaults and grit sifting down on it.
+        if (t == 44 || t == 76) sound(world, local(0, 40, -20), SoundEvents.ENTITY_LIGHTNING_BOLT_THUNDER, .9f, .45f);
+        if (t >= 44 && t < IMPACT && t % 2 == 0) grit(world, t);
+        if (t == LOOK + 8) sound(world, upper(t), SoundEvents.ENTITY_ZOMBIE_AMBIENT, 1.2f, .7f);
+        // The drop: a roar out of the dark and the wind of its fall.
+        if (t == FALL + 6) sound(world, fists(t), SoundEvents.ENTITY_RAVAGER_ROAR, 3f, .5f);
+        for (int gust : new int[]{POV + 8, POV + 22, IMPACT - 8})
+            if (t == gust) sound(world, fists(t), SoundEvents.ENTITY_BREEZE_WIND_BURST, 1.2f + (t - POV) / 30f, .6f);
+        if (t == IMPACT) smash(world);
+        if (t > IMPACT && t <= IMPACT + 18) ring(world, t);
+        if (t == IMPACT + 40) guardian.clearWave(0);
+        if (t == IMPACT + 16) sound(world, local(0, 4, 0), SoundEvents.ENTITY_RAVAGER_ROAR, 2.5f, .55f);
+        // It takes the zombie by the head and hauls it up to look at it; the zombie claws and groans.
+        if (t == GRIP) { sound(world, upper(t), SoundEvents.ENTITY_ZOMBIE_HURT, 1.2f, 1f); dust(world, upper(t).add(0, -.3, 0), 14); }
+        if (t == GRIP + 4) sound(world, local(0, 3, 0), SoundEvents.BLOCK_GRINDSTONE_USE, 1.4f, .4f);
+        if (t == SHOW + 4 || t == SHOW + 16) sound(world, upper(t), SoundEvents.ENTITY_ZOMBIE_AMBIENT, 1.3f, 1.05f);
+        if (t == GRAB) sound(world, lower(t), SoundEvents.ENTITY_ZOMBIE_HURT, 1.2f, .9f);
+        if (t == TEAR - 12) sound(world, local(0, 3.5, 0), SoundEvents.BLOCK_GRINDSTONE_USE, 1.5f, .35f);
+        if (t == TEAR + 3) tear(world, t);
+        // The legs are flung away, and the rest thrown hard over the players' heads.
+        if (t == TOSS) sound(world, lower(t), SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, 1.6f, .55f);
+        if (t == HURL - 12) sound(world, local(0, 4, 0), SoundEvents.BLOCK_GRINDSTONE_USE, 1.4f, .45f);
+        if (t == HURL) {
+            sound(world, upper(t), SoundEvents.ENTITY_PLAYER_ATTACK_STRONG, 1.8f, .5f);
+            sound(world, upper(t), SoundEvents.ENTITY_BREEZE_WIND_BURST, 2f, .7f);
         }
-        if (t == LAUNCH + 12) sound(world, held, SoundEvents.ITEM_TRIDENT_RIPTIDE_1, 1.6f, 1.3f);
-        if (t == IMPACT) impact(world);
-        if (t == IMPACT + 6) sound(world, core, SoundEvents.ENTITY_WARDEN_HEARTBEAT, 2.5f, .7f);
-        // Lightning crawls over the waking stone.
-        for (int crack : new int[]{WAKE, WAKE + 7, WAKE + 15, WAKE + 26, WAKE + 34, RISE + 8, RISE + 21})
-            if (t == crack) {
-                sound(world, core, SoundEvents.ENTITY_LIGHTNING_BOLT_IMPACT, 1.6f, .8f + world.getRandom().nextFloat() * .4f);
-                sound(world, core, SoundEvents.ENTITY_LIGHTNING_BOLT_THUNDER, .7f, 1.5f + world.getRandom().nextFloat() * .3f);
-            }
-        if (t >= IMPACT && t < RISE + 24 && t % 2 == 0) {
-            var random = world.getRandom();
-            double height = t < RISE ? 2.2 : 3;
-            for (int i = 0; i < 4; i++)
-                particles(world, ParticleTypes.ELECTRIC_SPARK, local((random.nextDouble() - .5) * 3.6, .3 + random.nextDouble() * height * 1.4,
-                        (random.nextDouble() - .5) * 2.6 + .4), 2, .1, .08);
-        }
-        if (t == HEAD) sound(world, local(0, 3, 1), SoundEvents.BLOCK_GRINDSTONE_USE, 1.6f, .45f);
-        if (t == RISE) sound(world, centre, SoundEvents.ENTITY_WARDEN_EMERGE, 1.8f, 1.1f);
-        if (t == RISE + 4) for (int side : new int[]{-1, 1}) dust(world, local(side * 1.9, 0, 1.5), 18);
-        if (t == RISE + 16) { dust(world, local(.7, 0, -.6), 22); sound(world, centre, SoundEvents.BLOCK_DEEPSLATE_BREAK, 1.6f, .5f); }
-        if (t == RISE + 26 || t == STAND) { sound(world, centre, SoundEvents.ENTITY_IRON_GOLEM_STEP, 2f, .5f); dust(world, centre, 12); }
-        if (t == WIND) {
-            sound(world, local(0, 3, 0), SoundEvents.BLOCK_BEACON_POWER_SELECT, 2f, .5f);
-            sound(world, local(0, 3, 0), SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, 1.5f, .5f);
-        }
-        if (t > WIND && t < CLAP && t % 2 == 0)
-            for (int side : new int[]{-1, 1}) particles(world, ParticleTypes.ELECTRIC_SPARK, local(side * 3.1, 3.4, .2), 3, .25, .05);
-        if (t == CLAP) clap(world);
-        if (t > CLAP && t <= CLAP + 18) ring(world, t);
+        if (t == track.event("over_players") - 2) sound(world, upper(t), SoundEvents.ENTITY_BREEZE_WIND_BURST, 2f, 1.1f);
+        if (t == POINT + 12) sound(world, local(0, 4, 0), SoundEvents.ENTITY_RAVAGER_AMBIENT, 1.8f, .5f);
     }
 
-    /** The heart strikes the core: a flash of light, a blast of sparks and the first heartbeat of stone. */
-    private void impact(ServerWorld world) {
-        if (heart != null) heart.discard();
-        heart = null;
-        sound(world, core, SoundEvents.ENTITY_WARDEN_HEARTBEAT, 3f, .6f);
-        sound(world, core, SoundEvents.BLOCK_RESPAWN_ANCHOR_SET_SPAWN, 2f, .6f);
-        sound(world, core, SoundEvents.BLOCK_BEACON_ACTIVATE, 2.5f, .6f);
-        sound(world, core, SoundEvents.ITEM_TRIDENT_THUNDER, 1.4f, 1.4f);
-        particles(world, ParticleTypes.END_ROD, core, 40, .2, .18);
-        particles(world, ParticleTypes.ELECTRIC_SPARK, core, 60, .5, .4);
-        particles(world, ParticleTypes.GLOW, core, 24, .6, .1);
+    /** Grit sifting down around the zombie as the Guardian comes: more and more of it. */
+    private void grit(ServerWorld world, int t) {
+        var random = world.getRandom();
+        BlockState stone = floor(world, centre);
+        int count = 1 + (int)(3 * smooth((t - 44.0) / (IMPACT - 44)));
+        Vec3d at = upper(t);
+        for (int i = 0; i < count; i++)
+            world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.FALLING_DUST, stone), true, false,
+                    at.x + (random.nextDouble() - .5) * 7, at.y + 5 + random.nextDouble() * 5, at.z + (random.nextDouble() - .5) * 7, 1, 0, 0, 0, 0);
     }
 
-    /** Both fists meet: a thunderclap and a ring that rolls out across the whole floor. */
-    private void clap(ServerWorld world) {
-        Vec3d fists = place(centre, yaw, FISTS);
-        sound(world, fists, SoundEvents.ITEM_MACE_SMASH_GROUND_HEAVY, 3f, .6f);
+    /** Both fists land: a thunderclap, a burst of stone and a ring that rolls out across the floor. */
+    private void smash(ServerWorld world) {
+        Vec3d fists = fists(IMPACT);
+        sound(world, fists, SoundEvents.ITEM_MACE_SMASH_GROUND_HEAVY, 3f, .55f);
         sound(world, fists, SoundEvents.ENTITY_GENERIC_EXPLODE, 2.5f, .6f);
-        sound(world, fists, SoundEvents.ITEM_TRIDENT_THUNDER, 2.5f, .9f);
-        sound(world, fists, SoundEvents.ENTITY_LIGHTNING_BOLT_IMPACT, 2f, .7f);
-        particles(world, ParticleTypes.ELECTRIC_SPARK, fists, 90, .4, .6);
-        particles(world, ParticleTypes.END_ROD, fists, 40, .3, .25);
-        dust(world, centre, 40);
+        sound(world, fists, SoundEvents.ENTITY_IRON_GOLEM_DAMAGE, 2f, .5f);
+        sound(world, fists, SoundEvents.ENTITY_ZOMBIE_HURT, 1.6f, .8f);
+        particles(world, ParticleTypes.CLOUD, fists.add(0, .6, 0), 18, 1.2, .06);
+        dust(world, fists, 60);
+        dust(world, centre, 30);
+        // The fight's own shockwave, as a look only (the fight's waves do the damage, not this ridge).
+        guardian.startWaveAt(world.getTime() - GuardianCombatRules.SLAM_IMPACT, new Vec3d(fists.x, centre.y, fists.z), 0);
     }
 
-    /** The slam's ring: sparks and dust racing out over the floor. */
+    /** The smash's ring: dust racing out over the floor. */
     private void ring(ServerWorld world, int t) {
-        double s = (t - CLAP) / 18.0, radius = 1.5 + (RING_REACH - 1.5) * (1 - (1 - s) * (1 - s));
+        double s = (t - IMPACT) / 18.0, radius = 1.5 + (RING_REACH - 1.5) * (1 - (1 - s) * (1 - s));
+        Vec3d from = fists(IMPACT);
         int points = Math.min(180, (int)(radius * 4));
         BlockState floor = floor(world, centre);
         for (int i = 0; i < points; i++) {
             double angle = i * Math.PI * 2 / points + t * .05;
-            double x = centre.x + Math.cos(angle) * radius, z = centre.z + Math.sin(angle) * radius;
-            world.spawnParticles(ParticleTypes.ELECTRIC_SPARK, true, false, x, centre.y + .2, z, 1, 0, .08, 0, .02);
-            if (i % 3 == 0) world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, floor), true, false, x, centre.y + .1, z, 1, .1, .05, .1, .05);
+            double x = from.x + Math.cos(angle) * radius, z = from.z + Math.sin(angle) * radius;
+            world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, floor), true, false, x, centre.y + .1, z, 1, .1, .05, .1, .05);
+            if (i % 4 == 0) world.spawnParticles(ParticleTypes.POOF, true, false, x, centre.y + .2, z, 1, .05, .05, .05, .01);
         }
+    }
+
+    /** The zombie comes apart at the waist: a crack, a groan and a puff, nothing more. */
+    private void tear(ServerWorld world, int t) {
+        Vec3d waist = upper(t).lerp(lower(t), .5);
+        sound(world, waist, SoundEvents.ENTITY_ZOMBIE_BREAK_WOODEN_DOOR, 1.6f, .8f);
+        sound(world, waist, SoundEvents.ENTITY_PLAYER_ATTACK_CRIT, 1.5f, .6f);
+        sound(world, waist, SoundEvents.ENTITY_ZOMBIE_DEATH, 1.4f, 1f);
+        particles(world, ParticleTypes.POOF, waist, 14, .25, .05);
+        particles(world, ParticleTypes.CRIT, waist, 12, .3, .3);
     }
 
     private void dust(ServerWorld world, Vec3d at, int count) {
@@ -341,14 +302,13 @@ public final class GuardianIntro {
     }
 
     private void clear() {
-        if (heart != null) heart.discard();
-        heart = null;
+        if (zombie != null) zombie.discard();
+        zombie = null;
     }
 
     /** Watchers still held by this scene, for tests and status. */
     int watcherCount() { return watchers.size(); }
-    boolean heartFlying() { return heart != null && !heart.isRemoved(); }
-    ServerPlayerEntity caller() { return caller; }
+    boolean zombiePresent() { return zombie != null && !zombie.isRemoved(); }
 
     private static BlockState floor(ServerWorld world, Vec3d at) {
         BlockState state = world.getBlockState(BlockPos.ofFloored(at.x, at.y - .5, at.z));

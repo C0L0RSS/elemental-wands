@@ -613,9 +613,9 @@ public final class GuardianArenaManager {
     // ------------------------------------------------------------------ the Guardian's arrival
 
     /**
-     * Clears leftovers from any earlier fight and kneels the Guardian on the effigy seat as a
-     * statue; its intro cinematic plays for everyone in the slot, with the caller holding out the
-     * heart that wakes it. It stays untouchable until the intro hands over to the fight.
+     * Clears leftovers from any earlier fight and puts the Guardian on the effigy seat, where its
+     * intro cinematic plays for everyone in the slot: it drops out of the vaults onto a zombie.
+     * It stays untouchable until the intro hands over to the fight.
      */
     private static FracturedGuardianEntity raise(ServerWorld realm, int slot, Fight fight) {
         clearEntities(realm, slot);
@@ -632,8 +632,7 @@ public final class GuardianArenaManager {
         realm.spawnEntity(guardian);
         var area = ShatteredNave.footprint(centre);
         List<ServerPlayerEntity> watchers = realm.getPlayers(p -> p.isAlive() && !p.isSpectator() && area.contains(p.getEntityPos()));
-        ServerPlayerEntity caller = fight.caller == null ? null : realm.getServer().getPlayerManager().getPlayer(UUID.fromString(fight.caller));
-        guardian.beginIntro(watchers, caller);
+        guardian.beginIntro(watchers);
         arrivals.put(slot, new Arrival(guardian));
         return guardian;
     }

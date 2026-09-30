@@ -64,7 +64,7 @@ inspect their assertions when behavior changes instead of trusting an old name.
 | Hollow Necromancer | `necromancer_server_smoke.init.gradle` (spells, Hands→ambush, waves and their quickening, a Soul Fire Rain volley, blink/shift, the full two-siege fight flow with rain into the transformation, soul light on bolts, fireballs and markers and its cleanup), `necromancer_phase_smoke.init.gradle` (phase two; starts past the sieges: grab, swipe, the random-windup rush, Grave Dive hit and dodge, Soul Harvest, the soul split and collapse, soul light on the souls and its cleanup) | `necromancer_client_smoke.init.gradle` (screenshots; `-PnecroRecord` for hidden recording; `-PnecroMechanics` for the Soul Fire Rain fireball, charge windup, Grave Dive, soul split and Soul Harvest against a scripted player, then soul light under a night rain and skull volley); siege perch views are in `crypt_client_smoke` |
 | Hollow undead | `hollow_undead_server_smoke.init.gradle` (rise, chase, hit-frame damage and arrow timing, daylight burning, loot, held death clip, bound-minion rules) | `hollow_undead_client_smoke.init.gradle` (hidden window; rise, idle front/side, walk, attack key frames, death screenshots) |
 | Hollow Crypt realm | — | `crypt_client_smoke.init.gradle` (realm build, enter, summon, a siege on an exported bough perch with near and far-rim screenshots, wall, reset, leave, `/locate`, withered woods around the yard, the unbreakable mausoleum and its door hint, the walk-in veil ritual, wipe with kept items and a return to the court, victory rewards and spell book; screenshots) |
-| Church / Shattered Nave | `guardian_church_smoke.init.gradle` (ritual into the nave, wipe/retry, victory, restoration, loot), `guardian_nave_smoke.init.gradle` (layout, arrival, the Guardian's intro played in full then skipped, casting/damage gates, floor and hall protection, containment, spectating with kept items, victory, wipe, restart) | `nave_client_smoke.init.gradle` (screenshots of the hall from six viewpoints; the intro's camera, raised arm and hand-back into the fight; `-PintroVideo` saves every tick for a review video); Guardian floor client with visual options |
+| Church / Shattered Nave | `guardian_church_smoke.init.gradle` (ritual into the nave, wipe/retry, victory, restoration, loot), `guardian_nave_smoke.init.gradle` (layout, arrival, the Guardian's intro played in full then skipped, its zombie gone after both, casting/damage gates, floor and hall protection, containment, spectating with kept items, victory, wipe, restart) | `nave_client_smoke.init.gradle` (screenshots of the hall from six viewpoints; stills of the intro's shots and its hand-back into the fight; `-PintroVideo` saves every tick for a review video); Guardian floor client with visual options |
 | Worldgen / locate | `guardian_church_worldgen_smoke.init.gradle`, `guardian_church_locate_smoke.init.gradle` | Human terrain review |
 | Parties / audit regressions | `party_server_smoke.init.gradle`, `audit_fixes_smoke.init.gradle` | Human co-op review |
 
@@ -219,10 +219,11 @@ this does not verify the user's authenticated Lunar skin or multiplayer feel.
 ## Evidence retention
 
 The Nave client runner accepts `-PintroVideo` with `hubClientAssets` to record the
-Guardian intro in a hidden native window. It captures 328 consecutive frames,
+Guardian intro in a hidden native window. It captures 482 consecutive frames,
 `build/nave-client-smoke/screenshots/nave-intro-video-001.png` through
-`nave-intro-video-328.png`; encode at 20 fps for 16.4 seconds. Stills include the
-fist slam, the title's early and late hold, and the camera return. Require a fresh
+`nave-intro-video-482.png`; encode at 20 fps for 24.1 seconds. Stills cover each shot:
+the zombie's walk and look up, its view of the drop, the smash, the tear, the throw
+over the players and the point with the title. Require a fresh
 `build/nave-client-smoke/NAVE_CLIENT_PASSED.txt` and no `NAVE_CLIENT_FAILED.txt`.
 
 The Crypt client runner accepts `-PintroVideo` with `hubClientAssets` to record the

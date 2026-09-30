@@ -270,13 +270,13 @@ public final class ModEntities {
                         .dimensions(EntityDimensions.fixed(.7f, .9f)).trackRangeBlocks(128).trackedUpdateRate(1).disableSaving()
                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "intro_soul"))));
 
-        // The Guardian's intro cinematic: the heart that flies from the caller's hand into its core.
-        public static final EntityType<com.anton.elementalwands.entity.IntroHeartEntity> INTRO_HEART = Registry.register(
-                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "intro_heart"),
-                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.IntroHeartEntity>create(SpawnGroup.MISC,
-                        com.anton.elementalwands.entity.IntroHeartEntity::new)
-                        .dimensions(EntityDimensions.fixed(.3f, .3f)).trackRangeBlocks(128).trackedUpdateRate(1).disableSaving()
-                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "intro_heart"))));
+        // The Guardian's intro cinematic: the zombie it smashes and tears in two.
+        public static final EntityType<com.anton.elementalwands.entity.GuardianIntroZombieEntity> GUARDIAN_INTRO_ZOMBIE = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "guardian_intro_zombie"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.GuardianIntroZombieEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.GuardianIntroZombieEntity::new)
+                        .dimensions(EntityDimensions.fixed(.6f, 1.95f)).trackRangeBlocks(128).trackedUpdateRate(20).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "guardian_intro_zombie"))));
 
         // Hollow undead: night spawns in the Overworld and the Necromancer's raised army.
         public static final EntityType<com.anton.elementalwands.entity.undead.HollowCrawlerEntity> HOLLOW_CRAWLER = Registry.register(

@@ -148,16 +148,15 @@ It records known verification limits; it is not a fresh installation receipt.
 - **Guardian/church:** the fight moved from the sky floor into its own dimension, the
   Shattered Nave, on September 29; the user approved the hall in the browser preview. The
   nave, church (with its restart pass), cover and Nature server fixtures passed, and the
-  native client tour photographed the hall. Every fight now opens with the "effigy wakes" intro
-  (the heart flies from the caller's hand into the kneeling Guardian, which wakes in lightning
-  and slams its fists together); the nave fixture plays it in full and skipped, and the native
-  client fixture recorded it. The September 30 closed-fist slam and longer black title card
-  passed fresh build/asset checks and nave server/client fixtures; the updated intro was
-  recorded for review. Pending: the user's look at the updated intro video and a Lunar playtest
-  of realm and intro together, including the fog distance, brightness (ambient light 0.3) and
-  light shafts, which read fainter in the client screenshots than in the preview; how the
-  caller's raised arm reads in third person with real skins; and a co-op check that every
-  watcher's camera stays in step and that a partial skip waits for the rest. Earlier: user
+  native client tour photographed the hall. On September 30 the "effigy wakes" intro was
+  replaced at the user's request: the Guardian now smashes a zombie, tears it in two and throws it
+  over the players (approved in the browser animatic, then retimed slower on request). Pending: the
+  user's look at the in-game intro video and a Lunar playtest of realm and intro together,
+  including the fog distance, brightness (ambient light 0.3) and light shafts, which read fainter
+  in the client screenshots than in the preview; whether the Guardian reads in the dark vaults
+  during the zombie's-eye shot; and a co-op check that every watcher's camera stays in step, that
+  the zombie stays in the Guardian's fists on a remote server, and that a partial skip waits for
+  the rest. Earlier: user
   approval of the overall two-phase fight is recorded; later attack pressure, party combat,
   pedestal discovery and varied-seed terrain integration still need broader human feedback.
 

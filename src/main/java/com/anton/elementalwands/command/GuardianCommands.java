@@ -59,10 +59,10 @@ public final class GuardianCommands {
             guardian.startFight();
         } else if (action.equals("intro")) {
             var caller = source.getPlayerOrThrow();
-            // Kneel facing the caller, so the heart flies at its chest.
+            // Face the caller, so the scene plays out toward them and ends pointing at them.
             float face = com.anton.elementalwands.entity.GuardianIntro.facing(guardian.getEntityPos(), caller.getEntityPos());
             guardian.setYaw(face); guardian.setBodyYaw(face); guardian.setHeadYaw(face);
-            guardian.beginIntro(source.getWorld().getPlayers(p -> p.isAlive() && !p.isSpectator() && p.squaredDistanceTo(guardian) <= 64 * 64), caller);
+            guardian.beginIntro(source.getWorld().getPlayers(p -> p.isAlive() && !p.isSpectator() && p.squaredDistanceTo(guardian) <= 64 * 64));
         } else if (action.equals("fan") || action.equals("rock") || action.equals("shockwave") || action.equals("melee") || action.equals("leap")) {
             guardian.testAttack(source.getPlayerOrThrow(), switch (action) {
                 case "fan" -> com.anton.elementalwands.entity.GuardianCombatRules.Attack.FAN;
@@ -80,7 +80,7 @@ public final class GuardianCommands {
                 + (action.equals("follow") ? " — follows you; stops 5 blocks away."
                 : action.equals("beam") ? " — firing at you; Survival players can take damage."
                 : action.equals("fight") ? " — cooperative boss enabled; targets nearby Survival/Adventure players. /ew guardian stop to end."
-                : action.equals("intro") ? " — playing the intro for players within 64 blocks, with your hand holding the heart, then fighting. Hold Sneak to skip."
+                : action.equals("intro") ? " — playing the intro for players within 64 blocks, facing you, then fighting. Hold Sneak to skip."
                 : action.equals("fan") || action.equals("rock") || action.equals("shockwave") || action.equals("melee") || action.equals("leap") ? " — one real attack; Survival/Adventure players can take damage."
                 : action.equals("stop") ? " — passive until /ew guardian fight, including after reload." : " — animation rehearsal, no damage.")), false);
         return 1;

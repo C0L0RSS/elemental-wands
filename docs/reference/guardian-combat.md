@@ -73,7 +73,7 @@ near the legs to preserve attack visibility; it does not change fire damage.
 ## Rehearsal and verification
 
 Operator commands include `/ew guardian fight`, `stop`, `status`, `intro` (the nave's opening
-cinematic, played on the nearest Guardian with you holding the heart), and one-shot
+cinematic, played on the nearest Guardian turned to face you), and one-shot
 `beam`, `rock`, `shockwave`, `melee`, `leap`, `fan`. One-shot rehearsals leave the
 boss passive and refuse a Guardian in a nave fight; use `/ew nave` for those (see
 [church and arena](church-and-arena.md#the-shattered-nave)). Use disposable test worlds.

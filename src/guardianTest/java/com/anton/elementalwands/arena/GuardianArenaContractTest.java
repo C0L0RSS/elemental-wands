@@ -1,15 +1,12 @@
 package com.anton.elementalwands.arena;
 
 import com.anton.elementalwands.entity.GuardianIntro;
-import com.anton.elementalwands.entity.necromancer.NecromancerIntro;
+import com.anton.elementalwands.entity.GuardianIntroTrack;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
-import net.minecraft.util.Arm;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import static com.anton.elementalwands.arena.GuardianArenaRules.*;
@@ -49,59 +46,52 @@ public final class GuardianArenaContractTest {
         System.out.println("Guardian nave checks passed: slot spacing, tile coverage, walled floor, escape correction, arrival, light shafts and the intro's script.");
     }
 
-    /** The intro's beats, the heart's flight from the caller's hand into the core, and the baked clip. */
+    /** The intro's beats, its baked track and both actors' clips on one clock, and where its camera and zombie go. */
     private static void intro(BlockPos c) throws Exception {
-        int[] beats = {0, GuardianIntro.SKIP_AFTER, GuardianIntro.LIFT, GuardianIntro.LAUNCH, GuardianIntro.IMPACT, GuardianIntro.WAKE,
-                GuardianIntro.HEAD, GuardianIntro.RISE, GuardianIntro.STAND, GuardianIntro.WIND, GuardianIntro.CLAP, GuardianIntro.RELEASE,
-                GuardianIntro.LENGTH};
+        int[] beats = {0, GuardianIntro.SKIP_AFTER, GuardianIntro.STOP, GuardianIntro.TURN, GuardianIntro.LOOK, GuardianIntro.FALL,
+                GuardianIntro.POV, GuardianIntro.IMPACT, GuardianIntro.RISE, GuardianIntro.GRIP, GuardianIntro.SHOW, GuardianIntro.GRAB, GuardianIntro.TEAR,
+                GuardianIntro.TOSS, GuardianIntro.HURL, GuardianIntro.PLAYERS, GuardianIntro.POINT, GuardianIntro.LENGTH};
         for (int i = 1; i < beats.length; i++) require(beats[i] > beats[i - 1], "Intro beats out of order at " + i);
-        require(GuardianIntro.TITLE_END - GuardianIntro.TITLE == NecromancerIntro.TITLE_END - NecromancerIntro.TITLE,
-                "The Guardian title does not hold as long as the Necromancer title");
-        require(GuardianIntro.LENGTH - GuardianIntro.RETURN == 24, "The Guardian camera hand-back must last 24 ticks");
-        require(GuardianIntro.TITLE > GuardianIntro.CLAP && GuardianIntro.TITLE_END <= GuardianIntro.RETURN
-                && GuardianIntro.RETURN > GuardianIntro.CLAP && GuardianIntro.RETURN < GuardianIntro.LENGTH, "Title or hand-back outside the scene");
+        require(GuardianIntro.LENGTH <= 20 * 25, "Intro too long to sit through every fight");
+        require(GuardianIntro.TITLE > GuardianIntro.POINT && GuardianIntro.TITLE_END <= GuardianIntro.LENGTH
+                && GuardianIntro.RETURN > GuardianIntro.POINT && GuardianIntro.RETURN < GuardianIntro.LENGTH, "Title or hand-back outside the scene");
 
-        // From the middle of the arrival line, facing the seat (north), the heart rests ahead of the
-        // caller's right shoulder, which is on the east side.
+        // The track is baked from the same beats as the Java scene.
+        GuardianIntroTrack track = GuardianIntroTrack.get();
+        require(track.length() == GuardianIntro.LENGTH, "The camera track is off the scene's clock");
+        for (var beat : List.of(new Object[]{"stop", GuardianIntro.STOP}, new Object[]{"turn", GuardianIntro.TURN}, new Object[]{"look", GuardianIntro.LOOK},
+                new Object[]{"fall", GuardianIntro.FALL}, new Object[]{"pov", GuardianIntro.POV}, new Object[]{"impact", GuardianIntro.IMPACT},
+                new Object[]{"rise", GuardianIntro.RISE}, new Object[]{"grip", GuardianIntro.GRIP}, new Object[]{"show", GuardianIntro.SHOW}, new Object[]{"grab", GuardianIntro.GRAB},
+                new Object[]{"tear", GuardianIntro.TEAR}, new Object[]{"toss", GuardianIntro.TOSS}, new Object[]{"hurl", GuardianIntro.HURL},
+                new Object[]{"players", GuardianIntro.PLAYERS}, new Object[]{"point", GuardianIntro.POINT}, new Object[]{"title", GuardianIntro.TITLE},
+                new Object[]{"title_end", GuardianIntro.TITLE_END}, new Object[]{"ret", GuardianIntro.RETURN}, new Object[]{"length", GuardianIntro.LENGTH}))
+            require(track.beat((String)beat[0]) == (int)beat[1], "The baked track's " + beat[0] + " beat differs from the scene's");
+
+        // Arriving players face the Guardian; the camera stays in the walled hall; the zombie's halves
+        // leave the shot before the fight, the top half clearing the players' heads.
         Vec3d seat = seat(c), feet = arrival(c);
         float face = GuardianIntro.facing(feet, seat);
         require(Math.abs(face - ARRIVAL_YAW) < .01 || Math.abs(Math.abs(face) - 180) < .01, "Arriving players do not face the Guardian");
-        Vec3d hand = GuardianIntro.handOf(feet, face, Arm.RIGHT), core = GuardianIntro.place(seat, 0, GuardianIntro.CORE);
-        require(hand.z < feet.z && hand.x > feet.x && Math.abs(hand.y - feet.y - GuardianIntro.HAND.y) < .01, "The heart is not on the right hand, held out ahead");
-        require(GuardianIntro.handOf(feet, face, Arm.LEFT).x < feet.x, "A left-handed caller holds it in the right hand");
-        require(GuardianIntro.heartAt(hand, core, 0).distanceTo(hand) < .06, "The heart does not start in the hand");
-        require(GuardianIntro.heartAt(hand, core, GuardianIntro.IMPACT).distanceTo(core) < .01, "The heart does not reach the core on the strike");
-        double previous = 0;
-        for (int t = GuardianIntro.LAUNCH; t <= GuardianIntro.IMPACT; t++) {
-            Vec3d at = GuardianIntro.heartAt(hand, core, t);
-            require(inPlay(c, at, .4) && at.y > SURFACE_Y + 1.5, "The heart's flight leaves the floor's air: " + at);
-            double flown = at.distanceTo(GuardianIntro.heartAt(hand, core, GuardianIntro.LAUNCH));
-            require(flown >= previous - 1e-6, "The heart turns back in flight");
-            previous = flown;
+        for (int t = 0; t <= GuardianIntro.LENGTH; t++) {
+            Vec3d eye = GuardianIntro.place(seat, 0, track.eye(t));
+            require(inPlay(c, eye, .2) && eye.y > SURFACE_Y + 1.2, "The camera leaves the hall's air at tick " + t + ": " + eye);
+            require(track.fov(t) > 10 && track.fov(t) < 100 && Math.abs(track.pitch(t)) <= 90, "An impossible camera at tick " + t);
         }
-        require(previous > 25, "The heart's flight is shorter than the nave's arrival line");
+        double over = track.event("over_players");
+        Vec3d half = GuardianIntro.place(seat, 0, track.upper(over));
+        require(Math.abs(half.z - feet.z) < 1.5 && half.y > feet.y + 2.5, "The thrown half does not clear the players' heads: " + half);
+        require(track.event("legs_gone") < GuardianIntro.PLAYERS && track.event("half_gone") < GuardianIntro.POINT,
+                "A half of the zombie is still in the air when the Guardian points");
 
-        // The clip must share the scene's clock, and the points the scene aims at come from the clip.
-        try (var in = GuardianArenaContractTest.class.getClassLoader().getResourceAsStream("assets/elementalwands/geckolib/animations/fractured_guardian.animation.json")) {
-            require(in != null, "Guardian animations are not on the classpath");
-            JsonObject clip = JsonParser.parseReader(new InputStreamReader(in, StandardCharsets.UTF_8)).getAsJsonObject()
-                    .getAsJsonObject("animations").getAsJsonObject("animation.fractured_guardian.intro");
-            require(clip != null && Math.abs(clip.get("animation_length").getAsDouble() - GuardianIntro.LENGTH / 20.0) < 1e-6,
-                    "The installed intro clip is missing or off the scene's clock");
-        }
-        Path points = Path.of("art/fractured_guardian/intro/intro-points.json");
-        if (Files.exists(points)) {
-            JsonObject json = JsonParser.parseString(Files.readString(points)).getAsJsonObject(), beat = json.getAsJsonObject("beats");
-            require(beat.get("length").getAsInt() == GuardianIntro.LENGTH && beat.get("impact").getAsInt() == GuardianIntro.IMPACT
-                    && beat.get("wake").getAsInt() == GuardianIntro.WAKE && beat.get("head").getAsInt() == GuardianIntro.HEAD
-                    && beat.get("rise").getAsInt() == GuardianIntro.RISE && beat.get("stand").getAsInt() == GuardianIntro.STAND
-                    && beat.get("wind").getAsInt() == GuardianIntro.WIND && beat.get("clap").getAsInt() == GuardianIntro.CLAP
-                    && beat.get("release").getAsInt() == GuardianIntro.RELEASE, "The authored clip's beats differ from the scene's");
-            for (var point : List.of(new Object[]{"core_kneeling", GuardianIntro.CORE}, new Object[]{"fists_at_clap", GuardianIntro.FISTS},
-                    new Object[]{"head_kneeling", GuardianIntro.HEAD_KNEELING}, new Object[]{"head_standing", GuardianIntro.HEAD_STANDING})) {
-                var xyz = json.getAsJsonArray((String)point[0]);
-                Vec3d measured = new Vec3d(xyz.get(0).getAsDouble(), xyz.get(1).getAsDouble(), xyz.get(2).getAsDouble());
-                require(measured.distanceTo((Vec3d)point[1]) < .01, "Re-measure " + point[0] + " from the clip: " + measured);
+        // Both actors' clips run on the scene's clock.
+        for (var clip : List.of(new String[]{"fractured_guardian", "animation.fractured_guardian.intro"},
+                new String[]{"guardian_intro_zombie", "animation.guardian_intro_zombie.intro"})) {
+            try (var in = GuardianArenaContractTest.class.getClassLoader().getResourceAsStream("assets/elementalwands/geckolib/animations/" + clip[0] + ".animation.json")) {
+                require(in != null, clip[0] + " animations are not on the classpath");
+                JsonObject json = JsonParser.parseReader(new InputStreamReader(in, StandardCharsets.UTF_8)).getAsJsonObject()
+                        .getAsJsonObject("animations").getAsJsonObject(clip[1]);
+                require(json != null && Math.abs(json.get("animation_length").getAsDouble() - GuardianIntro.LENGTH / 20.0) < 1e-6,
+                        "The installed " + clip[1] + " clip is missing or off the scene's clock");
             }
         }
     }

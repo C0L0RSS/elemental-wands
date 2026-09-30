@@ -41,10 +41,15 @@ public class SingularityBoltEntity extends ProjectileEntity {
     private static final double GUIDANCE_TURN_RADIANS = Math.toRadians(1.0);
     private static final double GUIDANCE_TOTAL_RADIANS = Math.toRadians(16.0);
 
+    /** The Astral Double's echo hits at 70% of a cast bolt, splash included. */
+    public static final float ECHO_STRENGTH = 0.7f;
+
     private boolean astralPair;
+    private float strength = 1.0f;
     private static final net.minecraft.registry.RegistryKey<net.minecraft.entity.damage.DamageType> ASTRAL_DAMAGE =
             net.minecraft.registry.RegistryKey.of(net.minecraft.registry.RegistryKeys.DAMAGE_TYPE, net.minecraft.util.Identifier.of("elementalwands","astral_bolt"));
     public void setAstralPair() { astralPair=true; }
+    public void setEcho() { strength=ECHO_STRENGTH; }
     public void useCastVisuals(LivingEntity caster) {
         wake=com.anton.elementalwands.util.SpellCastVisuals.Wake.from(caster,startPos,launchDirection);
     }
@@ -156,12 +161,13 @@ public class SingularityBoltEntity extends ProjectileEntity {
 
     private void applyImpact(ServerWorld world, Vec3d impactPos, Entity directHit) {
         Entity owner = getOwner();
+        float directDamage = DIRECT_DAMAGE * strength, splashDamage = SPLASH_DAMAGE * strength;
 
         if (directHit instanceof LivingEntity living && !protectsAlly(directHit)) {
             DamageSource source = impactSource(world);
-            boolean damaged = damageWithoutKnockback(world, living, source, DIRECT_DAMAGE);
+            boolean damaged = damageWithoutKnockback(world, living, source, directDamage);
             if (damaged) {
-                com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(owner, DIRECT_DAMAGE, com.anton.elementalwands.data.WizardAffinity.SPACE);
+                com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(owner, directDamage, com.anton.elementalwands.data.WizardAffinity.SPACE);
             }
         }
 
@@ -176,9 +182,9 @@ public class SingularityBoltEntity extends ProjectileEntity {
 
             if (living != directHit) {
                 DamageSource splashSource = impactSource(world);
-                boolean damaged = damageWithoutKnockback(world, living, splashSource, SPLASH_DAMAGE);
+                boolean damaged = damageWithoutKnockback(world, living, splashSource, splashDamage);
                 if (damaged) {
-                    com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(owner, SPLASH_DAMAGE, com.anton.elementalwands.data.WizardAffinity.SPACE);
+                    com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(owner, splashDamage, com.anton.elementalwands.data.WizardAffinity.SPACE);
                     world.spawnParticles(ModParticles.SPACE_PINPOINT,
                             living.getX(), living.getBodyY(0.5), living.getZ(),
                             1, 0.0, 0.0, 0.0, 0.0);

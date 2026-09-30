@@ -1,6 +1,6 @@
 # Current status
 
-Reviewed September 29, 2026. This page contains outstanding work, not release history.
+Reviewed September 30, 2026. This page contains outstanding work, not release history.
 It records known verification limits; it is not a fresh installation receipt.
 
 - **Hollow Necromancer (in progress):** reworked after the first co-op playtest (duels and
@@ -11,15 +11,21 @@ It records known verification limits; it is not a fresh installation receipt.
   Dive, Soul Harvest and the soul split at a quarter health. Server fixtures cover the
   full two-siege flow with rain, and every phase-two mechanic. A skippable intro cinematic
   now opens each crypt fight: a zombie's soul is torn out and a pan reveals the Necromancer
-  hauling it into his staff, then his slam lights the rim braziers. The intro clip and the
-  dragged-soul clip await workshop approval; the camera shots await review from the crypt
-  client fixture's `crypt-intro-*.png` frames. Necromancer spells now cast soul light (real
-  block light plus a blue ground pool); FPS on weaker machines is untested.
+  hauling it into his staff, then his slam lights the rim braziers. The final slower intro
+  and camera sequence were approved September 29; native verification and Lunar installation
+  were recorded for that version. Separate workshop/model approvals remain below.
+  Necromancer spells now cast soul light (real block light plus a blue ground pool);
+  FPS on weaker machines is untested.
   After a third (solo) playtest, Life Drain only starts within 10 blocks, with a 1.5-second
   windup, and breaks at 14 blocks. The soul split now happens once, and the blind body swings at
   random headings instead of fighting alongside the soul (30 soul damage solo). Pending a playtest.
-  Pending: user approval of the new clips (workshop) and the fireball and soul models
-  (`/.local-previews/soul-fire/`), then install and client checks; a solo and co-op Lunar
+  Space was too strong here: Astral Double tuning makes its echo bolt
+  deal 70%, and each skull volley can add one skull for a currently visible double at least
+  eight seconds old (server fixture covered). This does not measure continuous time in sight.
+  Pending: installation/client checks of that tuning and a playtest of double survival and
+  Space's pace; separate approval of the remaining workshop clips, including the standalone
+  dragged-soul clip, and fireball/soul models (`/.local-previews/soul-fire/`), followed by
+  their installation/client checks; a solo and co-op Lunar
   playtest with `/ew necromancer log on` to tune health, wave sizes, rain damage, dive and
   split timing (the Hands→ambush and Hands→bite combos cost an iron-armored player about
   three quarters of their health).
@@ -102,10 +108,12 @@ It records known verification limits; it is not a fresh installation receipt.
   purchases, cooldown, hostile/rim catches, collision, destruction and cleanup,
   plus planting through forest-floor foliage and restoring covered plants. Partial
   flowers beside obstacles share a synchronized visual/collision footprint.
-  Native client checks passed for the approved model, real mouse casting, a
-  last-second pod catch, protected landing, and approximately 20.7 blocks upward /
-  14.8 forward with movement held. Human Lunar/co-op feedback on placement,
-  timing and coordinated chaining remains pending.
+  Earlier native client checks passed for the approved model, real mouse casting,
+  a last-second pod catch and protected landing. Their flight measurements predate
+  the September 29 flatter arc and run-in launch. The current server fixture checks
+  roughly a 15-block apex and 21-block travel; these are simulated server measurements.
+  Fresh native-client measurement of the revised arc and human Lunar/co-op feedback
+  on placement, timing and coordinated chaining remain pending.
 - **Thornbite:** Thorn Lash is now a committed single-target flytrap bite. The
   Nature server fixture passed for combat. The revised visual launches and returns
   at the wand tip along the hand side; its native client fixture passed with
@@ -120,10 +128,12 @@ It records known verification limits; it is not a fresh installation receipt.
   session. The larger held pose and cropped hotbar icon still need the user's
   Lunar feedback. Actual two-client affinity appearance remains unverified;
   a simulated remote holder check is not equivalent.
-- **Five free spell slots:** build/whitespace checks were recorded as passing.
-  The updated hub/progression server fixtures were not rerun in that session.
-  Shared Basic recovery, element leveling, spell-book rewards, and current Thorn
-  Lash tuning are present in code; this documentation cleanup did not retest them.
+- **Five free spell slots:** five unrestricted slots, per-spell cooldowns and shared
+  Basic recovery are implemented, alongside element levels, tiered spell-book credits
+  and personal rewards. Preserved September 17 server/native receipts cover the earlier
+  progression, persistence, credits and UI implementation. They do not establish a fresh
+  pass for later free-slot/cooldown changes or current tuning. Pending: relevant current
+  hub/progression regression checks and human feedback on free-slot combinations and pace.
 - **Wand-tip cast particles:** cast bursts, the fractured beam, the Flamethrower
   stream and projectile wakes now start at an estimated wand tip instead of the
   caster's face. The build passed; the tip placement (right/left hand,

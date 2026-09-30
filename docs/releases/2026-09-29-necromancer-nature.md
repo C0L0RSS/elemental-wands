@@ -7,3 +7,5 @@
 - Nature is now the support wand. Seed and Thornbite hit a little harder, Thornbite heals more, and thorns bite bosses harder and reach their whole body.
 - Your flowers bank the health their thorns steal, up to four hearts, and show hearts while they hold some. Left-click your own flower, or pop it with your own Seed, to take that health back.
 - Springbloom is real mobility now: run into the pad to launch the way you're facing on a flatter, longer arc. Pads last 8 seconds and the cooldown is 6 seconds.
+- The Astral Double's echo bolt now hits for 70% of your Singularity Bolt.
+- The Necromancer's skull volleys send one extra skull at a visible Astral Double once it is eight seconds old. The double hums as it's marked; use cover to keep it out of his view.

@@ -171,7 +171,7 @@ public final class AstralDoubleManager {
         Vec3d origin=clone.getEntityPos().add(0,1.62,0),direction=end.subtract(origin).normalize();
         if(direction.lengthSquared()<.001)return false;
         clone.face(direction);clone.swingHand(net.minecraft.util.Hand.MAIN_HAND);
-        var bolt=new SingularityBoltEntity(p.getEntityWorld(),p,origin,direction);bolt.setAstralPair();bolt.useCastVisuals(clone);
+        var bolt=new SingularityBoltEntity(p.getEntityWorld(),p,origin,direction);bolt.setAstralPair();bolt.setEcho();bolt.useCastVisuals(clone);
         return p.getEntityWorld().spawnEntity(bolt);
     }
     public static void poof(ServerWorld w,Vec3d p) {

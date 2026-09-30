@@ -128,6 +128,11 @@ public final class NecromancerContractTest {
         // Every cast lands inside its own duration; bolts all leave before the cast ends.
         for (Action action : Action.values()) require(action.impact < action.duration, action + " impact after cast end");
         require(Action.BOLT.impact + (NecromancerRules.BOLT_COUNT - 1) * NecromancerRules.BOLT_INTERVAL < Action.BOLT.duration, "Bolt volley truncated");
+        // The extra skull for a noticed Astral Double also leaves in time, in both forms, well within the double's life.
+        for (boolean colossus : new boolean[]{false, true})
+            require(Action.BOLT.impact + NecromancerRules.boltCount(colossus) * NecromancerRules.boltInterval(colossus) < Action.BOLT.duration, "Double skull truncated");
+        require(NecromancerRules.DOUBLE_NOTICE > 0 && NecromancerRules.DOUBLE_NOTICE < com.anton.elementalwands.util.AstralDoubleManager.LIFETIME / 2,
+                "A double is hunted at once or never");
         // Skulls arrive far enough apart to read; each one counts (necromancer_soul bypasses hit immunity).
         require(NecromancerRules.BOLT_INTERVAL >= 8, "Soul bolts bunch into one blur");
         // After a half-second reaction, walking (0.2 blocks/tick) leaves a centred ring before it bites.

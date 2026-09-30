@@ -895,6 +895,19 @@ final class NecromancerCombat {
                     bolt.launch(boss, player, castOrigin(), boltSpeed(colossus));
                     if (world.spawnEntity(bolt)) bolts.add(bolt);
                     world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_BLAZE_SHOOT, SoundCategory.HOSTILE, .7f, .5f);
+                } else if (tick >= active.impact && (tick - active.impact) % boltInterval(colossus) == 0 && boltsFired == boltCount(colossus)) {
+                    // The volley ends with one more skull for a double left standing in its sight.
+                    boltsFired++;
+                    AstralDoubleEntity clone = noticedDouble(world);
+                    if (clone != null) {
+                        SoulBoltEntity bolt = new SoulBoltEntity(ModEntities.SOUL_BOLT, world);
+                        bolt.launch(boss, clone, castOrigin(), boltSpeed(colossus));
+                        if (world.spawnEntity(bolt)) bolts.add(bolt);
+                        world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_BLAZE_SHOOT, SoundCategory.HOSTILE, .7f, .5f);
+                        // The double hums as it is marked, so its owner hears the skull coming.
+                        world.playSound(null, clone.getX(), clone.getY() + 1, clone.getZ(), SoundEvents.BLOCK_AMETHYST_BLOCK_RESONATE, SoundCategory.HOSTILE, 1.5f, .6f);
+                        log.cast(now, "double bolt", clone.owner() == null ? "?" : clone.owner().getName().getString());
+                    }
                 }
                 if (colossus && tick < active.impact && tick % 2 == 0) {
                     Vec3d jaw = castOrigin();
@@ -930,6 +943,14 @@ final class NecromancerCombat {
             case RUSH, DIVE -> {}
         }
         if (active != null && tick >= active.duration) finish(now);
+    }
+
+    /** The nearest eligible player's Astral Double that has stood in its sight long enough to draw a skull. */
+    private AstralDoubleEntity noticedDouble(ServerWorld world) {
+        return world.getEntitiesByClass(AstralDoubleEntity.class, boss.getBoundingBox().expand(BOLT_RANGE),
+                        clone -> clone.isAlive() && clone.age >= DOUBLE_NOTICE && clone.owner() != null
+                                && canDamage(boss, clone.owner()) && boss.distanceTo(clone) <= BOLT_RANGE && boss.canSee(clone))
+                .stream().min(Comparator.comparingDouble(boss::squaredDistanceTo)).orElse(null);
     }
 
     private void finish(long now) {

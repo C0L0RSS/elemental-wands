@@ -77,6 +77,8 @@ public final class NecromancerRules {
     public static final int BOLT_COUNT = 3, BOLT_INTERVAL = 8, BOLT_LIFE = 100;
     public static final double BOLT_SPEED = .38, BOLT_TURN = Math.toRadians(4.5), BOLT_RADIUS = .3, BOLT_RANGE = 28;
     public static final float BOLT_DAMAGE = 5;
+    /** An Astral Double that has stood this long in its sight draws one extra skull from each volley. */
+    public static final int DOUBLE_NOTICE = 160;
 
     public static final double HANDS_RADIUS = 4, HANDS_RANGE = 24;
     public static final int HANDS_MAX_TARGETS = 3, ROOT_TICKS = 40;

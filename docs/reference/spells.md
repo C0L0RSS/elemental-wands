@@ -263,11 +263,13 @@ three-second recovery. A fresh press is required; holding the input cannot
 consume the newly formed double.
 
 The double lasts 45 seconds from landing. Every successful Singularity Bolt cast
-also launches a full-strength bolt from the double toward the caster's crosshair
-hit point. Each projectile retains its own ordinary range, cover collision and
-limited guidance. The paired damage type lets both bolts deal damage even on the
-same tick, while preserving armor, shields, party protection and Space attribution.
-It does not copy Hollow Purple or fire autonomously.
+also launches an echo bolt from the double toward the caster's crosshair hit point,
+dealing 70% of the cast bolt's direct and splash damage. Each projectile retains its
+own ordinary range, cover collision and limited guidance. The paired damage type lets
+both bolts deal damage even on the same tick, while preserving armor, shields, party
+protection and Space attribution. It does not copy Hollow Purple or fire autonomously.
+The Hollow Necromancer sends an extra skull at a currently visible double at least
+eight seconds old (see [Necromancer combat](necromancer-combat.md)).
 
 Recasting within 64 blocks teleports to the double and consumes it. Walls between
 the two positions do not prevent a return to a safe destination; arena containment

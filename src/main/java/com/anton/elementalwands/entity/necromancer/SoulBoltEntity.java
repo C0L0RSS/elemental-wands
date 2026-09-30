@@ -61,12 +61,13 @@ public class SoulBoltEntity extends ProjectileEntity implements GeoEntity {
         loadedFromSave = true; // A reloaded bolt must not resume a stale fight.
     }
 
-    void launch(NecromancerEntity boss, ServerPlayerEntity player, Vec3d from, double speed) {
+    /** Launches at a player, or at an Astral Double left standing in the caster's sight. */
+    void launch(NecromancerEntity boss, LivingEntity quarry, Vec3d from, double speed) {
         this.speed = speed;
         setOwner(boss);
-        target = player.getUuid();
+        target = quarry.getUuid();
         setPosition(from);
-        setVelocity(player.getBoundingBox().getCenter().subtract(from).normalize().multiply(speed));
+        setVelocity(quarry.getBoundingBox().getCenter().subtract(from).normalize().multiply(speed));
         faceVelocity();
         velocityDirty = true;
     }
@@ -126,13 +127,15 @@ public class SoulBoltEntity extends ProjectileEntity implements GeoEntity {
         setPitch((float)-Math.toDegrees(Math.atan2(v.y, v.horizontalLength())));
     }
 
-    /** Bounded turn toward the tracked player; a lost or ineligible target flies straight. */
+    /** Bounded turn toward the tracked player or double; a lost or ineligible target flies straight. */
     private void steer(ServerWorld world, NecromancerEntity boss) {
         if (target == null) return;
-        var player = world.getServer().getPlayerManager().getPlayer(target);
-        if (player == null || player.getEntityWorld() != world || !NecromancerCombat.canDamage(boss, player)) { target = null; return; }
+        var tracked = world.getEntity(target);
+        boolean eligible = tracked instanceof ServerPlayerEntity player ? NecromancerCombat.canDamage(boss, player)
+                : tracked instanceof AstralDoubleEntity clone && clone.isAlive();
+        if (!eligible) { target = null; return; }
         Vec3d velocity = getVelocity();
-        Vec3d desired = player.getBoundingBox().getCenter().subtract(getEntityPos()).normalize();
+        Vec3d desired = tracked.getBoundingBox().getCenter().subtract(getEntityPos()).normalize();
         Vec3d current = velocity.normalize();
         double angle = Math.acos(Math.clamp(current.dotProduct(desired), -1, 1));
         if (angle < 1e-4) return;

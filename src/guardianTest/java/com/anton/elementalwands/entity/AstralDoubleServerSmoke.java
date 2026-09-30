@@ -1,6 +1,8 @@
 package com.anton.elementalwands.entity;
 
 import com.anton.elementalwands.data.*;
+import com.anton.elementalwands.entity.necromancer.NecromancerEntity;
+import com.anton.elementalwands.entity.necromancer.NecromancerRules;
 import com.anton.elementalwands.item.*;
 import com.anton.elementalwands.registry.*;
 import com.anton.elementalwands.util.*;
@@ -25,6 +27,7 @@ public final class AstralDoubleServerSmoke implements ModInitializer {
     private FracturedGuardianEntity guardian;
     private GuardianBossCombat combat;
     private GuardianBeamAttack beam;
+    private NecromancerEntity necro;
     private Vec3d anchor,returnPoint;
     private long expiration;
     private double throwDistance;
@@ -49,7 +52,7 @@ public final class AstralDoubleServerSmoke implements ModInitializer {
         if(t==26){WandLoadouts.cast(owner,3);require(orbs().size()==1,"Toss missing");require(AstralDoubleManager.remaining(owner)==0,"Toss started cooldown");WandLoadouts.cast(owner,3,false);require(orbs().size()==1,"Held input threw twice");}
         if(t==50){clone=AstralDoubleManager.active(owner);require(clone!=null,"Orb never formed a double");anchor=clone.getEntityPos();throwDistance=anchor.distanceTo(owner.getEntityPos());require(throwDistance>=6 && throwDistance<=8,"Wrong short throw distance "+throwDistance);require(AstralDoubleManager.remaining(owner)==0,"Live double started cooldown");require(clone.ownerUuid().equals(owner.getUuid()),"Skin owner missing");expiration=AstralDoubleManager.state(owner).getLong("expires",0);}
         if(t==60){WandLoadouts.cast(owner,0);require(bolts().size()==2,"Primary not mirrored");WandLoadouts.cast(owner,0);require(bolts().size()==2,"Rejected primary echoed");}
-        if(t==90){require(Math.abs(target.getHealth()-6)<.01,"Mirrored primaries should deal 14; health="+target.getHealth());require(WandProgression.get(owner,WizardAffinity.SPACE).xp()>0,"Lost Space XP");require(clone.getEntityPos().squaredDistanceTo(anchor)<.001,"Double moved");
+        if(t==90){require(Math.abs(target.getHealth()-(20-7*(1+SingularityBoltEntity.ECHO_STRENGTH)))<.01,"Mirrored primaries should deal 7 plus a 70% echo; health="+target.getHealth());require(WandProgression.get(owner,WizardAffinity.SPACE).xp()>0,"Lost Space XP");require(clone.getEntityPos().squaredDistanceTo(anchor)<.001,"Double moved");
             target.setHealth(20);target.timeUntilRegen=0;
             for(int i=0;i<2;i++){var bolt=new SingularityBoltEntity(w,owner,new Vec3d(.5,101.5,17),new Vec3d(0,0,1));bolt.setAstralPair();w.spawnEntity(bolt);}
         }
@@ -79,8 +82,13 @@ public final class AstralDoubleServerSmoke implements ModInitializer {
         if(t==310){require(clone.isRemoved(),"Guardian beam failed");beam.cancel();guardian.discard();reset();clone=place(new Vec3d(4.5,100,.5));
             // Player attachment is persisted independently of the retained wand.
             var codec=EWAttachments.ASTRAL_STATE;require(AstralDoubleManager.state(owner).getBoolean("active",false),"Active crash recovery marker missing");
-            AstralDoubleManager.cancel(owner);NbtCompound saved=AstralDoubleManager.state(owner).copy();owner.setAttached(codec,saved);owner.setStackInHand(Hand.MAIN_HAND,new ItemStack(ModItems.FRACTURED_WAND));require(!AstralDoubleManager.cast(owner),"Persisted recovery bypassed");
-            Files.writeString(Path.of("PRESSURE_PASSED.txt"),"Astral Double passed: purchase/equip/defaults; real short throw distance="+throwDistance+"; stationary owner-backed double; deferred cooldown; primary mirroring; simultaneous 14-damage paired hits; Space XP; Blink -> double -> immediate rift return; one-use consumption; fresh-wand recovery; owner/allied protection; one-hit hostile destruction; invalid landing and exact 60-tick recovery; range and solid destination safety; affinity/death cleanup; retained beacon with wand put away; 900-tick lifespan and expiry recovery; real Guardian wave, slam, shard and beam contact.\n");server.stop(false);}
+            AstralDoubleManager.cancel(owner);NbtCompound saved=AstralDoubleManager.state(owner).copy();owner.setAttached(codec,saved);owner.setStackInHand(Hand.MAIN_HAND,new ItemStack(ModItems.FRACTURED_WAND));require(!AstralDoubleManager.cast(owner),"Persisted recovery bypassed");}
+        // The Necromancer spares a fresh double, then sends a skull at one left standing in its sight.
+        if(t==315){reset();owner.setHealth(20);clone=place(new Vec3d(8.5,100,16.5));
+            necro=new NecromancerEntity(ModEntities.HOLLOW_NECROMANCER,w);necro.refreshPositionAndAngles(.5,100,16.5,180,0);w.spawnEntity(necro);necro.stopFight();necro.testAction(owner,NecromancerRules.Action.BOLT);}
+        if(t==400){require(!clone.isRemoved(),"Necromancer hunted a fresh double");owner.setHealth(20);clone.age=NecromancerRules.DOUBLE_NOTICE;necro.testAction(owner,NecromancerRules.Action.BOLT);}
+        if(t==470){require(owner.isAlive()&&clone.isRemoved(),"Necromancer ignored a double left standing in its sight");require(AstralDoubleManager.remaining(owner)>0,"Skull destruction skipped recovery");necro.discard();
+            Files.writeString(Path.of("PRESSURE_PASSED.txt"),"Astral Double passed: purchase/equip/defaults; real short throw distance="+throwDistance+"; stationary owner-backed double; deferred cooldown; primary mirroring with a 70% echo; simultaneous paired hits bypass immunity; Space XP; Blink -> double -> immediate rift return; one-use consumption; fresh-wand recovery; owner/allied protection; one-hit hostile destruction; invalid landing and exact 60-tick recovery; range and solid destination safety; affinity/death cleanup; retained beacon with wand put away; 900-tick lifespan and expiry recovery; real Guardian wave, slam, shard and beam contact; the Necromancer spares a fresh double and a skull destroys one that stood in its sight.\n");server.stop(false);}
     }
     private void reset(){AstralDoubleManager.cancel(owner);owner.setAttached(EWAttachments.ASTRAL_STATE,new NbtCompound());owner.setStackInHand(Hand.MAIN_HAND,new ItemStack(ModItems.FRACTURED_WAND));owner.setPosition(.5,100,.5);owner.setYaw(0);owner.setHeadYaw(0);owner.setPitch(0);target.setPosition(30.5,100,30.5);target.setHealth(20);target.timeUntilRegen=0;for(var b:bolts())b.discard();}
     private AstralDoubleEntity place(Vec3d at){require(AstralDoubleManager.cast(owner),"Placement setup cast failed");AstralDoubleManager.land(owner,orbs().getFirst(),at);var d=AstralDoubleManager.active(owner);require(d!=null,"Placement rejected "+at);return d;}

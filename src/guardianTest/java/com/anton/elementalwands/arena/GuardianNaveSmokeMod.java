@@ -2,7 +2,7 @@ package com.anton.elementalwands.arena;
 
 import com.anton.elementalwands.entity.FracturedGuardianEntity;
 import com.anton.elementalwands.entity.GuardianIntro;
-import com.anton.elementalwands.entity.IntroHeartEntity;
+import com.anton.elementalwands.entity.GuardianIntroZombieEntity;
 import com.mojang.authlib.GameProfile;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -106,8 +106,8 @@ public final class GuardianNaveSmokeMod implements ModInitializer {
         if (stage == 2) {
             guardian = nave.getEntitiesByClass(FracturedGuardianEntity.class, new Box(centre).expand(80), Entity::isAlive).stream().findFirst().orElse(null);
             if (guardian != null) {
-                require(guardian.inIntro() && guardian.isInvulnerable() && GuardianArenaManager.owns(guardian), "The Guardian did not kneel for its intro");
-                require(guardian.getEntityPos().distanceTo(ShatteredNave.seat(centre)) < .6, "The Guardian kneels off its seat");
+                require(guardian.inIntro() && guardian.isInvulnerable() && GuardianArenaManager.owns(guardian), "The Guardian did not start its intro");
+                require(guardian.getEntityPos().distanceTo(ShatteredNave.seat(centre)) < .6, "The Guardian's intro is off its seat");
                 require(!GuardianArenaManager.isFighting(guardian), "The fight began before the intro");
                 require(GuardianIntro.watching(first) && GuardianIntro.watching(second), "The intro did not hold both players");
                 mark = ticks;
@@ -116,24 +116,24 @@ public final class GuardianNaveSmokeMod implements ModInitializer {
         }
         if (stage == 3 && !GuardianArenaManager.isFighting(guardian)) {
             // The whole scene plays once: watchers held still and unhurt, the Guardian untouchable,
-            // the heart in the caller's hand until it strikes home.
+            // and the zombie it tears apart on stage until the scene ends.
             int t = ticks - mark;
             if (t == 6) { held = first.getEntityPos(); first.setPosition(held.add(2, 0, 0)); }
             if (t == 8) require(first.getEntityPos().distanceTo(held) < .05, "The intro did not hold its watcher still");
             if (t == 12) {
-                require(nave.getEntitiesByClass(IntroHeartEntity.class, new Box(centre).expand(80), Entity::isAlive).size() == 1, "The heart is not in the caller's hand");
+                require(zombies(nave) == 1, "The intro's zombie is not on stage");
                 first.onTeleportationDone();
                 float health = first.getHealth(), stone = guardian.getHealth();
                 first.damage(nave, nave.getDamageSources().generic(), 5);
                 guardian.damage(nave, nave.getDamageSources().playerAttack(first), 5);
                 require(first.getHealth() == health && guardian.getHealth() == stone, "Someone was hurt during the intro");
             }
-            if (t == GuardianIntro.IMPACT + 6)
-                require(nave.getEntitiesByClass(IntroHeartEntity.class, new Box(centre).expand(80), Entity::isAlive).isEmpty(), "The heart never struck home");
+            if (t == GuardianIntro.POINT) require(zombies(nave) == 1, "The intro's zombie left before the scene ended");
         }
         if (stage == 3 && GuardianArenaManager.isFighting(guardian)) {
             require(ticks - mark >= GuardianIntro.LENGTH - 2, "The fight began before the intro ended");
             require(!GuardianIntro.watching(first) && !GuardianIntro.watching(second) && !guardian.inIntro(), "The intro still holds its watchers");
+            require(zombies(nave) == 0, "The intro's zombie outlived the scene");
             first.onTeleportationDone();
             second.onTeleportationDone();
             Vec3d seat = ShatteredNave.seat(centre);
@@ -174,6 +174,7 @@ public final class GuardianNaveSmokeMod implements ModInitializer {
             if (GuardianIntro.watching(second)) GuardianIntro.skip(second);
         }
         if (stage == 6 && guardian(nave) != null && GuardianArenaManager.isFighting(guardian)) {
+            require(zombies(nave) == 0, "A skipped intro left its zombie behind");
             first.onTeleportationDone();
             second.onTeleportationDone();
             first.kill(nave);
@@ -251,6 +252,10 @@ public final class GuardianNaveSmokeMod implements ModInitializer {
             System.out.println("NAVE SMOKE RECOVERY PASSED");
             server.stop(false);
         }
+    }
+
+    private int zombies(ServerWorld nave) {
+        return nave.getEntitiesByClass(GuardianIntroZombieEntity.class, new Box(centre).expand(80), Entity::isAlive).size();
     }
 
     private void ritual(ServerPlayerEntity caller) {

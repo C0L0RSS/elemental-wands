@@ -292,14 +292,12 @@ public final class ModNetworking {
      * The Guardian's intro cinematic for this watcher: its first frame's world time, the Guardian's
      * place and facing, and who holds the heart out and where; active=false ends it.
      */
-    public record GuardianIntroPayload(int guardianId, int callerId, long start, float yaw, net.minecraft.util.math.Vec3d centre,
-                                       net.minecraft.util.math.Vec3d hand, boolean leftHanded, boolean active) implements CustomPayload {
+    public record GuardianIntroPayload(int guardianId, long start, float yaw, net.minecraft.util.math.Vec3d centre, boolean active) implements CustomPayload {
         public static final Id<GuardianIntroPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"guardian_intro"));
         public static final PacketCodec<RegistryByteBuf,GuardianIntroPayload> CODEC = PacketCodec.tuple(
-                PacketCodecs.VAR_INT,GuardianIntroPayload::guardianId,PacketCodecs.VAR_INT,GuardianIntroPayload::callerId,
-                PacketCodecs.VAR_LONG,GuardianIntroPayload::start,PacketCodecs.FLOAT,GuardianIntroPayload::yaw,
-                net.minecraft.util.math.Vec3d.PACKET_CODEC,GuardianIntroPayload::centre,net.minecraft.util.math.Vec3d.PACKET_CODEC,GuardianIntroPayload::hand,
-                PacketCodecs.BOOLEAN,GuardianIntroPayload::leftHanded,PacketCodecs.BOOLEAN,GuardianIntroPayload::active,GuardianIntroPayload::new);
+                PacketCodecs.VAR_INT,GuardianIntroPayload::guardianId,PacketCodecs.VAR_LONG,GuardianIntroPayload::start,
+                PacketCodecs.FLOAT,GuardianIntroPayload::yaw,net.minecraft.util.math.Vec3d.PACKET_CODEC,GuardianIntroPayload::centre,
+                PacketCodecs.BOOLEAN,GuardianIntroPayload::active,GuardianIntroPayload::new);
         @Override public Id<? extends CustomPayload> getId() { return ID; }
     }
     public record GuardianIntroSkipPayload() implements CustomPayload {

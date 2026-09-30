@@ -57,34 +57,51 @@ hall out to about 220 blocks; the fog hides the edge, and the dimension's flat f
 
 A slot is laid out the first time it is used, one tile per server tick (about six seconds),
 and is then reused. When the installed tiles change, every slot moves to untouched ground.
-The group arrives side by side south of the seat, facing it. Two seconds later the Guardian
-appears kneeling on the seat as a stone statue and its intro cinematic plays (see below); the
-fight starts when it ends. Until then nobody in the fight casts or takes damage, and the
-Guardian cannot be hurt. Only the sealed players still standing can damage it, and it only
-targets them.
+The group arrives side by side south of the seat, facing it. Two seconds later the Guardian's
+intro cinematic plays (see below), and the fight starts when it ends with the Guardian on the
+seat. Until then nobody in the fight casts or takes damage, and the Guardian cannot be hurt. Only
+the sealed players still standing can damage it, and it only targets them.
 
-### The intro: "the effigy wakes"
+### The intro: the zombie
 
-`entity/GuardianIntro` runs a 13-second scene (260 ticks) on the server's clock; each watcher's
-client (`client/GuardianIntroClient`) flies its camera along the same timeline, so a party sees
-it together. The camera frames the caller's outstretched arm with the heart on it (the player who
-offered it; `IntroHeartArmMixin` raises their main arm and empties their hands). The heart
-(`IntroHeartEntity`, a scripted path both sides compute from world time) trembles harder and
-harder, floats up and flies down the nave, the camera chasing it until it strikes the kneeling
-Guardian's core. Its eyes and veins stutter alight, lightning crawls over the stone and jumps to
-the floor (`GuardianAwakeningVisual`), and it lifts its head, rises, spreads its arms and slams
-its fists together; the slam sends a ring of sparks across the floor and the title appears.
+`entity/GuardianIntro` runs a 23.8-second scene (476 ticks) on the server's clock; each watcher's
+client (`client/GuardianIntroClient`) flies its camera along the same timeline, so a party sees it
+together. A vanilla zombie shuffles out of the dark toward the players and stops in front of the
+seat. From straight above, it turns at a rumble in the vaults and looks up. Through its eyes, the
+Guardian arcs down out of the dark with both fists raised and hammers it flat, and the screen
+whites out. From the front, the dust clears on the Guardian crouched over it; it roars, then, slow
+and heavy, hauls the zombie up by the head, looks at it, takes its feet and rips it in two at
+the waist (no gore: the legs part from the rest). It flings the legs out of the shot and hurls the
+top half hard at the camera; from the players' line it flies over their heads and is gone.
+The Guardian slowly points at them and its name slides up on a padded black card (ticks 382–458),
+then the camera returns. Both halves are gone before the fight starts.
+
+The zombie is its own entity (`GuardianIntroZombieEntity`, `guardian_intro_zombie`): a GeckoLib
+copy of the vanilla zombie split at the waist, wearing the game's own zombie texture, standing at
+the seat and facing as the Guardian does, never saved. The Necromancer's intro zombie is a
+different entity. Both actors are hidden until the scene's first tick and then always drawn, and
+both controllers play their intro clip from their first frame, so the clips start together on the
+scene's clock (GeckoLib only runs a clip while its entity renders). The Guardian casts no shadow
+until it lands. The server plays the sounds and dust (grit falling as it comes, the smash's ring
+across the floor, a puff at the tear), placed from the same track.
 
 Watchers are held still, unhurt and unable to cast. Anyone can hold Sneak to skip; the fight
 starts early only once every watcher has. It plays every fight. An operator control that stops
 the Guardian mid-scene releases everyone without starting the fight, and a restart comes back
-fighting. `/ew guardian intro` replays it on the nearest Guardian anywhere, with the operator
-holding the heart. The Guardian's clip (`animation.fractured_guardian.intro`) is authored by
-`art/fractured_guardian/intro/build_intro.py` on the approved rig, sharing the scene's beats; it
-also measures the points the scene aims at (`intro-points.json`), which the contract test checks
-against `GuardianIntro`. Rebuild with that script, then `python3 tools/prepare_guardian_assets.py`.
-The shared camera, HUD and input hooks (`IntroCameraMixin` and friends) ask `BossIntroCamera`,
-which defers to whichever boss's scene is playing.
+fighting. `/ew guardian intro` replays it on the nearest Guardian anywhere, turned to face the
+operator.
+
+`art/fractured_guardian/intro/build_intro.py` authors the whole scene from one set of beats: the
+Guardian's clip (`animation.fractured_guardian.intro`, merged by `tools/prepare_guardian_assets.py`),
+the zombie's model and clip, and the per-tick camera track (`cinematics/guardian_intro.json`,
+read by `GuardianIntroTrack` on both sides, which also holds the zombie's halves and the fists
+for the server's effects). The zombie's clip is posed from the Guardian's own hand bones, so it
+stays in its fists. The script also writes `intro.bbmodel` for Blockbench and a browser animatic
+(`.local-previews/guardian-intro-v2/`, launch entry `guardian-intro-preview`) that plays both clips
+through the scene's camera. Rebuild with `build_intro.py --install`, then run
+`tools/prepare_guardian_assets.py`; `--check` detects drift, and the contract test checks the
+Java beats against the track. The shared camera, HUD and input hooks (`IntroCameraMixin` and
+friends) ask `BossIntroCamera`, which defers to whichever boss's scene is playing.
 
 Every player teleport (spells, pearls, commands, portals) stays on the walled floor and cannot
 cross into or out of the nave, except the nave's own moves; a player who escapes is pulled back.

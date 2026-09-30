@@ -41,6 +41,7 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
     private static final String CONTROLLER = "guardian";
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.fractured_guardian.idle");
     private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.fractured_guardian.walk");
+    private static final RawAnimation INTRO = RawAnimation.begin().thenPlayAndHold("animation.fractured_guardian.intro");
     private static final TrackedData<Boolean> ARENA_HIDDEN = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Long> BEAM_START = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.LONG);
     private static final TrackedData<Vector3f> BEAM_ORIGIN = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.VECTOR_3F);
@@ -280,23 +281,23 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
     }
 
     /**
-     * Opens the fight with the intro cinematic: the Guardian kneels passive and untouchable while
-     * the watchers see the caller's heart wake it, then the fight starts on its own (or early, once
-     * everyone skips). {@code caller} holds the heart out; without one, the first watcher does.
+     * Opens the fight with the intro cinematic: the Guardian stays passive and untouchable while the
+     * watchers see it drop on a zombie and tear it apart, then the fight starts on its own (or early,
+     * once everyone skips). Its clip plays while the scene runs (see {@link #registerControllers}).
      */
-    public void beginIntro(java.util.List<ServerPlayerEntity> watchers, ServerPlayerEntity caller) {
+    public void beginIntro(java.util.List<ServerPlayerEntity> watchers) {
         if (!(getEntityWorld() instanceof ServerWorld world)) return;
         stopReview();
         setAiDisabled(true);
-        intro = new GuardianIntro(this, world, watchers, caller);
-        dataTracker.set(INTRO_START, world.getTime() + 1);
-        triggerAnim(CONTROLLER, "intro");
+        stopTriggeredAnim(CONTROLLER, null);
+        long start = world.getTime() + 1;
+        intro = new GuardianIntro(this, world, watchers, start);
+        dataTracker.set(INTRO_START, start);
     }
     void syncIntroStart(long start) { dataTracker.set(INTRO_START, start); }
     void endIntro(boolean early) {
         intro = null;
         dataTracker.set(INTRO_START, -1L);
-        if (early) stopTriggeredAnim(CONTROLLER, "intro");
         setAiDisabled(false);
         startFight();
     }
@@ -306,7 +307,6 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
         intro.cancel();
         intro = null;
         dataTracker.set(INTRO_START, -1L);
-        stopTriggeredAnim(CONTROLLER, "intro");
         setAiDisabled(false);
     }
     public boolean inIntro() { return dataTracker.get(INTRO_START) >= 0; }
@@ -503,6 +503,12 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
         controllers.add(new AnimationController<FracturedGuardianEntity>(CONTROLLER, 4,
                 state -> {
+                    if (state.animatable().inIntro()) {
+                        // The renderer only draws it from the scene's first tick, so the clip starts
+                        // on the same frame as the zombie's and stays on the scene's clock.
+                        state.controller().transitionLength(0);
+                        return state.setAndContinue(INTRO);
+                    }
                     if (state.controller().getTriggeredAnimation() != null) {
                         // Authored tells supply anticipation; extra blending would delay
                         // the grip, ground impact, and mouth pose behind server damage.
@@ -512,7 +518,6 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
                     state.controller().transitionLength(4);
                     return state.setAndContinue(state.isMoving() ? WALK : IDLE);
                 }).receiveTriggeredAnimations()
-                .triggerableAnim("intro", RawAnimation.begin().thenPlay("animation.fractured_guardian.intro"))
                 .triggerableAnim("fan", RawAnimation.begin().thenPlay("animation.fractured_guardian.fan"))
                 .triggerableAnim("phase_change", RawAnimation.begin().thenPlay("animation.fractured_guardian.phase_change"))
                 .triggerableAnim("slam_fast", RawAnimation.begin().thenPlay("animation.fractured_guardian.slam_fast"))

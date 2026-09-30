@@ -14,28 +14,24 @@ public class FracturedGuardianRenderer extends GeoEntityRenderer<FracturedGuardi
     public FracturedGuardianRenderer(EntityRendererFactory.Context context) {
         super(context, new FracturedGuardianModel());
         this.shadowRadius = 1.5f;
-        withRenderLayer(Glow::new);
+        withRenderLayer(AutoGlowingGeoLayer::new);
         withRenderLayer(GuardianHeldRockLayer::new);
     }
 
-    /** The eyes and veins stay dark while the Guardian is still stone in its intro. */
-    private static final class Glow extends AutoGlowingGeoLayer<FracturedGuardianEntity, Void, FracturedGuardianRenderState> {
-        Glow(software.bernie.geckolib.renderer.base.GeoRenderer<FracturedGuardianEntity, Void, FracturedGuardianRenderState> renderer) { super(renderer); }
-        @Override
-        public void submitRenderTask(FracturedGuardianRenderState state, MatrixStack matrices, software.bernie.geckolib.cache.object.BakedGeoModel model,
-                                     OrderedRenderCommandQueue queue, CameraRenderState camera, int light, int overlay, int color, boolean didRender) {
-            if (GuardianAwakeningVisual.dormant(state.introTime)) return;
-            super.submitRenderTask(state, matrices, model, queue, camera, light, overlay, color, didRender);
-        }
-    }
-
     /**
-     * GeckoLib only advances a clip while its entity renders, so the intro keeps drawing the Guardian
-     * when the camera looks away (at the caller's hand) and its clip stays on the scene's clock.
+     * GeckoLib only runs a clip while its entity renders. Through the intro the Guardian is drawn
+     * from the scene's first tick on, wherever the camera looks, so its clip starts on the same frame
+     * as the zombie's and stays on the scene's clock; before that tick it is not drawn at all.
      */
     @Override
     public boolean shouldRender(FracturedGuardianEntity entity, net.minecraft.client.render.Frustum frustum, double x, double y, double z) {
-        return entity.inIntro() || super.shouldRender(entity, frustum, x, y, z);
+        return entity.inIntro() ? entity.getIntroTime(0) >= 0 : super.shouldRender(entity, frustum, x, y, z);
+    }
+
+    /** No shadow waits on the empty seat while the Guardian is still up in the vaults. */
+    @Override
+    protected float getShadowRadius(FracturedGuardianRenderState state) {
+        return state.introTime >= 0 && state.introTime < com.anton.elementalwands.entity.GuardianIntro.IMPACT ? 0 : super.getShadowRadius(state);
     }
 
     @Override
@@ -90,7 +86,6 @@ public class FracturedGuardianRenderer extends GeoEntityRenderer<FracturedGuardi
         if (state.deathTime == 0 && !state.invisibleToPlayer) GuardianUnstableVisual.submit(state,matrices,queue);
         if (state.deathTime == 0 && !state.invisibleToPlayer) GuardianFanVisual.submit(state,matrices,queue);
         super.render(state,matrices,queue,cameraState);
-        if (state.introTime >= 0 && state.deathTime == 0) GuardianAwakeningVisual.submit(state,matrices,queue,cameraState);
         GuardianBurnVisual.submit(state,matrices,queue,cameraState);
     }
 

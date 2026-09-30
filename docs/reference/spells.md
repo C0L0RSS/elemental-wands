@@ -137,9 +137,12 @@ Faultline (`faultline`, 500 Flux) sends a twenty-block widening wave after a 0.1
 warning. It advances two one-block rows per tick (40 blocks per second), reaching
 its end about 0.6 seconds after casting. Its far-end width remains eight blocks.
 The custom non-solid spikes rise and immediately crumble. Each target
-can take one 4-damage hit per cast; non-boss enemies lose horizontal momentum,
-receive an upward launch of roughly 1.4 blocks on open ground, and have movement
-interrupted for twelve ticks (0.6 seconds). They can still aim and cast; this is
+can take one 4-damage hit per cast; non-boss enemies lose their own horizontal
+momentum, receive an upward launch of roughly 1.4 blocks on open ground, are shoved
+about 1.5 blocks along the wave's direction, and have movement interrupted for
+twelve ticks (0.6 seconds). The shove replaces the hit's ordinary knockback and is
+shortened by knockback resistance (a Hollow brute travels about 0.6 blocks); the
+launch height is not. They can still aim and cast; this is
 a movement interruption rather than an action lock. Forty ticks of interrupt
 immunity prevent repeated Faultlines from maintaining a movement lock.
 The wave follows nearby solid/leaf/water surfaces; tall cover or a gap stops that

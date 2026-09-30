@@ -117,7 +117,7 @@ public final class FaultlineManager {
                 wave.hits.add(target.getUuid());
                 if (SpellCombat.damage(target,wave.world,owner.getDamageSources().playerAttack(owner),4,owner,WizardAffinity.STONE)) {
                     AbstractWandItem.onWandDamageDealt(owner,4,WizardAffinity.STONE);
-                    if (!(target instanceof com.anton.elementalwands.entity.WandBoss)) StoneChargeManager.interrupt(target);
+                    if (!(target instanceof com.anton.elementalwands.entity.WandBoss)) StoneChargeManager.interrupt(target, wave.forward);
                 }
             }
         }

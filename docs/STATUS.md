@@ -124,6 +124,10 @@ It records known verification limits; it is not a fresh installation receipt.
   Dedicated-server mechanics and native client movement/render checks cover the
   initial implementation. Human Lunar/co-op feedback is still needed for steering,
   interruption feel, spike appearance, varied terrain and destruction balance.
+  Faultline also shoves targets about 1.5 blocks along the wave. The server fixture
+  covers the launch and shove on a zombie, a chasing Hollow crawler and a Hollow
+  brute; the launch was reported as not noticeable on Hollow undead in Lunar, so how
+  the launch and shove read on screen, and the shove on a struck player, need a playtest.
 - **3D wand:** native client previews and model checks passed in the redesign
   session. The larger held pose and cropped hotbar icon still need the user's
   Lunar feedback. Actual two-client affinity appearance remains unverified;

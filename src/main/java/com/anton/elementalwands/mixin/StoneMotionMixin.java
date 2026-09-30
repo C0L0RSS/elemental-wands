@@ -15,6 +15,7 @@ public abstract class StoneMotionMixin implements StoneMotionAccess {
     @Unique private float elementalwands$yaw, elementalwands$speed;
     @Unique private int elementalwands$mode;
     @Unique private long elementalwands$until, elementalwands$interruptUntil, elementalwands$immuneUntil;
+    @Unique private double elementalwands$pushX, elementalwands$pushZ;
     @Override public void elementalwands$stoneMotion(float yaw, float speed, int mode) {
         LivingEntity self = (LivingEntity)(Object)this;
         long now = self.getEntityWorld().getTime();
@@ -23,6 +24,9 @@ public abstract class StoneMotionMixin implements StoneMotionAccess {
             elementalwands$interruptUntil = now + StoneTechniqueRules.INTERRUPT;
             elementalwands$immuneUntil = now + StoneTechniqueRules.INTERRUPT_GRACE;
             elementalwands$mode = 0;
+            // An interrupt's yaw and speed are the shove it carries.
+            double push = Math.toRadians(yaw);
+            elementalwands$pushX = -Math.sin(push) * speed; elementalwands$pushZ = Math.cos(push) * speed;
         } else {
             elementalwands$yaw = yaw; elementalwands$speed = speed; elementalwands$mode = mode;
             elementalwands$until = now + 8; // Fail closed if state updates stop.
@@ -38,7 +42,8 @@ public abstract class StoneMotionMixin implements StoneMotionAccess {
     private Vec3d elementalwands$drive(Vec3d input) {
         LivingEntity self = (LivingEntity)(Object)this;
         if (elementalwands$stoneInterrupted()) {
-            self.setVelocity(0, self.getVelocity().y, 0);
+            self.setVelocity(elementalwands$pushX, self.getVelocity().y, elementalwands$pushZ);
+            elementalwands$pushX *= StoneTechniqueRules.FAULT_PUSH_DECAY; elementalwands$pushZ *= StoneTechniqueRules.FAULT_PUSH_DECAY;
             return Vec3d.ZERO;
         }
         if (!elementalwands$powered()) return input;

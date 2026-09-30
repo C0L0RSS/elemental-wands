@@ -13,6 +13,7 @@ import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.networking.v1.*;
 import net.minecraft.block.*;
 import net.minecraft.entity.*;
+import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.decoration.ArmorStandEntity;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.item.ItemStack;
@@ -85,15 +86,23 @@ public final class StoneChargeManager {
     private static boolean rooted(LivingEntity p) {
         var effect=p.getStatusEffect(StatusEffects.SLOWNESS);return effect!=null && effect.getAmplifier()>=6;
     }
-    public static void interrupt(LivingEntity target) {
+    public static void interrupt(LivingEntity target) { interrupt(target, Vec3d.ZERO); }
+    /** Also shoves the target along {@code push}; knockback resistance shortens the shove, not the launch. */
+    public static void interrupt(LivingEntity target, Vec3d push) {
         if (!(target.getEntityWorld() instanceof ServerWorld world) || target instanceof WandBoss) return;
         int now=world.getServer().getTicks();
         if(INTERRUPT_READY.getOrDefault(target.getUuid(),0)>now)return;
         INTERRUPT_READY.put(target.getUuid(),now+StoneTechniqueRules.INTERRUPT_GRACE);
         if(target instanceof ServerPlayerEntity player)stop(player,false);
-        ((StoneMotionAccess)target).elementalwands$stoneMotion(0,0,3);
-        target.setSprinting(false);target.setVelocity(0,StoneTechniqueRules.FAULT_LAUNCH_SPEED,0);target.velocityModified=true;
-        var packet=new ModNetworking.StoneMotionPayload(target.getId(),0,0,3);
+        boolean pushed=push.horizontalLengthSquared()>1e-6;
+        float yaw=pushed?(float)Math.toDegrees(Math.atan2(-push.x,push.z)):0;
+        float speed=pushed?(float)(StoneTechniqueRules.FAULT_PUSH_SPEED
+                *Math.max(0,1-target.getAttributeValue(EntityAttributes.KNOCKBACK_RESISTANCE))):0;
+        ((StoneMotionAccess)target).elementalwands$stoneMotion(yaw,speed,3);
+        double angle=Math.toRadians(yaw);
+        target.setSprinting(false);
+        target.setVelocity(-Math.sin(angle)*speed,StoneTechniqueRules.FAULT_LAUNCH_SPEED,Math.cos(angle)*speed);target.velocityModified=true;
+        var packet=new ModNetworking.StoneMotionPayload(target.getId(),yaw,speed,3);
         for(var player:PlayerLookup.tracking(target))ServerPlayNetworking.send(player,packet);
         if(target instanceof ServerPlayerEntity player)ServerPlayNetworking.send(player,packet);
     }

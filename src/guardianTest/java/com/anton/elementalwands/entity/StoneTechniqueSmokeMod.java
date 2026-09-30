@@ -25,6 +25,30 @@ public final class StoneTechniqueSmokeMod implements ModInitializer {
     private ServerPlayerEntity beyond;
     private int farHitTick=-1;
     private ServerPlayerEntity rooted,swapped,dead,ceiling;
+    private Struck zombie,crawler,brute;
+    /** A body in the wave: when it was struck, how high it rose and how far the shove carried it down the wave. */
+    private static final class Struck {
+        final net.minecraft.entity.LivingEntity body;final String name;final float health;
+        int tick=-1;double z,peak,carried;
+        Struck(net.minecraft.entity.LivingEntity body,String name) { this.body=body;this.name=name;health=body.getHealth();z=body.getZ(); }
+        void watch(int now) {
+            if(tick<0 && body.getHealth()<health) {
+                tick=now;
+                require(((StoneMotionAccess)body).elementalwands$stoneInterrupted(),name+" was not interrupted");
+            }
+            // This helper may run before or after the wave in a tick, so the shove is measured from the
+            // tick before the hit was seen. Walking resumes once the interrupt ends and is left out.
+            if(tick<0) { z=body.getZ();return; }
+            if(now>tick+14)return;
+            peak=Math.max(peak,body.getY()-101);carried=Math.max(carried,body.getZ()-z);
+        }
+        void check(double least,double most) {
+            require(tick>0,name+" was never struck");
+            require(peak>1 && peak<1.8,name+" launch height not noticeable/controlled: "+peak);
+            require(carried>least && carried<most,name+" shove outside "+least+".."+most+" blocks: "+carried);
+        }
+        public String toString() { return name+" rose "+peak+" and was carried "+carried; }
+    }
     private static void require(boolean value,String message) { if(!value)throw new AssertionError(message); }
     public void onInitialize() {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
@@ -55,8 +79,14 @@ public final class StoneTechniqueSmokeMod implements ModInitializer {
             farMob.equipStack(EquipmentSlot.HEAD,new ItemStack(net.minecraft.item.Items.CARVED_PUMPKIN));
             world.spawnEntity(farMob);
             beyond=player(server,"BeyondFaultline",.5,101,22.5);beyond.setNoGravity(true);beyond.setLoaded(true);
+            // A crawler already chasing a player, and a brute whose knockback resistance shortens the shove.
+            var chasing=hollow(world,com.anton.elementalwands.registry.ModEntities.HOLLOW_CRAWLER,12.5);chasing.setTarget(victim);
+            var heavy=hollow(world,com.anton.elementalwands.registry.ModEntities.HOLLOW_BRUTE,16.5);
+            heavy.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED).setBaseValue(0);
+            zombie=new Struck(farMob,"Zombie");crawler=new Struck(chasing,"Chasing Hollow crawler");brute=new Struck(heavy,"Hollow brute");
         }
         if(farMob!=null && tick>30 && tick<65) {
+            zombie.watch(tick);crawler.watch(tick);brute.watch(tick);
             launchedPeak=Math.max(launchedPeak,farMob.getY()-101);
             if(farMob.getHealth()<200 && farHitTick<0) {
                 farHitTick=tick;
@@ -73,7 +103,10 @@ public final class StoneTechniqueSmokeMod implements ModInitializer {
             require(launchedPeak>1 && launchedPeak<1.8,"Mob launch height not noticeable/controlled: "+launchedPeak);
             require(Math.abs(200-farMob.getHealth()-4)<.1,"Distant mob took repeated or unexpected damage");
             require(beyond.getHealth()==20,"Faultline exceeded its range");
-            farMob.discard();beyond.setPosition(15,101,100);
+            System.out.println("FAULTLINE SHOVE: "+zombie+"; "+crawler+"; "+brute);
+            zombie.check(1.2,1.8);crawler.check(1.2,1.8);brute.check(.4,.8);
+            require(Math.abs(farMob.getX()-.5)<.05,"Shove drifted off the wave's direction: "+farMob.getX());
+            farMob.discard();crawler.body.discard();brute.body.discard();beyond.setPosition(15,101,100);
             require(Math.abs(health-victim.getHealth()-4)<.1,"Wave did not damage exactly once: "+(health-victim.getHealth()));
             require(!((StoneMotionAccess)victim).elementalwands$stoneInterrupted(),"Movement interrupt failed to expire");
             require(world.getEntitiesByClass(FaultlineSpikeEntity.class,new Box(-15,95,-10,20,110,20),e->true).isEmpty(),"Spikes failed to crumble");
@@ -149,7 +182,7 @@ public final class StoneTechniqueSmokeMod implements ModInitializer {
             require(!StoneChargeManager.active(rooted) && !StoneChargeManager.active(swapped) && !StoneChargeManager.active(dead),"Root, item change or death leaked charge");
             require(!StoneChargeManager.active(ceiling),"Ceiling collision did not end charge");
             require(world.getBlockState(new BlockPos(-6,103,60)).isOf(Blocks.OAK_PLANKS),"Ceiling collision broke blocks");
-            Files.writeString(Path.of("STONE_PASSED.txt"),"PASS: five-slot catalog, 20-block fast Faultline, single damage/crumble, real mob upward launch and 0.6s interrupt, water/leaves/cover, material budget and shielded blocks, containers and tracked terrain, grounded acceleration, direct impact, damage continuation, fresh-wand recovery, airborne pause, slowness, explicit interrupt/grace braking, full-speed knockback resistance, root/item/death cleanup and ceiling stop.\n");
+            Files.writeString(Path.of("STONE_PASSED.txt"),"PASS: five-slot catalog, 20-block fast Faultline, single damage/crumble, real mob upward launch and 0.6s interrupt, shove along the wave for a zombie, a chasing Hollow crawler and a knockback-resistant Hollow brute, water/leaves/cover, material budget and shielded blocks, containers and tracked terrain, grounded acceleration, direct impact, damage continuation, fresh-wand recovery, airborne pause, slowness, explicit interrupt/grace braking, full-speed knockback resistance, root/item/death cleanup and ceiling stop.\n");
             System.out.println("STONE TECHNIQUES SERVER CHECKS PASSED; Faultline launch peak="+launchedPeak+", distant hit after "+(farHitTick-30)+" ticks");server.stop(false);
         }
     }
@@ -159,6 +192,13 @@ public final class StoneTechniqueSmokeMod implements ModInitializer {
         WandProgression.grant(p,3);WandLoadouts.get(p);return p;
     }
     private void freshWand() { caster.equipStack(EquipmentSlot.MAINHAND,new ItemStack(ModItems.FRACTURED_WAND)); }
+    /** A wild Hollow body standing in the wave; fire resistance keeps daylight from hurting it first. */
+    private static <T extends net.minecraft.entity.mob.MobEntity> T hollow(ServerWorld world,net.minecraft.entity.EntityType<T> type,double z) {
+        T mob=type.create(world,net.minecraft.entity.SpawnReason.COMMAND);
+        mob.refreshPositionAndAngles(.5,101,z,180,0);
+        mob.addStatusEffect(new StatusEffectInstance(StatusEffects.FIRE_RESISTANCE,400,0));
+        world.spawnEntity(mob);return mob;
+    }
     private void surfaceChecks(ServerWorld w) {
         w.setBlockState(new BlockPos(10,100,0),Blocks.WATER.getDefaultState());
         require(FaultlineManager.surface(w,caster,new Vec3d(9.5,101,.5),10.5,.5)!=null,"Water surface rejected");

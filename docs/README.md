@@ -6,6 +6,7 @@ current guide below; there is no requirement to read this whole folder.
 | I want to understand…                                     | Current reference                                                 |
 | --------------------------------------------------------- | ----------------------------------------------------------------- |
 | What still needs attention                                | [Current status](STATUS.md)                                       |
+| Where the mod is headed and what is planned               | [Roadmap](ROADMAP.md)                                             |
 | Slots, controls, store, levels, spell books, parties      | [Progression and controls](reference/progression-and-controls.md) |
 | What each element does and which code owns it             | [Spells](reference/spells.md)                                     |
 | The 3D wand and its animated elemental glass              | [Wand rendering](reference/wand-rendering.md)                     |

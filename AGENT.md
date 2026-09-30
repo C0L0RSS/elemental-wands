@@ -28,6 +28,7 @@ relevant to the task; the docs archive is optional history, not required context
 | Task | Read |
 | --- | --- |
 | Open issues and outstanding playtests | [Current status](docs/STATUS.md) |
+| Long-term direction and planned features | [Roadmap](docs/ROADMAP.md) |
 | Controls, loadouts, progression, networking | [Progression and controls](docs/reference/progression-and-controls.md) |
 | Spell behavior and cross-element rules | [Spells](docs/reference/spells.md) |
 | Wand geometry, palettes, animation | [Wand rendering](docs/reference/wand-rendering.md) |

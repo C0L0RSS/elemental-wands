@@ -25,7 +25,7 @@ public final class WindPressureSmokeMod implements ModInitializer {
     private ServerPlayerEntity player;
     private ZombieEntity zombie;
     private ItemStack wand;
-    private float health,guard,lockedPitch;
+    private float health,lockedPitch;
     private final Set<UUID> shards=new HashSet<>();
     private java.util.Set<UUID> wallHits;
     private GuardianWallImpact sharedWall;
@@ -53,10 +53,9 @@ public final class WindPressureSmokeMod implements ModInitializer {
             report.append("Two dash charges retained; recharge occurs exactly at 100 ticks.\n");
         }
         if(boss==null)return;
-        if(tick==30) {player.setHeadYaw(0);health=boss.getHealth();guard=boss.getGuard();WindAbilityHandler.castPrimary(world,player,wand);}
+        if(tick==30) {player.setHeadYaw(0);health=boss.getHealth();WindAbilityHandler.castPrimary(world,player,wand);}
         if(tick==36) {
-            float loss=health-boss.getHealth();require(loss>1.5 && loss<=2.8,"Fan damage stacked or center missed: "+loss);
-            require(guard-boss.getGuard()>4 && guard-boss.getGuard()<=7,"Three blades stacked guard damage");
+            float loss=health-boss.getHealth();require(loss>3.75 && loss<=7,"Fan damage stacked or center missed: "+loss);
             require(Math.abs(boss.getVelocity().y)<.1 && boss.getY()<y+.1,"Wind lifted resistant boss");
             boss.addVelocity(0,8,0);require(boss.getVelocity().y<.1,"External launch bypassed boss resistance");
             boss.testAttack(player,GuardianCombatRules.Attack.SHOCKWAVE);
@@ -118,14 +117,17 @@ public final class WindPressureSmokeMod implements ModInitializer {
             combat.testAttack(player,GuardianCombatRules.Attack.FAN);
         }
         if(tick==333) {
-            boss.clearGuardHurtWindows();boss.timeUntilRegen=0;
+            boss.resetPhase(); // Earlier steps left it in phase two, where there is no gate.
+            boss.setHealth(GuardianShellRules.gate(boss.getMaxHealth())+1);
+            boss.clearHurtWindows();boss.timeUntilRegen=0;
             boss.damage(world,world.getDamageSources().playerAttack(player),400);
         }
         if(tick==337) {
-            require(boss.isGuardOpening() && boss.getFanTime(0)<0,"Guard break did not cancel fan windup");
-            require(world.getEntitiesByClass(GuardianRockEntity.class,boss.getBoundingBox().expand(60),r->r.isAlive()).isEmpty(),"Guard cancellation left fan projectiles");
-            report.append("Earned guard break cancels the fan and leaves no pending projectile hazard.\n");
-            boss.stopReview();boss.setPosition(.5,y,.5);boss.setVelocity(Vec3d.ZERO);
+            require(boss.phasePending() && !boss.isBreaking() && boss.getFanTime(0)>=0,"A pending shell break cut off the committed fan");
+            near(boss.getHealth(),GuardianShellRules.gate(boss.getMaxHealth()),"Burst passed the half-health gate");
+            report.append("Reaching half health mid-fan holds at the gate and lets the committed fan finish before the break.\n");
+            // Back to phase two, as earlier steps left it, so the later chase skips the awakening.
+            boss.stopReview();boss.resetPhase();boss.beginPhase();boss.finishPhase();boss.setHealth(boss.getMaxHealth());boss.setPosition(.5,y,.5);boss.setVelocity(Vec3d.ZERO);
             player.setPosition(.5,y,10.5);player.setYaw(180);player.setHeadYaw(180);player.setBodyYaw(180);player.setPitch(0);player.setInvulnerable(false);player.setHealth(20);player.timeUntilRegen=0;
             com.anton.elementalwands.item.StoneAbilityHandler.castSecondary(world,player,new ItemStack(ModItems.FRACTURED_WAND));
             require(!com.anton.elementalwands.item.StoneAbilityHandler.guardianWallBlocks(world).isEmpty(),"Fan wall fixture failed");
@@ -191,7 +193,7 @@ public final class WindPressureSmokeMod implements ModInitializer {
     }
     private String rotationState()throws Exception {
         var field=FracturedGuardianEntity.class.getDeclaredField("combat");field.setAccessible(true);var combat=field.get(boss);
-        String state=" pos="+boss.getEntityPos()+" grounded="+boss.isOnGround()+" visible="+boss.canSee(player)+" player="+player.getEntityPos()+" guard="+boss.getGuard()+" beam="+boss.getBeamTime(0);
+        String state=" pos="+boss.getEntityPos()+" grounded="+boss.isOnGround()+" visible="+boss.canSee(player)+" player="+player.getEntityPos()+" cracks="+boss.getCracks()+" beam="+boss.getBeamTime(0);
         for(String key:List.of("active","last","engaged","waking","attacksSinceBeam","nextAction","pendingFan","approachUntil")) {
             var f=GuardianBossCombat.class.getDeclaredField(key);f.setAccessible(true);state+=" "+key+"="+f.get(combat);
         }
@@ -227,5 +229,6 @@ public final class WindPressureSmokeMod implements ModInitializer {
         shard.releaseShard(new Vec3d(0,0,1),wallHits,sharedWall);world.spawnEntity(shard);
     }
     private void collect(ServerWorld world){for(var r:world.getEntitiesByClass(GuardianRockEntity.class,boss.getBoundingBox().expand(70),r->r.isShard()))shards.add(r.getUuid());}
+    private static void near(float value,float expected,String reason){require(Math.abs(value-expected)<.02,reason+": "+value+" != "+expected);}
     private static void require(boolean ok,String why){if(!ok)throw new AssertionError(why);}
 }

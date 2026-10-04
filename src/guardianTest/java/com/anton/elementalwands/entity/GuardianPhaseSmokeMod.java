@@ -47,32 +47,24 @@ public final class GuardianPhaseSmokeMod implements ModInitializer {
         target.setHealth(20);standing.setHealth(20);jumping.setHealth(20);
         if(tick==125) {
             boss.stopReview(); boss.startFight();
-            boss.setHealth(boss.getMaxHealth()*.59f);boss.requestPhase();boss.openGuard();
+            boss.setHealth(GuardianShellRules.gate(boss.getMaxHealth()));boss.requestPhase();
         }
-        if(tick==200) {
-            require(boss.isGuardOpening() && !boss.isUnstable(),"Phase transition stole an earned guard opening");
-        }
-        if(tick==325) {
-            require(boss.isUnstable() && boss.getPhaseTime(0)>=0,"Phase did not start after guard recovery");
+        if(tick==260) {
+            require(boss.isUnstable() && boss.isBreaking(),"Shell break did not start after the awakening");
             var output=net.minecraft.storage.NbtWriteView.create(net.minecraft.util.ErrorReporter.EMPTY,world.getRegistryManager());
             boss.writeCustomData(output);
             var copy=new FracturedGuardianEntity(com.anton.elementalwands.registry.ModEntities.FRACTURED_GUARDIAN,world);
             copy.readCustomData(net.minecraft.storage.NbtReadView.create(net.minecraft.util.ErrorReporter.EMPTY,world.getRegistryManager(),output.getNbt()));
             require(copy.isUnstable() && Math.abs(copy.getPhaseTime(0)-boss.getPhaseTime(0))<.01,"Phase save/load lost transition clock");
             require(Math.abs(copy.getHealth()-boss.getHealth())<.01,"Phase save/load healed boss");
-            report.append("60% threshold waits for full earned opening; phase and transition clock survive save/load without healing.\n");
+            report.append("Half health starts the shell break after the awakening; phase and break clock survive save/load without healing.\n");
+            float health=boss.getHealth();
+            boss.clearHurtWindows();boss.timeUntilRegen=0;
+            require(!boss.damage(world,world.getDamageSources().playerAttack(target),100) && boss.getHealth()==health,"The shell break took damage");
         }
         if(tick==330) {
-            float health=boss.getHealth();
-            for(int i=0;i<10 && boss.getGuard()>0;i++) {
-                boss.clearGuardHurtWindows();boss.timeUntilRegen=0;
-                boss.damage(world,world.getDamageSources().playerAttack(target),100);
-            }
-            require(boss.getHealth()<health,"Transition made boss invulnerable");
-        }
-        if(tick==333) {
-            require(boss.isGuardOpening() && boss.getPhaseTime(0)<0 && boss.isUnstable(),"Breaking guard during transition did not preserve phase and opening");
-            report.append("Transition remains damageable and can be interrupted by an earned guard break.\n");
+            require(boss.isUnstable() && !boss.isBreaking() && boss.getCracks()==3,"Break did not hand back to phase two");
+            report.append("The break is immune throughout and ends in phase two with the shell fully cracked.\n");
         }
         if(tick==360) {
             reset(); target.setPosition(.5,ground,10.5);

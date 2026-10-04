@@ -8,7 +8,7 @@ public final class GuardianBeamTiming {
     public static final int END = FIRE + PULSE + 28;
     public static final double RANGE = 24;
     public static final double RADIUS = .42;
-    public static final float DAMAGE = 8;
+    public static final float DAMAGE = 14;
 
     private GuardianBeamTiming() {}
 

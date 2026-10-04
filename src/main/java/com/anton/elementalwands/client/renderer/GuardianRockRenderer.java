@@ -21,7 +21,8 @@ public final class GuardianRockRenderer extends EntityRenderer<GuardianRockEntit
         state.held = entity.isHeld(); state.shard=entity.isShard();
     }
     @Override public void render(State state, MatrixStack matrices, OrderedRenderCommandQueue queue, CameraRenderState camera) {
-        if (state.held || state.invisible) return;
+        // The thrown rock is drawn in the Guardian's hand while held; rising volley stones draw themselves.
+        if ((state.held && !state.shard) || state.invisible) return;
         matrices.push();
         float size = (float)((state.shard?com.anton.elementalwands.entity.GuardianFanRules.RADIUS:GuardianCombatRules.ROCK_RADIUS)*2);
         matrices.scale(size,size,size);

@@ -123,6 +123,7 @@ public class ElementalWandsClient implements ClientModInitializer {
         com.anton.elementalwands.client.NecromancerIntroClient.init();
         EntityRendererRegistry.register(ModEntities.GUARDIAN_INTRO_ZOMBIE, com.anton.elementalwands.client.renderer.GuardianIntroZombieRenderer::new);
         com.anton.elementalwands.client.GuardianIntroClient.init();
+        com.anton.elementalwands.client.GuardianPullClient.init();
         EntityRendererRegistry.register(ModEntities.HOLLOW_CRAWLER, context -> new com.anton.elementalwands.client.renderer.HollowUndeadRenderer<>(context, "hollow_crawler", .6f));
         EntityRendererRegistry.register(ModEntities.HOLLOW_ARCHER, context -> new com.anton.elementalwands.client.renderer.HollowUndeadRenderer<>(context, "hollow_archer", .4f));
         EntityRendererRegistry.register(ModEntities.HOLLOW_BRUTE, context -> new com.anton.elementalwands.client.renderer.HollowUndeadRenderer<>(context, "hollow_brute", .6f));

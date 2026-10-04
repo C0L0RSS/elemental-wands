@@ -58,7 +58,7 @@ Pillars:
 
 | Shard | Boss | Where | Shards expected | State |
 | --- | --- | --- | --- | --- |
-| Stone | Fractured Guardian | Ruined churches, Shattered Nave | 0 | Built |
+| Stone | Fractured Guardian | Ruined churches, Shattered Nave | 0 | Built, rebalanced October 3; playtest pending |
 | Nature (life turned to death) | Hollow Necromancer | Graveyards, Hollow Crypt | 1 | Built, in tuning |
 | Wind | New | Mountain peaks or the sky | 2 | Open |
 | Fire | New | The Nether | 3 | Open |
@@ -85,6 +85,24 @@ These come from the Guardian and Necromancer playtests:
 - Summoned waves are separate sections, not mixed into the duel.
 - Keep the boss findable. Darkness must not cost readability.
 - Every mechanic is solvable solo. A teammate makes it easier but is never required.
+
+### Difficulty and co-op
+
+- **Decided:** bosses are meant to be hard, like Elden Ring. The Guardian, the first wall,
+  should take a new duo about ten tries. Retries stay cheap (belongings are kept, the intro can
+  be skipped).
+- **Decided:** the world's difficulty (Easy / Normal / Hard) is the intensity setting. Normal is
+  the intended fight. Easy and Hard change vanilla damage scaling and the boss's pace.
+- **Decided:** boss damage is sized against the vanilla armor expected at that point in the
+  order. Better armor makes a boss easier, as with the Wither or the dragon. The Guardian is
+  tuned against full iron.
+- **Decided:** fight length grows with the order. The Guardian aims at about four minutes for a
+  winning run; later bosses run longer.
+- **Decided:** co-op pressure, not only health, grows with the party: shorter rests, faster
+  cooldowns, attacks on the players the boss isn't facing, and targeting that follows threat.
+  Pressure stops growing at four players; larger parties add only health.
+- **Decided:** a boss's big set piece happens once, at the phase change. The Guardian's
+  repeating guard break became its shell bursting open at half health.
 
 ## Hub map page
 

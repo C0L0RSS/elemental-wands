@@ -40,10 +40,10 @@ public final class GuardianFloorClientSmokeMod implements ClientModInitializer {
                 require(heartState.getParticleSprite(net.minecraft.util.math.random.Random.create()).getContents().getId().equals(Identifier.ofVanilla("item/heart_of_the_sea")),"Guardian Heart texture is missing");
                 var animations=software.bernie.geckolib.cache.GeckoLibResources.getBakedAnimations().get(Identifier.of("elementalwands","fractured_guardian"));
                 require(animations!=null,"Guardian animation package was not baked");
-                for(String clip:new String[]{"intro","awaken","guard_break","phase_change","slam_fast","throw_fast","fan"}) require(animations.getAnimation("animation.fractured_guardian."+clip)!=null,"Missing baked entrance clip: "+clip);
+                for(String clip:new String[]{"intro","awaken","phase_change","slam_fast","throw_fast","fan","core_pulse","slam_hold_10","slam_hold_16","slam_hold_22"}) require(animations.getAnimation("animation.fractured_guardian."+clip)!=null,"Missing baked entrance clip: "+clip);
                 for (int stage=1;stage<=3;stage++) for(String suffix:new String[]{"","_glowmask"}) {
                     var id=Identifier.of("elementalwands","textures/entity/fractured_guardian_cracks_"+stage+suffix+".png");
-                    require(client.getResourceManager().getResource(id).isPresent(),"Missing guard material: "+id);
+                    require(client.getResourceManager().getResource(id).isPresent(),"Missing crack material: "+id);
                     client.getTextureManager().getTexture(id);
                 }
                 var guardModel=new com.anton.elementalwands.client.model.FracturedGuardianModel();
@@ -51,20 +51,21 @@ public final class GuardianFloorClientSmokeMod implements ClientModInitializer {
                 guardModel.getBakedModel(guardModel.getModelResource(guardState));
                 var core=guardModel.getBone("core").orElseThrow();
                 var leftPlate=guardModel.getBone("chest_plate_1").orElseThrow();
-                for(float time:new float[]{0,12,24,80,164,180,194}) {
+                // Shell break clock: shut until the burst, swinging open, then open for good (-1).
+                for(float time:new float[]{0,32,44,56,64,-1}) {
                     for(var bone:guardModel.getAnimationProcessor().getRegisteredBones()) {
                         bone.setPosX(0);bone.setPosY(0);bone.setPosZ(0);
                         bone.setRotX(0);bone.setRotY(0);bone.setRotZ(0);
                         bone.setScaleX(1);bone.setScaleY(1);bone.setScaleZ(1);
                     }
-                    guardState.guardTime=time;
+                    guardState.unstable=true;guardState.phaseTime=time;guardState.pulseTime=-1;guardState.magicTime=0;
                     guardModel.setCustomAnimations(new software.bernie.geckolib.animatable.processing.AnimationState<>(guardState,null,0,new it.unimi.dsi.fastutil.objects.Reference2DoubleOpenHashMap<>(),null));
-                    float open=com.anton.elementalwands.entity.GuardianGuardRules.openness(time);
-                    require(Math.abs(core.getPosZ()+12*open)<.001,"Core visual travel disagrees with server exposure");
-                    require(Math.abs(core.getScaleZ()-(1+1.4f*open))<.001,"Core scale disagrees with preview");
+                    float open=com.anton.elementalwands.entity.GuardianShellRules.openness(time,true);
+                    require(Math.abs(core.getPosZ()+12*open)<.001,"Core visual travel disagrees with the break clock");
+                    require(Math.abs(core.getScaleZ()-1.04f*(1+1.4f*open))<.001,"Core scale disagrees with preview");
                     require(Math.abs(leftPlate.getRotY()-Math.toRadians(68*open))<.001,"Rib rotation disagrees with preview");
                     for(int stage=1;stage<=3;stage++) {
-                        guardState.guardCracks=stage;
+                        guardState.cracks=stage;
                         require(guardModel.getTextureResource(guardState).getPath().contains("cracks_"+stage),"Wrong fracture material");
                     }
                 }
@@ -75,7 +76,7 @@ public final class GuardianFloorClientSmokeMod implements ClientModInitializer {
                 NatureClientChecks.check(client);
                 FireClientChecks.check(client);
                 Files.writeString(Path.of("FLOOR_CLIENT_PASSED.txt"),
-                        "Church socket, pedestal and Guardian Heart models, the Guardian's arrival clips, awakening, guard materials and visuals resolved from actual client assets. No world opened.\n");
+                        "Church socket, pedestal and Guardian Heart models, the Guardian's arrival clips, awakening, crack materials and visuals resolved from actual client assets. No world opened.\n");
                 System.out.println("GUARDIAN FLOOR CLIENT CHECK PASSED");
             } catch (Throwable failure) {
                 failure.printStackTrace();

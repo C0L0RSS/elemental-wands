@@ -3,6 +3,7 @@ package com.anton.elementalwands.entity;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
@@ -16,17 +17,30 @@ final class GuardianBossContractTest {
         UUID a = new UUID(0,1), b = new UUID(0,2), c = new UUID(0,3);
         var players = List.of(new Candidate(a, 10, true), new Candidate(b, 12, true), new Candidate(c, 14, true));
         var history = new HashMap<UUID, Long>();
-        require(target(Attack.THROW, players, history).id().equals(a), "Initial throw selection failed");
+        // With equal threat the selection still rotates through the whole party.
+        require(target(Attack.THROW, players, history, 0).id().equals(a), "Initial throw selection failed");
         history.put(a, 10L);
-        require(target(Attack.BEAM, players, history).id().equals(b), "Beam tunneled on the prior throw target");
+        require(target(Attack.BEAM, players, history, 15).id().equals(b), "Beam tunneled on the prior throw target");
         history.put(b, 20L);
-        require(target(Attack.THROW, players, history).id().equals(c), "Third co-op player was starved");
+        require(target(Attack.THROW, players, history, 25).id().equals(c), "Third co-op player was starved");
         history.put(c, 30L);
-        require(target(Attack.BEAM, players, history).id().equals(a), "Target rotation did not wrap");
+        require(target(Attack.BEAM, players, history, 40).id().equals(a), "Target rotation did not wrap");
         var obscured = List.of(new Candidate(a, 10, false), new Candidate(b, 12, true));
-        require(target(Attack.THROW, obscured, new HashMap<>()).id().equals(b), "Obstructed target was selected");
-        require(target(Attack.THROW, List.of(), history) == null, "Empty party produced a target");
-        require(target(Attack.BEAM, List.of(new Candidate(a, 30, true)), history) == null, "Beam exceeded range");
+        require(target(Attack.THROW, obscured, new HashMap<>(), 0).id().equals(b), "Obstructed target was selected");
+        require(target(Attack.THROW, List.of(), history, 40) == null, "Empty party produced a target");
+        require(target(Attack.BEAM, List.of(new Candidate(a, 30, true)), history, 40) == null, "Beam exceeded range");
+        // Threat: whoever is hurting it draws attacks, standing still to cast does too, and nobody is ignored for long.
+        var recent = new HashMap<UUID, Long>(Map.of(a, 100L, b, 100L));
+        require(target(Attack.THROW, List.of(new Candidate(a, 10, true, 0, false), new Candidate(b, 14, true, 30, false)),
+                recent, 140).id().equals(b), "The player dealing damage did not draw the attack");
+        require(target(Attack.THROW, List.of(new Candidate(a, 14, true, 0, true), new Candidate(b, 10, true, 0, false)),
+                recent, 140).id().equals(a), "Standing still to cast drew no attention");
+        var neglect = new HashMap<UUID, Long>(Map.of(a, 0L, b, 190L));
+        require(target(Attack.THROW, List.of(new Candidate(a, 10, true, 0, false), new Candidate(b, 10, true, 500, false)),
+                neglect, NEGLECT).id().equals(a), "A player was ignored past the neglect limit");
+        require(!target(Attack.THROW, players, recent, 140, false, a).id().equals(a), "A combo repeat stayed on its previous target");
+        require(target(Attack.SLAM, List.of(new Candidate(a, 3, true), new Candidate(b, 20, true)), recent, 140, false, a).id().equals(a),
+                "A combo repeat with nobody else in reach lost its target");
         var ready = new EnumMap<Attack, Long>(Attack.class);
         var crowd = List.of(new Candidate(a, 3, true), new Candidate(b, 7, true));
         require(choose(crowd, ready, 100, null) == Attack.SHOCKWAVE, "Cluster did not trigger area pressure");
@@ -41,7 +55,13 @@ final class GuardianBossContractTest {
         ready.put(Attack.LEAP, 300L);
         require(choose(far, ready, 199, Attack.THROW) == null, "Distant throw skipped cooldown");
         require(choose(far, ready, 200, Attack.THROW) == Attack.THROW, "Distant solo encounter deadlocked");
-        require(healthForParty(1)==600 && healthForParty(3)==1500 && healthForParty(5)==2400 && healthForParty(8)==3750, "Party scaling bounds changed");
+        require(healthForParty(1)==1400 && healthForParty(3)==3400 && healthForParty(5)==5400 && healthForParty(8)==8400, "Party scaling bounds changed");
+        // The core pulse belongs to phase two and takes priority once ready, after a due beam.
+        var close = List.of(new Candidate(a, 8, true), new Candidate(b, 20, true));
+        require(choose(close, new EnumMap<>(Attack.class), 100, Attack.THROW, true, 0) == Attack.PULSE, "Ready pulse was skipped in phase two");
+        require(choose(close, new EnumMap<>(Attack.class), 100, Attack.THROW, false, 0) != Attack.PULSE, "Pulse appeared in phase one");
+        require(choose(List.of(new Candidate(a, 20, true)), new EnumMap<>(Attack.class), 100, Attack.THROW, true, 0) != Attack.PULSE,
+                "Pulse fired with nobody in its pull");
         for(boolean unstable:new boolean[]{false,true}) {
             require(choose(players,new EnumMap<>(Attack.class),100,Attack.FAN,unstable,2)==Attack.BEAM,"Due beam lost to ready leap/throw");
             var beamCooling=new EnumMap<Attack,Long>(Attack.class);beamCooling.put(Attack.BEAM,101L);

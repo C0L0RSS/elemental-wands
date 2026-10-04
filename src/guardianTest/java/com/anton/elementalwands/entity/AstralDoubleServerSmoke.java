@@ -77,7 +77,9 @@ public final class AstralDoubleServerSmoke implements ModInitializer {
             combat.emitWave(w,guardian.getEntityPos(),Set.of());}
         if(t==250){require(clone.isRemoved(),"Guardian wave failed to destroy clone");guardian.stopReview();reset();clone=place(new Vec3d(2.5,100,.5));combat.crushGrowth(w,guardian.getEntityPos(),4.5,false,6);require(clone.isRemoved(),"Guardian slam failed");}
         if(t==260){reset();clone=place(new Vec3d(.5,100,10.5));var rock=new GuardianRockEntity(ModEntities.GUARDIAN_ROCK,w);rock.setOwner(guardian);rock.setPosition(.5,101,5);rock.releaseShard(new Vec3d(0,0,1),new HashSet<>(),new GuardianWallImpact());w.spawnEntity(rock);}
-        if(t==266){require(clone.isRemoved(),"Guardian shard failed");reset();clone=place(new Vec3d(.5,100,18.5));owner.setPosition(.5,100,21.5);beam=new GuardianBeamAttack(guardian);beam.begin(owner);}
+        if(t==266){require(clone.isRemoved(),"Guardian shard failed");reset();
+            // The shard flies on past the destroyed double; clear it before the caster steps into its path.
+            for(var stray:w.getEntitiesByClass(GuardianRockEntity.class,owner.getBoundingBox().expand(64),e->true))stray.discard();clone=place(new Vec3d(.5,100,18.5));owner.setPosition(.5,100,21.5);beam=new GuardianBeamAttack(guardian);beam.begin(owner);}
         if(t>=267&&t<=310)beam.tick(w);
         if(t==310){require(clone.isRemoved(),"Guardian beam failed");beam.cancel();guardian.discard();reset();clone=place(new Vec3d(4.5,100,.5));
             // Player attachment is persisted independently of the retained wand.

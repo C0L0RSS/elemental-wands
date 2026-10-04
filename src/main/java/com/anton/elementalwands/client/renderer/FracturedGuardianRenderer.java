@@ -61,10 +61,8 @@ public class FracturedGuardianRenderer extends GeoEntityRenderer<FracturedGuardi
         state.unstable = entity.isUnstable();
         state.phaseTime = entity.getPhaseTime(partialTick);
         state.magicTime = entity.age + partialTick;
-        state.guardTime = entity.getGuardTime(partialTick);
-        state.guardCracks = com.anton.elementalwands.entity.GuardianGuardRules.cracks(entity.getGuard(), entity.getMaxGuard());
-        if (state.guardTime >= com.anton.elementalwands.entity.GuardianGuardRules.CLOSE_START)
-            state.guardCracks = Math.min(state.guardCracks, (int)Math.ceil(3 * com.anton.elementalwands.entity.GuardianGuardRules.openness(state.guardTime)));
+        state.cracks = entity.getCracks();
+        state.pulseTime = entity.getPulseTime(partialTick);
         state.beamTime = entity.getBeamTime(partialTick);
         state.holdingRock = entity.isHoldingRock();
         state.waveStones = GuardianWaveVisual.prepare(entity,partialTick);

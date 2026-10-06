@@ -14,6 +14,11 @@ It records known verification limits; it is not a fresh installation receipt.
   hauling it into his staff, then his slam lights the rim braziers. The final slower intro
   and camera sequence were approved September 29; native verification and Lunar installation
   were recorded for that version. Separate workshop/model approvals remain below.
+  Phase two now opens with a 34.6-second transformation cinematic in which he grows into
+  the colossus. Its browser animatic and its native crypt recording were approved October 6,
+  and server fixtures cover it. It was installed into Lunar that day, built together with the
+  Guardian rebalance branch, which is not yet on main. Pending: a playtest of its length and
+  skip in co-op.
   Necromancer spells now cast soul light (real block light plus a blue ground pool);
   FPS on weaker machines is untested.
   After a third (solo) playtest, Life Drain only starts within 10 blocks, with a 1.5-second

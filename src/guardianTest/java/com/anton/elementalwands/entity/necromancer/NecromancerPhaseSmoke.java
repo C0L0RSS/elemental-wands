@@ -78,11 +78,22 @@ public final class NecromancerPhaseSmoke implements ModInitializer {
             // Saved mid-transformation, the boss reloads as the finished colossus.
             var copy = reload(w);
             require(copy.isColossus() && !copy.isTransforming() && copy.getWidth() == NecromancerRules.COLOSSUS_WIDTH, "Mid-transform save did not resume as colossus");
+            // The cinematic holds both players where they stood, unhurt.
+            require(NecromancerTransformScene.watching(target) && NecromancerTransformScene.watching(second)
+                    && boss.combat().transformWatchers() == 2, "The transformation does not hold its watchers");
+            float hp = target.getHealth();
+            require(!target.damage(w, w.getDamageSources().generic(), 4) && target.getHealth() == hp, "A watcher was hurt during the transformation");
         }
+        if (stage == 0 && mark > 0 && t == mark + 160)
+            require(boss.combat().transformSouls() >= 20, "The storm has only " + boss.combat().transformSouls() + " ghosts");
+        if (stage == 0 && mark > 0 && t == mark + 300)
+            require(boss.combat().transformSouls() == 0, "Ghosts outlived their dive: " + boss.combat().transformSouls());
         if (stage == 0 && mark > 0 && t == mark + NecromancerRules.TRANSFORM_GROW + 2)
             require(boss.isColossus() && boss.isTransforming() && boss.getWidth() == NecromancerRules.COLOSSUS_WIDTH, "Body did not grow mid-transformation");
         if (stage == 0 && mark > 0 && t == mark + NecromancerRules.TRANSFORM_TICKS + 3) {
             require(boss.isColossus() && !boss.isTransforming(), "Transformation did not finish: " + boss.status());
+            require(!NecromancerTransformScene.watching(target) && !NecromancerTransformScene.watching(second), "The transformation kept its watchers");
+            require(w.getEntitiesByClass(TransformSoulEntity.class, boss.getBoundingBox().expand(40), e -> true).isEmpty(), "A ghost outlived the transformation");
             require(boss.getHeight() == NecromancerRules.COLOSSUS_HEIGHT, "Colossus hitbox wrong");
             require(reload(w).isColossus(), "Colossus did not persist");
             for (int x = -3; x <= 3; x++) for (int z = -3; z <= 3; z++) w.setBlockState(new BlockPos(x, 102, z), Blocks.AIR.getDefaultState());
@@ -347,7 +358,7 @@ public final class NecromancerPhaseSmoke implements ModInitializer {
             for (BlockPos pos : BlockPos.iterate(-30, 99, -30, 45, 120, 45))
                 if (w.getBlockState(pos).isOf(com.anton.elementalwands.registry.ModSpellBlocks.SOUL_GLOW)) left.add(pos.toImmutable());
             require(left.isEmpty(), "Soul light outlived phase two: " + left);
-            Files.writeString(Path.of("NECROMANCER_PASSED.txt"), "Phase two passed: transformation and save, original grab/slam and teammate rescue, swipe; grounded rush with a random windup, single bite, throw, no team interrupt, sidestep, wall collision, hands visuals and nearest caught target combo against iron armor, escape, expiry and cancellation; grave dive shielded underground, erupting under a still player and stuck, exposed after a dodge, cancelled safely; soul harvest raised away from players, destroyed by a hit, healing on arrival and cleared on stop; the soul split at a quarter health shields the body, passes soul hits to the boss, swings blind and collapses it exposed when knocked down; harvested and freed souls carry soul light and none outlives the phase.\n");
+            Files.writeString(Path.of("NECROMANCER_PASSED.txt"), "Phase two passed: the transformation cinematic holding both players unhurt while its ghosts come and go, then releasing them; transformation and save, original grab/slam and teammate rescue, swipe; grounded rush with a random windup, single bite, throw, no team interrupt, sidestep, wall collision, hands visuals and nearest caught target combo against iron armor, escape, expiry and cancellation; grave dive shielded underground, erupting under a still player and stuck, exposed after a dodge, cancelled safely; soul harvest raised away from players, destroyed by a hit, healing on arrival and cleared on stop; the soul split at a quarter health shields the body, passes soul hits to the boss, swings blind and collapses it exposed when knocked down; harvested and freed souls carry soul light and none outlives the phase.\n");
             server.stop(false);
         }
     }

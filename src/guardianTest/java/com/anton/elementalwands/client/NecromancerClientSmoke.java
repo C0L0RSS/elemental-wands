@@ -53,6 +53,13 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
 
     public void onInitializeClient() { ClientTickEvents.END_CLIENT_TICK.register(this::tick); }
 
+    private boolean rushSkip;
+
+    /** Every watcher skips the transformation cinematic; it ends once its skip window opens. */
+    private static void skipTransform(net.minecraft.server.MinecraftServer server) {
+        server.execute(() -> server.getPlayerManager().getPlayerList().forEach(com.anton.elementalwands.entity.necromancer.NecromancerTransformScene::skip));
+    }
+
     private void tick(MinecraftClient c) {
         if (done || c.getOverlay() != null) return;
         try {
@@ -151,6 +158,9 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
                 }
                 p.networkHandler.requestTeleport(-7.5, floor + 1, -3.5, -39, 0);
             });
+            // The cinematic has its own recording (crypt_client_smoke -PtransformVideo): skip it here.
+            if (t == 358 || t == 365 || t == 375) skipTransform(server);
+            if (t == 362) require(com.anton.elementalwands.client.NecromancerTransformClient.cinematic(), "The transformation did not take the camera");
             if (t > 357 && t < 530) lookAtBoss(c);
             for (int frame = 0; frame < 12; frame++) if (t == 362 + frame * 13) shot(c, "necromancer-transform-" + frame + ".png");
             if (t == 520) server.execute(() -> server.getPlayerManager().getPlayer(uuid).networkHandler.requestTeleport(.5, floor + 1, -5.5, 0, 0));
@@ -197,7 +207,7 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
                 ScreenshotRecorder.saveScreenshot(c.runDirectory, recordingDirectory + "/frame-" + String.format(java.util.Locale.ROOT, "%04d", t - 340) + ".png", c.getFramebuffer(), 1, message -> recorded.incrementAndGet());
             if (t >= 790) {
                 if (record && recorded.get() < 450) return;
-                Files.writeString(Path.of("NECRO_PASSED.txt"), "Hollow Necromancer native client passed: V2 GeckoLib model and renderer, front/side views, bolt, hands, drain, siege wave, Hollow undead renderers, blink and curse screenshots, eight-second hood emergence sequence, synchronized colossus form and hitbox, swipe, bolt spit, outstretched lunge and moving crawl screenshots. Visual review and human Lunar playtest pending.\n");
+                Files.writeString(Path.of("NECRO_PASSED.txt"), "Hollow Necromancer native client passed: V2 GeckoLib model and renderer, front/side views, bolt, hands, drain, siege wave, Hollow undead renderers, blink and curse screenshots, the transformation cinematic taking the camera (then skipped), synchronized colossus form and hitbox, swipe, bolt spit, outstretched lunge and moving crawl screenshots. Visual review and human Lunar playtest pending.\n");
                 done = true; c.scheduleStop();
             }
         } catch (Throwable e) {
@@ -218,6 +228,7 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
                     var boss = (NecromancerEntity)w.getEntity(bossId);
                     boss.refreshPositionAndAngles(.5, floor, 2.5, 0, 0);
                     boss.setBodyYaw(0); boss.requestTransform();
+                    rushSkip = true;
                     var f = com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player", net.minecraft.server.MinecraftServer.class,
                             UUID.class, String.class, double.class, double.class, double.class);
                     f.setAccessible(true);
@@ -235,6 +246,7 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
                 } catch (Throwable e) { serverFailure = e.toString(); }
             });
         }
+        if (rushSkip && (t == 4 || t == 10 || t == 20)) skipTransform(server);
         // Fake players have no input connection: integrate their released throw velocity in this fixture only.
         if (t > 165) server.execute(() -> {
             var victim = server.getPlayerManager().getPlayer(rushVictim);

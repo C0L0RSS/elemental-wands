@@ -4,8 +4,8 @@
   "summary": "Lean hooded mage; hunched skeleton with jointed claws, a four-limbed crawl and an outstretched lunge.",
   "texture": [
     256,
-    128
+    256
   ],
-  "cubes": 246,
-  "bones": 77
+  "cubes": 570,
+  "bones": 234
 }

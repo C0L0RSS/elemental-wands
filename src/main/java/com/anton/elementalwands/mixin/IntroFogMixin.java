@@ -1,6 +1,6 @@
 package com.anton.elementalwands.mixin;
 
-import com.anton.elementalwands.client.NecromancerIntroClient;
+import com.anton.elementalwands.client.BossIntroCamera;
 import net.minecraft.client.render.Camera;
 import net.minecraft.client.render.fog.FogRenderer;
 import net.minecraft.client.world.ClientWorld;
@@ -16,7 +16,7 @@ public class IntroFogMixin {
     @Inject(method = "getFogColor", at = @At("RETURN"), cancellable = true)
     private void introFog(Camera camera, float tickProgress, ClientWorld world, int viewDistance,
             float skyDarkness, boolean thickFog, CallbackInfoReturnable<Vector4f> cir) {
-        float light = NecromancerIntroClient.arenaLight(tickProgress);
+        float light = BossIntroCamera.arenaLight(tickProgress);
         if (light >= 1) return;
         float scale = .22f + .78f * light;
         Vector4f color = cir.getReturnValue();

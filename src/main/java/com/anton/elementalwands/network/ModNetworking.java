@@ -58,6 +58,7 @@ public final class ModNetworking {
         PayloadTypeRegistry.playS2C().register(StoneStaggerPayload.ID, StoneStaggerPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(NecromancerIntroPayload.ID, NecromancerIntroPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(NecromancerIntroSkipPayload.ID, NecromancerIntroSkipPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(NecromancerTransformPayload.ID, NecromancerTransformPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(GuardianIntroPayload.ID, GuardianIntroPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(GuardianIntroSkipPayload.ID, GuardianIntroSkipPayload.CODEC);
     }
@@ -78,8 +79,11 @@ public final class ModNetworking {
                 (payload, context) -> com.anton.elementalwands.util.WandLoadouts.cast(context.player(), payload.slot(), payload.deliberate()));
         ServerPlayNetworking.registerGlobalReceiver(HubActionPayload.ID,
                 (payload, context) -> handleHub(context.player(), payload));
-        ServerPlayNetworking.registerGlobalReceiver(NecromancerIntroSkipPayload.ID,
-                (payload, context) -> com.anton.elementalwands.entity.necromancer.NecromancerIntro.skip(context.player()));
+        // One skip for both of the Necromancer's scenes: it counts for whichever holds the player.
+        ServerPlayNetworking.registerGlobalReceiver(NecromancerIntroSkipPayload.ID, (payload, context) -> {
+            com.anton.elementalwands.entity.necromancer.NecromancerIntro.skip(context.player());
+            com.anton.elementalwands.entity.necromancer.NecromancerTransformScene.skip(context.player());
+        });
         ServerPlayNetworking.registerGlobalReceiver(GuardianIntroSkipPayload.ID,
                 (payload, context) -> com.anton.elementalwands.entity.GuardianIntro.skip(context.player()));
     }
@@ -280,6 +284,15 @@ public final class ModNetworking {
                 PacketCodecs.VAR_INT,NecromancerIntroPayload::bossId,PacketCodecs.VAR_LONG,NecromancerIntroPayload::start,
                 PacketCodecs.FLOAT,NecromancerIntroPayload::yaw,net.minecraft.util.math.Vec3d.PACKET_CODEC,NecromancerIntroPayload::centre,
                 PacketCodecs.BOOLEAN,NecromancerIntroPayload::active,NecromancerIntroPayload::new);
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
+    /** The Necromancer's transformation cinematic for this watcher: its first frame's world time and the landing spot it plays around; active=false ends it. */
+    public record NecromancerTransformPayload(int bossId, long start, float yaw, net.minecraft.util.math.Vec3d centre, boolean active) implements CustomPayload {
+        public static final Id<NecromancerTransformPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"necromancer_transform"));
+        public static final PacketCodec<RegistryByteBuf,NecromancerTransformPayload> CODEC = PacketCodec.tuple(
+                PacketCodecs.VAR_INT,NecromancerTransformPayload::bossId,PacketCodecs.VAR_LONG,NecromancerTransformPayload::start,
+                PacketCodecs.FLOAT,NecromancerTransformPayload::yaw,net.minecraft.util.math.Vec3d.PACKET_CODEC,NecromancerTransformPayload::centre,
+                PacketCodecs.BOOLEAN,NecromancerTransformPayload::active,NecromancerTransformPayload::new);
         @Override public Id<? extends CustomPayload> getId() { return ID; }
     }
     public record NecromancerIntroSkipPayload() implements CustomPayload {

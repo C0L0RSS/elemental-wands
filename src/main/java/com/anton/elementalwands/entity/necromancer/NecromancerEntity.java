@@ -31,7 +31,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 /** Summon-only caster boss. {@link NecromancerCombat} owns every decision; this class owns state. */
 public class NecromancerEntity extends PathAwareEntity implements GeoEntity, WandBoss {
-    static final String CONTROLLER = "necromancer";
+    public static final String CONTROLLER = "necromancer";
     private static final String PASSIVE_TAG = "ew_necromancer_passive";
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.hollow_necromancer.idle");
     private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.hollow_necromancer.walk");
@@ -47,6 +47,8 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
     private static final TrackedData<Long> INTRO_START = DataTracker.registerData(NecromancerEntity.class, TrackedDataHandlerRegistry.LONG);
     private static final EntityDimensions COLOSSUS_SIZE = EntityDimensions.fixed(NecromancerRules.COLOSSUS_WIDTH, NecromancerRules.COLOSSUS_HEIGHT);
     private boolean phasePending, soulFreed, soulHitting;
+    /** Saved mid-transformation: its storm may have left the crypt's braziers out. */
+    private boolean relightBraziers;
     private NecromancerRules.Stage stage = NecromancerRules.Stage.DUEL_A;
     private record HurtWindow(long until, float damage) {}
     private final Map<UUID, HurtWindow> hurtWindows = new HashMap<>();
@@ -304,6 +306,7 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
         }
         if (!(getEntityWorld() instanceof ServerWorld world)) return;
         if (!isAlive()) { combat.cancel(); return; }
+        if (relightBraziers) { relightBraziers = false; NecromancerTransformScene.relightCrypt(world, getEntityPos()); }
         if (intro != null) { if (!intro.tick(world)) intro = null; return; }
         if (isBossAggressive()) combat.tick(world);
         else combat.tickReview(world);
@@ -325,6 +328,7 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
         super.readCustomData(view);
         // An interrupted transformation resumes as the finished colossus rather than replaying.
         setColossus(view.getBoolean("NecromancerColossus", false) || view.getBoolean("NecromancerTransforming", false));
+        relightBraziers = view.getBoolean("NecromancerTransforming", false);
         phasePending = !isColossus() && view.getBoolean("NecromancerPhasePending", false);
         soulFreed = isColossus() && view.getBoolean("NecromancerSoulFreed", false);
         // A siege saved mid-way restarts from its first wave; the army itself never saves.

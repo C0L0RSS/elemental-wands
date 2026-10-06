@@ -6,6 +6,7 @@ allprojects {
         // Optional existing cache for offline verification (for example Lunar shared/assets).
         def existingAssets=project.findProperty('hubClientAssets')
         if (project.hasProperty('introVideo')) loom.runs.client.vmArg('-Dcrypt.introVideo=true')
+        if (project.hasProperty('transformVideo')) loom.runs.client.vmArg('-Dcrypt.transformVideo=true')
         if (existingAssets) {
             loom.runs.client.vmArg('-Dfabric.dli.config='+new File(smokeRoot,'launch.cfg').absolutePath)
         }

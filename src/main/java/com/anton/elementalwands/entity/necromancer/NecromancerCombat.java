@@ -91,6 +91,8 @@ final class NecromancerCombat {
     private UUID target, held;
     private long started, nextAction, emptySince = -1, nextMove, pendingSince = -1, nextRelocate, staggerUntil;
     private boolean engaged, reviewing, minionsFrozen;
+    /** The transformation cinematic, while it plays. */
+    private NecromancerTransformScene scene;
     private int boltsFired;
     private long rushCaught = -1;
     private boolean handsRush;
@@ -146,6 +148,9 @@ final class NecromancerCombat {
 
     void cancel() {
         log.finish(boss, boss.isAlive() ? "stopped" : "defeated");
+        // Watchers go free at once; the transformation itself plays out without them.
+        if (scene != null) scene.cancel();
+        scene = null;
         interrupt();
         thawMinions();
         for (MobEntity minion : minions) if (!minion.isRemoved() && minion.getEntityWorld() instanceof ServerWorld world)
@@ -400,42 +405,29 @@ final class NecromancerCombat {
         boss.triggerAnim(NecromancerEntity.CONTROLLER, "transform");
         freezeMinions();
         log.stage(world.getTime(), "transformation");
-        world.playSound(null, boss.getBlockPos(), SoundEvents.BLOCK_SCULK_SHRIEKER_SHRIEK, SoundCategory.HOSTILE, 2f, .55f);
+        // Everyone at the fight watches it; anyone further off sees it play without the camera.
+        List<ServerPlayerEntity> watchers = world.getPlayers(p -> p.isAlive() && !p.isSpectator()
+                && boss.squaredDistanceTo(p) <= ENCOUNTER_RANGE * ENCOUNTER_RANGE);
+        scene = new NecromancerTransformScene(boss, world, watchers, world.getTime());
+        scene.tick(0);
     }
 
     private void tickTransform(ServerWorld world, long now) {
         halt();
         int t = (int)boss.getTransformTime(0);
-        Vec3d hood = boss.getEntityPos().subtract(forward().multiply(.3)).add(0, 1.9, 0);
-        if (t >= 18 && t < 65 && t % 4 == 0)
-            world.spawnParticles(ParticleTypes.SOUL, hood.x, hood.y, hood.z, 2, .13, .13, .13, .01);
-        if (t == 27) world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_SKELETON_HURT, SoundCategory.HOSTILE, 1.6f, .35f);
-        if (t == 49 || t == 56) {
-            Vec3d hand = boss.getEntityPos().add(forward().multiply(1.5));
-            world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_IRON_GOLEM_STEP, SoundCategory.HOSTILE, 1.2f, .6f);
-            world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, floorState(world, hand)), hand.x, hand.y + .05, hand.z, 12, .7, .02, .4, .025);
-        }
-        if (t == 68) world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_WARDEN_EMERGE, SoundCategory.HOSTILE, 2f, .65f);
-        if (t >= 112 && t < 155 && t % 2 == 0) {
-            // The empty robe lies behind the skeleton before it burns. Cosmetic particles only.
-            Vec3d robe = boss.getEntityPos().subtract(forward().multiply(1.2)).add(0, .12, 0);
-            world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, robe.x, robe.y, robe.z, 5, .35, .08, .65, .015);
-            world.spawnParticles(ParticleTypes.LARGE_SMOKE, robe.x, robe.y + .15, robe.z, 1, .3, .12, .5, .015);
-        }
-        if (t == TRANSFORM_GROW && !boss.isColossus()) {
-            boss.setColossus(true);
-            boss.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED).setBaseValue(COLOSSUS_SPEED);
-            boss.getAttributeInstance(EntityAttributes.STEP_HEIGHT).setBaseValue(1.5);
-            shove(world, .7, .25);
-        }
-        if (t == TRANSFORM_ROAR) {
-            world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_RAVAGER_ROAR, SoundCategory.HOSTILE, 3f, .5f);
-            world.spawnParticles(ParticleTypes.SCULK_SOUL, boss.getX(), boss.getY() + 3, boss.getZ(), 30, 1.5, 1.2, 1.5, .08);
-            shove(world, 1.1, .35);
-        }
-        if (t >= TRANSFORM_TICKS) {
+        if (scene != null) scene.tick(t);
+        // Inside the smoke burst it is the colossus: from here the body that can be hit is the giant's.
+        if (t >= TRANSFORM_GROW && !boss.isColossus()) grow(world);
+        if (t == TRANSFORM_ROAR) shove(world, 1.1, .35);
+        if (t >= TRANSFORM_TICKS || scene != null && scene.everyoneSkipped()) {
+            // A skip lands on the finished scene: the colossus, braziers lit, everyone free.
+            if (!boss.isColossus()) grow(world);
+            if (scene != null) scene.finish();
+            scene = null;
             boss.finishTransform();
             boss.stopTriggeredAnim(NecromancerEntity.CONTROLLER, null);
+            // The watchers stood still through it: clear them out of the body that grew around them.
+            shove(world, .7, .25);
             thawMinions();
             last = null;
             nextAction = now + 20;
@@ -445,6 +437,17 @@ final class NecromancerCombat {
             log.stage(now, "colossus");
         }
     }
+
+    private void grow(ServerWorld world) {
+        boss.setColossus(true);
+        boss.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED).setBaseValue(COLOSSUS_SPEED);
+        boss.getAttributeInstance(EntityAttributes.STEP_HEIGHT).setBaseValue(1.5);
+        shove(world, .7, .25);
+    }
+
+    /** Players the transformation cinematic still holds, for tests and status. */
+    int transformWatchers() { return scene == null ? 0 : scene.watcherCount(); }
+    int transformSouls() { return scene == null ? 0 : scene.soulCount(); }
 
     /** Pushes nearby players out of the growing body instead of trapping them inside it. */
     private void shove(ServerWorld world, double strength, double lift) {

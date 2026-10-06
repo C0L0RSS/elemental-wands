@@ -53,7 +53,7 @@ public final class CryptClientSmoke implements ClientModInitializer {
             if (!started) {
                 started = true; c.options.pauseOnLostFocus = false; c.options.tutorialStep = net.minecraft.client.tutorial.TutorialStep.NONE;
                 GLFW.glfwSetWindowSize(c.getWindow().getHandle(), 1280, 720);
-                if (INTRO_VIDEO) GLFW.glfwHideWindow(c.getWindow().getHandle());
+                if (INTRO_VIDEO || TRANSFORM_VIDEO) GLFW.glfwHideWindow(c.getWindow().getHandle());
                 c.options.getFov().setValue(70);
                 c.options.getNarrator().setValue(net.minecraft.client.option.NarratorMode.OFF);
                 c.getNarratorManager().clear();
@@ -126,6 +126,7 @@ public final class CryptClientSmoke implements ClientModInitializer {
                     });
                     int s = scene - INTRO_END + 1;
                     if (s > 5) lookAtBoss(c);
+                    if (TRANSFORM_VIDEO) { transformScene(c, server, uuid, s); return; }
                     if (s == 40) shot(c, "crypt-boss.png");
                     // A siege from a shielded player: the caster takes a bough above the lid and raises wave 1.
                     if (s == 45) onServer(server, () -> {
@@ -453,6 +454,78 @@ public final class CryptClientSmoke implements ClientModInitializer {
                 {com.anton.elementalwands.entity.necromancer.NecromancerIntro.RETURN + 6, 9}})
             if (t == at[0]) shot(c, "crypt-intro-" + at[1] + ".png");
     }
+    /** -PtransformVideo plays the transformation in the crypt after the intro and saves every tick of it, for a review video. */
+    private static final boolean TRANSFORM_VIDEO = Boolean.getBoolean("crypt.transformVideo");
+    private int lastTransformFrame = -1, transformFrames, transformDone = -1;
+
+    /** Lit soul campfires around the circle, the braziers the storm puts out and the howl relights. */
+    private static int litBraziers(MinecraftServer server, ServerPlayerEntity p) {
+        var realm = server.getWorld(HollowCryptRealm.WORLD);
+        BlockPos centre = HollowCryptRealm.nearestCentre(p.getEntityPos());
+        int lit = 0;
+        for (BlockPos q : BlockPos.iterate(centre.add(-44, 1, -44), centre.add(44, 4, 44)))
+            if (realm.getBlockState(q).isOf(Blocks.SOUL_CAMPFIRE) && realm.getBlockState(q).get(net.minecraft.block.CampfireBlock.LIT)) lit++;
+        return lit;
+    }
+
+    /**
+     * The transformation cinematic in the real crypt: it takes the camera, hides his hood in his
+     * point of view, darkens the crypt and puts the braziers out, flies the storm of ghosts, and
+     * hands back to the finished colossus with the braziers relit. Every tick is saved.
+     */
+    private void transformScene(MinecraftClient c, MinecraftServer server, UUID uuid, int s) {
+        if (s == 10) onServer(server, () -> {
+            var p = player(server, uuid);
+            p.getAbilities().invulnerable = true; p.sendAbilitiesUpdate();
+            crypt(server, p).requestTransform();
+        });
+        require(s < 1100, "The transformation never finished");
+        NecromancerEntity boss = null;
+        for (var e : c.world.getEntities()) if (e instanceof NecromancerEntity n) boss = n;
+        if (boss == null) return;
+        if (boss.isTransforming()) {
+            c.options.hudHidden = false;
+            int t = (int)boss.getTransformTime(0);
+            if (t == 20) require(com.anton.elementalwands.client.NecromancerTransformClient.cinematic(), "The transformation did not take the camera");
+            if (t == 60) require(com.anton.elementalwands.client.NecromancerTransformClient.hidesHood(boss.getId()), "His hood shows in his own point of view");
+            if (t == 100) onServer(server, () -> require(litBraziers(server, player(server, uuid)) == 0, "The storm left braziers burning"));
+            if (t == 160) {
+                int souls = 0;
+                for (var e : c.world.getEntities()) if (e instanceof com.anton.elementalwands.entity.necromancer.TransformSoulEntity soul && soul.soul() != null) souls++;
+                require(souls >= 20, "Only " + souls + " ghosts in the storm");
+            }
+            if (t == 200) require(com.anton.elementalwands.client.NecromancerTransformClient.arenaLight(0) == 0, "The crypt did not darken with the braziers out");
+            // One frame per client tick, as the scene plays; a clock resync may skip or repeat a scene tick.
+            require(lastTransformFrame < 0 || t <= lastTransformFrame + 3, "The scene's clock jumped from " + lastTransformFrame + " to " + t);
+            shot(c, String.format("transform-video-%03d.png", transformFrames++));
+            lastTransformFrame = Math.max(lastTransformFrame, t);
+            return;
+        }
+        if (lastTransformFrame < 0) return; // not begun yet
+        if (transformDone < 0) {
+            transformDone = s;
+            require(boss.isColossus(), "The transformation did not end in the colossus");
+            onServer(server, () -> {
+                var p = player(server, uuid);
+                require(!com.anton.elementalwands.entity.necromancer.NecromancerTransformScene.watching(p), "The scene still holds the player");
+                require(litBraziers(server, p) >= 8, "The howl relit only " + litBraziers(server, p) + " braziers");
+            });
+        }
+        if (s == transformDone + 5) {
+            require(!com.anton.elementalwands.client.NecromancerTransformClient.cinematic(), "The camera was not handed back");
+            for (var e : c.world.getEntities()) require(!(e instanceof com.anton.elementalwands.entity.necromancer.TransformSoulEntity), "A ghost outlived the scene");
+            shot(c, "crypt-transform-handback.png");
+        }
+        if (s == transformDone + 20) {
+            try {
+                Files.writeString(Path.of("CRYPT_PASSED.txt"), "Crypt transformation recording passed: " + transformFrames + " consecutive frames (to tick " + lastTransformFrame
+                        + "); the cinematic took the camera, hid his hood in his point of view, put the braziers out and darkened the crypt, flew the storm of ghosts"
+                        + " and handed back to the finished colossus with the braziers relit and no ghost left. Visual review and human Lunar playtest pending.\n");
+            } catch (java.io.IOException e) { throw new AssertionError(e.toString()); }
+            done = true; c.scheduleStop();
+        }
+    }
+
     private static void shot(MinecraftClient c, String name) { ScreenshotRecorder.saveScreenshot(c.runDirectory, name, c.getFramebuffer(), 1, t -> {}); }
     private static void require(boolean b, String why) { if (!b) throw new AssertionError(why); }
 }

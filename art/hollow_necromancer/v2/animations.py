@@ -1,13 +1,14 @@
 """Hand-authored animation beats, baked to smooth numeric GeckoLib keyframes.
 
-The eight-second emergence shares impact beats with NecromancerRules. The
-skeleton settles into a four-limbed crawl; its lunge extends that gait into a
-full-body spring toward the player.
+The transformation is its own cinematic (transform.py), sharing its beats with
+NecromancerTransformScene. The skeleton settles into a four-limbed crawl; its
+lunge extends that gait into a full-body spring toward the player.
 """
 import math
 import copy
 from rig import plant, sample, matrix
 from rig import bake_contacts
+from transform import transform_clip
 
 
 def keys(frames):
@@ -595,41 +596,7 @@ def animations():
     rot('colossus_walk', 'spine', [(0, (43, -5, 3)), (.43, (48, -7, 5)), (.9, (41, 4, -3)), (1.36, (48, 6, -5)), (1.8, (43, -5, 3))])
     rot('colossus_walk', 'skull', [(0, (-58, 7, -2)), (.43, (-63, 9, -3)), (.9, (-56, -3, 2)), (1.36, (-63, -8, 3)), (1.8, (-58, 7, -2))])
 
-    clip('transform', 8)
-    # Mage braces, leans back and parts the hood. The face disappears into the opening.
-    rot('transform', 'body', [(0, zero), (.5, (8, 0, 0)), (1.2, (-55, 0, 0)), (2.3, (-62, 0, 0)), (3.8, (-45, 0, 0)), (4.9, (-65, 0, 0)), (5.4, zero)])
-    rot('transform', 'hood', [(0, zero), (1.1, (-20, 0, 0)), (2.5, (-30, 0, 0)), (5.4, zero)])
-    rot('transform', 'hood_crown', [(0, zero), (.8, zero), (1.5, (-65, 0, 0)), (5.8, (-65, 0, 0)), (6.2, (-12, 0, 0))])
-    for side, sign in [('right', -1), ('left', 1)]:
-        rot('transform', 'hood_' + side, [(0, zero), (.8, zero), (1.5, (0, sign * 55, sign * 22)), (5.8, (0, sign * 55, sign * 22)), (6.2, (0, sign * 25, sign * 10))])
-        rot('transform', side + '_arm', [(0, zero), (.6, (-35, 0, sign * 20)), (1.15, (-110, 0, sign * 15)), (2, (-90, 0, sign * 30)), (3.8, (10, 0, sign * 32)), (5.3, (0, 0, sign * 65))])
-        rot('transform', 'mage_forearm_' + side, [(0, zero), (1.1, (-80, 0, 0)), (2, (-40, 0, 0)), (3.8, zero)])
-    scale('transform', 'mage_face', [(0, 1), (1, 1), (1.4, 0)])
-    for side in ['right', 'left']:
-        # Only the empty cloth remains after the creature has escaped its disguise.
-        scale('transform', 'mage_hand_' + side, [(0, 1), (2.8, 1), (4.2, 0)])
-        scale('transform', 'mage_leg_' + side, [(0, 1), (3.2, 1), (4.3, 0)])
-    scale('transform', 'staff_flame', [(0, 1), (1.3, 1.5), (2.3, 0)])
-    rot('transform', 'staff', [(0, zero), (1, (0, 0, 20)), (3, (0, 0, 65)), (5.2, (0, 0, 80))])
-    # The robe crumples behind the emerging body, lying visibly on the floor before burning.
-    pos('transform', 'robe', [(0, zero), (3.8, zero), (4.8, (0, 0, 5)), (5.5, (0, 2, 12)), (6.5, (0, 1, 12)), (7.2, (0, .3, 12))])
-    rot('transform', 'robe', [(0, zero), (4, zero), (5.5, (-82, 0, 8)), (6.5, (-88, 0, 8))])
-    scale('transform', 'robe', [(0, 1), (4.5, 1), (5.5, (1.2, .8, .3)), (6.4, (1.2, .8, .3)), (7.25, (1.1, .55, .1)), (7.7, 0)])
-    # Arms emerge first. The small folded body follows through the hood, then unfolds on the ground.
-    scale('transform', 'colossus', [(0, 0), (1.25, 0), (1.45, .25), (2.4, .42), (3.3, .7), (4.5, 1), (8, 1)])
-    pos('transform', 'colossus', [(0, (0, 17, 8)), (1.45, (0, 17, 8)), (2.4, (0, 8, 4)), (3.3, (0, -3, 0)), (4.5, (0, -11, 0)), (5.5, (0, -11, 0)), (6.65, zero), (7.25, zero), (8, (0, -10, 0))])
-    rot('transform', 'spine', [(0, (55, 0, 0)), (2.4, (55, 0, 0)), (3.3, (72, 0, -5)), (4.5, (65, 0, 0)), (5.5, (65, 0, 0)), (6.65, (-3, 0, 0)), (7.1, (-9, 0, 0)), (7.5, (12, 0, 0)), (8, (43, -3, 1))])
-    rot('transform', 'skull', [(0, (-50, 0, 0)), (2.2, (-50, -10, -10)), (3.2, (-65, 10, 5)), (4.5, (-60, 0, 0)), (5.5, (-60, 0, 0)), (6.7, (-15, 0, 0)), (7.1, (-25, 0, 0)), (8, (-58, 5, -3))])
-    rot('transform', 'jaw', [(0, zero), (2.2, (10, 0, 0)), (3.3, (22, 0, 0)), (5.5, (8, 0, 0)), (6.7, (12, 0, 0)), (7.1, (38, 0, 0)), (7.5, (32, 0, 0)), (8, (3, 0, 0))])
-    for side, sign in [('right', 1), ('left', -1)]:
-        delay = 0 if side == 'right' else .25
-        rot('transform', 'arm_' + side, [(0, (-110, 0, sign * 10)), (1.6 + delay, (-120, sign * 12, sign * 20)), (2.6 + delay, (-25, 0, sign * 12)), (3.5 + delay, (-45, 0, sign * 8)), (4.5, (-55, 0, sign * 10)), (5.5, (-55, 0, sign * 10)), (6.6, (-5, 0, sign * 6)), (7.1, (-35, 0, sign * 15)), (8, zero)])
-        scale('transform', 'arm_' + side, [(0, 1), (1.45, (1.6, 2.3, 1.6)), (2.5, (1.3, 1.7, 1.3)), (4.5, 1)])
-        rot('transform', 'forearm_' + side, [(0, (-35, 0, 0)), (2, (-70, 0, 0)), (2.8 + delay, (-15, 0, 0)), (4.5, (-10, 0, 0)), (5.5, (-10, 0, 0)), (6.65, zero)])
-        rot('transform', 'hand_' + side, [(0, (20, 0, 0)), (2, (60, 0, 0)), (3, (55, 0, 0)), (5.5, (55, 0, 0)), (6.65, zero)])
-        claw('transform', side, [(0, 35), (1.8 + delay, -27), (2.8 + delay, 38), (3.5, -12), (4.25, 45), (5.5, 38), (6.65, -18), (7.1, 38), (8, 12)])
-        rot('transform', 'leg_' + side, [(0, (-60, 0, sign * 18)), (3.6, (-60, 0, sign * 18)), (4.5, (-45, 0, sign * 10)), (5.5, (-45, 0, sign * 10)), (6.65, zero), (7.25, zero), (8, (-32, 0, 0))])
-        rot('transform', 'shin_' + side, [(0, (100, 0, 0)), (3.6, (100, 0, 0)), (4.5, (70, 0, 0)), (5.5, (70, 0, 0)), (6.65, zero), (7.25, zero), (8, (82, 0, 0))])
+    transform_clip(clips)  # The transformation cinematic: transform.py.
 
     clip('colossus_roar', 2)
     pos('colossus_roar', 'colossus', [(0, (0, -10, 0)), (.4, zero), (1.4, zero), (2, (0, -10, 0))])
@@ -681,14 +648,10 @@ def animations():
         rot('colossus_lunge', 'shin_' + side, [(0, (82, 0, 0)), (.28, (82 + sign * 6, 0, 0)), (.55, (84 - sign * 5, 0, 0)), (.8, (87 + sign * 5, 0, 0)), (1, (92, 0, 0)), (1.3, (12 + sign * 5, 0, 0)), (1.5, (4 + sign * 5, 0, 0)), (1.7, (93 - sign * 4, 0, 0)), (2.1, (86, 0, 0)), (2.5, (82, 0, 0))])
         claw('colossus_lunge', side, [(0, 12), (.25, -22 if sign > 0 else 42), (.55, 42 if sign > 0 else -24), (.8, -25 if sign > 0 else 43), (1.0, 38), (1.3, -38), (1.7, 58), (2.1, 26), (2.5, 12)])
     # These poses are authored as absolute spine angles; the mesh already has
-    # a 22-degree hunch. Transformation starts hidden and keeps its old ramp.
+    # a 22-degree hunch.
     for name in ['colossus_lunge', 'colossus_grab', 'colossus_swipe']:
         for value in clips[name]['bones']['spine']['rotation'].values():
             value[0] -= 22
-    for time, value in clips['transform']['bones']['spine']['rotation'].items():
-        t = float(time)
-        weight = max(0, min(1, t / .3, (8 - t) / .5))
-        value[0] -= 22 * weight
     clip('colossus_bite_throw', 2.2)
     pos('colossus_bite_throw', 'colossus', [(0, (0, -10, 0)), (.65, (0, -4, 0)), (1.05, (0, -4, 0)), (1.4, (0, -7, -2)), (2.2, (0, -10, 0))])
     rot('colossus_bite_throw', 'spine', [(0, (43, 0, 0)), (.65, (20, 0, 0)), (.9, (30, 0, 0)), (1.15, (18, -12, 0)), (1.4, (40, 14, 0)), (2.2, (43, 0, 0))])

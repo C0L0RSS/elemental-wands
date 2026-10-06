@@ -5,6 +5,7 @@ are not claims of public publication. Older entries describe what changed then;
 use [current guides](../README.md) for today’s behavior and [status](../STATUS.md)
 for outstanding verification. Detailed historical reports are optional background.
 
+- [2026-10-06 — The Necromancer grows into the colossus](2026-10-06-necromancer-transformation.md)
 - [2026-09-30 — A new Guardian intro](2026-09-30-guardian-zombie-intro.md)
 - [2026-09-29 — The Shattered Nave](2026-09-29-guardian-nave.md)
 - [2026-09-29 — The graveyard mausoleum](2026-09-29-graveyard-mausoleum.md)

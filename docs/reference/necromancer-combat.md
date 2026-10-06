@@ -158,14 +158,36 @@ with headroom for the colossus. Under a low ceiling it blinks to open ground fir
 and after ten seconds it transforms in place regardless. The operator `transform`
 command skips any remaining siege.
 
-During the eight-second, invulnerable transformation the mage arches backward and
-opens its hood. The skeleton reaches through, plants its hands, and pulls its body
-free. The discarded robe collapses onto the ground behind it and burns away while
-the skeleton rears up, then settles onto all fours. Any bodies still standing freeze
-while it happens. The hitbox grows at 4.5 seconds, nearby players are pushed clear,
-and a roar at 7.1 seconds precedes the return to combat. A save during the
-transformation reloads as the finished colossus. The colossus keeps its phase if
-everyone leaves.
+The transformation is a 34.6-second cinematic (`NecromancerTransformScene`, 692 ticks) in
+which he grows into the colossus. Everyone within the encounter range watches it; it plays
+around his landing spot, turned to face the party:
+
+| Ticks | Shot |
+| --- | --- |
+| 0–40 | Low on the floor as he drops out of the dark onto one knee; the staff he lands on snaps and the braziers gutter out |
+| 40–148 | His point of view (his hood hidden): the broken halves rattle, souls seep out of the cracks and shriek free into a storm |
+| 148–208 | Overhead: two ghosts lunge into his mask and floor him |
+| 208–280 | At floor level from the side as the storm pours into his face |
+| 280–322 | Overhead: he convulses, smoke rising from his face |
+| 322–370 | Close to his face as his hand jerks up and three jolts stretch his fingers into claws, then a hold on them |
+| 370–452 | Overhead: four growth spurts (to 2.1 times his height), each ripping the robe further |
+| 452–512 | Low at its side: inside a burst of smoke and a flash he is the giant, arched on its back in the rags |
+| 512–560 | Low before its feet: it sits bolt upright, its skull snaps round to the party and its eyes ignite |
+| 560–692 | Low before it: it lunges into a spider crouch and crawls at the party, then sits back on its haunches and howls as the camera swings to a three-quarter view; the braziers flare back, and the camera returns over the last second |
+
+The server holds every watcher in place, unhurt and unable to cast; the boss is
+invulnerable, and any bodies still standing freeze. From the swap at tick 452 it is the
+colossus (hitbox and speed). The storm puts out every lit soul campfire within 44 blocks
+at tick 29, and the howl relights them at tick 638; in the crypt the client dims the
+ambient fill and fog while they are out. Each of the 40 ghosts is a non-saving
+`TransformSoulEntity` drawn with the Soul Harvest model; its flight is baked into the
+scene's track, so it stays in step with the camera. Holding Sneak skips: the camera hands
+back at once, and the scene ends early only when every watcher has skipped (never before
+tick 20), on the finished colossus with the braziers lit. A watcher who disconnects is let
+go at once; an operator stop or an unloading boss releases everyone, and the transformation
+then finishes without its camera. When it ends, players standing in the colossus are
+pushed clear. A save during the transformation reloads as the finished colossus. The
+colossus keeps its phase if everyone leaves.
 
 The colossus moves on all fours in a low diagonal crawl (steering, not pathfinding) at
 about 4.4 blocks a second, just faster than a walking player, never blinks and raises
@@ -273,6 +295,18 @@ hand contacts and the server grab socket from the same transforms. The exporter
 requires Pillow and NumPy. Default invocation writes the workshop candidate;
 `--install` writes mod resources and the Java grab socket; `--check` compares all
 five runtime outputs. Neither option installs a JAR into Lunar.
+
+The transformation clip is authored in `v2/transform.py` (the fall through the
+convulsions) and `v2/growth.py` (the growth, the giant and the howl), whose `BEATS` own the
+timeline. `art/hollow_necromancer/transform/build_scene.py` samples that clip into the
+cinematic's track: per tick the camera, flashes, fade, crypt light, braziers, his point
+of view and the souls' glow, plus the sound cues, smoke, stone chips, embers and every
+ghost's flight. It also builds the browser animatic (launch entry
+`necromancer-transform-preview`). `--install` writes
+`cinematics/necromancer_transform.json`; `--check` compares it. The cinematic's parts
+(snapped staff, claws, rags, chest panels, smoke) are hidden in every other clip, using the
+list in the track. `NecromancerRules`' transformation clock must match the track's beats;
+`checkNecromancer` verifies it.
 
 The earlier V0/V1 generators are historical sources and must not overwrite V2
 runtime assets. Minion art is owned by the Hollow undead exporter.

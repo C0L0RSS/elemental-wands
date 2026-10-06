@@ -111,23 +111,12 @@ def plant(clip, side, targets):
 
 def bake_contacts(clips):
     for side, sign in [('right', 1), ('left', -1)]:
-        for name in ['colossus_idle', 'colossus_walk', 'transform', 'colossus_roar', 'colossus_swipe', 'colossus_lunge']:
+        for name in ['colossus_idle', 'colossus_walk', 'colossus_roar', 'colossus_swipe', 'colossus_lunge']:
             clip = clips[name]
             targets = []
             for tick in range(round(clip['animation_length'] * 20) + 1):
                 t = tick / 20
-                if name == 'transform':
-                    # Reach through, plant, pull, release. One hand takes weight before the other.
-                    delay = 0 if side == 'right' else .25
-                    emergence = max(0, min(1, (t - 1.8 - delay) / .8, (6.4 - t) / .9))
-                    settling = max(0, min(1, (t - 7.25) / .75))
-                    weight = max(emergence, settling)
-                    progress = max(0, min(1, (t - 2) / 2.5))
-                    target = [sign * (12 + 8 * progress), 5, -20 - 20 * progress]
-                    if settling:
-                        target = [sign * 20, 5, -43]
-                    pitch = -65
-                elif name == 'colossus_idle':
+                if name == 'colossus_idle':
                     weight = 1
                     target = [sign * 20, 5.5, -43 - .6 * math.sin(t * math.pi / 2)]
                     pitch = -65

@@ -60,15 +60,13 @@ Pillars:
 | --- | --- | --- | --- | --- |
 | Stone | Fractured Guardian | Ruined churches, Shattered Nave | 0 | Built |
 | Nature (life turned to death) | Hollow Necromancer | Graveyards, Hollow Crypt | 1 | Built, in tuning |
-| Wind | New | Mountain peaks or the sky | 2 | Open |
+| Wind | Storm Roc | Mountain peaks, a sky realm above the clouds | 2 | Concept chosen |
 | Fire | New | The Nether | 3 | Open |
 | Space | New | The End or the deep dark | 4 | Open |
 | — | Final: the wizard who tried to hold all five | Opened by all five shards | 5 | Open |
 
 Early seeds to discuss (none chosen):
 
-- **Wind:** a storm bird fought on a crumbling summit where gusts shove players, or a
-  masked duelist who fights like a wizard player.
 - **Fire:** a forge colossus whose lava floods cool into platforms, or a phoenix that
   rises from its ashes unless finished in time.
 - **Space:** a creature that exists in two places at once, or an arena collapsing
@@ -85,6 +83,34 @@ These come from the Guardian and Necromancer playtests:
 - Summoned waves are separate sections, not mixed into the duel.
 - Keep the boss findable. Darkness must not cost readability.
 - Every mechanic is solvable solo. A teammate makes it easier but is never required.
+
+### Wind: the Storm Roc
+
+- **Decided:** the Wind shardbearer is the Storm Roc, a giant storm bird fought above
+  the clouds. Its faction is the Windcallers.
+- **Proposed:** an aerie shrine on a mountain peak holds a walk-in veil into a sky
+  realm: a summit plateau over a sea of clouds, ringed by standing stones and wind
+  chimes.
+- **Proposed:** in phase one the Roc circles out of reach, screeches and dives at a
+  marked shadow. A missed dive crashes it into the ground with its talons stuck, which
+  is the main window to hit it. On the ground it uses a wing buffet, a heavy beak
+  lunge and a feather sweep.
+- **Decided:** nothing in the fight knocks players toward the edge. The Roc's attacks
+  hurt but don't shove. A player who falls off the edge dies.
+- **Proposed:** the chimes show which way the next gust of wind blades will sweep from.
+  Standing stones block it, but the Roc smashes stones, so cover runs out as the fight
+  goes on.
+- **Proposed:** the one big set piece is the phase change, where the Roc tears the
+  summit into floating islands linked by updraft vents.
+- **Proposed:** phase two is a storm: lightning telegraphed on the ground, feather
+  volleys, and a tornado that wanders across the islands and hurts anyone it touches.
+- **Proposed:** Windcallers are masked cultists who roam the mountain peaks. They dash,
+  throw daggers and glide like wand players.
+- **Proposed:** players of every element can fight it. The Roc spends real time within
+  reach of short-range spells, and the arena supplies its own lift instead of relying
+  on Wind's mobility spells.
+- **Open:** whether Windcallers appear in the fight; the intro cinematic; fight length
+  and the gear it is tuned against.
 
 ## Hub map page
 
@@ -141,7 +167,8 @@ With infusion, a standout pairing can still become a hand-made signature spell l
   a lesson, rewards players who go looking.
 - **Proposed premise (draft):** the broken-ring emblem was once a whole ring that
   bound the five elements. A wizard tried to hold all five alone and it shattered.
-  The Guardian still watches over the pieces. The Necromancer tried to fill the
+  The wizard's messenger, the Storm Roc, carried the pieces to the ends of the world
+  and kept the Wind piece for itself. The Guardian still watches over the pieces. The Necromancer tried to fill the
   hollow it left with stolen souls. The final boss is that first wizard, now Hollow.
 - **Proposed lesson:** no one wizard can hold everything. This echoes how the elements
   split into roles and how play encourages parties.
@@ -172,7 +199,7 @@ With infusion, a standout pairing can still become a hand-made signature spell l
 
 ## Open questions
 
-- Boss concepts for the Wind, Fire and Space slots, and the final boss.
+- Boss concepts for the Fire and Space slots, and the final boss.
 - Whether one element per shardbearer is the right frame.
 - What crystals do.
 - The exact level cap per shard.

@@ -3,23 +3,31 @@ package com.anton.elementalwands.arena;
 import com.anton.elementalwands.entity.FracturedGuardianEntity;
 import com.anton.elementalwands.entity.GuardianIntro;
 import com.anton.elementalwands.entity.GuardianIntroZombieEntity;
+import com.anton.elementalwands.network.ModNetworking;
 import com.mojang.authlib.GameProfile;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.impl.networking.CommonRegisterPayload;
+import net.fabricmc.fabric.impl.networking.server.ServerNetworkingImpl;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.NetworkSide;
+import net.minecraft.network.packet.CustomPayload;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.c2s.common.SyncedClientOptions;
+import net.minecraft.network.packet.s2c.common.CustomPayloadS2CPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ConnectedClientData;
@@ -36,12 +44,14 @@ import net.minecraft.world.World;
 /**
  * Test-only Fabric entrypoint, packaged solely by the optional nave smoke task. Drives the Guardian
  * ritual through the Shattered Nave with simulated players: layout, arrival, the Guardian's intro
- * (played in full once, then skipped), protection and containment, spectating with kept belongings,
- * victory, a wipe, and a restart.
+ * (played in full once, then skipped, then losing a watcher who dies mid-scene), protection and
+ * containment, spectating with kept belongings, victory, a wipe, and a restart.
  */
 public final class GuardianNaveSmokeMod implements ModInitializer {
     private static final String SITE = "smoke|0|0|0";
     private static final Path SPECTATOR = Path.of("NAVE_SPECTATOR.txt");
+    /** Custom payloads sent to simulated players that declared channels, as their clients would receive them. */
+    private static final Map<UUID, List<CustomPayload>> HEARD = new ConcurrentHashMap<>();
     private int ticks, stage, mark, ground;
     private ServerPlayerEntity first, second;
     private FracturedGuardianEntity guardian;
@@ -49,6 +59,7 @@ public final class GuardianNaveSmokeMod implements ModInitializer {
     private boolean accepted;
     private String previous = "";
     private Vec3d held;
+    private List<CustomPayload> heard;
 
     @Override public void onInitialize() {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
@@ -169,7 +180,7 @@ public final class GuardianNaveSmokeMod implements ModInitializer {
             stage = 6;
         }
         // Later fights skip the intro: it ends early only once everyone has asked to.
-        if ((stage == 6 || stage == 8) && guardian(nave) != null && guardian.inIntro()) {
+        if (stage == 6 && guardian(nave) != null && guardian.inIntro()) {
             if (GuardianIntro.watching(first)) GuardianIntro.skip(first);
             if (GuardianIntro.watching(second)) GuardianIntro.skip(second);
         }
@@ -190,16 +201,35 @@ public final class GuardianNaveSmokeMod implements ModInitializer {
                     "A wiped player did not return to Survival at the church");
             require(second.getEntityWorld() == world && second.interactionManager.getGameMode() == GameMode.ADVENTURE, "A wiped observer lost Adventure mode");
             require(nave.getEntitiesByClass(FracturedGuardianEntity.class, new Box(centre).expand(80), Entity::isAlive).isEmpty(), "The wipe left the Guardian standing");
+            heard = listen(second, ModNetworking.GuardianIntroPayload.ID);
             ritual(first);
             stage = 8;
         }
-        if (stage == 8 && guardian(nave) != null && GuardianArenaManager.isFighting(guardian)) {
+        // The retry's intro loses a watcher: one killed mid-scene (/kill or the void) is let go at once and its
+        // client told the scene is over, the scene carries on for the other, whose skip alone then ends it.
+        if (stage == 8 && guardian(nave) != null && guardian.inIntro() && !intro(heard).isEmpty()) {
+            require(intro(heard).size() == 1 && intro(heard).get(0).active() && GuardianIntro.watching(second), "The retry's intro did not start on the second player's client");
+            second.onTeleportationDone();
             second.kill(nave);
-            respawn(server, second);
+            require(!second.isAlive(), "The second player survived /kill mid-intro");
             mark = ticks;
             stage = 9;
         }
-        if (stage == 9 && ticks - mark == 3) {
+        if (stage == 9 && ticks - mark == 1) {
+            require(!GuardianIntro.watching(second), "A watcher killed mid-intro is still held");
+            require(guardian.inIntro() && GuardianIntro.watching(first), "A watcher's death ended the intro for everyone");
+            var told = intro(heard);
+            require(told.size() == 2 && !told.get(1).active() && told.get(1).guardianId() == guardian.getId(),
+                    "A watcher killed mid-intro was not told the scene is over: " + told);
+            respawn(server, second);
+            GuardianIntro.skip(first);
+        }
+        if (stage == 9 && GuardianArenaManager.isFighting(guardian)) {
+            require(ticks - mark < GuardianIntro.LENGTH / 2, "The fallen watcher still counted toward the skip");
+            mark = ticks;
+            stage = 10;
+        }
+        if (stage == 10 && ticks - mark == 3) {
             second = server.getPlayerManager().getPlayer(second.getUuid());
             require(second.isSpectator(), "The restart check needs a saved spectator");
             Files.writeString(SPECTATOR, second.getUuidAsString());
@@ -207,7 +237,8 @@ public final class GuardianNaveSmokeMod implements ModInitializer {
             server.getPlayerManager().remove(second);
             Files.writeString(Path.of("SMOKE_PASSED.txt"), "Ritual admission, nave layout, arrival, the Guardian's full intro and a unanimous skip, casting and damage gates, "
                     + "floor and hall protection, spell writes, explosions, containment, spectating with kept belongings, victory return, "
-                    + "a party wipe and a retry passed. Stopping mid-fight to exercise restart recovery.\n");
+                    + "a party wipe and a retry whose intro lets a watcher killed mid-scene go and tells its client the scene is over passed. "
+                    + "Stopping mid-fight to exercise restart recovery.\n");
             System.out.println("NAVE SMOKE PASSED — stopping mid-fight to exercise recovery");
             server.stop(false);
         }
@@ -272,6 +303,27 @@ public final class GuardianNaveSmokeMod implements ModInitializer {
 
     private static String status() { return GuardianArenaManager.status(); }
 
+    /** The intro payloads among what a simulated player was sent, in order. */
+    private static List<ModNetworking.GuardianIntroPayload> intro(List<CustomPayload> heard) {
+        return heard.stream().filter(ModNetworking.GuardianIntroPayload.class::isInstance).map(ModNetworking.GuardianIntroPayload.class::cast).toList();
+    }
+
+    /**
+     * Declares {@code channel} as a client's register packet would, so the server will send on it, and
+     * records the custom payloads this simulated player is sent from now on.
+     */
+    static List<CustomPayload> listen(ServerPlayerEntity player, CustomPayload.Id<?> channel) {
+        var addon = ServerNetworkingImpl.getAddon(player.networkHandler);
+        addon.onCommonVersionPacket(1);
+        addon.onCommonRegisterPacket(new CommonRegisterPayload(1, CommonRegisterPayload.PLAY_PHASE, Set.of(channel.id())));
+        return HEARD.computeIfAbsent(player.getUuid(), id -> new CopyOnWriteArrayList<>());
+    }
+
+    private static void hear(UUID player, Packet<?> packet) {
+        List<CustomPayload> heard = HEARD.get(player);
+        if (heard != null && packet instanceof CustomPayloadS2CPacket custom) heard.add(custom.payload());
+    }
+
     /** A simulated player has no client to press Respawn; do what the respawn packet does. */
     private static void respawn(MinecraftServer server, ServerPlayerEntity dead) {
         var handler = dead.networkHandler;
@@ -288,9 +340,9 @@ public final class GuardianNaveSmokeMod implements ModInitializer {
         GameProfile profile = new GameProfile(uuid, name);
         ServerPlayerEntity player = new ServerPlayerEntity(server, world, profile, SyncedClientOptions.createDefault());
         ClientConnection connection = new ClientConnection(NetworkSide.SERVERBOUND) {
-            @Override public void send(Packet<?> packet) {}
-            @Override public void send(Packet<?> packet, io.netty.channel.ChannelFutureListener listener) {}
-            @Override public void send(Packet<?> packet, io.netty.channel.ChannelFutureListener listener, boolean flush) {}
+            @Override public void send(Packet<?> packet) { hear(uuid, packet); }
+            @Override public void send(Packet<?> packet, io.netty.channel.ChannelFutureListener listener) { hear(uuid, packet); }
+            @Override public void send(Packet<?> packet, io.netty.channel.ChannelFutureListener listener, boolean flush) { hear(uuid, packet); }
             @Override public void flush() {}
             @Override public boolean isOpen() { return true; }
         };

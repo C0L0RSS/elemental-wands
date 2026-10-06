@@ -86,7 +86,8 @@ until it lands. The server plays the sounds and dust (grit falling as it comes, 
 across the floor, a puff at the tear), placed from the same track.
 
 Watchers are held still, unhurt and unable to cast. Anyone can hold Sneak to skip; the fight
-starts early only once every watcher has. It plays every fight. An operator control that stops
+starts early only once every watcher has. A watcher who dies (`/kill` or the void) or changes
+dimension is let go with its camera handed back and no longer counts toward the skip. It plays every fight. An operator control that stops
 the Guardian mid-scene releases everyone without starting the fight, and a restart comes back
 fighting. `/ew guardian intro` replays it on the nearest Guardian anywhere, turned to face the
 operator.

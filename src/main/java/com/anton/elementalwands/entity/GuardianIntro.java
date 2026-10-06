@@ -177,7 +177,8 @@ public final class GuardianIntro {
             if (release || player.isRemoved() || !player.isAlive() || player.getEntityWorld() != world) {
                 WATCHING.remove(player.getUuid(), this);
                 player.fallDistance = 0;
-                if (release && !player.isRemoved() && ServerPlayNetworking.canSend(player, ModNetworking.GuardianIntroPayload.ID))
+                // Released, killed, or gone to another dimension: its client must let go of the camera too.
+                if (!player.isRemoved() && ServerPlayNetworking.canSend(player, ModNetworking.GuardianIntroPayload.ID))
                     ServerPlayNetworking.send(player, payload(false));
                 it.remove();
                 continue;

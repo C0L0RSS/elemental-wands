@@ -26,7 +26,8 @@ the synchronized entity yaw directly so the stationary mob’s usual body-turn d
 him facing away during the staff slam. The server holds every watcher in place: they
 cannot move, cast or take damage (except `/kill` and the void), and the boss is passive and
 untouchable. A watcher caught mid-jump builds no fall distance while held. A watcher who disconnects
-is let go at once, and a boss that unloads, changes dimension or is removed mid-scene releases
+is let go at once; one who dies or changes dimension is let go with its camera handed back and no
+longer counts toward the skip. A boss that unloads, changes dimension or is removed mid-scene releases
 everyone. Operator `fight`, `stop`, `intro` and the one-shot rehearsals (casts, `wave`, `rain`)
 end a running scene on the spot: its watchers go free and it never starts the fight later. The
 scene itself never saves: a boss saved mid-scene reloads fighting, as the scene would have

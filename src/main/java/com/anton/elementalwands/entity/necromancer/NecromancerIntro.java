@@ -227,6 +227,10 @@ public final class NecromancerIntro {
             ServerPlayerEntity player = entry.getKey();
             if (player.isRemoved() || !player.isAlive() || player.getEntityWorld() != world) {
                 WATCHING.remove(player.getUuid(), this);
+                player.fallDistance = 0;
+                // Killed or gone to another dimension: its client must let go of the camera too.
+                if (!player.isRemoved() && ServerPlayNetworking.canSend(player, ModNetworking.NecromancerIntroPayload.ID))
+                    ServerPlayNetworking.send(player, new ModNetworking.NecromancerIntroPayload(boss.getId(), start, yaw, centre, false));
                 it.remove();
                 continue;
             }

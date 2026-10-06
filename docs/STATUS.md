@@ -70,6 +70,10 @@ It records known verification limits; it is not a fresh installation receipt.
   layout. `/place structure` now needs the chunks about 40 blocks around the yard loaded. And
   graveyards have no exclusion from villages (the structure set's one exclusion zone is the
   Guardian church), so a village can overlap one.
+- **Blink Rift nerf (October 6):** Blink no longer leaves a return rift and its
+  cooldown rose from 6 to 10 seconds. Astral Double and Gravity Well server
+  fixtures cover the cooldown and chaining. Pending: a Lunar playtest of Space's
+  escape options.
 - **Gravity Well:** Space has five learnable spells; every current elemental
   catalog now meets the five-spell minimum. Dedicated-server checks passed the
   12.25-block level throw, immediate floor/wall/entity impact, pull, early/automatic
@@ -83,7 +87,7 @@ It records known verification limits; it is not a fresh installation receipt.
   balance and feel remain pending; this is not an installation receipt.
 - **Astral Double:** Space now has five spells with Gravity Well.
   Dedicated-server checks passed the short toss, mirrored/simultaneous damage,
-  Blink Rift chaining, one-use return, delayed recovery, invalid placement,
+  Blink chaining, one-use return, delayed recovery, invalid placement,
   ally protection, Guardian attack destruction and covered lifecycle cases.
   Native client checks passed for bound input, the owner skin and wand, mirrored
   fire, teleport chaining and HUD synchronization. Human Lunar/multiplayer feel

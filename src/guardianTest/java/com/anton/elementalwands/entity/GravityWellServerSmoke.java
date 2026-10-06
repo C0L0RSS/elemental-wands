@@ -88,8 +88,8 @@ public final class GravityWellServerSmoke implements ModInitializer {
         if(t==80) { reset();target.setPosition(.5,101,4.5);WandLoadouts.cast(owner,4);bomb=GravityWellManager.active(owner); }
         if(t==85) { require(bomb.isWell()&&bomb.getZ()<5,"Enemy impact did not activate immediately");impact=GravityWellManager.state(owner).getLong("impact",0);target.setPosition(20,100,20); }
         if(t==88)require(bomb.getZ()<5,"Well followed struck enemy");
-        if(t==92) { owner.setPosition(10,100,.5);WandLoadouts.cast(owner,1);require(BlinkRiftManager.hasActiveRift(w,owner)&&!bomb.isRemoved(),"Blink canceled well"); }
-        if(t==100) { WandLoadouts.cast(owner,1);require(!BlinkRiftManager.hasActiveRift(w,owner)&&!bomb.isRemoved(),"Rift return canceled well");owner.setStackInHand(Hand.MAIN_HAND,ItemStack.EMPTY); }
+        if(t==92) { owner.setPosition(10,100,.5);var from=owner.getEntityPos();WandLoadouts.cast(owner,1);require(owner.getEntityPos().squaredDistanceTo(from)>1&&!bomb.isRemoved(),"Blink canceled well"); }
+        if(t==100) { var from=owner.getEntityPos();WandLoadouts.cast(owner,1);require(owner.getEntityPos().squaredDistanceTo(from)<.001&&!bomb.isRemoved(),"Blink recast during its cooldown");owner.setStackInHand(Hand.MAIN_HAND,ItemStack.EMPTY); }
         if(t==105)require(GravityWellManager.active(owner)==bomb,"Putting away wand canceled field");
         if(t==150) { target.setPosition(bomb.getEntityPos().add(2,0,0));target.setVelocity(Vec3d.ZERO);target.setHealth(20);target.timeUntilRegen=0;healthBefore=target.getHealth(); }
         if(t==185) { require(bomb.isRemoved()&&target.getHealth()<healthBefore,"Automatic collapse missing");require(GravityWellManager.state(owner).getLong("expires",0)-impact==80,"Well lifetime not 80 ticks"); }
@@ -127,7 +127,7 @@ public final class GravityWellServerSmoke implements ModInitializer {
         }
         if(t==655) {
             require(bomb.isRemoved()&&GravityWellManager.state(owner).getLong("impact",0)-flightLaunched==60&&GravityWellManager.remaining(owner)==319,"World-time flight timeout missed cleanup/recovery: removed="+bomb.isRemoved()+" remaining="+GravityWellManager.remaining(owner)+" time="+w.getTime()+" state="+GravityWellManager.state(owner));
-            Files.writeString(Path.of("PRESSURE_PASSED.txt"),"Gravity Well passed: five Space spells; purchase/equip; real throw distance="+throwDistance+"; swept floor/entity/wall impact; stationary core; 80-tick pull lifetime; eight-tick buildup then single burst damage; timed cosmetic cleanup; deliberate early and automatic collapse; six base damage and Space XP; cover/allies/own double protection; stronger collapse tug; Guardian displacement resistance with damage; independent Blink/return; held input and duplicate prevention; impact-based exact 320-tick recovery; fresh-wand protection; put-away, affinity/death/lost-flight cleanup; manager well/flight expiry independent of entity ticks.\n");server.stop(false);
+            Files.writeString(Path.of("PRESSURE_PASSED.txt"),"Gravity Well passed: five Space spells; purchase/equip; real throw distance="+throwDistance+"; swept floor/entity/wall impact; stationary core; 80-tick pull lifetime; eight-tick buildup then single burst damage; timed cosmetic cleanup; deliberate early and automatic collapse; six base damage and Space XP; cover/allies/own double protection; stronger collapse tug; Guardian displacement resistance with damage; independent Blink and its cooldown; held input and duplicate prevention; impact-based exact 320-tick recovery; fresh-wand protection; put-away, affinity/death/lost-flight cleanup; manager well/flight expiry independent of entity ticks.\n");server.stop(false);
         }
     }
     private void aim(){owner.setYaw(0);owner.setHeadYaw(0);owner.setPitch(0);}

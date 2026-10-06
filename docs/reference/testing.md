@@ -214,7 +214,7 @@ The ordinary mode exercises bound inputs; recording sends scripted cast packets.
 Require fresh `build/astral-double-smoke-run/PRESSURE_PASSED.txt` and
 `build/astral-double-client-smoke/HUB_PASSED.txt`, with no failure markers.
 Scenes cover the orb toss, skin and wand, mirrored fire, consuming teleport,
-Blink Rift return and destruction poof. A dev player's supplied skin is used;
+Blink chaining and destruction poof. A dev player's supplied skin is used;
 this does not verify the user's authenticated Lunar skin or multiplayer feel.
 
 ## Evidence retention

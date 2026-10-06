@@ -255,7 +255,8 @@ while preserving earned recovery openings. Owners: `NatureAbilityHandler`,
 Singularity Bolt is a black star with limited initial aim assistance. It cannot
 retarget or U-turn and loses guidance through cover or invalid angles. Impact
 causes damage without restoring the retired pull/mobility-disruption mechanics.
-Blink Rift makes a safe teleport and leaves a temporary return rift.
+Blink Rift teleports up to 10 blocks along the caster's aim to the farthest safe
+spot, on a 10-second cooldown. It leaves no return point.
 
 Astral Double (`astral_double`, 500 Flux) tosses a harmless, visible orb in a short
 arc (about seven blocks on level ground). A supported landing with clear standing
@@ -276,9 +277,8 @@ eight seconds old (see [Necromancer combat](necromancer-combat.md)).
 
 Recasting within 64 blocks teleports to the double and consumes it. Walls between
 the two positions do not prevent a return to a safe destination; arena containment
-still applies. The double neither consumes nor refreshes Blink Rift, and blinking
-does not remove the double. Blink, consume the double, then immediately use the
-still-open return rift is supported through the existing global input timing.
+still applies. Blinking does not remove the double, and the double's return does
+not touch Blink's cooldown, so the two can be chained.
 
 A single hostile damaging hit, including Guardian beam, wave, slam, rock and shard
 contact, destroys the double in a magical poof. Owner/allied attacks are protected.
@@ -328,7 +328,7 @@ walk, blink, or use items; switching/dropping the wand does not cancel or refund
 it. Death, world exit, and encounter teardown clean it up without a refund.
 The orb erases blocks along its path except in the Hollow Crypt realm, where it
 leaves the terrain intact (as do explosions there; see `HollowCryptRealm.keepsTerrain`).
-Owners: `SpaceAbilityHandler`, `SingularityBoltEntity`, `BlinkRiftManager`,
+Owners: `SpaceAbilityHandler`, `SingularityBoltEntity`,
 `HollowPurpleChargeManager`. Keep arena containment in all teleport paths.
 
 Visual ownership is described in [art and assets](art-and-assets.md).

@@ -88,7 +88,7 @@ public final class AstralDoubleClientSmoke implements ClientModInitializer {
             if(t==121)cast(0,false);
             if(t>=121&&t<=132){int n=0;for(var e:c.world.getEntities())if(e instanceof SingularityBoltEntity)n++;if(n>=2)sawPair=true;}
             if(t==128)shot(c,"astral-double-crossfire.png");
-            if(t==155){require(sawPair,"Two projectiles never synchronized");server.execute(()->{if(target.getHealth()>86.01)serverFailure="Mirrored damage missing: "+target.getHealth();});}
+            if(t==155){require(sawPair,"Two projectiles never synchronized");server.execute(()->{if(target.getHealth()>100-7*(1+SingularityBoltEntity.ECHO_STRENGTH)+.01)serverFailure="Mirrored damage missing: "+target.getHealth();});}
             if(t==170)server.execute(()->server.getPlayerManager().getPlayer(uuid).networkHandler.requestTeleport(8.5,floor,.5,0,0));
             if(t>=174&&t<=225){c.player.setYaw(0);c.player.setPitch(0);}
             if(t==180)cast(1,true);
@@ -98,8 +98,8 @@ public final class AstralDoubleClientSmoke implements ClientModInitializer {
             if(t==200)shot(c,"astral-double-teleport.png");
             if(t==203){require(clone(c)==null,"Teleport left clone");cast(1,true);}
             if(t==204)cast(1,false);
-            if(t==218)server.execute(()->{var p=server.getPlayerManager().getPlayer(uuid);comboPassed=p.getEntityPos().squaredDistanceTo(new Vec3d(8.5,floor,.5))<.1&&!BlinkRiftManager.hasActiveRift(p.getEntityWorld(),p)&&AstralDoubleManager.remaining(p)>0;});
-            if(t==225){require(comboPassed,"Blink/double/rift combo failed");shot(c,"astral-double-return.png");}
+            if(t==218)server.execute(()->{var p=server.getPlayerManager().getPlayer(uuid);comboPassed=p.getEntityPos().squaredDistanceTo(anchor)<.1&&AstralDoubleManager.remaining(p)>0;});
+            if(t==225){require(comboPassed,"Blink/double combo failed or Blink recast during its cooldown");shot(c,"astral-double-blink-cooldown.png");}
             if(t==235)server.execute(()->{var p=server.getPlayerManager().getPlayer(uuid);p.setAttached(EWAttachments.ASTRAL_STATE,new NbtCompound());p.setStackInHand(Hand.MAIN_HAND,new ItemStack(ModItems.FRACTURED_WAND));p.networkHandler.requestTeleport(.5,floor,.5,0,0);});
             if(t>=239){c.player.setYaw(0);c.player.setPitch(0);}
             if(t==245)cast(3,true);
@@ -111,7 +111,7 @@ public final class AstralDoubleClientSmoke implements ClientModInitializer {
             if(record&&t>=40&&t<340)ScreenshotRecorder.saveScreenshot(c.runDirectory,recordingDirectory+"/frame-"+String.format(java.util.Locale.ROOT,"%04d",t-40)+".png",c.getFramebuffer(),1,message->recorded.incrementAndGet());
             if(t>=340){if(record&&recorded.get()<300)return;
                 var spell=WandSpells.find("astral_double");require(c.textRenderer.getWidth(spell.reach())<=148,"Hub reach overflow");require(c.textRenderer.getWidth(spell.timing())<=148,"Hub timing overflow");require(c.textRenderer.wrapLines(net.minecraft.text.Text.literal(spell.description()),148).size()<=3,"Hub description overflow");
-                Files.writeString(Path.of("HUB_PASSED.txt"),"Astral Double native client passed: "+(record?"scripted cast packets, hidden-window recording":"real bound input")+", orb/double synchronization, exact owner skin in player render state, stationary model/wand/shimmer screenshots, two networked bolts and mirrored damage, Blink -> consume double -> rift return, active and recovery HUD synchronization, destruction, and hub text fit. Human Lunar playtest pending.\n");done=true;c.scheduleStop();}
+                Files.writeString(Path.of("HUB_PASSED.txt"),"Astral Double native client passed: "+(record?"scripted cast packets, hidden-window recording":"real bound input")+", orb/double synchronization, exact owner skin in player render state, stationary model/wand/shimmer screenshots, two networked bolts and mirrored damage, Blink -> consume double with no Blink return during its cooldown, active and recovery HUD synchronization, destruction, and hub text fit. Human Lunar playtest pending.\n");done=true;c.scheduleStop();}
         }catch(Throwable e){done=true;e.printStackTrace();try{Files.writeString(Path.of("HUB_FAILED.txt"),e.toString());}catch(Exception ignored){}c.scheduleStop();}
     }
     private void cast(int slot,boolean press){

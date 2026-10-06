@@ -105,7 +105,7 @@ public final class WandSpells {
                 "Throw a jump flower. Land on it to launch safely. Anyone can use or break it."),
         spell(WizardAffinity.NATURE, Ability.ULTIMATE, "overgrowth", "Overgrowth", "Throw an acorn to grow a healing oak. One nearby flower extends its duration."),
         spell(WizardAffinity.SPACE, Ability.PRIMARY, "singularity_bolt", "Singularity Bolt", "Launch a black star with subtle guidance and a damaging impact burst."),
-        spell(WizardAffinity.SPACE, Ability.SECONDARY, "blink_rift", "Blink Rift", "Blink to a safe location, leaving a rift you can use to return."),
+        spell(WizardAffinity.SPACE, Ability.SECONDARY, "blink_rift", "Blink Rift", "Blink a short distance to a safe location along your aim."),
         new Spell("astral_double", WizardAffinity.SPACE, Ability.SECONDARY, "Astral Double",
                 "Toss a fragile double that copies shots. Recast to consume it and teleport.", 500),
         new Spell("gravity_well", WizardAffinity.SPACE, Ability.SECONDARY, "Gravity Well",

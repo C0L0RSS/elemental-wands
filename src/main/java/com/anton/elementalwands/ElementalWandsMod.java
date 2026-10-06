@@ -9,7 +9,6 @@ import com.anton.elementalwands.registry.ModItems;
 import com.anton.elementalwands.registry.ModEntities;
 import com.anton.elementalwands.registry.ModParticles;
 import com.anton.elementalwands.registry.ModSpellBlocks;
-import com.anton.elementalwands.util.BlinkRiftManager;
 import com.anton.elementalwands.util.SeedlingManager;
 import com.anton.elementalwands.util.EntangleTracker;
 import com.anton.elementalwands.util.HollowPurpleChargeManager;
@@ -78,7 +77,6 @@ public class ElementalWandsMod implements ModInitializer {
         com.anton.elementalwands.util.SpringbloomManager.init();
         MeteorManager.init();
         TitanDomeManager.init();
-        BlinkRiftManager.init();
         HollowPurpleChargeManager.init();
         ModBlocks.registerAll();
         ModEntities.registerAll();

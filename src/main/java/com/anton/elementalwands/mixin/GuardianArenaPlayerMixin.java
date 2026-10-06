@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/** Covers pearls, old rifts, commands, and dimension travel as well as wand destination checks. */
+/** Covers pearls, commands, and dimension travel as well as wand destination checks. */
 @Mixin(ServerPlayerEntity.class)
 public abstract class GuardianArenaPlayerMixin {
     @Inject(method="requestTeleport",at=@At("HEAD"),cancellable=true)

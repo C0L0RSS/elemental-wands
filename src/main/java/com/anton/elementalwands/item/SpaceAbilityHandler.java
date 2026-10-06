@@ -4,7 +4,6 @@ import java.util.Optional;
 
 import com.anton.elementalwands.entity.SingularityBoltEntity;
 import com.anton.elementalwands.registry.ModParticles;
-import com.anton.elementalwands.util.BlinkRiftManager;
 import com.anton.elementalwands.util.HollowPurpleChargeManager;
 
 import net.minecraft.entity.player.PlayerEntity;
@@ -22,10 +21,9 @@ import net.minecraft.world.RaycastContext;
 public final class SpaceAbilityHandler {
 
     private static final int PRIMARY_COOLDOWN_TICKS = 20;
-    private static final int SECONDARY_COOLDOWN_TICKS = 120;
+    private static final int SECONDARY_COOLDOWN_TICKS = 200;
 
     private static final double BLINK_RANGE = 10.0;
-    private static final int RIFT_DURATION_TICKS = SECONDARY_COOLDOWN_TICKS;
 
     private SpaceAbilityHandler() {}
 
@@ -68,15 +66,6 @@ public final class SpaceAbilityHandler {
         if (HollowPurpleChargeManager.isCharging(world, caster)) {
             return;
         }
-        BlinkRiftManager.SwapResult swapResult = BlinkRiftManager.trySwapWithRift(world, caster);
-        if (swapResult == BlinkRiftManager.SwapResult.SWAPPED) {
-            return;
-        }
-        if (swapResult == BlinkRiftManager.SwapResult.BLOCKED) {
-            caster.sendMessage(Text.literal("Rift swap blocked."), true);
-            return;
-        }
-
         Optional<Vec3d> destination = findSafeBlinkDestination(world, caster, BLINK_RANGE);
         if (destination.isEmpty()) {
             spawnFailedBlink(world, caster.getEntityPos());
@@ -94,8 +83,6 @@ public final class SpaceAbilityHandler {
         caster.requestTeleport(to.x, to.y, to.z);
         caster.fallDistance = 0.0f;
         caster.velocityModified = true;
-
-        BlinkRiftManager.createRift(world, caster, from, RIFT_DURATION_TICKS);
 
         spawnBlinkFold(world, from, false);
         spawnBlinkFold(world, to, true);

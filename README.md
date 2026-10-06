@@ -102,7 +102,7 @@ The **Verdant Step** passive creates temporary rafts across water.
 ### Space
 
 **Singularity Bolt** launches a black star with limited aim assistance.
-**Blink Rift** teleports you and leaves a temporary return point.
+**Blink Rift** teleports you a short distance along your aim.
 **Hollow Purple** commits you to a charged release: you can keep aiming while
 charging, but cannot move or use other items.
 

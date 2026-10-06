@@ -5,8 +5,8 @@ import net.minecraft.util.math.Vec3d;
 
 final class GuardianPhaseContractTest {
     static void run() {
-        require(GuardianPhaseRules.threshold(360,600) && !GuardianPhaseRules.threshold(361,600),"60% boundary moved");
-        require(GuardianPhaseRules.threshold(1440,2400),"Party threshold differs from solo");
+        require(GuardianPhaseRules.threshold(700,1400) && !GuardianPhaseRules.threshold(701,1400),"Half-health boundary moved");
+        require(GuardianPhaseRules.threshold(1700,3400),"Party threshold differs from solo");
         for(boolean unstable:new boolean[]{false,true}) {
             double speed=GuardianPhaseRules.waveSpeed(unstable),range=GuardianPhaseRules.waveRange(unstable);
             require(speed>.3,"Sprinting can outrun the wave");

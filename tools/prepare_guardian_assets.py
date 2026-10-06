@@ -116,7 +116,6 @@ def compile_assets():
     animations = json.loads((SOURCE.parent/'v5-leap/fractured_guardian.animation.json').read_text())
     assert set(animations['animations']) == {f'animation.fractured_guardian.{n}' for n in ['idle','walk','awaken','slam','throw','beam','leap_launch','leap_air','leap_land']}
     animations['animations'].update(json.loads((SOURCE.parent/'intro/intro.animation.json').read_text())['animations'])
-    animations['animations'].update(json.loads((SOURCE.parent/'guard/guard.animation.json').read_text())['animations'])
     animations['animations'].update(json.loads((SOURCE.parent/'phase/phase.animation.json').read_text())['animations'])
     for clip in animations['animations'].values():
         assert set(clip['bones']) <= names

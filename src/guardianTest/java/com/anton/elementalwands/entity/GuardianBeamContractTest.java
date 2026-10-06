@@ -12,7 +12,7 @@ public final class GuardianBeamContractTest {
     public static void main(String[] args) throws Exception {
         com.anton.elementalwands.arena.GuardianArenaContractTest.run();
         GuardianBossContractTest.run();
-        GuardianGuardContractTest.run();
+        GuardianShellContractTest.run();
         GuardianPhaseContractTest.run();
         GuardianNatureContractTest.run();
         GuardianLeapContractTest.run();

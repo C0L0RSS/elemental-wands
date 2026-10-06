@@ -17,9 +17,17 @@ public final class GuardianCommands {
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         var root = CommandManager.literal("guardian").requires(source -> source.hasPermissionLevel(2));
-        for (String action : new String[]{"intro", "awaken", "slam", "throw", "follow", "stop", "beam", "fight", "rock", "shockwave", "melee", "leap", "fan", "status"}) {
+        for (String action : new String[]{"intro", "awaken", "slam", "throw", "follow", "stop", "beam", "fight", "rock", "shockwave", "melee", "leap", "fan", "pulse", "status"}) {
             root.then(CommandManager.literal(action).executes(context -> run(context.getSource(), action)));
         }
+        for (boolean on : new boolean[]{true, false})
+            root.then(CommandManager.literal("log").then(CommandManager.literal(on ? "on" : "off").executes(context -> {
+                com.anton.elementalwands.entity.GuardianFightLog.setEnabled(on);
+                context.getSource().sendFeedback(() -> Text.literal(on
+                        ? "Guardian fight log on: fights that start from now record attacks, hits and damage, then write logs/guardian-fight-*.txt."
+                        : "Guardian fight log off."), true);
+                return 1;
+            })));
         root.then(CommandManager.literal("church")
                 .then(CommandManager.literal("cancel").executes(context -> {
                     String message=com.anton.elementalwands.church.GuardianChurchLocator.cancel();
@@ -63,9 +71,10 @@ public final class GuardianCommands {
             float face = com.anton.elementalwands.entity.GuardianIntro.facing(guardian.getEntityPos(), caller.getEntityPos());
             guardian.setYaw(face); guardian.setBodyYaw(face); guardian.setHeadYaw(face);
             guardian.beginIntro(source.getWorld().getPlayers(p -> p.isAlive() && !p.isSpectator() && p.squaredDistanceTo(guardian) <= 64 * 64));
-        } else if (action.equals("fan") || action.equals("rock") || action.equals("shockwave") || action.equals("melee") || action.equals("leap")) {
+        } else if (action.equals("fan") || action.equals("rock") || action.equals("shockwave") || action.equals("melee") || action.equals("leap") || action.equals("pulse")) {
             guardian.testAttack(source.getPlayerOrThrow(), switch (action) {
                 case "fan" -> com.anton.elementalwands.entity.GuardianCombatRules.Attack.FAN;
+                case "pulse" -> com.anton.elementalwands.entity.GuardianCombatRules.Attack.PULSE;
                 case "leap" -> com.anton.elementalwands.entity.GuardianCombatRules.Attack.LEAP;
                 case "rock" -> com.anton.elementalwands.entity.GuardianCombatRules.Attack.THROW;
                 case "shockwave" -> com.anton.elementalwands.entity.GuardianCombatRules.Attack.SHOCKWAVE;
@@ -81,7 +90,7 @@ public final class GuardianCommands {
                 : action.equals("beam") ? " — firing at you; Survival players can take damage."
                 : action.equals("fight") ? " — cooperative boss enabled; targets nearby Survival/Adventure players. /ew guardian stop to end."
                 : action.equals("intro") ? " — playing the intro for players within 64 blocks, facing you, then fighting. Hold Sneak to skip."
-                : action.equals("fan") || action.equals("rock") || action.equals("shockwave") || action.equals("melee") || action.equals("leap") ? " — one real attack; Survival/Adventure players can take damage."
+                : action.equals("fan") || action.equals("rock") || action.equals("shockwave") || action.equals("melee") || action.equals("leap") || action.equals("pulse") ? " — one real attack; Survival/Adventure players can take damage."
                 : action.equals("stop") ? " — passive until /ew guardian fight, including after reload." : " — animation rehearsal, no damage.")), false);
         return 1;
     }

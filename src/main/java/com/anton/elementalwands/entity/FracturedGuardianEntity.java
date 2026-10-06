@@ -30,9 +30,8 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 /** Summon-only cooperative boss, with explicit passive animation review controls. */
 public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntity, WandBoss {
     private static final TrackedData<Long> NATURE_OPENING = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.LONG);
-    private static final TrackedData<Float> GUARD = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.FLOAT);
-    private static final TrackedData<Float> MAX_GUARD = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.FLOAT);
-    private static final TrackedData<Long> GUARD_OPENED = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.LONG);
+    private static final TrackedData<Integer> CRACKS = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.INTEGER);
+    private static final TrackedData<Long> PULSE_START = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.LONG);
     private static final TrackedData<Boolean> UNSTABLE = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Long> PHASE_START = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.LONG);
     private boolean phasePending;
@@ -62,7 +61,7 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
     private static final TrackedData<Long> INTRO_START = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.LONG);
     private GuardianIntro intro;
     private record HurtWindow(long until, float damage) {}
-    private final java.util.Map<UUID, HurtWindow> guardHurtWindows = new java.util.HashMap<>();
+    private final java.util.Map<UUID, HurtWindow> hurtWindows = new java.util.HashMap<>();
     private static final UUID ENVIRONMENT_DAMAGE = new UUID(0,0);
     private final GuardianBeamAttack beam = new GuardianBeamAttack(this);
     private final GuardianBossCombat combat = new GuardianBossCombat(this);
@@ -87,9 +86,8 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
         builder.add(ARENA_HIDDEN, false);
         builder.add(UNSTABLE, false);
         builder.add(PHASE_START, -1L);
-        builder.add(GUARD, (float)GuardianGuardRules.guard(1));
-        builder.add(MAX_GUARD, (float)GuardianGuardRules.guard(1));
-        builder.add(GUARD_OPENED, -1L);
+        builder.add(CRACKS, 0);
+        builder.add(PULSE_START, -1L);
         builder.add(BEAM_START, -1L);
         builder.add(WAVE_TWO_START, -1L);
         builder.add(WAVE_TWO_BLOCK, BlockPos.ORIGIN);
@@ -123,7 +121,10 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
         phasePending = false;
         dataTracker.set(UNSTABLE, true);
         dataTracker.set(PHASE_START, getEntityWorld().getTime());
+        updateCracks();
     }
+    /** Mid-break: the stagger, burst and ribs opening, during which it cannot be hurt. */
+    public boolean isBreaking() { return dataTracker.get(PHASE_START) >= 0; }
     public float getPhaseTime(float partialTick) {
         long start = dataTracker.get(PHASE_START);
         return start < 0 ? -1 : getEntityWorld().getTime()-start+partialTick;
@@ -138,28 +139,19 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
     }
     public float getFanPitch() { return dataTracker.get(FAN_PITCH); }
 
-    public float getGuard() { return dataTracker.get(GUARD); }
-    public float getMaxGuard() { return dataTracker.get(MAX_GUARD); }
-    public float getGuardTime(float partialTick) {
-        long start = dataTracker.get(GUARD_OPENED);
+    /** Crack stage 0–3 worn into the shell on the way to the break (see {@link GuardianShellRules#cracks}). */
+    public int getCracks() { return dataTracker.get(CRACKS); }
+    void updateCracks() { dataTracker.set(CRACKS, GuardianShellRules.cracks(getHealth(), getMaxHealth(), isUnstable())); }
+    /** Back to an unbroken shell, as before the fight. */
+    void resetShell() { resetPhase(); dataTracker.set(CRACKS, 0); }
+    void clearHurtWindows() { hurtWindows.clear(); }
+
+    void syncPulse(long start) { dataTracker.set(PULSE_START, start); }
+    void clearPulse() { dataTracker.set(PULSE_START, -1L); }
+    /** Ticks into the current core pulse, or -1 outside one. */
+    public float getPulseTime(float partialTick) {
+        long start = dataTracker.get(PULSE_START);
         return start < 0 ? -1 : getEntityWorld().getTime() - start + partialTick;
-    }
-    public boolean isGuardOpening() { return dataTracker.get(GUARD_OPENED) >= 0; }
-    void openGuard() { dataTracker.set(GUARD_OPENED, getEntityWorld().getTime()); }
-    void clearGuardHurtWindows() { guardHurtWindows.clear(); }
-    void finishGuard() { dataTracker.set(GUARD_OPENED, -1L); dataTracker.set(GUARD, getMaxGuard()); }
-    void resetGuard() {
-        resetPhase();
-        dataTracker.set(MAX_GUARD, (float)GuardianGuardRules.guard(1));
-        finishGuard();
-    }
-    void scaleGuard(int players) {
-        float maximum = GuardianGuardRules.guard(players);
-        if (maximum <= getMaxGuard()) return;
-        // A late join must not cancel an earned opening or repair accumulated cracks.
-        float fraction = getGuard() / getMaxGuard();
-        dataTracker.set(MAX_GUARD, maximum);
-        dataTracker.set(GUARD, maximum * fraction);
     }
 
     @Override
@@ -167,17 +159,18 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
         if (source.isIn(net.minecraft.registry.tag.DamageTypeTags.BYPASSES_INVULNERABILITY))
             return super.damage(world, source, amount);
         if (intro != null) return false; // Still stone, waking in the intro cinematic.
+        if (isBreaking()) return false; // The shell break is a set piece, not a damage window.
         // Preserve vanilla's duplicate-hit protection for each attacker, without
         // one teammate's hit swallowing everyone else's simultaneous ultimate.
         long now = world.getTime();
-        guardHurtWindows.values().removeIf(window -> window.until() <= now);
+        hurtWindows.values().removeIf(window -> window.until() <= now);
         var attacker = source.getAttacker();
         UUID key = attacker == null ? ENVIRONMENT_DAMAGE : attacker.getUuid();
-        HurtWindow previous = guardHurtWindows.get(key);
+        HurtWindow previous = hurtWindows.get(key);
         timeUntilRegen = previous == null ? 0 : 10 + (int)(previous.until() - now);
         lastDamageTaken = previous == null ? 0 : previous.damage();
-        boolean accepted = super.damage(world, source, GuardianGuardRules.impact(amount));
-        if (accepted) guardHurtWindows.put(key, new HurtWindow(previous == null ? now+10 : previous.until(), lastDamageTaken));
+        boolean accepted = super.damage(world, source, GuardianShellRules.impact(amount));
+        if (accepted) hurtWindows.put(key, new HurtWindow(previous == null ? now+10 : previous.until(), lastDamageTaken));
         return accepted;
     }
 
@@ -190,20 +183,27 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
             return;
         }
         // Burst normalization happened before vanilla computed stronger-hit differences.
-        float impact = amount;
         float before = getHealth();
-        super.applyDamage(world, source, impact * GuardianGuardRules.multiplier(getGuardTime(0)));
-        if (getHealth() < before && GuardianPhaseRules.threshold(getHealth(), getMaxHealth())) requestPhase();
-        if (getHealth() < before && isAlive() && !isGuardOpening()) {
-            int oldCracks = GuardianGuardRules.cracks(getGuard(), getMaxGuard());
-            dataTracker.set(GUARD, Math.max(0, getGuard() - impact));
-            if (GuardianGuardRules.cracks(getGuard(), getMaxGuard()) > oldCracks) {
-                world.playSound(null, getBlockPos(), SoundEvents.BLOCK_STONE_BREAK, SoundCategory.HOSTILE, 1.3f, .7f);
-                world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, net.minecraft.block.Blocks.STONE.getDefaultState()),
-                        getX(), getY()+3.3, getZ(), 22, 1.2, 1.1, 1.2, .07);
-            }
+        // Phase one holds at half health until the shell breaks, so burst cannot skip the break.
+        if (!isUnstable()) amount = Math.min(amount, Math.max(0, before - GuardianShellRules.gate(getMaxHealth())));
+        super.applyDamage(world, source, amount);
+        if (GuardianPhaseRules.threshold(getHealth(), getMaxHealth())) requestPhase();
+        if (getHealth() >= before) return;
+        combat.damaged(world, source.getAttacker(), before - getHealth());
+        int oldCracks = getCracks();
+        updateCracks();
+        if (getCracks() > oldCracks && isAlive()) {
+            world.playSound(null, getBlockPos(), SoundEvents.BLOCK_STONE_BREAK, SoundCategory.HOSTILE, 1.3f, .7f);
+            world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, net.minecraft.block.Blocks.STONE.getDefaultState()),
+                    getX(), getY()+3.3, getZ(), 22, 1.2, 1.1, 1.2, .07);
         }
     }
+
+    /** A Guardian attack landing on a player; one swallowed by hit immunity goes to the fight log. */
+    boolean strike(ServerWorld world, ServerPlayerEntity player, net.minecraft.entity.damage.DamageSource source, float amount, String what) {
+        return combat.strike(world, player, source, amount, what);
+    }
+    GuardianBossCombat combat() { return combat; }
 
     void syncBeam(long start, Vec3d origin, Vec3d end, float pitch) {
         dataTracker.set(BEAM_ORIGIN, origin.subtract(getEntityPos()).toVector3f());
@@ -324,7 +324,7 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
 
     public static DefaultAttributeContainer.Builder createAttributes() {
         return PathAwareEntity.createMobAttributes()
-                .add(EntityAttributes.MAX_HEALTH, GuardianGuardRules.health(1))
+                .add(EntityAttributes.MAX_HEALTH, GuardianShellRules.health(1))
                 .add(EntityAttributes.MOVEMENT_SPEED, 0.16)
                 .add(EntityAttributes.STEP_HEIGHT, 1.0)
                 .add(EntityAttributes.KNOCKBACK_RESISTANCE, 1.0)
@@ -360,7 +360,7 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
 
     public void stopReview() {
         cancelIntro();
-        finishGuard();
+        combat.finishLog("stopped");
         followPlayer = null;
         addCommandTag(PASSIVE_TAG);
         combat.cancel();
@@ -384,7 +384,7 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
         if (getEntityWorld() instanceof ServerWorld serverWorld) beam.tick(serverWorld);
         super.tick();
         if (!(getEntityWorld() instanceof ServerWorld world)) return;
-        if (!isAlive()) { combat.cancel(); return; }
+        if (!isAlive()) { combat.finishLog("defeated"); combat.cancel(); return; }
         if (intro != null) { if (!intro.tick(world)) intro = null; return; }
         if (!getCommandTags().contains(PASSIVE_TAG)) combat.tick(world);
         else combat.tickReview(world);
@@ -422,7 +422,10 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
 
     @Override
     public void remove(net.minecraft.entity.Entity.RemovalReason reason) {
-        if (getEntityWorld() instanceof ServerWorld) combat.cancel();
+        if (getEntityWorld() instanceof ServerWorld) {
+            combat.finishLog("removed (" + reason.name().toLowerCase(java.util.Locale.ROOT) + ")");
+            combat.cancel();
+        }
         super.remove(reason);
     }
 
@@ -439,16 +442,13 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
     @Override
     protected void readCustomData(net.minecraft.storage.ReadView view) {
         super.readCustomData(view);
-        dataTracker.set(MAX_GUARD, Math.max(1, view.getFloat("GuardianMaxGuard", GuardianGuardRules.guard(1))));
-        dataTracker.set(GUARD, Math.clamp(view.getFloat("GuardianGuard", getMaxGuard()), 0, getMaxGuard()));
-        int remaining = view.getInt("GuardianOpeningRemaining", 0);
-        if (remaining > 0) dataTracker.set(GUARD_OPENED, getEntityWorld().getTime() - GuardianGuardRules.CYCLE_TICKS + Math.min(remaining, GuardianGuardRules.CYCLE_TICKS));
         dataTracker.set(UNSTABLE, view.getBoolean("GuardianUnstable", false));
         phasePending = view.getBoolean("GuardianPhasePending", false);
         int phaseRemaining = view.getInt("GuardianPhaseRemaining", 0);
         if (isUnstable() && phaseRemaining > 0)
             dataTracker.set(PHASE_START, getEntityWorld().getTime()-GuardianPhaseRules.TRANSITION_TICKS
                     + Math.min(phaseRemaining, GuardianPhaseRules.TRANSITION_TICKS));
+        updateCracks();
         dataTracker.set(ARENA_HIDDEN,getCommandTags().contains("ew_arena_hidden"));
         if (getCommandTags().contains("ew_guardian_leap_gravity")) {
             setNoGravity(false); removeCommandTag("ew_guardian_leap_gravity");
@@ -466,9 +466,6 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
         view.putBoolean("GuardianUnstable", isUnstable());
         view.putBoolean("GuardianPhasePending", phasePending);
         view.putInt("GuardianPhaseRemaining", getPhaseTime(0) < 0 ? 0 : Math.max(0, GuardianPhaseRules.TRANSITION_TICKS-(int)getPhaseTime(0)));
-        view.putFloat("GuardianGuard", getGuard());
-        view.putFloat("GuardianMaxGuard", getMaxGuard());
-        view.putInt("GuardianOpeningRemaining", isGuardOpening() ? Math.max(0, GuardianGuardRules.CYCLE_TICKS - (int)getGuardTime(0)) : 0);
     }
 
     private void stoneImpact(ServerWorld world) {
@@ -522,9 +519,12 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
                 .triggerableAnim("phase_change", RawAnimation.begin().thenPlay("animation.fractured_guardian.phase_change"))
                 .triggerableAnim("slam_fast", RawAnimation.begin().thenPlay("animation.fractured_guardian.slam_fast"))
                 .triggerableAnim("throw_fast", RawAnimation.begin().thenPlay("animation.fractured_guardian.throw_fast"))
-                .triggerableAnim("guard_break", RawAnimation.begin().thenPlay("animation.fractured_guardian.guard_break"))
+                .triggerableAnim("core_pulse", RawAnimation.begin().thenPlay("animation.fractured_guardian.core_pulse"))
                 .triggerableAnim("awaken", RawAnimation.begin().thenPlay("animation.fractured_guardian.awaken"))
                 .triggerableAnim("slam", RawAnimation.begin().thenPlay("animation.fractured_guardian.slam"))
+                .triggerableAnim("slam_hold_10", RawAnimation.begin().thenPlay("animation.fractured_guardian.slam_hold_10"))
+                .triggerableAnim("slam_hold_16", RawAnimation.begin().thenPlay("animation.fractured_guardian.slam_hold_16"))
+                .triggerableAnim("slam_hold_22", RawAnimation.begin().thenPlay("animation.fractured_guardian.slam_hold_22"))
                 .triggerableAnim("throw", RawAnimation.begin().thenPlay("animation.fractured_guardian.throw"))
                 .triggerableAnim("leap_launch", RawAnimation.begin().thenPlay("animation.fractured_guardian.leap_launch"))
                 .triggerableAnim("leap_air", RawAnimation.begin().thenPlay("animation.fractured_guardian.leap_air"))

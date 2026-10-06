@@ -10,8 +10,9 @@ public class FracturedGuardianRenderState extends LivingEntityRenderState implem
     public float fanTime=-1, fanPitch, fanYaw;
     public boolean unstable;
     public float phaseTime = -1, magicTime;
-    public int guardCracks;
-    public float guardTime = -1;
+    /** Crack stage 0–3 worn into the shell; ticks into the current core pulse, or -1. */
+    public int cracks;
+    public float pulseTime = -1;
     public float beamTime = -1;
     public boolean holdingRock, arenaHidden, burning;
     public float leapTime = -1;

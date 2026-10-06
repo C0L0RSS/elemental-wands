@@ -38,6 +38,6 @@ public final class GuardianLeapRules {
         double x = Math.clamp(landing.x,victim.minX,victim.maxX);
         double z = Math.clamp(landing.z,victim.minZ,victim.maxZ);
         double radius = Math.hypot(x-landing.x,z-landing.z);
-        return radius <= CORE_RADIUS ? 16 : radius <= IMPACT_RADIUS ? 10 : 0;
+        return radius <= CORE_RADIUS ? 18 : radius <= IMPACT_RADIUS ? 12 : 0;
     }
 }

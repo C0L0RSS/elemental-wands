@@ -1,6 +1,6 @@
 # Current status
 
-Reviewed September 30, 2026. This page contains outstanding work, not release history.
+Reviewed October 3, 2026. This page contains outstanding work, not release history.
 It records known verification limits; it is not a fresh installation receipt.
 
 - **Hollow Necromancer (in progress):** reworked after the first co-op playtest (duels and
@@ -150,6 +150,19 @@ It records known verification limits; it is not a fresh installation receipt.
 - **Human playtesting:** free-slot combinations, progression pace, recent Fire
   Leap/Flashover and Nature changes, and multiplayer timing remain balance/feel
   work. Automated mechanics checks do not settle these questions.
+- **Guardian difficulty (October 3):** the Guardian was rebalanced to be about a ten-try boss for a
+  new duo in full iron on Normal, with a winning run of about four minutes. Its hits were raised so
+  heavy ones take about 45% through iron. Slams sometimes hold before smashing and now hit with the
+  fists. The repeating guard break is gone: at half health the shell bursts open as the phase
+  change, and phase two adds a pull-then-blast core pulse. In co-op, pressure grows up to four
+  players (shorter rests, faster cooldowns, back volleys at the players it isn't attacking, and
+  threat-based targeting). World difficulty sets the intensity. Health is now 1,400 plus 1,000 per
+  extra player, a starting estimate. Contract checks and the shell, phase, combat, cover,
+  Nature, wall, Wind and Space server fixtures cover the mechanics. Pending: a solo and co-op
+  Lunar playtest with `/ew guardian log on` to tune health and fight length. Also pending: an
+  in-game look at the core pulse clip, the held slams, the ribs staying open (clipping against the
+  slam and throw), the pull's feel and the ring's readability. The pull is applied by each
+  client, so a fixture with fake players cannot show it; it needs a real client.
 - **Guardian/church:** the fight moved from the sky floor into its own dimension, the
   Shattered Nave, on September 29; the user approved the hall in the browser preview. The
   nave, church (with its restart pass), cover and Nature server fixtures passed, and the

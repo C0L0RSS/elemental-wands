@@ -156,7 +156,9 @@ final class GuardianBeamAttack {
             Vec3d contact = hit.get();
             if (!walls.clear(world,guardian,origin,contact,false)) continue;
             struck.add(victim.getUuid()); // A blocked hit also consumes the attempt; no repeated shield spam.
-            if (victim.damage(world,world.getDamageSources().mobAttack(guardian),GuardianBeamTiming.DAMAGE)) {
+            var source = world.getDamageSources().mobAttack(guardian);
+            if (victim instanceof ServerPlayerEntity player ? guardian.strike(world,player,source,GuardianBeamTiming.DAMAGE,"beam")
+                    : victim.damage(world,source,GuardianBeamTiming.DAMAGE)) {
                 victim.takeKnockback(.45,-direction.x,-direction.z);
             }
         }

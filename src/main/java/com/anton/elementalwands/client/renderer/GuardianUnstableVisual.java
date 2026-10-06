@@ -9,8 +9,9 @@ final class GuardianUnstableVisual {
     static void submit(FracturedGuardianRenderState state, MatrixStack matrices, OrderedRenderCommandQueue queue) {
         if (!state.unstable || state.beamTime >= 0) return;
         float time = state.magicTime;
-        float flare = state.phaseTime >= 0 ? (float)Math.sin(Math.PI * Math.clamp(state.phaseTime / 64,0,1)) : .18f;
-        float fade = state.guardTime >= 0 ? .35f : 1;
+        // The shell break erupts, and a gathering core pulse builds the discharges the same way.
+        float flare = Math.max(state.phaseTime >= 0 ? (float)Math.sin(Math.PI * Math.clamp(state.phaseTime / 64,0,1)) : .18f,
+                com.anton.elementalwands.entity.GuardianPulseRules.charge(state.pulseTime));
         queue.submitCustom(matrices,RenderLayer.getLightning(),(entry,out) -> {
             for (int strand=0; strand<10; strand++) {
                 // Change shape in discrete bursts rather than a smooth decorative orbit.
@@ -26,7 +27,7 @@ final class GuardianUnstableVisual {
                     float ay=(float)(2.7+Math.sin(strand*3)*.7+a*(.8+flare));
                     float by=(float)(2.7+Math.sin(strand*3)*.7+b*(.8+flare));
                     float width=.025f+.035f*flare;
-                    int alpha=(int)((170+70*flare)*(1-a*.6)*fade);
+                    int alpha=(int)((170+70*flare)*(1-a*.6));
                     // Two crossed ribbons remain visible from every viewing direction.
                     for (int plane=0;plane<2;plane++) {
                         float dx=plane==0?width:0,dz=plane==1?width:0;

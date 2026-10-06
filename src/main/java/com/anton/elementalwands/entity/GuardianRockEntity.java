@@ -41,6 +41,8 @@ public class GuardianRockEntity extends ProjectileEntity implements FlyingItemEn
         dataTracker.set(SHARD,true);dataTracker.set(HELD,false);
         setVelocity(direction.normalize().multiply(GuardianFanRules.SPEED));velocityDirty=true;
     }
+    /** A back-volley stone, rising with the Guardian until {@link #releaseShard} launches it. */
+    void holdShard() { dataTracker.set(SHARD, true); }
     public boolean isHeld() { return dataTracker.get(HELD); }
     @Override protected void readCustomData(ReadView view) {
         super.readCustomData(view);
@@ -129,7 +131,8 @@ public class GuardianRockEntity extends ProjectileEntity implements FlyingItemEn
             Vec3d from = center.subtract(getVelocity().normalize().multiply(.08));
             if (!walls.clear(world, guardian, from, contact, false)) continue;
             if (isShard()) volleyHits.add(player.getUuid());
-            if (player.damage(world, world.getDamageSources().thrown(this, guardian), isShard()?6:player == direct ? 8 : 4)) {
+            float damage = isShard() ? GuardianCombatRules.SHARD_DAMAGE : player == direct ? GuardianCombatRules.ROCK_DAMAGE : GuardianCombatRules.ROCK_SPLASH_DAMAGE;
+            if (guardian.strike(world, player, world.getDamageSources().thrown(this, guardian), damage, isShard() ? "stone shard" : "rock")) {
                 Vec3d away = player.getEntityPos().subtract(center);
                 player.takeKnockback(.6, -away.x, -away.z);
             }

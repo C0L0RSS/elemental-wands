@@ -3,5 +3,13 @@
   "minimum_vertex": -7.0817131553251605e-15,
   "phase_seconds": 3.2,
   "slam_impact_tick": 21,
-  "throw_release_tick": 29
+  "throw_release_tick": 29,
+  "slam_apex_seconds": 1.075,
+  "slam_holds": [
+    10,
+    16,
+    22
+  ],
+  "core_pulse_seconds": 3.8,
+  "core_pulse_minimum_vertex": -6.992732359726821e-15
 }

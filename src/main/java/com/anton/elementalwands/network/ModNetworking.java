@@ -61,6 +61,7 @@ public final class ModNetworking {
         PayloadTypeRegistry.playS2C().register(NecromancerTransformPayload.ID, NecromancerTransformPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(GuardianIntroPayload.ID, GuardianIntroPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(GuardianIntroSkipPayload.ID, GuardianIntroSkipPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(GuardianPullPayload.ID, GuardianPullPayload.CODEC);
     }
 
     public static void registerC2SReceivers() {
@@ -317,6 +318,17 @@ public final class ModNetworking {
         public static final GuardianIntroSkipPayload INSTANCE = new GuardianIntroSkipPayload();
         public static final Id<GuardianIntroSkipPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"guardian_intro_skip"));
         public static final PacketCodec<RegistryByteBuf,GuardianIntroSkipPayload> CODEC = PacketCodec.unit(INSTANCE);
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
+    /**
+     * One tick of the core pulse's pull, added to the receiving player's own velocity so their
+     * movement input still counts (a velocity packet would replace it). The server decides who is
+     * pulled and how hard; the client only scales it to its air control while airborne.
+     */
+    public record GuardianPullPayload(float x, float z) implements CustomPayload {
+        public static final Id<GuardianPullPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"guardian_pull"));
+        public static final PacketCodec<RegistryByteBuf,GuardianPullPayload> CODEC = PacketCodec.tuple(
+                PacketCodecs.FLOAT,GuardianPullPayload::x,PacketCodecs.FLOAT,GuardianPullPayload::z,GuardianPullPayload::new);
         @Override public Id<? extends CustomPayload> getId() { return ID; }
     }
     public record StoneMotionPayload(int entityId, float yaw, float speed, int mode) implements CustomPayload {

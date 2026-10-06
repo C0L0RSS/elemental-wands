@@ -16,10 +16,12 @@ public class FracturedGuardianModel extends GeoModel<FracturedGuardianEntity> {
     @Override
     public void setCustomAnimations(AnimationState<FracturedGuardianEntity> animationState) {
         if (animationState.renderState() instanceof FracturedGuardianRenderState guardState) {
-            float open = com.anton.elementalwands.entity.GuardianGuardRules.openness(guardState.guardTime);
-            float seconds = guardState.guardTime / 20;
-            if (guardState.unstable && open == 0) {
-                float pulse = 1.04f + .035f*(float)Math.sin(guardState.magicTime*1.7);
+            // The ribs burst open at the shell break and stay open; a core pulse flares them wider.
+            float charge = com.anton.elementalwands.entity.GuardianPulseRules.charge(guardState.pulseTime);
+            float open = com.anton.elementalwands.entity.GuardianShellRules.openness(guardState.phaseTime, guardState.unstable) * (1 + .3f*charge);
+            float seconds = guardState.magicTime / 20;
+            if (guardState.unstable) {
+                float pulse = (1.04f + .035f*(float)Math.sin(guardState.magicTime*1.7)) * (1 + .35f*charge);
                 getBone("core").ifPresent(core -> {
                     core.setScaleX(core.getScaleX()*pulse); core.setScaleY(core.getScaleY()*pulse);
                     core.setScaleZ(core.getScaleZ()*pulse);
@@ -34,12 +36,14 @@ public class FracturedGuardianModel extends GeoModel<FracturedGuardianEntity> {
                     bone.setPosZ(bone.getPosZ() - 2*open);
                 });
             }
+            // The freed core shakes hard as it breaks out, then settles to a tremor that a pulse stirs up again.
+            float jitter = open * (guardState.phaseTime >= 0 ? 1 : .35f + .65f*charge);
             getBone("core").ifPresent(core -> {
-                core.setPosX(core.getPosX() + (float)Math.sin(seconds*31)*.5f*open);
-                core.setPosY(core.getPosY() + (float)Math.sin(seconds*21)*.4f*open);
+                core.setPosX(core.getPosX() + (float)Math.sin(seconds*31)*.5f*jitter);
+                core.setPosY(core.getPosY() + (float)Math.sin(seconds*21)*.4f*jitter);
                 core.setPosZ(core.getPosZ() - 12*open);
-                core.setRotY(core.getRotY() - (float)Math.toRadians(Math.sin(seconds*17)*8*open));
-                core.setRotZ(core.getRotZ() + (float)Math.toRadians(Math.sin(seconds*23)*7*open));
+                core.setRotY(core.getRotY() - (float)Math.toRadians(Math.sin(seconds*17)*8*jitter));
+                core.setRotZ(core.getRotZ() + (float)Math.toRadians(Math.sin(seconds*23)*7*jitter));
                 core.setScaleX(core.getScaleX() * (1+.65f*open));
                 core.setScaleY(core.getScaleY() * (1+.3f*open));
                 core.setScaleZ(core.getScaleZ() * (1+1.4f*open));
@@ -61,8 +65,8 @@ public class FracturedGuardianModel extends GeoModel<FracturedGuardianEntity> {
 
     @Override
     public Identifier getTextureResource(GeoRenderState renderState) {
-        if (renderState instanceof FracturedGuardianRenderState state && state.guardCracks > 0)
-            return Identifier.of("elementalwands", "textures/entity/fractured_guardian_cracks_"+state.guardCracks+".png");
+        if (renderState instanceof FracturedGuardianRenderState state && state.cracks > 0)
+            return Identifier.of("elementalwands", "textures/entity/fractured_guardian_cracks_"+state.cracks+".png");
         return TEXTURE;
     }
 

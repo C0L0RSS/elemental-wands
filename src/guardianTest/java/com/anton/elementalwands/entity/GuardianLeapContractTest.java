@@ -45,7 +45,7 @@ final class GuardianLeapContractTest {
             }
         }
         Vec3d landing=Vec3d.ZERO;
-        require(damage(landing,new Box(-.3,0,-.3,.3,1.8,.3))==16,"Center smash must be heavy");
+        require(damage(landing,new Box(-.3,0,-.3,.3,1.8,.3))==18,"Center smash must be heavy");
         require(damage(landing,new Box(4,0,0,4.6,1.8,.6))==0,"Outer landing must be handled by the jumpable wave");
         require(damage(landing,new Box(6.1,0,0,6.7,1.8,.6))==0,"Marked perimeter does not bound damage");
         require(damage(landing,new Box(-.3,-4,-.3,.3,-2,.3))==0,"Smash damaged a player through a lower floor");

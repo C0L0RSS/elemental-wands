@@ -30,12 +30,13 @@ public class NecromancerRenderer extends GeoEntityRenderer<NecromancerEntity, Ne
         state.transformTime = entity.getTransformTime(partialTick);
         state.split = entity.isSplit();
         state.buried = entity.isBuried();
+        state.povHood = com.anton.elementalwands.client.NecromancerTransformClient.hidesHood(entity.getId());
     }
 
     @Override
     public void addRenderData(NecromancerEntity entity, Void relatedObject, NecromancerRenderState state, float partialTick) {
-        if (!entity.inIntro()) return;
-        // A stationary mob's vanilla body turn lags its head. The cinematic turns the whole
+        if (!entity.inIntro() && !entity.isTransforming()) return;
+        // A stationary mob's vanilla body turn lags its head. The cinematics turn the whole
         // caster together, so follow the synchronized entity yaw during the staff slam too.
         state.bodyYaw = entity.getLerpedYaw(partialTick);
         state.relativeHeadYaw = 0;
@@ -52,11 +53,12 @@ public class NecromancerRenderer extends GeoEntityRenderer<NecromancerEntity, Ne
 
     /**
      * GeckoLib only advances animations while the entity renders; the intro keeps him off-screen
-     * for its first shots, so he is never culled then and his clip stays on the scene's clock.
+     * for its first shots, and the transformation looks out of his eyes and at his claws, so he is
+     * never culled in either and his clip stays on the scene's clock.
      */
     @Override
     public boolean shouldRender(NecromancerEntity entity, net.minecraft.client.render.Frustum frustum, double x, double y, double z) {
-        return entity.inIntro() || super.shouldRender(entity, frustum, x, y, z);
+        return entity.inIntro() || entity.isTransforming() || super.shouldRender(entity, frustum, x, y, z);
     }
 
     @Override
@@ -66,10 +68,11 @@ public class NecromancerRenderer extends GeoEntityRenderer<NecromancerEntity, Ne
 
     @Override
     protected net.minecraft.util.math.Box getBoundingBox(NecromancerEntity entity) {
-        // The emerging skeleton and its reared skull extend far beyond either hitbox.
+        // The growing giant, its rags and its reared skull extend far beyond either hitbox, and the
+        // transformation opens with him dropping out of the dark from eleven blocks up.
         if (!entity.isColossus() && !entity.isTransforming()) return super.getBoundingBox(entity);
         return new net.minecraft.util.math.Box(entity.getX() - 6, entity.getY() - .5, entity.getZ() - 6,
-                entity.getX() + 6, entity.getY() + 9, entity.getZ() + 6);
+                entity.getX() + 6, entity.getY() + (entity.isTransforming() ? 13 : 9), entity.getZ() + 6);
     }
 
     @Override

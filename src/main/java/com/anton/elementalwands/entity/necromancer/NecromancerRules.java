@@ -133,8 +133,12 @@ public final class NecromancerRules {
     public static final int EXPOSED_TICKS = 120;
     public static final float EXPOSED_MULTIPLIER = 1.5f;
 
-    /** Eight-second emergence: hood opens, hands plant, body pulls free, robe burns, skeleton rises. */
-    public static final int TRANSFORM_TICKS = 160, TRANSFORM_GROW = 90, TRANSFORM_ROAR = 142, RELOCATE_TIMEOUT = 200;
+    /**
+     * The transformation cinematic's clock ({@link NecromancerTransformScene}): it is the colossus from
+     * the swap inside the smoke burst, howls, and hands back at the end. The beats match the scene's
+     * track (art/hollow_necromancer/v2/transform.py BEATS: swap, roar, length).
+     */
+    public static final int TRANSFORM_TICKS = 692, TRANSFORM_GROW = 452, TRANSFORM_ROAR = 636, RELOCATE_TIMEOUT = 200;
     public static final float COLOSSUS_WIDTH = 3.6f, COLOSSUS_HEIGHT = 4.5f;
     /** The crawl is low, but rearing needs headroom: clearance is checked above the hitbox. */
     public static final double COLOSSUS_CLEARANCE = 5.5;

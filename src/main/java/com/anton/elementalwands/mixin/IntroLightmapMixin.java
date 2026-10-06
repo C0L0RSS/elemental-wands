@@ -1,6 +1,6 @@
 package com.anton.elementalwands.mixin;
 
-import com.anton.elementalwands.client.NecromancerIntroClient;
+import com.anton.elementalwands.client.BossIntroCamera;
 import net.minecraft.client.render.LightmapTextureManager;
 import net.minecraft.world.dimension.DimensionType;
 import org.spongepowered.asm.mixin.Mixin;
@@ -12,6 +12,6 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 public class IntroLightmapMixin {
     @Redirect(method = "update", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/dimension/DimensionType;ambientLight()F"))
     private float introAmbient(DimensionType dimension, float tickProgress) {
-        return NecromancerIntroClient.ambientLight(dimension.ambientLight(), tickProgress);
+        return BossIntroCamera.ambientLight(dimension.ambientLight(), tickProgress);
     }
 }

@@ -10,7 +10,7 @@ import java.util.Map;
 public class NecromancerRenderState extends LivingEntityRenderState implements GeoRenderState {
 
     private final Map<DataTicket<?>, Object> geckolibData = new HashMap<>();
-    public boolean colossus, split, buried;
+    public boolean colossus, split, buried, povHood;
     public float transformTime = -1;
 
     @Override

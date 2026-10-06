@@ -23,9 +23,11 @@ import sys
 from pathlib import Path
 
 from PIL import Image
-from geometry import bones, cubes
+from geometry import bones, cubes, resolve_shell_uvs
 from animations import animations
-from rig import hand, sample
+import numpy as np
+from rig import hand, rotation, sample
+from transform import BEATS as TRANSFORM_BEATS
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
@@ -52,6 +54,7 @@ WOOD = [(26, 17, 11), (40, 28, 18), (56, 40, 26), (77, 56, 37)]
 LEATHER = [(38, 23, 17), (56, 36, 26), (78, 52, 36)]
 METAL = [(70, 74, 84), (118, 124, 136), (170, 176, 188)]
 SOUL = [(12, 58, 66), (26, 128, 138), (72, 214, 222), (170, 250, 255), (240, 255, 255)]
+SMOKE = [(30, 27, 36), (44, 40, 53), (60, 55, 72), (80, 74, 95)]
 
 
 # ---------------- UV packing ----------------
@@ -61,9 +64,11 @@ def box_uv_size(size):
 
 
 def pack(width):
-    # Copies (the planted staff, eye flares) share their source cube's texture region.
-    order = sorted((i for i in range(len(cubes)) if 'uv_of' not in cubes[i]['opts']),
-                   key=lambda i: (-box_uv_size(cubes[i]['raw']['size'])[1], -box_uv_size(cubes[i]['raw']['size'])[0], i))
+    # Copies (the planted staff, eye flares) share their source cube's texture region. Late cubes
+    # (the transformation's additions) pack after the rest, so earlier texels never move.
+    order = sorted((i for i in range(len(cubes)) if 'uv_of' not in cubes[i]['opts'] and 'uv_crop_of' not in cubes[i]['opts']),
+                   key=lambda i: (bool(cubes[i]['opts'].get('late')), -box_uv_size(cubes[i]['raw']['size'])[1],
+                                  -box_uv_size(cubes[i]['raw']['size'])[0], i))
     x = y = row = 0
     for i in order:
         w, h = box_uv_size(cubes[i]['raw']['size'])
@@ -76,6 +81,7 @@ def pack(width):
         if 'uv_of' in entry['opts']:
             assert entry['raw']['size'] == entry['opts']['uv_of']['size'], 'Texture copy has another size'
             entry['raw']['uv'] = list(entry['opts']['uv_of']['uv'])
+    resolve_shell_uvs()
     used = y + row
     height = 64
     while height < used:
@@ -373,8 +379,30 @@ def paint_soul(f):
             dist = math.hypot(c - cx, r - cy) / max(1, max(cx, cy))
             swirl = hash2(f.x + c, f.y + r, 29)
             tone = 4 - int(dist * 3.2) - (1 if swirl < .25 else 0)
+            if f.opts.get('ember'):
+                tone = 2  # A broken end smouldering, not a light source.
+            if f.opts.get('wisp'):
+                tone = min(tone, 4 - f.opts['wisp'])  # A soul's trail fades behind it.
             color = ramp(SOUL, max(1, tone))
             f.put(c, r, color, glow=color)
+    if f.dir == 'north' and f.opts.get('front') == 'soul_face':
+        # A wailing face: hollow eyes and a long open mouth (5x5).
+        for c, r in ((1, 1), (1, 2), (3, 1), (3, 2), (2, 3), (2, 4)):
+            f.put(c, r, VOID[1], glow=SOUL[0])
+
+
+def paint_smoke(f):
+    """Black smoke: lumpy near-black with ragged cut-out edges and a rare soul spark."""
+    for c in range(f.w):
+        for r in range(f.h):
+            edge = min(c, r, f.w - 1 - c, f.h - 1 - r)
+            n = hash2(f.x + c, f.y + r, 41)
+            if edge == 0 and n < .4:
+                f.clear(c, r)
+            elif edge > 0 and n > .93:
+                f.put(c, r, SOUL[1], glow=SOUL[1])
+            else:
+                f.put(c, r, SMOKE[min(len(SMOKE) - 1, (n > .45) + (n > .8) + (edge > 0))])
 
 
 def paint_vial(f):
@@ -387,7 +415,8 @@ def paint_vial(f):
 
 
 PAINTERS = {'cloth': paint_cloth, 'char': lambda f: paint_cloth(f, CHAR, burnt=True), 'void': paint_void,
-            'bone': paint_bone, 'wood': paint_wood, 'leather': paint_leather, 'soul': paint_soul, 'soul_vial': paint_vial}
+            'bone': paint_bone, 'wood': paint_wood, 'leather': paint_leather, 'soul': paint_soul, 'soul_vial': paint_vial,
+            'smoke': paint_smoke}
 
 
 def texture():
@@ -395,7 +424,7 @@ def texture():
     glow = Image.new('RGBA', (TEX_W, TEX_H), (0, 0, 0, 0))
     px, gx = image.load(), glow.load()
     for index, entry in enumerate(cubes):
-        if 'uv_of' in entry['opts']:
+        if 'uv_of' in entry['opts'] or 'uv_crop_of' in entry['opts']:
             continue
         for direction, (x, y, w, h) in faces_of(entry).items():
             if w <= 0 or h <= 0:
@@ -447,7 +476,7 @@ def validate(data):
             for frames in channels.values():
                 assert all(0 <= float(t) <= clip['animation_length'] for t in frames), name
                 assert all(math.isfinite(v) for frame in frames.values() for v in frame), name
-    assert data['animations']['animation.hollow_necromancer.transform']['animation_length'] == 8
+    assert data['animations']['animation.hollow_necromancer.transform']['animation_length'] == TRANSFORM_BEATS['length'] / 20
     intro = data['animations']['animation.hollow_necromancer.intro']
     assert intro['animation_length'] == 378 / 20, 'Intro does not share the director timeline'
     for channels in intro['bones'].values():
@@ -455,7 +484,7 @@ def validate(data):
             assert math.dist(sample(channel, 242 / 20, [0, 0, 0]), sample(channel, 262 / 20, [0, 0, 0])) < .001, 'Pointing pose does not hold'
     assert 'shoulder_rag' not in names, 'Dark shoulder panel returned'
     for name, time in [('colossus_idle', 0), ('colossus_walk', 0),
-                       ('transform', 5.5), ('colossus_lunge', 1.3)]:
+                       ('transform', TRANSFORM_BEATS['length'] / 20), ('colossus_lunge', 1.3)]:
         clip = data['animations']['animation.hollow_necromancer.' + name]
         right = sample(clip['bones']['arm_right']['rotation'], time, [0, 0, 0])[2]
         left = sample(clip['bones']['arm_left']['rotation'], time, [0, 0, 0])[2]
@@ -464,8 +493,15 @@ def validate(data):
                  'colossus_swipe', 'colossus_grab', 'colossus_lunge'):
         channel = data['animations']['animation.hollow_necromancer.' + name]['bones']['arm_left']['rotation']
         poses = sorted((float(t), v) for t, v in channel.items())
-        assert all(math.dist(a, b) < 20 for (_, a), (_, b) in zip(poses, poses[1:])), f'{name}: left elbow snapped'
-    for name, time in [('transform', 4.8), ('transform', 5.5), ('transform', 8),
+        if name == 'transform':
+            # Baked per tick from world poses, its keys can sit near gimbal lock, where small turns
+            # are large Euler steps: measure the turn itself. The claws bursting out of his face
+            # and swinging up for the roar turn fast on purpose; a snapped elbow turns far more.
+            turn = lambda a, b: math.degrees(math.acos(max(-1, min(1, (np.trace(rotation(a)[:3, :3].T @ rotation(b)[:3, :3]) - 1) / 2))))
+            assert all(turn(a, b) < 30 for (_, a), (_, b) in zip(poses, poses[1:])), f'{name}: left elbow snapped'
+        else:
+            assert all(math.dist(a, b) < 20 for (_, a), (_, b) in zip(poses, poses[1:])), f'{name}: left elbow snapped'
+    for name, time in [('transform', TRANSFORM_BEATS['length'] / 20),
                        ('colossus_idle', 0), ('colossus_walk', 0),
                        ('colossus_lunge', .8), ('colossus_lunge', 1.7), ('colossus_lunge', 2.5)]:
         for side in ['right', 'left']:

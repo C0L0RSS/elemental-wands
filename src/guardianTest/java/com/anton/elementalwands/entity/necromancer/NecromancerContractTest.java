@@ -216,6 +216,13 @@ public final class NecromancerContractTest {
         // Transformation clock: the body grows before the roar, and both finish inside the cinematic.
         require(0 < NecromancerRules.TRANSFORM_GROW && NecromancerRules.TRANSFORM_GROW < NecromancerRules.TRANSFORM_ROAR
                 && NecromancerRules.TRANSFORM_ROAR < NecromancerRules.TRANSFORM_TICKS, "Transformation clock out of order");
+        // ...on the cinematic's own track: it is the colossus at the swap, howls at the roar and hands back at its end.
+        var track = NecromancerTransformTrack.get();
+        require(NecromancerRules.TRANSFORM_TICKS == track.length() && NecromancerRules.TRANSFORM_GROW == track.beat("swap")
+                && NecromancerRules.TRANSFORM_ROAR == track.beat("roar"), "Transformation clock drifted from its cinematic track");
+        require(track.souls().size() == 40 && track.souls().stream().allMatch(s -> s.first() > 0 && s.last() < track.beat("writhe")
+                && s.arrive() <= s.last() + 1), "A ghost of the storm flies outside the scene");
+        require(track.beat("ret") < track.length() && NecromancerTransformScene.SKIP_AFTER < track.beat("impact"), "Transformation hand-back out of order");
         require(NecromancerRules.COLOSSUS_CLEARANCE >= NecromancerRules.COLOSSUS_HEIGHT, "Clearance lower than the body");
         // Grab: never a one-shot, and the team can break it.
         require(NecromancerRules.grabDamage(20) <= 14 && NecromancerRules.grabDamage(20) < 20 && NecromancerRules.grabDamage(10) < 10, "Grab slam can one-shot");

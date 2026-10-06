@@ -270,6 +270,14 @@ public final class ModEntities {
                         .dimensions(EntityDimensions.fixed(.7f, .9f)).trackRangeBlocks(128).trackedUpdateRate(1).disableSaving()
                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "intro_soul"))));
 
+        // The transformation cinematic's storm of souls.
+        public static final EntityType<com.anton.elementalwands.entity.necromancer.TransformSoulEntity> TRANSFORM_SOUL = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "transform_soul"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.necromancer.TransformSoulEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.necromancer.TransformSoulEntity::new)
+                        .dimensions(EntityDimensions.fixed(.6f, .6f)).trackRangeBlocks(128).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "transform_soul"))));
+
         // The Guardian's intro cinematic: the zombie it smashes and tears in two.
         public static final EntityType<com.anton.elementalwands.entity.GuardianIntroZombieEntity> GUARDIAN_INTRO_ZOMBIE = Registry.register(
                 Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "guardian_intro_zombie"),

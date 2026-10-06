@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Necromancer Transformation</title>
+<style>
+  :root { --bg: #0d0f13; --panel: #171a20; --line: #2a2f38; --text: #e4e8ec; --dim: #8b94a0; --accent: #6af2ff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, -apple-system, sans-serif; }
+  main { max-width: 1280px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 17px; font-weight: 600; margin: 0 0 2px; }
+  .sub { color: var(--dim); margin: 0 0 12px; font-size: 13px; }
+  .stage { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 6px; overflow: hidden; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #hud { pointer-events: none; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+  button, select { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 5px; padding: 6px 10px; font: inherit; cursor: pointer; }
+  button:disabled { opacity: .35; cursor: default; }
+  button.active { border-color: var(--accent); color: var(--accent); }
+  input[type=range] { flex: 1; min-width: 200px; accent-color: var(--accent); }
+  #clock { font-variant-numeric: tabular-nums; color: var(--dim); min-width: 150px; }
+  .shots { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .shots button { font-size: 12px; padding: 4px 8px; }
+  .note { color: var(--dim); font-size: 12px; margin-top: 10px; }
+  .group { color: var(--dim); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; margin-left: 8px; }
+  #error { color: #ff8a8a; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Necromancer transformation — animatic</h1>
+  <p class="sub">The workshop candidate's transformation clip, played through the scene's camera track. Sounds show as captions; the Soul Harvest ghosts form the storm, and particles and the real crypt are added in game.</p>
+  <div class="bar" id="studies" aria-label="Growth pose studies"></div>
+  <p class="sub" id="study-note">The transformation: press Space to play, or pick a shot below.</p>
+  <div class="stage"><canvas id="view"></canvas><canvas id="hud"></canvas></div>
+  <div class="bar">
+    <button id="play" aria-label="Pause">❚❚</button>
+    <input id="timeline" type="range" min="0" max="458" step="0.05" value="0" aria-label="Scene time">
+    <span id="clock">tick 0</span>
+  </div>
+  <div class="bar">
+    <button id="cam-scene" class="active">Scene camera</button>
+    <button id="cam-orbit">Orbit</button>
+    <select id="speed" aria-label="Speed"><option value="1">1×</option><option value="0.5">½×</option><option value="0.25">¼×</option></select>
+    <button id="bars" class="active">Letterbox</button>
+    <button id="captions" class="active">Sound captions</button>
+  </div>
+  <div class="shots" id="shots"></div>
+  <p class="note">Space plays or pauses, ← → step one tick, C switches camera. In orbit, drag to turn and scroll to zoom; the scene camera shows as a cyan frustum.</p>
+  <p id="error"></p>
+</main>
+<script src="animatic.js"></script>
+</body>
+</html>

@@ -1,0 +1,273 @@
+{
+  "format_version": 1,
+  "texture": "storm_roc_sparks.png",
+  "sheet_size": [
+    256,
+    64
+  ],
+  "frame_size": [
+    32,
+    32
+  ],
+  "filter": "nearest",
+  "emissive": true,
+  "billboard": "camera_facing",
+  "sequences": {
+    "arc": {
+      "fps": 18,
+      "frames": [
+        {
+          "uv": [
+            0,
+            0
+          ],
+          "size": [
+            32,
+            32
+          ]
+        },
+        {
+          "uv": [
+            32,
+            0
+          ],
+          "size": [
+            32,
+            32
+          ]
+        },
+        {
+          "uv": [
+            64,
+            0
+          ],
+          "size": [
+            32,
+            32
+          ]
+        },
+        {
+          "uv": [
+            96,
+            0
+          ],
+          "size": [
+            32,
+            32
+          ]
+        },
+        {
+          "uv": [
+            128,
+            0
+          ],
+          "size": [
+            32,
+            32
+          ]
+        },
+        {
+          "uv": [
+            160,
+            0
+          ],
+          "size": [
+            32,
+            32
+          ]
+        },
+        {
+          "uv": [
+            192,
+            0
+          ],
+          "size": [
+            32,
+            32
+          ]
+        },
+        {
+          "uv": [
+            224,
+            0
+          ],
+          "size": [
+            32,
+            32
+          ]
+        }
+      ]
+    },
+    "spark": {
+      "fps": 23,
+      "frames": [
+        {
+          "uv": [
+            0,
+            32
+          ],
+          "size": [
+            32,
+            32
+          ]
+        },
+        {
+          "uv": [
+            32,
+            32
+          ],
+          "size": [
+            32,
+            32
+          ]
+        },
+        {
+          "uv": [
+            64,
+            32
+          ],
+          "size": [
+            32,
+            32
+          ]
+        },
+        {
+          "uv": [
+            96,
+            32
+          ],
+          "size": [
+            32,
+            32
+          ]
+        },
+        {
+          "uv": [
+            128,
+            32
+          ],
+          "size": [
+            32,
+            32
+          ]
+        },
+        {
+          "uv": [
+            160,
+            32
+          ],
+          "size": [
+            32,
+            32
+          ]
+        },
+        {
+          "uv": [
+            192,
+            32
+          ],
+          "size": [
+            32,
+            32
+          ]
+        },
+        {
+          "uv": [
+            224,
+            32
+          ],
+          "size": [
+            32,
+            32
+          ]
+        }
+      ]
+    }
+  },
+  "anchors": [
+    {
+      "bone": "spark_beak_tip",
+      "pivot_model_pixels": [
+        0.0,
+        76.8,
+        -51.0
+      ],
+      "sequence": "arc",
+      "size_blocks": 0.95,
+      "phase": 0
+    },
+    {
+      "bone": "spark_beak_ridge",
+      "pivot_model_pixels": [
+        0.0,
+        103.4,
+        -41.2
+      ],
+      "sequence": "arc",
+      "size_blocks": 0.95,
+      "phase": 0.061
+    },
+    {
+      "bone": "spark_eye_left",
+      "pivot_model_pixels": [
+        12.88,
+        100.32,
+        -23.0
+      ],
+      "sequence": "spark",
+      "size_blocks": 0.4,
+      "phase": 0.149
+    },
+    {
+      "bone": "spark_eye_right",
+      "pivot_model_pixels": [
+        -12.88,
+        100.32,
+        -23.0
+      ],
+      "sequence": "spark",
+      "size_blocks": 0.4,
+      "phase": 0.237
+    },
+    {
+      "bone": "spark_brow_left",
+      "pivot_model_pixels": [
+        12.32,
+        102.0,
+        -20.2
+      ],
+      "sequence": "arc",
+      "size_blocks": 0.62,
+      "phase": 0.313
+    },
+    {
+      "bone": "spark_brow_right",
+      "pivot_model_pixels": [
+        -12.32,
+        102.0,
+        -20.2
+      ],
+      "sequence": "arc",
+      "size_blocks": 0.62,
+      "phase": 0.381
+    }
+  ],
+  "normal": {
+    "copies_per_anchor": 1,
+    "brightness": 1.0,
+    "size_multiplier": 1,
+    "alpha_multiplier": 0.85
+  },
+  "charged": {
+    "copies_per_anchor": 3,
+    "brightness": 1.9,
+    "size_multiplier": 1.2,
+    "alpha_multiplier": 1.15
+  },
+  "jitter_blocks": 0.055,
+  "alpha_range": [
+    0.65,
+    1
+  ],
+  "coordinates": "Anchor pivots are absolute bind coordinates, 16 model pixels per block; transform by the named bone matrix."
+}

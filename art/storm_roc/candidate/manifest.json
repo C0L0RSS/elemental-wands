@@ -1,0 +1,21 @@
+{
+  "bones": 237,
+  "cubes": 1018,
+  "texels_per_model_pixel": {
+    "head_beak_crest_cheeks": 4,
+    "body_wings_tail_legs": 2
+  },
+  "texture_size": [
+    1024,
+    1024
+  ],
+  "approved_head": {
+    "bones": 53,
+    "cubes": 361,
+    "geometry_uv_pixels": "unchanged relative to head"
+  },
+  "body_bones": 184,
+  "body_cubes": 657,
+  "body_islands": 335,
+  "used_height": 417
+}

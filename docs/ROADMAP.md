@@ -213,14 +213,25 @@ These come from the Guardian and Necromancer playtests:
   short minimum so it never just flashes past.
 - **Proposed:** the struggle ends with the player striking the talon with their wand.
   The Roc shrieks and flings them away.
-- **Proposed:** one landing for each element, all the same length:
+- **Decided:** the landings go bigger than the spells can in normal play.
+- **Proposed:** every landing takes the same time, about 3.5 seconds from the throw to
+  control, and ends in the same standing pose facing the Roc's spire. Their effects fade
+  within a few seconds, so the arena starts clean.
+- **Proposed:** a first pass at the six landings:
   - **No element:** the wand sputters a beam straight down that barely slows the fall.
     They crash, roll and stagger up.
-  - **Fire:** a Fire Leap landing that bursts into a ring of fire.
-  - **Wind:** an Updraft just before impact, and they touch down lightly.
-  - **Stone:** a heavy landing that cracks the rock around them.
-  - **Nature:** a Springbloom flower thrown below them; they bounce off it and land.
-  - **Space:** a Blink just before impact, and they reappear standing.
+  - **Fire:** they fall wrapped in flame like a small Meteor and land in a crouch as a
+    ring of fire bursts across the rock.
+  - **Wind:** Zephyr Strike wings unfurl mid-fall. They glide a curve past the Roc's
+    spire and land in a gust that blows the snow outward. (Alternative: an Updraft just
+    before impact.)
+  - **Stone:** rock gathers around them as they fall until they are a boulder. They
+    crater into the summit, and the shell crumbles off as they rise.
+  - **Nature:** a Springbloom flower thrown below them launches them in one high, gentle
+    arc, and they land in a burst of petals.
+  - **Space:** they throw their Astral Double down ahead of them. It hits the rock and
+    cracks, and they swap into its place as it shatters. (Alternative: a Blink just
+    before impact.)
 - **Proposed:** in co-op, the cloud part lasts until every player has loaded. Everyone's
   sky part then starts at the same moment, and because every landing is the same length,
   the whole party lands together. A player who skips waits on the summit.
@@ -230,8 +241,10 @@ These come from the Guardian and Necromancer playtests:
   throw daggers and glide like wand players.
 - **Proposed:** players of every element can fight it. Its damage window is on the
   ground, and no part of the fight relies on Wind's mobility spells.
-- **Open:** whether Windcallers appear in the fight; the intro's exact shots and timings;
-  fight length and the gear it is tuned against.
+- **Decided:** build it in the same order as the other bosses: the map first, then the
+  fight, then the cinematics.
+- **Open:** whether Windcallers appear in the fight; the intro's exact shots and timings,
+  and the details of each landing; fight length and the gear it is tuned against.
 
 ## Hub map page
 

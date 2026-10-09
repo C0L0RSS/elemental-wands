@@ -106,9 +106,18 @@ These come from the Guardian and Necromancer playtests:
 
 - **Decided:** the Wind shardbearer is the Storm Roc, a giant storm bird fought above
   the clouds. Its faction is the Windcallers.
-- **Decided:** the fight takes place in a large arena on a mountaintop above the clouds.
-  Taller, thin rock spires stand around it, and the Roc perches on them between
-  attacks.
+- **Decided:** the arena is a roughly round mountain summit about 110–120 blocks across:
+  mostly open, weathered rock with a few low rocks, cracks and snow. Cliffs drop away at
+  its edge into a sea of clouds.
+- **Decided:** the Roc perches on tall, thin rock spires that rise out of the clouds
+  beyond the edge. They stand apart from the summit, so players can never reach their
+  bases. About six spires stand in a loose ring 20–30 blocks out from the edge. Their
+  tops are 25–35 blocks above the summit, at uneven heights.
+- **Decided:** a player who uses a movement spell to get close to a spire is met with a
+  caw that deals heavy damage and knocks them back.
+- **Proposed:** the caw always knocks toward the summit. The damage is the punishment,
+  and a player who still falls short drops into the clouds. It only triggers near the
+  spires, never on players dodging near the edge.
 - **Decided:** nothing in the fight knocks players toward the edge. The Roc's attacks
   hurt but don't shove. A player who falls off the edge dies.
 - **Decided:** in the dodging stretches it uses three abilities:
@@ -187,14 +196,42 @@ These come from the Guardian and Necromancer playtests:
   around its beak and eyes, and lightning marks run across its face and body.
 - **Proposed:** its lightning is white-gold, unlike the Guardian's cyan core and the
   Necromancer's soul-blue fire. The marks glow brighter once it is charged in phase two.
-- **Proposed:** an aerie shrine on a mountain peak holds a walk-in veil into the sky realm.
+- **Decided:** the entrance is an aerie at the top of a mountain in the Overworld.
+  Ringing a big storm bell there calls the Roc. It attacks, snatches the player and throws
+  them onto the arena.
+- **Decided:** every player sees their own version of the intro, with their own skin as
+  the one snatched. Only that player appears in it; teammates meet them on the summit.
+  It plays on every attempt and can be skipped.
+- **Decided:** high in the air, the player struggles in the Roc's talon in a chaotic
+  fight before it throws them at the summit. How they survive the landing depends on
+  their wand's element.
+- **Proposed:** the intro runs in four parts: the snatch at the aerie, the climb through
+  the clouds, the struggle high above them with the summit and spires below, and the
+  throw and landing. The cloud part stretches to cover the move into the sky realm. It
+  replaces the game's loading screen with a full-screen cloud effect (wind, wingbeats,
+  lightning flashing inside the cloud) and lasts as long as the load takes. It has a
+  short minimum so it never just flashes past.
+- **Proposed:** the struggle ends with the player striking the talon with their wand.
+  The Roc shrieks and flings them away.
+- **Proposed:** one landing for each element, all the same length:
+  - **No element:** the wand sputters a beam straight down that barely slows the fall.
+    They crash, roll and stagger up.
+  - **Fire:** a Fire Leap landing that bursts into a ring of fire.
+  - **Wind:** an Updraft just before impact, and they touch down lightly.
+  - **Stone:** a heavy landing that cracks the rock around them.
+  - **Nature:** a Springbloom flower thrown below them; they bounce off it and land.
+  - **Space:** a Blink just before impact, and they reappear standing.
+- **Proposed:** in co-op, the cloud part lasts until every player has loaded. Everyone's
+  sky part then starts at the same moment, and because every landing is the same length,
+  the whole party lands together. A player who skips waits on the summit.
+- **Proposed:** build the intro in stages: first end to end with the no-element landing,
+  then the other five landings one at a time.
 - **Proposed:** Windcallers are masked cultists who roam the mountain peaks. They dash,
   throw daggers and glide like wand players.
 - **Proposed:** players of every element can fight it. Its damage window is on the
   ground, and no part of the fight relies on Wind's mobility spells.
-- **Open:** whether Windcallers appear in the fight; the intro cinematic; fight length
-  and the gear it is tuned against; whether hitting the base of the Roc's spire can
-  force it off early (held in reserve in case the dodging stretches drag).
+- **Open:** whether Windcallers appear in the fight; the intro's exact shots and timings;
+  fight length and the gear it is tuned against.
 
 ## Hub map page
 

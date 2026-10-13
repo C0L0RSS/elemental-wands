@@ -1,0 +1,1037 @@
+[
+  [
+    "flight-0.00-below",
+    "flight",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0,
+      "angles": [
+        0,
+        -75
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "flight-0.00-above",
+    "flight",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0,
+      "angles": [
+        180,
+        75
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "flight-0.00-front",
+    "flight",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0,
+      "angles": [
+        0,
+        0
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "flight-0.00-back",
+    "flight",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0,
+      "angles": [
+        180,
+        0
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "flight-0.00-three-quarter",
+    "flight",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0,
+      "angles": [
+        -35,
+        30
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "flight-0.60-below",
+    "flight",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0.6,
+      "angles": [
+        0,
+        -75
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "flight-0.60-above",
+    "flight",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0.6,
+      "angles": [
+        180,
+        75
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "flight-0.60-front",
+    "flight",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0.6,
+      "angles": [
+        0,
+        0
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "flight-0.60-back",
+    "flight",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0.6,
+      "angles": [
+        180,
+        0
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "flight-0.60-three-quarter",
+    "flight",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0.6,
+      "angles": [
+        -35,
+        30
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "flight-1.80-below",
+    "flight",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 1.8,
+      "angles": [
+        0,
+        -75
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "flight-1.80-above",
+    "flight",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 1.8,
+      "angles": [
+        180,
+        75
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "flight-1.80-front",
+    "flight",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 1.8,
+      "angles": [
+        0,
+        0
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "flight-1.80-back",
+    "flight",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 1.8,
+      "angles": [
+        180,
+        0
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "flight-1.80-three-quarter",
+    "flight",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 1.8,
+      "angles": [
+        -35,
+        30
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "spread-0.00-below",
+    "spread",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0,
+      "angles": [
+        0,
+        -75
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "spread-0.00-above",
+    "spread",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0,
+      "angles": [
+        180,
+        75
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "spread-0.00-front",
+    "spread",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0,
+      "angles": [
+        0,
+        0
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "spread-0.00-back",
+    "spread",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0,
+      "angles": [
+        180,
+        0
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "spread-0.00-three-quarter",
+    "spread",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0,
+      "angles": [
+        -35,
+        30
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "screech-1.70-below",
+    "screech",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 1.7,
+      "angles": [
+        0,
+        -75
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "screech-1.70-above",
+    "screech",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 1.7,
+      "angles": [
+        180,
+        75
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "screech-1.70-front",
+    "screech",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 1.7,
+      "angles": [
+        0,
+        0
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "screech-1.70-back",
+    "screech",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 1.7,
+      "angles": [
+        180,
+        0
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "screech-1.70-three-quarter",
+    "screech",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 1.7,
+      "angles": [
+        -35,
+        30
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "grab-1.20-below",
+    "grab",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 1.2,
+      "angles": [
+        0,
+        -75
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "grab-1.20-above",
+    "grab",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 1.2,
+      "angles": [
+        180,
+        75
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "grab-1.20-front",
+    "grab",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 1.2,
+      "angles": [
+        0,
+        0
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "grab-1.20-back",
+    "grab",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 1.2,
+      "angles": [
+        180,
+        0
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "grab-1.20-three-quarter",
+    "grab",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 1.2,
+      "angles": [
+        -35,
+        30
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "perched-0.00-below",
+    "perched",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0,
+      "angles": [
+        0,
+        -75
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        8,
+        0
+      ]
+    }
+  ],
+  [
+    "perched-0.00-above",
+    "perched",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0,
+      "angles": [
+        180,
+        75
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        8,
+        0
+      ]
+    }
+  ],
+  [
+    "perched-0.00-front",
+    "perched",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0,
+      "angles": [
+        0,
+        0
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        8,
+        0
+      ]
+    }
+  ],
+  [
+    "perched-0.00-back",
+    "perched",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0,
+      "angles": [
+        180,
+        0
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        8,
+        0
+      ]
+    }
+  ],
+  [
+    "perched-0.00-three-quarter",
+    "perched",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0,
+      "angles": [
+        -35,
+        30
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        8,
+        0
+      ]
+    }
+  ],
+  [
+    "hunched-0.00-below",
+    "hunched",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0,
+      "angles": [
+        0,
+        -75
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "hunched-0.00-above",
+    "hunched",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0,
+      "angles": [
+        180,
+        75
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "hunched-0.00-front",
+    "hunched",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0,
+      "angles": [
+        0,
+        0
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "hunched-0.00-back",
+    "hunched",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0,
+      "angles": [
+        180,
+        0
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "hunched-0.00-three-quarter",
+    "hunched",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0,
+      "angles": [
+        -35,
+        30
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "peck-0.50-below",
+    "peck",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0.5,
+      "angles": [
+        0,
+        -75
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "peck-0.50-above",
+    "peck",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0.5,
+      "angles": [
+        180,
+        75
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "peck-0.50-front",
+    "peck",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0.5,
+      "angles": [
+        0,
+        0
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "peck-0.50-back",
+    "peck",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0.5,
+      "angles": [
+        180,
+        0
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ],
+  [
+    "peck-0.50-three-quarter",
+    "peck",
+    "hero",
+    false,
+    true,
+    false,
+    false,
+    {
+      "time": 0.5,
+      "angles": [
+        -35,
+        30
+      ],
+      "modelOnly": true,
+      "extent": 12,
+      "at": [
+        0,
+        4.8,
+        0
+      ]
+    }
+  ]
+]

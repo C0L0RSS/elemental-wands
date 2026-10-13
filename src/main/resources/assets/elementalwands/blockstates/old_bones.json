@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "elementalwands:block/summit/old_bones"
+    },
+    "facing=east": {
+      "model": "elementalwands:block/summit/old_bones",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "elementalwands:block/summit/old_bones",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "elementalwands:block/summit/old_bones",
+      "y": 270
+    }
+  }
+}

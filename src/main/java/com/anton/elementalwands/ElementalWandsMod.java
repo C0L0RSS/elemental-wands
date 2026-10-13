@@ -132,6 +132,7 @@ public class ElementalWandsMod implements ModInitializer {
         com.anton.elementalwands.arena.GuardianArenaManager.init();
         com.anton.elementalwands.church.GuardianChurchManager.init();
         com.anton.elementalwands.crypt.HollowCryptManager.init();
+        com.anton.elementalwands.summit.StormSummitManager.init();
         com.anton.elementalwands.entity.necromancer.NecromancerFightLog.init();
         com.anton.elementalwands.entity.GuardianFightLog.init();
 
@@ -169,6 +170,7 @@ public class ElementalWandsMod implements ModInitializer {
             com.anton.elementalwands.command.NecromancerCommands.register(dispatcher);
             com.anton.elementalwands.command.CryptCommands.register(dispatcher);
             com.anton.elementalwands.command.NaveCommands.register(dispatcher);
+            com.anton.elementalwands.command.SummitCommands.register(dispatcher);
             com.anton.elementalwands.command.PartyCommands.register(dispatcher);
             dispatcher.register(
                 CommandManager.literal("ew")

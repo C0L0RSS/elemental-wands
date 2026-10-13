@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "elementalwands:block/summit/broken_sword"
+    },
+    "facing=east": {
+      "model": "elementalwands:block/summit/broken_sword",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "elementalwands:block/summit/broken_sword",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "elementalwands:block/summit/broken_sword",
+      "y": 270
+    }
+  }
+}

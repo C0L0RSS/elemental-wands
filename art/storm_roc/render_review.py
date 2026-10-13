@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Offline reference rasterizer of the viewer's draw calls (not browser screenshots)."""
-import argparse,base64,io,json,subprocess
+import argparse,base64,io,json,subprocess,os
 from pathlib import Path
 import numpy as np
 from PIL import Image,ImageDraw
@@ -96,9 +96,9 @@ def posture_overlay(case,record,textures):
 
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--only',nargs='*');p.add_argument('--width',type=int,default=1200);args=p.parse_args()
-    (PREVIEW/'shots').mkdir(exist_ok=True)
-    path=PREVIEW/'review-draws.json';subprocess.run(['node',str(HERE/'review_scene.cjs'),str(path),str(args.width),*(args.only or [])],check=True)
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--only',nargs='*');p.add_argument('--width',type=int,default=1200);p.add_argument('--cases',type=Path,help='JSON review cases, with optional time/camera overrides');p.add_argument('--output',type=Path,default=PREVIEW/'shots');args=p.parse_args()
+    args.output.mkdir(parents=True,exist_ok=True)
+    path=args.output/'review-draws.json';subprocess.run(['node',str(HERE/'review_scene.cjs'),str(path),str(args.width),*(args.only or [])],check=True,env={**os.environ,**({'ROC_REVIEW_CASES':str(args.cases.resolve())} if args.cases else {})})
     record=json.loads(path.read_text());textures=[]
     for t in record['textures']:
         if t.get('src'):im=Image.open(io.BytesIO(base64.b64decode(t['src'].split(',')[1]))).convert('RGBA')
@@ -106,16 +106,16 @@ def main():
         textures.append(np.array(im))
     for case in record['cases']:
         if args.only and case['name'] not in args.only:continue
-        render(case,record,textures).save(PREVIEW/'shots'/(case['name']+'.png'));print(case['name'],flush=True)
+        render(case,record,textures).save(args.output/(case['name']+'.png'));print(case['name'],flush=True)
     path.unlink()
     if not args.only:
         names=[case['name'] for case in record['cases']]
         sheet=Image.new('RGB',(1200,((len(names)+2)//3)*293),(16,24,35))
         draw=ImageDraw.Draw(sheet)
         for i,name in enumerate(names):
-            thumb=Image.open(PREVIEW/'shots'/(name+'.png')).convert('RGB')
+            thumb=Image.open(args.output/(name+'.png')).convert('RGB')
             thumb.thumbnail((400,273));x=(i%3)*400;y=(i//3)*293
             sheet.paste(thumb,(x,y));draw.text((x+8,y+276),name,fill='white')
-        sheet.save(PREVIEW/'shots'/'review-contact.png')
+        sheet.save(args.output/'review-contact.png')
         print('review-contact',flush=True)
 if __name__=='__main__':main()

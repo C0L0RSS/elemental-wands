@@ -103,5 +103,11 @@
   "guardian.elementalwands.intro_waiting": "Waiting for your party to finish the intro...",
   "entity.elementalwands.necromancer_soul": "Necromancer’s Soul",
   "death.attack.necromancer_fireball": "%1$s was burned to ash by %2$s’s soul fire",
-  "death.attack.necromancer_erupt": "%1$s was caught by %2$s bursting from the grave"
+  "death.attack.necromancer_erupt": "%1$s was caught by %2$s bursting from the grave",
+  "block.elementalwands.roc_feather": "Roc Feather",
+  "block.elementalwands.rusted_helm": "Rusted Helm",
+  "block.elementalwands.broken_sword": "Broken Sword",
+  "block.elementalwands.sword_tip": "Broken Blade",
+  "block.elementalwands.old_bones": "Old Bones",
+  "block.elementalwands.old_ribcage": "Old Ribcage"
 }

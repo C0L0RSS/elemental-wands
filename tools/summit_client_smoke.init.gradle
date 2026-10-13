@@ -1,0 +1,51 @@
+// Native Storm Summit look: enters a slot, photographs the summit and spires, checks the fall rescue, then leaves.
+// Screenshots: build/summit-client-smoke/screenshots/
+// ./gradlew -I tools/summit_client_smoke.init.gradle runClient -PhubClientAssets="$HOME/.lunarclient/shared/assets" --offline
+allprojects {
+    plugins.withId('fabric-loom') {
+        def smokeRoot=layout.buildDirectory.dir('summit-client-smoke').get().asFile
+        // Optional existing cache for offline verification (for example Lunar shared/assets).
+        def existingAssets=project.findProperty('hubClientAssets')
+        if (existingAssets) {
+            loom.runs.client.vmArg('-Dfabric.dli.config='+new File(smokeRoot,'launch.cfg').absolutePath)
+        }
+        tasks.register('summitClientMetadata') {
+            if (existingAssets) dependsOn generateDLIConfig
+            doLast {
+                def metadata=new File(smokeRoot,'metadata')
+                metadata.mkdirs()
+                new File(metadata,'fabric.mod.json').text='''{
+  "schemaVersion": 1, "id": "summit_client_smoke", "version": "1.0.0", "environment": "client",
+  "entrypoints": {"client": ["com.anton.elementalwands.client.SummitClientSmoke"]},
+  "depends": {"elementalwands": "*"}
+}'''
+                new File(smokeRoot,'SUMMIT_CLIENT_PASSED.txt').delete()
+                new File(smokeRoot,'SUMMIT_CLIENT_FAILED.txt').delete()
+                if (existingAssets) {
+                    def assets=file(existingAssets)
+                    if (!new File(assets,'indexes/27.json').exists()) throw new GradleException('Existing asset cache needs indexes/27.json')
+                    def launch=file('.gradle/loom-cache/launch.cfg').text
+                    launch=launch.replaceAll(/(?m)(\t--assetIndex\r?\n)\t[^\r\n]+/, { match, prefix -> prefix+'\t27' })
+                    launch=launch.replaceAll(/(?m)(\t--assetsDir\r?\n)\t[^\r\n]+/, { match, prefix -> prefix+'\t'+assets.absolutePath })
+                    new File(smokeRoot,'launch.cfg').text=launch
+                }
+            }
+        }
+        tasks.register('summitClientJar',Jar) {
+            dependsOn guardianTestClasses, summitClientMetadata
+            archiveFileName='summit-client-smoke.jar'
+            destinationDirectory=smokeRoot
+            from sourceSets.guardianTest.output
+            from new File(smokeRoot,'metadata')
+        }
+        loom.runs.client.runDir('build/summit-client-smoke')
+        loom.runs.client.vmArg('-Dfabric.addMods='+new File(smokeRoot,'summit-client-smoke.jar').absolutePath)
+        tasks.named('runClient') {
+            dependsOn summitClientJar
+            doLast {
+                if (!new File(smokeRoot,'SUMMIT_CLIENT_PASSED.txt').exists() || new File(smokeRoot,'SUMMIT_CLIENT_FAILED.txt').exists())
+                    throw new GradleException('Summit client check failed; inspect build/summit-client-smoke/logs/latest.log')
+            }
+        }
+    }
+}

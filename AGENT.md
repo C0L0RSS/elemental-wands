@@ -37,6 +37,7 @@ relevant to the task; the docs archive is optional history, not required context
 | Hollow Necromancer boss | [Necromancer combat](docs/reference/necromancer-combat.md) |
 | Hollow undead night mobs | [Hollow undead](docs/reference/hollow-undead.md) |
 | Church, arena, recovery, rewards | [Church and arena](docs/reference/church-and-arena.md) |
+| Storm Roc's summit realm | [Storm Summit](docs/reference/storm-summit.md) |
 | Test runners and verification boundaries | [Testing](docs/reference/testing.md) |
 | What changed for players | [Release summaries](docs/releases/README.md) |
 
@@ -103,6 +104,7 @@ python3 art/hollow_necromancer/life_drain/build_runtime.py --check
 python3 art/hollow_necromancer/undead/build_runtime.py --check
 python3 art/hollow_crypt/build_layout.py --check
 python3 art/guardian_nave/build_layout.py --check
+python3 art/storm_summit/build_layout.py --check
 python3 art/fractured_guardian/intro/build_intro.py --check
 unzip -t build/libs/elementalwands-2.2.0.jar
 ```

@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "elementalwands:block/summit/old_ribcage"
+    },
+    "facing=east": {
+      "model": "elementalwands:block/summit/old_ribcage",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "elementalwands:block/summit/old_ribcage",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "elementalwands:block/summit/old_ribcage",
+      "y": 270
+    }
+  }
+}

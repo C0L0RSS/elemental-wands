@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "facing=north,stuck=false": {
+      "model": "elementalwands:block/summit/roc_feather_flat"
+    },
+    "facing=north,stuck=true": {
+      "model": "elementalwands:block/summit/roc_feather_stuck"
+    },
+    "facing=east,stuck=false": {
+      "model": "elementalwands:block/summit/roc_feather_flat",
+      "y": 90
+    },
+    "facing=east,stuck=true": {
+      "model": "elementalwands:block/summit/roc_feather_stuck",
+      "y": 90
+    },
+    "facing=south,stuck=false": {
+      "model": "elementalwands:block/summit/roc_feather_flat",
+      "y": 180
+    },
+    "facing=south,stuck=true": {
+      "model": "elementalwands:block/summit/roc_feather_stuck",
+      "y": 180
+    },
+    "facing=west,stuck=false": {
+      "model": "elementalwands:block/summit/roc_feather_flat",
+      "y": 270
+    },
+    "facing=west,stuck=true": {
+      "model": "elementalwands:block/summit/roc_feather_stuck",
+      "y": 270
+    }
+  }
+}

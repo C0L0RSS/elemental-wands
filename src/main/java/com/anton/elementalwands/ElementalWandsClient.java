@@ -59,6 +59,7 @@ public class ElementalWandsClient implements ClientModInitializer {
         BlockRenderLayerMap.putBlock(ModSpellBlocks.INFERNO_FLAME, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModSpellBlocks.PYRE_FLAME, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModSpellBlocks.STONE_SPIKE, BlockRenderLayer.CUTOUT);
+        for (var relic : com.anton.elementalwands.registry.ModBlocks.SUMMIT_RELICS) BlockRenderLayerMap.putBlock(relic, BlockRenderLayer.CUTOUT);
         EntangleClientEffects.register();
         for (var block : new net.minecraft.block.Block[]{ModSpellBlocks.NATURE_SEEDLING,
                 ModSpellBlocks.NATURE_ROOT_KNOT,ModSpellBlocks.NATURE_ROOTS,ModSpellBlocks.NATURE_RAFT,
@@ -198,6 +199,7 @@ public class ElementalWandsClient implements ClientModInitializer {
         HudRenderCallback.EVENT.register(new EntangleHudOverlay());
         com.anton.elementalwands.client.NecromancerDrainEffects.register();
         com.anton.elementalwands.client.NaveShaftEffects.register();
+        com.anton.elementalwands.client.SummitCloudEffects.register();
         HudRenderCallback.EVENT.register(new com.anton.elementalwands.client.overlay.NecromancerDrainOverlay());
     }
 

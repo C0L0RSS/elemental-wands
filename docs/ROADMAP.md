@@ -109,10 +109,27 @@ These come from the Guardian and Necromancer playtests:
 - **Decided:** the arena is a roughly round mountain summit about 110–120 blocks across:
   mostly open, weathered rock with a few low rocks, cracks and snow. Cliffs drop away at
   its edge into a sea of clouds.
+- **Decided:** the rock is flat, with no one-block steps to trip a dodging player, and the
+  middle is left bare. Below the rim a short sheer drop gives way to a steep, buttressed
+  flank that meets the clouds about 36 blocks down. Snowy peaks and low rock needles rise
+  out of the clouds in the distance.
+- **Decided:** in phase one the sky is bright and clear: deep blue, a high sun and a white
+  sea of clouds, so phase two's storm has the most to change.
+- **Decided:** the summit carries signs of the fight: lightning scars burned into the rock,
+  the remains of past challengers (bones, rusted helmets, a broken sword, the Roc's red and
+  white feathers caught in the cracks) and Windcaller ruins. The ruins are a shrine on the
+  west rim with a copper wind rose and a small bell, half of it fallen with the cliff, and
+  pale, copper-capped standing stones with lightning rods along the rim. No nest.
+- **Decided:** the Roc is drawn at 2.5 times the art study's size, so its scale is a
+  spectacle: a 68-block wingspan, 22 blocks tall standing and 46 long hunched to brawl.
 - **Decided:** the Roc perches on tall, thin rock spires that rise out of the clouds
   beyond the edge. They stand apart from the summit, so players can never reach their
   bases. About six spires stand in a loose ring 20–30 blocks out from the edge. Their
-  tops are 25–35 blocks above the summit, at uneven heights.
+  tops are 25–35 blocks above the summit, at uneven heights. The tallest stands due north,
+  facing the landing. Each spire is a leaning needle of dark rock ending in a capstone
+  about 14 blocks across, sized for the Roc's grip. It perches on the far edge facing the
+  summit, with its tail hanging over the back. The capstones are scorched black where
+  lightning lands.
 - **Decided:** a player who uses a movement spell to get close to a spire is met with a
   caw that deals heavy damage and knocks them back.
 - **Proposed:** the caw always knocks toward the summit. The damage is the punishment,
@@ -120,6 +137,9 @@ These come from the Guardian and Necromancer playtests:
   spires, never on players dodging near the edge.
 - **Decided:** nothing in the fight knocks players toward the edge. The Roc's attacks
   hurt but don't shove. A player who falls off the edge dies.
+- **Proposed:** because the flank below the rim has ledges, falling counts once a player is
+  outside the rim and more than about 4 blocks below the summit, not only on reaching the
+  clouds.
 - **Decided:** in the dodging stretches it uses three abilities:
   - **Small strikes:** a small circle shows on the ground for a moment before lightning
     hits it. They are spread all over the arena.

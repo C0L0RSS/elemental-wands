@@ -1,0 +1,18 @@
+{
+  "type": "elementalwands:storm_summit",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "elementalwands:storm_summit",
+      "features": false,
+      "lakes": false,
+      "layers": [
+        {
+          "block": "minecraft:air",
+          "height": 1
+        }
+      ],
+      "structure_overrides": []
+    }
+  }
+}

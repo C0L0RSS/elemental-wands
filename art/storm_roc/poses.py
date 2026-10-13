@@ -31,6 +31,15 @@ def fold_wings(r,mantle=0):
             name=f'{label}_{group}'
             if name in p.bones:p.world[name]=p.world[p.bones[name]['parent']]
         for name,f in r.feathers.items():
+            if name.startswith(label+'_root_'):
+                # Lay the root vanes down the flank inside the existing folded
+                # coverts, rather than carrying a spread armpit through a fold.
+                i=int(name.split('_')[-1])
+                y=79 if '_covert_' in name else 74 if '_tertial_' in name else 70
+                target=[side*(17+i*1.5),y-i,-24+i*5]
+                bind=rotation(p.bones[name]['cubes'][0]['rotation'])
+                put(name,frame([0,-.38,.925],[side,.12,0])@bind.T,target)
+                continue
             if not name.startswith(label+'_') or not any(k in name for k in ('primary','secondary','covert','leading','alula')):continue
             nums=[int(v) for v in name.split('_') if v.isdigit()];i=nums[-1] if nums else 0
             if '_primary_' in name:target=[side*(18-i*.4),67-i*1.5+(i%3-1)*3,14+i*2+(i%3-1)*4];drop=.36+i*.02;direction=[-side*.34,-drop,math.sqrt(1-drop*drop-.34*.34)]
@@ -85,6 +94,15 @@ def animations(r):
                     p.local(label+'_wing_shoulder',[0,side*(-10 if fly else -4),side*(24*breath if fly else 0)])
                     p.local(label+'_wing_elbow',[0,side*(3+3*breath if fly else 3),side*(-10*math.sin(phase-.3) if fly else 0)])
                     p.local(label+'_wing_wrist',[0,side*2,side*(-7*math.sin(phase-.5) if fly else 0)])
+                    # Root plumage hinges at the flank, with a shallower roll
+                    # than the humerus. This keeps the inner edge buried during
+                    # downstroke instead of flipping it up across the back.
+                    root_R=rotation([0,side*(-6 if fly else -2.4),side*(14.4*breath if fly else 0)])
+                    anchor=np.array([side*8,78,-20])
+                    for name,feather in r.feathers.items():
+                        if not name.startswith(label+'_root_'):continue
+                        target=anchor+root_R@(np.array(feather['start'])-anchor)
+                        p.put(name,p.world['body'][:3,:3]@root_R,p.point('body',target))
                     for i in range(10):p.channels[f'{label}_primary_{i:02}']={'rotation':[0,side*(i-4.5)*(.35*breath if fly else 0),0]}
             # Every leg shares the same fixed-length zigzag; ground feet never move.
             for side,label in ((-1,'right'),(1,'left')):

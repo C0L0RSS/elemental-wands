@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "elementalwands:block/summit/sword_tip"
+    },
+    "facing=east": {
+      "model": "elementalwands:block/summit/sword_tip",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "elementalwands:block/summit/sword_tip",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "elementalwands:block/summit/sword_tip",
+      "y": 270
+    }
+  }
+}

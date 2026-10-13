@@ -33,7 +33,7 @@ are offline renders, not in-game captures or proof of WebGL/GeckoLib execution.
 
 ## Current shape and rig
 
-**657 body cubes and 184 body bones; 1,018 cubes and 237 bones total.**
+**699 body cubes and 198 body bones; 1,060 cubes and 251 bones total.**
 The approved head remains 361 cubes / 53 bones. Both builder and validator enforce
 at most 700 non-head cubes, 200 non-head bones and 1,100 total cubes. The atlas is
 1024 × 1024, with 4 texels per model pixel on the head and 2 elsewhere; 16 model
@@ -94,6 +94,15 @@ solid wing spars. Folded leading plates, coverts and secondaries use staggered
 ends and taper inward along the body; primaries separate into a few distinct tips.
 The slate, red and white tiers remain ordered. Folded primaries cross the tail center, stay inside the fan's
 width, and end before its tip, including the half-mantled hunch and screech.
+
+Seven overlapping root feathers per wing join that flight surface to the flank:
+three white tertials, two rose scapular coverts and two white axillaries. Their
+inner edges overlap the body, while their outer edges overlap the existing wing.
+In flight they hinge near the flank with 60% of the shoulder's roll and yaw, so
+the inner vanes do not lift across the back on downstroke. Folded poses lay them
+down the flank beneath the existing coverts. The original wing pivots, feather
+geometry and motion are unchanged. The added root is deliberately layered and
+chunky, with a broader rose shoulder patch and white underwing overlap.
 
 The shoulders rise and fall while the elbows and wrists counter-bend. The distal
 planes stay within 10.7 degrees of horizontal through the beat, with 4.62 blocks

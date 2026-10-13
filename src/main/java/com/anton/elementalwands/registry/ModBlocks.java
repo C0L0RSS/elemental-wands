@@ -70,6 +70,25 @@ public class ModBlocks {
         return net.minecraft.registry.Registry.register(net.minecraft.registry.Registries.BLOCK,id,block);
     }
 
+    // Remains on the Storm Summit; art/storm_summit/build_layout.py writes their models and block states.
+    public static final net.minecraft.block.Block ROC_FEATHER=relic("roc_feather",com.anton.elementalwands.summit.SummitRelicBlock.Feather::new);
+    public static final java.util.List<net.minecraft.block.Block> SUMMIT_RELICS=java.util.List.of(ROC_FEATHER,
+            relic("rusted_helm",com.anton.elementalwands.summit.SummitRelicBlock::new),
+            relic("broken_sword",com.anton.elementalwands.summit.SummitRelicBlock::new),
+            relic("sword_tip",com.anton.elementalwands.summit.SummitRelicBlock::new),
+            relic("old_bones",com.anton.elementalwands.summit.SummitRelicBlock::new),
+            relic("old_ribcage",com.anton.elementalwands.summit.SummitRelicBlock::new));
+
+    private static net.minecraft.block.Block relic(String name,
+            java.util.function.Function<net.minecraft.block.AbstractBlock.Settings,net.minecraft.block.Block> factory) {
+        var id=net.minecraft.util.Identifier.of("elementalwands",name);
+        var key=net.minecraft.registry.RegistryKey.of(net.minecraft.registry.RegistryKeys.BLOCK,id);
+        return net.minecraft.registry.Registry.register(net.minecraft.registry.Registries.BLOCK,id,
+                factory.apply(net.minecraft.block.AbstractBlock.Settings.create().registryKey(key).strength(-1,3600000)
+                        .noCollision().nonOpaque().dropsNothing().sounds(net.minecraft.sound.BlockSoundGroup.BONE)
+                        .allowsSpawning((state,world,pos,type) -> false).pistonBehavior(net.minecraft.block.piston.PistonBehavior.DESTROY)));
+    }
+
     public static void registerAll() {
         // Internal encounter blocks; no items or recipes. Crystal ores remain removed.
     }

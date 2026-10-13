@@ -3,6 +3,10 @@
 Reviewed October 3, 2026. This page contains outstanding work, not release history.
 It records known verification limits; it is not a fresh installation receipt.
 
+- **Storm Summit (map only):** the Storm Roc's realm is built in game. It is reached only by
+  `/ew summit enter`, and has no fight, aerie or intro yet. The native client tour passed on
+  October 9 (seven viewpoints, remains, protection, fall rescue). Pending: a look in Lunar,
+  and frame rate with the sea of clouds and the 250-block view on weaker machines.
 - **Hollow Necromancer (in progress):** reworked after the first co-op playtest (duels and
   sieges, heavier telegraphed hits) and again after a solo playtest where phase two felt
   easier than phase one and the siege waves were easy. Sieges now bring larger waves,

@@ -15,6 +15,7 @@ current guide below; there is no requirement to read this whole folder.
 | The Hollow Necromancer boss (in progress)                 | [Necromancer combat](reference/necromancer-combat.md)             |
 | Hollow undead night mobs and the Necromancer's army       | [Hollow undead](reference/hollow-undead.md)                       |
 | Churches, rituals, arena returns and saved-world recovery | [Church and arena](reference/church-and-arena.md)                 |
+| The Storm Roc's summit realm (map only so far)            | [Storm Summit](reference/storm-summit.md)                         |
 | How automated Minecraft previews and checks work          | [Testing](reference/testing.md)                                   |
 | Short summaries of player-facing changes                  | [Releases](releases/README.md)                                    |
 | Why an old decision was made or how a bug was verified    | [Historical archive](archive/README.md)                           |

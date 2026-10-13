@@ -77,6 +77,19 @@ def simplify(r):
             stretch=1.6 if '_leading_' in name else 1.2 if '_covert_' in name else 1
             end=[a+(b-a)*stretch for a,b in zip(start,end)]
             plate(name,parent,start,end,width,mat,tip if tip!=mat else None,animated=True,steps=steps)
+        # Overlapping root vanes bury their inboard edges in the flank. The
+        # existing flight feathers start outboard of the shoulder and cannot
+        # cover this axilla, especially when the shoulder rises on upstroke.
+        owner=label+'_wing_shoulder'
+        for i,x in enumerate((8,18,28)):
+            plate(f'{label}_root_tertial_{i}',owner,[side*x,78,-17],
+                  [side*(x+2),69,54-i*2],26,'flight',animated=True)
+        for i,x in enumerate((9,23)):
+            cx=12 if i==0 else x
+            plate(f'{label}_root_covert_{i}',owner,[side*cx,82,-25],
+                  [side*(cx+5),77,28+i*4],18 if i==0 else 25,'rose',animated=True)
+            plate(f'{label}_root_axillary_{i}',owner,[side*x,75,-20],
+                  [side*(x+4),67,43+i*2],25,'white',animated=True)
     # Fifteen broad red vanes, including the short overlap at the tail root.
     for name,f in feathers.items():
         if not name.startswith('tail_'):continue

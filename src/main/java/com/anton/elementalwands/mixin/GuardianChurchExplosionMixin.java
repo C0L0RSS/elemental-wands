@@ -15,7 +15,8 @@ public abstract class GuardianChurchExplosionMixin {
     private void keepWard(CallbackInfoReturnable<List<BlockPos>> ci) {
         var world=((ExplosionImpl)(Object)this).getWorld();
         // Explosion fire also lands only on this list, so an empty one keeps the crypt and the nave unburnt.
-        if (HollowCryptRealm.keepsTerrain(world) || com.anton.elementalwands.arena.ShatteredNave.keepsTerrain(world)) {
+        if (HollowCryptRealm.keepsTerrain(world) || com.anton.elementalwands.arena.ShatteredNave.keepsTerrain(world)
+                || com.anton.elementalwands.summit.StormSummit.keepsTerrain(world)) {
             ci.setReturnValue(new java.util.ArrayList<>());
             return;
         }

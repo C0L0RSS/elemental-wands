@@ -142,10 +142,20 @@ These come from the Guardian and Necromancer playtests:
   clouds.
 - **Decided:** in the dodging stretches it uses three abilities:
   - **Small strikes:** a small circle shows on the ground for a moment before lightning
-    hits it. They are spread all over the arena.
+    hits it.
   - **Large strikes:** larger circles that are slightly slower but deal much more damage.
   - **Tornadoes:** one or more stay on the battlefield. They hurt anyone inside, slow
     players more the closer they get, and pull harder on players in the air.
+- **Decided:** each strike hits two or three times in quick succession, so a player can't
+  wait out the first bolt and then walk straight onto its circle. Every bolt deals the
+  same full damage, like lightning striking the same spot again and again. Small strikes
+  hit twice and large strikes three times, about half a second apart.
+- **Decided:** strikes are really hard to dodge and hit really hard, rather than filling
+  the screen. Against full diamond a small bolt deals about 4 hearts and a large bolt
+  about 8.
+- **Decided:** the strikes use custom lightning models instead of Minecraft's lightning:
+  a small bolt for small strikes and a bigger one for large strikes. The repeat bolts
+  look and hit the same as the first.
 - **Decided:** for most of the fight the Roc flies and perches on the spires, calling
   strikes, and the players' job is to dodge and survive. Then it commits to a heavy
   attack and lands in the arena for a while, which is when players deal damage. None of
@@ -160,35 +170,120 @@ These come from the Guardian and Necromancer playtests:
   and can't attack, which gives players free hits. Once it pulls free it attacks freely.
   It takes no extra damage on the ground; it is simply in reach. Tornadoes stay on the
   battlefield while it is down.
-- **Proposed:** small strikes fill the arena and land wherever players run. Large strikes
-  mostly land on players, and their size means a player has to commit to getting out.
-  No circle warns for less than about 0.7 seconds, and the small strikes always leave a
-  path open.
+- **Decided:** the dive comes while the storm keeps going. Strikes and tornadoes stay
+  active as the Roc leaves its perch and climbs high above the summit with a scream, and
+  its shadow grows over the spot where it will land.
+- **Decided:** it lands on a large marked area, not on one player, and players escape by
+  running out of it while the strikes still falling block some routes. A direct hit
+  kills a full-health player in full diamond: the dive is the biggest hit in the fight.
+- **Decided:** the impact releases lightning and a shockwave. The shockwave is a visible
+  ring that rolls out along the ground in a cloud of smoke, with the lightning arcing
+  inside it, and players jump over it.
+- **Decided:** it stays stuck for about 6 seconds, since players need 2–3 of them just to
+  run back from outside the marked area.
+- **Decided:** while stuck it panics, screeching and scrambling with its feet and talons
+  to get up. The legs hurt anyone who gets too close, so players aim for the neck and
+  head. The wings splay out and beat weakly against the rock, and they are harmless.
+- **Proposed:** in phase one the strikes stop on impact while the tornadoes stay. About a
+  second before it rips free the scrambling changes and its neck heaves, so players
+  know to back off.
+- **Decided:** strikes are few and aimed, not a screen full. Half land on a player and
+  half where the player is running, so running in a straight line doesn't dodge them.
+  Starting numbers, to tune in playtests:
+
+  | | Small strike | Large strike |
+  |---|---|---|
+  | Circle radius | 2.5 blocks | 5 blocks |
+  | Warning | 1.0 s | 1.5 s |
+  | Escape from the centre (0.3 s reaction, sprinting) | 0.8 s | 1.25 s |
+  | How often, per player | about every 2 s | about every 6 s |
+  | Bolts | 2 × 4 hearts | 3 × 8 hearts |
+
+- **Decided:** circles can partly overlap but never stack on the same spot, since every
+  bolt does so much. No circle's centre lands inside another live circle; a strike aimed
+  there moves to that circle's edge instead.
+- **Decided:** random strikes also fall around the summit for atmosphere. They are real,
+  so a player who uses an ability to escape has a small chance of landing in one. Both
+  sizes fall at random and hit exactly like aimed strikes.
+- **Proposed:** about one random strike every 1.5 seconds across the whole summit, one in
+  four of them large. A blind dash then lands in a live circle roughly once in 200.
+- **Decided:** distant bolts also hit the cloud sea and the spires around the summit. They
+  only look and sound like a storm and can't hurt anyone.
+- **Proposed:** distant bolts are rare in phase one's clear sky and come often in phase
+  two's storm.
 - **Proposed:** a slowed player near a tornado can still escape a small circle, but not a
   large one. Tornadoes keep away from the edge, so their pull never drags anyone off.
   Their stronger pull on players in the air punishes constant jumping.
-- **Proposed:** the strike circles are white-gold and crackle, and they come quick and
-  many, unlike the Necromancer's few slow lobbed fireballs.
-- **Proposed:** the dive lands on a large marked area, not on one player, and ends in a
-  discharge. Players escape by leaving the area while strikes block some routes.
+- **Decided:** one tornado at the start of phase one, a second once the Roc has lost half
+  of phase one's health, and a third in phase two. This may be too strong; tune it after
+  playtests.
+- **Decided:** tornadoes are permanent once they spawn. They stay through the dive, the
+  stuck window and the brawl.
+- **Decided:** a player caught in a tornado's core is lifted, spun and thrown out with a
+  few hearts of damage, always toward the middle of the summit.
+- **Decided:** tornadoes can't be destroyed; they are just wind. Movement abilities such
+  as dashes, blinks and walls help players get out of them.
+- **Decided:** tornadoes drift slower than walking, never chase anyone, and keep apart
+  from each other and from the edge. The dive's marked area never lands on one.
+- **Decided:** a player who was just thrown can't be caught again for a couple of seconds,
+  so tornadoes can't juggle anyone between them.
+- **Decided:** the tornado count is the same in co-op. The aimed strikes already scale,
+  since each player draws their own.
+- **Proposed:** the strike circles are white-gold and crackle as they form, so players can
+  hear one forming behind them. They come quick and hard, unlike the Necromancer's slow
+  lobbed fireballs.
 - **Decided:** once free, it fights on the ground with three kinds of attack:
   - **Scream blast:** it tucks in and takes a heavy breath, then screams a blast of air,
     sound and lightning in a straight horizontal line ahead. Everyone in the line is hit,
     so players lined up behind each other are all caught.
   - **Beak swings and pecks**, its basic melee.
   - **Wing wave:** a big wave from its wings that pushes players away.
-- **Proposed:** every place to stand has an answer, so the brawl is about reading where
-  its head points. The scream covers the long line in front, pecks hit a player close
-  in front, beak swings sweep its sides, and the wing wave answers players hugging it
-  or standing behind it.
-- **Proposed:** the scream turns toward a player while it breathes in, locks its
-  direction just before it fires, and is too wide to sidestep casually. It can't be
-  jumped, and behind the Roc is safe from it.
-- **Proposed:** the dive always lands far enough from the edge that the wing wave's push
-  can't reach it, so the no-edge rule holds. Being pushed into a tornado is a deliberate
-  danger.
+- **Decided:** every place to stand has an answer, so the brawl is about reading where
+  its head points. Long windups and heavy hits, with starting numbers against full
+  diamond:
+
+  | Attack | Where it hits | Warning | Damage |
+  |---|---|---|---|
+  | Scream blast | A line ahead, about 5 blocks wide, across the summit | Breathes in ~1.2 s while turning to a player; aim locks 0.3 s before | ~8 hearts |
+  | Peck | One player close in front | Head draws back ~0.6 s | ~5 hearts |
+  | Beak swing | A sweep along one side | Head winds back to the other side ~0.8 s | ~5 hearts, knocks sideways |
+  | Wing wave | Players hugging it or behind it | Wings rise ~1 s | ~2 hearts, big push away |
+
+- **Proposed:** the scream is too wide to sidestep casually. It can't be jumped, and
+  behind the Roc is safe from it.
+- **Decided:** it hurts a player it steps on as it shifts its feet or moves, but it never
+  attacks with its talons.
+- **Decided:** it mostly stays where it landed, but it has a movement ability in the brawl
+  so it can't be pinned against the edge or kited from range.
+- **Decided:** the brawl lasts 10–20 seconds. Damage thresholds decide when it takes off
+  and when phase two starts. It takes off with a huge wing spread whose gust blasts
+  everyone away from it without damage, then flies up.
+- **Decided:** damage alone decides when it takes off, with no timer: a team that deals
+  less damage simply brawls longer. Phase two starts at half health. If its health
+  crosses that line during a brawl, the takeoff gust leads straight into the cinematic.
+- **Proposed:** each landing ends once it has lost about an eighth of its health, sized so
+  a typical team needs 10–20 seconds. Phase one then takes at least four landings.
+- **Decided:** the brawl's movement abilities are scary with a hint of cartoon:
+  - **Pounce**, its normal way to move: it drops into a low crouch, tail fan twitching
+    and rear end wiggling like a cat about to leap, then launches in one huge flap and
+    slams down feet-first on a marked circle. Anyone under it is crushed, and the landing
+    sends out a small jumpable ring like the dive's. It doesn't get stuck.
+  - **Stampede**, its answer to a player hitting it from range: it scrapes the rock like
+    a bull and thunders across the summit at that player. It can't stop in time, so it
+    skids for blocks, feet scrabbling and sparks flying, then whips its head around.
+- **Proposed:** starting numbers for the movement abilities:
+  - Pounce: about 1.2 s of wiggle, then about 1 s in the air. Its circle (radius about 6)
+    shows the moment it launches. About 10 hearts to anyone crushed and 3 from the ring.
+    It lands crouched for about a second before it turns.
+  - Stampede: two scrapes over about 1.2 s while it turns to the ranged player, then a
+    straight run about 6 blocks wide. About 8 hearts to anyone trampled, who is tossed
+    aside. The skid leaves about 1.5 s of opening. It always stops well short of the
+    edge, and it waits at least 8 seconds before stampeding again.
+- **Proposed:** the dive always lands far enough from the edge that neither the wing wave
+  nor the takeoff gust can push anyone off, so the no-edge rule holds. Being pushed into
+  a tornado is a deliberate danger.
 - **Proposed:** it dives on a steady rhythm, not by chance.
-  Starting guesses: about 15–20 seconds in the air, 3 for the dive, 3 stuck and 8 of
+  Starting guesses: about 15–20 seconds in the air, 3 for the dive, 6 stuck and 10–20 of
   brawling.
 - **Proposed:** no ward while it perches. A long-range spell that reaches it still
   counts, but the fight is balanced as if nothing can.

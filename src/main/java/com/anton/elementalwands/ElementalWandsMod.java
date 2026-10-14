@@ -81,6 +81,8 @@ public class ElementalWandsMod implements ModInitializer {
         ModBlocks.registerAll();
         ModEntities.registerAll();
         FabricDefaultAttributeRegistry.register(ModEntities.FRACTURED_GUARDIAN, FracturedGuardianEntity.createAttributes().build());
+        FabricDefaultAttributeRegistry.register(ModEntities.STORM_ROC, com.anton.elementalwands.entity.roc.StormRocEntity.createAttributes().build());
+        FabricDefaultAttributeRegistry.register(ModEntities.ROC_BODY_PART, com.anton.elementalwands.entity.roc.RocBodyPartEntity.createAttributes().build());
         FabricDefaultAttributeRegistry.register(ModEntities.HOLLOW_NECROMANCER, com.anton.elementalwands.entity.necromancer.NecromancerEntity.createAttributes().build());
         FabricDefaultAttributeRegistry.register(ModEntities.HARVEST_SOUL, com.anton.elementalwands.entity.necromancer.HarvestSoulEntity.createAttributes().build());
         FabricDefaultAttributeRegistry.register(ModEntities.NECROMANCER_SOUL, com.anton.elementalwands.entity.necromancer.NecromancerSoulEntity.createAttributes().build());

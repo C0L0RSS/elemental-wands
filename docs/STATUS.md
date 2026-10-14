@@ -3,10 +3,19 @@
 Reviewed October 3, 2026. This page contains outstanding work, not release history.
 It records known verification limits; it is not a fresh installation receipt.
 
-- **Storm Summit (map only):** the Storm Roc's realm is built in game. It is reached only by
-  `/ew summit enter`, and has no fight, aerie or intro yet. The native client tour passed on
-  October 9 (seven viewpoints, remains, protection, fall rescue). Pending: a look in Lunar,
-  and frame rate with the sea of clouds and the 250-block view on weaker machines.
+- **Storm Roc phase one:** the summit now has a sealed, operator-started encounter with
+  repeated lightning, permanent drifting tornadoes, a marked dive and jumpable shockwave,
+  the pinned-beak opening, seven grounded actions and health-driven takeoffs. The approved
+  Roc study is installed at the planned scale with synchronized combat poses and animated
+  head/neck hurtboxes. Half health ends this phase-only attempt without rewards. Falls,
+  death and disconnect eliminate a challenger; wipe/reset releases the group for retry.
+  The aerie, intro, storm transformation, phase two and victory rewards remain unimplemented.
+  Build/export checks, dedicated mechanics/lifecycle checks and Nature/Flashover regressions pass.
+  Native checks and reviewed screenshots cover the synchronized poses and visible storm effects.
+  Pending: human Lunar/co-op balance and appearance, weaker-machine performance with the
+  giant model and cloud sea, and tuning health, hazard density and attack pacing. This work
+  does not establish installation into Lunar. See the [summit reference](reference/storm-summit.md)
+  and [testing guide](reference/testing.md) for commands and verification boundaries.
 - **Hollow Necromancer (in progress):** reworked after the first co-op playtest (duels and
   sieges, heavier telegraphed hits) and again after a solo playtest where phase two felt
   easier than phase one and the siege waves were easy. Sieges now bring larger waves,

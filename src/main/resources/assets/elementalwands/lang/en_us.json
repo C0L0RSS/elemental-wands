@@ -109,5 +109,10 @@
   "block.elementalwands.broken_sword": "Broken Sword",
   "block.elementalwands.sword_tip": "Broken Blade",
   "block.elementalwands.old_bones": "Old Bones",
-  "block.elementalwands.old_ribcage": "Old Ribcage"
+  "block.elementalwands.old_ribcage": "Old Ribcage",
+  "entity.elementalwands.storm_roc": "Storm Roc",
+  "entity.elementalwands.roc_body_part": "Storm Roc",
+  "entity.elementalwands.roc_effect": "Storm",
+  "death.attack.roc_storm": "%1$s was caught in the Storm Roc’s fury",
+  "death.attack.roc_storm.player": "%1$s was caught in the Storm Roc’s fury while fighting %2$s"
 }

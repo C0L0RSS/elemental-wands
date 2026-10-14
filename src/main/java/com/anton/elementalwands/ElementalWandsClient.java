@@ -113,6 +113,9 @@ public class ElementalWandsClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.STONE_ZOMBIE, StoneZombieRenderer::new);
         EntityRendererRegistry.register(ModEntities.FIRE_SPIRIT, FireSpiritRenderer::new);
         EntityRendererRegistry.register(ModEntities.FRACTURED_GUARDIAN, FracturedGuardianRenderer::new);
+        EntityRendererRegistry.register(ModEntities.STORM_ROC, com.anton.elementalwands.client.renderer.StormRocRenderer::new);
+        EntityRendererRegistry.register(ModEntities.ROC_EFFECT, com.anton.elementalwands.client.renderer.RocEffectRenderer::new);
+        EntityRendererRegistry.register(ModEntities.ROC_BODY_PART, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.HOLLOW_NECROMANCER, com.anton.elementalwands.client.renderer.NecromancerRenderer::new);
         EntityRendererRegistry.register(ModEntities.SOUL_BOLT, com.anton.elementalwands.client.renderer.SoulBoltRenderer::new);
         EntityRendererRegistry.register(ModEntities.GRASPING_HAND, com.anton.elementalwands.client.renderer.GraspingHandRenderer::new);

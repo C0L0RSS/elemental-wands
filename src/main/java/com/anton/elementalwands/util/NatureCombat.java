@@ -49,6 +49,7 @@ public final class NatureCombat {
 
     /** Returns the health the thorns actually took, which the patch's flower banks. */
     public static float thornContact(ServerWorld world, LivingEntity target, UUID casterUuid) {
+        target=(LivingEntity)SpellCombat.damageTarget(target);
         if (!target.isAlive() || target.isSpectator() || target instanceof AwakenedTreeEntity
                 || WandAllies.protectedFrom(world, casterUuid, target)) return 0;
         int now = world.getServer().getTicks();

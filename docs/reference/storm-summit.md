@@ -1,8 +1,8 @@
 # Storm Summit
 
-The Storm Roc's realm. The map exists, but the fight, the Overworld aerie and the intro don't
-yet; the planned design is the Storm Roc section of the [roadmap](../ROADMAP.md). Owners are
-under `src/main/java/com/anton/elementalwands/summit/`.
+The Storm Roc's realm, with a playable first combat phase. The Overworld aerie, intro,
+storm transformation and second phase remain planned in the [roadmap](../ROADMAP.md).
+The realm and encounter lifecycle live under `summit/`; combat lives under `entity/roc/`.
 
 ## The realm
 
@@ -38,7 +38,7 @@ fog.
 
 ## Visiting
 
-The summit has no fight yet. Operators raise and visit a slot with `/ew summit enter [slot]`.
+Operators raise and visit a slot with `/ew summit enter [slot]`.
 Anyone on the summit can use `/ew summit leave`, which returns them to where they entered.
 `/ew summit status` reports the generation and built slots. A slot is laid out the first
 time it is used, one 48×48 tile per server tick (70 tiles), and is then reused. When the
@@ -46,10 +46,62 @@ installed tiles change, every slot moves to untouched ground. `elementalwands/st
 records the built slots and return points.
 
 A player outside the rim and more than 4 blocks below the summit, or anywhere below the
-clouds, has fallen (`StormSummit.fallen`). For now, the wind sets them back at the arrival
-point. The fight will decide what a fall costs. Survival players can't break the mountain
+clouds, has fallen (`StormSummit.fallen`). Outside a fight, the wind sets them back at the arrival
+point. During a fight, a fall defeats the challenger and moves them into spectator mode. Survival players can't break the mountain
 or place blocks on it. Spells and explosions destroy no blocks. Nothing drops on death: the
-respawned player keeps their inventory and experience. Teleports aren't contained yet.
+respawned player keeps their inventory and experience. During a fight, movement spells and
+pearls may move within its slot (including toward spires), but cannot cross slots or dimensions.
+The explicit leave command remains available.
+
+
+## Phase one
+
+After the slot is ready, `/ew summit start` begins a fight with the living Survival or
+Adventure players on that summit. The roster seals at the start. `/ew summit reset` ends
+it and permits another attempt; `/ew summit status` includes the current combat state.
+Both start and reset require operator permission. There is no aerie entrance yet.
+
+The Roc perches and flies between the six spires for about 18 seconds on Normal, then
+commits to a fixed dive marker for three seconds. Small lightning circles have a one-second
+warning and two bolts; large circles have a 1.5-second warning and three. Repeats arrive
+half a second apart, with full damage on each bolt. Their centres cannot sit inside another
+live circle. Some aimed strikes lead movement; random damaging strikes and harmless distant
+bolts add atmosphere. Aimed volleys rotate through at most four challengers at once.
+
+The dive marker keeps clear of tornadoes. Its impact is lethal against full unenchanted
+diamond and launches a jumpable smoke/lightning ring. Sky strikes stop on impact. The Roc
+stays stuck for six seconds, scrambling with dangerous feet and harmless wings, then
+brawls with pecks, side sweeps, a straight scream, wing gusts, pounces and stampedes.
+The brawl has no timeout: the next takeoff requires another eighth of total health lost.
+Burst damage holds at each landing's gate. Reaching half health plays the takeoff and ends
+this phase-only encounter; it awards no victory loot or shard.
+
+One tornado starts with the fight; a second appears at 75% total health. They persist through
+the dive and brawl, drift slowly within the interior and keep apart. Their outer wind slows
+and hurts; the core lifts/spins a challenger, then throws them toward the summit centre.
+A shared three-second recatch immunity prevents juggling. Dashes and teleports can escape
+the core. Gusts and throws are constrained toward safe ground; normal strikes have no
+knockback. Approaching a spire high above the summit triggers a damaging inward caw.
+
+Starting health is 2,400 solo plus 1,600 per additional challenger. Raw attack damage uses
+vanilla armor and difficulty: on Normal, one small bolt costs about four hearts through
+full diamond, a large bolt or scream about eight, and a peck/sweep about five. These are
+initial tuning values, not human balance approval. Hard shortens the airborne stretch and
+ground recovery; Easy lengthens them. Ground recovery pressure caps at four players.
+
+A defeated, disconnected or departed challenger cannot rejoin the current attempt. Defeated
+players spectate with belongings kept; a wipe, reset or phase completion releases the group
+for a retry. Original game modes are journalled before the fight and restored after an
+interruption, server restart or later login. Runtime bosses, hurtboxes and effects do not
+save, and ending the encounter removes hazards and tornado slowdown. Temporary chunk
+tickets keep the summit and all perches ticking independently of player simulation distance;
+they are removed when the fight ends and are never serialized.
+
+The body, head and neck share the boss's health and damage admission. The latter two
+hurtboxes follow authored sockets. The torso includes its grounded footprint for planted
+thorns; authored feet also test owned coals and flame floors during grounded combat. Spell
+damage and fire attribution resolve to the owning Roc so hitting multiple parts does not
+multiply one attack's reward.
 
 ## Authoring
 
@@ -70,3 +122,15 @@ respawned player keeps their inventory and experience. Teleports aren't containe
 seven viewpoints into `build/summit-client-smoke/screenshots/`, counts the remains, tries to
 break the rock as a survival player, drops a player off the east rim to check the rescue,
 and leaves. Screenshots are not a Lunar look.
+
+The approved study stays under `art/storm_roc/candidate/`. `build_runtime.py` installs its
+model/atlas plus thirteen combat poses and matching server sockets; it converts the
+preview's coordinate basis to GeckoLib without changing the approved shape or texture.
+Run `python3 art/storm_roc/build_runtime.py --check` and
+`python3 art/storm_roc/validate_runtime.py` to check export drift, anatomy and hit-frame
+agreement. `render_runtime.py` produces offline review images.
+
+`tools/roc_server_smoke.init.gradle` exercises real damage and encounter lifecycle in a
+disposable server. `tools/roc_client_smoke.init.gradle` runs a hidden native summit rehearsal
+and captures individual screenshots of the Roc and attacks. Fresh receipts and inspection are required
+before claiming either passed; neither establishes human Lunar/co-op balance.

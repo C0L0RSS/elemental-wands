@@ -23,7 +23,13 @@ public final class SpellCombat {
         return owner instanceof PlayerEntity p && affinity!=WizardAffinity.NONE ? ElementLevels.multiplier(WandProgression.get(p,affinity).xp()) : 1;
     }
     public static boolean damage(Entity target,ServerWorld world,DamageSource source,float amount,Entity owner,WizardAffinity affinity) {
+        target = damageTarget(target);
         if(!Float.isFinite(amount)||amount<=0||WandAllies.protectedFrom(owner,target))return false;
+        // Environmental spell sources (thorns, coals and flame floors) still have an explicit
+        // caster. Preserve the damage type while presenting that owner to Roc admission.
+        if(target instanceof com.anton.elementalwands.entity.roc.StormRocEntity
+                && owner instanceof ServerPlayerEntity && source.getAttacker()!=owner)
+            source=new DamageSource(source.getTypeRegistryEntry(),source.getSource(),owner);
         float health=target instanceof LivingEntity living?living.getHealth():0;
         boolean accepted=target.damage(world,source,amount*multiplier(owner,affinity));
         if(accepted && target instanceof LivingEntity living) reward(living,owner,affinity,health);
@@ -46,9 +52,11 @@ public final class SpellCombat {
             WandProgression.experience(p,affinity,(target.getHealth()-before)*(target==owner?.25:1));
     }
     public static void ignite(Entity target,Entity owner,int seconds) {
+        target=damageTarget(target);
         target.setOnFireFor(seconds);trackBurn(target,owner,seconds*20);
     }
     public static void trackBurn(Entity target,Entity owner,int ticks){
+        target=damageTarget(target);
         if(owner!=null && target.getEntityWorld() instanceof ServerWorld world && !WandAllies.protectedFrom(owner,target))
             BURNS.put(target,new Effect(owner.getUuid(),WizardAffinity.FIRE,world.getTime()+ticks,0));
     }
@@ -69,6 +77,10 @@ public final class SpellCombat {
                 && status!=null && status.getAmplifier()==effect.amplifier()) {
             heal(target,amount,world.getPlayerByUuid(effect.owner()),effect.element());
         } else {REGEN.remove(target);target.heal(amount);}
+    }
+    /** A multipart hit keeps its visible contact point but shares one health and spell owner. */
+    public static Entity damageTarget(Entity target){
+        return target instanceof com.anton.elementalwands.entity.roc.RocBodyPartEntity part && part.owner()!=null ? part.owner() : target;
     }
     private SpellCombat(){}
 }

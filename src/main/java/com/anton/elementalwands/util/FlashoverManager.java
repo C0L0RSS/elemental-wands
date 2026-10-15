@@ -168,6 +168,7 @@ public final class FlashoverManager {
     private static void explode(ServerPlayerEntity p,FlashoverEmberEntity ember,Map<UUID,Integer> contacts) {
         var world=p.getEntityWorld();Vec3d at=ember.getEntityPos();
         var source=new net.minecraft.entity.damage.DamageSource(world.getRegistryManager().getOrThrow(net.minecraft.registry.RegistryKeys.DAMAGE_TYPE).getOrThrow(DAMAGE_TYPE),ember,p);
+        Set<UUID> hitThisBlast=new HashSet<>();
         for(var target:world.getEntitiesByClass(LivingEntity.class,ember.getBoundingBox().expand(FlashoverRules.RADIUS),
                 t -> t.isAlive() && !t.isSpectator() && !WandAllies.protectedFrom(p,t))) {
             Box b=target.getBoundingBox();Vec3d nearest=new Vec3d(Math.clamp(at.x,b.minX,b.maxX),Math.clamp(at.y,b.minY,b.maxY),Math.clamp(at.z,b.minZ,b.maxZ));
@@ -178,7 +179,9 @@ public final class FlashoverManager {
                 if(world.raycast(new RaycastContext(at,point,RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p)).getType()==HitResult.Type.MISS) { visible=true;break; }
             }
             if(!visible)continue;
-            int count=contacts.merge(target.getUuid(),1,Integer::sum);
+            UUID healthOwner=SpellCombat.damageTarget(target).getUuid();
+            if(!hitThisBlast.add(healthOwner))continue;
+            int count=contacts.merge(healthOwner,1,Integer::sum);
             float damage=FlashoverRules.damage(count)-FlashoverRules.damage(count-1);
             // This damage type bypasses only hurt cooldown, not armor/shields/invulnerability.
             // Otherwise vanilla would silently swallow the smaller blasts three ticks apart.

@@ -1,0 +1,51 @@
+// Hidden native Storm Roc rehearsal on the authored summit:16 individual combat and effect screenshots.
+// Screenshots: build/roc-client-smoke/screenshots/
+// ./gradlew -I tools/roc_client_smoke.init.gradle runClient -PhubClientAssets="$HOME/.lunarclient/shared/assets" --offline
+allprojects {
+    plugins.withId('fabric-loom') {
+        def smokeRoot=layout.buildDirectory.dir('roc-client-smoke').get().asFile
+        // Optional existing cache for offline verification (for example Lunar shared/assets).
+        def existingAssets=project.findProperty('hubClientAssets')
+        if (existingAssets) {
+            loom.runs.client.vmArg('-Dfabric.dli.config='+new File(smokeRoot,'launch.cfg').absolutePath)
+        }
+        tasks.register('rocClientMetadata') {
+            if (existingAssets) dependsOn generateDLIConfig
+            doLast {
+                def metadata=new File(smokeRoot,'metadata')
+                metadata.mkdirs()
+                new File(metadata,'fabric.mod.json').text='''{
+  "schemaVersion": 1, "id": "roc_client_smoke", "version": "1.0.0", "environment": "client",
+  "entrypoints": {"client": ["com.anton.elementalwands.client.StormRocClientSmoke"]},
+  "depends": {"elementalwands": "*"}
+}'''
+                new File(smokeRoot,'ROC_CLIENT_PASSED.txt').delete()
+                new File(smokeRoot,'ROC_CLIENT_FAILED.txt').delete()
+                if (existingAssets) {
+                    def assets=file(existingAssets)
+                    if (!new File(assets,'indexes/27.json').exists()) throw new GradleException('Existing asset cache needs indexes/27.json')
+                    def launch=file('.gradle/loom-cache/launch.cfg').text
+                    launch=launch.replaceAll(/(?m)(\t--assetIndex\r?\n)\t[^\r\n]+/, { match, prefix -> prefix+'\t27' })
+                    launch=launch.replaceAll(/(?m)(\t--assetsDir\r?\n)\t[^\r\n]+/, { match, prefix -> prefix+'\t'+assets.absolutePath })
+                    new File(smokeRoot,'launch.cfg').text=launch
+                }
+            }
+        }
+        tasks.register('rocClientJar',Jar) {
+            dependsOn guardianTestClasses, rocClientMetadata
+            archiveFileName='roc-client-smoke.jar'
+            destinationDirectory=smokeRoot
+            from sourceSets.guardianTest.output
+            from new File(smokeRoot,'metadata')
+        }
+        loom.runs.client.runDir('build/roc-client-smoke')
+        loom.runs.client.vmArg('-Dfabric.addMods='+new File(smokeRoot,'roc-client-smoke.jar').absolutePath)
+        tasks.named('runClient') {
+            dependsOn rocClientJar
+            doLast {
+                if (!new File(smokeRoot,'ROC_CLIENT_PASSED.txt').exists() || new File(smokeRoot,'ROC_CLIENT_FAILED.txt').exists())
+                    throw new GradleException('Roc client check failed; inspect build/roc-client-smoke/logs/latest.log')
+            }
+        }
+    }
+}

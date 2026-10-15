@@ -24,6 +24,29 @@ import net.minecraft.util.Identifier;
 
 public final class ModEntities {
 
+        public static final EntityType<com.anton.elementalwands.entity.roc.StormRocEntity> STORM_ROC = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "storm_roc"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.roc.StormRocEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.roc.StormRocEntity::new)
+                        .dimensions(EntityDimensions.fixed(10f, 14f)).trackRangeBlocks(256).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "storm_roc"))));
+
+        public static final EntityType<com.anton.elementalwands.entity.roc.RocBodyPartEntity> ROC_BODY_PART = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "roc_body_part"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.roc.RocBodyPartEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.roc.RocBodyPartEntity::new)
+                        .dimensions(EntityDimensions.fixed(6f, 6f)).trackRangeBlocks(256).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "roc_body_part"))));
+
+        public static final EntityType<com.anton.elementalwands.entity.roc.RocEffectEntity> ROC_EFFECT = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "roc_effect"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.roc.RocEffectEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.roc.RocEffectEntity::new)
+                        .dimensions(EntityDimensions.fixed(0.1f, 0.1f)).trackRangeBlocks(256).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "roc_effect"))));
+
+
+
         public static final EntityType<com.anton.elementalwands.entity.PyreFrontEntity> PYRE_FRONT = Registry.register(
                 Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "pyre_front"),
                 FabricEntityTypeBuilder.<com.anton.elementalwands.entity.PyreFrontEntity>create(SpawnGroup.MISC, com.anton.elementalwands.entity.PyreFrontEntity::new)

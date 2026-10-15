@@ -64,6 +64,7 @@ public final class StormSummitManager {
         String layout = "";
         List<Integer> built = new ArrayList<>();
         Map<String, Point> returns = new LinkedHashMap<>();
+        Map<String, String> modes = new LinkedHashMap<>();
     }
 
     private static final class Build {
@@ -86,12 +87,13 @@ public final class StormSummitManager {
     private static boolean internalTeleport;
 
     public static void init() {
+        StormRocEncounter.init();
         ServerLifecycleEvents.SERVER_STARTED.register(StormSummitManager::load);
         ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resources, success) -> layout = fingerprint(server));
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> { state = null; path = null; builds.clear(); kept.clear(); });
         ServerTickEvents.END_SERVER_TICK.register(StormSummitManager::tick);
         ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) -> {
-            if (alive || !kept.remove(oldPlayer.getUuid())) return;
+            if (alive || !kept.remove(oldPlayer.getUuid()) && !inRealm(oldPlayer)) return;
             newPlayer.getInventory().clone(oldPlayer.getInventory());
             newPlayer.experienceLevel = oldPlayer.experienceLevel;
             newPlayer.totalExperience = oldPlayer.totalExperience;
@@ -116,6 +118,7 @@ public final class StormSummitManager {
     // ------------------------------------------------------------------ commands
 
     public static String enter(ServerPlayerEntity player, int slot) {
+        if (StormRocEncounter.enrolled(player)) return "Leave your current fight before entering another summit.";
         ServerWorld realm = realm(player.getEntityWorld().getServer());
         if (realm == null) return "The Storm Summit dimension is not loaded.";
         if (state == null) return "Storm Summit storage is unavailable; see the server log.";
@@ -123,6 +126,7 @@ public final class StormSummitManager {
             state.returns.put(player.getUuidAsString(), point(player));
             if (!persist()) return "Could not record your return point, so you were not moved.";
         }
+        if (StormRocEncounter.activeAt(StormSummit.centre(state.generation, slot))) return "That summit has a sealed fight in progress.";
         if (ready(slot)) {
             arrive(player, realm, slot);
             return "Entered summit slot " + slot + ". /ew summit leave takes you back.";
@@ -135,6 +139,7 @@ public final class StormSummitManager {
     public static String leave(ServerPlayerEntity player) {
         if (!inRealm(player)) return "You are not on the Storm Summit.";
         if (state == null) return "Storm Summit storage is unavailable; see the server log.";
+        StormRocEncounter.leave(player);
         return sendHome(player) ? "Returned to where you entered." : "No return point was recorded; sent to world spawn.";
     }
 
@@ -143,8 +148,23 @@ public final class StormSummitManager {
         StringBuilder out = new StringBuilder("Storm Summit generation ").append(state.generation)
                 .append(", slots built: ").append(state.built).append('.');
         builds.values().forEach(b -> out.append(" Slot ").append(b.slot).append(" building ").append(b.next).append('/').append(b.tiles.size()).append('.'));
-        return out.toString();
+        return out.append(StormRocEncounter.status()).toString();
     }
+
+    public static String start(ServerPlayerEntity player) {
+        if (!inRealm(player) || state == null) return "Stand on a ready Storm Summit first.";
+        BlockPos centre = StormSummit.nearestCentre(player.getEntityPos());
+        int slot = centre.getX() / StormSummit.SLOT_SPACING - state.generation * StormSummit.SLOTS;
+        if (slot < 0 || slot >= StormSummit.SLOTS || !ready(slot)) return "This summit slot is not ready.";
+        return StormRocEncounter.start(player.getEntityWorld().getServer(), centre);
+    }
+
+    public static String reset(ServerPlayerEntity player) {
+        if (!inRealm(player)) return "Stand on the Storm Summit to reset its fight.";
+        return StormRocEncounter.reset(player.getEntityWorld().getServer(), StormSummit.nearestCentre(player.getEntityPos()));
+    }
+
+    static Map<String, String> savedModes() { return state == null ? null : state.modes; }
 
     // ------------------------------------------------------------------ moving players
 
@@ -170,7 +190,7 @@ public final class StormSummitManager {
         return false;
     }
 
-    private static void transfer(ServerPlayerEntity player, ServerWorld world, Vec3d pos, float yaw, float pitch) {
+    static void transfer(ServerPlayerEntity player, ServerWorld world, Vec3d pos, float yaw, float pitch) {
         player.stopRiding();
         internalTeleport = true;
         try { player.teleport(world, pos.x, pos.y, pos.z, Set.of(), yaw, pitch, true); }
@@ -185,7 +205,7 @@ public final class StormSummitManager {
 
     // ------------------------------------------------------------------ building
 
-    private static boolean ready(int slot) {
+    static boolean ready(int slot) {
         refreshGeneration();
         return state.built.contains(slot) && !builds.containsKey(slot);
     }
@@ -242,6 +262,7 @@ public final class StormSummitManager {
         }
         // Until the fight decides what a fall means, the wind sets a falling visitor back on the summit.
         for (ServerPlayerEntity player : realm.getPlayers()) {
+            if (StormRocEncounter.handlesFall(player)) continue;
             if (player.isSpectator() || !player.isAlive()) continue;
             BlockPos centre = StormSummit.nearestCentre(player.getEntityPos());
             if (!StormSummit.fallen(centre, player.getEntityPos())) continue;
@@ -291,6 +312,7 @@ public final class StormSummitManager {
             state = Files.exists(path) ? JSON.fromJson(Files.readString(path), State.class) : new State();
             if (state == null || state.version != 1 || state.built == null || state.returns == null || state.layout == null)
                 throw new IOException("Invalid Storm Summit record");
+            if (state.modes == null) state.modes = new LinkedHashMap<>();
             persist();
         } catch (Exception e) {
             state = null;
@@ -298,7 +320,7 @@ public final class StormSummitManager {
         }
     }
 
-    private static boolean persist() {
+    static boolean persist() {
         if (state == null || path == null) return false;
         try {
             Files.createDirectories(path.getParent());

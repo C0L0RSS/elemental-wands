@@ -4,7 +4,8 @@ Review-only GeckoLib candidate for the Storm Roc. The current silhouette target 
 `concepts/body-postures.png`: the hunched top figure and horizontal flying bottom
 figure. The face and feather sheet (`concepts/face-and-feathers.png`) and body
 turnaround (`concepts/body-turnaround.png`) still own the head design, palette and
-wing pattern. Nothing here installs runtime assets.
+wing pattern. The candidate builder remains review-only; the separate runtime exporter below
+installs the approved study with combat motion.
 
 ## Build and review
 
@@ -189,3 +190,22 @@ edges are still angular up close. The shallow red tail remains longer than the
 original concept, as established in the prior approved passes. Flight remains 13.78 blocks long. Intermediate pose blending,
 runtime cost, native GeckoLib loading and live Minecraft appearance remain outside
 this art review.
+
+## Runtime combat export
+
+`python3 art/storm_roc/build_runtime.py` installs the model and byte-identical atlases,
+plus thirteen combat clips and sampled server sockets. It preserves the approved shape,
+converting the preview coordinate basis to GeckoLib by reversing Y/Z rotation signs where
+required. The candidate remains unchanged. Rendering uses the server's synchronized pose
+clock, including clients who first see the Roc midway through an attack.
+
+The stuck clip drives the bill tip about 1.5 blocks into the rock (at 2.5x). Each frame rolls
+the wing shoulders down until that wing's lowest feather meets the ground (`WING_REST`). It
+then lifts the wing by up to `WING_SLAP` between weak beats, so the wings splay and beat
+against the rock instead of hanging in the air.
+
+`python3 art/storm_roc/build_runtime.py --check` checks installed outputs, and
+`python3 art/storm_roc/validate_runtime.py` checks the head lock, geometry/UV conversion,
+fixed-length legs, pinned beak and exact peck/scream impact timing. Run
+`python3 art/storm_roc/render_runtime.py` for offline combat views. Native verification
+uses `tools/roc_client_smoke.init.gradle`; see the testing reference for its limits.

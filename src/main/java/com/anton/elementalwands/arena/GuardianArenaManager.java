@@ -208,6 +208,7 @@ public final class GuardianArenaManager {
      * its own rules first.
      */
     public static boolean canTeleport(PlayerEntity player, ServerWorld destination, Vec3d target) {
+        if (!com.anton.elementalwands.summit.StormRocEncounter.canTeleport(player, destination, target)) return false;
         if (!com.anton.elementalwands.crypt.HollowCryptManager.canTeleport(player, destination, target)) return false;
         if (internalTeleport) return true;
         boolean from = inRealm(player), to = destination.getRegistryKey() == ShatteredNave.WORLD;
@@ -220,6 +221,7 @@ public final class GuardianArenaManager {
 
     /** Sealed fighters cast only once the Guardian has woken, and only while still standing. */
     public static boolean canCast(PlayerEntity player) {
+        if (!com.anton.elementalwands.summit.StormRocEncounter.canCast(player)) return false;
         if (player.isSpectator()) return false;
         Fight fight = rosterOf(player);
         return fight == null || fight.fighting && fight.standing.contains(player.getUuidAsString());

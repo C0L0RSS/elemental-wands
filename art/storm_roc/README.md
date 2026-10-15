@@ -199,6 +199,11 @@ converting the preview coordinate basis to GeckoLib by reversing Y/Z rotation si
 required. The candidate remains unchanged. Rendering uses the server's synchronized pose
 clock, including clients who first see the Roc midway through an attack.
 
+The stuck clip drives the bill tip about 1.5 blocks into the rock (at 2.5x). Each frame rolls
+the wing shoulders down until that wing's lowest feather meets the ground (`WING_REST`). It
+then lifts the wing by up to `WING_SLAP` between weak beats, so the wings splay and beat
+against the rock instead of hanging in the air.
+
 `python3 art/storm_roc/build_runtime.py --check` checks installed outputs, and
 `python3 art/storm_roc/validate_runtime.py` checks the head lock, geometry/UV conversion,
 fixed-length legs, pinned beak and exact peck/scream impact timing. Run

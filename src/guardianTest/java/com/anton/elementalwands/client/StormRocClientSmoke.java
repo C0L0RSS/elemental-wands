@@ -35,7 +35,8 @@ public final class StormRocClientSmoke implements ClientModInitializer {
     private BlockPos centre;
     private final AtomicInteger completedShots=new AtomicInteger();
     private int requestedShots;
-    private boolean sawBoss,sawEffects;
+    private boolean sawBoss,sawEffects,partsChecked;
+    private final Map<Integer,Vec3d> serverParts=new java.util.concurrent.ConcurrentHashMap<>();
     private final Set<String> poses=new HashSet<>();
     private final Set<RocEffectEntity.Kind> effects=EnumSet.noneOf(RocEffectEntity.Kind.class);
     public void onInitializeClient(){ClientTickEvents.END_CLIENT_TICK.register(this::tick);}
@@ -71,6 +72,15 @@ public final class StormRocClientSmoke implements ClientModInitializer {
             if(scene==100)onServer(server,()->serverBoss.testStrike(centre.toCenterPos().add(-10,1,8),true));
             if(scene==110)onServer(server,()->{camera(server,id,65,145,75,0,120,0);serverBoss.testDive(centre.toCenterPos().add(0,1,0));});
             if(scene==220)onServer(server,()->camera(server,id,60,124,60,0,108,0));
+            // Melee aims at the client's copy of the head/neck hurtboxes, so it must follow the
+            // server's (they spawned at the far perch; a frozen copy would still be there).
+            if(scene==258)onServer(server,()->{serverParts.clear();for(var part:server.getWorld(StormSummit.WORLD).getEntitiesByClass(RocBodyPartEntity.class,new Box(centre).expand(200),p->p.owner()==serverBoss))serverParts.put(part.getId(),part.getEntityPos());});
+            if(scene==262){
+                require(serverParts.size()==2,"Expected the head and neck hurtboxes on the server, found "+serverParts.size());
+                for(var entry:serverParts.entrySet()){var part=c.world.getEntityById(entry.getKey());
+                    require(part instanceof RocBodyPartEntity&&part.getEntityPos().distanceTo(entry.getValue())<4,"Client Roc hurtbox is not where the server has it: "+(part==null?"missing":part.getEntityPos())+" vs "+entry.getValue());}
+                partsChecked=true;
+            }
             if(scene>=280&&(scene-280)%64==0){int action=(scene-280)/64;if(action<StormRocRules.Action.values().length)onServer(server,()->{
                 target.setPosition(centre.getX()+.5,101,centre.getZ()+12.5);target.setHealth(target.getMaxHealth());target.onTeleportationDone();
                 serverBoss.testAction(target,StormRocRules.Action.values()[action]);
@@ -94,7 +104,8 @@ public final class StormRocClientSmoke implements ClientModInitializer {
                 require(sawBoss,"No synchronized Roc reached the native client");require(sawEffects,"No synchronized Roc effects reached native client");require(poses.containsAll(Set.of("perched","flight","dive","stuck","peck","swing_left","swing_right","scream","wing","pounce","stampede","takeoff")),"Requested tracked poses missing from native client: "+poses);
                 require(effects.containsAll(Set.of(RocEffectEntity.Kind.SMALL_STRIKE,RocEffectEntity.Kind.LARGE_STRIKE,RocEffectEntity.Kind.TORNADO,RocEffectEntity.Kind.DIVE_MARKER,RocEffectEntity.Kind.SHOCKWAVE,RocEffectEntity.Kind.SCREAM)),"Required tracked effect kinds missing: "+effects);
                 require(requestedShots==16,"Expected16 native screenshots, requested"+requestedShots);
-                Files.writeString(Path.of("ROC_CLIENT_PASSED.txt"),"Scripted native summit rehearsal: "+completedShots.get()+" completed screenshots; synchronized Roc, effects and poses "+poses+". Not human input or Lunar balance approval.\n");
+                require(partsChecked,"Client hurtbox positions were never compared");
+                Files.writeString(Path.of("ROC_CLIENT_PASSED.txt"),"Scripted native summit rehearsal: "+completedShots.get()+" completed screenshots; synchronized Roc, effects and poses "+poses+"; client head/neck hurtboxes follow the server's. Not human input or Lunar balance approval.\n");
                 done=true;c.scheduleStop();
             }
         }catch(Throwable error){error.printStackTrace();try{Files.writeString(Path.of("ROC_CLIENT_FAILED.txt"),error+"\n");}catch(Exception ignored){}done=true;c.scheduleStop();}

@@ -79,6 +79,7 @@ public final class StormRocServerSmoke implements ModInitializer {
         elapsed++;
         switch(step){
             case 0 -> {
+                if(elapsed==1)answerChecks();
                 if(elapsed==19)require(target.getHealth()==before,"Small strike hit before warning elapsed");
                 if(elapsed==23){damage(before-target.getHealth(),8,"Small first bolt diamond damage");require(target.getVelocity().lengthSquared()<1e-6,"Small bolt pushed its target");}
                 if(elapsed==34){damage(before-target.getHealth(),16,"Small repeat bolt damage");require(dodge.getHealth()==200,"Small strike hit distant dodger");require(outsider.getHealth()==200,"Small strike hit outsider");checks.add("Small warning, repeat damage, diamond armor, dodge, outsider and no push");next();beginStrike(true);}
@@ -269,6 +270,11 @@ public final class StormRocServerSmoke implements ModInitializer {
                     require(dodge.getHealth()==200,action+" hit distant dodger");require(outsider.getHealth()==200,action+" hit outsider");
                     if(action==StormRocRules.Action.PECK||action==StormRocRules.Action.SCREAM)require(target.getVelocity().lengthSquared()<.0001,action+" unexpectedly pushed target");
                 }
+                // The landing ring reaches a crushed player two ticks later; it must not add to the crush.
+                if(action==StormRocRules.Action.POUNCE&&elapsed==action.impact+7){
+                    damage(200-target.getHealth(),20,"Pounce ring stacked on its crush");
+                    checks.add("Crushed player takes the pounce once, not crush plus ring");
+                }
                 if(elapsed==action.duration+3){
                     checks.add(action+" hit-frame damage, dodge and outsider exclusion");
                     if(++melee>=StormRocRules.Action.values().length){target.setPosition(30.5,101,.5);target.setHealth(200);target.setVelocity(Vec3d.ZERO);boss.stopFight();boss.startFight(CENTRE,List.of(target,dodge));boss.testAction(target,StormRocRules.Action.PECK);target.setPosition(.5,101,.5);dodge.setPosition(20.5,104,.5);dodge.setHealth(200);outsider.setPosition(.5,101,.5);outsider.setHealth(200);boss.testDive(new Vec3d(.5,101.03,.5));step=16;elapsed=0;}
@@ -416,6 +422,18 @@ public final class StormRocServerSmoke implements ModInitializer {
         return StormSummitManager.status()+"; challenger="+dodge.getEntityPos()+"/"+dodge.getEntityWorld().getRegistryKey().getValue()+"/"+dodge.interactionManager.getGameMode()+"/alive="+dodge.isAlive()+"/health="+dodge.getHealth()+"; allRocs="+rocs+"; managed="+saved+"; worldPlayers="+players;
     }
     private void beginStrike(boolean large){target.setHealth(200);target.timeUntilRegen=0;dodge.setHealth(200);outsider.setHealth(200);boss.testAction(target,StormRocRules.Action.PECK);before=target.getHealth();target.setVelocity(Vec3d.ZERO);velocity=target.getVelocity();strike=boss.testStrike(target.getEntityPos(),large);require(strike!=null,"testStrike did not create effect");}
+    private void answerChecks(){
+        var wing=List.of(StormRocRules.Action.WING);
+        require(StormRocCombat.answers(4,1,true,null).equals(wing),"Target between the Roc's feet had no answer");
+        require(StormRocCombat.answers(12,1,true,null).equals(wing),"Target under the Roc's neck had no answer: "+StormRocCombat.answers(12,1,true,null));
+        require(StormRocCombat.answers(12,1,true,StormRocRules.Action.WING).equals(List.of(StormRocRules.Action.POUNCE)),"Target staying under the neck was not pounced");
+        require(StormRocCombat.answers(10,-1,true,null).equals(wing),"Target behind the Roc drew no wing wave");
+        var front=StormRocCombat.answers(25,1,true,null);
+        require(front.containsAll(List.of(StormRocRules.Action.PECK,StormRocRules.Action.SWING_LEFT,StormRocRules.Action.SCREAM)),"Target in bill reach lacked head attacks: "+front);
+        require(!StormRocCombat.answers(15,1,true,null).contains(StormRocRules.Action.PECK),"Peck offered where its bill cannot reach");
+        require(!StormRocCombat.answers(25,1,true,StormRocRules.Action.PECK).contains(StormRocRules.Action.PECK),"Brawl repeated its last attack");
+        checks.add("Brawl answers every place to stand: wings and pounce under the neck, head attacks only within reach, no repeats");
+    }
     private List<RocEffectEntity> effects(){return world.getEntitiesByClass(RocEffectEntity.class,AREA,e->!e.isRemoved());}
     private void next(){step++;elapsed=0;}
     private static void damage(float actual,float expected,String name){require(Math.abs(actual-expected)<.12,name+": expected "+expected+" got "+actual);}

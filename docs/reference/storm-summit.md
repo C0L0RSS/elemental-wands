@@ -69,9 +69,27 @@ live circle. Some aimed strikes lead movement; random damaging strikes and harml
 bolts add atmosphere. Aimed volleys rotate through at most four challengers at once.
 
 The dive marker keeps clear of tornadoes. Its impact is lethal against full unenchanted
-diamond and launches a jumpable smoke/lightning ring. Sky strikes stop on impact. The Roc
-stays stuck for six seconds, scrambling with dangerous feet and harmless wings, then
-brawls with pecks, side sweeps, a straight scream, wing gusts, pounces and stampedes.
+diamond and launches a jumpable smoke/lightning ring; it rolls over low rocks, so only being
+in the air clears it. Sky strikes stop on impact. The Roc stays stuck for six seconds with
+its bill driven into the rock, its wings splayed and beating weakly on the ground (harmless)
+and its scrambling feet hurting anyone close. Then it brawls.
+
+Where its target stands decides the answer, so every spot has one:
+
+- **Head attacks** (peck, side sweep, straight scream) are offered only where the bill's
+  authored path reaches. The reach is measured from the shipped sockets: sweeps about
+  17.5–27.5 blocks ahead of its feet, pecks 21–31.5, the scream from 23.5 out.
+- **Wing wave** for players beside or behind it, or under its neck and chest.
+- **Pounce** at a target over 35 blocks away, after four attacks in one spot, or at a player
+  who stays underneath after a wing wave.
+- **Stampede** at the player who last hit it from more than 28 blocks, at most every eight seconds.
+
+It never repeats an attack back to back and picks among the rest at random. Its target is
+chosen at random, weighted by each player's recent damage (counting half after five seconds),
+so the main damage dealer draws most attacks but not all. It turns 15° a tick while winding up,
+and each attack's aim stops following its target at a lock tick. The pounce locks 0.4 seconds
+before launch and shows its circle at launch. A moving foot, from turning, scraping or
+landing, hurts players under it; the pounce's flight and the stampede's charge use their own hits.
 The brawl has no timeout: the next takeoff requires another eighth of total health lost.
 Burst damage holds at each landing's gate. Reaching half health plays the takeoff and ends
 this phase-only encounter; it awards no victory loot or shard.
@@ -88,6 +106,10 @@ vanilla armor and difficulty: on Normal, one small bolt costs about four hearts 
 full diamond, a large bolt or scream about eight, and a peck/sweep about five. These are
 initial tuning values, not human balance approval. Hard shortens the airborne stretch and
 ground recovery; Easy lengthens them. Ground recovery pressure caps at four players.
+Shields don't block the Roc. Its hits skip vanilla's hurt cooldown, so repeat bolts half a
+second apart land in full. Within its own eight-tick window, though, a new hit only adds its
+excess over the largest recent one, so a crush and its ring, overlapping circles or a chip
+and a bolt never stack. Values live in `StormRocRules`.
 
 A defeated, disconnected or departed challenger cannot rejoin the current attempt. Defeated
 players spectate with belongings kept; a wipe, reset or phase completion releases the group
@@ -98,7 +120,9 @@ tickets keep the summit and all perches ticking independently of player simulati
 they are removed when the fight ends and are never serialized.
 
 The body, head and neck share the boss's health and damage admission. The latter two
-hurtboxes follow authored sockets. The torso includes its grounded footprint for planted
+hurtboxes follow authored sockets; their client copies step their position every tick, so melee
+aims where the server has them. The Roc's own position reaches clients with a one-tick blend,
+so a charge is drawn where it hits. The torso includes its grounded footprint for planted
 thorns; authored feet also test owned coals and flame floors during grounded combat. Spell
 damage and fire attribution resolve to the owning Roc so hitting multiple parts does not
 multiply one attack's reward.

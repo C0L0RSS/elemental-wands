@@ -18,6 +18,9 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 ASSETS = ROOT / 'src/main/resources/assets/elementalwands'
 SCALE = 2.5 / 16
+# While stuck, each wing's lowest feather rests this far into the rock (blocks at 2.5x)
+# and lifts by up to WING_SLAP between weak beats.
+WING_REST, WING_SLAP = -.25, 1.4
 
 def packed(value):
     return (json.dumps(value, separators=(',', ':')) + '\n').encode()
@@ -104,10 +107,33 @@ def main():
     neutral=pose('hunched',0)
     neutral_m=matrices(neutral)
     feet={label:point(neutral_m,label+'_foot',by[label+'_foot']['pivot']) for label in ('left','right')}
-    pin=point(matrices(pose('peck',.5)),'upper_beak',tip);pin[1]=.4
+    # The bill tip is driven about 1.5 blocks into the rock (at 2.5x), not resting on it.
+    pin=point(matrices(pose('peck',.5)),'upper_beak',tip);pin[1]=-9.6
+    wing_keys=('wing','primary','secondary','covert','leading','root_','primaries','secondaries')
+    wing_cubes={label:[(b['name'],np.array(c['origin'])+np.array(c['size'])*[dx,dy,dz])
+        for b in bones if b['name'].startswith(label+'_') and any(k in b['name'] for k in wing_keys)
+        for c in b.get('cubes',[]) for dx in (0,1) for dy in (0,1) for dz in (0,1)] for label in ('left','right')}
+    def splay(p,t):
+        # Roll each shoulder down until that wing's lowest feather meets the rock, then let
+        # it lift and slap down again: the wings splay out and beat weakly against the ground.
+        base={label:p[label+'_wing_shoulder']['rotation'][2] for label in ('left','right')}
+        lo={'left':-60.,'right':-60.};hi={'left':10.,'right':10.}
+        targets={label:(WING_REST+WING_SLAP*max(0,math.sin(t*7+side*.9))**2)/SCALE
+            for label,side in (('left',1),('right',-1))}
+        for _ in range(14):
+            mid={label:(lo[label]+hi[label])/2 for label in lo}
+            for label,side in (('left',1),('right',-1)):
+                p[label+'_wing_shoulder']['rotation'][2]=base[label]+side*mid[label]
+            m=matrices(p)
+            for label in lo:
+                low=min((m[n]@np.r_[v,1])[1] for n,v in wing_cubes[label])
+                if low>targets[label]:hi[label]=mid[label]
+                else:lo[label]=mid[label]
+        for label,side in (('left',1),('right',-1)):
+            p[label+'_wing_shoulder']['rotation'][2]=base[label]+side*(lo[label]+hi[label])/2
     def stuck(t):
         p=pose('peck',.5)
-        wings(p,1.65+.11*math.sin(t*8))
+        wings(p,1.8+.05*math.sin(t*7))
         heave=ease(t,4.85,5.65)
         p['root']['rotation'][0]=10-3*heave+1.3*math.sin(t*11)*(1-heave)
         p['body']['rotation'][0]+=3*math.sin(t*8)*(1-heave)-7*heave
@@ -121,6 +147,7 @@ def main():
         p['lower_beak']['rotation'][0]=18+10*math.sin(t*16)
         at=point(matrices(p),'upper_beak',tip)
         p['root']['position']+=pin-at
+        splay(p,t)
         m=matrices(p);targets={}
         for side,label in ((-1,'right'),(1,'left')):
             foot=point(m,label+'_foot',by[label+'_foot']['pivot'])

@@ -105,6 +105,8 @@ python3 art/hollow_necromancer/undead/build_runtime.py --check
 python3 art/hollow_crypt/build_layout.py --check
 python3 art/guardian_nave/build_layout.py --check
 python3 art/storm_summit/build_layout.py --check
+python3 art/storm_roc_texture_study/build_texture_v3.py --check
+python3 art/storm_roc_mod/build_mod.py --check
 python3 art/storm_roc/build_runtime.py --check
 python3 art/storm_roc/validate_runtime.py
 python3 art/roc_effects/build_tornado_texture.py --check

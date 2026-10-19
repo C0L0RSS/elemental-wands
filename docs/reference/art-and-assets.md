@@ -55,6 +55,11 @@ Runtime resources live under `src/main/resources/assets/elementalwands/`.
 | `art/hollow_necromancer/undead/build_preview.py`, `upright.py`, `build_runtime.py` | Hollow Crawler, Risen Archer and Hunched Brute models, textures, glow masks and clips; `build_preview.py` writes the review candidate, `build_runtime.py` installs GeckoLib files and the generated `HollowUndeadClips` timings (`--check` verifies and re-proves the GeckoLib pose matches the review viewer) |
 | `tools/prepare_soul_light.py` | Stepped soul-cyan ground pool under the Necromancer's glowing spells; `--check` verifies it |
 | `tools/build_guardian_church.py` | Ruined/restored church layouts and structure resources |
+| `art/storm_summit/build_layout.py` | Storm Summit realm tiles, generated `StormSummitLayout`, remains' blocks and cloud textures; `--check` verifies |
+| `art/storm_roc/build_preview.py` | Storm Roc art study: the skeleton and clips the game model rides, and the head crackles; review-only, `--check` verifies |
+| `art/storm_roc_texture_study/build_texture_v3.py`, `art/storm_roc_mod/build_mod.py` | Storm Roc bearded-vulture atlas, eye glow mask and 307-block model; rebuild texture, then model, then runtime (see that folder's README) |
+| `art/storm_roc/build_runtime.py` | Storm Roc GeckoLib model, atlas, sixteen clips and server sockets; `--check` verifies, `validate_runtime.py` checks anatomy and hit timing |
+| `art/roc_effects/build_tornado_texture.py` | Roc tornado atlas; `--check` verifies |
 
 Do not run generators with replacement options unless intentionally changing their
 owned families. A Fire/Wind pass must not regenerate Space/Arcane, Stone, Nature,

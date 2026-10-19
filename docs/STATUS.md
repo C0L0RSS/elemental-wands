@@ -66,7 +66,7 @@ It records known verification limits; it is not a fresh installation receipt.
   Phase two now opens with a 34.6-second transformation cinematic in which he grows into
   the colossus. Its browser animatic and its native crypt recording were approved October 6,
   and server fixtures cover it. It was installed into Lunar that day, built together with the
-  Guardian rebalance branch, which is not yet on main. Pending: a playtest of its length and
+  Guardian rebalance. Pending: a playtest of its length and
   skip in co-op.
   Necromancer spells now cast soul light (real block light plus a blue ground pool);
   FPS on weaker machines is untested.

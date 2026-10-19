@@ -4,8 +4,10 @@ Review-only GeckoLib candidate for the Storm Roc. The current silhouette target 
 `concepts/body-postures.png`: the hunched top figure and horizontal flying bottom
 figure. The face and feather sheet (`concepts/face-and-feathers.png`) and body
 turnaround (`concepts/body-turnaround.png`) still own the head design, palette and
-wing pattern. The candidate builder remains review-only; the separate runtime exporter below
-installs the approved study with combat motion.
+wing pattern. The candidate builder remains review-only. The study is no longer the in-game
+look: the runtime exporter below puts the block model from `art/storm_roc_mod/` on the
+study's skeleton and combat motion (see the
+[summit reference](../../docs/reference/storm-summit.md#authoring)).
 
 ## Build and review
 
@@ -227,9 +229,10 @@ this art review.
 
 ## Runtime combat export
 
-`python3 art/storm_roc/build_runtime.py` installs sixteen runtime clips, the model,
-byte-identical candidate atlases and sampled server sockets. It preserves the
-candidate, converting the study basis to GeckoLib by reversing Y/Z rotation signs.
+`python3 art/storm_roc/build_runtime.py` installs sixteen runtime clips, the block model
+and atlas from `art/storm_roc_mod/candidate/` (`MODEL`), the study's head crackles and
+sampled server sockets. It preserves the model's shape and texture, converting the study
+basis to GeckoLib by reversing Y/Z rotation signs.
 The runtime scale is **1.25x** (`SCALE = 1.25 / 16`). Pose channels are sampled at
 40 Hz, with 80 Hz keys around fast strikes to keep IK interpolation accurate; sockets remain
 20 Hz, in blocks. Java's tick clock and clip durations are unchanged.

@@ -224,8 +224,9 @@ These come from the Guardian and Necromancer playtests:
   few hearts of damage, always toward the middle of the summit.
 - **Decided:** tornadoes can't be destroyed; they are just wind. Movement abilities such
   as dashes, blinks and walls help players get out of them.
-- **Decided:** tornadoes drift slower than walking, never chase anyone, and keep apart
-  from each other and from the edge. The dive's marked area never lands on one.
+- **Decided:** tornadoes drift slower than walking and keep apart from each other and from
+  the edge. The dive's marked area never lands on one. They were meant never to chase
+  anyone; the second-playtest build tries a slow creep toward players (see below).
 - **Decided:** a player who was just thrown can't be caught again for a couple of seconds,
   so tornadoes can't juggle anyone between them.
 - **Decided:** the tornado count is the same in co-op. The aimed strikes already scale,
@@ -352,12 +353,17 @@ These come from the Guardian and Necromancer playtests:
   wave can't push anyone off.
 - **Proposed:** in phase two the chain smash replaces the single dive. The sky strikes on
   its own, there are fewer perches, and strikes keep falling while it brawls.
-- **Decided:** a raptor with a deep blue head and spiky crest, red skin around the eyes,
-  white chest, wings that fade from red-pink to white, a red tail fan and red talons. Its
-  oversized hooked beak is its main weapon and reads from a distance. Lightning crackles
-  around its beak and eyes, and lightning marks run across its face and body.
+- **Decided (Oct 16–19):** it is built from solid, chunky blocks with a detailed pixel
+  texture, like a big modded boss, and looks like a bearded vulture: a rust neck, breast and
+  crest, slate wings and back, rust feathered legs and a long wedge tail. Its face is a
+  demon's, with steep spiked brows over glowing red slit eyes set deep in a dark mask. The
+  crest flares when it screams, calls or winds up and lies flat in flight. Huge black
+  sickle talons grip the rock and the spires. Its long hooked beak is still its main weapon
+  and reads from a distance. Lightning crackles around its head; its body has no lightning
+  marks.
 - **Proposed:** its lightning is white-gold, unlike the Guardian's cyan core and the
-  Necromancer's soul-blue fire. The marks glow brighter once it is charged in phase two.
+  Necromancer's soul-blue fire. Once the storm charges it in phase two, the crackle never
+  settles.
 - **Decided:** the entrance is an aerie at the top of a mountain in the Overworld.
   Ringing a big storm bell there calls the Roc. It attacks, snatches the player and throws
   them onto the arena.

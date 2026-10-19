@@ -18,7 +18,8 @@ public final class StormRocModel extends GeoModel<StormRocEntity> {
     @Override public Identifier getAnimationResource(StormRocEntity entity) { return ANIMATION; }
     @Override public void setCustomAnimations(AnimationState<StormRocEntity> animation) {
         if (!(animation.renderState() instanceof StormRocRenderState state)) return;
-        StormRocPose.pose(state.pose, state.poseTick).forEach((name, p) -> getBone(name).ifPresent(bone -> {
+        var channels = state.frame != null ? state.frame.channels() : StormRocPose.pose(state.pose, state.poseTick);
+        channels.forEach((name, p) -> getBone(name).ifPresent(bone -> {
             var initial = bone.getInitialSnapshot();
             float radians = (float)(Math.PI / 180);
             bone.setRotX(initial.getRotX() - p[0] * radians);

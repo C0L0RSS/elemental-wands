@@ -35,6 +35,8 @@ public final class StormRocClientSmoke implements ClientModInitializer {
     private BlockPos centre;
     private final AtomicInteger completedShots=new AtomicInteger();
     private int requestedShots;
+    private final Set<String> phaseShots=new HashSet<>();
+    private boolean stormChecked;
     private boolean sawBoss,sawEffects,partsChecked;
     private final Map<Integer,Vec3d> serverParts=new java.util.concurrent.ConcurrentHashMap<>();
     private final Set<String> poses=new HashSet<>();
@@ -43,7 +45,7 @@ public final class StormRocClientSmoke implements ClientModInitializer {
     private void tick(MinecraftClient c){
         if(done||c.getOverlay()!=null)return;
         try{
-            if(++ticks>6500)throw new AssertionError("Roc client timeout at scene "+scene);
+            if(++ticks>9000)throw new AssertionError("Roc client timeout at scene "+scene);
             if(!started){
                 started=true;c.options.pauseOnLostFocus=false;c.options.tutorialStep=net.minecraft.client.tutorial.TutorialStep.NONE;
                 c.options.getNarrator().setValue(net.minecraft.client.option.NarratorMode.OFF);c.getNarratorManager().clear();
@@ -66,12 +68,15 @@ public final class StormRocClientSmoke implements ClientModInitializer {
             if(!ready)return;
             scene++;
             if(scene>5&&scene<760&&scene%20==0)onServer(server,()->require(serverBoss.fighting(),"Native combat timeline cancelled at scene"+scene+": "+serverBoss.status()));
-            if(scene==0)onServer(server,()->camera(server,id,72,140,42,0,138,-88));
-            if(scene==65)onServer(server,()->camera(server,id,45,118,35,8,101,4));
-            if(scene==70)onServer(server,()->serverBoss.testStrike(centre.toCenterPos().add(8,1,4),false));
-            if(scene==100)onServer(server,()->serverBoss.testStrike(centre.toCenterPos().add(-10,1,8),true));
-            if(scene==110)onServer(server,()->{camera(server,id,65,145,75,0,120,0);serverBoss.testDive(centre.toCenterPos().add(0,1,0));});
-            if(scene==220)onServer(server,()->camera(server,id,60,124,60,0,108,0));
+            // The first spire visit: its idle, then its call (tick 34) raises a bolt (44) and the
+            // large strikes it calls land at 74. The camera then looks up at them from the rock,
+            // under the cap cloud.
+            if(scene==0)onServer(server,()->camera(server,id,24,142,-60,2,140,-88));
+            if(scene==56)onServer(server,()->camera(server,id,22,102,40,0,140,8));
+            if(scene==80)onServer(server,()->camera(server,id,45,118,35,8,101,4));
+            if(scene==82)onServer(server,()->serverBoss.testStrike(centre.toCenterPos().add(8,1,4),false));
+            if(scene==110)onServer(server,()->{camera(server,id,36,122,42,0,108,0);serverBoss.testDive(centre.toCenterPos().add(0,1,0));});
+            if(scene==220)onServer(server,()->camera(server,id,32,112,36,0,104,-6));
             // Melee aims at the client's copy of the head/neck hurtboxes, so it must follow the
             // server's (they spawned at the far perch; a frozen copy would still be there).
             if(scene==258)onServer(server,()->{serverParts.clear();for(var part:server.getWorld(StormSummit.WORLD).getEntitiesByClass(RocBodyPartEntity.class,new Box(centre).expand(200),p->p.owner()==serverBoss))serverParts.put(part.getId(),part.getEntityPos());});
@@ -85,27 +90,59 @@ public final class StormRocClientSmoke implements ClientModInitializer {
                 target.setPosition(centre.getX()+.5,101,centre.getZ()+12.5);target.setHealth(target.getMaxHealth());target.onTeleportationDone();
                 serverBoss.testAction(target,StormRocRules.Action.values()[action]);
                 if(action==0){serverBoss.testTornado(centre.toCenterPos().add(-18,1,0));serverBoss.testStrike(centre.toCenterPos().add(12,1,8),true);}
-                camera(server,id,55,125,60,0,108,0);
+                camera(server,id,28,112,34,0,104,0);
             });}
+            // A close look at the textured tornado, between the peck and the first sweep.
+            if(scene==328)onServer(server,()->camera(server,id,-4,104,16,-18,110,0));
+            if(scene==336)shot(c,"roc-tornado.png");
             if(scene==760)onServer(server,()->{serverBoss.setHealth(serverBoss.getMaxHealth()*.5f);camera(server,id,60,140,70,0,125,0);});
+            if(scene==865)onServer(server,()->camera(server,id,30,112,36,0,145,0));
+            if(scene==990)onServer(server,()->camera(server,id,62,123,70,0,157,-30));
+            if(scene==1000){require(SummitStormClient.level(1)>.95,"Charged summit storm did not roll in: "+SummitStormClient.level(1));stormChecked=true;shot(c,"roc-storm-sky.png");}
+            if(scene==1010)onServer(server,()->camera(server,id,58,133,62,0,106,0));
+            if(scene==1030)shot(c,"roc-storm-tornadoes.png");
+            if(scene==1080)onServer(server,()->{require(serverBoss.phaseTwo(),"Chain rehearsal began before phase two");serverBoss.testChain();camera(server,id,45,134,55,0,108,12);});
+            if(scene==1300)onServer(server,()->camera(server,id,35,101,25,-25,106,-20));
+            if(scene==1310)shot(c,"roc-storm-ground.png");
+            if(scene==1330)onServer(server,()->{serverBoss.testAction(target,StormRocRules.Action.PECK);serverBoss.testStrike(centre.toCenterPos().add(28,0,12),true);camera(server,id,46,115,36,28,101,12);});
             var clientBoss=c.world.getEntities().iterator();while(clientBoss.hasNext()){
                 var entity=clientBoss.next();if(entity instanceof StormRocEntity roc){sawBoss=true;poses.add(roc.poseName());}if(entity instanceof RocEffectEntity effect){sawEffects=true;effects.add(effect.kind());require(effect.shouldRender(100*100),"Tracked Roc effect was distance-culled at100blocks: "+effect.kind());}
             }
-            if(scene==55)shot(c,"roc-perched.png");
-            if(scene==75)shot(c,"roc-small-warning.png");if(scene==92)shot(c,"roc-small-bolt.png");
-            if(scene==105)shot(c,"roc-large-warning.png");if(scene==132)shot(c,"roc-large-bolt.png");
+            // Use synchronized effect ages for brief phase-two shots, allowing the server camera
+            // teleport to reach the client before the framebuffer is captured.
+            for(var entity:c.world.getEntities()){
+                if(entity instanceof RocEffectEntity e){
+                    // Its call's bolt and the first of the large bolts it calls down, timed by their own ages.
+                    if(e.kind()==RocEffectEntity.Kind.CALL_BOLT&&scene<110&&e.effectTicks(0)>=6&&e.effectTicks(0)<8&&phaseShots.add("call"))shot(c,"roc-call.png");
+                    if(e.kind()==RocEffectEntity.Kind.LARGE_STRIKE&&scene>56&&scene<110&&e.effectTicks(0)>=e.warningTicks()+1&&e.effectTicks(0)<e.warningTicks()+3&&phaseShots.add("large"))shot(c,"roc-large-bolt.png");
+                    if(e.kind()==RocEffectEntity.Kind.CHARGE_BOLT&&e.effectTicks(0)>=3&&e.effectTicks(0)<6&&scene<1000&&phaseShots.add("charge"))shot(c,"roc-charge-bolt.png");
+                    if(e.kind()==RocEffectEntity.Kind.DIVE_MARKER&&scene>1080&&scene<1140){
+                        if(e.effectTicks(0)<5)onServer(server,()->camera(server,id,e.getX()-centre.getX()+35,128,e.getZ()-centre.getZ()+38,e.getX()-centre.getX(),102,e.getZ()-centre.getZ()));
+                        if(e.effectTicks(0)>=8&&phaseShots.add("mark"))shot(c,"roc-chain-mark.png");
+                    }
+                    if(e.kind()==RocEffectEntity.Kind.SHOCKWAVE&&scene>1140&&scene<1170&&e.effectTicks(0)>=5&&phaseShots.add("slam"))shot(c,"roc-chain-slam.png");
+                    if(e.kind()==RocEffectEntity.Kind.LIVE_GROUND&&scene>1380&&e.effectTicks(0)>=12&&phaseShots.add("live"))shot(c,"roc-live-ground.png");
+                }
+                if(entity instanceof StormRocEntity roc&&roc.poseName().equals("hop")&&scene>1148&&scene<1230){
+                    if(scene<1153)onServer(server,()->camera(server,id,roc.getX()-centre.getX()+38,125,roc.getZ()-centre.getZ()+45,roc.getX()-centre.getX(),roc.getY()+5,roc.getZ()-centre.getZ()));
+                    if(scene>=1158&&phaseShots.add("hop"))shot(c,"roc-chain-hop.png");
+                }
+            }
+            if(scene==20)shot(c,"roc-perched.png");if(scene==66)shot(c,"roc-large-warning.png");
+            if(scene==90)shot(c,"roc-small-warning.png");if(scene==104)shot(c,"roc-small-bolt.png");
             if(scene==145)shot(c,"roc-dive-warning.png");if(scene==180)shot(c,"roc-dive-impact.png");if(scene==195)shot(c,"roc-stuck.png");
             for(int i=0;i<StormRocRules.Action.values().length;i++){
                 var action=StormRocRules.Action.values()[i];
                 if(scene==280+i*64+action.impact+2)shot(c,"roc-"+action.pose+".png");
             }
             if(scene==790)shot(c,"roc-takeoff.png");
-            if(scene>=820&&completedShots.get()==requestedShots){
-                require(sawBoss,"No synchronized Roc reached the native client");require(sawEffects,"No synchronized Roc effects reached native client");require(poses.containsAll(Set.of("perched","flight","dive","stuck","peck","swing_left","swing_right","scream","wing","pounce","stampede","takeoff")),"Requested tracked poses missing from native client: "+poses);
-                require(effects.containsAll(Set.of(RocEffectEntity.Kind.SMALL_STRIKE,RocEffectEntity.Kind.LARGE_STRIKE,RocEffectEntity.Kind.TORNADO,RocEffectEntity.Kind.DIVE_MARKER,RocEffectEntity.Kind.SHOCKWAVE,RocEffectEntity.Kind.SCREAM)),"Required tracked effect kinds missing: "+effects);
-                require(requestedShots==16,"Expected16 native screenshots, requested"+requestedShots);
+            if(scene>=1450&&completedShots.get()==requestedShots){
+                require(sawBoss,"No synchronized Roc reached the native client");require(sawEffects,"No synchronized Roc effects reached native client");require(poses.containsAll(Set.of("perched","call","land","flight","dive","stuck","peck","swing_left","swing_right","scream","wing","pounce","stampede","takeoff","hop")),"Requested tracked poses missing from native client: "+poses);
+                require(effects.containsAll(Set.of(RocEffectEntity.Kind.SMALL_STRIKE,RocEffectEntity.Kind.LARGE_STRIKE,RocEffectEntity.Kind.TORNADO,RocEffectEntity.Kind.DIVE_MARKER,RocEffectEntity.Kind.SHOCKWAVE,RocEffectEntity.Kind.SCREAM,RocEffectEntity.Kind.LIVE_GROUND,RocEffectEntity.Kind.CHARGE_BOLT,RocEffectEntity.Kind.STORM_BOLT,RocEffectEntity.Kind.CALL_BOLT)),"Required tracked effect kinds missing: "+effects);
+                require(requestedShots==26,"Expected26 native screenshots, requested"+requestedShots);
+                require(stormChecked&&SummitStormClient.level(1)>.95,"Storm level did not remain above.95");
                 require(partsChecked,"Client hurtbox positions were never compared");
-                Files.writeString(Path.of("ROC_CLIENT_PASSED.txt"),"Scripted native summit rehearsal: "+completedShots.get()+" completed screenshots; synchronized Roc, effects and poses "+poses+"; client head/neck hurtboxes follow the server's. Not human input or Lunar balance approval.\n");
+                Files.writeString(Path.of("ROC_CLIENT_PASSED.txt"),"Scripted native summit rehearsal: "+completedShots.get()+" completed screenshots; phase two storm level="+SummitStormClient.level(1)+"; synchronized Roc, effects "+effects+" and poses "+poses+"; client head/neck hurtboxes follow the server's. Not human input or Lunar balance approval.\n");
                 done=true;c.scheduleStop();
             }
         }catch(Throwable error){error.printStackTrace();try{Files.writeString(Path.of("ROC_CLIENT_FAILED.txt"),error+"\n");}catch(Exception ignored){}done=true;c.scheduleStop();}
@@ -118,7 +155,7 @@ public final class StormRocClientSmoke implements ClientModInitializer {
         target.setLoaded(true);target.onTeleportationDone();target.setNoGravity(true);target.getAttributeInstance(EntityAttributes.MAX_HEALTH).setBaseValue(10000);target.setHealth(10000);target.getAbilities().invulnerable=true;target.sendAbilitiesUpdate();
         target.changeGameMode(GameMode.SURVIVAL);target.getAbilities().invulnerable=true;target.sendAbilitiesUpdate();
         serverBoss=new StormRocEntity(ModEntities.STORM_ROC,world);serverBoss.startFight(centre,List.of(target));require(serverBoss.eligible(target),"Scripted survival target was not eligible");world.spawnEntity(serverBoss);bossId=serverBoss.getUuid();
-        camera.changeGameMode(GameMode.SPECTATOR);camera(server,observer,72,140,42,0,138,-88);ready=true;
+        camera.changeGameMode(GameMode.SPECTATOR);camera(server,observer,24,142,-60,2,140,-88);ready=true;
     }
     private void camera(MinecraftServer server,UUID id,double x,double y,double z,double tx,double ty,double tz){
         var player=server.getPlayerManager().getPlayer(id);double dx=tx-x,dz=tz-z,dy=ty-y;

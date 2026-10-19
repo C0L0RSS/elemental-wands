@@ -16,7 +16,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.GameMode;
 
-/** Server-owned, sealed phase-one rosters. Original modes are journalled before admission. */
+/** Server-owned, sealed fight rosters. Original modes are journalled before admission. */
 public final class StormRocEncounter {
     private StormRocEncounter() {}
     private static final Map<BlockPos, Fight> fights = new HashMap<>();
@@ -92,8 +92,15 @@ public final class StormRocEncounter {
             end(server, fight, "Storm Roc could not begin; encounter reset.");
             return "Storm Roc could not begin: " + failure.getClass().getSimpleName() + ".";
         }
-        announce(server, fight, "Storm Roc phase one begins. The challenger roster is sealed.");
-        return "Started phase one with " + players.size() + " challengers.";
+        announce(server, fight, "The Storm Roc attacks. The challenger roster is sealed.");
+        return "Started the fight with " + players.size() + " challengers.";
+    }
+    public static String skip(MinecraftServer server, BlockPos centre) {
+        Fight fight = fights.get(centre);
+        if (fight == null) return "No active fight on this summit.";
+        if (!fight.boss.skipToPhaseTwo()) return "The Roc is already in or entering phase two.";
+        announce(server, fight, "An operator skipped the fight to the Storm Roc's phase two.");
+        return "Skipping to phase two.";
     }
     public static String reset(MinecraftServer server, BlockPos centre) {
         Fight fight = fights.get(centre);
@@ -150,8 +157,12 @@ public final class StormRocEncounter {
                 if (player == null) { fight.standing.remove(id); fight.boss.removeParticipant(id); }
                 else if (!player.isAlive() || !StormSummitManager.inRealm(player) || !StormSummit.nearestCentre(player.getEntityPos()).equals(fight.centre) || player.isCreative() || player.isSpectator()) eliminate(player);
             }
+            // A defeat earned in the same tick the last challenger fell is still a victory.
+            if (fight.boss.fightComplete()) {
+                end(server, fight, "The Storm Roc falls. Its death and the shard reward are still to come; you may fight it again.");
+                continue;
+            }
             if (fight.standing.isEmpty()) { end(server, fight, "The challengers have fallen. You may retry."); continue; }
-            if (fight.boss.phaseOneComplete()) { end(server, fight, "Phase one complete. You may retry; no shard is awarded in this phase."); continue; }
             if (fight.boss.isRemoved() || !fight.boss.isAlive()) { end(server, fight, "Storm Roc encounter interrupted. You may retry."); continue; }
             for (UUID id : fight.roster) {
                 ServerPlayerEntity player = server.getPlayerManager().getPlayer(id);

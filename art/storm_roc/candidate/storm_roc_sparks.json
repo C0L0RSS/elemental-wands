@@ -210,9 +210,9 @@
     {
       "bone": "spark_eye_left",
       "pivot_model_pixels": [
-        12.88,
-        174.52,
-        -29.0
+        9.0651,
+        177.04,
+        -39.3496
       ],
       "sequence": "spark",
       "size_blocks": 0.4,
@@ -221,9 +221,9 @@
     {
       "bone": "spark_eye_right",
       "pivot_model_pixels": [
-        -12.88,
-        174.52,
-        -29.0
+        -9.0651,
+        177.04,
+        -39.3496
       ],
       "sequence": "spark",
       "size_blocks": 0.4,
@@ -232,9 +232,9 @@
     {
       "bone": "spark_brow_left",
       "pivot_model_pixels": [
-        12.32,
-        176.2,
-        -26.2
+        9.2257,
+        179.84,
+        -39.579
       ],
       "sequence": "arc",
       "size_blocks": 0.62,
@@ -243,9 +243,9 @@
     {
       "bone": "spark_brow_right",
       "pivot_model_pixels": [
-        -12.32,
-        176.2,
-        -26.2
+        -9.2257,
+        179.84,
+        -39.579
       ],
       "sequence": "arc",
       "size_blocks": 0.62,

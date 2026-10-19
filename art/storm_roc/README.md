@@ -118,18 +118,52 @@ tarsi fold under the rear belly with both sets of talons near the fan base.
 
 ## Approved head lock
 
-`approved_head/` contains the protected head-family records and atlas source from
-`.local-previews/storm-roc/snapshots/head-approved-1007/`. `head_lock.py` reserves
-those exact UV rectangles, including gutters, before packing any new body island.
+`approved_head/` now locks the user-requested forward-eye revision. The former
+`head-approved-1007` snapshot is historical. The current full snapshot is
+`.local-previews/storm-roc/snapshots/head-approved-eyes-forward/candidate/`;
+`approved_head/snapshot.json` also pins the committed source files with SHA-256,
+so source integrity is checked even when local previews are absent.
+`head_lock.py` reserves the exact head UV rectangles and gutters before packing
+body islands.
 
-All **53 head-family bones and 361 cubes** retain their head-local pivots,
-origins, sizes, cube rotations and UVs. Texture and glow-mask island pixels are
-identical. The spark sheet is byte-identical, and all six anchor offsets,
-sequence settings and staggered phases are preserved. The family was translated
-rigidly in bind space to meet the longer neck. The existing jaw hinge opens in
-the screech; the crest and cheek geometry have no new deformation.
+The head remains **53 bones and 361 cubes**. Sixteen existing eye-region cubes
+form front-facing sockets, bright gold irises, square dark pupils, and thick blue
+supraorbital shelves with backing into the skull. Iris centers in exported bind
+pixels are `[±8.5432, 177.04, -38.6041]`: closer to the bill than the former side
+eyes. Eye planes have 35-degree outward yaw from straight ahead and mirrored
+12-degree roll, lifting the outer corners and lowering the brow toward the bill.
+Both eyes read beside and above the bill in the front and low player cameras.
 
-`validate_review.py` compares against the supplied head snapshot, checks loop
+Every bone name and parent is retained. The head pivot `[0,165,-22]` and jaw hinge
+`[0,160.8,-30.4]`, hooked bill dimensions, skull courses, crest, plumes, cheek and
+cere feathers, palette, animation clips and non-head geometry are unchanged.
+Unchanged head islands retain their exact UVs and pixels; the revised eyes have
+new atlas islands with fully emissive irises. Body UVs repack around those islands.
+The spark sheet, sequencing and phases are unchanged; only four anchors move:
+
+| Anchor | Absolute bind coordinates (model pixels) |
+| --- | --- |
+| `spark_eye_left` | `[9.0651, 177.04, -39.3496]` |
+| `spark_eye_right` | `[-9.0651, 177.04, -39.3496]` |
+| `spark_brow_left` | `[9.2257, 179.84, -39.579]` |
+| `spark_brow_right` | `[-9.2257, 179.84, -39.579]` |
+
+Matched before/after CPU renders and a comparison sheet live in
+`.local-previews/storm-roc/eyes-forward/`. Its `cameras.json` records front,
+three-quarter, side profile, face close-up and player-view cameras. The player
+camera is 1.6 blocks high, 10 blocks horizontally in front of the hunched head
+pivot, with 1.25x model scale and an assumed 70-degree vertical field of view.
+The head pivot is 2.369 blocks high at that scale. Geometry-only captures omit
+spark sprites so eye visibility comes from the irises themselves. Re-render:
+
+```sh
+python3 art/storm_roc/render_review.py --width 1200 \
+  --cases .local-previews/storm-roc/eyes-forward/cameras.json \
+  --output .local-previews/storm-roc/eyes-forward/after
+```
+
+`validate_review.py` compares against the current head snapshot, checks forward
+eye orientation and iris emissivity, checks loop
 endpoints, and verifies neck and leg attachment at every authored frame. It checks
 fixed segment lengths and planted feet in all ground clips, standing hock height,
 backward hock placement, the final 4.5–4.7-block shoulder height and 0.55–0.8-block
@@ -193,19 +227,75 @@ this art review.
 
 ## Runtime combat export
 
-`python3 art/storm_roc/build_runtime.py` installs the model and byte-identical atlases,
-plus thirteen combat clips and sampled server sockets. It preserves the approved shape,
-converting the preview coordinate basis to GeckoLib by reversing Y/Z rotation signs where
-required. The candidate remains unchanged. Rendering uses the server's synchronized pose
-clock, including clients who first see the Roc midway through an attack.
+`python3 art/storm_roc/build_runtime.py` installs sixteen runtime clips, the model,
+byte-identical candidate atlases and sampled server sockets. It preserves the
+candidate, converting the study basis to GeckoLib by reversing Y/Z rotation signs.
+The runtime scale is **1.25x** (`SCALE = 1.25 / 16`). Pose channels are sampled at
+40 Hz, with 80 Hz keys around fast strikes to keep IK interpolation accurate; sockets remain
+20 Hz, in blocks. Java's tick clock and clip durations are unchanged.
 
-The stuck clip drives the bill tip about 1.5 blocks into the rock (at 2.5x). Each frame rolls
-the wing shoulders down until that wing's lowest feather meets the ground (`WING_REST`). It
-then lifts the wing by up to `WING_SLAP` between weak beats, so the wings splay and beat
-against the rock instead of hanging in the air.
+Ground poses use fixed 14/28/26-pixel avian legs. The solve tilts its sagittal plane
+laterally for body weight shifts while retaining the exact planted foot targets.
+Partial wing spreads interpolate world orientations and pivots, avoiding scattered
+feathers from folded-wing Euler interpolation. Rotation channels are unwrapped
+before export because Java interpolates their components directly.
 
-`python3 art/storm_roc/build_runtime.py --check` checks installed outputs, and
-`python3 art/storm_roc/validate_runtime.py` checks the head lock, geometry/UV conversion,
-fixed-length legs, pinned beak and exact peck/scream impact timing. Run
-`python3 art/storm_roc/render_runtime.py` for offline combat views. Native verification
-uses `tools/roc_client_smoke.init.gradle`; see the testing reference for its limits.
+The stuck bill is pinned **0.9 blocks below the rock** (11.52 model pixels), through
+5.65 s. Wing contact uses the actual rotated cube corners. `WING_REST = -0.125`
+and `WING_SLAP = 0.7` blocks preserve the old model-space clearances at half scale.
+The wing attack and takeoff also limit their downstroke at the rock surface. The
+swing bill crosses the front at **1.05 blocks** throughout the damage window.
+
+All times below are clip seconds; a second is 20 server ticks.
+
+| Clip | Length | Loop | Key times and motion |
+| --- | ---: | :---: | --- |
+| perched | 7.2 | yes | Left snap 0.45–0.60, hold to 1.65; right snap 1.65–1.80; one-eye cock 2.05–3.10; bob 3.15–3.50; feather shake 3.75–4.25; half-open stretch 4.55–6.30; tail flicks, breathing and planted weight shifts. |
+| call | 3.0 | no | Rear and skyward gape 0–0.45; trembling hold to 1.90; command snaps down/wide by **2.00**; glare to 2.60; settle by 3.00. Warning at **0.50**; bolts **2.00 / 2.50 / 3.00**. |
+| land | 0.8 | no | Flight-neutral start; flare and feet forward 0–0.20; feet grip at **0.30**; compression peaks 0.40–0.45; fold to perched neutral at 0.80. |
+| flight | 4.8 | yes | Raised wings 0.35 / 1.55; power strokes 0.70 / 1.90; recover by 2.45; glide to 4.80 with primary flex. Stable forward head, tucked legs, no banking. |
+| hunched | 4.8 | yes | Breathing, low head sway and planted weight shifts; sharp cock 1.30–1.45, hold to 2.05, release by 2.25. |
+| dive | 3.0 | no | Perched start, climbing beats to 1.80; tip 1.50–2.05; tight stoop 2.05–2.55; wings reopen 2.55–2.80; spear to exact stuck(0) at **3.00**. |
+| stuck | 6.0 | no | Pinned bill, rocking/heaving torso, wing slaps and scrabbling feet; big heave **4.85–5.65**; bill releases after 5.65, hunched neutral at 6.00. |
+| peck | 1.8 | no | Coil to 0.40, hold to 0.50; committed strike **0.60**, stick through 0.70; yank free and settle by 1.80. |
+| swing_left | 1.8 | no | Draw across 0–0.55; hold to 0.80; low scythe **0.80–1.15**; overshoot 1.30; settle 1.80. |
+| swing_right | 1.8 | no | Opposite sweep, same **0.80–1.15** damage window, with body twist and tail counterbalance. |
+| scream | 2.2 | no | Rear/mantle to 0.85, hold to 1.10; forward open-bill blast **1.20**; shudder to 1.85; settle 2.20. |
+| wing | 2.0 | no | Crouch, rise with overhead wings by 0.75; slam down/forward **1.00**; follow-through to 1.15; settle by 2.00. |
+| pounce | 3.2 | no | Deep crouch and cat wiggle **0–1.20**; talons forward and pumping wings **1.20–2.20**; heavy planted landing **2.20**; settle 3.20. |
+| stampede | 4.2 | no | Bull scrapes peak **0.30 / 0.90**; alternating-stride charge **1.20–2.70**; blend into lean-back skid after 2.70; air-brake wings; head toss 3.65–4.20. |
+| takeoff | 2.5 | no | Crouch, rise, huge spread/downbeat **1.20**; leg lift and flight transition 1.20–2.50; exact flight(0) endpoint. |
+| hop | 1.2 | no | Exact stuck(0) start; bill yank/head throw to 0.30; huge downbeat about 0.55; tip and spear from 0.85 to exact stuck(0) at **1.20**. |
+
+Server integration: select `call` and `land` explicitly. The concurrent Java
+integration now does this, with a 60-tick call and 16-tick land. Call's warnings
+belong at clip tick 10 and its bolts at ticks 40/50/60. Land starts from flight
+neutral; its local feet grip at tick 6 and remain planted through tick 16. Keep
+the root on the capstone while it absorbs the landing. The planned crossfade can
+accommodate the preceding flight phase. Takeoff ends at flight(0).
+
+Preserve a separate perched-idle phase or allow a longer idle if its full motion
+should be visible. The current 140-tick visit only gives perched windows at ticks
+16–28 and 88–96; resetting the 7.2-second idle in each window cuts off the later
+head cock, shake and stretch. Head yaw stays within +/-45 degrees for layered
+look-at. Java owns travel arcs, roll from turning, renderer scale and gameplay radii.
+
+`python3 art/storm_roc/build_runtime.py --check` compares the installed exports.
+`python3 art/storm_roc/validate_runtime.py` checks the head lock, exact geometry/UV
+conversion, fixed leg lengths, planted feet, socket agreement, loop/end poses,
+pinned bill, wing/ground contact and server impact timing. The peck timing check
+now measures its maximum forward extension at 0.60 s rather than requiring the
+old study's entire strike pose. Flight sanity bounds allow the intentionally deeper
+power strokes: maximum span must stay 32–36.5 blocks and wrist vertical excursion
+must stay 8–16 blocks at 1.25x. These are new runtime envelopes; the unchanged
+study validation still describes its original shallow flap. These are export checks,
+not native gameplay verification.
+
+`python3 art/storm_roc/render_runtime.py --gifs` creates a contact sheet for every
+clip and 480px / 10fps GIFs for perched, call, flight, dive, peck, scream, wing,
+pounce and stampede in `.local-previews/storm-roc/animations/`. It uses the CPU
+renderer at 1.25x, without a browser or generated study HTML. Each clip keeps one
+camera, a floor and a 1.8-block human reference. These show local authored poses;
+server travel arcs are not applied, so airborne dive/hop frames can cross the
+reference floor before their actual in-game landing. Native verification remains
+the integrator's task; see the testing reference.

@@ -1,0 +1,11 @@
+{
+  "revision": "eyes-forward",
+  "description": "User-authorized forward raptor eyes and supraorbital shelves; head and jaw pivots preserved.",
+  "sha256": {
+    "bones.json": "e186297c4970d394b2c5e1d6778ee4fda7df89dc8dc6872a05015e7b8dbcf52e",
+    "storm_roc.png": "3c10aa1b5372f41628a3ef05453a881bb184fb953ad3ca516752d6cb757b3a4e",
+    "storm_roc_glowmask.png": "c36a43b0fead58d1fe246cafa34471935c12909603aac288bf31a4963f1ad592",
+    "storm_roc_sparks.json": "db7bf72d57a824d1a47a3b73e99508a0e3a39cdb44d5245e75bc2684f122527e",
+    "storm_roc_sparks.png": "1ea33f275cf5ff371654ab505241b049ef9be87d6daf4cfd1726576d36dd5ffe"
+  }
+}

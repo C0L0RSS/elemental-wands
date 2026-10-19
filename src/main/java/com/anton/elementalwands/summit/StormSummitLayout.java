@@ -13,7 +13,7 @@ public final class StormSummitLayout {
     public static final int TOP = 36, REACH = 247;
     public static final int TILE = 48, TILE_ORIGIN = -264, TILE_COUNT = 11;
     /** The Roc is drawn at this multiple of its art study; the capstones are sized for its grip. */
-    public static final double ROC_SCALE = 2.5;
+    public static final double ROC_SCALE = 1.25;
     public static final int[] ARRIVAL = {0, 1, 32};
     /** Where the Roc stands on each spire, home spire first; it faces the summit's centre. */
     public static final int[][] PERCHES = {

@@ -1,0 +1,33 @@
+{
+  "status": "User-approved visual checkpoint. art/storm_roc_mod/build_mod.py and art/storm_roc/build_runtime.py now build the same geometry and clips (checked).",
+  "coordinate_basis": "Authoring/study coordinates, before GeckoLib rotation-sign conversion",
+  "scale": 0.078125,
+  "checks": {
+    "source_files_unchanged": true,
+    "protected_head_and_wings_unchanged": true,
+    "tail_pair_max_error_model_pixels": 3.972054645195637e-14,
+    "all_clip_loop_seams": "passed",
+    "flight_head_displacement_blocks": [
+      0.0,
+      0.222560986322059,
+      -1.4380899273703285
+    ],
+    "flight_neck_length_scale": 0.62,
+    "front_chest_width": [
+      32,
+      40
+    ],
+    "shoulder_mantle_width": [
+      34,
+      42
+    ],
+    "pieces": 212
+  },
+  "sha256": {
+    "approved-shape-v3/storm_roc.geo.json": "c26019e121d148e02ff926d367b5fc85edb71033bcf868cd4bf2e9c302e07d37",
+    "approved-shape-v3/storm_roc.animation.json": "d7891563baa784b5a69fb9ef3c6e8167f42c6054f5ccacb8feb50544287d811f",
+    "storm-roc-vulture-v2.png": "2ff506fee43b1c3e260953df488276124f7afe4da266369d7adb2fca181388ea",
+    "storm-roc-glow-v2.png": "ffea58548f169a32ef77c56d3394e459f2e44293f1f13a1fcc75a03f7d8414fd"
+  },
+  "source": "The chunky block model before shape revision 3"
+}

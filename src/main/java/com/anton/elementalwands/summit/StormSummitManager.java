@@ -159,6 +159,11 @@ public final class StormSummitManager {
         return StormRocEncounter.start(player.getEntityWorld().getServer(), centre);
     }
 
+    public static String skip(ServerPlayerEntity player) {
+        if (!inRealm(player)) return "Stand on the Storm Summit to skip its fight ahead.";
+        return StormRocEncounter.skip(player.getEntityWorld().getServer(), StormSummit.nearestCentre(player.getEntityPos()));
+    }
+
     public static String reset(ServerPlayerEntity player) {
         if (!inRealm(player)) return "Stand on the Storm Summit to reset its fight.";
         return StormRocEncounter.reset(player.getEntityWorld().getServer(), StormSummit.nearestCentre(player.getEntityPos()));

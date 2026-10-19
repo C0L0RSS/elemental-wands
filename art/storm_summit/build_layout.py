@@ -26,7 +26,7 @@ BOTTOM = -50           # lowest authored block, well inside the cloud
 OPEN_R = 22            # the middle stays bare rock: no boulders or ruins
 ARRIVAL = (0, 1, 32)   # the party lands south of the centre, facing the home spire
 SEED = 0x5707
-ROC_SCALE = 2.5       # the Roc is drawn at 2.5x the art study: a 68-block wingspan
+ROC_SCALE = 1.25      # the Roc is drawn at 1.25x the art study: a 34-block wingspan
 
 # The six perches: azimuth (degrees, 0 = east, 90 = south), gap from the rim to the
 # spire's face at summit height, and the height of the perch above the summit.
@@ -1044,17 +1044,15 @@ def relic_assets():
         files[ASSETS / f'blockstates/{name}.json'] = as_json({'variants': variants})
     files[ASSETS / 'textures/environment/summit_clouds.png'] = png(cloud_texture(False))
     files[ASSETS / 'textures/environment/summit_wisps.png'] = png(cloud_texture(True))
+    files[ASSETS / 'textures/environment/summit_storm.png'] = png(storm_texture(False))
+    files[ASSETS / 'textures/environment/summit_scud.png'] = png(storm_texture(True))
+    files[ASSETS / 'textures/environment/summit_cap.png'] = png(cap_texture())
     return files
 
 
-def cloud_texture(wisps, size=256):
-    """A tiling sheet for the sea of clouds, one pixel per block: lit, puffy tops for the
-    base layer, or thin drifting wisps for the layer above it."""
-    img = Image.new('RGBA', (size, size))
-    period = 8 if not wisps else 16
-
+def noise_sheet(size, period, salt):
+    """Fractal value noise that wraps every `size` pixels, one value per pixel."""
     def tile_noise(x, y, salt, cells):
-        # Value noise that wraps every `size` pixels.
         fx, fy = x * cells / size, y * cells / size
         ix, iy = int(fx), int(fy)
         tx, ty = fx - ix, fy - iy
@@ -1066,10 +1064,53 @@ def cloud_texture(wisps, size=256):
         total = norm = 0.0
         for o, cells in enumerate((period, period * 2, period * 4, period * 8)):
             amp = .5 ** o
-            total += tile_noise(x, y, 60 + o + 9 * wisps, cells) * amp
+            total += tile_noise(x, y, salt + o, cells) * amp
             norm += amp
         return total / norm
-    h = [[field(x, y) for x in range(size)] for y in range(size)]
+    return [[field(x, y) for x in range(size)] for y in range(size)]
+
+
+def storm_texture(scud, size=256):
+    """Phase two's storm, one pixel per block like the sea below: the heavy, billowed underside
+    of the cloud ceiling, or the torn scud that races beneath it."""
+    img = Image.new('RGBA', (size, size))
+    h = noise_sheet(size, 16 if scud else 8, 95 if scud else 80)
+    for y in range(size):
+        for x in range(size):
+            v = h[y][x]
+            if scud:
+                a = max(0.0, min(1.0, (v - .5) / .16)) * .8
+                img.putpixel((x, y), (66, 72, 88, round(a * 255)))
+                continue
+            # Seen from below: billows catch a little light, the folds between them sink to slate.
+            slope = h[(y - 1) % size][(x - 1) % size] - h[(y + 1) % size][(x + 1) % size]
+            lit = max(0.0, min(1.0, .4 + slope * 6 + (v - .5) * 1.2))
+            dark, light = (34, 38, 50), (98, 106, 126)
+            img.putpixel((x, y), tuple(round(dark[k] + (light[k] - dark[k]) * lit) for k in range(3)) + (255,))
+    return img
+
+
+def cap_texture(size=256):
+    """Phase one's cap cloud: a thin, broken grey deck over the summit that the lightning falls
+    from. Seen from below, its billows are lit at the edges and grey in the folds, with gaps."""
+    img = Image.new('RGBA', (size, size))
+    h = noise_sheet(size, 8, 120)
+    for y in range(size):
+        for x in range(size):
+            v = h[y][x]
+            a = max(0.0, min(1.0, (v - .4) / .14)) * .88
+            slope = h[(y - 1) % size][(x - 1) % size] - h[(y + 1) % size][(x + 1) % size]
+            lit = max(0.0, min(1.0, .45 + slope * 6 + (v - .5) * 1.1))
+            dark, light = (128, 136, 152), (222, 228, 238)
+            img.putpixel((x, y), tuple(round(dark[k] + (light[k] - dark[k]) * lit) for k in range(3)) + (round(a * 255),))
+    return img
+
+
+def cloud_texture(wisps, size=256):
+    """A tiling sheet for the sea of clouds, one pixel per block: lit, puffy tops for the
+    base layer, or thin drifting wisps for the layer above it."""
+    img = Image.new('RGBA', (size, size))
+    h = noise_sheet(size, 8 if not wisps else 16, 60 + 9 * wisps)
     for y in range(size):
         for x in range(size):
             v = h[y][x]

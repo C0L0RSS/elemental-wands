@@ -203,6 +203,8 @@ public class ElementalWandsClient implements ClientModInitializer {
         com.anton.elementalwands.client.NecromancerDrainEffects.register();
         com.anton.elementalwands.client.NaveShaftEffects.register();
         com.anton.elementalwands.client.SummitCloudEffects.register();
+        ClientTickEvents.END_CLIENT_TICK.register(com.anton.elementalwands.client.SummitStormClient::tick);
+        ClientTickEvents.END_CLIENT_TICK.register(com.anton.elementalwands.client.StormRocMotion::tick);
         HudRenderCallback.EVENT.register(new com.anton.elementalwands.client.overlay.NecromancerDrainOverlay());
     }
 

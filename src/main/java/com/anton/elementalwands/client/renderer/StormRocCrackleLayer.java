@@ -38,13 +38,14 @@ public final class StormRocCrackleLayer extends GeoRenderLayer<StormRocEntity,Vo
         if(!visible)return;
         // Animation transforms are normally applied inside deferred model callbacks.
         // Capture channels now, rather than reading shared bones from a prior frame.
-        Map<String,float[]> channels=StormRocPose.pose(state.pose,state.poseTick);
+        Map<String,float[]> channels=state.frame!=null?state.frame.channels():StormRocPose.pose(state.pose,state.poseTick);
         List<Matrix4f> transforms=new ArrayList<>();
         for(JsonElement element:DATA.getAsJsonArray("anchors")) {
             String name=element.getAsJsonObject().get("bone").getAsString();
             transforms.add(transform(getGeoModel().getBone(name).orElseThrow(),channels));
         }
-        boolean charged=state.pose.equals("dive") || state.pose.equals("scream")&&state.poseTick>=18
+        // It flares while calling the lightning down, as it does in the dive and the scream.
+        boolean charged=state.charged || state.pose.equals("dive") || state.pose.equals("call") || state.pose.equals("scream")&&state.poseTick>=18
                 || state.pose.equals("stuck")&&state.poseTick>=100;
         float time=state.age/20;
         queue.submitCustom(matrices,LIGHT,(entry,vertices)->{

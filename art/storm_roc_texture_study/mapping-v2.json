@@ -1,0 +1,6548 @@
+{
+  "changed": 654,
+  "preserved": 606,
+  "cleared_glow_texels": 594,
+  "wings_and_tail": "byte-identical to v1",
+  "orientations": [
+    {
+      "part": 0,
+      "bone": "body",
+      "face": "north",
+      "region": "breast",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 0,
+      "bone": "body",
+      "face": "south",
+      "region": "breast",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 0,
+      "bone": "body",
+      "face": "east",
+      "region": "breast",
+      "flow_uv": [
+        0.8944271909999159,
+        0.4472135954999579
+      ]
+    },
+    {
+      "part": 0,
+      "bone": "body",
+      "face": "west",
+      "region": "breast",
+      "flow_uv": [
+        -0.8944271909999159,
+        0.4472135954999579
+      ]
+    },
+    {
+      "part": 0,
+      "bone": "body",
+      "face": "up",
+      "region": "breast",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 0,
+      "bone": "body",
+      "face": "down",
+      "region": "breast",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 1,
+      "bone": "body",
+      "face": "north",
+      "region": "breast",
+      "flow_uv": [
+        0,
+        1.0000000000000002
+      ]
+    },
+    {
+      "part": 1,
+      "bone": "body",
+      "face": "south",
+      "region": "breast",
+      "flow_uv": [
+        0,
+        1.0000000000000002
+      ]
+    },
+    {
+      "part": 1,
+      "bone": "body",
+      "face": "east",
+      "region": "breast",
+      "flow_uv": [
+        -0.24192189559966773,
+        0.9702957262759965
+      ]
+    },
+    {
+      "part": 1,
+      "bone": "body",
+      "face": "west",
+      "region": "breast",
+      "flow_uv": [
+        0.24192189559966773,
+        0.9702957262759965
+      ]
+    },
+    {
+      "part": 1,
+      "bone": "body",
+      "face": "up",
+      "region": "breast",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 1,
+      "bone": "body",
+      "face": "down",
+      "region": "breast",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 2,
+      "bone": "body",
+      "face": "north",
+      "region": "belly",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 2,
+      "bone": "body",
+      "face": "south",
+      "region": "belly",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 2,
+      "bone": "body",
+      "face": "east",
+      "region": "belly",
+      "flow_uv": [
+        0.9680130564679407,
+        0.25089982564281604
+      ]
+    },
+    {
+      "part": 2,
+      "bone": "body",
+      "face": "west",
+      "region": "belly",
+      "flow_uv": [
+        -0.9680130564679407,
+        0.25089982564281604
+      ]
+    },
+    {
+      "part": 2,
+      "bone": "body",
+      "face": "up",
+      "region": "belly",
+      "flow_uv": [
+        0,
+        -0.9999999999999999
+      ]
+    },
+    {
+      "part": 2,
+      "bone": "body",
+      "face": "down",
+      "region": "belly",
+      "flow_uv": [
+        0,
+        0.9999999999999999
+      ]
+    },
+    {
+      "part": 3,
+      "bone": "body",
+      "face": "north",
+      "region": "belly",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 3,
+      "bone": "body",
+      "face": "south",
+      "region": "belly",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 3,
+      "bone": "body",
+      "face": "east",
+      "region": "belly",
+      "flow_uv": [
+        0.9889363528682975,
+        0.14834045293024462
+      ]
+    },
+    {
+      "part": 3,
+      "bone": "body",
+      "face": "west",
+      "region": "belly",
+      "flow_uv": [
+        -0.9889363528682975,
+        0.14834045293024462
+      ]
+    },
+    {
+      "part": 3,
+      "bone": "body",
+      "face": "up",
+      "region": "belly",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 3,
+      "bone": "body",
+      "face": "down",
+      "region": "belly",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 4,
+      "bone": "body",
+      "face": "north",
+      "region": "back-mantle",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 4,
+      "bone": "body",
+      "face": "south",
+      "region": "back-mantle",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 4,
+      "bone": "body",
+      "face": "east",
+      "region": "back-mantle",
+      "flow_uv": [
+        0.9975640502598242,
+        -0.0697564737441253
+      ]
+    },
+    {
+      "part": 4,
+      "bone": "body",
+      "face": "west",
+      "region": "back-mantle",
+      "flow_uv": [
+        -0.9975640502598242,
+        -0.0697564737441253
+      ]
+    },
+    {
+      "part": 4,
+      "bone": "body",
+      "face": "up",
+      "region": "back-mantle",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 4,
+      "bone": "body",
+      "face": "down",
+      "region": "back-mantle",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 5,
+      "bone": "body",
+      "face": "north",
+      "region": "back-mantle",
+      "flow_uv": [
+        0,
+        -1.0000000000000002
+      ]
+    },
+    {
+      "part": 5,
+      "bone": "body",
+      "face": "south",
+      "region": "back-mantle",
+      "flow_uv": [
+        0,
+        -1.0000000000000002
+      ]
+    },
+    {
+      "part": 5,
+      "bone": "body",
+      "face": "east",
+      "region": "back-mantle",
+      "flow_uv": [
+        0.9781476007338057,
+        -0.20791169081775931
+      ]
+    },
+    {
+      "part": 5,
+      "bone": "body",
+      "face": "west",
+      "region": "back-mantle",
+      "flow_uv": [
+        -0.9781476007338057,
+        -0.20791169081775931
+      ]
+    },
+    {
+      "part": 5,
+      "bone": "body",
+      "face": "up",
+      "region": "back-mantle",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 5,
+      "bone": "body",
+      "face": "down",
+      "region": "back-mantle",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 6,
+      "bone": "body",
+      "face": "north",
+      "region": "breast",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 6,
+      "bone": "body",
+      "face": "south",
+      "region": "breast",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 6,
+      "bone": "body",
+      "face": "east",
+      "region": "breast",
+      "flow_uv": [
+        0.8944271909999159,
+        0.4472135954999579
+      ]
+    },
+    {
+      "part": 6,
+      "bone": "body",
+      "face": "west",
+      "region": "breast",
+      "flow_uv": [
+        -0.8944271909999159,
+        0.4472135954999579
+      ]
+    },
+    {
+      "part": 6,
+      "bone": "body",
+      "face": "up",
+      "region": "breast",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 6,
+      "bone": "body",
+      "face": "down",
+      "region": "breast",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 7,
+      "bone": "body",
+      "face": "north",
+      "region": "back-mantle",
+      "flow_uv": [
+        2.7755575615628914e-17,
+        1
+      ]
+    },
+    {
+      "part": 7,
+      "bone": "body",
+      "face": "south",
+      "region": "back-mantle",
+      "flow_uv": [
+        -2.7755575615628914e-17,
+        1
+      ]
+    },
+    {
+      "part": 7,
+      "bone": "body",
+      "face": "east",
+      "region": "back-mantle",
+      "flow_uv": [
+        0.9902680687415704,
+        0.13917310096006544
+      ]
+    },
+    {
+      "part": 7,
+      "bone": "body",
+      "face": "west",
+      "region": "back-mantle",
+      "flow_uv": [
+        -0.9902680687415704,
+        0.13917310096006544
+      ]
+    },
+    {
+      "part": 7,
+      "bone": "body",
+      "face": "up",
+      "region": "back-mantle",
+      "flow_uv": [
+        3.469446951953614e-18,
+        -1
+      ]
+    },
+    {
+      "part": 7,
+      "bone": "body",
+      "face": "down",
+      "region": "back-mantle",
+      "flow_uv": [
+        3.469446951953614e-18,
+        1
+      ]
+    },
+    {
+      "part": 8,
+      "bone": "body",
+      "face": "north",
+      "region": "breast",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 8,
+      "bone": "body",
+      "face": "south",
+      "region": "breast",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 8,
+      "bone": "body",
+      "face": "east",
+      "region": "breast",
+      "flow_uv": [
+        0.8944271909999159,
+        0.4472135954999579
+      ]
+    },
+    {
+      "part": 8,
+      "bone": "body",
+      "face": "west",
+      "region": "breast",
+      "flow_uv": [
+        -0.8944271909999159,
+        0.4472135954999579
+      ]
+    },
+    {
+      "part": 8,
+      "bone": "body",
+      "face": "up",
+      "region": "breast",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 8,
+      "bone": "body",
+      "face": "down",
+      "region": "breast",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 9,
+      "bone": "body",
+      "face": "north",
+      "region": "back-mantle",
+      "flow_uv": [
+        -2.7755575615628914e-17,
+        1
+      ]
+    },
+    {
+      "part": 9,
+      "bone": "body",
+      "face": "south",
+      "region": "back-mantle",
+      "flow_uv": [
+        2.7755575615628914e-17,
+        1
+      ]
+    },
+    {
+      "part": 9,
+      "bone": "body",
+      "face": "east",
+      "region": "back-mantle",
+      "flow_uv": [
+        0.9902680687415704,
+        0.13917310096006544
+      ]
+    },
+    {
+      "part": 9,
+      "bone": "body",
+      "face": "west",
+      "region": "back-mantle",
+      "flow_uv": [
+        -0.9902680687415704,
+        0.13917310096006544
+      ]
+    },
+    {
+      "part": 9,
+      "bone": "body",
+      "face": "up",
+      "region": "back-mantle",
+      "flow_uv": [
+        -3.469446951953614e-18,
+        -1
+      ]
+    },
+    {
+      "part": 9,
+      "bone": "body",
+      "face": "down",
+      "region": "back-mantle",
+      "flow_uv": [
+        -3.469446951953614e-18,
+        1
+      ]
+    },
+    {
+      "part": 10,
+      "bone": "body",
+      "face": "north",
+      "region": "breast",
+      "flow_uv": [
+        -0.10922351374699597,
+        0.9940172151651901
+      ]
+    },
+    {
+      "part": 10,
+      "bone": "body",
+      "face": "south",
+      "region": "breast",
+      "flow_uv": [
+        0.10922351374699597,
+        0.9940172151651901
+      ]
+    },
+    {
+      "part": 10,
+      "bone": "body",
+      "face": "east",
+      "region": "breast",
+      "flow_uv": [
+        0.8943142085597732,
+        0.4474394890575784
+      ]
+    },
+    {
+      "part": 10,
+      "bone": "body",
+      "face": "west",
+      "region": "breast",
+      "flow_uv": [
+        -0.8943142085597732,
+        0.4474394890575784
+      ]
+    },
+    {
+      "part": 10,
+      "bone": "body",
+      "face": "up",
+      "region": "breast",
+      "flow_uv": [
+        -0.05489226234800818,
+        -0.9984922831621272
+      ]
+    },
+    {
+      "part": 10,
+      "bone": "body",
+      "face": "down",
+      "region": "breast",
+      "flow_uv": [
+        -0.05489226234800818,
+        0.9984922831621272
+      ]
+    },
+    {
+      "part": 11,
+      "bone": "body",
+      "face": "north",
+      "region": "breast",
+      "flow_uv": [
+        -2.7383888244461864e-16,
+        1
+      ]
+    },
+    {
+      "part": 11,
+      "bone": "body",
+      "face": "south",
+      "region": "breast",
+      "flow_uv": [
+        2.7383888244461864e-16,
+        1
+      ]
+    },
+    {
+      "part": 11,
+      "bone": "body",
+      "face": "east",
+      "region": "breast",
+      "flow_uv": [
+        0.8944268099196113,
+        0.4472143576597552
+      ]
+    },
+    {
+      "part": 11,
+      "bone": "body",
+      "face": "west",
+      "region": "breast",
+      "flow_uv": [
+        -0.8944268099196113,
+        0.4472143576597552
+      ]
+    },
+    {
+      "part": 11,
+      "bone": "body",
+      "face": "up",
+      "region": "breast",
+      "flow_uv": [
+        -1.369197329021724e-16,
+        -0.9999999999999999
+      ]
+    },
+    {
+      "part": 11,
+      "bone": "body",
+      "face": "down",
+      "region": "breast",
+      "flow_uv": [
+        -1.369197329021724e-16,
+        0.9999999999999999
+      ]
+    },
+    {
+      "part": 12,
+      "bone": "body",
+      "face": "north",
+      "region": "breast",
+      "flow_uv": [
+        0.10922351374699597,
+        0.9940172151651901
+      ]
+    },
+    {
+      "part": 12,
+      "bone": "body",
+      "face": "south",
+      "region": "breast",
+      "flow_uv": [
+        -0.10922351374699597,
+        0.9940172151651901
+      ]
+    },
+    {
+      "part": 12,
+      "bone": "body",
+      "face": "east",
+      "region": "breast",
+      "flow_uv": [
+        0.8943142085597732,
+        0.4474394890575784
+      ]
+    },
+    {
+      "part": 12,
+      "bone": "body",
+      "face": "west",
+      "region": "breast",
+      "flow_uv": [
+        -0.8943142085597732,
+        0.4474394890575784
+      ]
+    },
+    {
+      "part": 12,
+      "bone": "body",
+      "face": "up",
+      "region": "breast",
+      "flow_uv": [
+        0.05489226234800818,
+        -0.9984922831621272
+      ]
+    },
+    {
+      "part": 12,
+      "bone": "body",
+      "face": "down",
+      "region": "breast",
+      "flow_uv": [
+        0.05489226234800818,
+        0.9984922831621272
+      ]
+    },
+    {
+      "part": 13,
+      "bone": "body",
+      "face": "north",
+      "region": "breast",
+      "flow_uv": [
+        -0.1175029172359862,
+        0.9930725373511409
+      ]
+    },
+    {
+      "part": 13,
+      "bone": "body",
+      "face": "south",
+      "region": "breast",
+      "flow_uv": [
+        0.1175029172359862,
+        0.9930725373511409
+      ]
+    },
+    {
+      "part": 13,
+      "bone": "body",
+      "face": "east",
+      "region": "breast",
+      "flow_uv": [
+        0.8942960663710622,
+        0.44747574869845685
+      ]
+    },
+    {
+      "part": 13,
+      "bone": "body",
+      "face": "west",
+      "region": "breast",
+      "flow_uv": [
+        -0.8942960663710622,
+        0.44747574869845685
+      ]
+    },
+    {
+      "part": 13,
+      "bone": "body",
+      "face": "up",
+      "region": "breast",
+      "flow_uv": [
+        -0.05910116586120187,
+        -0.9982519983420253
+      ]
+    },
+    {
+      "part": 13,
+      "bone": "body",
+      "face": "down",
+      "region": "breast",
+      "flow_uv": [
+        -0.05910116586120187,
+        0.9982519983420253
+      ]
+    },
+    {
+      "part": 14,
+      "bone": "body",
+      "face": "north",
+      "region": "breast",
+      "flow_uv": [
+        -2.7383888244461864e-16,
+        1
+      ]
+    },
+    {
+      "part": 14,
+      "bone": "body",
+      "face": "south",
+      "region": "breast",
+      "flow_uv": [
+        2.7383888244461864e-16,
+        1
+      ]
+    },
+    {
+      "part": 14,
+      "bone": "body",
+      "face": "east",
+      "region": "breast",
+      "flow_uv": [
+        0.8944268099196113,
+        0.4472143576597552
+      ]
+    },
+    {
+      "part": 14,
+      "bone": "body",
+      "face": "west",
+      "region": "breast",
+      "flow_uv": [
+        -0.8944268099196113,
+        0.4472143576597552
+      ]
+    },
+    {
+      "part": 14,
+      "bone": "body",
+      "face": "up",
+      "region": "breast",
+      "flow_uv": [
+        -1.369197329021724e-16,
+        -0.9999999999999999
+      ]
+    },
+    {
+      "part": 14,
+      "bone": "body",
+      "face": "down",
+      "region": "breast",
+      "flow_uv": [
+        -1.369197329021724e-16,
+        0.9999999999999999
+      ]
+    },
+    {
+      "part": 15,
+      "bone": "body",
+      "face": "north",
+      "region": "breast",
+      "flow_uv": [
+        0.1175029172359862,
+        0.9930725373511409
+      ]
+    },
+    {
+      "part": 15,
+      "bone": "body",
+      "face": "south",
+      "region": "breast",
+      "flow_uv": [
+        -0.1175029172359862,
+        0.9930725373511409
+      ]
+    },
+    {
+      "part": 15,
+      "bone": "body",
+      "face": "east",
+      "region": "breast",
+      "flow_uv": [
+        0.8942960663710622,
+        0.44747574869845685
+      ]
+    },
+    {
+      "part": 15,
+      "bone": "body",
+      "face": "west",
+      "region": "breast",
+      "flow_uv": [
+        -0.8942960663710622,
+        0.44747574869845685
+      ]
+    },
+    {
+      "part": 15,
+      "bone": "body",
+      "face": "up",
+      "region": "breast",
+      "flow_uv": [
+        0.05910116586120187,
+        -0.9982519983420253
+      ]
+    },
+    {
+      "part": 15,
+      "bone": "body",
+      "face": "down",
+      "region": "breast",
+      "flow_uv": [
+        0.05910116586120187,
+        0.9982519983420253
+      ]
+    },
+    {
+      "part": 16,
+      "bone": "body",
+      "face": "north",
+      "region": "breast",
+      "flow_uv": [
+        -0.10092190563511748,
+        0.9948943506538654
+      ]
+    },
+    {
+      "part": 16,
+      "bone": "body",
+      "face": "south",
+      "region": "breast",
+      "flow_uv": [
+        0.10092190563511748,
+        0.9948943506538654
+      ]
+    },
+    {
+      "part": 16,
+      "bone": "body",
+      "face": "east",
+      "region": "breast",
+      "flow_uv": [
+        0.8943310386906433,
+        0.4474058484581033
+      ]
+    },
+    {
+      "part": 16,
+      "bone": "body",
+      "face": "west",
+      "region": "breast",
+      "flow_uv": [
+        -0.8943310386906433,
+        0.4474058484581033
+      ]
+    },
+    {
+      "part": 16,
+      "bone": "body",
+      "face": "up",
+      "region": "breast",
+      "flow_uv": [
+        -0.05068195228586711,
+        -0.9987148440433303
+      ]
+    },
+    {
+      "part": 16,
+      "bone": "body",
+      "face": "down",
+      "region": "breast",
+      "flow_uv": [
+        -0.05068195228586711,
+        0.9987148440433303
+      ]
+    },
+    {
+      "part": 17,
+      "bone": "body",
+      "face": "north",
+      "region": "breast",
+      "flow_uv": [
+        -2.7383888244461864e-16,
+        1
+      ]
+    },
+    {
+      "part": 17,
+      "bone": "body",
+      "face": "south",
+      "region": "breast",
+      "flow_uv": [
+        2.7383888244461864e-16,
+        1
+      ]
+    },
+    {
+      "part": 17,
+      "bone": "body",
+      "face": "east",
+      "region": "breast",
+      "flow_uv": [
+        0.8944268099196113,
+        0.4472143576597552
+      ]
+    },
+    {
+      "part": 17,
+      "bone": "body",
+      "face": "west",
+      "region": "breast",
+      "flow_uv": [
+        -0.8944268099196113,
+        0.4472143576597552
+      ]
+    },
+    {
+      "part": 17,
+      "bone": "body",
+      "face": "up",
+      "region": "breast",
+      "flow_uv": [
+        -1.369197329021724e-16,
+        -0.9999999999999999
+      ]
+    },
+    {
+      "part": 17,
+      "bone": "body",
+      "face": "down",
+      "region": "breast",
+      "flow_uv": [
+        -1.369197329021724e-16,
+        0.9999999999999999
+      ]
+    },
+    {
+      "part": 18,
+      "bone": "body",
+      "face": "north",
+      "region": "breast",
+      "flow_uv": [
+        0.10092190563511748,
+        0.9948943506538654
+      ]
+    },
+    {
+      "part": 18,
+      "bone": "body",
+      "face": "south",
+      "region": "breast",
+      "flow_uv": [
+        -0.10092190563511748,
+        0.9948943506538654
+      ]
+    },
+    {
+      "part": 18,
+      "bone": "body",
+      "face": "east",
+      "region": "breast",
+      "flow_uv": [
+        0.8943310386906433,
+        0.4474058484581033
+      ]
+    },
+    {
+      "part": 18,
+      "bone": "body",
+      "face": "west",
+      "region": "breast",
+      "flow_uv": [
+        -0.8943310386906433,
+        0.4474058484581033
+      ]
+    },
+    {
+      "part": 18,
+      "bone": "body",
+      "face": "up",
+      "region": "breast",
+      "flow_uv": [
+        0.05068195228586711,
+        -0.9987148440433303
+      ]
+    },
+    {
+      "part": 18,
+      "bone": "body",
+      "face": "down",
+      "region": "breast",
+      "flow_uv": [
+        0.05068195228586711,
+        0.9987148440433303
+      ]
+    },
+    {
+      "part": 19,
+      "bone": "neck_base_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 19,
+      "bone": "neck_base_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 19,
+      "bone": "neck_base_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.14834045293024462,
+        0.9889363528682975
+      ]
+    },
+    {
+      "part": 19,
+      "bone": "neck_base_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.14834045293024462,
+        0.9889363528682975
+      ]
+    },
+    {
+      "part": 19,
+      "bone": "neck_base_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 19,
+      "bone": "neck_base_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 20,
+      "bone": "neck_base_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 20,
+      "bone": "neck_base_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 20,
+      "bone": "neck_base_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.14834045293024462,
+        0.9889363528682975
+      ]
+    },
+    {
+      "part": 20,
+      "bone": "neck_base_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.14834045293024462,
+        0.9889363528682975
+      ]
+    },
+    {
+      "part": 20,
+      "bone": "neck_base_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 20,
+      "bone": "neck_base_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 21,
+      "bone": "neck_base_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 21,
+      "bone": "neck_base_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 21,
+      "bone": "neck_base_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.07899439030900321,
+        0.9968750605264979
+      ]
+    },
+    {
+      "part": 21,
+      "bone": "neck_base_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.07899439030900321,
+        0.9968750605264979
+      ]
+    },
+    {
+      "part": 21,
+      "bone": "neck_base_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        -0.9999999999999999
+      ]
+    },
+    {
+      "part": 21,
+      "bone": "neck_base_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        0.9999999999999999
+      ]
+    },
+    {
+      "part": 22,
+      "bone": "neck_base_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.7999340388806442,
+        0.6000879380891605
+      ]
+    },
+    {
+      "part": 22,
+      "bone": "neck_base_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.7999340388806442,
+        0.6000879380891605
+      ]
+    },
+    {
+      "part": 22,
+      "bone": "neck_base_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9952670913673961,
+        0.0971772444612591
+      ]
+    },
+    {
+      "part": 22,
+      "bone": "neck_base_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9952670913673961,
+        0.0971772444612591
+      ]
+    },
+    {
+      "part": 22,
+      "bone": "neck_base_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.12906735959684137,
+        -0.9916358286622663
+      ]
+    },
+    {
+      "part": 22,
+      "bone": "neck_base_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.12906735959684137,
+        0.9916358286622663
+      ]
+    },
+    {
+      "part": 23,
+      "bone": "neck_base_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.7999340388806442,
+        0.6000879380891605
+      ]
+    },
+    {
+      "part": 23,
+      "bone": "neck_base_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.7999340388806442,
+        0.6000879380891605
+      ]
+    },
+    {
+      "part": 23,
+      "bone": "neck_base_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9952670913673961,
+        0.0971772444612591
+      ]
+    },
+    {
+      "part": 23,
+      "bone": "neck_base_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9952670913673961,
+        0.0971772444612591
+      ]
+    },
+    {
+      "part": 23,
+      "bone": "neck_base_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.12906735959684137,
+        -0.9916358286622663
+      ]
+    },
+    {
+      "part": 23,
+      "bone": "neck_base_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.12906735959684137,
+        0.9916358286622663
+      ]
+    },
+    {
+      "part": 24,
+      "bone": "neck_base_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.8449701252061708,
+        0.5348135072238436
+      ]
+    },
+    {
+      "part": 24,
+      "bone": "neck_base_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.8449701252061708,
+        0.5348135072238436
+      ]
+    },
+    {
+      "part": 24,
+      "bone": "neck_base_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9994829336845074,
+        0.03215377541457025
+      ]
+    },
+    {
+      "part": 24,
+      "bone": "neck_base_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9994829336845074,
+        0.03215377541457025
+      ]
+    },
+    {
+      "part": 24,
+      "bone": "neck_base_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.05076160250728698,
+        -0.998710798835625
+      ]
+    },
+    {
+      "part": 24,
+      "bone": "neck_base_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.05076160250728698,
+        0.998710798835625
+      ]
+    },
+    {
+      "part": 25,
+      "bone": "neck_base_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.8449701252061708,
+        0.5348135072238436
+      ]
+    },
+    {
+      "part": 25,
+      "bone": "neck_base_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.8449701252061708,
+        0.5348135072238436
+      ]
+    },
+    {
+      "part": 25,
+      "bone": "neck_base_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9994829336845074,
+        0.03215377541457025
+      ]
+    },
+    {
+      "part": 25,
+      "bone": "neck_base_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9994829336845074,
+        0.03215377541457025
+      ]
+    },
+    {
+      "part": 25,
+      "bone": "neck_base_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.05076160250728698,
+        -0.998710798835625
+      ]
+    },
+    {
+      "part": 25,
+      "bone": "neck_base_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.05076160250728698,
+        0.998710798835625
+      ]
+    },
+    {
+      "part": 26,
+      "bone": "neck_base_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.5999190222817951,
+        0.8000607268854377
+      ]
+    },
+    {
+      "part": 26,
+      "bone": "neck_base_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.5999190222817951,
+        0.8000607268854377
+      ]
+    },
+    {
+      "part": 26,
+      "bone": "neck_base_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9804162870268919,
+        0.1969362946041264
+      ]
+    },
+    {
+      "part": 26,
+      "bone": "neck_base_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9804162870268919,
+        0.1969362946041264
+      ]
+    },
+    {
+      "part": 26,
+      "bone": "neck_base_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.14894078475940226,
+        -0.9888461167619831
+      ]
+    },
+    {
+      "part": 26,
+      "bone": "neck_base_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.14894078475940226,
+        0.9888461167619831
+      ]
+    },
+    {
+      "part": 27,
+      "bone": "neck_base_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.5999190222817951,
+        0.8000607268854377
+      ]
+    },
+    {
+      "part": 27,
+      "bone": "neck_base_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.5999190222817951,
+        0.8000607268854377
+      ]
+    },
+    {
+      "part": 27,
+      "bone": "neck_base_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9804162870268919,
+        0.1969362946041264
+      ]
+    },
+    {
+      "part": 27,
+      "bone": "neck_base_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9804162870268919,
+        0.1969362946041264
+      ]
+    },
+    {
+      "part": 27,
+      "bone": "neck_base_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.14894078475940226,
+        -0.9888461167619831
+      ]
+    },
+    {
+      "part": 27,
+      "bone": "neck_base_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.14894078475940226,
+        0.9888461167619831
+      ]
+    },
+    {
+      "part": 28,
+      "bone": "neck_base_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        3.8375406453843116e-16,
+        0.9999999999999998
+      ]
+    },
+    {
+      "part": 28,
+      "bone": "neck_base_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -3.8375406453843116e-16,
+        0.9999999999999998
+      ]
+    },
+    {
+      "part": 28,
+      "bone": "neck_base_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9488949303895086,
+        0.31559215941003593
+      ]
+    },
+    {
+      "part": 28,
+      "bone": "neck_base_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9488949303895086,
+        0.31559215941003593
+      ]
+    },
+    {
+      "part": 28,
+      "bone": "neck_base_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        1.276324385676166e-16,
+        -1
+      ]
+    },
+    {
+      "part": 28,
+      "bone": "neck_base_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        1.276324385676166e-16,
+        1
+      ]
+    },
+    {
+      "part": 29,
+      "bone": "neck_base_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -3.8375406453843116e-16,
+        0.9999999999999998
+      ]
+    },
+    {
+      "part": 29,
+      "bone": "neck_base_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        3.8375406453843116e-16,
+        0.9999999999999998
+      ]
+    },
+    {
+      "part": 29,
+      "bone": "neck_base_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9488949303895086,
+        0.31559215941003593
+      ]
+    },
+    {
+      "part": 29,
+      "bone": "neck_base_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9488949303895086,
+        0.31559215941003593
+      ]
+    },
+    {
+      "part": 29,
+      "bone": "neck_base_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -1.276324385676166e-16,
+        -1
+      ]
+    },
+    {
+      "part": 29,
+      "bone": "neck_base_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -1.276324385676166e-16,
+        1
+      ]
+    },
+    {
+      "part": 30,
+      "bone": "neck_lower_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 30,
+      "bone": "neck_lower_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 30,
+      "bone": "neck_lower_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.14834045293024462,
+        0.9889363528682975
+      ]
+    },
+    {
+      "part": 30,
+      "bone": "neck_lower_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.14834045293024462,
+        0.9889363528682975
+      ]
+    },
+    {
+      "part": 30,
+      "bone": "neck_lower_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 30,
+      "bone": "neck_lower_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 31,
+      "bone": "neck_lower_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 31,
+      "bone": "neck_lower_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 31,
+      "bone": "neck_lower_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.14834045293024462,
+        0.9889363528682975
+      ]
+    },
+    {
+      "part": 31,
+      "bone": "neck_lower_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.14834045293024462,
+        0.9889363528682975
+      ]
+    },
+    {
+      "part": 31,
+      "bone": "neck_lower_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 31,
+      "bone": "neck_lower_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 32,
+      "bone": "neck_lower_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 32,
+      "bone": "neck_lower_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 32,
+      "bone": "neck_lower_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.07899439030900321,
+        0.9968750605264979
+      ]
+    },
+    {
+      "part": 32,
+      "bone": "neck_lower_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.07899439030900321,
+        0.9968750605264979
+      ]
+    },
+    {
+      "part": 32,
+      "bone": "neck_lower_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        -0.9999999999999999
+      ]
+    },
+    {
+      "part": 32,
+      "bone": "neck_lower_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        0.9999999999999999
+      ]
+    },
+    {
+      "part": 33,
+      "bone": "neck_lower_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.7999340388806442,
+        0.6000879380891605
+      ]
+    },
+    {
+      "part": 33,
+      "bone": "neck_lower_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.7999340388806442,
+        0.6000879380891605
+      ]
+    },
+    {
+      "part": 33,
+      "bone": "neck_lower_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9952670913673961,
+        0.0971772444612591
+      ]
+    },
+    {
+      "part": 33,
+      "bone": "neck_lower_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9952670913673961,
+        0.0971772444612591
+      ]
+    },
+    {
+      "part": 33,
+      "bone": "neck_lower_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.12906735959684137,
+        -0.9916358286622663
+      ]
+    },
+    {
+      "part": 33,
+      "bone": "neck_lower_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.12906735959684137,
+        0.9916358286622663
+      ]
+    },
+    {
+      "part": 34,
+      "bone": "neck_lower_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.7999340388806442,
+        0.6000879380891605
+      ]
+    },
+    {
+      "part": 34,
+      "bone": "neck_lower_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.7999340388806442,
+        0.6000879380891605
+      ]
+    },
+    {
+      "part": 34,
+      "bone": "neck_lower_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9952670913673961,
+        0.0971772444612591
+      ]
+    },
+    {
+      "part": 34,
+      "bone": "neck_lower_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9952670913673961,
+        0.0971772444612591
+      ]
+    },
+    {
+      "part": 34,
+      "bone": "neck_lower_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.12906735959684137,
+        -0.9916358286622663
+      ]
+    },
+    {
+      "part": 34,
+      "bone": "neck_lower_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.12906735959684137,
+        0.9916358286622663
+      ]
+    },
+    {
+      "part": 35,
+      "bone": "neck_lower_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.8449701252061708,
+        0.5348135072238436
+      ]
+    },
+    {
+      "part": 35,
+      "bone": "neck_lower_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.8449701252061708,
+        0.5348135072238436
+      ]
+    },
+    {
+      "part": 35,
+      "bone": "neck_lower_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9994829336845074,
+        0.03215377541457025
+      ]
+    },
+    {
+      "part": 35,
+      "bone": "neck_lower_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9994829336845074,
+        0.03215377541457025
+      ]
+    },
+    {
+      "part": 35,
+      "bone": "neck_lower_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.05076160250728698,
+        -0.998710798835625
+      ]
+    },
+    {
+      "part": 35,
+      "bone": "neck_lower_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.05076160250728698,
+        0.998710798835625
+      ]
+    },
+    {
+      "part": 36,
+      "bone": "neck_lower_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.8449701252061708,
+        0.5348135072238436
+      ]
+    },
+    {
+      "part": 36,
+      "bone": "neck_lower_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.8449701252061708,
+        0.5348135072238436
+      ]
+    },
+    {
+      "part": 36,
+      "bone": "neck_lower_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9994829336845074,
+        0.03215377541457025
+      ]
+    },
+    {
+      "part": 36,
+      "bone": "neck_lower_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9994829336845074,
+        0.03215377541457025
+      ]
+    },
+    {
+      "part": 36,
+      "bone": "neck_lower_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.05076160250728698,
+        -0.998710798835625
+      ]
+    },
+    {
+      "part": 36,
+      "bone": "neck_lower_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.05076160250728698,
+        0.998710798835625
+      ]
+    },
+    {
+      "part": 37,
+      "bone": "neck_lower_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.5999190222817945,
+        0.8000607268854382
+      ]
+    },
+    {
+      "part": 37,
+      "bone": "neck_lower_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.5999190222817945,
+        0.8000607268854382
+      ]
+    },
+    {
+      "part": 37,
+      "bone": "neck_lower_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9804162870268919,
+        0.1969362946041266
+      ]
+    },
+    {
+      "part": 37,
+      "bone": "neck_lower_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9804162870268919,
+        0.1969362946041266
+      ]
+    },
+    {
+      "part": 37,
+      "bone": "neck_lower_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.14894078475940223,
+        -0.9888461167619831
+      ]
+    },
+    {
+      "part": 37,
+      "bone": "neck_lower_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.14894078475940223,
+        0.9888461167619831
+      ]
+    },
+    {
+      "part": 38,
+      "bone": "neck_lower_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.5999190222817945,
+        0.8000607268854382
+      ]
+    },
+    {
+      "part": 38,
+      "bone": "neck_lower_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.5999190222817945,
+        0.8000607268854382
+      ]
+    },
+    {
+      "part": 38,
+      "bone": "neck_lower_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9804162870268919,
+        0.1969362946041266
+      ]
+    },
+    {
+      "part": 38,
+      "bone": "neck_lower_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9804162870268919,
+        0.1969362946041266
+      ]
+    },
+    {
+      "part": 38,
+      "bone": "neck_lower_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.14894078475940223,
+        -0.9888461167619831
+      ]
+    },
+    {
+      "part": 38,
+      "bone": "neck_lower_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.14894078475940223,
+        0.9888461167619831
+      ]
+    },
+    {
+      "part": 39,
+      "bone": "neck_lower_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        3.8375406453843116e-16,
+        0.9999999999999998
+      ]
+    },
+    {
+      "part": 39,
+      "bone": "neck_lower_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -3.8375406453843116e-16,
+        0.9999999999999998
+      ]
+    },
+    {
+      "part": 39,
+      "bone": "neck_lower_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9488949303895086,
+        0.31559215941003593
+      ]
+    },
+    {
+      "part": 39,
+      "bone": "neck_lower_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9488949303895086,
+        0.31559215941003593
+      ]
+    },
+    {
+      "part": 39,
+      "bone": "neck_lower_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        1.276324385676166e-16,
+        -1
+      ]
+    },
+    {
+      "part": 39,
+      "bone": "neck_lower_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        1.276324385676166e-16,
+        1
+      ]
+    },
+    {
+      "part": 40,
+      "bone": "neck_lower_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -3.8375406453843116e-16,
+        0.9999999999999998
+      ]
+    },
+    {
+      "part": 40,
+      "bone": "neck_lower_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        3.8375406453843116e-16,
+        0.9999999999999998
+      ]
+    },
+    {
+      "part": 40,
+      "bone": "neck_lower_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9488949303895086,
+        0.31559215941003593
+      ]
+    },
+    {
+      "part": 40,
+      "bone": "neck_lower_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9488949303895086,
+        0.31559215941003593
+      ]
+    },
+    {
+      "part": 40,
+      "bone": "neck_lower_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -1.276324385676166e-16,
+        -1
+      ]
+    },
+    {
+      "part": 40,
+      "bone": "neck_lower_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -1.276324385676166e-16,
+        1
+      ]
+    },
+    {
+      "part": 41,
+      "bone": "neck_mid_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 41,
+      "bone": "neck_mid_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 41,
+      "bone": "neck_mid_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.14834045293024462,
+        0.9889363528682975
+      ]
+    },
+    {
+      "part": 41,
+      "bone": "neck_mid_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.14834045293024462,
+        0.9889363528682975
+      ]
+    },
+    {
+      "part": 41,
+      "bone": "neck_mid_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 41,
+      "bone": "neck_mid_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 42,
+      "bone": "neck_mid_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 42,
+      "bone": "neck_mid_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 42,
+      "bone": "neck_mid_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.14834045293024462,
+        0.9889363528682975
+      ]
+    },
+    {
+      "part": 42,
+      "bone": "neck_mid_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.14834045293024462,
+        0.9889363528682975
+      ]
+    },
+    {
+      "part": 42,
+      "bone": "neck_mid_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 42,
+      "bone": "neck_mid_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 43,
+      "bone": "neck_mid_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 43,
+      "bone": "neck_mid_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 43,
+      "bone": "neck_mid_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.07899439030900321,
+        0.9968750605264979
+      ]
+    },
+    {
+      "part": 43,
+      "bone": "neck_mid_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.07899439030900321,
+        0.9968750605264979
+      ]
+    },
+    {
+      "part": 43,
+      "bone": "neck_mid_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        -0.9999999999999999
+      ]
+    },
+    {
+      "part": 43,
+      "bone": "neck_mid_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        0.9999999999999999
+      ]
+    },
+    {
+      "part": 44,
+      "bone": "neck_mid_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.7999340388806442,
+        0.6000879380891605
+      ]
+    },
+    {
+      "part": 44,
+      "bone": "neck_mid_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.7999340388806442,
+        0.6000879380891605
+      ]
+    },
+    {
+      "part": 44,
+      "bone": "neck_mid_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9952670913673961,
+        0.0971772444612591
+      ]
+    },
+    {
+      "part": 44,
+      "bone": "neck_mid_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9952670913673961,
+        0.0971772444612591
+      ]
+    },
+    {
+      "part": 44,
+      "bone": "neck_mid_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.12906735959684137,
+        -0.9916358286622663
+      ]
+    },
+    {
+      "part": 44,
+      "bone": "neck_mid_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.12906735959684137,
+        0.9916358286622663
+      ]
+    },
+    {
+      "part": 45,
+      "bone": "neck_mid_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.7999340388806442,
+        0.6000879380891605
+      ]
+    },
+    {
+      "part": 45,
+      "bone": "neck_mid_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.7999340388806442,
+        0.6000879380891605
+      ]
+    },
+    {
+      "part": 45,
+      "bone": "neck_mid_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9952670913673961,
+        0.0971772444612591
+      ]
+    },
+    {
+      "part": 45,
+      "bone": "neck_mid_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9952670913673961,
+        0.0971772444612591
+      ]
+    },
+    {
+      "part": 45,
+      "bone": "neck_mid_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.12906735959684137,
+        -0.9916358286622663
+      ]
+    },
+    {
+      "part": 45,
+      "bone": "neck_mid_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.12906735959684137,
+        0.9916358286622663
+      ]
+    },
+    {
+      "part": 46,
+      "bone": "neck_mid_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.8449701252061708,
+        0.5348135072238436
+      ]
+    },
+    {
+      "part": 46,
+      "bone": "neck_mid_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.8449701252061708,
+        0.5348135072238436
+      ]
+    },
+    {
+      "part": 46,
+      "bone": "neck_mid_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9994829336845074,
+        0.03215377541457025
+      ]
+    },
+    {
+      "part": 46,
+      "bone": "neck_mid_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9994829336845074,
+        0.03215377541457025
+      ]
+    },
+    {
+      "part": 46,
+      "bone": "neck_mid_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.05076160250728698,
+        -0.998710798835625
+      ]
+    },
+    {
+      "part": 46,
+      "bone": "neck_mid_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.05076160250728698,
+        0.998710798835625
+      ]
+    },
+    {
+      "part": 47,
+      "bone": "neck_mid_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.8449701252061708,
+        0.5348135072238436
+      ]
+    },
+    {
+      "part": 47,
+      "bone": "neck_mid_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.8449701252061708,
+        0.5348135072238436
+      ]
+    },
+    {
+      "part": 47,
+      "bone": "neck_mid_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9994829336845074,
+        0.03215377541457025
+      ]
+    },
+    {
+      "part": 47,
+      "bone": "neck_mid_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9994829336845074,
+        0.03215377541457025
+      ]
+    },
+    {
+      "part": 47,
+      "bone": "neck_mid_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.05076160250728698,
+        -0.998710798835625
+      ]
+    },
+    {
+      "part": 47,
+      "bone": "neck_mid_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.05076160250728698,
+        0.998710798835625
+      ]
+    },
+    {
+      "part": 48,
+      "bone": "neck_mid_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.5999190222817945,
+        0.8000607268854382
+      ]
+    },
+    {
+      "part": 48,
+      "bone": "neck_mid_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.5999190222817945,
+        0.8000607268854382
+      ]
+    },
+    {
+      "part": 48,
+      "bone": "neck_mid_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9804162870268919,
+        0.1969362946041266
+      ]
+    },
+    {
+      "part": 48,
+      "bone": "neck_mid_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9804162870268919,
+        0.1969362946041266
+      ]
+    },
+    {
+      "part": 48,
+      "bone": "neck_mid_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.14894078475940223,
+        -0.9888461167619831
+      ]
+    },
+    {
+      "part": 48,
+      "bone": "neck_mid_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.14894078475940223,
+        0.9888461167619831
+      ]
+    },
+    {
+      "part": 49,
+      "bone": "neck_mid_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.5999190222817945,
+        0.8000607268854382
+      ]
+    },
+    {
+      "part": 49,
+      "bone": "neck_mid_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.5999190222817945,
+        0.8000607268854382
+      ]
+    },
+    {
+      "part": 49,
+      "bone": "neck_mid_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9804162870268919,
+        0.1969362946041266
+      ]
+    },
+    {
+      "part": 49,
+      "bone": "neck_mid_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9804162870268919,
+        0.1969362946041266
+      ]
+    },
+    {
+      "part": 49,
+      "bone": "neck_mid_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.14894078475940223,
+        -0.9888461167619831
+      ]
+    },
+    {
+      "part": 49,
+      "bone": "neck_mid_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.14894078475940223,
+        0.9888461167619831
+      ]
+    },
+    {
+      "part": 50,
+      "bone": "neck_mid_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        3.8375406453843116e-16,
+        0.9999999999999998
+      ]
+    },
+    {
+      "part": 50,
+      "bone": "neck_mid_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -3.8375406453843116e-16,
+        0.9999999999999998
+      ]
+    },
+    {
+      "part": 50,
+      "bone": "neck_mid_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9488949303895086,
+        0.31559215941003593
+      ]
+    },
+    {
+      "part": 50,
+      "bone": "neck_mid_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9488949303895086,
+        0.31559215941003593
+      ]
+    },
+    {
+      "part": 50,
+      "bone": "neck_mid_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        1.276324385676166e-16,
+        -1
+      ]
+    },
+    {
+      "part": 50,
+      "bone": "neck_mid_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        1.276324385676166e-16,
+        1
+      ]
+    },
+    {
+      "part": 51,
+      "bone": "neck_mid_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -3.8375406453843116e-16,
+        0.9999999999999998
+      ]
+    },
+    {
+      "part": 51,
+      "bone": "neck_mid_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        3.8375406453843116e-16,
+        0.9999999999999998
+      ]
+    },
+    {
+      "part": 51,
+      "bone": "neck_mid_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9488949303895086,
+        0.31559215941003593
+      ]
+    },
+    {
+      "part": 51,
+      "bone": "neck_mid_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9488949303895086,
+        0.31559215941003593
+      ]
+    },
+    {
+      "part": 51,
+      "bone": "neck_mid_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -1.276324385676166e-16,
+        -1
+      ]
+    },
+    {
+      "part": 51,
+      "bone": "neck_mid_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -1.276324385676166e-16,
+        1
+      ]
+    },
+    {
+      "part": 52,
+      "bone": "neck_upper_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 52,
+      "bone": "neck_upper_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 52,
+      "bone": "neck_upper_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.14834045293024462,
+        0.9889363528682975
+      ]
+    },
+    {
+      "part": 52,
+      "bone": "neck_upper_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.14834045293024462,
+        0.9889363528682975
+      ]
+    },
+    {
+      "part": 52,
+      "bone": "neck_upper_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 52,
+      "bone": "neck_upper_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 53,
+      "bone": "neck_upper_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 53,
+      "bone": "neck_upper_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 53,
+      "bone": "neck_upper_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.14834045293024462,
+        0.9889363528682975
+      ]
+    },
+    {
+      "part": 53,
+      "bone": "neck_upper_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.14834045293024462,
+        0.9889363528682975
+      ]
+    },
+    {
+      "part": 53,
+      "bone": "neck_upper_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 53,
+      "bone": "neck_upper_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 54,
+      "bone": "neck_upper_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 54,
+      "bone": "neck_upper_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 54,
+      "bone": "neck_upper_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.07899439030900321,
+        0.9968750605264979
+      ]
+    },
+    {
+      "part": 54,
+      "bone": "neck_upper_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.07899439030900321,
+        0.9968750605264979
+      ]
+    },
+    {
+      "part": 54,
+      "bone": "neck_upper_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        -0.9999999999999999
+      ]
+    },
+    {
+      "part": 54,
+      "bone": "neck_upper_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0,
+        0.9999999999999999
+      ]
+    },
+    {
+      "part": 55,
+      "bone": "neck_upper_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.7999340388806442,
+        0.6000879380891605
+      ]
+    },
+    {
+      "part": 55,
+      "bone": "neck_upper_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.7999340388806442,
+        0.6000879380891605
+      ]
+    },
+    {
+      "part": 55,
+      "bone": "neck_upper_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9952670913673961,
+        0.0971772444612591
+      ]
+    },
+    {
+      "part": 55,
+      "bone": "neck_upper_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9952670913673961,
+        0.0971772444612591
+      ]
+    },
+    {
+      "part": 55,
+      "bone": "neck_upper_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.12906735959684137,
+        -0.9916358286622663
+      ]
+    },
+    {
+      "part": 55,
+      "bone": "neck_upper_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.12906735959684137,
+        0.9916358286622663
+      ]
+    },
+    {
+      "part": 56,
+      "bone": "neck_upper_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.7999340388806442,
+        0.6000879380891605
+      ]
+    },
+    {
+      "part": 56,
+      "bone": "neck_upper_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.7999340388806442,
+        0.6000879380891605
+      ]
+    },
+    {
+      "part": 56,
+      "bone": "neck_upper_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9952670913673961,
+        0.0971772444612591
+      ]
+    },
+    {
+      "part": 56,
+      "bone": "neck_upper_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9952670913673961,
+        0.0971772444612591
+      ]
+    },
+    {
+      "part": 56,
+      "bone": "neck_upper_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.12906735959684137,
+        -0.9916358286622663
+      ]
+    },
+    {
+      "part": 56,
+      "bone": "neck_upper_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.12906735959684137,
+        0.9916358286622663
+      ]
+    },
+    {
+      "part": 57,
+      "bone": "neck_upper_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -3.8375406453843116e-16,
+        0.9999999999999998
+      ]
+    },
+    {
+      "part": 57,
+      "bone": "neck_upper_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        3.8375406453843116e-16,
+        0.9999999999999998
+      ]
+    },
+    {
+      "part": 57,
+      "bone": "neck_upper_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9488949303895086,
+        0.31559215941003593
+      ]
+    },
+    {
+      "part": 57,
+      "bone": "neck_upper_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9488949303895086,
+        0.31559215941003593
+      ]
+    },
+    {
+      "part": 57,
+      "bone": "neck_upper_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -1.276324385676166e-16,
+        -1
+      ]
+    },
+    {
+      "part": 57,
+      "bone": "neck_upper_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -1.276324385676166e-16,
+        1
+      ]
+    },
+    {
+      "part": 58,
+      "bone": "neck_upper_skin",
+      "face": "north",
+      "region": "neck-hackles",
+      "flow_uv": [
+        3.8375406453843116e-16,
+        0.9999999999999998
+      ]
+    },
+    {
+      "part": 58,
+      "bone": "neck_upper_skin",
+      "face": "south",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -3.8375406453843116e-16,
+        0.9999999999999998
+      ]
+    },
+    {
+      "part": 58,
+      "bone": "neck_upper_skin",
+      "face": "east",
+      "region": "neck-hackles",
+      "flow_uv": [
+        0.9488949303895086,
+        0.31559215941003593
+      ]
+    },
+    {
+      "part": 58,
+      "bone": "neck_upper_skin",
+      "face": "west",
+      "region": "neck-hackles",
+      "flow_uv": [
+        -0.9488949303895086,
+        0.31559215941003593
+      ]
+    },
+    {
+      "part": 58,
+      "bone": "neck_upper_skin",
+      "face": "up",
+      "region": "neck-hackles",
+      "flow_uv": [
+        1.276324385676166e-16,
+        -1
+      ]
+    },
+    {
+      "part": 58,
+      "bone": "neck_upper_skin",
+      "face": "down",
+      "region": "neck-hackles",
+      "flow_uv": [
+        1.276324385676166e-16,
+        1
+      ]
+    },
+    {
+      "part": 59,
+      "bone": "neck_tip_skin",
+      "face": "north",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 59,
+      "bone": "neck_tip_skin",
+      "face": "south",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 59,
+      "bone": "neck_tip_skin",
+      "face": "east",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.14834045293024462,
+        0.9889363528682975
+      ]
+    },
+    {
+      "part": 59,
+      "bone": "neck_tip_skin",
+      "face": "west",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.14834045293024462,
+        0.9889363528682975
+      ]
+    },
+    {
+      "part": 59,
+      "bone": "neck_tip_skin",
+      "face": "up",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 59,
+      "bone": "neck_tip_skin",
+      "face": "down",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 60,
+      "bone": "neck_tip_skin",
+      "face": "north",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 60,
+      "bone": "neck_tip_skin",
+      "face": "south",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 60,
+      "bone": "neck_tip_skin",
+      "face": "east",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.14834045293024462,
+        0.9889363528682975
+      ]
+    },
+    {
+      "part": 60,
+      "bone": "neck_tip_skin",
+      "face": "west",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.14834045293024462,
+        0.9889363528682975
+      ]
+    },
+    {
+      "part": 60,
+      "bone": "neck_tip_skin",
+      "face": "up",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 60,
+      "bone": "neck_tip_skin",
+      "face": "down",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 61,
+      "bone": "neck_tip_skin",
+      "face": "north",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 61,
+      "bone": "neck_tip_skin",
+      "face": "south",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 61,
+      "bone": "neck_tip_skin",
+      "face": "east",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.07899439030900321,
+        0.9968750605264979
+      ]
+    },
+    {
+      "part": 61,
+      "bone": "neck_tip_skin",
+      "face": "west",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.07899439030900321,
+        0.9968750605264979
+      ]
+    },
+    {
+      "part": 61,
+      "bone": "neck_tip_skin",
+      "face": "up",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0,
+        -0.9999999999999999
+      ]
+    },
+    {
+      "part": 61,
+      "bone": "neck_tip_skin",
+      "face": "down",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0,
+        0.9999999999999999
+      ]
+    },
+    {
+      "part": 62,
+      "bone": "neck_tip_skin",
+      "face": "north",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.7999340388806442,
+        0.6000879380891605
+      ]
+    },
+    {
+      "part": 62,
+      "bone": "neck_tip_skin",
+      "face": "south",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.7999340388806442,
+        0.6000879380891605
+      ]
+    },
+    {
+      "part": 62,
+      "bone": "neck_tip_skin",
+      "face": "east",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.9952670913673961,
+        0.0971772444612591
+      ]
+    },
+    {
+      "part": 62,
+      "bone": "neck_tip_skin",
+      "face": "west",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.9952670913673961,
+        0.0971772444612591
+      ]
+    },
+    {
+      "part": 62,
+      "bone": "neck_tip_skin",
+      "face": "up",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.12906735959684137,
+        -0.9916358286622663
+      ]
+    },
+    {
+      "part": 62,
+      "bone": "neck_tip_skin",
+      "face": "down",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.12906735959684137,
+        0.9916358286622663
+      ]
+    },
+    {
+      "part": 63,
+      "bone": "neck_tip_skin",
+      "face": "north",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.7999340388806442,
+        0.6000879380891605
+      ]
+    },
+    {
+      "part": 63,
+      "bone": "neck_tip_skin",
+      "face": "south",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.7999340388806442,
+        0.6000879380891605
+      ]
+    },
+    {
+      "part": 63,
+      "bone": "neck_tip_skin",
+      "face": "east",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.9952670913673961,
+        0.0971772444612591
+      ]
+    },
+    {
+      "part": 63,
+      "bone": "neck_tip_skin",
+      "face": "west",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.9952670913673961,
+        0.0971772444612591
+      ]
+    },
+    {
+      "part": 63,
+      "bone": "neck_tip_skin",
+      "face": "up",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.12906735959684137,
+        -0.9916358286622663
+      ]
+    },
+    {
+      "part": 63,
+      "bone": "neck_tip_skin",
+      "face": "down",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.12906735959684137,
+        0.9916358286622663
+      ]
+    },
+    {
+      "part": 64,
+      "bone": "neck_tip_skin",
+      "face": "north",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -3.8375406453843116e-16,
+        0.9999999999999998
+      ]
+    },
+    {
+      "part": 64,
+      "bone": "neck_tip_skin",
+      "face": "south",
+      "region": "cheek-nape",
+      "flow_uv": [
+        3.8375406453843116e-16,
+        0.9999999999999998
+      ]
+    },
+    {
+      "part": 64,
+      "bone": "neck_tip_skin",
+      "face": "east",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.9488949303895086,
+        0.31559215941003593
+      ]
+    },
+    {
+      "part": 64,
+      "bone": "neck_tip_skin",
+      "face": "west",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.9488949303895086,
+        0.31559215941003593
+      ]
+    },
+    {
+      "part": 64,
+      "bone": "neck_tip_skin",
+      "face": "up",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -1.276324385676166e-16,
+        -1
+      ]
+    },
+    {
+      "part": 64,
+      "bone": "neck_tip_skin",
+      "face": "down",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -1.276324385676166e-16,
+        1
+      ]
+    },
+    {
+      "part": 65,
+      "bone": "neck_tip_skin",
+      "face": "north",
+      "region": "cheek-nape",
+      "flow_uv": [
+        3.8375406453843116e-16,
+        0.9999999999999998
+      ]
+    },
+    {
+      "part": 65,
+      "bone": "neck_tip_skin",
+      "face": "south",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -3.8375406453843116e-16,
+        0.9999999999999998
+      ]
+    },
+    {
+      "part": 65,
+      "bone": "neck_tip_skin",
+      "face": "east",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.9488949303895086,
+        0.31559215941003593
+      ]
+    },
+    {
+      "part": 65,
+      "bone": "neck_tip_skin",
+      "face": "west",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.9488949303895086,
+        0.31559215941003593
+      ]
+    },
+    {
+      "part": 65,
+      "bone": "neck_tip_skin",
+      "face": "up",
+      "region": "cheek-nape",
+      "flow_uv": [
+        1.276324385676166e-16,
+        -1
+      ]
+    },
+    {
+      "part": 65,
+      "bone": "neck_tip_skin",
+      "face": "down",
+      "region": "cheek-nape",
+      "flow_uv": [
+        1.276324385676166e-16,
+        1
+      ]
+    },
+    {
+      "part": 66,
+      "bone": "head",
+      "face": "north",
+      "region": "crown",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 66,
+      "bone": "head",
+      "face": "south",
+      "region": "crown",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 66,
+      "bone": "head",
+      "face": "east",
+      "region": "crown",
+      "flow_uv": [
+        0.9766444667050899,
+        0.21486178267511977
+      ]
+    },
+    {
+      "part": 66,
+      "bone": "head",
+      "face": "west",
+      "region": "crown",
+      "flow_uv": [
+        -0.9766444667050899,
+        0.21486178267511977
+      ]
+    },
+    {
+      "part": 66,
+      "bone": "head",
+      "face": "up",
+      "region": "crown",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 66,
+      "bone": "head",
+      "face": "down",
+      "region": "crown",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 67,
+      "bone": "head",
+      "face": "north",
+      "region": "crown",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 67,
+      "bone": "head",
+      "face": "south",
+      "region": "crown",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 67,
+      "bone": "head",
+      "face": "east",
+      "region": "crown",
+      "flow_uv": [
+        0.9766444667050899,
+        0.21486178267511977
+      ]
+    },
+    {
+      "part": 67,
+      "bone": "head",
+      "face": "west",
+      "region": "crown",
+      "flow_uv": [
+        -0.9766444667050899,
+        0.21486178267511977
+      ]
+    },
+    {
+      "part": 67,
+      "bone": "head",
+      "face": "up",
+      "region": "crown",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 67,
+      "bone": "head",
+      "face": "down",
+      "region": "crown",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 68,
+      "bone": "head",
+      "face": "north",
+      "region": "crown",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 68,
+      "bone": "head",
+      "face": "south",
+      "region": "crown",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 68,
+      "bone": "head",
+      "face": "east",
+      "region": "crown",
+      "flow_uv": [
+        0.9766444667050899,
+        0.21486178267511977
+      ]
+    },
+    {
+      "part": 68,
+      "bone": "head",
+      "face": "west",
+      "region": "crown",
+      "flow_uv": [
+        -0.9766444667050899,
+        0.21486178267511977
+      ]
+    },
+    {
+      "part": 68,
+      "bone": "head",
+      "face": "up",
+      "region": "crown",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 68,
+      "bone": "head",
+      "face": "down",
+      "region": "crown",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 69,
+      "bone": "head",
+      "face": "north",
+      "region": "crown",
+      "flow_uv": [
+        -9.792517468504433e-17,
+        1
+      ]
+    },
+    {
+      "part": 69,
+      "bone": "head",
+      "face": "south",
+      "region": "crown",
+      "flow_uv": [
+        9.792517468504433e-17,
+        1
+      ]
+    },
+    {
+      "part": 69,
+      "bone": "head",
+      "face": "east",
+      "region": "crown",
+      "flow_uv": [
+        -0.9632225331372115,
+        0.2687049527953166
+      ]
+    },
+    {
+      "part": 69,
+      "bone": "head",
+      "face": "west",
+      "region": "crown",
+      "flow_uv": [
+        0.9632225331372115,
+        0.2687049527953166
+      ]
+    },
+    {
+      "part": 69,
+      "bone": "head",
+      "face": "up",
+      "region": "crown",
+      "flow_uv": [
+        -2.731765353901835e-17,
+        1
+      ]
+    },
+    {
+      "part": 69,
+      "bone": "head",
+      "face": "down",
+      "region": "crown",
+      "flow_uv": [
+        -2.731765353901835e-17,
+        -1
+      ]
+    },
+    {
+      "part": 70,
+      "bone": "head",
+      "face": "north",
+      "region": "crown",
+      "flow_uv": [
+        -5.360405436144452e-17,
+        0.9999999999999998
+      ]
+    },
+    {
+      "part": 70,
+      "bone": "head",
+      "face": "south",
+      "region": "crown",
+      "flow_uv": [
+        5.360405436144452e-17,
+        0.9999999999999998
+      ]
+    },
+    {
+      "part": 70,
+      "bone": "head",
+      "face": "east",
+      "region": "crown",
+      "flow_uv": [
+        -0.8712290741546522,
+        0.4908766651080769
+      ]
+    },
+    {
+      "part": 70,
+      "bone": "head",
+      "face": "west",
+      "region": "crown",
+      "flow_uv": [
+        0.8712290741546522,
+        0.4908766651080769
+      ]
+    },
+    {
+      "part": 70,
+      "bone": "head",
+      "face": "up",
+      "region": "crown",
+      "flow_uv": [
+        -3.020213652390935e-17,
+        0.9999999999999998
+      ]
+    },
+    {
+      "part": 70,
+      "bone": "head",
+      "face": "down",
+      "region": "crown",
+      "flow_uv": [
+        -3.020213652390935e-17,
+        -0.9999999999999998
+      ]
+    },
+    {
+      "part": 71,
+      "bone": "head",
+      "face": "north",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0,
+        0.9999999999999999
+      ]
+    },
+    {
+      "part": 71,
+      "bone": "head",
+      "face": "south",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0,
+        0.9999999999999999
+      ]
+    },
+    {
+      "part": 71,
+      "bone": "head",
+      "face": "east",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.9244966857358432,
+        0.38119008127631193
+      ]
+    },
+    {
+      "part": 71,
+      "bone": "head",
+      "face": "west",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.9244966857358432,
+        0.38119008127631193
+      ]
+    },
+    {
+      "part": 71,
+      "bone": "head",
+      "face": "up",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 71,
+      "bone": "head",
+      "face": "down",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 72,
+      "bone": "head",
+      "face": "north",
+      "region": "crown",
+      "flow_uv": [
+        -0.944265500024023,
+        0.32918484999219194
+      ]
+    },
+    {
+      "part": 72,
+      "bone": "head",
+      "face": "south",
+      "region": "crown",
+      "flow_uv": [
+        0.944265500024023,
+        0.32918484999219194
+      ]
+    },
+    {
+      "part": 72,
+      "bone": "head",
+      "face": "east",
+      "region": "crown",
+      "flow_uv": [
+        -0.9934099791492379,
+        0.11461506588014854
+      ]
+    },
+    {
+      "part": 72,
+      "bone": "head",
+      "face": "west",
+      "region": "crown",
+      "flow_uv": [
+        0.9934099791492379,
+        0.11461506588014854
+      ]
+    },
+    {
+      "part": 72,
+      "bone": "head",
+      "face": "up",
+      "region": "crown",
+      "flow_uv": [
+        -0.3141939777563139,
+        0.9493588069542858
+      ]
+    },
+    {
+      "part": 72,
+      "bone": "head",
+      "face": "down",
+      "region": "crown",
+      "flow_uv": [
+        -0.3141939777563139,
+        -0.9493588069542858
+      ]
+    },
+    {
+      "part": 75,
+      "bone": "head",
+      "face": "north",
+      "region": "crown",
+      "flow_uv": [
+        -0.9136476133743565,
+        0.40650711995651745
+      ]
+    },
+    {
+      "part": 75,
+      "bone": "head",
+      "face": "south",
+      "region": "crown",
+      "flow_uv": [
+        0.9136476133743565,
+        0.40650711995651745
+      ]
+    },
+    {
+      "part": 75,
+      "bone": "head",
+      "face": "east",
+      "region": "crown",
+      "flow_uv": [
+        0.9645342779378022,
+        0.2639576228923925
+      ]
+    },
+    {
+      "part": 75,
+      "bone": "head",
+      "face": "west",
+      "region": "crown",
+      "flow_uv": [
+        -0.9645342779378022,
+        0.2639576228923925
+      ]
+    },
+    {
+      "part": 75,
+      "bone": "head",
+      "face": "up",
+      "region": "crown",
+      "flow_uv": [
+        -0.5239052833064981,
+        -0.8517765282769525
+      ]
+    },
+    {
+      "part": 75,
+      "bone": "head",
+      "face": "down",
+      "region": "crown",
+      "flow_uv": [
+        -0.5239052833064981,
+        0.8517765282769525
+      ]
+    },
+    {
+      "part": 77,
+      "bone": "head",
+      "face": "north",
+      "region": "crown",
+      "flow_uv": [
+        0.944265500024023,
+        0.32918484999219194
+      ]
+    },
+    {
+      "part": 77,
+      "bone": "head",
+      "face": "south",
+      "region": "crown",
+      "flow_uv": [
+        -0.944265500024023,
+        0.32918484999219194
+      ]
+    },
+    {
+      "part": 77,
+      "bone": "head",
+      "face": "east",
+      "region": "crown",
+      "flow_uv": [
+        -0.9934099791492379,
+        0.11461506588014854
+      ]
+    },
+    {
+      "part": 77,
+      "bone": "head",
+      "face": "west",
+      "region": "crown",
+      "flow_uv": [
+        0.9934099791492379,
+        0.11461506588014854
+      ]
+    },
+    {
+      "part": 77,
+      "bone": "head",
+      "face": "up",
+      "region": "crown",
+      "flow_uv": [
+        0.3141939777563139,
+        0.9493588069542858
+      ]
+    },
+    {
+      "part": 77,
+      "bone": "head",
+      "face": "down",
+      "region": "crown",
+      "flow_uv": [
+        0.3141939777563139,
+        -0.9493588069542858
+      ]
+    },
+    {
+      "part": 80,
+      "bone": "head",
+      "face": "north",
+      "region": "crown",
+      "flow_uv": [
+        0.9136476133743565,
+        0.40650711995651745
+      ]
+    },
+    {
+      "part": 80,
+      "bone": "head",
+      "face": "south",
+      "region": "crown",
+      "flow_uv": [
+        -0.9136476133743565,
+        0.40650711995651745
+      ]
+    },
+    {
+      "part": 80,
+      "bone": "head",
+      "face": "east",
+      "region": "crown",
+      "flow_uv": [
+        0.9645342779378022,
+        0.2639576228923925
+      ]
+    },
+    {
+      "part": 80,
+      "bone": "head",
+      "face": "west",
+      "region": "crown",
+      "flow_uv": [
+        -0.9645342779378022,
+        0.2639576228923925
+      ]
+    },
+    {
+      "part": 80,
+      "bone": "head",
+      "face": "up",
+      "region": "crown",
+      "flow_uv": [
+        0.5239052833064981,
+        -0.8517765282769525
+      ]
+    },
+    {
+      "part": 80,
+      "bone": "head",
+      "face": "down",
+      "region": "crown",
+      "flow_uv": [
+        0.5239052833064981,
+        0.8517765282769525
+      ]
+    },
+    {
+      "part": 82,
+      "bone": "left_cheek_0",
+      "face": "north",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.8797738305465342,
+        0.4753924768919656
+      ]
+    },
+    {
+      "part": 82,
+      "bone": "left_cheek_0",
+      "face": "south",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.8797738305465342,
+        0.4753924768919656
+      ]
+    },
+    {
+      "part": 82,
+      "bone": "left_cheek_0",
+      "face": "east",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.9745362661632904,
+        0.2242299398664505
+      ]
+    },
+    {
+      "part": 82,
+      "bone": "left_cheek_0",
+      "face": "west",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.9745362661632904,
+        0.2242299398664505
+      ]
+    },
+    {
+      "part": 82,
+      "bone": "left_cheek_0",
+      "face": "up",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.3917706163944491,
+        -0.9200629240056972
+      ]
+    },
+    {
+      "part": 82,
+      "bone": "left_cheek_0",
+      "face": "down",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.3917706163944491,
+        0.9200629240056972
+      ]
+    },
+    {
+      "part": 83,
+      "bone": "left_cheek_2",
+      "face": "north",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.8797738305465342,
+        0.4753924768919656
+      ]
+    },
+    {
+      "part": 83,
+      "bone": "left_cheek_2",
+      "face": "south",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.8797738305465342,
+        0.4753924768919656
+      ]
+    },
+    {
+      "part": 83,
+      "bone": "left_cheek_2",
+      "face": "east",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.9745362661632904,
+        0.2242299398664505
+      ]
+    },
+    {
+      "part": 83,
+      "bone": "left_cheek_2",
+      "face": "west",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.9745362661632904,
+        0.2242299398664505
+      ]
+    },
+    {
+      "part": 83,
+      "bone": "left_cheek_2",
+      "face": "up",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.3917706163944491,
+        -0.9200629240056972
+      ]
+    },
+    {
+      "part": 83,
+      "bone": "left_cheek_2",
+      "face": "down",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.3917706163944491,
+        0.9200629240056972
+      ]
+    },
+    {
+      "part": 84,
+      "bone": "left_cheek_4",
+      "face": "north",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.8797738305465342,
+        0.4753924768919656
+      ]
+    },
+    {
+      "part": 84,
+      "bone": "left_cheek_4",
+      "face": "south",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.8797738305465342,
+        0.4753924768919656
+      ]
+    },
+    {
+      "part": 84,
+      "bone": "left_cheek_4",
+      "face": "east",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.9745362661632904,
+        0.2242299398664505
+      ]
+    },
+    {
+      "part": 84,
+      "bone": "left_cheek_4",
+      "face": "west",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.9745362661632904,
+        0.2242299398664505
+      ]
+    },
+    {
+      "part": 84,
+      "bone": "left_cheek_4",
+      "face": "up",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.3917706163944491,
+        -0.9200629240056972
+      ]
+    },
+    {
+      "part": 84,
+      "bone": "left_cheek_4",
+      "face": "down",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.3917706163944491,
+        0.9200629240056972
+      ]
+    },
+    {
+      "part": 85,
+      "bone": "right_cheek_0",
+      "face": "north",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.8797738305465342,
+        0.4753924768919656
+      ]
+    },
+    {
+      "part": 85,
+      "bone": "right_cheek_0",
+      "face": "south",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.8797738305465342,
+        0.4753924768919656
+      ]
+    },
+    {
+      "part": 85,
+      "bone": "right_cheek_0",
+      "face": "east",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.9745362661632904,
+        0.2242299398664505
+      ]
+    },
+    {
+      "part": 85,
+      "bone": "right_cheek_0",
+      "face": "west",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.9745362661632904,
+        0.2242299398664505
+      ]
+    },
+    {
+      "part": 85,
+      "bone": "right_cheek_0",
+      "face": "up",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.3917706163944491,
+        -0.9200629240056972
+      ]
+    },
+    {
+      "part": 85,
+      "bone": "right_cheek_0",
+      "face": "down",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.3917706163944491,
+        0.9200629240056972
+      ]
+    },
+    {
+      "part": 86,
+      "bone": "right_cheek_2",
+      "face": "north",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.8797738305465342,
+        0.4753924768919656
+      ]
+    },
+    {
+      "part": 86,
+      "bone": "right_cheek_2",
+      "face": "south",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.8797738305465342,
+        0.4753924768919656
+      ]
+    },
+    {
+      "part": 86,
+      "bone": "right_cheek_2",
+      "face": "east",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.9745362661632904,
+        0.2242299398664505
+      ]
+    },
+    {
+      "part": 86,
+      "bone": "right_cheek_2",
+      "face": "west",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.9745362661632904,
+        0.2242299398664505
+      ]
+    },
+    {
+      "part": 86,
+      "bone": "right_cheek_2",
+      "face": "up",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.3917706163944491,
+        -0.9200629240056972
+      ]
+    },
+    {
+      "part": 86,
+      "bone": "right_cheek_2",
+      "face": "down",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.3917706163944491,
+        0.9200629240056972
+      ]
+    },
+    {
+      "part": 87,
+      "bone": "right_cheek_4",
+      "face": "north",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.8797738305465342,
+        0.4753924768919656
+      ]
+    },
+    {
+      "part": 87,
+      "bone": "right_cheek_4",
+      "face": "south",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.8797738305465342,
+        0.4753924768919656
+      ]
+    },
+    {
+      "part": 87,
+      "bone": "right_cheek_4",
+      "face": "east",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.9745362661632904,
+        0.2242299398664505
+      ]
+    },
+    {
+      "part": 87,
+      "bone": "right_cheek_4",
+      "face": "west",
+      "region": "cheek-nape",
+      "flow_uv": [
+        -0.9745362661632904,
+        0.2242299398664505
+      ]
+    },
+    {
+      "part": 87,
+      "bone": "right_cheek_4",
+      "face": "up",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.3917706163944491,
+        -0.9200629240056972
+      ]
+    },
+    {
+      "part": 87,
+      "bone": "right_cheek_4",
+      "face": "down",
+      "region": "cheek-nape",
+      "flow_uv": [
+        0.3917706163944491,
+        0.9200629240056972
+      ]
+    },
+    {
+      "part": 88,
+      "bone": "upper_beak",
+      "face": "north",
+      "region": "beak-horn",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 88,
+      "bone": "upper_beak",
+      "face": "south",
+      "region": "beak-horn",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 88,
+      "bone": "upper_beak",
+      "face": "east",
+      "region": "beak-horn",
+      "flow_uv": [
+        -1,
+        0
+      ]
+    },
+    {
+      "part": 88,
+      "bone": "upper_beak",
+      "face": "west",
+      "region": "beak-horn",
+      "flow_uv": [
+        1,
+        0
+      ]
+    },
+    {
+      "part": 88,
+      "bone": "upper_beak",
+      "face": "up",
+      "region": "beak-horn",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 88,
+      "bone": "upper_beak",
+      "face": "down",
+      "region": "beak-horn",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 89,
+      "bone": "upper_beak",
+      "face": "north",
+      "region": "beak-horn",
+      "flow_uv": [
+        0,
+        -1.0000000000000002
+      ]
+    },
+    {
+      "part": 89,
+      "bone": "upper_beak",
+      "face": "south",
+      "region": "beak-horn",
+      "flow_uv": [
+        0,
+        -1.0000000000000002
+      ]
+    },
+    {
+      "part": 89,
+      "bone": "upper_beak",
+      "face": "east",
+      "region": "beak-horn",
+      "flow_uv": [
+        0.9778022571089497,
+        -0.20952982124901293
+      ]
+    },
+    {
+      "part": 89,
+      "bone": "upper_beak",
+      "face": "west",
+      "region": "beak-horn",
+      "flow_uv": [
+        -0.9778022571089497,
+        -0.20952982124901293
+      ]
+    },
+    {
+      "part": 89,
+      "bone": "upper_beak",
+      "face": "up",
+      "region": "beak-horn",
+      "flow_uv": [
+        9.244463733058732e-33,
+        -1
+      ]
+    },
+    {
+      "part": 89,
+      "bone": "upper_beak",
+      "face": "down",
+      "region": "beak-horn",
+      "flow_uv": [
+        9.244463733058732e-33,
+        1
+      ]
+    },
+    {
+      "part": 90,
+      "bone": "upper_beak",
+      "face": "north",
+      "region": "beak-horn",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 90,
+      "bone": "upper_beak",
+      "face": "south",
+      "region": "beak-horn",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 90,
+      "bone": "upper_beak",
+      "face": "east",
+      "region": "beak-horn",
+      "flow_uv": [
+        0.9486835675144071,
+        -0.3162269576240099
+      ]
+    },
+    {
+      "part": 90,
+      "bone": "upper_beak",
+      "face": "west",
+      "region": "beak-horn",
+      "flow_uv": [
+        -0.9486835675144071,
+        -0.3162269576240099
+      ]
+    },
+    {
+      "part": 90,
+      "bone": "upper_beak",
+      "face": "up",
+      "region": "beak-horn",
+      "flow_uv": [
+        6.162975822039155e-33,
+        -1
+      ]
+    },
+    {
+      "part": 90,
+      "bone": "upper_beak",
+      "face": "down",
+      "region": "beak-horn",
+      "flow_uv": [
+        6.162975822039155e-33,
+        1
+      ]
+    },
+    {
+      "part": 91,
+      "bone": "upper_beak",
+      "face": "north",
+      "region": "beak-horn",
+      "flow_uv": [
+        0,
+        -1.0000000000000002
+      ]
+    },
+    {
+      "part": 91,
+      "bone": "upper_beak",
+      "face": "south",
+      "region": "beak-horn",
+      "flow_uv": [
+        0,
+        -1.0000000000000002
+      ]
+    },
+    {
+      "part": 91,
+      "bone": "upper_beak",
+      "face": "east",
+      "region": "beak-horn",
+      "flow_uv": [
+        0.9751327245312087,
+        -0.2216216811332816
+      ]
+    },
+    {
+      "part": 91,
+      "bone": "upper_beak",
+      "face": "west",
+      "region": "beak-horn",
+      "flow_uv": [
+        -0.9751327245312087,
+        -0.2216216811332816
+      ]
+    },
+    {
+      "part": 91,
+      "bone": "upper_beak",
+      "face": "up",
+      "region": "beak-horn",
+      "flow_uv": [
+        3.0814879110195774e-33,
+        -1
+      ]
+    },
+    {
+      "part": 91,
+      "bone": "upper_beak",
+      "face": "down",
+      "region": "beak-horn",
+      "flow_uv": [
+        3.0814879110195774e-33,
+        1
+      ]
+    },
+    {
+      "part": 92,
+      "bone": "upper_beak",
+      "face": "north",
+      "region": "beak-horn",
+      "flow_uv": [
+        6.162975822039155e-33,
+        -1
+      ]
+    },
+    {
+      "part": 92,
+      "bone": "upper_beak",
+      "face": "south",
+      "region": "beak-horn",
+      "flow_uv": [
+        -6.162975822039155e-33,
+        -1
+      ]
+    },
+    {
+      "part": 92,
+      "bone": "upper_beak",
+      "face": "east",
+      "region": "beak-horn",
+      "flow_uv": [
+        0.4344531174627959,
+        -0.9006944480382113
+      ]
+    },
+    {
+      "part": 92,
+      "bone": "upper_beak",
+      "face": "west",
+      "region": "beak-horn",
+      "flow_uv": [
+        -0.4344531174627959,
+        -0.9006944480382113
+      ]
+    },
+    {
+      "part": 92,
+      "bone": "upper_beak",
+      "face": "up",
+      "region": "beak-horn",
+      "flow_uv": [
+        1.232595164407831e-32,
+        -1
+      ]
+    },
+    {
+      "part": 92,
+      "bone": "upper_beak",
+      "face": "down",
+      "region": "beak-horn",
+      "flow_uv": [
+        1.232595164407831e-32,
+        1
+      ]
+    },
+    {
+      "part": 93,
+      "bone": "upper_beak",
+      "face": "north",
+      "region": "beak-horn",
+      "flow_uv": [
+        6.162975822039155e-33,
+        -0.9999999999999999
+      ]
+    },
+    {
+      "part": 93,
+      "bone": "upper_beak",
+      "face": "south",
+      "region": "beak-horn",
+      "flow_uv": [
+        -6.162975822039155e-33,
+        -0.9999999999999999
+      ]
+    },
+    {
+      "part": 93,
+      "bone": "upper_beak",
+      "face": "east",
+      "region": "beak-horn",
+      "flow_uv": [
+        -0.3162269576240096,
+        -0.9486835675144072
+      ]
+    },
+    {
+      "part": 93,
+      "bone": "upper_beak",
+      "face": "west",
+      "region": "beak-horn",
+      "flow_uv": [
+        0.3162269576240096,
+        -0.9486835675144072
+      ]
+    },
+    {
+      "part": 93,
+      "bone": "upper_beak",
+      "face": "up",
+      "region": "beak-horn",
+      "flow_uv": [
+        0,
+        0.9999999999999999
+      ]
+    },
+    {
+      "part": 93,
+      "bone": "upper_beak",
+      "face": "down",
+      "region": "beak-horn",
+      "flow_uv": [
+        0,
+        -0.9999999999999999
+      ]
+    },
+    {
+      "part": 95,
+      "bone": "lower_beak",
+      "face": "north",
+      "region": "beak-horn",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 95,
+      "bone": "lower_beak",
+      "face": "south",
+      "region": "beak-horn",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 95,
+      "bone": "lower_beak",
+      "face": "east",
+      "region": "beak-horn",
+      "flow_uv": [
+        -1,
+        0
+      ]
+    },
+    {
+      "part": 95,
+      "bone": "lower_beak",
+      "face": "west",
+      "region": "beak-horn",
+      "flow_uv": [
+        1,
+        0
+      ]
+    },
+    {
+      "part": 95,
+      "bone": "lower_beak",
+      "face": "up",
+      "region": "beak-horn",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 95,
+      "bone": "lower_beak",
+      "face": "down",
+      "region": "beak-horn",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 96,
+      "bone": "lower_beak",
+      "face": "north",
+      "region": "beak-horn",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 96,
+      "bone": "lower_beak",
+      "face": "south",
+      "region": "beak-horn",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 96,
+      "bone": "lower_beak",
+      "face": "east",
+      "region": "beak-horn",
+      "flow_uv": [
+        0.9992611733982547,
+        -0.03843315416073955
+      ]
+    },
+    {
+      "part": 96,
+      "bone": "lower_beak",
+      "face": "west",
+      "region": "beak-horn",
+      "flow_uv": [
+        -0.9992611733982547,
+        -0.03843315416073955
+      ]
+    },
+    {
+      "part": 96,
+      "bone": "lower_beak",
+      "face": "up",
+      "region": "beak-horn",
+      "flow_uv": [
+        7.703719777548943e-34,
+        -1
+      ]
+    },
+    {
+      "part": 96,
+      "bone": "lower_beak",
+      "face": "down",
+      "region": "beak-horn",
+      "flow_uv": [
+        7.703719777548943e-34,
+        1
+      ]
+    },
+    {
+      "part": 97,
+      "bone": "lower_beak",
+      "face": "north",
+      "region": "beak-horn",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 97,
+      "bone": "lower_beak",
+      "face": "south",
+      "region": "beak-horn",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 97,
+      "bone": "lower_beak",
+      "face": "east",
+      "region": "beak-horn",
+      "flow_uv": [
+        -1,
+        0
+      ]
+    },
+    {
+      "part": 97,
+      "bone": "lower_beak",
+      "face": "west",
+      "region": "beak-horn",
+      "flow_uv": [
+        1,
+        0
+      ]
+    },
+    {
+      "part": 97,
+      "bone": "lower_beak",
+      "face": "up",
+      "region": "beak-horn",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 97,
+      "bone": "lower_beak",
+      "face": "down",
+      "region": "beak-horn",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 102,
+      "bone": "crest_plume_0_1",
+      "face": "north",
+      "region": "crown",
+      "flow_uv": [
+        -0.10381098402880795,
+        0.9945970438297966
+      ]
+    },
+    {
+      "part": 102,
+      "bone": "crest_plume_0_1",
+      "face": "south",
+      "region": "crown",
+      "flow_uv": [
+        0.10381098402880795,
+        0.9945970438297966
+      ]
+    },
+    {
+      "part": 102,
+      "bone": "crest_plume_0_1",
+      "face": "east",
+      "region": "crown",
+      "flow_uv": [
+        0.8986445950953343,
+        0.4386774346897081
+      ]
+    },
+    {
+      "part": 102,
+      "bone": "crest_plume_0_1",
+      "face": "west",
+      "region": "crown",
+      "flow_uv": [
+        -0.8986445950953343,
+        0.4386774346897081
+      ]
+    },
+    {
+      "part": 102,
+      "bone": "crest_plume_0_1",
+      "face": "up",
+      "region": "crown",
+      "flow_uv": [
+        -0.05088508279583909,
+        -0.9987045150337815
+      ]
+    },
+    {
+      "part": 102,
+      "bone": "crest_plume_0_1",
+      "face": "down",
+      "region": "crown",
+      "flow_uv": [
+        -0.05088508279583909,
+        0.9987045150337815
+      ]
+    },
+    {
+      "part": 103,
+      "bone": "crest_plume_0_1",
+      "face": "north",
+      "region": "crown",
+      "flow_uv": [
+        -0.10381098402880795,
+        0.9945970438297966
+      ]
+    },
+    {
+      "part": 103,
+      "bone": "crest_plume_0_1",
+      "face": "south",
+      "region": "crown",
+      "flow_uv": [
+        0.10381098402880795,
+        0.9945970438297966
+      ]
+    },
+    {
+      "part": 103,
+      "bone": "crest_plume_0_1",
+      "face": "east",
+      "region": "crown",
+      "flow_uv": [
+        0.8986445950953343,
+        0.4386774346897081
+      ]
+    },
+    {
+      "part": 103,
+      "bone": "crest_plume_0_1",
+      "face": "west",
+      "region": "crown",
+      "flow_uv": [
+        -0.8986445950953343,
+        0.4386774346897081
+      ]
+    },
+    {
+      "part": 103,
+      "bone": "crest_plume_0_1",
+      "face": "up",
+      "region": "crown",
+      "flow_uv": [
+        -0.05088508279583909,
+        -0.9987045150337815
+      ]
+    },
+    {
+      "part": 103,
+      "bone": "crest_plume_0_1",
+      "face": "down",
+      "region": "crown",
+      "flow_uv": [
+        -0.05088508279583909,
+        0.9987045150337815
+      ]
+    },
+    {
+      "part": 104,
+      "bone": "crest_plume_0_0",
+      "face": "north",
+      "region": "crown",
+      "flow_uv": [
+        0.08929784180559047,
+        0.9960049675824231
+      ]
+    },
+    {
+      "part": 104,
+      "bone": "crest_plume_0_0",
+      "face": "south",
+      "region": "crown",
+      "flow_uv": [
+        -0.08929784180559047,
+        0.9960049675824231
+      ]
+    },
+    {
+      "part": 104,
+      "bone": "crest_plume_0_0",
+      "face": "east",
+      "region": "crown",
+      "flow_uv": [
+        0.930064124521582,
+        0.3673972295457649
+      ]
+    },
+    {
+      "part": 104,
+      "bone": "crest_plume_0_0",
+      "face": "west",
+      "region": "crown",
+      "flow_uv": [
+        -0.930064124521582,
+        0.3673972295457649
+      ]
+    },
+    {
+      "part": 104,
+      "bone": "crest_plume_0_0",
+      "face": "up",
+      "region": "crown",
+      "flow_uv": [
+        0.03539404864848077,
+        -0.999373434367889
+      ]
+    },
+    {
+      "part": 104,
+      "bone": "crest_plume_0_0",
+      "face": "down",
+      "region": "crown",
+      "flow_uv": [
+        0.03539404864848077,
+        0.999373434367889
+      ]
+    },
+    {
+      "part": 105,
+      "bone": "crest_plume_0_0",
+      "face": "north",
+      "region": "crown",
+      "flow_uv": [
+        0.08929784180559047,
+        0.9960049675824231
+      ]
+    },
+    {
+      "part": 105,
+      "bone": "crest_plume_0_0",
+      "face": "south",
+      "region": "crown",
+      "flow_uv": [
+        -0.08929784180559047,
+        0.9960049675824231
+      ]
+    },
+    {
+      "part": 105,
+      "bone": "crest_plume_0_0",
+      "face": "east",
+      "region": "crown",
+      "flow_uv": [
+        0.930064124521582,
+        0.3673972295457649
+      ]
+    },
+    {
+      "part": 105,
+      "bone": "crest_plume_0_0",
+      "face": "west",
+      "region": "crown",
+      "flow_uv": [
+        -0.930064124521582,
+        0.3673972295457649
+      ]
+    },
+    {
+      "part": 105,
+      "bone": "crest_plume_0_0",
+      "face": "up",
+      "region": "crown",
+      "flow_uv": [
+        0.03539404864848077,
+        -0.999373434367889
+      ]
+    },
+    {
+      "part": 105,
+      "bone": "crest_plume_0_0",
+      "face": "down",
+      "region": "crown",
+      "flow_uv": [
+        0.03539404864848077,
+        0.999373434367889
+      ]
+    },
+    {
+      "part": 106,
+      "bone": "crest_plume_0_2",
+      "face": "north",
+      "region": "crown",
+      "flow_uv": [
+        -0.3404416531904808,
+        0.9402656437267781
+      ]
+    },
+    {
+      "part": 106,
+      "bone": "crest_plume_0_2",
+      "face": "south",
+      "region": "crown",
+      "flow_uv": [
+        0.3404416531904808,
+        0.9402656437267781
+      ]
+    },
+    {
+      "part": 106,
+      "bone": "crest_plume_0_2",
+      "face": "east",
+      "region": "crown",
+      "flow_uv": [
+        0.9314468570056711,
+        0.3638773867311034
+      ]
+    },
+    {
+      "part": 106,
+      "bone": "crest_plume_0_2",
+      "face": "west",
+      "region": "crown",
+      "flow_uv": [
+        -0.9314468570056711,
+        0.3638773867311034
+      ]
+    },
+    {
+      "part": 106,
+      "bone": "crest_plume_0_2",
+      "face": "up",
+      "region": "crown",
+      "flow_uv": [
+        -0.14005143698713846,
+        -0.9901442293917779
+      ]
+    },
+    {
+      "part": 106,
+      "bone": "crest_plume_0_2",
+      "face": "down",
+      "region": "crown",
+      "flow_uv": [
+        -0.14005143698713846,
+        0.9901442293917779
+      ]
+    },
+    {
+      "part": 107,
+      "bone": "crest_plume_0_2",
+      "face": "north",
+      "region": "crown",
+      "flow_uv": [
+        -0.3404416531904808,
+        0.9402656437267781
+      ]
+    },
+    {
+      "part": 107,
+      "bone": "crest_plume_0_2",
+      "face": "south",
+      "region": "crown",
+      "flow_uv": [
+        0.3404416531904808,
+        0.9402656437267781
+      ]
+    },
+    {
+      "part": 107,
+      "bone": "crest_plume_0_2",
+      "face": "east",
+      "region": "crown",
+      "flow_uv": [
+        0.9314468570056711,
+        0.3638773867311034
+      ]
+    },
+    {
+      "part": 107,
+      "bone": "crest_plume_0_2",
+      "face": "west",
+      "region": "crown",
+      "flow_uv": [
+        -0.9314468570056711,
+        0.3638773867311034
+      ]
+    },
+    {
+      "part": 107,
+      "bone": "crest_plume_0_2",
+      "face": "up",
+      "region": "crown",
+      "flow_uv": [
+        -0.14005143698713846,
+        -0.9901442293917779
+      ]
+    },
+    {
+      "part": 107,
+      "bone": "crest_plume_0_2",
+      "face": "down",
+      "region": "crown",
+      "flow_uv": [
+        -0.14005143698713846,
+        0.9901442293917779
+      ]
+    },
+    {
+      "part": 176,
+      "bone": "left_thigh",
+      "face": "north",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 176,
+      "bone": "left_thigh",
+      "face": "south",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 176,
+      "bone": "left_thigh",
+      "face": "east",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0.09950371902099893,
+        0.9950371902099893
+      ]
+    },
+    {
+      "part": 176,
+      "bone": "left_thigh",
+      "face": "west",
+      "region": "leg-plumes",
+      "flow_uv": [
+        -0.09950371902099893,
+        0.9950371902099893
+      ]
+    },
+    {
+      "part": 176,
+      "bone": "left_thigh",
+      "face": "up",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 176,
+      "bone": "left_thigh",
+      "face": "down",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 177,
+      "bone": "left_shin",
+      "face": "north",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 177,
+      "bone": "left_shin",
+      "face": "south",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 177,
+      "bone": "left_shin",
+      "face": "east",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0.09950371902099893,
+        0.9950371902099893
+      ]
+    },
+    {
+      "part": 177,
+      "bone": "left_shin",
+      "face": "west",
+      "region": "leg-plumes",
+      "flow_uv": [
+        -0.09950371902099893,
+        0.9950371902099893
+      ]
+    },
+    {
+      "part": 177,
+      "bone": "left_shin",
+      "face": "up",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 177,
+      "bone": "left_shin",
+      "face": "down",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 178,
+      "bone": "left_shin",
+      "face": "north",
+      "region": "leg-plumes",
+      "flow_uv": [
+        -0.6276467827954647,
+        0.7784982440869749
+      ]
+    },
+    {
+      "part": 178,
+      "bone": "left_shin",
+      "face": "south",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0.6276467827954647,
+        0.7784982440869749
+      ]
+    },
+    {
+      "part": 178,
+      "bone": "left_shin",
+      "face": "east",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0.992277912105967,
+        0.12403445145048543
+      ]
+    },
+    {
+      "part": 178,
+      "bone": "left_shin",
+      "face": "west",
+      "region": "leg-plumes",
+      "flow_uv": [
+        -0.992277912105967,
+        0.12403445145048543
+      ]
+    },
+    {
+      "part": 178,
+      "bone": "left_shin",
+      "face": "up",
+      "region": "leg-plumes",
+      "flow_uv": [
+        -0.100270319408791,
+        -0.994960231891536
+      ]
+    },
+    {
+      "part": 178,
+      "bone": "left_shin",
+      "face": "down",
+      "region": "leg-plumes",
+      "flow_uv": [
+        -0.100270319408791,
+        0.994960231891536
+      ]
+    },
+    {
+      "part": 179,
+      "bone": "left_shin",
+      "face": "north",
+      "region": "leg-plumes",
+      "flow_uv": [
+        -5.485239172332425e-16,
+        1
+      ]
+    },
+    {
+      "part": 179,
+      "bone": "left_shin",
+      "face": "south",
+      "region": "leg-plumes",
+      "flow_uv": [
+        5.485239172332425e-16,
+        1
+      ]
+    },
+    {
+      "part": 179,
+      "bone": "left_shin",
+      "face": "east",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0.9750115363633033,
+        0.22215423461746361
+      ]
+    },
+    {
+      "part": 179,
+      "bone": "left_shin",
+      "face": "west",
+      "region": "leg-plumes",
+      "flow_uv": [
+        -0.9750115363633033,
+        0.22215423461746361
+      ]
+    },
+    {
+      "part": 179,
+      "bone": "left_shin",
+      "face": "up",
+      "region": "leg-plumes",
+      "flow_uv": [
+        -1.2497996839795166e-16,
+        -1
+      ]
+    },
+    {
+      "part": 179,
+      "bone": "left_shin",
+      "face": "down",
+      "region": "leg-plumes",
+      "flow_uv": [
+        -1.2497996839795166e-16,
+        1
+      ]
+    },
+    {
+      "part": 180,
+      "bone": "left_shin",
+      "face": "north",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0.6276467827954647,
+        0.7784982440869749
+      ]
+    },
+    {
+      "part": 180,
+      "bone": "left_shin",
+      "face": "south",
+      "region": "leg-plumes",
+      "flow_uv": [
+        -0.6276467827954647,
+        0.7784982440869749
+      ]
+    },
+    {
+      "part": 180,
+      "bone": "left_shin",
+      "face": "east",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0.992277912105967,
+        0.12403445145048543
+      ]
+    },
+    {
+      "part": 180,
+      "bone": "left_shin",
+      "face": "west",
+      "region": "leg-plumes",
+      "flow_uv": [
+        -0.992277912105967,
+        0.12403445145048543
+      ]
+    },
+    {
+      "part": 180,
+      "bone": "left_shin",
+      "face": "up",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0.100270319408791,
+        -0.994960231891536
+      ]
+    },
+    {
+      "part": 180,
+      "bone": "left_shin",
+      "face": "down",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0.100270319408791,
+        0.994960231891536
+      ]
+    },
+    {
+      "part": 181,
+      "bone": "left_shin",
+      "face": "north",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0,
+        1.0000000000000002
+      ]
+    },
+    {
+      "part": 181,
+      "bone": "left_shin",
+      "face": "south",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0,
+        1.0000000000000002
+      ]
+    },
+    {
+      "part": 181,
+      "bone": "left_shin",
+      "face": "east",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0.999695314775409,
+        0.024683549503592736
+      ]
+    },
+    {
+      "part": 181,
+      "bone": "left_shin",
+      "face": "west",
+      "region": "leg-plumes",
+      "flow_uv": [
+        -0.999695314775409,
+        0.024683549503592736
+      ]
+    },
+    {
+      "part": 181,
+      "bone": "left_shin",
+      "face": "up",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0,
+        -1.0000000000000002
+      ]
+    },
+    {
+      "part": 181,
+      "bone": "left_shin",
+      "face": "down",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0,
+        1.0000000000000002
+      ]
+    },
+    {
+      "part": 193,
+      "bone": "right_thigh",
+      "face": "north",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 193,
+      "bone": "right_thigh",
+      "face": "south",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 193,
+      "bone": "right_thigh",
+      "face": "east",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0.09950371902099893,
+        0.9950371902099893
+      ]
+    },
+    {
+      "part": 193,
+      "bone": "right_thigh",
+      "face": "west",
+      "region": "leg-plumes",
+      "flow_uv": [
+        -0.09950371902099893,
+        0.9950371902099893
+      ]
+    },
+    {
+      "part": 193,
+      "bone": "right_thigh",
+      "face": "up",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 193,
+      "bone": "right_thigh",
+      "face": "down",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 194,
+      "bone": "right_shin",
+      "face": "north",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 194,
+      "bone": "right_shin",
+      "face": "south",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 194,
+      "bone": "right_shin",
+      "face": "east",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0.09950371902099893,
+        0.9950371902099893
+      ]
+    },
+    {
+      "part": 194,
+      "bone": "right_shin",
+      "face": "west",
+      "region": "leg-plumes",
+      "flow_uv": [
+        -0.09950371902099893,
+        0.9950371902099893
+      ]
+    },
+    {
+      "part": 194,
+      "bone": "right_shin",
+      "face": "up",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0,
+        -1
+      ]
+    },
+    {
+      "part": 194,
+      "bone": "right_shin",
+      "face": "down",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0,
+        1
+      ]
+    },
+    {
+      "part": 195,
+      "bone": "right_shin",
+      "face": "north",
+      "region": "leg-plumes",
+      "flow_uv": [
+        -0.6276467827954647,
+        0.7784982440869749
+      ]
+    },
+    {
+      "part": 195,
+      "bone": "right_shin",
+      "face": "south",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0.6276467827954647,
+        0.7784982440869749
+      ]
+    },
+    {
+      "part": 195,
+      "bone": "right_shin",
+      "face": "east",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0.992277912105967,
+        0.12403445145048543
+      ]
+    },
+    {
+      "part": 195,
+      "bone": "right_shin",
+      "face": "west",
+      "region": "leg-plumes",
+      "flow_uv": [
+        -0.992277912105967,
+        0.12403445145048543
+      ]
+    },
+    {
+      "part": 195,
+      "bone": "right_shin",
+      "face": "up",
+      "region": "leg-plumes",
+      "flow_uv": [
+        -0.100270319408791,
+        -0.994960231891536
+      ]
+    },
+    {
+      "part": 195,
+      "bone": "right_shin",
+      "face": "down",
+      "region": "leg-plumes",
+      "flow_uv": [
+        -0.100270319408791,
+        0.994960231891536
+      ]
+    },
+    {
+      "part": 196,
+      "bone": "right_shin",
+      "face": "north",
+      "region": "leg-plumes",
+      "flow_uv": [
+        -5.485239172332425e-16,
+        1
+      ]
+    },
+    {
+      "part": 196,
+      "bone": "right_shin",
+      "face": "south",
+      "region": "leg-plumes",
+      "flow_uv": [
+        5.485239172332425e-16,
+        1
+      ]
+    },
+    {
+      "part": 196,
+      "bone": "right_shin",
+      "face": "east",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0.9750115363633033,
+        0.22215423461746361
+      ]
+    },
+    {
+      "part": 196,
+      "bone": "right_shin",
+      "face": "west",
+      "region": "leg-plumes",
+      "flow_uv": [
+        -0.9750115363633033,
+        0.22215423461746361
+      ]
+    },
+    {
+      "part": 196,
+      "bone": "right_shin",
+      "face": "up",
+      "region": "leg-plumes",
+      "flow_uv": [
+        -1.2497996839795166e-16,
+        -1
+      ]
+    },
+    {
+      "part": 196,
+      "bone": "right_shin",
+      "face": "down",
+      "region": "leg-plumes",
+      "flow_uv": [
+        -1.2497996839795166e-16,
+        1
+      ]
+    },
+    {
+      "part": 197,
+      "bone": "right_shin",
+      "face": "north",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0.6276467827954647,
+        0.7784982440869749
+      ]
+    },
+    {
+      "part": 197,
+      "bone": "right_shin",
+      "face": "south",
+      "region": "leg-plumes",
+      "flow_uv": [
+        -0.6276467827954647,
+        0.7784982440869749
+      ]
+    },
+    {
+      "part": 197,
+      "bone": "right_shin",
+      "face": "east",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0.992277912105967,
+        0.12403445145048543
+      ]
+    },
+    {
+      "part": 197,
+      "bone": "right_shin",
+      "face": "west",
+      "region": "leg-plumes",
+      "flow_uv": [
+        -0.992277912105967,
+        0.12403445145048543
+      ]
+    },
+    {
+      "part": 197,
+      "bone": "right_shin",
+      "face": "up",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0.100270319408791,
+        -0.994960231891536
+      ]
+    },
+    {
+      "part": 197,
+      "bone": "right_shin",
+      "face": "down",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0.100270319408791,
+        0.994960231891536
+      ]
+    },
+    {
+      "part": 198,
+      "bone": "right_shin",
+      "face": "north",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0,
+        1.0000000000000002
+      ]
+    },
+    {
+      "part": 198,
+      "bone": "right_shin",
+      "face": "south",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0,
+        1.0000000000000002
+      ]
+    },
+    {
+      "part": 198,
+      "bone": "right_shin",
+      "face": "east",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0.999695314775409,
+        0.024683549503592736
+      ]
+    },
+    {
+      "part": 198,
+      "bone": "right_shin",
+      "face": "west",
+      "region": "leg-plumes",
+      "flow_uv": [
+        -0.999695314775409,
+        0.024683549503592736
+      ]
+    },
+    {
+      "part": 198,
+      "bone": "right_shin",
+      "face": "up",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0,
+        -1.0000000000000002
+      ]
+    },
+    {
+      "part": 198,
+      "bone": "right_shin",
+      "face": "down",
+      "region": "leg-plumes",
+      "flow_uv": [
+        0,
+        1.0000000000000002
+      ]
+    }
+  ]
+}

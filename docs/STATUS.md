@@ -3,23 +3,55 @@
 Reviewed October 3, 2026. This page contains outstanding work, not release history.
 It records known verification limits; it is not a fresh installation receipt.
 
-- **Storm Roc phase one:** the summit now has a sealed, operator-started encounter with
-  repeated lightning, permanent drifting tornadoes, a marked dive and jumpable shockwave,
-  the pinned-beak opening, seven grounded actions and health-driven takeoffs. The approved
-  Roc study is installed at the planned scale with synchronized combat poses and animated
-  head/neck hurtboxes. Half health ends this phase-only attempt without rewards. Falls,
-  death and disconnect eliminate a challenger; wipe/reset releases the group for retry.
-  The aerie, intro, storm transformation, phase two and victory rewards remain unimplemented.
-  A review pass on October 14 fixed several issues: client hurtboxes that never moved, a safe
-  spot under the neck, stampedes at the wrong player, permanent targeting, stacking hits,
-  shield blocking and a pounce that missed anyone moving. The same pass reworked the stuck pose.
-  Build/export checks, dedicated mechanics/lifecycle checks and Nature/Flashover regressions pass.
-  Native checks and reviewed screenshots cover the synchronized poses, visible storm effects and
-  client hurtbox positions. Pending: human Lunar/co-op balance and appearance, how the new
-  brawl choices and turn speed feel, weaker-machine performance with the giant model and cloud
-  sea, and tuning health, hazard density and attack pacing. This work does not establish
-  installation into Lunar. See the [summit reference](reference/storm-summit.md) and
-  [testing guide](reference/testing.md) for commands and verification boundaries.
+- **Storm Roc (both phases):** the summit has a sealed, operator-started encounter.
+  - **Phase one:** repeated lightning, permanent drifting tornadoes, a marked dive and jumpable
+    shockwave, the pinned-beak opening, seven grounded actions and health-driven takeoffs.
+  - **Phase change:** at half health a short in-engine stand-in for the planned cinematic.
+  - **Phase two (Oct 14):** a client-side thunderstorm with storm clouds, rain and flashes;
+    larger, harder strikes with live ground after the large ones; strikes during the brawl;
+    swollen tornadoes plus a third; and the chain smash in place of the dive.
+  - **Defeat:** it ends the fight without rewards. Falls, death and disconnect eliminate a
+    challenger; a wipe or reset releases the group for retry.
+  - **Not yet built:** the aerie, intro, phase-change cinematic, death and victory rewards.
+  - **October 14 fixes:**
+    - First pass: client hurtboxes, the safe spot under the neck, stampede targeting,
+      permanent threat, stacking, shields, the pounce aim and the stuck pose.
+    - Second pass:
+      - a crash when a tornado throw kills a player;
+      - spires were safe during the brawl;
+      - hit stacking was compared before armor;
+      - air chip could skip the last landing;
+      - ground sampling repeated every frame;
+      - the scream's and the rings' hit volumes went beyond what they draw.
+    - The tornado was rebuilt from blocky cloud cubes and the bolts thickened.
+  - **First playtest (Oct 15):** the user played phase one. These changes followed:
+    - it is drawn at half the size;
+    - its eyes face forward like an eagle's under heavy brows;
+    - every clip was revamped, and there are new spire landing and lightning-call clips;
+    - its gaze snaps to players and it banks in flight;
+    - each spire visit ends in a call that brings the large volley down;
+    - tornadoes are textured, catch from further out, drag players in, whirl them up and
+      throw them, and creep toward players in the air stretch;
+    - a cap cloud over the summit is what phase one's lightning falls from.
+  - **New look (Oct 16–19):** a chunky block model with a bearded-vulture texture, the Demon
+    face (glowing red slit eyes in sockets, brow spikes), an animated crest, thick legs with
+    big sickle talons, and a tail that lifts off the rock while the feet are down. The
+    server fixture passed with the new poses and the client fixture with the final model.
+  - **Verified:** the server fixture covers both phases and the spire call (40 checks), and
+    the native client fixture has 26 reviewed screenshots, including the call bolt, bolts
+    from the cap cloud, the textured tornado, the charge, the storm, the chain smash and live
+    ground.
+  - **Pending:**
+    - human Lunar/co-op balance and appearance: the half-size reach, the hunting tornadoes,
+      phase two's density (three big tornadoes, strikes during the brawl, chain-smash damage)
+      and the storm's darkness;
+    - weaker-machine performance with the model, cloud sea, cap and storm sheets and the
+      textured tornadoes;
+    - the phase-two "fewer perches";
+    - the new look in Lunar, including how far the talons bite into the rock (about a third
+      of a block standing, up to a block while it scrabbles when stuck).
+  - See the [summit reference](reference/storm-summit.md) and [testing guide](reference/testing.md)
+    for commands and verification boundaries.
 - **Hollow Necromancer (in progress):** reworked after the first co-op playtest (duels and
   sieges, heavier telegraphed hits) and again after a solo playtest where phase two felt
   easier than phase one and the siege waves were easy. Sieges now bring larger waves,

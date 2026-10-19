@@ -5,6 +5,8 @@ are not claims of public publication. Older entries describe what changed then;
 use [current guides](../README.md) for today’s behavior and [status](../STATUS.md)
 for outstanding verification. Detailed historical reports are optional background.
 
+- [2026-10-19 — Storm Roc: a new look](2026-10-19-storm-roc-new-look.md)
+- [2026-10-14 — Storm Roc: the storm phase](2026-10-14-storm-roc-phase-two.md)
 - [2026-10-13 — Storm Roc: first combat phase](2026-10-13-storm-roc-phase-one.md)
 - [2026-10-06 — Space: Blink Rift nerf](2026-10-06-space-blink.md)
 - [2026-10-06 — The Necromancer grows into the colossus](2026-10-06-necromancer-transformation.md)

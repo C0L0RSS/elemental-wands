@@ -23,6 +23,16 @@ public final class StormSummit {
     public static final int SURFACE_Y = 100;
     /** Top of the sea of clouds, drawn by the client; nothing below it is meant to be seen. */
     public static final int CLOUD_Y = SURFACE_Y + StormSummitLayout.CLOUD_TOP;
+    /**
+     * Underside of phase two's storm clouds. Its scud races 11 blocks lower, still clear of the
+     * spires and of every phase-two flight path, the charge's hover included.
+     */
+    public static final int STORM_CEILING = SURFACE_Y + 76;
+    /**
+     * Underside of phase one's cap cloud, the thin deck over the summit its lightning falls from.
+     * Above every spire and flight; only the dive climbs into it.
+     */
+    public static final int CAP_Y = SURFACE_Y + 58;
     public static final int SLOTS = 8;
     /** Far enough apart that no view distance reaches a neighbouring slot. */
     public static final int SLOT_SPACING = 1024;

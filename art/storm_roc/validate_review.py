@@ -41,8 +41,8 @@ def main():
     assert len(body_bones)<=200 and body_cubes<=700
     assert len(bones)<=253 and sum(len(b['cubes']) for b in bones)<=1100
     head=verify(SimpleNamespace(bones=bones),Image.open(OUT/'storm_roc.png'),Image.open(OUT/'storm_roc_glowmask.png'))
-    snapshot=PREVIEW/'snapshots/head-approved-1007/candidate'
-    # Verify that the locked source itself still matches the user-provided snapshot.
+    snapshot=PREVIEW/'snapshots/head-approved-eyes-forward/candidate'
+    # Verify the updated authorized snapshot; the original 1007 snapshot is historical.
     if snapshot.exists():
         old=read(snapshot/'storm_roc.geo.json')['minecraft:geometry'][0]['bones'];names={b['name'] for b in approved()}
         assert [b for b in old if b['name'] in names]==approved()
@@ -55,6 +55,20 @@ def main():
         assert {k:v for k,v in current.items() if k!='anchors'}=={k:v for k,v in old_sparks.items() if k!='anchors'}
         for name in ('storm_roc.png','storm_roc_glowmask.png'):
             assert (HERE/'approved_head'/name).read_bytes()==(snapshot/name).read_bytes()
+    # Forward eye planes retain the bright iris islands beneath the heavy shelves.
+    assert by['head']['pivot']==[0,165,-22]
+    assert by['lower_beak']['pivot']==[0,160.8,-30.4]
+    glow=Image.open(OUT/'storm_roc_glowmask.png').convert('RGBA')
+    for index,side in ((11,-1),(19,1)):
+        eye=by['head']['cubes'][index]
+        normal=rotation(eye['rotation'])@np.array([0,0,-1])
+        yaw=np.degrees(np.arctan2(abs(normal[0]),-normal[2]))
+        center=np.array(eye['origin'])+np.array(eye['size'])/2
+        assert 30<=yaw<=45,(yaw,'forward eye plane')
+        assert 6<side*center[0]<10 and center[2]<-37 and center[1]>176,center
+        for f in eye['uv'].values():
+            x,y=f['uv'];w,h=f['uv_size']
+            assert glow.crop((x,y,x+w,y+h)).getchannel('A').getextrema()==(255,255),'iris emissivity'
     def world(clip,t):
         mats={}
         for b in bones:mats[b['name']]=mats.get(b.get('parent'),np.eye(4))@matrix(b,clip['bones'].get(b['name'],{}),t)

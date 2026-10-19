@@ -39,6 +39,13 @@ public final class StormRocServerSmoke implements ModInitializer {
     private BlockPos fireCell;
     private TemporaryBlockManager.TemporaryPlacement firePlacement;
     private float before;
+    private final Set<UUID> chainMarkers = new HashSet<>();
+    private final Set<UUID> brawlStrikes = new HashSet<>();
+    private Vec3d lastMark, lastBody;
+    private RocEffectEntity chainMark, live, aimedAtSlam;
+    private int markerAt;
+    private StormRocEntity managed;
+
     private Vec3d velocity;
     private final List<String> checks = new ArrayList<>();
     private static final BlockPos CENTRE = new BlockPos(0, StormSummit.SURFACE_Y, 0);
@@ -54,7 +61,7 @@ public final class StormRocServerSmoke implements ModInitializer {
         });
     }
     private void run(MinecraftServer server) throws Exception {
-        if (++tick > 2500) throw new AssertionError("Roc server fixture timeout at " + step);
+        if (++tick > 5000) throw new AssertionError("Roc server fixture timeout at " + step);
         if (tick == 25) {
             world = server.getWorld(StormSummit.WORLD);
             require(world != null, "Summit dimension missing");
@@ -104,21 +111,32 @@ public final class StormRocServerSmoke implements ModInitializer {
                     boss.startFight(CENTRE,List.of(target,dodge));boss.testAction(target,StormRocRules.Action.PECK);
                     target.setPosition(-10,101,.5);target.setHealth(200);target.setVelocity(Vec3d.ZERO);tornado=boss.testTornado(target.getEntityPos());
                 }
-                if(elapsed==8)require(target.getAttributeValue(EntityAttributes.MOVEMENT_SPEED)<.08,"Tornado core did not slow challenger");
-                if(elapsed==30){
+                if(elapsed==6+StormRocRules.TORNADO_HOLD/2)require(target.getVelocity().y>.5&&target.getHealth()==200,"Tornado did not catch and whirl its challenger up unhurt: "+target.getVelocity());
+                if(elapsed==8+StormRocRules.TORNADO_HOLD){
                     damage(200-target.getHealth(),6,"Tornado catch release diamond damage");
                     require(target.getVelocity().y>0&&target.getVelocity().multiply(1,0,1).dotProduct(CENTRE.toCenterPos().subtract(target.getEntityPos()))>0,"Tornado release did not throw inward");
-                    target.setPosition(35,101,.5);target.setVelocity(Vec3d.ZERO);
+                    target.setPosition(tornado.getEntityPos().x+StormRocRules.TORNADO_RADIUS*.6,101,tornado.getEntityPos().z);target.setVelocity(Vec3d.ZERO);
                 }
-                if(elapsed==40){target.setPosition(tornado.getEntityPos().x,101,tornado.getEntityPos().z);target.setVelocity(Vec3d.ZERO);}
-                if(elapsed==41){require(Math.abs(target.getVelocity().y)<.01,"Tornado immediately recaught/juggled released challenger");boss.stopFight();}
-                if(elapsed==43){
+                if(elapsed==10+StormRocRules.TORNADO_HOLD)require(target.getAttributeValue(EntityAttributes.MOVEMENT_SPEED)<.08,"Tornado winds did not slow challenger");
+                if(elapsed==18+StormRocRules.TORNADO_HOLD){target.setPosition(tornado.getEntityPos().x,101,tornado.getEntityPos().z);target.setVelocity(Vec3d.ZERO);}
+                if(elapsed==19+StormRocRules.TORNADO_HOLD){require(Math.abs(target.getVelocity().y)<.01,"Tornado immediately recaught/juggled released challenger");boss.stopFight();}
+                if(elapsed==21+StormRocRules.TORNADO_HOLD){
                     require(Math.abs(target.getAttributeValue(EntityAttributes.MOVEMENT_SPEED)-.1)<.0001,"Tornado slow survived cancellation");
-                    require(effects().isEmpty(),"Tornado survived cancellation");checks.add("Tornado core slowing, timed catch/release, inward throw, recatch immunity and cleanup");
+                    require(effects().isEmpty(),"Tornado survived cancellation");checks.add("Tornado catch and whirl, timed release, inward throw, winds slowing, recatch immunity and cleanup");
                     target.setPosition(30.5,101,.5);target.setVelocity(Vec3d.ZERO);target.setHealth(200);
                     boss.startFight(CENTRE,List.of(target,dodge));boss.setHealth(boss.getMaxHealth()*.74f);
                 }
-                if(elapsed==45){require(effects().stream().filter(e->e.kind()==RocEffectEntity.Kind.TORNADO).count()==2,"75-percent health did not add second tornado");checks.add("Second tornado unlocks below75percent health");
+                if(elapsed==23+StormRocRules.TORNADO_HOLD){require(effects().stream().filter(e->e.kind()==RocEffectEntity.Kind.TORNADO).count()==2,"75-percent health did not add second tornado");checks.add("Second tornado unlocks below75percent health");
+                    boss.stopFight();target.setHealth(200);dodge.setHealth(200);boss.startFight(CENTRE,List.of(target,dodge));
+                }
+                // A fresh air stretch: on its spire it rears into its call, then calls a large strike on everyone.
+                int call=24+StormRocRules.TORNADO_HOLD+StormRocRules.CALL_AT;
+                if(elapsed==call)require(boss.poseName().equals("call"),"Roc did not rear into its call: "+boss.poseName());
+                if(elapsed==call+StormRocRules.CALL_VOLLEY+1){
+                    require(effects().stream().anyMatch(e->e.kind()==RocEffectEntity.Kind.CALL_BOLT),"Call raised no bolt into the clouds");
+                    require(effects().stream().filter(e->e.kind()==RocEffectEntity.Kind.LARGE_STRIKE).count()>=2,"Call did not strike every challenger");
+                    require(boss.lookTarget()==target.getId()||boss.lookTarget()==dodge.getId(),"Roc does not look at the player it strikes");
+                    checks.add("Spire call: rears up, bolt into the clouds, a large strike at each challenger, and it watches its mark");
                     boss.stopFight();boss.startFight(CENTRE,List.of(target,dodge));step=15;elapsed=0;
                 }
             }
@@ -137,24 +155,28 @@ public final class StormRocServerSmoke implements ModInitializer {
             case 5 -> {
                 if(elapsed==2)require(boss.combat().stage()==StormRocRules.Stage.TAKEOFF,"Landing quota did not trigger takeoff: "+boss.status());
                 if(elapsed>StormRocRules.TAKEOFF_TICKS+5){
-                    require(!boss.phaseOneComplete(),"First landing ended entire phase");checks.add("Landing health quota triggers takeoff safely");
+                    require(!boss.phaseTwo()&&boss.stage()!=StormRocRules.Stage.CHARGE,"First landing ended entire phase");checks.add("Landing health quota triggers takeoff safely");
                     boss.testAction(target,StormRocRules.Action.PECK);boss.setHealth(boss.getMaxHealth()*.5f);next();
                 }
             }
             case 6 -> {
-                if(elapsed==1)require(!boss.phaseOneComplete(),"Phase gate skipped the takeoff animation");
-                if(elapsed>StormRocRules.TAKEOFF_TICKS+5){require(boss.phaseOneComplete(),"Half-health phase did not complete after takeoff: "+boss.status());require(effects().isEmpty(),"Phase completion retained damaging effects");checks.add("Half health takeoff and safe phase completion");
+                if(elapsed==1)require(boss.stage()==StormRocRules.Stage.TAKEOFF,"Phase gate skipped the takeoff animation");
+                if(elapsed>StormRocRules.TAKEOFF_TICKS+5){require(boss.stage()==StormRocRules.Stage.CHARGE&&!boss.fightComplete(),"Half-health takeoff did not begin the phase change: "+boss.status());require(effects().stream().allMatch(e->e.kind()==RocEffectEntity.Kind.TORNADO),"Phase change retained damaging effects");checks.add("Half health takeoff begins the phase change with only tornadoes left");
                     boss.discard();
+                    target.setPosition(45.5,135,.5);dodge.setPosition(-45.5,135,.5);
                     target.setHealth(200);dodge.setHealth(200);
-                    for(int x=-8;x<=8;x++)for(int z=-8;z<=8;z++){world.getChunk(64+x,z);world.setChunkForced(64+x,z,true);}
-                    StormSummitManager.enter(target,1);StormSummitManager.enter(dodge,1);next();}
+                    boss=new StormRocEntity(ModEntities.STORM_ROC,world);boss.startFight(CENTRE,List.of(target,dodge));world.spawnEntity(boss);
+                    require(boss.skipToPhaseTwo()&&boss.stage()==StormRocRules.Stage.CHARGE,"Skip did not directly start CHARGE");
+                    damage(boss.getHealth(),boss.getMaxHealth()*.5f,"Skip half health");
+                    float health=boss.getHealth();require(!boss.damage(world,target.getDamageSources().playerAttack(target),100),"CHARGE accepted damage");
+                    require(boss.getHealth()==health,"CHARGE lost health");step=21;elapsed=0;}
             }
             case 7 -> {
                 if(elapsed==180){
                     target.onTeleportationDone();dodge.onTeleportationDone();
                     require(StormSummit.nearestCentre(target.getEntityPos()).equals(StormSummit.centre(0,1)),"Authored lifecycle slot did not finish building");
                     for(int x=-8;x<=8;x++)for(int z=-8;z<=8;z++)world.setChunkForced(64+x,z,false);
-                    String result=StormSummitManager.start(target);require(result.startsWith("Started phase one with 2"),"Sealed start failed: "+result);
+                    String result=StormSummitManager.start(target);require(result.startsWith("Started the fight with 2"),"Sealed start failed: "+result);
                     require(!StormRocEncounter.canTeleport(outsider,world,target.getEntityPos()),"Outsider could teleport into sealed fight");
                     require(!StormRocEncounter.canTeleport(target,server.getOverworld(),new Vec3d(0,100,0)),"Participant could escape dimension");
                     require(!StormRocEncounter.canTeleport(target,world,new Vec3d(0,101,0)),"Participant could escape slot");
@@ -183,10 +205,10 @@ public final class StormRocServerSmoke implements ModInitializer {
                     require(!StormRocEncounter.activeAt(StormSummit.centre(0,1)),"Wipe retained active fight");
                     require(dodge.interactionManager.getGameMode()==GameMode.SURVIVAL,"Wipe retained spectator mode");
                     checks.add("Authored summit sealed roster, legal spire movement, containment, fall defeat, belongings, leave and wipe");
-                    String start=StormSummitManager.start(dodge);require(start.startsWith("Started phase one with 1"),"Retry after wipe failed: "+start);
+                    String start=StormSummitManager.start(dodge);require(start.startsWith("Started the fight with 1"),"Retry after wipe failed: "+start);
                     require(StormSummitManager.reset(dodge).contains("reset"),"Operator reset failed");
                     require(!StormRocEncounter.activeAt(StormSummit.centre(0,1)),"Reset retained fight");
-                    require(StormSummitManager.start(dodge).startsWith("Started phase one with 1"),"Second retry start failed");
+                    require(StormSummitManager.start(dodge).startsWith("Started the fight with 1"),"Second retry start failed");
                 }
                 if(elapsed>=5){
                     dodge.onTeleportationDone();
@@ -202,21 +224,33 @@ public final class StormRocServerSmoke implements ModInitializer {
                 }
             }
             case 10 -> {
-                if(elapsed>StormRocRules.TAKEOFF_TICKS+8){
+                if(elapsed==StormRocRules.TAKEOFF_TICKS+StormRocRules.CHARGE_TICKS+4){
+                    require(boss.phaseTwo(),"Managed encounter did not enter phase two");boss.setHealth(1.005f);
+                }
+                if(elapsed>StormRocRules.TAKEOFF_TICKS+StormRocRules.CHARGE_TICKS+8){
                     require(!StormRocEncounter.activeAt(StormSummit.centre(0,1)),"Phase completion did not end managed encounter");
                     require(dodge.interactionManager.getGameMode()==GameMode.SURVIVAL,"Phase completion retained spectator mode");
                     require(world.getEntitiesByClass(net.minecraft.entity.ItemEntity.class,new Box(880,70,-160,1180,260,160),e->!e.isRemoved()).isEmpty(),"Phase completion awarded loot");
                     checks.add("Reset, retry and managed phase completion restore players without victory loot");
                     StormSummitManager.enter(target,1);StormSummitManager.enter(outsider,1);target.onTeleportationDone();outsider.onTeleportationDone();dodge.onTeleportationDone();
                     target.setHealth(target.getMaxHealth());dodge.setHealth(dodge.getMaxHealth());outsider.setHealth(outsider.getMaxHealth());
-                    require(StormSummitManager.start(dodge).startsWith("Started phase one with 3"),"Death/disconnect retry failed");
+                    require(StormSummitManager.start(dodge).startsWith("Started the fight with 3"),"Death/disconnect retry failed");
                     next();
                 }
             }
             case 11 -> {
                 if(elapsed==3){
                     target.experienceLevel=17;target.totalExperience=400;target.experienceProgress=.25f;
-                    target.damage(world,target.getDamageSources().outOfWorld(),100000);require(!target.isAlive(),"Scripted realm death failed");
+                    // The realm death is a lethal tornado throw: eliminating the challenger edits the Roc's
+                    // caught list while it is still releasing them.
+                    managed=managedBoss(StormSummit.centre(0,1));require(managed!=null,"Managed boss missing before tornado death");
+                    tornado=managed.testTornado(target.getEntityPos());
+                    target.setPosition(tornado.getX(),101,tornado.getZ());target.setVelocity(Vec3d.ZERO);
+                }
+                if(elapsed==20)target.setHealth(2);
+                if(elapsed>3&&target.isAlive()){if(elapsed>70)throw new AssertionError("Tornado throw never killed the caught challenger");return;}
+                if(elapsed>3){
+                    require(managed.fighting()&&!managed.isRemoved(),"Lethal tornado throw broke the managed Roc: "+managed.status());
                     var handler=target.networkHandler;UUID id=target.getUuid();
                     handler.player=server.getPlayerManager().respawnPlayer(target,false,net.minecraft.entity.Entity.RemovalReason.KILLED);
                     target=server.getPlayerManager().getPlayer(id);target.setLoaded(true);target.onTeleportationDone();next();
@@ -255,7 +289,7 @@ public final class StormRocServerSmoke implements ModInitializer {
                     Vec3d point=switch(action){
                         case PECK,SWING_LEFT,SWING_RIGHT -> boss.modelToWorld(StormRocPose.socket(action.pose,action==StormRocRules.Action.PECK?12:20,"beak"));
                         case SCREAM -> boss.modelToWorld(StormRocPose.socket(action.pose,24,"beak")).add(Vec3d.fromPolar(0,boss.getYaw()).multiply(20));
-                        case WING -> new Vec3d(20.5,101,.5);
+                        case WING -> new Vec3d(12.5,101,.5);
                         case POUNCE -> new Vec3d(.5,101,30.5);
                         case STAMPEDE -> new Vec3d(.5,101,45.5);
                     };
@@ -299,7 +333,7 @@ public final class StormRocServerSmoke implements ModInitializer {
             case 17 -> {
                 if(elapsed==1){
                     target.setPosition(58.5,101,.5);target.setHealth(200);target.setVelocity(Vec3d.ZERO);dodge.setPosition(58.5,135,.5);dodge.setHealth(200);outsider.setPosition(58.5,101,.5);outsider.setHealth(200);
-                    boss.testAction(target,StormRocRules.Action.WING);boss.setPosition(35.5,101.03,.5);
+                    boss.testAction(target,StormRocRules.Action.WING);boss.setPosition(45.5,101.03,.5);
                 }
                 if(elapsed==21){
                     damage(200-target.getHealth(),4,"Wing hit at rim");Vec3d impulse=target.getVelocity().multiply(1,0,1);
@@ -401,9 +435,114 @@ public final class StormRocServerSmoke implements ModInitializer {
                     boss.stopFight();boss.startFight(CENTRE,List.of(target,dodge));boss.testAction(target,StormRocRules.Action.PECK);step=4;elapsed=0;
                 }
             }
+            case 21 -> {
+                if(elapsed==39)require(!boss.charged(),"Roc charged before tick40");
+                if(elapsed==40)require(boss.charged(),"Roc not charged at tick40");
+                if(elapsed==90)require(effects().stream().anyMatch(e->e.kind()==RocEffectEntity.Kind.CHARGE_BOLT),"Charge bolt missing at tick90");
+                if(elapsed==StormRocRules.CHARGE_TICKS+2){
+                    require(boss.phaseTwo()&&boss.stage()==StormRocRules.Stage.AIR,"CHARGE did not finish in phase-two AIR: "+boss.status());
+                    damage(boss.combat().healthFloor(),boss.getMaxHealth()*.375f,"Phase-two first landing floor");
+                    var ts=effects().stream().filter(e->e.kind()==RocEffectEntity.Kind.TORNADO).toList();
+                    require(ts.size()==3,"Phase two did not have three tornadoes");
+                    require(effects().stream().anyMatch(e->e.kind()==RocEffectEntity.Kind.STORM&&flatDistance(e.getEntityPos(),CENTRE.toCenterPos())<1),"Phase two has no storm marker at the summit centre");
+                    for(int i=0;i<ts.size();i++){require(ts.get(i).radius()==7,"Phase-two tornado radius");for(int j=0;j<i;j++)require(flatDistance(ts.get(i).getEntityPos(),ts.get(j).getEntityPos())>=18,"Phase-two tornado spacing below18");}
+                    checks.add("Skip starts invulnerable CHARGE, tick40 charged flag, tick90 bolt, phase-two AIR, .375 landing floor and three radius7 separated tornadoes");
+                    boss.testChain();step=22;elapsed=0;
+                }
+            }
+            case 22 -> {
+                var marks=effects().stream().filter(e->e.kind()==RocEffectEntity.Kind.DIVE_MARKER).toList();
+                for(var m:marks)if(chainMarkers.add(m.getUuid())){
+                    int n=chainMarkers.size();int expected=n==1?20:68+(n-2)*32;
+                    require(elapsed==expected,"Chain marker"+n+" at tick"+elapsed+" expected"+expected);
+                    require(m.radius()==8&&m.warningTicks()==(n==1?40:24),"Chain marker radius/warning");
+                    if(lastMark!=null)require(flatDistance(lastMark,m.getEntityPos())<=25.01,"Chain hop exceeded25");
+                    if(n<4)require(StormSummit.beyondRim(CENTRE,m.getEntityPos())<=-13+.001,"Chain mark lacked rim margin");
+                    else require(flatDistance(CENTRE.toCenterPos(),m.getEntityPos())<=24.01,"Final chain mark outside24");
+                    lastMark=m.getEntityPos();chainMark=m;markerAt=elapsed;
+                    if(n==2){target.setPosition(lastMark.x,lastMark.y+1,lastMark.z);target.setVelocity(Vec3d.ZERO);target.setHealth(200);before=200;}
+                }
+                if(elapsed==59)aimedAtSlam=boss.testStrike(new Vec3d(40,101,15),false);
+                if(elapsed==60){require(aimedAtSlam!=null&&aimedAtSlam.isRemoved(),"First slam retained aimed strike");}
+                if(chainMark!=null){
+                    int due=markerAt+chainMark.warningTicks();
+                    if(elapsed<due)require(!chainMark.isRemoved(),"Chain marker ended before slam");
+                    if(elapsed==due){
+                        require(chainMark.isRemoved(),"Chain marker survived slam");
+                        // The body hops no further than its circle: the bill is 26 blocks ahead of the feet.
+                        if(lastBody!=null)require(flatDistance(lastBody,boss.getEntityPos())<=25.01,"Chain body hop exceeded25: "+flatDistance(lastBody,boss.getEntityPos()));
+                        lastBody=boss.getEntityPos();
+                        require(effects().stream().anyMatch(e->e.kind()==RocEffectEntity.Kind.SHOCKWAVE&&e.radius()==26&&flatDistance(e.getEntityPos(),lastMark)<.01&&e.effectTicks(0)==0),"Slam did not emit radius26 ring");
+                        if(chainMarkers.size()==2){damage(before-target.getHealth(),12,"Later chain slam diamond damage");target.setPosition(55,135,0);target.setVelocity(Vec3d.ZERO);}
+                    }
+                }
+                if(elapsed==156){require(chainMarkers.size()==4&&boss.stage()==StormRocRules.Stage.STUCK,"Fourth slam did not leave STUCK with exactly4 markers");checks.add("Four chain markers, launch/warnings/pauses, hop caps, rim margins, later12HP slam, four jumpable rings and aimed-strike cleanup");step=23;elapsed=0;}
+            }
+            case 23 -> {
+                if(boss.stage()==StormRocRules.Stage.BRAWL){
+                    for(var e:effects())if((e.kind()==RocEffectEntity.Kind.SMALL_STRIKE||e.kind()==RocEffectEntity.Kind.LARGE_STRIKE)&&e.effectTicks(0)==0){require(e.radius()==3.5||e.radius()==7,"Brawl random strike radius");brawlStrikes.add(e.getUuid());}
+                }
+                if(elapsed==165){
+                    require(boss.stage()==StormRocRules.Stage.BRAWL&&!brawlStrikes.isEmpty(),"No random strikes during following BRAWL");checks.add("Random phase-two strikes continue during BRAWL");
+                    target.setPosition(45.5,101,.5);dodge.setPosition(45.5,101,20.5);beginStrike(false);require(strike.radius()==3.5,"Phase-two small radius");step=24;elapsed=0;
+                }
+            }
+            case 24 -> {
+                if(elapsed==19)require(target.getHealth()==before,"Phase-two small hit before warning");
+                if(elapsed==21)damage(before-target.getHealth(),10,"Phase-two small first bolt diamond damage");
+                if(elapsed==35){target.setPosition(45.5,101,.5);beginStrike(true);require(strike.radius()==7,"Phase-two large radius");step=25;elapsed=0;}
+            }
+            case 25 -> {
+                if(elapsed==29)require(target.getHealth()==before,"Phase-two large hit before warning");
+                if(elapsed==31)damage(before-target.getHealth(),18,"Phase-two large first bolt diamond damage");
+                if(elapsed==49)require(effects().stream().noneMatch(e->e.kind()==RocEffectEntity.Kind.LIVE_GROUND),"Live ground appeared before third bolt");
+                if(elapsed==50){
+                    live=effects().stream().filter(e->e.kind()==RocEffectEntity.Kind.LIVE_GROUND).findFirst().orElseThrow(()->new AssertionError("Third large bolt did not leave LIVE_GROUND"));
+                    require(live.radius()==7&&live.getEntityPos().distanceTo(strike.getEntityPos())<.01,"Live ground differs from large circle");
+                    target.setHealth(200);dodge.setHealth(200);outsider.setHealth(200);
+                    dodge.setPosition(live.getX()+10,101,live.getZ());outsider.setPosition(live.getX(),101,live.getZ());step=26;elapsed=0;
+                }
+            }
+            case 26 -> {
+                if(elapsed<=50){int pulses=elapsed/10;damage(200-target.getHealth(),pulses,"Live ground grounded pulse damage");require(dodge.getHealth()==200,"Live ground hit outside player");require(outsider.getHealth()==200,"Live ground hit outsider");}
+                if(elapsed==52){require(live.isRemoved(),"Live ground survived52ticks");checks.add("Phase-two small10HP/large18HP and radii; third bolt leaves matching LIVE_GROUND, five1HP grounded pulses, outside/outsider exclusion and expiry");
+                    // A separate field checks the airborne case without sacrificing the full grounded pulse run.
+                    boss.testAction(target,StormRocRules.Action.PECK);target.setPosition(45.5,104,.5);strike=boss.testStrike(target.getEntityPos(),true);step=27;elapsed=0;}
+            }
+            case 27 -> {
+                if(elapsed==51){target.setHealth(200);target.setOnGround(false);}
+                if(elapsed==102){require(target.getHealth()==200,"Live ground hit airborne player");
+                    // Small bolt first, then a large one inside the stacking window: the large still costs its full 18.
+                    boss.testAction(target,StormRocRules.Action.PECK);target.setPosition(45.5,101,.5);target.setVelocity(Vec3d.ZERO);target.setOnGround(true);
+                    target.setHealth(200);target.timeUntilRegen=0;
+                    strike=boss.testStrike(new Vec3d(52.3,101,.5),true);require(strike!=null&&strike.radius()==7,"Stacking large strike missing");step=29;elapsed=0;}
+            }
+            case 29 -> {
+                if(elapsed==6){RocEffectEntity small=boss.testStrike(target.getEntityPos(),false);
+                    require(small!=null&&flatDistance(small.getEntityPos(),target.getEntityPos())<=small.radius(),"Stacking small strike does not cover target");}
+                if(elapsed==27)damage(200-target.getHealth(),10,"Small bolt before the large one");
+                if(elapsed==31){damage(200-target.getHealth(),18,"Large bolt after a small one stacks to the large's full cost");
+                    // Large first, then a small one inside the window: the small adds nothing.
+                    boss.testAction(target,StormRocRules.Action.PECK);target.setHealth(200);target.timeUntilRegen=0;
+                    strike=boss.testStrike(new Vec3d(52.3,101,.5),true);step=30;elapsed=0;}
+            }
+            case 30 -> {
+                if(elapsed==12)boss.testStrike(target.getEntityPos(),false);
+                if(elapsed==31)damage(200-target.getHealth(),18,"Large bolt");
+                if(elapsed==33){damage(200-target.getHealth(),18,"Small bolt inside the large's window adds nothing");
+                    checks.add("Stacked hits compare costs after armor: small-then-large and large-then-small both cost the large's 18");
+                    boss.setHealth(1.005f);step=28;elapsed=0;}
+            }
+            case 28 -> {
+                require(boss.stage()==StormRocRules.Stage.COMPLETE&&boss.defeated()&&boss.fightComplete(),"Phase-two health threshold did not defeat Roc");require(effects().isEmpty(),"Defeat left effects alive");checks.add("Airborne live-ground exclusion;1.005HP defeats on next tick, COMPLETE/defeated/fightComplete and all effects cleared");
+                boss.discard();target.setHealth(200);dodge.setHealth(200);
+                for(int x=-8;x<=8;x++)for(int z=-8;z<=8;z++){world.getChunk(64+x,z);world.setChunkForced(64+x,z,true);}
+                StormSummitManager.enter(target,1);StormSummitManager.enter(dodge,1);step=7;elapsed=0;
+            }
             default -> throw new AssertionError("Unknown fixture stage");
         }
     }
+    private static double flatDistance(Vec3d a,Vec3d b){return a.subtract(b).horizontalLength();}
     private void placeFootFire(ServerPlayerEntity owner,boolean flame){
         Vec3d foot=boss.socket("left_foot");fireCell=BlockPos.ofFloored(foot.x,101.03,foot.z);
         firePlacement=TemporaryBlockManager.placeTrackedTemporaryBlocks(world,List.of(fireCell),(flame?ModSpellBlocks.INFERNO_FLAME:ModSpellBlocks.PYRE_COALS).getDefaultState(),80,s->s.isAir()||s.isReplaceable(),owner.getUuid());
@@ -424,14 +563,14 @@ public final class StormRocServerSmoke implements ModInitializer {
     private void beginStrike(boolean large){target.setHealth(200);target.timeUntilRegen=0;dodge.setHealth(200);outsider.setHealth(200);boss.testAction(target,StormRocRules.Action.PECK);before=target.getHealth();target.setVelocity(Vec3d.ZERO);velocity=target.getVelocity();strike=boss.testStrike(target.getEntityPos(),large);require(strike!=null,"testStrike did not create effect");}
     private void answerChecks(){
         var wing=List.of(StormRocRules.Action.WING);
-        require(StormRocCombat.answers(4,1,true,null).equals(wing),"Target between the Roc's feet had no answer");
-        require(StormRocCombat.answers(12,1,true,null).equals(wing),"Target under the Roc's neck had no answer: "+StormRocCombat.answers(12,1,true,null));
-        require(StormRocCombat.answers(12,1,true,StormRocRules.Action.WING).equals(List.of(StormRocRules.Action.POUNCE)),"Target staying under the neck was not pounced");
-        require(StormRocCombat.answers(10,-1,true,null).equals(wing),"Target behind the Roc drew no wing wave");
-        var front=StormRocCombat.answers(25,1,true,null);
+        require(StormRocCombat.answers(2,1,true,null).equals(wing),"Target between the Roc's feet had no answer");
+        require(StormRocCombat.answers(6,1,true,null).equals(wing),"Target under the Roc's neck had no answer: "+StormRocCombat.answers(6,1,true,null));
+        require(StormRocCombat.answers(6,1,true,StormRocRules.Action.WING).equals(List.of(StormRocRules.Action.POUNCE)),"Target staying under the neck was not pounced");
+        require(StormRocCombat.answers(5,-1,true,null).equals(wing),"Target behind the Roc drew no wing wave");
+        var front=StormRocCombat.answers(12.5,1,true,null);
         require(front.containsAll(List.of(StormRocRules.Action.PECK,StormRocRules.Action.SWING_LEFT,StormRocRules.Action.SCREAM)),"Target in bill reach lacked head attacks: "+front);
-        require(!StormRocCombat.answers(15,1,true,null).contains(StormRocRules.Action.PECK),"Peck offered where its bill cannot reach");
-        require(!StormRocCombat.answers(25,1,true,StormRocRules.Action.PECK).contains(StormRocRules.Action.PECK),"Brawl repeated its last attack");
+        require(!StormRocCombat.answers(7.5,1,true,null).contains(StormRocRules.Action.PECK),"Peck offered where its bill cannot reach");
+        require(!StormRocCombat.answers(12.5,1,true,StormRocRules.Action.PECK).contains(StormRocRules.Action.PECK),"Brawl repeated its last attack");
         checks.add("Brawl answers every place to stand: wings and pounce under the neck, head attacks only within reach, no repeats");
     }
     private List<RocEffectEntity> effects(){return world.getEntitiesByClass(RocEffectEntity.class,AREA,e->!e.isRemoved());}

@@ -24,6 +24,10 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 public final class StormRocEntity extends PathAwareEntity implements GeoEntity, WandBoss {
     private static final TrackedData<String> POSE = DataTracker.registerData(StormRocEntity.class, TrackedDataHandlerRegistry.STRING);
     private static final TrackedData<Long> POSE_AT = DataTracker.registerData(StormRocEntity.class, TrackedDataHandlerRegistry.LONG);
+    /** Charged by the storm: phase two's sky, clouds and brighter crackle follow this on clients. */
+    private static final TrackedData<Boolean> CHARGED = DataTracker.registerData(StormRocEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    /** The player it is striking at or attacking, whom clients turn its head toward; -1 for none. */
+    private static final TrackedData<Integer> LOOK = DataTracker.registerData(StormRocEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private record Hurt(long until, float amount) {}
     private record Hit(UUID attacker, int projectile, String type, long tick) {}
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
@@ -58,19 +62,36 @@ public final class StormRocEntity extends PathAwareEntity implements GeoEntity, 
         super.initDataTracker(builder);
         builder.add(POSE, "perched");
         builder.add(POSE_AT, 0L);
+        builder.add(CHARGED, false);
+        builder.add(LOOK, -1);
     }
 
     public String poseName() { return dataTracker.get(POSE); }
     public float poseTicks(float partial) { return getEntityWorld().getTime() - dataTracker.get(POSE_AT) + partial; }
+    public long poseStart() { return dataTracker.get(POSE_AT); }
+    public int lookTarget() { return dataTracker.get(LOOK); }
+    void lookAt(Entity target) { dataTracker.set(LOOK, target == null ? -1 : target.getId()); }
 
-    void pose(String name) {
+    public boolean charged() { return dataTracker.get(CHARGED); }
+    void charged(boolean charged) { dataTracker.set(CHARGED, charged); }
+
+    void pose(String name) { pose(name, getEntityWorld().getTime()); }
+
+    /** A clip that started at start: a clip can resume from where it left off. */
+    void pose(String name, long start) {
         dataTracker.set(POSE, name);
-        dataTracker.set(POSE_AT, getEntityWorld().getTime());
+        dataTracker.set(POSE_AT, start);
     }
 
     public void startFight(BlockPos centre, List<ServerPlayerEntity> players) { hurt.clear(); combat.start(centre, players); }
     public void stopFight() { combat.cancel(); clearParts(); }
-    public boolean phaseOneComplete() { return combat.stage() == StormRocRules.Stage.COMPLETE; }
+    /** The fight is over: for now that means it was defeated in phase two. */
+    public boolean fightComplete() { return combat.stage() == StormRocRules.Stage.COMPLETE; }
+    public boolean defeated() { return combat.defeated(); }
+    public boolean phaseTwo() { return combat.phaseTwo(); }
+    public StormRocRules.Stage stage() { return combat.stage(); }
+    /** Operators skip a fight straight to the phase change for playtests. */
+    public boolean skipToPhaseTwo() { return combat.skipToPhaseTwo(); }
     public boolean fighting() { return combat.active(); }
     public boolean participant(UUID id) { return combat.participant(id); }
     public void removeParticipant(UUID id) { combat.removeParticipant(id); }
@@ -88,6 +109,7 @@ public final class StormRocEntity extends PathAwareEntity implements GeoEntity, 
     public RocEffectEntity testStrike(Vec3d position, boolean large) { return combat.strike(position, large); }
     public void testDive(Vec3d mark) { combat.dive(mark); }
     public RocEffectEntity testTornado(Vec3d point) { return combat.tornado(point); }
+    public void testChain() { combat.chain(); }
 
     @Override public double getAttributeValue(RegistryEntry<EntityAttribute> attribute) {
         // Vanilla caps max health at 1024; larger parties need more, like the other bosses.
@@ -99,7 +121,7 @@ public final class StormRocEntity extends PathAwareEntity implements GeoEntity, 
 
     @Override public boolean damage(ServerWorld world, DamageSource source, float amount) {
         if (source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY)) return super.damage(world, source, amount);
-        if (!fighting() || phaseOneComplete()) return false;
+        if (!fighting() || fightComplete()) return false;
         // No health can be lost at this landing gate. Reject the hit rather than report
         // accepted damage to spell callbacks, which would otherwise grant free charge.
         if (getHealth() <= combat.healthFloor() + .001f) return false;
@@ -178,7 +200,7 @@ public final class StormRocEntity extends PathAwareEntity implements GeoEntity, 
         // The torso includes its ground footprint so planted thorns can find a grounded Roc;
         // the enormous wings remain outside this hurt volume.
         Vec3d chest = socket("body");
-        setBoundingBox(new Box(chest.x - 4.8, Math.min(getY(), chest.y - 3.2), chest.z - 5, chest.x + 4.8, chest.y + 4, chest.z + 5));
+        setBoundingBox(new Box(chest.x - 2.6, Math.min(getY(), chest.y - 1.8), chest.z - 2.8, chest.x + 2.6, chest.y + 2.2, chest.z + 2.8));
         for (var p : parts) p.follow();
     }
 

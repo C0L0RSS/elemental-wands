@@ -41,7 +41,7 @@ public final class RocBodyPartEntity extends PathAwareEntity implements WandBoss
     void follow() {
         if (owner == null) return;
         Vec3d at = owner.socket(socket);
-        setPosition(at.x, at.y - 2.6, at.z);
+        setPosition(at.x, at.y - 1.6, at.z);
         setHealth(Math.min(getMaxHealth(), owner.getHealth()));
     }
 

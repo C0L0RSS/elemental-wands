@@ -1,4 +1,7 @@
 {
   "replace": false,
-  "values": ["elementalwands:roc_storm"]
+  "values": [
+    "elementalwands:roc_storm",
+    "elementalwands:roc_storm_excess"
+  ]
 }

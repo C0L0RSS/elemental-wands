@@ -13,7 +13,13 @@ import net.minecraft.world.World;
 
 /** Synchronized encounter presentation. Only StormRocCombat applies damage or movement. */
 public final class RocEffectEntity extends Entity {
-    public enum Kind { SMALL_STRIKE, LARGE_STRIKE, TORNADO, DIVE_MARKER, SHOCKWAVE, SCREAM, DISTANT_BOLT }
+    /**
+     * New kinds go at the end: clients read the ordinal. LIVE_GROUND is a large strike's lingering
+     * circle; CHARGE_BOLT is the huge bolt that charges the Roc; STORM_BOLT falls from phase two's
+     * storm ceiling and its radius is the bolt's length. STORM draws nothing: it marks phase two's
+     * storm at the summit's centre, which every challenger's client tracks wherever the Roc is.
+     */
+    public enum Kind { SMALL_STRIKE, LARGE_STRIKE, TORNADO, DIVE_MARKER, SHOCKWAVE, SCREAM, DISTANT_BOLT, LIVE_GROUND, CHARGE_BOLT, STORM_BOLT, STORM, CALL_BOLT }
 
     private static final TrackedData<Integer> KIND = DataTracker.registerData(RocEffectEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Integer> DURATION = DataTracker.registerData(RocEffectEntity.class, TrackedDataHandlerRegistry.INTEGER);
@@ -50,6 +56,7 @@ public final class RocEffectEntity extends Entity {
 
     public Kind kind() { return Kind.values()[Math.clamp(dataTracker.get(KIND), 0, Kind.values().length - 1)]; }
     public float radius() { return dataTracker.get(RADIUS); }
+    void resize(double radius) { dataTracker.set(RADIUS, (float) radius); }
     public int duration() { return dataTracker.get(DURATION); }
     public int warningTicks() { return dataTracker.get(WARNING); }
     public float effectTicks(float partial) { return getEntityWorld().getTime() - dataTracker.get(START) + partial; }

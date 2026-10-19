@@ -120,8 +120,9 @@ These come from the Guardian and Necromancer playtests:
   white feathers caught in the cracks) and Windcaller ruins. The ruins are a shrine on the
   west rim with a copper wind rose and a small bell, half of it fallen with the cliff, and
   pale, copper-capped standing stones with lightning rods along the rim. No nest.
-- **Decided:** the Roc is drawn at 2.5 times the art study's size, so its scale is a
-  spectacle: a 68-block wingspan, 22 blocks tall standing and 46 long hunched to brawl.
+- **Decided:** the Roc is drawn at 1.25 times the art study's size: a 34-block wingspan,
+  11 blocks tall standing and 23 long hunched to brawl. It was first drawn at 2.5 times
+  for spectacle, but in the first playtest (Oct 15) it was far too big in first person.
 - **Decided:** the Roc perches on tall, thin rock spires that rise out of the clouds
   beyond the edge. They stand apart from the summit, so players can never reach their
   bases. About six spires stand in a loose ring 20–30 blocks out from the edge. Their
@@ -291,8 +292,54 @@ These come from the Guardian and Necromancer playtests:
   turns dark and stormy.
 - **Decided:** in phase two its tornadoes are larger, and its lightning strikes are larger
   and hit harder.
+- **Decided:** phase two's identity is "the storm is on its side". Nowhere is safe, the
+  ground is always live, and the Roc comes down to the players more often.
+- **Decided:** phase two keeps phase one's loop: the air stretch, a heavy attack, the stuck
+  window, then the brawl. What changes is the attacks it uses, not the loop.
 - **Decided:** phase two adds a chain smash. Like the dive, it slams its beak into the
   ground, but several times in quick succession in different places, aimed at players.
+- **Decided:** the first smash lands on a spot picked at a player. Each later smash is also
+  aimed at a player, but it can only move a limited distance from the previous landing.
+  It never seems to teleport, yet the whole chain still covers a lot of ground. The hop
+  distance is a sweet spot to find in playtests.
+- **Decided:** starting numbers from the chain smash sandbox: each hop moves at most 25
+  blocks. The rest are the sandbox's defaults until playtests: 4 smashes, circles of
+  radius 8, a 2 s warning before the first and 1.2 s before each later one, and a 0.4 s
+  pause after each smash.
+- **Built for the first playtest (Oct 14), not yet decided:** phase two with these starting
+  picks, chosen to test in game rather than in a sandbox:
+  - random strikes only during the brawl;
+  - live ground after each large strike, 2.5 s at half a heart every half second;
+  - strikes of radius 3.5 and 7 (5 and 9 hearts), and tornadoes of radius 7 with a third one;
+  - a 15-second air stretch;
+  - a lethal first smash like the dive, about 6 hearts from each later one, and a jumpable
+    ring from every smash.
+
+  The cinematic is a short in-engine stand-in, the summit keeps all its spires, and the
+  defeat simply ends the fight.
+- **Decided (first playtest, Oct 15):** the user played phase one and asked for:
+  - half the size (see above);
+  - eagle eyes set forward under a heavy brow, so its eyes, not just its beak, look at you;
+  - a revamp of every animation, flight included: it mostly seemed to sit still while
+    damage happened anyway. Its head moves like a bird's on the perch, snapping round to
+    look at players;
+  - a tornado that does something, with textured cubes instead of plain grey ones;
+  - a thin layer of cloud over the summit for phase one's lightning to fall from, instead of
+    a clear blue sky.
+- **Built for the second playtest (Oct 15), not yet decided:**
+  - **Spires:** on each one it lands, rears up and calls a large volley down, a strike for
+    each challenger (up to four), with a bolt from its raised bill into the clouds, glares,
+    then flies on. It dives only from a
+    spire, after its call.
+  - **Its gaze:** it holds still, then snaps its head to the player it strikes at or attacks,
+    or to you. It banks into its turns in flight.
+  - **Tornadoes:** they catch anyone within 45% of their radius, whirl them about 10 blocks up
+    for 1.8 s, then throw them toward the centre with no fall damage. Their winds drag
+    players in and around from 1.8 times their radius. In the air stretch they creep toward
+    the nearest player at a quarter of walking pace; in the brawl they only wander.
+  - **Cap cloud:** phase one's cap cloud is a broken grey deck about 58 blocks over the summit
+    that frays out about 125 blocks from the centre. It gathers while a Roc fights there, and
+    phase two's storm replaces it.
 - **Proposed:** in the cinematic it climbs into the clouds and the arena goes quiet. The
   sky darkens and thunder rolls in. A huge bolt strikes it and it starts to glow
   white-gold. It dives back through the clouds as bolts shatter several spires, then

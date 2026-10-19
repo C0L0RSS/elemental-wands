@@ -107,6 +107,7 @@ python3 art/guardian_nave/build_layout.py --check
 python3 art/storm_summit/build_layout.py --check
 python3 art/storm_roc/build_runtime.py --check
 python3 art/storm_roc/validate_runtime.py
+python3 art/roc_effects/build_tornado_texture.py --check
 python3 art/fractured_guardian/intro/build_intro.py --check
 unzip -t build/libs/elementalwands-2.2.0.jar
 ```

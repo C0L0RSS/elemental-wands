@@ -9,12 +9,15 @@ import com.anton.elementalwands.summit.StormSummitLayout;
 import com.anton.elementalwands.util.SpellCombat;
 import com.anton.elementalwands.util.TemporaryBlockManager;
 import java.util.*;
+import net.minecraft.enchantment.EnchantmentHelper;
+import net.minecraft.entity.DamageUtil;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.boss.BossBar;
 import net.minecraft.entity.boss.ServerBossBar;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.damage.DamageType;
+import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -32,8 +35,12 @@ import net.minecraft.world.Difficulty;
 /** Telegraph -> committed hit -> opening. All encounter decisions and damage stay on the server. */
 final class StormRocCombat {
     private static final RegistryKey<DamageType> DAMAGE = RegistryKey.of(RegistryKeys.DAMAGE_TYPE, Identifier.of("elementalwands", "roc_storm"));
+    /** The excess of a stacked hit, already mitigated: it skips armor, enchantments, effects and difficulty. */
+    private static final RegistryKey<DamageType> EXCESS = RegistryKey.of(RegistryKeys.DAMAGE_TYPE, Identifier.of("elementalwands", "roc_storm_excess"));
     private static final Identifier SLOW = Identifier.of("elementalwands", "roc_tornado_drag");
     private static final double GOLDEN_ANGLE = 2.3999632297;
+    /** Chain-smash circles stay this close to the centre: a full circle and a margin inside the nearest rim. */
+    private static final double SMASH_AREA = Arrays.stream(StormSummitLayout.RIM).min().orElse(54) - SMASH_RADIUS - 5;
     private static final List<String> FEET = List.of("left_foot", "right_foot");
 
     /** Straight-ahead distances from its feet that a head attack's bill can reach. */
@@ -51,17 +58,22 @@ final class StormRocCombat {
 
     private static final class Strike {
         final RocEffectEntity effect;
+        /** Aimed strikes belong to the air stretch; random ones may keep falling after an impact. */
+        final boolean aimed;
         int bolts;
-        Strike(RocEffectEntity effect) { this.effect = effect; }
+        Strike(RocEffectEntity effect, boolean aimed) { this.effect = effect; this.aimed = aimed; }
     }
 
     private static final class Tornado {
         final RocEffectEntity effect;
         double heading;
+        /** After turning off the rim or a neighbour it wanders a moment before it hunts again. */
+        long detour;
         Tornado(RocEffectEntity effect, double heading) { this.effect = effect; this.heading = heading; }
     }
 
-    private record Caught(Tornado tornado, long at) {}
+    /** angle: where around the funnel the player was caught, which the whirl starts from. */
+    private record Caught(Tornado tornado, long at, double angle) {}
 
     private static final class Ring {
         final RocEffectEntity effect;
@@ -69,8 +81,8 @@ final class StormRocCombat {
         Ring(RocEffectEntity effect) { this.effect = effect; }
     }
 
-    /** The largest Roc hit a player took in the current stacking window, and when the window opened. */
-    private record Recent(long at, float amount) {}
+    /** The costliest Roc hit a player took in the current stacking window, after mitigation, and when the window opened. */
+    private record Recent(long at, float cost) {}
 
     private record Threat(double amount, long at) {
         double decayed(long time) { return amount * Math.pow(.5, (time - at) / (double) THREAT_HALF_LIFE); }
@@ -81,12 +93,15 @@ final class StormRocCombat {
     private final Map<UUID, Threat> threat = new HashMap<>();
     private final Map<UUID, Vec3d> previous = new HashMap<>(), motion = new HashMap<>();
     private final Map<UUID, Long> immunity = new HashMap<>(), footHurt = new HashMap<>(), cawAt = new HashMap<>();
+    /** Players a tornado has thrown, until they come down: the throw's own hit is their fall. */
+    private final Map<UUID, Long> thrown = new HashMap<>();
     private final Map<UUID, Recent> recent = new HashMap<>();
     private final Map<UUID, Caught> caught = new HashMap<>();
     private final Set<UUID> slowed = new HashSet<>();
     private final List<Strike> strikes = new ArrayList<>();
     private final List<Tornado> tornadoes = new ArrayList<>();
     private final List<Ring> rings = new ArrayList<>();
+    private final List<RocEffectEntity> fields = new ArrayList<>();
     private final List<RocEffectEntity> effects = new ArrayList<>();
     private final Set<UUID> actionHits = new HashSet<>();
     private final Vec3d[] lastFeet = new Vec3d[FEET.size()];
@@ -97,21 +112,28 @@ final class StormRocCombat {
     private long since, nextAction, actionAt, nextSmall, nextLarge, nextRandom, nextDistant, nextStampede, rangedAt;
     private Vec3d from = Vec3d.ZERO, to = Vec3d.ZERO, mark = Vec3d.ZERO, aim = Vec3d.ZERO;
     private UUID target, rangedBy;
-    private float floor;
-    private int perch, round, selection, sinceMove;
-    private boolean review, phasePending;
+    private float floor, startYaw, landingYaw;
+    private int perch, round, selection, sinceMove, smash;
+    /** Ticks it has spent in its perched idle, which resumes on each spire so every visit shows more of it. */
+    private long idle;
+    private long smashAt;
+    private boolean review, phasePending, two, defeated, marked;
     private RocEffectEntity marker;
+    /** The storm's presence at the summit's centre, which every challenger's client tracks. */
+    private RocEffectEntity storm;
 
     StormRocCombat(StormRocEntity boss) { this.boss = boss; }
 
     Stage stage() { return stage; }
+    boolean phaseTwo() { return two; }
+    boolean defeated() { return defeated; }
     boolean active() { return stage != Stage.IDLE && stage != Stage.COMPLETE; }
     boolean participant(UUID id) { return roster.contains(id); }
-    void removeParticipant(UUID id) { roster.remove(id); caught.remove(id); immunity.remove(id); clearSlow(id); }
+    void removeParticipant(UUID id) { roster.remove(id); caught.remove(id); thrown.remove(id); immunity.remove(id); clearSlow(id); }
     float healthFloor() { return Math.max(phaseHealth(), floor); }
 
     String status() {
-        return "Storm Roc: " + stage.name().toLowerCase(Locale.ROOT) + (action == null ? "" : " / " + action.name().toLowerCase(Locale.ROOT))
+        return "Storm Roc phase " + (two ? 2 : 1) + ": " + stage.name().toLowerCase(Locale.ROOT) + (action == null ? "" : " / " + action.name().toLowerCase(Locale.ROOT))
                 + ", health " + Math.round(boss.getHealth()) + "/" + Math.round(boss.getMaxHealth())
                 + ", tornadoes " + tornadoes.size() + ", fighters " + roster.size();
     }
@@ -126,6 +148,9 @@ final class StormRocCombat {
         floor = health * (float) (1 - LANDING_SHARE);
         phasePending = false;
         review = false;
+        two = false;
+        defeated = false;
+        boss.charged(false);
         round = 0;
         perch = 0;
         selection = 0;
@@ -133,7 +158,7 @@ final class StormRocCombat {
         last = null;
         boss.setPosition(perch(0));
         boss.face(center());
-        air();
+        air(false);
         tornado(center().add(-19, 0, 10));
     }
 
@@ -149,6 +174,8 @@ final class StormRocCombat {
         immunity.clear();
         rangedBy = null;
         bar.clearPlayers();
+        if (storm != null) storm.discard();
+        storm = null;
         stage = Stage.IDLE;
         action = null;
         marker = null;
@@ -161,8 +188,22 @@ final class StormRocCombat {
         strikes.clear();
         tornadoes.clear();
         rings.clear();
+        fields.clear();
         caught.clear();
+        thrown.clear();
         for (UUID id : new HashSet<>(slowed)) clearSlow(id);
+    }
+
+    /** The arena goes quiet before the storm: everything but the permanent tornadoes clears. */
+    private void calm() {
+        for (var s : strikes) s.effect.discard();
+        for (var r : rings) r.effect.discard();
+        for (var f : fields) f.discard();
+        if (marker != null) marker.discard();
+        strikes.clear();
+        rings.clear();
+        fields.clear();
+        marker = null;
     }
 
     void damaged(ServerPlayerEntity player, float amount) {
@@ -173,31 +214,40 @@ final class StormRocCombat {
             rangedBy = player.getUuid();
             rangedAt = now;
         }
-        if (atPhaseGate()) phasePending = true;
+        if (!two && atPhaseGate()) phasePending = true;
     }
 
     void tick(ServerWorld world) {
         if (!active()) return;
         List<ServerPlayerEntity> players = players();
         if (players.isEmpty()) { cancel(); return; }
+        // Phase two's last gate is its death, earned by the hit that reached it: it resolves
+        // before any hazard this tick could still wipe the challengers.
+        if (two && atPhaseGate()) { defeat(); return; }
         trackPlayers(players);
+        if (boss.poseName().equals("perched")) idle++;
         // Distant cosmetic bolts can be outside entity-ticking chunks; their owner still
         // expires them on schedule instead of letting an unticked flash repeat forever.
         effects.removeIf(e -> {
             if (!e.isRemoved() && e.effectTicks(0) > e.duration()) e.discard();
             return e.isRemoved();
         });
-        if (!review && boss.getHealth() <= boss.getMaxHealth() * .75f && tornadoes.size() < 2) tornado(center().add(19, 0, -12));
+        if (!review && !two && boss.getHealth() <= boss.getMaxHealth() * .75f && tornadoes.size() < 2) tornado(center().add(19, 0, -12));
         tickStrikes(players);
+        tickFields(players);
         tickTornadoes(players);
         tickRings(players);
         caw(players);
         if (stage == Stage.STUCK || stage == Stage.BRAWL) groundSpells();
-        if (atPhaseGate() && stage != Stage.TAKEOFF) takeoff();
+        // Phase two's sky keeps striking at random wherever the Roc is; aimed strikes stay in the air.
+        if (two && !review && (stage == Stage.STUCK || stage == Stage.BRAWL || stage == Stage.TAKEOFF || stage == Stage.SMASH && smash > 0)) sky();
+        // Phase one's gate is the last landing's floor, so the brawl's own check takes off there:
+        // chipping it from the air never skips that landing.
         long t = now() - since;
         switch (stage) {
             case AIR -> tickAir(players, t);
             case DIVE -> tickDive(players, t);
+            case SMASH -> tickSmash(players, t);
             case STUCK -> {
                 stomps(players, true);
                 if (t >= STUCK_TICKS) {
@@ -206,12 +256,13 @@ final class StormRocCombat {
                 }
             }
             case BRAWL -> {
-                if (boss.getHealth() <= floor + .01f || atPhaseGate()) { takeoff(); break; }
+                if (boss.getHealth() <= floor + .01f) { takeoff(); break; }
                 if (action != null) tickAction(players);
                 else if (now() >= nextAction && !review) chooseAction(players);
                 stomps(players, false);
             }
             case TAKEOFF -> tickTakeoff(players, t);
+            case CHARGE -> tickCharge(t);
             default -> {}
         }
     }
@@ -238,36 +289,61 @@ final class StormRocCombat {
         Arrays.fill(lastFeet, null);
     }
 
-    private void air() {
-        enter(Stage.AIR, "perched");
+    /** landing: it arrives on its spire from a flight, rather than starting the fight there. */
+    private void air(boolean landing) {
+        enter(Stage.AIR, "land");
+        if (!landing) perched();
         nextSmall = now() + 25;
-        nextLarge = now() + 80;
+        nextLarge = now() + LARGE_EVERY;
         nextRandom = now() + 35;
         nextDistant = now() + 100;
     }
 
     private int airDuration() {
         Difficulty difficulty = world().getDifficulty();
+        if (two) return difficulty == Difficulty.HARD ? AIR_TICKS_TWO_HARD : difficulty == Difficulty.EASY ? AIR_TICKS_TWO_EASY : AIR_TICKS_TWO;
         return difficulty == Difficulty.HARD ? AIR_TICKS_HARD : difficulty == Difficulty.EASY ? AIR_TICKS_EASY : AIR_TICKS;
     }
 
-    /** Perched for most of each six-second cycle, then a flight to the next spire. */
+    /** On each spire it lands, rears up and calls a large volley down on everyone, then flies on. */
     private void tickAir(List<ServerPlayerEntity> players, long t) {
         storm(players);
-        int cycle = (int) (t % 120);
-        if (cycle == 75) {
+        int cycle = (int) (t % AIR_CYCLE);
+        if (cycle == FLY_AT) {
             from = boss.getEntityPos();
             perch = (perch + 1) % StormSummitLayout.PERCHES.length;
             to = perch(perch);
             boss.pose("flight");
         }
-        if (cycle >= 75) fly(Math.min(1, (cycle - 75) / 44.0));
-        if (cycle == 0) {
+        if (cycle >= FLY_AT) fly(Math.min(1, (cycle - FLY_AT) / (double) (AIR_CYCLE - FLY_AT - 1)));
+        if (cycle == 0 && t > 0) {
             boss.setPosition(perch(perch));
             boss.face(center());
-            boss.pose("perched");
+            boss.pose("land");
         }
-        if (t >= airDuration()) dive(chooseLanding());
+        if (cycle == LAND_TICKS && t > 0) perched();
+        if (cycle == CALL_AT) {
+            boss.pose("call");
+            sound(boss.getEntityPos(), SoundEvents.ENTITY_PHANTOM_AMBIENT, 4, .5f);
+        }
+        if (cycle == CALL_AT + CALL_VOLLEY) call(players);
+        if (cycle == CALL_AT + CALL_TICKS) perched();
+        // It dives only from its spire, once its call has landed: never mid-call or mid-flight.
+        boolean calling = cycle >= CALL_AT && cycle < CALL_AT + CALL_TICKS;
+        if (t >= airDuration() && !calling && cycle < FLY_AT) {
+            if (two) chain();
+            else dive(chooseLanding());
+        }
+    }
+
+    private void perched() { boss.pose("perched", now() - idle); }
+
+    /** It calls the lightning: a bolt from its raised bill into the clouds, and a large strike at everyone. */
+    private void call(List<ServerPlayerEntity> players) {
+        effect(RocEffectEntity.Kind.CALL_BOLT, boss.socket("beak"), 0, 0, 12);
+        thunder(boss.getEntityPos(), .5f, 1.1f);
+        aimed(players, true);
+        nextLarge = now() + LARGE_EVERY;
     }
 
     /** It banks toward the next spire, then turns to face the summit before it lands. */
@@ -295,7 +371,7 @@ final class StormRocCombat {
     }
 
     private void takeoff() {
-        phasePending |= atPhaseGate();
+        phasePending |= !two && atPhaseGate();
         from = boss.getEntityPos();
         perch = (perch + 1) % StormSummitLayout.PERCHES.length;
         to = perch(perch);
@@ -305,20 +381,104 @@ final class StormRocCombat {
     private void tickTakeoff(List<ServerPlayerEntity> players, long t) {
         // The huge wing spread blasts everyone away without damage, then it flies up.
         if (t == 24) for (var p : players)
-            if (horizontal(p.getEntityPos(), boss.getEntityPos()) < 35) pushSafe(p, p.getEntityPos().subtract(boss.getEntityPos()), 1.8, .38);
+            if (horizontal(p.getEntityPos(), boss.getEntityPos()) < 24) pushSafe(p, p.getEntityPos().subtract(boss.getEntityPos()), 1.8, .38);
         if (t >= 24) fly(Math.clamp((t - 24) / 26.0, 0, 1));
         if (t < TAKEOFF_TICKS) return;
-        if (phasePending || atPhaseGate()) {
-            clearHazards();
-            bar.clearPlayers();
-            stage = Stage.COMPLETE;
-            boss.pose("perched");
-            boss.face(center());
-        } else {
+        if (!two && (phasePending || atPhaseGate())) charge();
+        else {
             floor = Math.max(phaseHealth(), floor - boss.getMaxHealth() * (float) LANDING_SHARE);
             round++;
-            air();
+            air(true);
         }
+    }
+
+    // ------------------------------------------------------------------ phase change and defeat
+
+    /**
+     * A stand-in for the phase-change cinematic. It climbs high above the summit and the arena
+     * goes quiet, the storm rolls in, a huge bolt charges it, then it lands on the tallest spire.
+     */
+    private void charge() {
+        calm();
+        phasePending = false;
+        review = false;
+        from = boss.getEntityPos();
+        enter(Stage.CHARGE, "flight");
+        sound(from, SoundEvents.ENTITY_PHANTOM_AMBIENT, 4, .4f);
+    }
+
+    private void tickCharge(long t) {
+        // Well below the storm's scud, where the whole summit can watch the bolt come down into it.
+        Vec3d high = center().add(0, StormSummit.STORM_CEILING - StormSummit.SURFACE_Y - 40, 0);
+        if (t <= 50) {
+            boss.setPosition(from.lerp(high, smooth(t / 50.0)));
+            if (horizontal(boss.getEntityPos(), high) > 2) turnToward(high, FLIGHT_TURN_RATE);
+        } else if (t < 120) {
+            boss.setPosition(high.add(0, Math.sin((t - 50) * .09) * 1.2, 0));
+        }
+        // The client darkens the sky and rolls in the storm clouds once it is charged.
+        if (t == 40) {
+            boss.charged(true);
+            if (storm == null || storm.isRemoved()) storm = RocEffectEntity.spawn(boss, RocEffectEntity.Kind.STORM, center(), 0, 0, Integer.MAX_VALUE);
+        }
+        if (t == 40 || t == 64) thunder(high, 1.2f, .55f);
+        if (t == 90) {
+            effect(RocEffectEntity.Kind.CHARGE_BOLT, boss.getEntityPos(), 3, 0, 26);
+            sound(boss.getEntityPos(), SoundEvents.ENTITY_LIGHTNING_BOLT_IMPACT, 6, .5f);
+            thunder(boss.getEntityPos(), 2, .45f);
+        }
+        if (t == 120) {
+            from = boss.getEntityPos();
+            perch = tallestPerch();
+            to = perch(perch);
+        }
+        if (t >= 120) fly(Math.min(1, (t - 120) / (double) (CHARGE_TICKS - 120)));
+        if (t >= CHARGE_TICKS) beginPhaseTwo();
+    }
+
+    private void beginPhaseTwo() {
+        two = true;
+        boss.charged(true);
+        if (storm == null || storm.isRemoved()) storm = RocEffectEntity.spawn(boss, RocEffectEntity.Kind.STORM, center(), 0, 0, Integer.MAX_VALUE);
+        floor = boss.getMaxHealth() * (float) (PHASE_GATE - LANDING_SHARE);
+        round++;
+        // The tornadoes swell, and a third joins them.
+        for (var t : tornadoes) t.effect.resize(TORNADO_RADIUS_TWO);
+        for (Vec3d seed : List.of(new Vec3d(-19, 0, 10), new Vec3d(19, 0, -12), new Vec3d(4, 0, 26)))
+            if (tornadoes.size() < TORNADOES_TWO) tornado(center().add(seed));
+        boss.setPosition(perch(perch));
+        boss.face(center());
+        air(true);
+    }
+
+    /** The death and the shard reward are still to come; the encounter ends here for now. */
+    private void defeat() {
+        Vec3d at = boss.getEntityPos();
+        clearHazards();
+        bar.clearPlayers();
+        if (storm != null) storm.discard();
+        storm = null;
+        action = null;
+        defeated = true;
+        stage = Stage.COMPLETE;
+        thunder(at, 2, .5f);
+        sound(at, SoundEvents.ENTITY_PHANTOM_DEATH, 4, .35f);
+    }
+
+    /** Operators can skip straight to the phase change for playtests. */
+    boolean skipToPhaseTwo() {
+        if (!active() || two || stage == Stage.CHARGE) return false;
+        boss.setHealth(phaseHealth());
+        action = null;
+        charge();
+        return true;
+    }
+
+    private int tallestPerch() {
+        int best = 0;
+        for (int i = 1; i < StormSummitLayout.PERCHES.length; i++)
+            if (StormSummitLayout.PERCHES[i][1] > StormSummitLayout.PERCHES[best][1]) best = i;
+        return best;
     }
 
     // ------------------------------------------------------------------ lightning
@@ -326,33 +486,56 @@ final class StormRocCombat {
     // Markers persist through every full-strength repeat; nothing authorizes a hit client-side.
     private void storm(List<ServerPlayerEntity> players) {
         if (now() >= nextSmall) { aimed(players, false); nextSmall = now() + SMALL_EVERY; }
-        if (now() >= nextLarge) { aimed(players, true); nextLarge = now() + LARGE_EVERY; }
+        if (stage != Stage.AIR && now() >= nextLarge) { aimed(players, true); nextLarge = now() + LARGE_EVERY; }
+        sky();
+    }
+
+    /** Random strikes across the summit, and the harmless distant bolts. */
+    private void sky() {
         if (now() >= nextRandom) {
             double a = boss.getRandom().nextDouble() * Math.PI * 2, r = Math.sqrt(boss.getRandom().nextDouble()) * RANDOM_RADIUS;
-            strike(center().add(Math.cos(a) * r, 0, Math.sin(a) * r), boss.getRandom().nextInt(4) == 0);
-            nextRandom = now() + RANDOM_EVERY;
+            strike(center().add(Math.cos(a) * r, 0, Math.sin(a) * r), boss.getRandom().nextInt(4) == 0, false);
+            nextRandom = now() + (two ? RANDOM_EVERY_TWO : RANDOM_EVERY);
         }
         if (now() >= nextDistant) {
             double a = boss.getRandom().nextDouble() * Math.PI * 2;
-            effect(RocEffectEntity.Kind.DISTANT_BOLT, center().add(Math.cos(a) * 140, -30, Math.sin(a) * 140), 3, 0, 6);
-            nextDistant = now() + DISTANT_EVERY;
+            if (two) {
+                // Phase two's bolts fall from the storm ceiling into the cloud sea, with thunder.
+                double r = 75 + boss.getRandom().nextDouble() * 90;
+                Vec3d at = center().add(Math.cos(a) * r, StormSummitLayout.CLOUD_TOP - 1, Math.sin(a) * r);
+                effect(RocEffectEntity.Kind.STORM_BOLT, at, StormSummit.STORM_CEILING - at.y, 0, 8);
+                thunder(at, 1, .7f + boss.getRandom().nextFloat() * .3f);
+            } else {
+                // Phase one's fall from the cap cloud, out past the rim into the cloud sea below.
+                Vec3d at = center().add(Math.cos(a) * (70 + boss.getRandom().nextDouble() * 35), -30, Math.sin(a) * (70 + boss.getRandom().nextDouble() * 35));
+                effect(RocEffectEntity.Kind.DISTANT_BOLT, at, StormSummit.CAP_Y + 2 - at.y, 0, 6);
+            }
+            nextDistant = now() + (two ? DISTANT_EVERY_TWO : DISTANT_EVERY);
         }
+    }
+
+    /** Thunder carries a couple of hundred blocks, not into the other summits' fights. */
+    private void thunder(Vec3d at, float loudness, float pitch) {
+        world().playSound(null, at.x, at.y, at.z, SoundEvents.ENTITY_LIGHTNING_BOLT_THUNDER, SoundCategory.WEATHER, 14 * loudness, pitch);
     }
 
     private void aimed(List<ServerPlayerEntity> players, boolean large) {
         int warning = large ? LARGE_WARNING : SMALL_WARNING;
         for (int i = 0; i < Math.min(AIMED_CAP, players.size()); i++) {
             var p = players.get(Math.floorMod(selection++, players.size()));
+            if (i == 0) boss.lookAt(p);
             Vec3d spot = p.getEntityPos();
             // Half land where the player is running, so a straight line doesn't dodge them.
             if ((selection + round) % 2 == 0) spot = spot.add(motion.getOrDefault(p.getUuid(), Vec3d.ZERO).multiply(warning * .7));
-            strike(spot, large);
+            strike(spot, large, true);
         }
     }
 
-    RocEffectEntity strike(Vec3d point, boolean large) {
+    RocEffectEntity strike(Vec3d point, boolean large) { return strike(point, large, true); }
+
+    private RocEffectEntity strike(Vec3d point, boolean large, boolean aimed) {
         if (!active()) return null;
-        double radius = large ? LARGE_RADIUS : SMALL_RADIUS;
+        double radius = large ? (two ? LARGE_RADIUS_TWO : LARGE_RADIUS) : (two ? SMALL_RADIUS_TWO : SMALL_RADIUS);
         int warning = large ? LARGE_WARNING : SMALL_WARNING, bolts = large ? LARGE_BOLTS : SMALL_BOLTS;
         Vec3d candidate = onFloor(point);
         // A relocated centre must be outside every live circle; edges may still partly overlap.
@@ -364,7 +547,7 @@ final class StormRocCombat {
             if (StormSummit.beyondRim(centre, candidate) > -1 || insideLiveCircle(candidate, radius)) continue;
             var kind = large ? RocEffectEntity.Kind.LARGE_STRIKE : RocEffectEntity.Kind.SMALL_STRIKE;
             var e = effect(kind, candidate, radius, warning, warning + (bolts - 1) * BOLT_GAP + 6);
-            strikes.add(new Strike(e));
+            strikes.add(new Strike(e, aimed));
             sound(candidate, SoundEvents.BLOCK_AMETHYST_BLOCK_RESONATE, 1.7f, large ? .55f : 1.1f);
             return e;
         }
@@ -386,10 +569,27 @@ final class StormRocCombat {
             if (s.bolts >= (large ? LARGE_BOLTS : SMALL_BOLTS) || e.effectTicks(0) < e.warningTicks() + s.bolts * BOLT_GAP) continue;
             s.bolts++;
             sound(e.getEntityPos(), SoundEvents.ENTITY_LIGHTNING_BOLT_IMPACT, large ? 2.3f : 1.4f, large ? .65f : 1.15f);
+            float damage = large ? (two ? LARGE_DAMAGE_TWO : LARGE_DAMAGE) : (two ? SMALL_DAMAGE_TWO : SMALL_DAMAGE);
             for (var p : players)
                 if (horizontal(p.getEntityPos(), e.getEntityPos()) <= e.radius() + p.getWidth() * .5
                         && p.getY() >= center().y - 4 && p.getY() < center().y + 110)
-                    hurt(p, large ? LARGE_DAMAGE : SMALL_DAMAGE);
+                    hurt(p, damage);
+            // In phase two a large strike's last bolt leaves its circle live for a while.
+            if (two && large && s.bolts == LARGE_BOLTS) fields.add(effect(RocEffectEntity.Kind.LIVE_GROUND, e.getEntityPos(), e.radius(), 0, LIVE_TICKS));
+        }
+    }
+
+    /** Live ground hurts anyone standing on it; jumping over the pulses avoids them. */
+    private void tickFields(List<ServerPlayerEntity> players) {
+        for (var it = fields.iterator(); it.hasNext(); ) {
+            var field = it.next();
+            if (field.isRemoved()) { it.remove(); continue; }
+            int age = (int) field.effectTicks(0);
+            if (age <= 0 || age > LIVE_TICKS || age % LIVE_EVERY != 0) continue;
+            for (var p : players)
+                if (horizontal(p.getEntityPos(), field.getEntityPos()) <= field.radius() + p.getWidth() * .5
+                        && grounded(p, field.getY()) && p.getY() < field.getY() + 6)
+                    hurt(p, LIVE_DAMAGE);
         }
     }
 
@@ -404,14 +604,19 @@ final class StormRocCombat {
     // Persistent drifting obstacles, never homing missiles. Immunity after a throw prevents juggling.
     RocEffectEntity tornado(Vec3d point) {
         Vec3d spot = clamp(point, SAFE_RADIUS);
-        for (int i = 0; i < 64 && nearTornado(spot, 15); i++) {
+        for (int i = 0; i < 64 && nearTornado(spot, tornadoSpacing()); i++) {
             double a = i * GOLDEN_ANGLE;
             spot = center().add(Math.cos(a) * 27, 0, Math.sin(a) * 27);
         }
-        var e = effect(RocEffectEntity.Kind.TORNADO, spot, TORNADO_RADIUS, 0, Integer.MAX_VALUE);
+        var e = effect(RocEffectEntity.Kind.TORNADO, spot, tornadoRadius(), 0, Integer.MAX_VALUE);
         tornadoes.add(new Tornado(e, boss.getRandom().nextDouble() * Math.PI * 2));
         return e;
     }
+
+    private double tornadoRadius() { return two ? TORNADO_RADIUS_TWO : TORNADO_RADIUS; }
+
+    /** Tornadoes keep this far apart, so their winds never merge. */
+    private double tornadoSpacing() { return tornadoRadius() * 2 + 5; }
 
     private boolean nearTornado(Vec3d spot, double distance) {
         for (var t : tornadoes) if (horizontal(spot, t.effect.getEntityPos()) < distance) return true;
@@ -422,36 +627,78 @@ final class StormRocCombat {
         Set<UUID> inside = new HashSet<>();
         for (var t : tornadoes) {
             if (t.effect.isRemoved()) continue;
-            drift(t);
+            drift(t, players);
+            Vec3d core = t.effect.getEntityPos();
+            double radius = t.effect.radius(), reach = radius * TORNADO_REACH;
+            if (now() % 30 == t.effect.getId() % 30) sound(core.add(0, 3, 0), SoundEvents.ENTITY_BREEZE_WHIRL, 2.2f, .55f);
             for (var p : players) {
-                double distance = horizontal(p.getEntityPos(), t.effect.getEntityPos());
-                if (distance > TORNADO_RADIUS || p.getY() > center().y + 20) continue;
-                inside.add(p.getUuid());
-                slow(p, Math.clamp(.15 + .45 * (1 - distance / TORNADO_RADIUS), .15, .6));
-                if (caught.containsKey(p.getUuid())) continue;
-                if (distance < TORNADO_CORE && now() >= immunity.getOrDefault(p.getUuid(), 0L)) {
-                    caught.put(p.getUuid(), new Caught(t, now()));
-                    continue;
+                double distance = horizontal(p.getEntityPos(), core);
+                if (distance > reach || p.getY() > center().y + 20 || caught.containsKey(p.getUuid())) continue;
+                boolean immune = now() < immunity.getOrDefault(p.getUuid(), 0L);
+                if (distance <= radius) {
+                    inside.add(p.getUuid());
+                    slow(p, Math.clamp(.1 + .35 * (1 - distance / radius), .1, .45));
+                    if (distance < radius * TORNADO_CATCH && !immune) {
+                        caught.put(p.getUuid(), new Caught(t, now(), Math.atan2(p.getZ() - core.z, p.getX() - core.x)));
+                        sound(p.getEntityPos(), SoundEvents.ENTITY_BREEZE_WIND_BURST.value(), 1.6f, .6f);
+                        continue;
+                    }
+                    if (now() % TORNADO_CHIP_EVERY == 0) hurt(p, TORNADO_CHIP);
                 }
-                // The pull is much stronger in the air, which punishes constant jumping.
-                Vec3d inward = flat(t.effect.getEntityPos().subtract(p.getEntityPos())).normalize();
-                double pull = p.isOnGround() ? .012 : .065;
-                p.addVelocity(inward.x * pull, 0, inward.z * pull);
+                if (immune) continue;
+                // Its winds drag everyone near it inward and around it, harder the closer they are,
+                // and much harder in the air, which punishes constant jumping. A walk still escapes
+                // the edge of them; deep inside, only a sprint does.
+                Vec3d inward = distance < 1e-3 ? Vec3d.ZERO : flat(core.subtract(p.getEntityPos())).multiply(1 / distance);
+                double close = 1 - distance / reach;
+                double pull = p.isOnGround() ? .018 + .05 * close : .065, swirl = p.isOnGround() ? .03 * close : .04;
+                p.addVelocity(inward.x * pull + inward.z * swirl, 0, inward.z * pull - inward.x * swirl);
                 p.velocityModified = true;
-                if (now() % TORNADO_CHIP_EVERY == 0) hurt(p, TORNADO_CHIP);
             }
         }
         for (UUID id : new HashSet<>(slowed)) if (!inside.contains(id)) clearSlow(id);
         tickCaught();
+        // Thrown players come down without a fall: the throw's own hit already counted it.
+        thrown.entrySet().removeIf(e -> {
+            var p = player(e.getKey());
+            if (p == null || !boss.eligible(p)) return true;
+            p.fallDistance = 0;
+            return now() >= e.getValue();
+        });
     }
 
-    /** Slower than walking; it turns away from the edge and from other tornadoes. */
-    private void drift(Tornado t) {
-        Vec3d next = t.effect.getEntityPos().add(Math.cos(t.heading) * .026, 0, Math.sin(t.heading) * .026);
+    /**
+     * A quarter of a walk. In the air stretch it turns slowly toward the nearest challenger on the
+     * rock; otherwise, or after turning off the rim or a neighbour, it wanders.
+     */
+    private void drift(Tornado t, List<ServerPlayerEntity> players) {
+        Vec3d at = t.effect.getEntityPos();
+        boolean hunting = stage == Stage.AIR || stage == Stage.DIVE || stage == Stage.SMASH;
+        ServerPlayerEntity prey = null;
+        double nearest = Double.MAX_VALUE;
+        if (hunting && now() >= t.detour)
+            for (var p : players) {
+                if (caught.containsKey(p.getUuid()) || p.getY() > center().y + 6) continue;
+                double d = horizontal(p.getEntityPos(), at);
+                if (d < nearest) { nearest = d; prey = p; }
+            }
+        if (prey != null && nearest > 1) {
+            double wanted = Math.atan2(prey.getZ() - at.z, prey.getX() - at.x);
+            t.heading += MathHelper.clamp(MathHelper.wrapDegrees(Math.toDegrees(wanted - t.heading)), -1.2f, 1.2f) * Math.PI / 180;
+        } else t.heading += Math.sin(now() * .03 + t.effect.getId()) * .012;
+        Vec3d next = at.add(Math.cos(t.heading) * TORNADO_SPEED, 0, Math.sin(t.heading) * TORNADO_SPEED);
         boolean blocked = horizontal(next, center()) > SAFE_RADIUS;
-        for (var other : tornadoes) if (other != t && horizontal(next, other.effect.getEntityPos()) < 14) blocked = true;
-        if (blocked) t.heading += 1.1;
-        else t.effect.setPosition(next);
+        // Only moves that close in on a neighbour are blocked, so tornadoes that swelled into
+        // each other's space at the phase change drift apart instead of freezing.
+        for (var other : tornadoes) {
+            if (other == t) continue;
+            double after = horizontal(next, other.effect.getEntityPos());
+            if (after < tornadoSpacing() - 1 && after < horizontal(t.effect.getEntityPos(), other.effect.getEntityPos())) blocked = true;
+        }
+        if (blocked) {
+            t.heading += 1.1;
+            t.detour = now() + 30;
+        } else t.effect.setPosition(next);
     }
 
     private void tickCaught() {
@@ -460,24 +707,31 @@ final class StormRocCombat {
             var p = player(entry.getKey());
             var hold = entry.getValue();
             Vec3d core = hold.tornado.effect.getEntityPos();
-            if (p == null || !boss.eligible(p) || horizontal(p.getEntityPos(), core) > TORNADO_RADIUS * 1.5) {
+            if (p == null || !boss.eligible(p) || horizontal(p.getEntityPos(), core) > hold.tornado.effect.radius() * 1.5) {
                 immunity.put(entry.getKey(), now() + TORNADO_IMMUNITY);
                 it.remove();
                 continue;
             }
             long age = now() - hold.at;
             if (age >= TORNADO_HOLD) {
-                // Thrown out, always toward the middle of the summit.
-                hurt(p, TORNADO_DAMAGE);
-                pushSafe(p, center().subtract(p.getEntityPos()), 2.2, .55);
-                immunity.put(entry.getKey(), now() + TORNADO_IMMUNITY);
+                // Leave the map first: a lethal throw eliminates the player, which edits it.
                 it.remove();
+                immunity.put(entry.getKey(), now() + TORNADO_IMMUNITY);
+                // Flung out of the top of the whirl, always toward the middle of the summit.
+                hurt(p, TORNADO_DAMAGE);
+                if (boss.eligible(p)) {
+                    pushSafe(p, center().subtract(p.getEntityPos()), 2.2, .55);
+                    thrown.put(entry.getKey(), now() + 60);
+                }
+                sound(p.getEntityPos(), SoundEvents.ENTITY_BREEZE_WIND_BURST.value(), 2, .8f);
                 continue;
             }
-            Vec3d d = flat(p.getEntityPos().subtract(core)).normalize();
-            Vec3d orbit = core.add(d.x * .8 - d.z * .45, Math.min(5, 1 + age * .18), d.z * .8 + d.x * .45);
-            Vec3d v = orbit.subtract(p.getEntityPos()).multiply(.32);
-            if (v.lengthSquared() > 1) v = v.normalize();
+            // Whirled up the funnel ever faster, widening with it as it climbs.
+            double k = hold.tornado.effect.radius() / TORNADO_RADIUS, f = Math.min(1, age / (TORNADO_HOLD * .7));
+            double lift = TORNADO_LIFT * k * smooth(f), angle = hold.angle + age * (.25 + .2 * f), r = (1 + .2 * k) * (1 + lift * .08);
+            Vec3d orbit = core.add(Math.cos(angle) * r, .5 + lift, Math.sin(angle) * r);
+            Vec3d v = orbit.subtract(p.getEntityPos()).multiply(.5);
+            if (v.lengthSquared() > 2.25) v = v.normalize().multiply(1.5);
             p.setVelocity(v);
             p.velocityModified = true;
             p.fallDistance = 0;
@@ -501,9 +755,12 @@ final class StormRocCombat {
 
     // ------------------------------------------------------------------ spires, edge and shockwaves
 
-    /** A player who flies up to a spire is met with a caw that hurts and throws them toward the summit. */
+    /**
+     * A player who flies up to a spire is met with a caw that hurts and throws them toward the
+     * summit, whatever the Roc is doing, so a spire is never a safe platform to shoot from.
+     */
     private void caw(List<ServerPlayerEntity> players) {
-        if (stage != Stage.AIR) return;
+        if (stage == Stage.CHARGE) return;
         for (var p : players) {
             if (p.getY() < center().y + 8 || now() < cawAt.getOrDefault(p.getUuid(), 0L)) continue;
             for (int i = 0; i < StormSummitLayout.PERCHES.length; i++) {
@@ -542,7 +799,9 @@ final class StormRocCombat {
         for (var it = rings.iterator(); it.hasNext(); ) {
             var ring = it.next();
             if (ring.effect.isRemoved()) { it.remove(); continue; }
-            double radius = ring.effect.effectTicks(0) * SHOCK_SPEED, inner = Math.max(0, radius - SHOCK_SPEED);
+            double radius = Math.min(ring.effect.radius(), ring.effect.effectTicks(0) * SHOCK_SPEED), inner = Math.max(0, radius - SHOCK_SPEED);
+            // It stops where it is drawn to stop; its last ticks only fade.
+            if (inner >= ring.effect.radius()) continue;
             double floorY = ring.effect.getY();
             for (var p : players) {
                 if (ring.passed.contains(p.getUuid())) continue;
@@ -550,11 +809,14 @@ final class StormRocCombat {
                 if (distance + p.getWidth() * .5 < inner - .6 || distance - p.getWidth() * .5 > radius + .6) continue;
                 // One contact decides, so a player who jumped it is not hit by its trailing smoke.
                 ring.passed.add(p.getUuid());
-                // It rolls over low rocks: standing on one doesn't clear it, only being in the air does.
-                boolean grounded = p.isOnGround() || p.getY() < floorY + SHOCK_HEIGHT;
-                if (grounded && p.getY() + p.getHeight() > floorY - .4) hurt(p, RING_DAMAGE);
+                if (grounded(p, floorY)) hurt(p, RING_DAMAGE);
             }
         }
+    }
+
+    /** Rings and live ground roll over low rocks: standing on one doesn't clear them, only being in the air does. */
+    private static boolean grounded(ServerPlayerEntity p, double floorY) {
+        return (p.isOnGround() || p.getY() < floorY + SHOCK_HEIGHT) && p.getY() + p.getHeight() > floorY - .4;
     }
 
     // ------------------------------------------------------------------ dive
@@ -568,7 +830,7 @@ final class StormRocCombat {
             Vec3d point = center().add(Math.cos(a) * r, 0, Math.sin(a) * r);
             double nearest = 999;
             for (var t : tornadoes) nearest = Math.min(nearest, horizontal(point, t.effect.getEntityPos()));
-            if (nearest > DIVE_RADIUS + TORNADO_RADIUS + 2) return point;
+            if (nearest > DIVE_RADIUS + tornadoRadius() + 2) return point;
             if (nearest > bestClear) { best = point; bestClear = nearest; }
         }
         // Two spaced tornadoes always leave a clear patch; otherwise take the clearest point found.
@@ -577,15 +839,168 @@ final class StormRocCombat {
 
     void dive(Vec3d point) {
         mark = clamp(point, 24);
-        if (nearTornado(mark, DIVE_RADIUS + TORNADO_RADIUS + 2)) mark = chooseLanding();
+        if (nearTornado(mark, DIVE_RADIUS + tornadoRadius() + 2)) mark = chooseLanding();
         from = boss.getEntityPos();
         boss.face(mark);
         enter(Stage.DIVE, "dive");
-        // Land so the pinned bill, not the feet, ends on the mark.
-        Vec3d bill = boss.modelToWorld(StormRocPose.socket("stuck", 0, "beak")).subtract(boss.getEntityPos());
-        to = new Vec3d(mark.x - bill.x, center().y, mark.z - bill.z);
+        to = landing(mark, boss.getYaw());
         marker = effect(RocEffectEntity.Kind.DIVE_MARKER, mark, DIVE_RADIUS, DIVE_TICKS, DIVE_TICKS + 2);
         sound(mark, SoundEvents.ENTITY_PHANTOM_AMBIENT, 3, .45f);
+    }
+
+    /** Where its feet go so that the pinned bill, not the body, lands on the mark. */
+    private Vec3d landing(Vec3d mark, float yaw) {
+        Vec3d bill = StormRocPose.socket("stuck", 0, "beak");
+        double a = Math.toRadians(yaw), c = Math.cos(a), s = Math.sin(a);
+        return new Vec3d(mark.x - (bill.x * c + bill.z * s), center().y, mark.z - (bill.x * s - bill.z * c));
+    }
+
+    // ------------------------------------------------------------------ chain smash
+
+    /** Phase two's heavy attack: beak slams in quick succession, each turned on a player, never far from the last. */
+    void chain() {
+        from = boss.getEntityPos();
+        smash = 0;
+        marked = false;
+        marker = null;
+        enter(Stage.SMASH, "dive");
+        sound(from, SoundEvents.ENTITY_PHANTOM_AMBIENT, 3, .4f);
+    }
+
+    private void tickSmash(List<ServerPlayerEntity> players, long t) {
+        if (smash == 0) {
+            // It launches straight up, picks its first player, then falls on them like the dive.
+            if (!review) storm(players);
+            int launch = DIVE_TICKS - FIRST_SMASH_WARNING;
+            if (t < launch) {
+                boss.setPosition(from.add(0, 14 * smooth(t / (double) launch), 0));
+                turnToward(center(), FLIGHT_TURN_RATE);
+                return;
+            }
+            if (!marked) {
+                from = boss.getEntityPos();
+                markSmash(players, null);
+            }
+            double f = Math.clamp((t - launch) / (double) FIRST_SMASH_WARNING, 0, 1);
+            Vec3d apex = mark.add(0, 42, 0);
+            boss.setPosition(f < .5 ? from.lerp(apex, smooth(f / .5)) : apex.lerp(to, smooth((f - .5) / .5)));
+            boss.yaw(MathHelper.lerpAngleDegrees((float) smooth(Math.min(1, f * 2.5)), startYaw, landingYaw));
+            if (f >= 1) slam(players, DIVE_DAMAGE);
+            return;
+        }
+        // Buried for a moment, then it rips free and hops onto the next player's circle.
+        long u = now() - smashAt;
+        if (u < SMASH_PAUSE) return;
+        if (!marked) {
+            from = boss.getEntityPos();
+            markSmash(players, mark);
+            boss.pose("hop");
+        }
+        double f = Math.clamp((u - SMASH_PAUSE) / (double) SMASH_WARNING, 0, 1);
+        boss.setPosition(from.lerp(to, smooth(f)).add(0, Math.sin(f * Math.PI) * (5 + horizontal(from, to) * .3), 0));
+        boss.yaw(MathHelper.lerpAngleDegrees((float) smooth(Math.min(1, f * 1.6)), startYaw, landingYaw));
+        if (f >= 1) slam(players, HOP_DAMAGE);
+    }
+
+    /** Each smash turns to the next player in turn, and its circle stays put once marked. */
+    private void markSmash(List<ServerPlayerEntity> players, Vec3d previous) {
+        var p = players.get(Math.floorMod(selection++, players.size()));
+        boss.lookAt(p);
+        mark = smashSpot(p.getEntityPos(), previous, smash == SMASHES - 1);
+        // It turns to face its circle from where it stands. The bill is about 13 blocks ahead of its
+        // feet, and facing the mark keeps the body's own hop no longer than the circle's, so it
+        // never seems to teleport. Only a landing too near the rim turns it a little further.
+        Vec3d body = boss.getEntityPos(), approach = flat(mark.subtract(body));
+        float facing = approach.lengthSquared() < 1e-4 ? boss.getYaw() : (float) Math.toDegrees(Math.atan2(-approach.x, approach.z));
+        landingYaw = facing;
+        to = landing(mark, facing);
+        for (int k = 1; k <= 18 && StormSummit.beyondRim(centre, to) > -6; k++) {
+            for (int sign = 1; sign >= -1; sign -= 2) {
+                Vec3d at = landing(mark, facing + sign * k * 10);
+                if (StormSummit.beyondRim(centre, at) > -6 || previous != null && horizontal(at, body) > SMASH_HOP) continue;
+                landingYaw = facing + sign * k * 10;
+                to = at;
+                break;
+            }
+        }
+        startYaw = boss.getYaw();
+        marked = true;
+        int warning = previous == null ? FIRST_SMASH_WARNING : SMASH_WARNING;
+        marker = effect(RocEffectEntity.Kind.DIVE_MARKER, mark, SMASH_RADIUS, warning, warning + 2);
+        sound(mark, SoundEvents.ENTITY_PHANTOM_AMBIENT, 2.5f, .5f);
+    }
+
+    /** At a player if it can, but inside the summit, off the tornadoes and within a hop of the last circle. */
+    private Vec3d smashSpot(Vec3d at, Vec3d previous, boolean last) {
+        Vec3d wanted = reachable(at, previous, last), best = wanted;
+        double clear = SMASH_RADIUS + tornadoRadius() + 1, most = room(wanted);
+        // Outward from the player's spot across everything it can reach: the nearest clear spot,
+        // or failing that the one with the most room, as the dive does.
+        for (int i = 1; i < 260 && most < clear; i++) {
+            double a = i * GOLDEN_ANGLE, r = 2.4 * Math.sqrt(i);
+            Vec3d spot = reachable(wanted.add(Math.cos(a) * r, 0, Math.sin(a) * r), previous, last);
+            double room = room(spot);
+            if (room > most) { best = spot; most = room; }
+        }
+        return best;
+    }
+
+    /** How far a spot is from the nearest tornado. */
+    private double room(Vec3d spot) {
+        double nearest = Double.MAX_VALUE;
+        for (var t : tornadoes) nearest = Math.min(nearest, horizontal(spot, t.effect.getEntityPos()));
+        return nearest;
+    }
+
+    /**
+     * The nearest point to a player that the chain can smash: within the summit's smashing area,
+     * near enough the middle that the rest of the chain can still reach the last circle's spot,
+     * and within a hop of the last circle, so it never seems to teleport. The last circle lands
+     * where neither the wing wave nor the takeoff gust can push anyone off.
+     */
+    private Vec3d reachable(Vec3d point, Vec3d previous, boolean last) {
+        double area = last ? 24 : Math.min(SMASH_AREA, 24 + (SMASHES - 1 - smash) * SMASH_HOP - 1);
+        Vec3d p = onFloor(point);
+        return previous == null ? clamp(p, area) : onFloor(lens(p, center(), area, previous, SMASH_HOP));
+    }
+
+    /** The nearest point to p inside both circles: around a with radius ra, and around b with rb. */
+    private static Vec3d lens(Vec3d p, Vec3d a, double ra, Vec3d b, double rb) {
+        Vec3d pa = clampTo(p, a, ra);
+        if (horizontal(pa, b) <= rb + 1e-6) return pa;
+        Vec3d pb = clampTo(p, b, rb);
+        double d = horizontal(a, b);
+        if (horizontal(pb, a) <= ra + 1e-6 || d > ra + rb || d < 1e-6) return pb;
+        // Otherwise the nearest point is one of the two corners where the circles cross.
+        double x = (d * d + ra * ra - rb * rb) / (2 * d), h = Math.sqrt(Math.max(0, ra * ra - x * x));
+        Vec3d u = flat(b.subtract(a)).multiply(1 / d), n = new Vec3d(-u.z, 0, u.x), mid = a.add(u.multiply(x));
+        Vec3d c1 = mid.add(n.multiply(h)), c2 = mid.subtract(n.multiply(h));
+        return horizontal(p, c1) <= horizontal(p, c2) ? c1 : c2;
+    }
+
+    private static Vec3d clampTo(Vec3d p, Vec3d centre, double radius) {
+        Vec3d d = flat(p.subtract(centre));
+        return d.lengthSquared() > radius * radius ? centre.add(d.normalize().multiply(radius)) : centre.add(d);
+    }
+
+    private void slam(List<ServerPlayerEntity> players, float damage) {
+        boss.setPosition(to);
+        boss.yaw(landingYaw);
+        if (marker != null) marker.discard();
+        for (var p : players)
+            if (horizontal(p.getEntityPos(), mark) <= SMASH_RADIUS + p.getWidth() * .5 && p.getY() < mark.y + 26) hurt(p, damage);
+        ring(mark, SMASH_RING);
+        sound(mark, SoundEvents.ENTITY_GENERIC_EXPLODE.value(), 3, .55f);
+        if (smash == 0) {
+            // The air stretch's aimed strikes stop at the first impact; the random sky keeps going.
+            for (var s : strikes) if (s.aimed) s.effect.discard();
+            strikes.removeIf(s -> s.aimed);
+        }
+        smash++;
+        smashAt = now();
+        marked = false;
+        if (smash >= SMASHES) enter(Stage.STUCK, "stuck");
+        else boss.pose("stuck");
     }
 
     // ------------------------------------------------------------------ on the ground
@@ -698,6 +1113,7 @@ final class StormRocCombat {
         action = chosen;
         actionAt = now();
         target = p.getUuid();
+        boss.lookAt(p);
         actionHits.clear();
         aim = p.getEntityPos();
         if (snap) boss.face(aim);
@@ -748,7 +1164,7 @@ final class StormRocCombat {
         Vec3d bill = boss.socket("beak");
         for (var victim : players) {
             if (actionHits.contains(victim.getUuid()) || horizontal(victim.getEntityPos(), bill) >= SWING_RADIUS) continue;
-            if (victim.getY() >= bill.y + 3 || victim.getY() + victim.getHeight() <= bill.y - 3) continue;
+            if (victim.getY() >= bill.y + 2.5 || victim.getY() + victim.getHeight() <= bill.y - 2.5) continue;
             if (!hurt(victim, PECK_DAMAGE)) continue;
             actionHits.add(victim.getUuid());
             pushSafe(victim, Vec3d.fromPolar(0, boss.getYaw() + (action == Action.SWING_LEFT ? 90 : -90)), .65, .16);
@@ -763,7 +1179,9 @@ final class StormRocCombat {
         for (var victim : players) {
             Vec3d d = victim.getEntityPos().subtract(origin);
             double along = d.dotProduct(forward), side = Math.abs(d.x * forward.z - d.z * forward.x);
-            if (along >= -1 && along <= 110 && side <= SCREAM_HALF_WIDTH + victim.getWidth() * .5 && victim.getY() < center().y + 12)
+            // The blast is drawn as a tube on the ground, and it can't be jumped, but it passes under
+            // anyone lifted well above it.
+            if (along >= -1 && along <= 110 && side <= SCREAM_HALF_WIDTH + victim.getWidth() * .5 && victim.getY() < e.getY() + SCREAM_HALF_WIDTH + .5)
                 hurt(victim, SCREAM_DAMAGE);
         }
         sound(origin, SoundEvents.ENTITY_PHANTOM_DEATH, 3, .4f);
@@ -783,7 +1201,7 @@ final class StormRocCombat {
     private void pounce(List<ServerPlayerEntity> players, int t) {
         if (t == 24) {
             boss.face(to);
-            marker = effect(RocEffectEntity.Kind.DIVE_MARKER, to, 6, 20, 22);
+            marker = effect(RocEffectEntity.Kind.DIVE_MARKER, to, 5, 20, 22);
         }
         if (t >= 24 && t <= 44) {
             double f = (t - 24) / 20.0;
@@ -791,7 +1209,7 @@ final class StormRocCombat {
         }
         if (t == 44) {
             boss.setPosition(to);
-            hitCircle(players, to, 6, POUNCE_DAMAGE, 10);
+            hitCircle(players, to, 5, POUNCE_DAMAGE, 10);
             ring(to, 26);
             sound(to, SoundEvents.ENTITY_GENERIC_EXPLODE.value(), 2, .65f);
         }
@@ -805,7 +1223,7 @@ final class StormRocCombat {
             boss.setPosition(from.lerp(to, (t - 24) / 30.0));
             for (var victim : players) {
                 if (actionHits.contains(victim.getUuid()) || victim.getY() >= center().y + 10) continue;
-                if (distanceToSegment(victim.getEntityPos(), old, boss.getEntityPos()) >= 3.3 || !hurt(victim, STAMPEDE_DAMAGE)) continue;
+                if (distanceToSegment(victim.getEntityPos(), old, boss.getEntityPos()) >= 2.2 || !hurt(victim, STAMPEDE_DAMAGE)) continue;
                 actionHits.add(victim.getUuid());
                 // Tossed aside, off whichever side of its path they stood on.
                 double side = flat(victim.getEntityPos().subtract(old)).crossProduct(forward()).y;
@@ -837,24 +1255,53 @@ final class StormRocCombat {
 
     /**
      * Roc damage skips vanilla's hurt cooldown so repeat bolts land in full. Inside its own
-     * shorter window a hit only adds its excess over the largest recent one, so hazards never stack.
+     * shorter window a hit only adds its excess over the costliest recent one, so hazards never
+     * stack. Costs are compared after armor: a smaller hit first never discounts a larger one.
      */
     private boolean hurt(ServerPlayerEntity p, float raw) {
         if (!boss.eligible(p)) return false;
         long now = now();
+        var source = new DamageSource(damageType(DAMAGE), boss);
+        float cost = mitigated(p, source, raw);
         Recent prior = recent.get(p.getUuid());
-        boolean fresh = prior == null || now - prior.at >= STACK_TICKS;
-        float amount = fresh ? raw : raw - prior.amount;
-        if (amount <= 0) return false;
-        var type = world().getRegistryManager().getOrThrow(RegistryKeys.DAMAGE_TYPE).getOrThrow(DAMAGE);
-        if (!p.damage(world(), new DamageSource(type, boss), amount)) return false;
-        recent.put(p.getUuid(), new Recent(fresh ? now : prior.at, raw));
+        if (prior == null || now - prior.at >= STACK_TICKS) {
+            float before = p.getHealth() + p.getAbsorptionAmount();
+            if (!p.damage(world(), source, raw)) return false;
+            // A hit that breaks Protection armor costs more than its estimate: count what it took.
+            float taken = before - p.getHealth() - p.getAbsorptionAmount();
+            recent.put(p.getUuid(), new Recent(now, Math.max(cost, taken)));
+            return true;
+        }
+        float extra = cost - prior.cost;
+        if (extra <= 0) return false;
+        if (!p.damage(world(), new DamageSource(damageType(EXCESS), boss), extra)) return false;
+        recent.put(p.getUuid(), new Recent(prior.at, cost));
         return true;
+    }
+
+    /** What a raw hit costs this player, as vanilla works it out: difficulty, armor, Resistance, Protection. */
+    private float mitigated(ServerPlayerEntity p, DamageSource source, float raw) {
+        float amount = switch (world().getDifficulty()) {
+            case PEACEFUL -> 0;
+            case EASY -> Math.min(raw / 2 + 1, raw);
+            case HARD -> raw * 1.5f;
+            default -> raw;
+        };
+        amount = DamageUtil.getDamageLeft(p, amount, source, p.getArmor(), (float) p.getAttributeValue(EntityAttributes.ARMOR_TOUGHNESS));
+        var resistance = p.getStatusEffect(StatusEffects.RESISTANCE);
+        if (resistance != null) amount = Math.max(amount * (25 - (resistance.getAmplifier() + 1) * 5) / 25f, 0);
+        float protection = EnchantmentHelper.getProtectionAmount(world(), p, source);
+        return protection > 0 ? DamageUtil.getInflictedDamage(amount, protection) : amount;
+    }
+
+    private net.minecraft.registry.entry.RegistryEntry<DamageType> damageType(RegistryKey<DamageType> key) {
+        return world().getRegistryManager().getOrThrow(RegistryKeys.DAMAGE_TYPE).getOrThrow(key);
     }
 
     private ServerWorld world() { return (ServerWorld) boss.getEntityWorld(); }
     private long now() { return boss.getEntityWorld().getTime(); }
-    private float phaseHealth() { return boss.getMaxHealth() * (float) PHASE_GATE; }
+    /** Phase one ends at half health; phase two's last gate is its defeat, one point above death. */
+    private float phaseHealth() { return two ? 1 : boss.getMaxHealth() * (float) PHASE_GATE; }
     private boolean atPhaseGate() { return boss.getHealth() <= phaseHealth() + .01f; }
     private Vec3d center() { return new Vec3d(centre.getX() + .5, StormSummit.SURFACE_Y + 1.03, centre.getZ() + .5); }
     private Vec3d forward() { return Vec3d.fromPolar(0, boss.getYaw()); }

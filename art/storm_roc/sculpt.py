@@ -61,19 +61,26 @@ def sculpt(Roc):
                 y=69-row*4;z=-13+row*3+i*2
                 plume(f'{label}_ruff_{row}_{i}','neck_upper' if row==0 else 'neck_mid',
                       [side*6,y,z],[side*(7+(i%2)*.5),y-6,z+6],3.5,'navy')
-    # Enlarged bevelled skull; side orbits have a heavy brow and bare red orbital skin.
+    # Bevelled blue skull with forward raptor orbits and a supraorbital shelf.
     bone('head',[0,70,-17],'neck_upper')
     for y,w,d,z in [(67,11,14,-16),(69,14,18,-16),(71,15,20,-16),(73,15,22,-16),(75,15,22,-16),(77,14,20,-16),(79,12,17,-15),(81,8,12,-14)]:
         box('head',[0,y,z],[w,2,d],'navy')
     for side,label in ((-1,'right'),(1,'left')):
-        box('head',[side*7.25,76.75,-19.0],[1.5,7,10],'skin')
-        box('head',[side*7.5,78.75,-20.0],[1,6,7],'skin')
-        box('head',[side*8.1,78.25,-20.0],[.5,4,5],'mouth')
-        box('head',[side*8.4,78.45,-20.5],[.5,3,3],'iris')
-        box('head',[side*8.7,78.45,-21.0],[.5,2.5,1],'talon')
-        box('head',[side*8.9,79.15,-21.5],[.5,.5,.5],'ivory')
-        box('head',[side*8.2,80.15,-20.0],[2.5,2.5,10],'navy',[10,-side*6,side*9])
-        box('head',[side*8,75.75,-19.5],[1,1,8],'skin')
+        # North-facing eye plates, splayed 35 degrees from forward. The outer
+        # corners rise 12 degrees; a broad shelf drops toward the bill to scowl.
+        normal=[side*math.sin(math.radians(35)),0,-math.cos(math.radians(35))]
+        center=[side*5.5,78.6,-28]
+        def orbit(offset,size,material,lift=0):
+            p=[center[j]+normal[j]*offset for j in range(3)];p[1]+=lift
+            box('head',p,size,material,[0,side*35,side*12])
+        orbit(-.55,[5.5,5,2],'navy')
+        orbit(0,[5,4.25,1.5],'skin')
+        orbit(.65,[4.25,3.5,.75],'mouth')
+        orbit(1.05,[3.25,2.75,.5],'iris')
+        orbit(1.4,[1.75,1.75,.5],'talon')
+        orbit(-2,[5.5,2.5,7],'navy',1.8)
+        orbit(.15,[6,2.25,3.5],'navy',2)
+        orbit(.35,[4.75,1,1.5],'skin',-1.8)
         for i in range(6):plume(f'{label}_cheek_{i}','head',[side*(5+i*.45),69-i*.4,-24+i*1.5],[side*(7.5+i*.45),62-i*.4,-16+i*1.7],4.5,'white')
     for side,label in ((-1,'right'),(1,'left')):
         for row in range(2):
@@ -226,8 +233,8 @@ def sculpt(Roc):
     box('body',[1.5,46,-14.7],[8,14,.5],'white',scar='chest')
     # Empty locator bones for camera-facing flipbook sprites; no crackle cubes.
     for name,p,parent in [('spark_beak_tip',[0,60,-42],'upper_beak'),('spark_beak_ridge',[0,79,-35],'upper_beak'),
-                          ('spark_eye_left',[9.2,76.8,-22],'head'),('spark_eye_right',[-9.2,76.8,-22],'head'),
-                          ('spark_brow_left',[8.8,78,-20],'head'),('spark_brow_right',[-8.8,78,-20],'head')]:bone(name,p,parent)
+                          ('spark_eye_left',[6.4751,78.6,-29.3926],'head'),('spark_eye_right',[-6.4751,78.6,-29.3926],'head'),
+                          ('spark_brow_left',[6.5898,80.6,-29.5564],'head'),('spark_brow_right',[-6.5898,80.6,-29.5564],'head')]:bone(name,p,parent)
     family={'head'}
     for bone in r.bones:
         if bone.get('parent') in family:family.add(bone['name'])

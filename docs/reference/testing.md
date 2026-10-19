@@ -65,7 +65,7 @@ inspect their assertions when behavior changes instead of trusting an old name.
 | Hollow undead | `hollow_undead_server_smoke.init.gradle` (rise, chase, hit-frame damage and arrow timing, daylight burning, loot, held death clip, bound-minion rules) | `hollow_undead_client_smoke.init.gradle` (hidden window; rise, idle front/side, walk, attack key frames, death screenshots) |
 | Hollow Crypt realm | — | `crypt_client_smoke.init.gradle` (realm build, enter, summon, a siege on an exported bough perch with near and far-rim screenshots, wall, reset, leave, `/locate`, withered woods around the yard, the unbreakable mausoleum and its door hint, the walk-in veil ritual, wipe with kept items and a return to the court, victory rewards and spell book; screenshots) |
 | Church / Shattered Nave | `guardian_church_smoke.init.gradle` (ritual into the nave, wipe/retry, victory, restoration, loot), `guardian_nave_smoke.init.gradle` (layout, arrival, the Guardian's intro played in full then skipped, its zombie gone after both, a watcher killed mid-intro let go and told the scene is over, casting/damage gates, floor and hall protection, containment, spectating with kept items, victory, wipe, restart) | `nave_client_smoke.init.gradle` (screenshots of the hall from six viewpoints; stills of the intro's shots and its hand-back into the fight; `-PintroVideo` saves every tick for a review video); Guardian floor client with visual options |
-| Storm Roc phase one | `roc_server_smoke.init.gradle` (diamond damage, repeated strikes, dodges, melee, dive/ring, tornadoes, health gates, planted thorns/owned fire contact and encounter lifecycle) | `roc_client_smoke.init.gradle` (hidden authored-summit rehearsal, synchronized poses/effects, individual native screenshots) |
+| Storm Roc | `roc_server_smoke.init.gradle` (diamond damage, repeated strikes, dodges, melee, the spire call, dive/ring, tornado catch, whirl, throw and winds, health gates, planted thorns/owned fire contact, stacking after armor in both orders; the phase change, phase-two strikes, live ground, chain-smash timing and hop limits, strikes during the brawl and the defeat; encounter lifecycle including a lethal tornado throw) | `roc_client_smoke.init.gradle` (hidden authored-summit rehearsal, synchronized poses/effects including the spire landing and call, the client storm level, 26 individual native screenshots of both phases including the call bolt, bolts from the cap cloud and a textured tornado close-up) |
 | Storm Summit realm | — | `summit_client_smoke.init.gradle` (enter, screenshots from seven viewpoints, the remains placed, survival players can't break the rock, a fall off the rim set back on the summit, leave) |
 | Worldgen / locate | `guardian_church_worldgen_smoke.init.gradle`, `guardian_church_locate_smoke.init.gradle` | Human terrain review |
 | Parties / audit regressions | `party_server_smoke.init.gradle`, `audit_fixes_smoke.init.gradle` | Human co-op review |
@@ -318,13 +318,14 @@ and no failure receipt. Encode the current `RECORDING_DIR.txt` to
 fixture for real damage, healing caps and cover rules. This does not establish
 human Lunar appearance or installation.
 
-### Storm Roc phase-one screenshots
+### Storm Roc screenshots
 
 Run the dedicated fixture first, then the client runner with the existing `hubClientAssets`
 option. Require `build/roc-smoke-run/ROC_SERVER_PASSED.txt` and
 `build/roc-client-smoke/ROC_CLIENT_PASSED.txt`, with no corresponding failure receipt.
 The client runs a hidden, scripted rehearsal in the authored summit and saves individual
 screenshots under `build/roc-client-smoke/screenshots/`. Inspect the perch, lightning,
-dive warning/impact, stuck opening, all seven ground moves and takeoff. It does not record
-video. The camera and challenger are scripted; this does not verify human controls,
+dive warning/impact, stuck opening, all seven ground moves and takeoff. Then inspect phase
+two: the charge bolt, the storm sky and ground views, the three tornadoes, the chain smash's
+mark, hop and slam, and live ground. It does not record video. The camera and challenger are scripted; this does not verify human controls,
 multiplayer latency, balance or installation into Lunar.

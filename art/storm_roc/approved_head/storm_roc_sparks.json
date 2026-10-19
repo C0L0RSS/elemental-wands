@@ -189,8 +189,8 @@
       "bone": "spark_beak_tip",
       "pivot_model_pixels": [
         0.0,
-        76.8,
-        -51.0
+        151.0,
+        -57.0
       ],
       "sequence": "arc",
       "size_blocks": 0.95,
@@ -200,8 +200,8 @@
       "bone": "spark_beak_ridge",
       "pivot_model_pixels": [
         0.0,
-        103.4,
-        -41.2
+        177.6,
+        -47.2
       ],
       "sequence": "arc",
       "size_blocks": 0.95,
@@ -210,9 +210,9 @@
     {
       "bone": "spark_eye_left",
       "pivot_model_pixels": [
-        12.88,
-        100.32,
-        -23.0
+        9.0651,
+        177.04,
+        -39.3496
       ],
       "sequence": "spark",
       "size_blocks": 0.4,
@@ -221,9 +221,9 @@
     {
       "bone": "spark_eye_right",
       "pivot_model_pixels": [
-        -12.88,
-        100.32,
-        -23.0
+        -9.0651,
+        177.04,
+        -39.3496
       ],
       "sequence": "spark",
       "size_blocks": 0.4,
@@ -232,9 +232,9 @@
     {
       "bone": "spark_brow_left",
       "pivot_model_pixels": [
-        12.32,
-        102.0,
-        -20.2
+        9.2257,
+        179.84,
+        -39.579
       ],
       "sequence": "arc",
       "size_blocks": 0.62,
@@ -243,9 +243,9 @@
     {
       "bone": "spark_brow_right",
       "pivot_model_pixels": [
-        -12.32,
-        102.0,
-        -20.2
+        -9.2257,
+        179.84,
+        -39.579
       ],
       "sequence": "arc",
       "size_blocks": 0.62,

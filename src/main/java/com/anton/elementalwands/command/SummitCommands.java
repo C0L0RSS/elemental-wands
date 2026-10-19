@@ -22,6 +22,8 @@ public final class SummitCommands {
                                 StormSummitManager.enter(c.getSource().getPlayerOrThrow(), IntegerArgumentType.getInteger(c, "slot"))))))
                 .then(CommandManager.literal("start").requires(op).executes(c -> reply(c.getSource(), StormSummitManager.start(c.getSource().getPlayerOrThrow()))))
                 .then(CommandManager.literal("reset").requires(op).executes(c -> reply(c.getSource(), StormSummitManager.reset(c.getSource().getPlayerOrThrow()))))
+                // Playtests: jump a running fight to the phase change.
+                .then(CommandManager.literal("skip").requires(op).executes(c -> reply(c.getSource(), StormSummitManager.skip(c.getSource().getPlayerOrThrow()))))
                 // Anyone on the summit may leave, so nobody is stranded there.
                 .then(CommandManager.literal("leave").executes(c -> reply(c.getSource(), StormSummitManager.leave(c.getSource().getPlayerOrThrow()))))
                 .then(CommandManager.literal("status").requires(op).executes(c -> reply(c.getSource(), StormSummitManager.status())))));

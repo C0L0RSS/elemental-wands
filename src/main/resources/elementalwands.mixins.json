@@ -42,6 +42,8 @@
     "IntroGameRendererMixin",
     "IntroInputMixin",
     "IntroLookMixin",
-    "NaveFogMixin"
+    "NaveFogMixin",
+    "SummitStormWeatherMixin",
+    "SummitStormRainMixin"
   ]
 }

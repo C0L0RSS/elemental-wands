@@ -1,6 +1,9 @@
 package com.anton.elementalwands.client.renderer;
 
+import com.anton.elementalwands.client.SummitStormClient;
+import com.anton.elementalwands.summit.StormSummit;
 import com.anton.elementalwands.entity.roc.RocEffectEntity;
+import com.anton.elementalwands.entity.roc.StormRocRules;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
@@ -24,15 +27,16 @@ public final class RocEffectRenderer extends EntityRenderer<RocEffectEntity, Roc
             Identifier.of("elementalwands", "textures/misc/roc_white.png"));
     private static final RenderLayer SMOKE = RenderLayer.getEntityTranslucent(
             Identifier.of("elementalwands", "textures/misc/roc_white.png"));
+    private static final RenderLayer TWISTER = RenderLayer.getEntityTranslucent(
+            Identifier.of("elementalwands", "textures/misc/roc_tornado.png"));
+    /** First tile of each row in the tornado's 4x4 atlas: funnel wall, dusty foot, torn-up debris, wind bands. */
+    private static final int WALL = 0, DUST = 4, DEBRIS = 8, BAND = 12;
     public static final class State extends EntityRenderState {
         RocEffectEntity.Kind kind;
         float tick, yaw, radius;
         int duration, warning;
         float[] ground = new float[0];
         int groundX, groundZ, groundSize;
-        long groundTick = Long.MIN_VALUE;
-        double groundOriginX, groundOriginZ, groundOriginY;
-
     }
     public RocEffectRenderer(EntityRendererFactory.Context context) { super(context); shadowRadius=0; }
     @Override public State createRenderState() { return new State(); }
@@ -42,23 +46,37 @@ public final class RocEffectRenderer extends EntityRenderer<RocEffectEntity, Roc
         s.radius=(float)e.radius(); s.warning=e.warningTicks(); s.yaw=e.getYaw();
         sampleGround(e,s);
     }
+    /**
+     * The rock under each effect, sampled once per world tick and shared by every frame in it.
+     * Render states are rebuilt each frame, so the samples live here, keyed by entity.
+     */
+    private record Ground(long tick,double x,double z,int originX,int originZ,int size,float[] heights) {}
+    private static final java.util.Map<Integer,Ground> GROUND=new java.util.HashMap<>();
+    private static net.minecraft.world.World groundWorld;
     private static void sampleGround(RocEffectEntity e, State s) {
-        if(s.kind==RocEffectEntity.Kind.SCREAM||s.kind==RocEffectEntity.Kind.DISTANT_BOLT) { s.groundSize=0;return; }
+        if(s.kind==RocEffectEntity.Kind.SCREAM||s.kind==RocEffectEntity.Kind.DISTANT_BOLT||s.kind==RocEffectEntity.Kind.STORM
+                ||s.kind==RocEffectEntity.Kind.STORM_BOLT||s.kind==RocEffectEntity.Kind.CHARGE_BOLT||s.kind==RocEffectEntity.Kind.CALL_BOLT) { s.groundSize=0;return; }
+        // Samples belong to one world: a new world, or a runaway cache, starts afresh.
+        if(e.getEntityWorld()!=groundWorld||GROUND.size()>512) { GROUND.clear(); groundWorld=e.getEntityWorld(); }
         long tick=e.getEntityWorld().getTime();
-        if(s.groundTick==tick && s.groundOriginX==e.getX() && s.groundOriginZ==e.getZ())return;
-        s.groundTick=tick;s.groundOriginX=e.getX();s.groundOriginZ=e.getZ();s.groundOriginY=e.getY();
+        Ground g=GROUND.get(e.getId());
+        if(g==null||g.tick!=tick||g.x!=e.getX()||g.z!=e.getZ()) {
+            g=sample(e,s,tick);
+            if(GROUND.size()>48)GROUND.values().removeIf(old->old.tick<tick-40);
+            GROUND.put(e.getId(),g);
+        }
+        s.ground=g.heights;s.groundX=g.originX;s.groundZ=g.originZ;s.groundSize=g.size;
+    }
+    private static Ground sample(RocEffectEntity e,State s,long tick) {
         boolean wave=s.kind==RocEffectEntity.Kind.SHOCKWAVE;
         double radius=wave?Math.min(s.radius,(Math.floor(s.tick)+1)*1.25):s.radius;
         int extent=(int)Math.ceil(Math.min(72,radius)+3);
-        s.groundX=(int)Math.floor(e.getX())-extent;s.groundZ=(int)Math.floor(e.getZ())-extent;
-        s.groundSize=extent*2+1;
-        int cells=s.groundSize*s.groundSize;
-        if(s.ground.length!=cells)s.ground=new float[cells];
-        java.util.Arrays.fill(s.ground,0);
+        int originX=(int)Math.floor(e.getX())-extent,originZ=(int)Math.floor(e.getZ())-extent,size=extent*2+1;
+        float[] heights=new float[size*size];
         BlockPos.Mutable pos=new BlockPos.Mutable();
         int floor=(int)Math.floor(e.getY());
-        for(int z=0;z<s.groundSize;z++)for(int x=0;x<s.groundSize;x++) {
-            double dx=s.groundX+x+.5-e.getX(),dz=s.groundZ+z+.5-e.getZ();
+        for(int z=0;z<size;z++)for(int x=0;x<size;x++) {
+            double dx=originX+x+.5-e.getX(),dz=originZ+z+.5-e.getZ();
             double distance=Math.sqrt(dx*dx+dz*dz);
             if(distance>radius+2.5 || wave && distance<Math.max(0,radius-4))continue;
             double height=e.getY();
@@ -66,13 +84,14 @@ public final class RocEffectRenderer extends EntityRenderer<RocEffectEntity, Roc
             // Search only the summit surface band: distant cliffs/spires never
             // pull a huge decal up into the sky. At most five block reads/cell.
             for(int y=floor-1;y<=floor+3;y++) {
-                pos.set(s.groundX+x,y,s.groundZ+z);
+                pos.set(originX+x,y,originZ+z);
                 var block=e.getEntityWorld().getBlockState(pos);
                 var shape=block.isOf(Blocks.SNOW)?block.getOutlineShape(e.getEntityWorld(),pos):block.getCollisionShape(e.getEntityWorld(),pos);
                 if(!shape.isEmpty())height=Math.max(height,y+shape.getMax(Direction.Axis.Y));
             }
-            s.ground[z*s.groundSize+x]=(float)Math.min(4,height-e.getY());
+            heights[z*size+x]=(float)Math.min(4,height-e.getY());
         }
+        return new Ground(tick,e.getX(),e.getZ(),originX,originZ,size,heights);
     }
     private static double surface(State s,double worldX,double worldZ) {
         int x=(int)Math.floor(worldX)-s.groundX,z=(int)Math.floor(worldZ)-s.groundZ;
@@ -83,128 +102,197 @@ public final class RocEffectRenderer extends EntityRenderer<RocEffectEntity, Roc
         return p.add(0,surface(s,s.x+c*p.x-sn*p.z,s.z+sn*p.x+c*p.z),0);
     }
     @Override protected Box getBoundingBox(RocEffectEntity e) { return super.getBoundingBox(e).expand(115,100,115); }
+    // Effects sit on the rock, a tornado's foot often inside a boulder: light them from the open air above.
+    @Override protected int getSkyLight(RocEffectEntity e,BlockPos pos) { return e.getEntityWorld().getLightLevel(net.minecraft.world.LightType.SKY,pos.up(4)); }
+    @Override protected int getBlockLight(RocEffectEntity e,BlockPos pos) { return e.getEntityWorld().getLightLevel(net.minecraft.world.LightType.BLOCK,pos.up(4)); }
     @Override public void render(State s, MatrixStack matrices, OrderedRenderCommandQueue queue, CameraRenderState camera) {
         matrices.push(); matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-s.yaw));
         queue.submitCustom(matrices, SMOKE, (entry,v)->draw(s,entry,v,false));
         queue.submitCustom(matrices, LIGHT, (entry,v)->draw(s,entry,v,true));
+        if(s.kind==RocEffectEntity.Kind.TORNADO)queue.submitCustom(matrices, TWISTER, (entry,v)->twister(s,entry,v));
         matrices.pop(); super.render(s,matrices,queue,camera);
     }
     private static void draw(State s, MatrixStack.Entry m, VertexConsumer v, boolean light) {
         switch(s.kind) {
-            case SMALL_STRIKE, LARGE_STRIKE, DISTANT_BOLT -> strike(s,m,v,light);
+            case SMALL_STRIKE, LARGE_STRIKE -> strike(s,m,v,light);
+            case DISTANT_BOLT, STORM_BOLT, CHARGE_BOLT, CALL_BOLT -> skyBolt(s,m,v,light);
             case TORNADO -> tornado(s,m,v,light);
             case DIVE_MARKER -> marker(s,m,v,light);
             case SHOCKWAVE -> shockwave(s,m,v,light);
             case SCREAM -> scream(s,m,v,light);
+            case LIVE_GROUND -> live(s,m,v,light);
+            case STORM -> {}
         }
     }
+    /** Seeds that differ per effect, so neighbouring bolts never share a shape. */
+    private static int seed(State s) { return (int)Math.floor(s.x*7.31+s.z*13.7); }
     private static void strike(State s, MatrixStack.Entry m, VertexConsumer v, boolean light) {
         float progress=Math.min(1,s.tick/Math.max(1,s.warning));
-        boolean distant=s.kind==RocEffectEntity.Kind.DISTANT_BOLT;
-        if(light && !distant) {
-            ring(s,v,m,s.radius,.055,.11,0xE6FFE4A0,64);
-            ring(s,v,m,s.radius*.88,.065,.055,0x80FFF3CE,48);
+        if(light) {
+            ring(s,v,m,s.radius,.055,.16,0xE6FFE4A0,64);
+            ring(s,v,m,s.radius*.88,.065,.07,0x80FFF3CE,48);
             int count=(int)(progress*48);
             for(int i=0;i<count;i++) {
                 double a=i*Math.PI*2/48;
-                line(v,m,ground(s,polar(s.radius-.23,.07,a)),ground(s,polar(s.radius,.07,a)),.065,0xEDFFF9DD);
+                line(v,m,ground(s,polar(s.radius-.3,.07,a)),ground(s,polar(s.radius,.07,a)),.08,0xEDFFF9DD);
             }
             for(int i=0;i<8;i++) {
                 double a=i*Math.PI/4+s.tick*.018;
                 Vec3d p=ground(s,polar(s.radius*.93,.10,a));
-                line(v,m,p,p.add(.14*Math.sin(i*7+s.tick),.16+.08*Math.sin(s.tick+i),.15),.027,0xCCFFFBE8);
+                line(v,m,p,p.add(.14*Math.sin(i*7+s.tick),.16+.08*Math.sin(s.tick+i),.15),.035,0xCCFFFBE8);
             }
-        } else if(!light&&!distant) disk(s,v,m,s.radius,.02,0x183E354B,48);
+        } else disk(s,v,m,s.radius,.02,0x183E354B,48);
         float hit=s.tick-s.warning;
         if(!light||hit<0)return;
         int pulse=(int)(hit/10); float age=hit%10;
-        int bolts=s.kind==RocEffectEntity.Kind.LARGE_STRIKE?3:2;
-        if(!distant&&pulse>=bolts)return;
-        if(age<4.5) {
-            double width=(s.kind==RocEffectEntity.Kind.LARGE_STRIKE?.22:.13)*(1-age/6);
-            Vec3d previous=Vec3d.ZERO;
-            for(int i=1;i<=13;i++) {
-                double y=i*5;
-                Vec3d next=new Vec3d(noise(i*19+pulse*71)*1.7,y,noise(i*43+pulse*33)*1.7);
-                line(v,m,previous,next,width*2.7,0x65FFD27A);
-                line(v,m,previous,next,width,0xFFFFFFEB);
-                if(i%3==0) {
-                    Vec3d branch=next.add(noise(i*9+pulse)*5,-7,noise(i*21+pulse)*5);
-                    line(v,m,next,branch,width*.6,0xDFFFF3CA);
-                    line(v,m,branch,branch.add(noise(i+5)*3,-5,noise(i+9)*3),width*.3,0xAFFFF7DA);
-                }
-                previous=next;
+        boolean large=s.kind==RocEffectEntity.Kind.LARGE_STRIKE;
+        if(pulse>=(large?3:2)||age>=4.5)return;
+        float fade=1-age/5;
+        bolt(v,m,Vec3d.ZERO,sky(s),seed(s)+pulse*71,(large?.3:.2)*(1-age/7),fade);
+        ring(s,v,m,s.radius*(.3+age*.14),.09,.2,alpha(0xFFFFFADD,.8f*fade),48);
+        // The rock flares white where it lands.
+        disk(s,v,m,large?1.6:1.1,.06,alpha(0xFFFFF6DE,.7f*fade),16);
+    }
+    /** From the effect up into the clouds: phase one's cap cloud, or the storm's ceiling as it rolls in. */
+    private static double sky(State s) {
+        float storm=SummitStormClient.level(0);
+        return StormSummit.CAP_Y+2+(StormSummit.STORM_CEILING-StormSummit.CAP_Y)*storm-s.y;
+    }
+    /**
+     * Bolts that touch nobody: phase one's distant flashes from the cap cloud, phase two's storm
+     * bolts from the cloud ceiling to the sea (radius is their length), the Roc's call into the
+     * clouds, and the huge bolt that charges it.
+     */
+    private static void skyBolt(State s, MatrixStack.Entry m, VertexConsumer v, boolean light) {
+        if(!light)return;
+        switch(s.kind) {
+            case DISTANT_BOLT -> { if(s.tick<4.5)bolt(v,m,Vec3d.ZERO,s.radius,seed(s),.18,1-s.tick/5); }
+            case CALL_BOLT -> {
+                // Its call: from the raised bill up into the clouds, flickering twice.
+                double top=sky(s)-11*SummitStormClient.level(0);
+                if(top>2&&(s.tick<3||s.tick>=5&&s.tick<9))bolt(v,m,Vec3d.ZERO,top,seed(s)+(s.tick<4?0:31),.34,1-s.tick/12);
             }
-            if(!distant)ring(s,v,m,s.radius*(.3+age*.14),.09,.18,0xCCFFFADD,48);
+            case STORM_BOLT -> {
+                // A double flicker, re-forking for its second flash.
+                if(s.tick<2.5)bolt(v,m,Vec3d.ZERO,s.radius,seed(s),.38,1);
+                else if(s.tick>=3.5&&s.tick<6.5)bolt(v,m,Vec3d.ZERO,s.radius,seed(s)+17,.32,1-(s.tick-3.5f)/4);
+            }
+            default -> {
+                float fade=Math.min(1,(s.duration-s.tick)/6);
+                int flicker=(int)(s.tick/3);
+                // Brief dark gaps between strikes, so it reads as one huge flickering bolt.
+                if(flicker%4==3&&s.tick<18)return;
+                // Every solid core first, then the soft glows over them (see bolt).
+                for(int i=0;i<3;i++)bolt(v,m,chargeBase(i,flicker),130,seed(s)+flicker*29+i*113,i==0?.9:.4,fade*(i==0?1:.75f),false,true);
+                // Lightning crackles out across the Roc.
+                for(int arc=0;arc<10;arc++) {
+                    Vec3d p=new Vec3d(0,1,0);
+                    double a=arc*.628+noise(arc+flicker*7),pitch=noise(arc*3+flicker)*.6;
+                    for(int i=0;i<4;i++) {
+                        Vec3d q=p.add(Math.cos(a)*2.2+noise(arc*17+i+flicker),Math.sin(pitch)*2+noise(arc*9+i)*.8,Math.sin(a)*2.2+noise(arc*23+i+flicker));
+                        beam(v,m,p,q,.2,alpha(0xFFFFD45A,fade));
+                        p=q;
+                    }
+                }
+                for(int i=0;i<3;i++)bolt(v,m,chargeBase(i,flicker),130,seed(s)+flicker*29+i*113,i==0?.9:.4,fade*(i==0?1:.75f),true,true);
+                // Its body glows at the strike.
+                beam(v,m,new Vec3d(0,-1.5,0),new Vec3d(0,3,0),2.6,alpha(0xFFFFE7A6,.22f*fade));
+            }
         }
     }
+    private static Vec3d chargeBase(int i,int flicker) { return new Vec3d(noise(i*5+flicker)*.8,0,noise(i*11+flicker)*.8); }
+    /** Short arcs crawl over a live circle's rock and re-form every two ticks; jumping clears its pulses. */
+    private static void live(State s, MatrixStack.Entry m, VertexConsumer v, boolean light) {
+        float fade=Math.min(1,(s.duration-s.tick)/10)*Math.min(1,s.tick/3);
+        if(fade<=0)return;
+        if(!light) { disk(s,v,m,s.radius,.025,alpha(0xFF2B2F48,.32f*fade),48);return; }
+        ring(s,v,m,s.radius,.05,.07,alpha(0xFFFFE4A0,.6f*fade),64);
+        int frame=(int)(s.tick/2);
+        // Brighter just before each half-second pulse, so it can be timed.
+        float charge=.55f+.45f*(float)Math.pow(((s.tick%10)/10),2);
+        for(int arc=0;arc<14;arc++) {
+            double a=noise(arc*13+frame*7)*Math.PI,r=Math.sqrt(Math.abs(noise(arc*31+frame*3)))*s.radius*.92;
+            Vec3d p=polar(r,.09,a);
+            double heading=noise(arc*5+frame)*Math.PI;
+            for(int i=0;i<4;i++) {
+                Vec3d q=p.add(Math.cos(heading)*.9+noise(arc*17+i+frame)*.55,0,Math.sin(heading)*.9+noise(arc*23+i+frame)*.55);
+                if(q.horizontalLength()>s.radius)break;
+                beam(v,m,ground(s,p),ground(s,q),.05,alpha(0xFFFFF6D8,fade*charge));
+                p=q;
+            }
+        }
+    }
+    /** On the rock, faintly: where its winds start to pull, and where they slow you. */
     private static void tornado(State s, MatrixStack.Entry m, VertexConsumer v, boolean light) {
-        double ground=surface(s,s.x,s.z);
-        if(!light) {
-            // Continuous spirals, with shared segment endpoints, replace the
-            // disconnected tiles that read as a checkerboard in native views.
-            for(int strand=0;strand<3;strand++) {
-                double phase=s.tick*(.080+strand*.004)+strand*Math.PI*2/3;
-                int segments=100;
-                for(int i=0;i<segments;i++) {
-                    double f=i/(double)segments,g=(i+1)/(double)segments;
-                    double y=.16+17.6*f,z=.16+17.6*g;
-                    double wa=.34+.43*f+.08*Math.sin(f*21+strand),wb=.34+.43*g+.08*Math.sin(g*21+strand);
-                    Vec3d a=funnel(y,phase,ground),b=funnel(z,phase,ground);
-                    float fade=(float)(Math.min(1,f*12)*Math.min(1,(1-g)*10));
-                    int rgb=strand==1?0xFF90A2B4:0xFF70839B;
-                    float opacity=(float)(.27+.06*Math.sin(f*18+strand));
-                    quad(v,m,a.add(0,-wa,0),b.add(0,-wb,0),b.add(0,wb,0),a.add(0,wa,0),alpha(rgb,fade*opacity));
-                    // Feathered borders keep the funnel airy without breaking
-                    // the silhouette into separate geometric cells.
-                    quad(v,m,a.add(0,-wa-.23,0),b.add(0,-wb-.23,0),b.add(0,-wb,0),a.add(0,-wa,0),alpha(rgb,fade*opacity*.30f));
-                    quad(v,m,a.add(0,wa,0),b.add(0,wb,0),b.add(0,wb+.23,0),a.add(0,wa+.23,0),alpha(rgb,fade*opacity*.30f));
-                }
+        if(!light)return;
+        ring(s,v,m,s.radius*StormRocRules.TORNADO_REACH,.06,.05,0x30DBE8F7,64);
+        ring(s,v,m,s.radius,.065,.06,0x50DBE8F7,48);
+    }
+    /**
+     * A blocky tornado built like the game's own clouds: textured cubes of cloud spun in rings,
+     * from a thick, dusty foot as wide as its catch to a broad cap overhead, wrapped in bands of
+     * wind that whip around faster than the funnel turns. Rock, snow and ice it has torn up fly
+     * around it, and dust swirls across the rock as far as its winds pull. Its size follows the
+     * gameplay radius, and everything turns the way its winds drag you.
+     */
+    private static void twister(State s, MatrixStack.Entry m, VertexConsumer v) {
+        double k=s.radius/5,ground=surface(s,s.x,s.z);
+        float storm=SummitStormClient.level(0);
+        // Under a clear sky its top frays out; in the storm it climbs into the cloud ceiling.
+        double free=26+8*k,height=free+(StormSummit.STORM_CEILING+4-(s.y+ground)-free)*storm;
+        int layers=Math.min(34,(int)(height/1.6));
+        double gap=height/layers,lean=.9*k*height/32;
+        // The world's light, not full bright: the storm darkens its tornadoes with everything else.
+        int lit=s.light;
+        for(int i=0;i<layers;i++) {
+            double f=i/(double)(layers-1),y=ground+.4+f*height;
+            double fray=Math.max(0,(f-.8)/.2)*(1-storm);
+            double r=k*(1.9+5.2*Math.pow(f,1.5))+fray*1.5;
+            double size=Math.sqrt(k)*(.8+1.25*f)*(1-.35*fray);
+            int puffs=(int)Math.round(Math.min(20,Math.max(8,r*2.1))*(1-.5*fray));
+            double spin=s.tick*(.22-.12*f)+i*.55;
+            // A slow, sinuous lean keeps the column from looking rigid.
+            double lx=Math.sin(s.tick*.02+f*2)*lean*f,lz=Math.cos(s.tick*.017+f*1.7)*lean*f;
+            // Dusty at the rock, cloud-white overhead, slate in the storm.
+            int rgb=mix(mix(0xD9D3CA,0xF4F6F8,(float)Math.min(1,f*1.4)),mix(0x8D8A86,0xA9AFB9,(float)f),storm*.75f);
+            int row=f<.18?DUST:WALL;
+            for(int j=0;j<puffs;j++) {
+                double a=spin+j*Math.PI*2/puffs,wobble=noise(i*31+j*7);
+                double rr=r*(.82+.26*wobble),w=size*(.8+.3*noise(i*13+j));
+                // Solid, like the game's clouds, so no puff shows the sky through another.
+                tile(v,m,Math.cos(a)*rr+lx,y+wobble*.35,Math.sin(a)*rr+lz,w,Math.max(w*.62,gap*.62),w,rgb,1,lit,row+((i+j)&3));
             }
-            // Unequal cloud swaths interrupt the regular helix rhythm. Their
-            // tapered ends and different speeds prevent a stacked-ring look.
-            for(int cloud=0;cloud<6;cloud++)for(int i=0;i<20;i++) {
-                double f=i/20.,g=(i+1)/20.;
-                double centerY=2.0+cloud*2.45+.4*Math.sin(s.tick*.018+cloud*2);
-                double start=s.tick*(.047+cloud*.003)+cloud*2.399;
-                double span=1.1+.7*Math.abs(noise(cloud*7));
-                double radius=.9+3.25*Math.pow(centerY/18,1.35);
-                Vec3d a=polar(radius,ground+centerY+f*.7,start+f*span);
-                Vec3d b=polar(radius,ground+centerY+g*.7,start+g*span);
-                double wa=.48*Math.sin(f*Math.PI),wb=.48*Math.sin(g*Math.PI);
-                quad(v,m,a.add(0,-wa,0),b.add(0,-wb,0),b.add(0,wb,0),a.add(0,wa,0),0x287F91A8);
-            }
-            // Dust at the base makes the vortex feel connected to the rock.
-            for(int arm=0;arm<3;arm++)for(int i=0;i<18;i++) {
-                double f=i/18.,g=(i+1)/18.,a=s.tick*.085+arm*2.094+f*2.2,b=s.tick*.085+arm*2.094+g*2.2;
-                double r=1.0+f*2.6,q=1.0+g*2.6;
-                Vec3d p=ground(s,polar(r,.13+f*.12,a)),n=ground(s,polar(q,.13+g*.12,b));
-                float fade=(float)(Math.sin(f*Math.PI)*.22);
-                quad(v,m,p.add(0,-.10,0),n.add(0,-.10,0),n.add(0,.24,0),p.add(0,.24,0),alpha(0xFFAAA99F,fade));
-            }
-            disk(s,v,m,1.4,.03,0x49333B56,24);
-        } else {
-            ring(s,v,m,s.radius,.065,.045,0x45DBE8F7,48);
-            // A few moving wind streaks, not a full bright wire cage.
-            for(int streak=0;streak<4;streak++)for(int i=0;i<15;i++) {
-                double y=.4+((s.tick*.075+streak*4.1)%12)+i*.24;
-                double phase=s.tick*.11+streak*2.399;
-                float fade=(float)(Math.sin(i/15.*Math.PI)*.23);
-                line(v,m,funnel(y,phase,ground),funnel(y+.24,phase,ground),.018,alpha(0xFFDDEAF4,fade));
-            }
-            for(int i=0;i<12;i++) {
-                double y=.25+(s.tick*.12+i*1.37)%13;
-                double r=1.15+2.0*Math.pow(y/18,1.2),a=s.tick*.14+i*2.399;
-                Vec3d p=polar(r,ground+y,a);
-                line(v,m,p,p.add(.10*Math.cos(a),.10,.10*Math.sin(a)),i%3==0?.10:.06,i%3==0?0x8F9B9C99:0x65CFD5D7);
-            }
+            if(i%4==2)band(v,m,lx,y,lz,r*1.22+.6,Math.max(1.2,gap*1.6),s.tick*(.38-.1*f)+i,rgb,lit,i);
+        }
+        // Rock, snow and ice it has torn loose, flung up the lower funnel and dropped again.
+        for(int d=0;d<22;d++) {
+            double phase=s.tick*(.13+.03*noise(d))+d*2.399,lift=Math.min(height,free)*.6,rise=(s.tick*.09+d*1.9)%lift;
+            double r=k*(2.4+2.6*rise/free)+.8,w=.22+.18*Math.abs(noise(d*3));
+            tile(v,m,Math.cos(phase)*r,ground+.4+rise,Math.sin(phase)*r,w,w,w,0xFFFFFF,1,lit,DEBRIS+(d&3));
+        }
+        // Dust swirled across the rock, out to where its winds start to pull.
+        double reach=s.radius*StormRocRules.TORNADO_REACH;
+        for(int j=0;j<28;j++) {
+            double a=s.tick*(.16+.06*noise(j))+j*2.399,rr=k*2+(reach-k*2)*(.15+.85*Math.abs(noise(j*7)));
+            double w=(.5+.3*Math.abs(noise(j*5)))*Math.sqrt(k);
+            Vec3d at=ground(s,new Vec3d(Math.cos(a)*rr,.3,Math.sin(a)*rr));
+            tile(v,m,at.x,at.y,at.z,w,.2,w,mix(0xE2D9CC,0x8C8A88,storm),.75f*(float)(1-.6*rr/reach),lit,DUST+(j&3));
         }
     }
-    private static Vec3d funnel(double y,double phase,double ground) {
-        double f=y/18,angle=phase-y*.76;
-        double radius=.82+3.25*Math.pow(f,1.35)+.09*Math.sin(y*1.7+phase*.35);
-        // Small coherent lean; there is no particle noise or random frame jitter.
-        return polar(radius,ground+y,angle).add(.18*f*Math.sin(phase*.22+y*.16),0,.16*f*Math.cos(phase*.19+y*.12));
+    /** One ring of wind around the funnel: streak tiles, open wherever the tile is clear. */
+    private static void band(VertexConsumer v,MatrixStack.Entry m,double cx,double y,double cz,double r,double h,double turn,int rgb,int light,int seed) {
+        int segments=Math.max(10,(int)(r*2.2)),color=shade(rgb,1,.85f);
+        float y0=(float)(y-h/2),y1=(float)(y+h/2);
+        for(int i=0;i<segments;i++) {
+            double a=turn+i*Math.PI*2/segments,b=turn+(i+1)*Math.PI*2/segments;
+            float x0=(float)(cx+Math.cos(a)*r),z0=(float)(cz+Math.sin(a)*r),x1=(float)(cx+Math.cos(b)*r),z1=(float)(cz+Math.sin(b)*r);
+            face(v,m,x0,y0,z0,x1,y0,z1,x1,y1,z1,x0,y1,z0,color,light,BAND+((i+seed)&3));
+        }
+    }
+    private static int mix(int a,int b,float f) {
+        f=Math.max(0,Math.min(1,f));
+        int r=(int)(((a>>16)&255)*(1-f)+((b>>16)&255)*f),g=(int)(((a>>8)&255)*(1-f)+((b>>8)&255)*f),bl=(int)((a&255)*(1-f)+(b&255)*f);
+        return r<<16|g<<8|bl;
     }
     private static void marker(State s, MatrixStack.Entry m, VertexConsumer v, boolean light) {
         float f=Math.min(1,s.tick/Math.max(1,s.warning>0?s.warning:s.duration));
@@ -292,6 +380,82 @@ public final class RocEffectRenderer extends EntityRenderer<RocEffectEntity, Roc
         Vec3d up=d.crossProduct(side).normalize().multiply(w);
         quad(v,m,a.subtract(side),b.subtract(side),b.add(side),a.add(side),color);
         quad(v,m,a.subtract(up),b.subtract(up),b.add(up),a.add(up),color);
+    }
+    /**
+     * A jagged, blocky bolt from base straight up: square segments with a hot core inside a soft
+     * gold glow, and forks that drop from every third joint.
+     */
+    private static void bolt(VertexConsumer v,MatrixStack.Entry m,Vec3d base,double height,int seed,double core,float fade) {
+        bolt(v,m,base,height,seed,core,fade,false,false);
+        bolt(v,m,base,height,seed,core,fade,true,false);
+    }
+    /**
+     * One pass of a bolt: the core and forks, or the glow. Overlapping bolts draw all cores first.
+     * A gold bolt keeps its contrast against storm clouds lit by its own flash.
+     */
+    private static void bolt(VertexConsumer v,MatrixStack.Entry m,Vec3d base,double height,int seed,double core,float fade,boolean glow,boolean gold) {
+        if(fade<=0||core<=0)return;
+        int steps=Math.max(6,(int)(height/5));
+        double step=height/steps;
+        Vec3d[] joints=new Vec3d[steps+1];
+        joints[0]=base;
+        for(int i=1;i<=steps;i++)joints[i]=base.add(noise(i*19+seed*71)*1.8,i*step,noise(i*43+seed*33)*1.8);
+        // The hot core and forks go first: the glow writes depth, and drawn earlier it would hide
+        // the core inside it, leaving only a faint gold haze.
+        if(glow) {
+            for(int i=1;i<=steps;i++)beam(v,m,joints[i-1],joints[i],core*2.6,alpha(gold?0xFFFFA928:0xFFFFD27A,(gold?.5f:.34f)*fade));
+            return;
+        }
+        for(int i=1;i<=steps;i++) {
+            beam(v,m,joints[i-1],joints[i],core,alpha(gold?0xFFFFE070:0xFFFFFFEE,fade));
+            if(i%3==0&&i<steps) {
+                Vec3d fork=joints[i].add(noise(i*9+seed)*5,-6,noise(i*21+seed)*5);
+                beam(v,m,joints[i],fork,core*.55,alpha(0xFFFFF3CA,.9f*fade));
+                beam(v,m,fork,fork.add(noise(i+5+seed)*3,-4,noise(i+9+seed)*3),core*.3,alpha(0xFFFFF7DA,.75f*fade));
+            }
+        }
+    }
+    /** A square prism along a segment; chunkier than crossed quads, and solid from every side. */
+    private static void beam(VertexConsumer v,MatrixStack.Entry m,Vec3d a,Vec3d b,double w,int color) {
+        Vec3d d=b.subtract(a);
+        if(d.lengthSquared()<1e-6)return;
+        d=d.normalize();
+        Vec3d side=d.crossProduct(Math.abs(d.y)<.9?new Vec3d(0,1,0):new Vec3d(1,0,0)).normalize().multiply(w);
+        Vec3d up=d.crossProduct(side).normalize().multiply(w);
+        Vec3d[] c={side.add(up),side.subtract(up),side.negate().subtract(up),side.negate().add(up)};
+        for(int i=0;i<4;i++) {
+            Vec3d p=c[i],q=c[(i+1)%4];
+            quad(v,m,a.add(p),b.add(p),b.add(q),a.add(q),color);
+        }
+    }
+    /**
+     * An axis-aligned box shaded per face like the game's clouds: lit top, darker sides, dark base.
+     * Each face shows a tile from tile's row of the atlas, varied per face so neighbours differ.
+     * Written straight to the buffer, since a storm's tornadoes draw several hundred a frame.
+     */
+    private static void tile(VertexConsumer v,MatrixStack.Entry m,double cx,double cy,double cz,double hx,double hy,double hz,int rgb,float a,int light,int tile) {
+        float x0=(float)(cx-hx),x1=(float)(cx+hx),y0=(float)(cy-hy),y1=(float)(cy+hy),z0=(float)(cz-hz),z1=(float)(cz+hz);
+        int top=shade(rgb,1,a),bottom=shade(rgb,.7f,a),ns=shade(rgb,.8f,a),ew=shade(rgb,.9f,a),row=tile&~3;
+        face(v,m,x0,y1,z0,x0,y1,z1,x1,y1,z1,x1,y1,z0,top,light,tile);
+        face(v,m,x0,y0,z0,x1,y0,z0,x1,y0,z1,x0,y0,z1,bottom,light,row+((tile+1)&3));
+        face(v,m,x1,y0,z0,x0,y0,z0,x0,y1,z0,x1,y1,z0,ns,light,row+((tile+2)&3));
+        face(v,m,x0,y0,z1,x1,y0,z1,x1,y1,z1,x0,y1,z1,ns,light,row+((tile+3)&3));
+        face(v,m,x0,y0,z0,x0,y0,z1,x0,y1,z1,x0,y1,z0,ew,light,tile);
+        face(v,m,x1,y0,z1,x1,y0,z0,x1,y1,z0,x1,y1,z1,ew,light,row+((tile+1)&3));
+    }
+    /** A quad from a to d, with the tile's bottom edge along a-b and its top along d-c. */
+    private static void face(VertexConsumer v,MatrixStack.Entry m,float ax,float ay,float az,float bx,float by,float bz,
+            float cx,float cy,float cz,float dx,float dy,float dz,int color,int light,int tile) {
+        float u0=(tile&3)/4f,v0=(tile>>2)/4f,u1=u0+.25f,v1=v0+.25f;
+        corner(v,m,ax,ay,az,u0,v1,color,light);corner(v,m,bx,by,bz,u1,v1,color,light);
+        corner(v,m,cx,cy,cz,u1,v0,color,light);corner(v,m,dx,dy,dz,u0,v0,color,light);
+    }
+    private static void corner(VertexConsumer v,MatrixStack.Entry m,float x,float y,float z,float u,float t,int color,int light) {
+        v.vertex(m,x,y,z).color(color).texture(u,t).overlay(OverlayTexture.DEFAULT_UV).light(light).normal(m,0,1,0);
+    }
+    private static int shade(int rgb,float f,float a) {
+        int r=(int)(((rgb>>16)&255)*f),g=(int)(((rgb>>8)&255)*f),b=(int)((rgb&255)*f);
+        return alpha(r<<16|g<<8|b,a);
     }
     private static void quad(VertexConsumer v,MatrixStack.Entry m,Vec3d a,Vec3d b,Vec3d c,Vec3d d,int color) {
         vertex(v,m,a,0,0,color);vertex(v,m,b,1,0,color);vertex(v,m,c,1,1,color);vertex(v,m,d,0,1,color);

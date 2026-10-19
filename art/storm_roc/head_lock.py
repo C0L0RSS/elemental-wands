@@ -1,4 +1,5 @@
 """Reserve the approved face atlas and verify its rigid head-local geometry."""
+import hashlib
 import json
 from pathlib import Path
 import numpy as np
@@ -7,6 +8,14 @@ HERE=Path(__file__).resolve().parent
 SOURCE=HERE/'approved_head'
 
 def approved():return json.loads((SOURCE/'bones.json').read_text())
+
+def verify_snapshot():
+    """The committed manifest pins the newly authorized head source, even offline."""
+    snapshot=json.loads((SOURCE/'snapshot.json').read_text())
+    for name,digest in snapshot['sha256'].items():
+        assert hashlib.sha256((SOURCE/name).read_bytes()).hexdigest()==digest,(name,'head snapshot')
+    return snapshot
+
 
 def reserve(r,size):
     old={b['name']:b for b in approved()};current={b['name']:b for b in r.bones}
@@ -25,6 +34,7 @@ def reserve(r,size):
     return texture,glow,occupied,locked
 
 def verify(r,texture,glow):
+    verify_snapshot()
     ref=approved();current={b['name']:b for b in r.bones};origin=np.array(current['head']['pivot']);old_origin=np.array(ref[0]['pivot'])
     source=[Image.open(SOURCE/name).convert('RGBA') for name in ('storm_roc.png','storm_roc_glowmask.png')]
     for b in ref:
@@ -33,6 +43,7 @@ def verify(r,texture,glow):
         if b['name']!='head':assert now.get('parent')==b.get('parent')
         assert len(now['cubes'])==len(b['cubes'])
         for c,old in zip(now['cubes'],b['cubes']):
+            assert set(c)==set(old),(b['name'],'cube fields')
             for key in old:
                 if key in ('origin','pivot'):assert np.allclose(np.array(c[key])-origin,np.array(old[key])-old_origin,atol=1e-7),(b['name'],key)
                 else:assert c[key]==old[key],(b['name'],key)

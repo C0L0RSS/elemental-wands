@@ -15,26 +15,15 @@ def unreflect(item):
     if 'rotation' in item:
         r=item['rotation'];item['rotation']=[r[0],-r[1],-r[2]] if isinstance(r,list) else {k:[v[0],-v[1],-v[2]] for k,v in r.items()}
 
-def nested(mesh):
-    """The runtime's flat GeckoLib lists back in Bedrock rows; a repeated last corner closes a triangle."""
-    rows=lambda flat,n:[flat[i:i+n] for i in range(0,len(flat),n)]
-    return {'positions':rows(mesh['positions'],3),'normals':rows(mesh['normals'],3),'uvs':rows(mesh['uvs'],2),
-        'polys':[p[:3] if p[3]==p[2] else p for p in mesh['polys']]}
-
 def main():
     from build_runtime import SCALE,DEFINITIONS,WING_REST,WING_SLAP,KEY_FPS,MODEL,shape,bill,glowing
     approved=read(MODEL/'storm_roc.geo.json')
     geo=read(ASSETS/'geckolib/models/storm_roc.geo.json')
     for b in geo['minecraft:geometry'][0]['bones']:
         for item in [b]+b.get('cubes',[]):unreflect(item)
-        if 'poly_mesh' in b:b['poly_mesh']=nested(b['poly_mesh'])
     for b,a in zip(geo['minecraft:geometry'][0]['bones'],approved['minecraft:geometry'][0]['bones'],strict=True):
         assert [b['name'],b.get('parent'),b['pivot'],b.get('rotation')]==[a['name'],a.get('parent'),a['pivot'],a.get('rotation')],b['name']
         assert b.get('cubes',[])==a.get('cubes',[]),('cubes',b['name'])
-        mine,theirs=b.get('poly_mesh'),a.get('poly_mesh')
-        if not theirs or not theirs['polys']:assert not mine,b['name'];continue
-        assert mine['polys']==theirs['polys'],('mesh faces',b['name'])
-        for k in ('positions','normals','uvs'):assert np.allclose(mine[k],theirs[k],atol=1e-3),('mesh',k,b['name'])
     assert (MODEL/'storm_roc.png').read_bytes()==(ASSETS/'textures/entity/storm_roc.png').read_bytes(),'atlas'
     assert glowing(MODEL/'storm_roc.png',MODEL/'storm_roc_glowmask.png')==(ASSETS/'textures/entity/storm_roc_glowmask.png').read_bytes(),'glow mask'
     clips={k.removeprefix('animation.storm_roc.'):v for k,v in read(ASSETS/'geckolib/animations/storm_roc.animation.json')['animations'].items()}
@@ -148,5 +137,5 @@ def main():
     assert wing_error<.02,('wing/rock contact solve',wing_error)
     # The clips are still authored on the cube study, so keep its head lock intact too.
     verify(SimpleNamespace(bones=read(HERE/'candidate/storm_roc.geo.json')['minecraft:geometry'][0]['bones']),Image.open(HERE/'candidate/storm_roc.png'),Image.open(HERE/'candidate/storm_roc_glowmask.png'))
-    print(f'PASS: {len(clips)} clips at {KEY_FPS*2}fps; study head lock; model cube/mesh/UV basis reversal; model atlas and glow; max leg error {worst:.6f}px; foot drift {foot_error:.6f} blocks; socket error {socket_error:.6f} blocks; pin interpolation {pin_error:.5f} blocks; wing contact {wing_error:.5f} blocks; flight span {max(spans):.3f}, wrist excursion {excursion:.3f} blocks; endpoints and server impact times.')
+    print(f'PASS: {len(clips)} clips at {KEY_FPS*2}fps; study head lock; model cube/UV basis reversal; model atlas and glow; max leg error {worst:.6f}px; foot drift {foot_error:.6f} blocks; socket error {socket_error:.6f} blocks; pin interpolation {pin_error:.5f} blocks; wing contact {wing_error:.5f} blocks; flight span {max(spans):.3f}, wrist excursion {excursion:.3f} blocks; endpoints and server impact times.')
 if __name__=='__main__':main()

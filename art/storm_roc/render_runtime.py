@@ -66,14 +66,6 @@ def main():
     # Scale only model vertices; the floor/grid and 1.8-block reference stay in blocks.
     marker='const cases=process.env.ROC_REVIEW_CASES?'
     recorder=recorder.replace(marker,f"source=source.replace('mesh[at+j]=(m[j]*d[i]+m[4+j]*d[i+1]+m[8+j]*d[i+2]+m[12+j])/16', 'mesh[at+j]=(m[j]*d[i]+m[4+j]*d[i+1]+m[8+j]*d[i+2]+m[12+j])*{SCALE}');\n"+marker)
-    # Low-poly faces: GeckoLib's flat lists, triangles closed by a repeated corner. The viewer's
-    # shader flips the PNG on upload, so the atlas's top-left V flips once here.
-    recorder=recorder.replace(marker,"""source=source.replace('return {name:b.name,data:new Float32Array(data)};', `
- if(b.poly_mesh){const m=b.poly_mesh,P=m.positions,N=m.normals,U=m.uvs;
-   for(const face of m.polys){const corners=face[3][0]===face[2][0]?[0,1,2]:[0,1,2,0,2,3];
-     for(const k of corners){const [pi,ni,ui]=face[k];data.push(P[3*pi],P[3*pi+1],P[3*pi+2],N[3*ni],N[3*ni+1],N[3*ni+2],U[2*ui],1-U[2*ui+1]);}}}
- return {name:b.name,data:new Float32Array(data)};`);
-"""+marker)
     # Add a floor grid and human scale marker to each otherwise isolated view.
     recorder=recorder.replace("if(options.extent){", "draws.push({vertices:floor,uniform:{...draws[0].uniform,tint:[.45,.52,.55,1]},texture:white.id,mask:clear.id}); for(const [key,tint] of Object.entries({skin:[.70,.48,.34,1],shirt:[.19,.49,.49,1],pants:[.23,.26,.38,1],boots:[.16,.19,.24,1],hair:[.22,.15,.12,1]}))draws.push({vertices:player[key],uniform:{...draws[0].uniform,tint},texture:white.id,mask:clear.id}); if(options.extent){")
     code=OUT/'record.cjs';code.write_text(recorder)

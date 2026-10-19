@@ -37,10 +37,7 @@ def packed(value):
     return (json.dumps(value, separators=(',', ':')) + '\n').encode()
 
 def shape(bone):
-    """Homogeneous model-space corners of a bone's faces: its poly mesh, or its cubes."""
-    mesh = bone.get('poly_mesh')
-    if mesh and mesh.get('polys'):
-        return np.c_[np.array(mesh['positions'], dtype=float), np.ones(len(mesh['positions']))]
+    """Homogeneous model-space corners of a bone's cubes."""
     corners = []
     for c in bone.get('cubes', []):
         C = matrix({'pivot':c.get('pivot',[0,0,0])}, {'rotation':c.get('rotation',[0,0,0])}, 0)
@@ -51,17 +48,11 @@ def shape(bone):
 
 def bill(beak):
     """The bill tip: the upper beak's frontmost point. The study's cube beak used its front face, 20% up."""
-    if beak.get('poly_mesh') or any('rotation' in c for c in beak['cubes']):
+    if any('rotation' in c for c in beak['cubes']):
         # The centre of the frontmost edge: angled blocks reach it with a corner pair.
         p = shape(beak)[:,:3]; front = p[p[:,2] <= p[:,2].min() + .01]; return front.mean(axis=0)
     c = min(beak['cubes'], key=lambda c: c['origin'][2])
     return np.array(c['origin']) + np.array(c['size'])*[.5,.2,0]
-
-def runtime_mesh(mesh):
-    """GeckoLib reads flat number lists and same-size polys, so a triangle repeats its last corner."""
-    flat = lambda rows, digits: [round(float(v), digits) for row in rows for v in row]
-    return {'normalized_uvs': True, 'positions': flat(mesh['positions'], 4), 'normals': flat(mesh['normals'], 5),
-        'uvs': flat(mesh['uvs'], 6), 'polys': [poly + [poly[-1]]*(4-len(poly)) for poly in mesh['polys']]}
 
 def glowing(texture, mask):
     """GeckoLib's glow layer draws the mask's own colours: the painted veins wherever the mask is lit."""
@@ -700,8 +691,7 @@ def main():
     for bone in runtime_geo['minecraft:geometry'][0]['bones']:
         for item in [bone]+bone.get('cubes',[]):
             if 'rotation' in item:item['rotation']=[item['rotation'][0],-item['rotation'][1],-item['rotation'][2]]
-        mesh=bone.pop('poly_mesh',None);bone.setdefault('cubes',[])
-        if mesh and mesh['polys']:bone['poly_mesh']=runtime_mesh(mesh)
+        bone.setdefault('cubes',[])
     for animation in animations.values():
         for channel in animation['bones'].values():
             if 'rotation' not in channel:continue

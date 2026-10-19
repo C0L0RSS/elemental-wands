@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Bake the installed runtime Roc into one JSON for the browser preview page.
 
-The page draws each bone's blocks or faces with that bone's world matrix, baked here at 20 Hz
+The page draws each bone's blocks with that bone's world matrix, baked here at 20 Hz
 with the same pose math the validators use, so the page cannot drift from the game's clips.
 Writes .local-previews/storm-roc/preview/roc.json beside copies of the atlas and glow mask.
 """
@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 from validate_review import matrix
 from fold import rotation
-from validate_runtime import read,unreflect,nested
+from validate_runtime import read,unreflect
 from build_runtime import SCALE,DEFINITIONS
 HERE=Path(__file__).resolve().parent
 ROOT=HERE.parents[1]
@@ -21,13 +21,9 @@ FPS=20
 def bake_parts(bones,W,H):
     """Each meshed bone's triangles in the study basis, in bone order, as the page draws them."""
     parts=[]
-    for b in [b for b in bones if b.get('poly_mesh') or b.get('cubes')]:
+    for b in [b for b in bones if b.get('cubes')]:
         P,N,U=[],[],[]
-        if b.get('poly_mesh'):
-            m=b['poly_mesh'];mp,mn,mu=np.array(m['positions']),np.array(m['normals']),np.array(m['uvs'])
-            for poly in m['polys']:
-                for k in ([0,1,2] if len(poly)==3 else [0,1,2,0,2,3]):P.append(mp[poly[k][0]]);N.append(mn[poly[k][1]]);U.append(mu[poly[k][2]])
-        for c in b.get('cubes',[]):
+        for c in b['cubes']:
             # The study viewer's own faces, corner order and per-face UVs (PNG top-left).
             (x,y,z),(w,h,d)=c['origin'],c['size'];X,Y,Z=x+w,y+h,z+d
             R=rotation(c.get('rotation',[0,0,0]));pv=np.array(c.get('pivot',[0,0,0]),dtype=float)
@@ -48,11 +44,10 @@ def main():
     bones=geo['bones']
     for b in bones:
         for item in [b]+b.get('cubes',[]):unreflect(item)
-        if 'poly_mesh' in b:b['poly_mesh']=nested(b['poly_mesh'])
     clips={k.removeprefix('animation.storm_roc.'):v for k,v in read(ASSETS/'geckolib/animations/storm_roc.animation.json')['animations'].items()}
     for clip in clips.values():
         for c in clip['bones'].values():unreflect(c)
-    meshes=[b for b in bones if b.get('poly_mesh') or b.get('cubes')]
+    meshes=[b for b in bones if b.get('cubes')]
     parts=bake_parts(bones,geo['description']['texture_width'],geo['description']['texture_height'])
     baked={};sockets=read(ASSETS/'storm_roc_sockets.json')
     for name,(duration,loop) in DEFINITIONS.items():

@@ -16,7 +16,7 @@ def unreflect(item):
         r=item['rotation'];item['rotation']=[r[0],-r[1],-r[2]] if isinstance(r,list) else {k:[v[0],-v[1],-v[2]] for k,v in r.items()}
 
 def main():
-    from build_runtime import SCALE,DEFINITIONS,WING_REST,WING_SLAP,KEY_FPS,MODEL,shape,bill,glowing
+    from build_runtime import SCALE,DEFINITIONS,WING_REST,WING_SLAP,KEY_FPS,KNEADS,BITE_IMPACT,BITE_TAKEOFF,BITE_LANDING,BITE_LEAP_IMPACT,SWEEP_START,SWEEP_END,SCREAM_IMPACT,WING_LIFT,WING_APEX,WING_IMPACT,POUNCE_LAUNCH,POUNCE_IMPACT,MODEL,shape,bill,glowing
     approved=read(MODEL/'storm_roc.geo.json')
     geo=read(ASSETS/'geckolib/models/storm_roc.geo.json')
     for b in geo['minecraft:geometry'][0]['bones']:
@@ -43,10 +43,12 @@ def main():
         'left_foot':('left_foot',by['left_foot']['pivot']),'right_foot':('right_foot',by['right_foot']['pivot'])}
     planted={'perched':[(0,DEFINITIONS['perched'][0],'perched')],'call':[(0,3,'perched')],
         'land':[(.3,.8,'perched')],'hunched':[(0,DEFINITIONS['hunched'][0],'hunched')],
-        'peck':[(0,1.8,'hunched')],'swing_left':[(0,1.8,'hunched')],
-        'swing_right':[(0,1.8,'hunched')],'scream':[(0,2.2,'hunched')],
-        'wing':[(0,2,'hunched')],'takeoff':[(0,1.2,'hunched')],
-        'pounce':[(0,1.2,'hunched'),(2.2,3.2,'hunched')]}
+        'bite':[(0,DEFINITIONS['bite'][0],'hunched')],
+        'bite_leap':[(0,BITE_TAKEOFF-.03,'hunched'),(BITE_LANDING+.05,DEFINITIONS['bite_leap'][0],'hunched')],
+        'swing_left':[(0,DEFINITIONS['swing_left'][0],'hunched')],'swing_right':[(0,DEFINITIONS['swing_right'][0],'hunched')],'scream':[(0,DEFINITIONS['scream'][0],'hunched')],
+        'wing':[(0,WING_LIFT-.06,'hunched'),(WING_IMPACT+.05,DEFINITIONS['wing'][0],'hunched')],'takeoff':[(0,1.2,'hunched')],
+        # The Raptor Strike's feet leave the rock between its last planted key and the 1.575 one.
+        'pounce':[(0,POUNCE_LAUNCH-.04,'hunched'),(POUNCE_IMPACT+.05,DEFINITIONS['pounce'][0],'hunched')]}
     reference={name:world(name,0) for name in ('perched','hunched')}
     worst=foot_error=socket_error=0.;snapshots={}
     for name,clip in clips.items():
@@ -64,8 +66,10 @@ def main():
                 points=[pt(mats,side+'_'+joint) for joint in ['thigh','shin','tarsus','foot']]
                 err=max(abs(np.linalg.norm(b-a)-length) for a,b,length in zip(points,points[1:],[14,28,26]))
                 worst=max(worst,err);assert err<.025,(name,t,side,'leg length',err)
+                # The brawl guard lifts each foot only for its own talon knead.
+                kneading=name=='hunched' and any(side==foot and a-.001<=t<=b+.001 for foot,a,b in KNEADS)
                 for a,b,ref in planted.get(name,[]):
-                    if a-.001<=t<=b+.001:
+                    if a-.001<=t<=b+.001 and not kneading:
                         drift=np.linalg.norm(points[-1]-pt(reference[ref],side+'_foot'))*SCALE
                         foot_error=max(foot_error,drift)
                         # Exported keys are pinned exactly. Between-key local Euler
@@ -79,33 +83,61 @@ def main():
         if loop:
             for n in by:assert np.allclose(snapshots[name][0][n],snapshots[name][-1][n],atol=.003),(name,n,'loop seam')
         print(f'Checked {name}',flush=True)
-    def endpoint(a,ta,b,tb):
+    def endpoint(a,ta,b,tb,atol=.003):
         ma,mb=world(a,ta),world(b,tb)
-        for n in by:assert np.allclose(ma[n],mb[n],atol=.003),(a,b,n,'endpoint')
+        for n in by:assert np.allclose(ma[n],mb[n],atol=atol),(a,b,n,'endpoint')
     for a,ta,b,tb in [('dive',3,'stuck',0),('hop',0,'stuck',0),('hop',1.2,'stuck',0),
         ('stuck',6,'hunched',0),('land',0,'flight',0),('land',.8,'perched',0),
         ('call',0,'perched',0),('call',3,'perched',0),('takeoff',2.5,'flight',0)]:endpoint(a,ta,b,tb)
+    # The Storm Sweep scythes its whole front at chest height through the server's hit ticks.
+    sweep=slice(round(SWEEP_START*20),round(SWEEP_END*20)+1)
     for name in ('swing_left','swing_right'):
-        points=np.array([frame['beak'] for frame in sockets[name][16:24]])
+        points=np.array([frame['beak'] for frame in sockets[name][sweep]])
         assert np.all((points[:,1]>=1.0)&(points[:,1]<=1.1)),(name,'chest-height sweep',points[:,1])
-        assert points[0,0]*points[-1,0]<0 and np.ptp(points[:,0])>12,(name,'sweep must cross the arena front')
-        assert np.all(points[:,2]<-5),(name,'sweep behind body')
+        assert points[0,0]*points[-1,0]<0 and np.ptp(points[:,0])>16,(name,'sweep must cross its whole front')
+        assert np.all(points[:,2]<0),(name,'sweep must stay in front of its chest')
+    # The server hurts anyone under a brawl foot that moves 0.1 blocks in a tick; a knead never may.
+    for side in ('left','right'):
+        steps=np.linalg.norm(np.diff([frame[side+'_foot'] for frame in sockets['hunched']],axis=0),axis=1)
+        assert steps.max()<.075,('hunched knead would stomp',side,steps.max())
+        for foot,a,b in KNEADS:
+            if foot==side:assert np.allclose(sockets['hunched'][round(a*20)][side+'_foot'],sockets['hunched'][round(b*20)][side+'_foot'],atol=1e-4),('knead must set the foot back',side)
     pin=np.array([frame['beak'] for frame in sockets['stuck'][:114]])
     assert np.max(np.ptp(pin,axis=0))<.0001,'Beak moved before release at 5.65s'
     assert -.99<pin[0,1]<-.8,'Bill must be visibly buried at 1.25x'
     # At subframes, linear Euler interpolation may orbit the pin very slightly.
     pin_error=max(np.linalg.norm(pt(m,'upper_beak',tip)*SCALE-pin[0]) for m in snapshots['stuck'][:round(5.65*KEY_FPS*2)+1])
     assert pin_error<.06,('interpolated beak pin',pin_error)
-    peck=np.array([f['beak'] for f in sockets['peck']])
-    assert peck[:,2].argmin()==12,'Peck first reaches maximum extension at t=.60'
-    assert peck[8,1]-peck[12,1]>3 and peck[8,2]-peck[12,2]>2,'Peck needs a large readable coil/strike'
-    assert np.allclose(peck[12],peck[14],atol=.0001),'Peck must stick briefly after impact'
+    # Thunder Bite, standing and leaping: reared tall and looking down at its prey when its aim
+    # locks (tick 24), then first at its furthest at the impact tick, where the server bursts its
+    # electricity, at player height. Both clips match until the lock, where the server may switch.
+    for name,at in (('bite',BITE_IMPACT),('bite_leap',BITE_LEAP_IMPACT)):
+        impact=round(at*20)
+        bite=np.array([f['beak'] for f in sockets[name]]);head=np.array([f['head'] for f in sockets[name]])
+        assert bite[:impact,2].min()>bite[impact,2] and bite[impact,2]<bite[:,2].min()+.01,(name,'reaches its furthest (to a centimetre) at its impact tick')
+        assert .6<bite[impact,1]<1.8,(name,'must close at player height',bite[impact])
+        assert head[24,1]-head[impact,1]>4.5,(name,'needs a tall, slow rear-up while it aims')
+        reared=head[24]-bite[24];assert math.degrees(math.atan2(reared[1],-reared[2]))>25,(name,'reared up, its head must look down at its prey')
+    # Thinned feather keys may land up to their 0.02 degree tolerance apart, a few hundredths of a
+    # model pixel: invisible, and the game crossfades the switch anyway.
+    endpoint('bite',1.2,'bite_leap',1.2,.05)
     jaw=clips['scream']['bones']['lower_beak']['rotation']
-    assert abs(sample(jaw,1.2,[0,0,0])[0]-48)<.0001,'Scream jaw misses server impact tick'
-    direction=world('scream',1.2)['head'][:3,:3]@np.array([0,0,-1])
-    assert np.dot(direction,[0,0,-1])>.999,'Scream must aim straight forward at 1.20s'
+    assert abs(sample(jaw,SCREAM_IMPACT,[0,0,0])[0]-48)<.0001,'Scream jaw misses server impact tick'
+    direction=world('scream',SCREAM_IMPACT)['head'][:3,:3]@np.array([0,0,-1])
+    assert np.dot(direction,[0,0,-1])>.999,'Scream must aim straight forward at its impact'
     def shoulder(name,t):return sample(clips[name]['bones']['left_wing_shoulder'].get('rotation'),t,[0,0,0])[2]
-    assert shoulder('wing',.9)>35 and shoulder('wing',1)<-35,'Wing slam misses tick 20'
+    # The Thunderclap is off the rock between its lift and its landing, and lands on its tick.
+    for side in ('left','right'):
+        feet_y=np.array([f[side+'_foot'][1] for f in sockets['wing']])
+        assert feet_y[round(WING_APEX*20)]>feet_y[0]+1,('Thunderclap legs must tuck up in the air',side)
+        assert abs(feet_y[round(WING_IMPACT*20)+1]-feet_y[0])<.02,('Thunderclap must land on its tick',side)
+    # The Raptor Strike flies with its legs tucked up and back, swings its talons far forward to
+    # strike, and is down on its impact tick.
+    for side in ('left','right'):
+        foot=np.array([f[side+'_foot'] for f in sockets['pounce']])
+        assert foot[round(2.0*20),1]>foot[0,1]+3,('Raptor Strike legs must tuck up in flight',side)
+        assert foot[round((POUNCE_IMPACT-.1)*20),2]<foot[round(2.0*20),2]-4,('Raptor Strike talons must swing forward to strike',side)
+        assert abs(foot[round(POUNCE_IMPACT*20)+1,1]-foot[0,1])<.02,('Raptor Strike must land on its tick',side)
     assert shoulder('takeoff',1.1)>35 and shoulder('takeoff',1.2)<-35,'Takeoff downbeat misses tick 24'
     for t in [.45,1.2,1.9]:
         d=world('call',t)['head'][:3,:3]@np.array([0,0,-1])

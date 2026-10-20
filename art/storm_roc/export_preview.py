@@ -5,7 +5,7 @@ The page draws each bone's blocks with that bone's world matrix, baked here at 2
 with the same pose math the validators use, so the page cannot drift from the game's clips.
 Writes .local-previews/storm-roc/preview/roc.json beside copies of the atlas and glow mask.
 """
-import base64,json,shutil
+import argparse,base64,json,shutil
 from pathlib import Path
 import numpy as np
 from validate_review import matrix
@@ -17,6 +17,8 @@ ROOT=HERE.parents[1]
 ASSETS=ROOT/'src/main/resources/assets/elementalwands'
 OUT=ROOT/'.local-previews/storm-roc/preview'
 FPS=20
+# Reworked clips have snaps quicker than a 20 Hz bake can show; the page reads each clip's own rate.
+CLIP_FPS={'hunched':80,'bite':80,'bite_leap':80,'swing_left':80,'swing_right':80,'scream':80,'wing':80,'pounce':80}
 
 def bake_parts(bones,W,H):
     """Each meshed bone's triangles in the study basis, in bone order, as the page draws them."""
@@ -39,6 +41,9 @@ def bake_parts(bones,W,H):
     return parts
 
 def main():
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--only',nargs='+',choices=list(DEFINITIONS),metavar='CLIP',help='re-bake just these clips')
+    args=parser.parse_args()
     OUT.mkdir(parents=True,exist_ok=True)
     geo=read(ASSETS/'geckolib/models/storm_roc.geo.json')['minecraft:geometry'][0]
     bones=geo['bones']
@@ -50,22 +55,27 @@ def main():
     meshes=[b for b in bones if b.get('cubes')]
     parts=bake_parts(bones,geo['description']['texture_width'],geo['description']['texture_height'])
     baked={};sockets=read(ASSETS/'storm_roc_sockets.json')
+    previous=json.loads((OUT/'roc.json').read_text())['clips'] if args.only else {}
     for name,(duration,loop) in DEFINITIONS.items():
-        first=sockets[name][0]
+        if args.only and name not in args.only:
+            baked[name]=previous[name];continue
+        first=sockets[name][0];fps=CLIP_FPS.get(name,FPS)
         frames=[]
-        for i in range(round(duration*FPS)+1):
-            t=i/FPS;world={}
+        for i in range(round(duration*fps)+1):
+            t=i/fps;world={}
             for b in bones:world[b['name']]=world.get(b.get('parent'),np.eye(4))@matrix(b,clips[name]['bones'].get(b['name'],{}),t)
             for b in meshes:
                 M=world[b['name']].copy();M[:3,3]*=SCALE
                 frames.append(M[:3,:4].T.ravel())
         data=np.array(frames,dtype='<f4')
         # Where it stands at the start (a spire top for the perched clips), and what to frame.
-        baked[name]={'duration':duration,'loop':loop,'frames':round(duration*FPS)+1,
+        baked[name]={'duration':duration,'loop':loop,'fps':fps,'frames':round(duration*fps)+1,
             'feet':min(first['left_foot'][1],first['right_foot'][1]),'body':first['body'],'head':first['head'],
             'matrices':base64.b64encode(data.tobytes()).decode()}
         print('baked',name,flush=True)
     (OUT/'roc.json').write_text(json.dumps({'fps':FPS,'scale':SCALE,'parts':parts,'clips':baked},separators=(',',':')))
+    # The viewer page itself is tracked as a template; the clip data and textures beside it are not.
+    shutil.copy(HERE/'animation_viewer/viewer.template.html',OUT/'storm-roc-redesign.html')
     shutil.copy(ASSETS/'textures/entity/storm_roc.png',OUT/'storm_roc.png')
     shutil.copy(ASSETS/'textures/entity/storm_roc_glowmask.png',OUT/'storm_roc_glowmask.png')
     print(OUT/'roc.json',(OUT/'roc.json').stat().st_size//1024,'KB')

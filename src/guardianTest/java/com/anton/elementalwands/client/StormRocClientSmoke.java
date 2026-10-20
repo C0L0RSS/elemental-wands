@@ -92,7 +92,7 @@ public final class StormRocClientSmoke implements ClientModInitializer {
                 if(action==0){serverBoss.testTornado(centre.toCenterPos().add(-18,1,0));serverBoss.testStrike(centre.toCenterPos().add(12,1,8),true);}
                 camera(server,id,28,112,34,0,104,0);
             });}
-            // A close look at the textured tornado, between the peck and the first sweep.
+            // A close look at the textured tornado, between the bite and the first sweep.
             if(scene==328)onServer(server,()->camera(server,id,-4,104,16,-18,110,0));
             if(scene==336)shot(c,"roc-tornado.png");
             if(scene==760)onServer(server,()->{serverBoss.setHealth(serverBoss.getMaxHealth()*.5f);camera(server,id,60,140,70,0,125,0);});
@@ -104,7 +104,7 @@ public final class StormRocClientSmoke implements ClientModInitializer {
             if(scene==1080)onServer(server,()->{require(serverBoss.phaseTwo(),"Chain rehearsal began before phase two");serverBoss.testChain();camera(server,id,45,134,55,0,108,12);});
             if(scene==1300)onServer(server,()->camera(server,id,35,101,25,-25,106,-20));
             if(scene==1310)shot(c,"roc-storm-ground.png");
-            if(scene==1330)onServer(server,()->{serverBoss.testAction(target,StormRocRules.Action.PECK);serverBoss.testStrike(centre.toCenterPos().add(28,0,12),true);camera(server,id,46,115,36,28,101,12);});
+            if(scene==1330)onServer(server,()->{serverBoss.testAction(target,StormRocRules.Action.BITE);serverBoss.testStrike(centre.toCenterPos().add(28,0,12),true);camera(server,id,46,115,36,28,101,12);});
             var clientBoss=c.world.getEntities().iterator();while(clientBoss.hasNext()){
                 var entity=clientBoss.next();if(entity instanceof StormRocEntity roc){sawBoss=true;poses.add(roc.poseName());}if(entity instanceof RocEffectEntity effect){sawEffects=true;effects.add(effect.kind());require(effect.shouldRender(100*100),"Tracked Roc effect was distance-culled at100blocks: "+effect.kind());}
             }
@@ -137,7 +137,7 @@ public final class StormRocClientSmoke implements ClientModInitializer {
             }
             if(scene==790)shot(c,"roc-takeoff.png");
             if(scene>=1450&&completedShots.get()==requestedShots){
-                require(sawBoss,"No synchronized Roc reached the native client");require(sawEffects,"No synchronized Roc effects reached native client");require(poses.containsAll(Set.of("perched","call","land","flight","dive","stuck","peck","swing_left","swing_right","scream","wing","pounce","stampede","takeoff","hop")),"Requested tracked poses missing from native client: "+poses);
+                require(sawBoss,"No synchronized Roc reached the native client");require(sawEffects,"No synchronized Roc effects reached native client");require(poses.containsAll(Set.of("perched","call","land","flight","dive","stuck","bite","swing_left","swing_right","scream","wing","pounce","stampede","takeoff","hop")),"Requested tracked poses missing from native client: "+poses);
                 require(effects.containsAll(Set.of(RocEffectEntity.Kind.SMALL_STRIKE,RocEffectEntity.Kind.LARGE_STRIKE,RocEffectEntity.Kind.TORNADO,RocEffectEntity.Kind.DIVE_MARKER,RocEffectEntity.Kind.SHOCKWAVE,RocEffectEntity.Kind.SCREAM,RocEffectEntity.Kind.LIVE_GROUND,RocEffectEntity.Kind.CHARGE_BOLT,RocEffectEntity.Kind.STORM_BOLT,RocEffectEntity.Kind.CALL_BOLT)),"Required tracked effect kinds missing: "+effects);
                 require(requestedShots==26,"Expected26 native screenshots, requested"+requestedShots);
                 require(stormChecked&&SummitStormClient.level(1)>.95,"Storm level did not remain above.95");

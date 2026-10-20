@@ -95,20 +95,60 @@ and its scrambling feet hurting anyone close. Then it brawls.
 
 Where its target stands decides the answer, so every spot has one:
 
-- **Head attacks** (peck, side sweep, straight scream) are offered only where the bill's
-  authored path reaches. The reach is measured from the shipped sockets: sweeps about
-  8.75–13.5 blocks ahead of its feet, pecks 10.75–16.5, the scream from 11.75 out.
-- **Wing wave** for players beside or behind it, or under its neck and chest, out to 16 blocks.
-- **Pounce** at a target over 26 blocks away, after four attacks in one spot, or at a player
-  who stays underneath after a wing wave.
+- **Head attacks** (Thunder Bite, Storm Sweep, Storm Scream) are offered only where the
+  bill's authored path reaches. The reach is measured from the shipped sockets: sweeps about
+  7.25–15.75 blocks ahead of its feet, the bite about 9.5–27.5 (its leap included), the scream
+  from 11.75 out.
+- **Thunder Bite:** it rears up slowly with its bill wide, lightning crackling at the corners
+  of its mouth, its head looking down at its prey, turning to follow them. At 1.2 s its aim
+  locks on where its prey stands and the crackles grow. If its prey is within reach it lunges
+  and snaps its bill shut in the air at 2.3 s, at player height. If not, it leaps, slower as befits
+  its size: it sinks into a deep crouch as its wings rise, drives off the rock with a heavy
+  downbeat at 2.15 s, sails up to 10 blocks over 0.6 s with its legs trailing then reaching and
+  its wings flaring to brake, lands hard right in front of its prey at 2.75 s and bites at 2.8 s. Crackles burst from the bill: everyone within 5 blocks of it,
+  jumping or not, is hit (about eight hearts through full diamond) and thrown away from the Roc.
+  Moving during the windup doesn't escape it; getting clear after the lock does. Its feet don't
+  stomp during the leap.
+- **Storm Sweep:** it coils its neck far round to one side, body twisting and bill crackling,
+  holds a beat, then at 1.25 s scythes its open bill across its whole front at chest height,
+  trailing crackles. Everyone within 5.5 blocks of the bill's path is hit (about five hearts
+  through full diamond) and thrown hard to the side. As the sweep ends a crescent of crackles
+  rolls out over the swept front (80° each side of ahead) from 10 to 22 blocks, like a ring:
+  anyone on the ground it reaches is hit, so jump it.
+- **Storm Scream:** a huge, slow breath that reads apart from the bite's rear-up: it sinks low
+  and draws its head back with its bill to the sky, wings spread wide and level, crackles
+  gathering in its flared crest, with a deep rising inhale. Then at 1.6 s a blast straight ahead: a line 6 blocks wide and 110
+  long of racing crackles. Everyone in it takes about eight hearts through full diamond and is
+  shoved back along the line. It can't be jumped; behind it is safe.
+- **Thunderclap** (its wing wave) for players beside or behind it, or under its neck and chest: it
+  sinks into a deep crouch as its wings rise, then leaps 9 blocks straight up on its legs and one
+  huge downbeat (a heavy whoosh and dust blown out over the rock), hangs a moment at the top with
+  its wings raised and head down, then smashes down and lands hard at 2.6 s: anyone within 5
+  blocks under it is crushed (about eight hearts through full diamond), and a ring of crackles and
+  dust rolls out to 16 blocks. Anyone on the ground it reaches takes about three hearts and is
+  thrown far away; a jump clears it. Its feet don't stomp while it is in the air.
+- **Raptor Strike** (its pounce) at a target over 26 blocks away, after four attacks in one spot,
+  or at a player who stays underneath after a Thunderclap. It sinks into a low stalking crouch,
+  wings half open and low, its weight rocking and its tail lashing, its head dead still on its
+  prey and turning to follow them. At 1.2 s its aim locks on where its prey stands: it draws back
+  and coils, talons crackling, and at 1.6 s drives off with one huge downbeat (a whoosh and dust
+  over the rock) and flies flat and fast at that spot on a low arc, at most 4 blocks up, with a
+  swoop. It screeches, flares and swings its talons forward, striking the spot at 2.6 s: anyone
+  within 5 blocks is crushed (about ten hearts through full diamond), and a shockwave rolls out to
+  26 blocks that a jump clears. Nothing marks the spot: its locked head and coil are the warning,
+  so sprint clear once it coils. It then mantles over the spot to 3.4 s, a window to punish it,
+  and settles by 4 s. Its feet don't stomp while it is in the air.
 - **Stampede** at the player who last hit it from more than 22 blocks, at most every eight seconds.
 
 It never repeats an attack back to back and picks among the rest at random. Its target is
 chosen at random, weighted by each player's recent damage (counting half after five seconds),
 so the main damage dealer draws most attacks but not all. It turns 15° a tick while winding up,
-and each attack's aim stops following its target at a lock tick. The pounce locks 0.4 seconds
-before launch and shows its circle at launch. A moving foot, from turning, scraping or
+and each attack's aim stops following its target at a lock tick. The Raptor Strike locks 0.4
+seconds before launch. A moving foot, from turning, scraping or
 landing, hurts players under it; the pounce's flight and the stampede's charge use their own hits.
+Between attacks it holds its brawl guard: electric head twitches, uneven breathing, weight
+shifts, beak clacks, talon kneads, a mantling hiss and a rouse. Its clock resumes after each blow, so each pause shows a
+different beat, and a knead never moves a foot fast enough to count as a stomp.
 The brawl has no timeout: the next takeoff requires another eighth of total health lost.
 Burst damage holds at each landing's gate. Reaching half health plays the takeoff, then the
 phase change.
@@ -132,7 +172,8 @@ point in the fight, so a spire is never a safe platform to shoot from.
 
 Starting health is 2,400 solo plus 1,600 per additional challenger. Raw attack damage uses
 vanilla armor and difficulty: on Normal, one small bolt costs about four hearts through
-full diamond, a large bolt or scream about eight, and a peck/sweep about five. These are
+full diamond, a large bolt, scream or Thunder Bite about eight, a sweep about five and its
+crackle wave about three. These are
 initial tuning values, not human balance approval. Hard shortens the airborne stretch and
 ground recovery; Easy lengthens them. Ground recovery pressure caps at four players.
 Shields don't block the Roc. Its hits skip vanilla's hurt cooldown, so repeat bolts half a
@@ -152,7 +193,8 @@ they are removed when the fight ends and are never serialized.
 On clients the Roc's clips crossfade over a quarter second whenever the server changes them.
 Its gaze holds dead still, then snaps its head to the player it is striking at or attacking
 (the server tracks that player), or else to you: fully while perched or between brawl attacks,
-partly in flight, never mid-attack. In flight it banks into its turns and pitches with its
+partly in flight, never mid-attack, except that through the Thunder Bite's windup its head
+follows its prey smoothly, without snaps, until the aim locks. In flight it banks into its turns and pitches with its
 climb. All of this is presentation; hitboxes follow the authored clips.
 
 The body, head and neck share the boss's health and damage admission. The latter two

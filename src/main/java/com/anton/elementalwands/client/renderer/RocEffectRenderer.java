@@ -20,6 +20,8 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.block.Blocks;
 import net.minecraft.util.math.RotationAxis;
 import net.minecraft.util.math.Vec3d;
+import org.joml.Matrix4f;
+import org.joml.Vector3f;
 
 /** Low-poly storm meshes. Telegraph geometry shares the authoritative effect radius and clock. */
 public final class RocEffectRenderer extends EntityRenderer<RocEffectEntity, RocEffectRenderer.State> {
@@ -68,7 +70,7 @@ public final class RocEffectRenderer extends EntityRenderer<RocEffectEntity, Roc
         s.ground=g.heights;s.groundX=g.originX;s.groundZ=g.originZ;s.groundSize=g.size;
     }
     private static Ground sample(RocEffectEntity e,State s,long tick) {
-        boolean wave=s.kind==RocEffectEntity.Kind.SHOCKWAVE;
+        boolean wave=s.kind==RocEffectEntity.Kind.SHOCKWAVE||s.kind==RocEffectEntity.Kind.CLAP_WAVE;
         double radius=wave?Math.min(s.radius,(Math.floor(s.tick)+1)*1.25):s.radius;
         int extent=(int)Math.ceil(Math.min(72,radius)+3);
         int originX=(int)Math.floor(e.getX())-extent,originZ=(int)Math.floor(e.getZ())-extent,size=extent*2+1;
@@ -110,7 +112,11 @@ public final class RocEffectRenderer extends EntityRenderer<RocEffectEntity, Roc
         queue.submitCustom(matrices, SMOKE, (entry,v)->draw(s,entry,v,false));
         queue.submitCustom(matrices, LIGHT, (entry,v)->draw(s,entry,v,true));
         if(s.kind==RocEffectEntity.Kind.TORNADO)queue.submitCustom(matrices, TWISTER, (entry,v)->twister(s,entry,v));
-        matrices.pop(); super.render(s,matrices,queue,camera);
+        matrices.pop();
+        if(s.kind==RocEffectEntity.Kind.SWEEP_WAVE)queue.submitCustom(matrices, StormRocCrackleLayer.LIGHT, (entry,v)->sweepWave(s,entry,v,camera));
+        if(s.kind==RocEffectEntity.Kind.SCREAM)queue.submitCustom(matrices, StormRocCrackleLayer.LIGHT, (entry,v)->screamCrackles(s,entry,v,camera));
+        if(s.kind==RocEffectEntity.Kind.CLAP_WAVE)queue.submitCustom(matrices, StormRocCrackleLayer.LIGHT, (entry,v)->clapCrackles(s,entry,v,camera));
+        super.render(s,matrices,queue,camera);
     }
     private static void draw(State s, MatrixStack.Entry m, VertexConsumer v, boolean light) {
         switch(s.kind) {
@@ -118,8 +124,7 @@ public final class RocEffectRenderer extends EntityRenderer<RocEffectEntity, Roc
             case DISTANT_BOLT, STORM_BOLT, CHARGE_BOLT, CALL_BOLT -> skyBolt(s,m,v,light);
             case TORNADO -> tornado(s,m,v,light);
             case DIVE_MARKER -> marker(s,m,v,light);
-            case SHOCKWAVE -> shockwave(s,m,v,light);
-            case SCREAM -> scream(s,m,v,light);
+            case SHOCKWAVE, CLAP_WAVE -> shockwave(s,m,v,light);
             case LIVE_GROUND -> live(s,m,v,light);
             case STORM -> {}
         }
@@ -220,6 +225,24 @@ public final class RocEffectRenderer extends EntityRenderer<RocEffectEntity, Roc
                 beam(v,m,ground(s,p),ground(s,q),.05,alpha(0xFFFFF6D8,fade*charge));
                 p=q;
             }
+        }
+    }
+    /**
+     * The Storm Sweep's crackle wave: a crescent of the Roc's own crackles across the front it swept,
+     * rolling out over the rock as the server's wave does, fading as it reaches its end.
+     */
+    private static void sweepWave(State s, MatrixStack.Entry m, VertexConsumer v, CameraRenderState camera) {
+        double r=Math.min(s.radius,StormRocRules.SWEEP_WAVE_START+s.tick*StormRocRules.SHOCK_SPEED);
+        float fade=Math.min(1,(s.duration-s.tick)/3)*(float)Math.min(1,(s.radius+2-r)/2+.35);
+        if(fade<=0)return;
+        Vector3f right=new Vector3f(1,0,0).rotate(camera.orientation),up=new Vector3f(0,1,0).rotate(camera.orientation);
+        var arc=StormRocCrackleLayer.DATA.getAsJsonObject("sequences").getAsJsonObject("arc");
+        double half=Math.toRadians(StormRocRules.SWEEP_WAVE_HALF),yaw=Math.toRadians(s.yaw);
+        int count=(int)Math.ceil(r*2*half/1.3);
+        for(int i=0;i<count;i++) {
+            double a=yaw-half+2*half*(i+.5)/count,dx=-Math.sin(a)*r,dz=Math.cos(a)*r,t=s.tick/20.0+i*.173;
+            Vector3f at=new Matrix4f(m.getPositionMatrix()).transformPosition(new Vector3f((float)dx,(float)(surface(s,s.x+dx,s.z+dz)+.55),(float)dz));
+            StormRocCrackleLayer.sprite(v,arc,t,at,1.6f,i*1.7+Math.sin(t*6)*.2,fade*(.75+.25*Math.sin(t*43+i)),right,up);
         }
     }
     /** On the rock, faintly: where its winds start to pull, and where they slow you. */
@@ -326,23 +349,40 @@ public final class RocEffectRenderer extends EntityRenderer<RocEffectEntity, Roc
             }
         }
     }
-    private static void scream(State s, MatrixStack.Entry m, VertexConsumer v, boolean light) {
-        if(!light)return;
-        double length=110, width=Math.max(2.5,s.radius);
-        float fade=Math.min(1,(s.duration-s.tick)/5);
-        for(int j=0;j<18;j++) {
-            double z=(j*6.5+s.tick*2.4)%length;
-            double r=width*(.80+.15*Math.sin(j+s.tick*.3));
-            for(int i=0;i<10;i++) {
-                double a=i*Math.PI/5,b=(i+1)*Math.PI/5;
-                line(v,m,new Vec3d(Math.cos(a)*r,Math.sin(a)*r,z),new Vec3d(Math.cos(b)*r,Math.sin(b)*r,z),.045,alpha(0xFFE0ECFF,fade*.48f));
-            }
+    /** The Thunderclap's ring, crackling all round its front as it rolls out over the rock. */
+    private static void clapCrackles(State s, MatrixStack.Entry m, VertexConsumer v, CameraRenderState camera) {
+        double r=Math.min(s.radius,s.tick*StormRocRules.SHOCK_SPEED);
+        float fade=Math.min(1,(s.duration-s.tick)/3);
+        if(r<.5||fade<=0)return;
+        Vector3f right=new Vector3f(1,0,0).rotate(camera.orientation),up=new Vector3f(0,1,0).rotate(camera.orientation);
+        var arc=StormRocCrackleLayer.DATA.getAsJsonObject("sequences").getAsJsonObject("arc");
+        int count=Math.max(8,(int)Math.ceil(r*Math.PI*2/1.6));
+        for(int i=0;i<count;i++) {
+            double a=Math.PI*2*(i+.5)/count,dx=Math.cos(a)*r,dz=Math.sin(a)*r,t=s.tick/20.0+i*.173;
+            Vector3f at=new Matrix4f(m.getPositionMatrix()).transformPosition(new Vector3f((float)dx,(float)(surface(s,s.x+dx,s.z+dz)+.6),(float)dz));
+            StormRocCrackleLayer.sprite(v,arc,t,at,1.5f,i*1.7+Math.sin(t*6)*.2,fade*(.75+.25*Math.sin(t*43+i)),right,up);
         }
-        for(int i=0;i<3;i++)for(int j=0;j<22;j++) {
-            double phase=(int)(s.tick/2)+i*33;
-            Vec3d a=new Vec3d(noise(j*19+phase)*width*.6,noise(j*11+phase)*width*.6,j*5);
-            Vec3d b=new Vec3d(noise((j+1)*19+phase)*width*.6,noise((j+1)*11+phase)*width*.6,(j+1)*5);
-            line(v,m,a,b,.055,alpha(0xFFFFF1C8,fade*.85f));
+    }
+    /**
+     * The Storm Scream in the Roc's own crackles: a dense flare at the bill, then crackles racing
+     * down its whole line, scattered across its width, fading as its breath runs out.
+     */
+    private static void screamCrackles(State s, MatrixStack.Entry m, VertexConsumer v, CameraRenderState camera) {
+        double length=110,width=Math.max(2.5,s.radius),yaw=Math.toRadians(s.yaw);
+        float fade=Math.min(1,(s.duration-s.tick)/5);
+        if(fade<=0)return;
+        Vector3f right=new Vector3f(1,0,0).rotate(camera.orientation),up=new Vector3f(0,1,0).rotate(camera.orientation);
+        var arc=StormRocCrackleLayer.DATA.getAsJsonObject("sequences").getAsJsonObject("arc");
+        double fx=-Math.sin(yaw),fz=Math.cos(yaw),sx=Math.cos(yaw),sz=Math.sin(yaw);
+        int flicker=(int)(s.tick/2);
+        for(int j=0;j<40;j++) {
+            // Near the bill they cluster thickly at first; down the line they race outward.
+            double along=j<8?j*.8*Math.min(1,s.tick/2+.2):(j*2.9+s.tick*4.5)%length;
+            double across=noise(j*7+flicker*13)*width*.8,lift=noise(j*13+flicker*5)*width*.5;
+            Vector3f at=new Matrix4f(m.getPositionMatrix()).transformPosition(new Vector3f(
+                    (float)(fx*along+sx*across),(float)lift,(float)(fz*along+sz*across)));
+            double t=s.tick/20.0+j*.137;
+            StormRocCrackleLayer.sprite(v,arc,t,at,(float)(j<8?2.4:1.7),j*1.9+Math.sin(t*6)*.2,fade*(.75+.25*Math.sin(t*43+j)),right,up);
         }
     }
     private static double noise(double seed) { double x=Math.sin(seed*127.1+311.7)*43758.5453;return (x-Math.floor(x))*2-1; }

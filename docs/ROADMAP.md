@@ -238,7 +238,8 @@ These come from the Guardian and Necromancer playtests:
   - **Scream blast:** it tucks in and takes a heavy breath, then screams a blast of air,
     sound and lightning in a straight horizontal line ahead. Everyone in the line is hit,
     so players lined up behind each other are all caught.
-  - **Beak swings and pecks**, its basic melee.
+  - **Beak swings and the Thunder Bite**, its melee. (Decided 2026-10-19: the small peck
+    became the Thunder Bite, a big area attack, because a giant shouldn't nip one player.)
   - **Wing wave:** a big wave from its wings that pushes players away.
 - **Decided:** every place to stand has an answer, so the brawl is about reading where
   its head points. Long windups and heavy hits, with starting numbers against full
@@ -246,10 +247,10 @@ These come from the Guardian and Necromancer playtests:
 
   | Attack | Where it hits | Warning | Damage |
   |---|---|---|---|
-  | Scream blast | A line ahead, about 5 blocks wide, across the summit | Breathes in ~1.2 s while turning to a player; aim locks 0.3 s before | ~8 hearts |
-  | Peck | One player close in front | Head draws back ~0.6 s | ~5 hearts |
-  | Beak swing | A sweep along one side | Head winds back to the other side ~0.8 s | ~5 hearts, knocks sideways |
-  | Wing wave | Players hugging it or behind it | Wings rise ~1 s | ~2 hearts, big push away |
+  | Storm Scream | A line ahead, 6 blocks wide, across the summit, in racing crackles | A huge breath ~1.5 s while turning to a player; aim locks 0.3 s before | ~8 hearts, shoved back along the line |
+  | Thunder Bite | Everyone within 5 blocks of its bill as it snaps shut in the air where its prey stood; it leaps up to 10 blocks to get there | Rears up slowly and holds, crackling, ~2 s; aim locks 1 s before | ~8 hearts, big push away |
+  | Storm Sweep | Its whole front at chest height, then a crescent of crackles rolling out to 22 blocks | Neck coils far to one side ~1.25 s, bill crackling | ~5 hearts and thrown hard sideways; the wave ~3 hearts unless jumped |
+  | Thunderclap | Players hugging it or behind it: a crush under it, then a ring rolling out to 16 blocks | Deep crouch, then leaps 9 blocks up with a whoosh and dust blowing out, hangs at the top | ~8 hearts crushed, ~3 and a big push from the ring; jump the ring |
 
 - **Proposed:** the scream is too wide to sidestep casually. It can't be jumped, and
   behind the Roc is safe from it.
@@ -266,17 +267,18 @@ These come from the Guardian and Necromancer playtests:
 - **Proposed:** each landing ends once it has lost about an eighth of its health, sized so
   a typical team needs 10–20 seconds. Phase one then takes at least four landings.
 - **Decided:** the brawl's movement abilities are scary with a hint of cartoon:
-  - **Pounce**, its normal way to move: it drops into a low crouch, tail fan twitching
-    and rear end wiggling like a cat about to leap, then launches in one huge flap and
-    slams down feet-first on a marked circle. Anyone under it is crushed, and the landing
-    sends out a small jumpable ring like the dive's. It doesn't get stuck.
+  - **Pounce**, its normal way to move, reworked 2026-10-19 as the **Raptor Strike**: it
+    stalks low with its tail lashing and its head locked on its prey, coils, then flies
+    flat and fast at them and strikes talons first, with no floor circle. Anyone under it
+    is crushed, and the landing sends out a jumpable ring like the dive's. It mantles over
+    the spot before settling. It doesn't get stuck.
   - **Stampede**, its answer to a player hitting it from range: it scrapes the rock like
     a bull and thunders across the summit at that player. It can't stop in time, so it
     skids for blocks, feet scrabbling and sparks flying, then whips its head around.
 - **Proposed:** starting numbers for the movement abilities:
-  - Pounce: about 1.2 s of wiggle, then about 1 s in the air. Its circle (radius about 6)
-    shows the moment it launches. About 10 hearts to anyone crushed and 3 from the ring.
-    It lands crouched for about a second before it turns.
+  - Pounce: about 1.6 s of stalk and coil (aim locks at 1.2 s), then 1 s in the air at
+    most 4 blocks up. No circle. About 10 hearts to anyone within 5 blocks of its landing
+    and 3 from the ring. It mantles for about 0.8 s and settles by 4 s.
   - Stampede: two scrapes over about 1.2 s while it turns to the ranged player, then a
     straight run about 6 blocks wide. About 8 hearts to anyone trampled, who is tossed
     aside. The skid leaves about 1.5 s of opening. It always stops well short of the

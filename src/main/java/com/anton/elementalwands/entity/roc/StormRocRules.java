@@ -48,7 +48,7 @@ public final class StormRocRules {
 
     // Damage.
     public static final float SMALL_DAMAGE = 20, LARGE_DAMAGE = 31.25f, DIVE_DAMAGE = 50;
-    public static final float PECK_DAMAGE = 23.2f, SCREAM_DAMAGE = 31.25f, WING_DAMAGE = 12.4f;
+    public static final float SWING_DAMAGE = 23.2f, BITE_DAMAGE = 31.25f, SCREAM_DAMAGE = 31.25f, WING_DAMAGE = 16.5f;
     public static final float POUNCE_DAMAGE = 35.9f, RING_DAMAGE = 16.5f, TORNADO_DAMAGE = 16.5f;
     public static final float STAMPEDE_DAMAGE = 31.25f, TORNADO_CHIP = 8, FOOT_DAMAGE = 14, CAW_DAMAGE = 31.25f;
     /**
@@ -63,15 +63,55 @@ public final class StormRocRules {
 
     // Brawl.
     /** Hit radii around the bill at each attack's impact, and the scream's half width. */
-    public static final double PECK_RADIUS = 4, SWING_RADIUS = 4.2, SCREAM_HALF_WIDTH = 2;
-    /** Wing wave reach; a player closer than WING_REACH - 2 can draw it. */
-    public static final double WING_REACH = 16;
+    public static final double BITE_RADIUS = 5, SWING_RADIUS = 5.5, SCREAM_HALF_WIDTH = 3;
+    /** How hard the Storm Scream shoves everyone in its line back along it. */
+    public static final double SCREAM_PUSH = 1.2;
+    /**
+     * The Storm Sweep: its bill scythes the front for SWING_SWEEP ticks from its impact, throwing
+     * everyone it catches sideways (SWING_PUSH). As it ends, a crescent of crackles rolls out over
+     * the swept front, SWEEP_WAVE_HALF degrees each side of ahead, from SWEEP_WAVE_START blocks to
+     * SWEEP_WAVE_REACH at SHOCK_SPEED; anyone on the ground it reaches is hit.
+     */
+    public static final int SWING_SWEEP = 8;
+    public static final double SWING_PUSH = 1.4, SWEEP_WAVE_START = 10, SWEEP_WAVE_REACH = 22, SWEEP_WAVE_HALF = 80;
+    /**
+     * The Thunder Bite: how hard its burst throws everyone it catches away from the Roc, and how far
+     * its lunge can leap forward to bite where its prey stood when the aim locked.
+     */
+    public static final double BITE_PUSH = 1.2, BITE_LUNGE = 10;
+    /**
+     * When its prey is out of reach at the aim lock it leaps instead (the bite_leap clip), slower as
+     * befits its size: it pushes off at BITE_LEAP (2.15 s), lands at BITE_LAND (2.75 s), bites at
+     * BITE_LEAP_IMPACT and is done at BITE_LEAP_DURATION, where the standing bite uses its Action's.
+     */
+    public static final int BITE_LEAP = 43, BITE_LAND = 55, BITE_LEAP_IMPACT = 56, BITE_LEAP_DURATION = 88;
+    /** How far beyond the standing bite's reach its prey must be for it to leap. */
+    public static final double BITE_LEAP_MIN = 2;
+    /**
+     * The Thunderclap's ring rolls out to WING_REACH; a player closer than WING_REACH - 2 can draw it.
+     * Anyone on the ground it reaches is thrown away from the Roc (WING_PUSH); a jump clears it.
+     */
+    public static final double WING_REACH = 16, WING_PUSH = 1.4;
+    /**
+     * The Thunderclap's leap: it leaves the rock at WING_LIFT, rises WING_HEIGHT blocks to its apex
+     * at WING_APEX, hangs there to WING_DROP, then smashes down and lands on the Action's impact,
+     * crushing anyone within WING_CRUSH of it under it before the ring rolls out.
+     */
+    public static final int WING_LIFT = 17, WING_APEX = 35, WING_DROP = 41;
+    public static final double WING_HEIGHT = 9, WING_CRUSH = 5;
     /** Hitting it from beyond this distance draws a stampede at that player. */
     public static final double RANGED_DISTANCE = 22;
     public static final int RANGED_MEMORY = 160, STAMPEDE_COOLDOWN = 160;
     /** It pounces at a target this far away, or after this many attacks in one spot. */
     public static final double POUNCE_FAR = 26;
     public static final int ACTIONS_BEFORE_POUNCE = 4;
+    /**
+     * The Raptor Strike's leap: it pushes off at POUNCE_LAUNCH and flies flat and fast on a low arc,
+     * at most POUNCE_HEIGHT blocks up, onto where its prey stood when its aim locked; its talons
+     * strike there on the Action's impact.
+     */
+    public static final int POUNCE_LAUNCH = 32;
+    public static final double POUNCE_HEIGHT = 4;
     /** Degrees per tick it turns while winding up or flying between perches. */
     public static final float TURN_RATE = 15, FLIGHT_TURN_RATE = 10;
     /** A player's damage counts half as much toward being targeted after this many ticks. */
@@ -116,12 +156,12 @@ public final class StormRocRules {
      * (swings aim where the target stood when chosen). duration includes recovery.
      */
     public enum Action {
-        PECK("peck", 12, 8, 36),
-        SWING_LEFT("swing_left", 16, 6, 36),
-        SWING_RIGHT("swing_right", 16, 6, 36),
-        SCREAM("scream", 24, 18, 44),
-        WING("wing", 20, 0, 40),
-        POUNCE("pounce", 44, 16, 64),
+        BITE("bite", 46, 24, 78),
+        SWING_LEFT("swing_left", 25, 16, 52),
+        SWING_RIGHT("swing_right", 25, 16, 52),
+        SCREAM("scream", 32, 26, 58),
+        WING("wing", 52, 0, 80),
+        POUNCE("pounce", 52, 24, 80),
         STAMPEDE("stampede", 24, 20, 84);
 
         public final String pose;

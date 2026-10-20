@@ -1,0 +1,726 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Storm Roc Redesign</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a field viewer. The stage (the summit sky) leads; the clip list sits beside it on wide
+   screens and below it on phones; screenshots and the concept follow. */
+:root {
+  --bg: #f1eee9;
+  --surface: #fbfaf7;
+  --ink: #2a1d17;
+  --muted: #6c5d55;
+  --line: #ddd3c9;
+  --rust: #b0481f;
+  --rust-soft: #f3dccf;
+  --navy: #22344f;
+  --sky-top: #86b3cb;
+  --sky-low: #dce8e7;
+  --stage-ink: #1d2a33;
+  --display: "Barlow Semi Condensed", "Arial Narrow", sans-serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17120f; --surface: #211a16; --ink: #f1e7df; --muted: #b3a296; --line: #3a2e27;
+    --rust: #ec8457; --rust-soft: #3d2519; --navy: #a9bedb; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17120f; --surface: #211a16; --ink: #f1e7df; --muted: #b3a296; --line: #3a2e27;
+  --rust: #ec8457; --rust-soft: #3d2519; --navy: #a9bedb; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 56px;
+}
+main { max-width: 1320px; margin: 0 auto; display: grid; gap: 36px; }
+header { display: grid; gap: 8px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--rust); }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(34px, 5vw, 52px); line-height: 1; margin: 0; text-wrap: balance; }
+header p { margin: 0; color: var(--muted); max-width: 68ch; }
+.stats { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--mono); font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.stats b { color: var(--ink); font-weight: 500; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 20px; align-items: start; }
+@media (max-width: 960px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+.viewer { display: grid; gap: 12px; min-width: 0; }
+.stage {
+  position: relative; width: 100%; aspect-ratio: 16 / 10; max-height: 74vh; border-radius: 6px; overflow: hidden;
+  background: linear-gradient(180deg, var(--sky-top), var(--sky-low) 78%); touch-action: none; cursor: grab;
+}
+.stage:active { cursor: grabbing; }
+@media (max-width: 600px) { .stage { aspect-ratio: 4 / 3.4; } .hud-name { font-size: 20px; } .hint { display: none; } }
+#view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.hud { position: absolute; left: 14px; top: 12px; right: 14px; display: flex; justify-content: space-between; align-items: start; gap: 12px; pointer-events: none; color: var(--stage-ink); }
+.hud-name { font-family: var(--display); font-weight: 700; font-size: 26px; line-height: 1; }
+.hud-meta { font-family: var(--mono); font-size: 12px; margin-top: 4px; opacity: .8; font-variant-numeric: tabular-nums; }
+.cams { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; pointer-events: auto; }
+.cams button {
+  font: 500 12px var(--mono); color: var(--stage-ink); background: rgba(255,255,255,.62); border: 1px solid rgba(29,42,51,.18);
+  border-radius: 4px; padding: 5px 8px; cursor: pointer;
+}
+.cams button[aria-pressed="true"] { background: var(--stage-ink); color: #f4efe9; border-color: var(--stage-ink); }
+.loading { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--mono); font-size: 13px; color: var(--stage-ink); }
+.hint { position: absolute; left: 14px; bottom: 10px; font-family: var(--mono); font-size: 11px; color: var(--stage-ink); opacity: .65; pointer-events: none; }
+
+.transport { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; }
+@media (max-width: 600px) { .transport { grid-template-columns: auto minmax(0, 1fr); } .speeds { grid-column: 1 / -1; justify-self: start; } }
+.play { width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--rust); color: #fff; cursor: pointer; display: grid; place-items: center; }
+.play svg { width: 16px; height: 16px; fill: currentColor; }
+.timeline { display: grid; gap: 4px; min-width: 0; }
+.track { position: relative; height: 30px; }
+.ticks { position: absolute; inset: 6px 0 auto 0; height: 12px; }
+.ticks i { position: absolute; top: 0; width: 1px; height: 5px; background: var(--line); }
+.ticks i.sec { height: 12px; background: var(--muted); }
+.rail { position: absolute; left: 0; right: 0; top: 19px; height: 4px; border-radius: 2px; background: var(--line); }
+.fill { position: absolute; left: 0; top: 19px; height: 4px; border-radius: 2px; background: var(--rust); width: 0; }
+.mark { position: absolute; top: 15px; height: 12px; border-radius: 2px; background: var(--navy); opacity: .9; min-width: 4px; transform: translateX(-2px); }
+.track input { position: absolute; inset: 0; width: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.track input:focus-visible + .focus { outline: 2px solid var(--rust); outline-offset: 2px; }
+.focus { position: absolute; inset: 0; border-radius: 4px; pointer-events: none; }
+.readout { display: flex; justify-content: space-between; gap: 10px; font-family: var(--mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.readout .hit { color: var(--navy); }
+.speeds { display: flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.speeds button { font: 500 12px var(--mono); padding: 6px 9px; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
+.speeds button[aria-pressed="true"] { background: var(--rust-soft); color: var(--ink); }
+button:focus-visible { outline: 2px solid var(--rust); outline-offset: 2px; }
+
+.clips { display: grid; gap: 18px; min-width: 0; }
+.group { display: grid; gap: 6px; }
+.group h2 { font-family: var(--display); font-weight: 600; font-size: 19px; margin: 0; color: var(--muted); letter-spacing: .01em; }
+.clip {
+  display: grid; gap: 2px; text-align: left; width: 100%; padding: 9px 12px; border-radius: 5px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit;
+}
+.clip[aria-pressed="true"] { border-color: var(--rust); box-shadow: inset 3px 0 0 var(--rust); }
+.clip .row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.clip b { font-family: var(--display); font-weight: 600; font-size: 18px; }
+.clip .len { font-family: var(--mono); font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.clip .len em { font-style: normal; color: var(--rust); }
+.clip span.d { font-size: 13px; color: var(--muted); }
+.clip .new { font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--rust); }
+
+section h2.sec { font-family: var(--display); font-weight: 700; font-size: 26px; margin: 0; }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 760px) { .pair { grid-template-columns: minmax(0, 1fr); } }
+figure { margin: 0; display: grid; gap: 8px; }
+figure img { width: 100%; height: auto; border-radius: 6px; border: 1px solid var(--line); }
+figcaption { font-size: 13.5px; color: var(--muted); }
+.notes { display: grid; gap: 10px; max-width: 72ch; color: var(--muted); font-size: 14px; }
+.notes p { margin: 0; }
+.shots { display: grid; gap: 14px; }
+.stage.dark { background: linear-gradient(180deg, #1f2730, #3a4450 78%); }
+.shots .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 14px; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+</style>
+
+<main>
+  <header>
+    <span class="eyebrow">Elemental Wands · Wind boss · Demon face and talons</span>
+    <h1>Storm Roc redesign</h1>
+    <p>The Roc as it is now installed: the Demon face, with steep slim brows over glowing red slit eyes set in dark sockets, brow spikes and war paint under a raised rust crest. It has huge legs with big black sickle talons, a slate back and a long wedge tail. The crest rests half up in the brawl, flares when the Roc screams, calls lightning or winds up a blow, ruffles in the perched shake and lies sleek in flight. The toes stand flat with their talons biting the rock and curl down to grip a spire. Try Scream, Perched and Pounce, and turn on Storm light to see the eyes glow. Drag to turn it, scroll or pinch to zoom, and pick a clip from the list.</p>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <div class="layout">
+    <section class="viewer" aria-label="Animation viewer">
+      <div class="stage" id="stage">
+        <canvas id="view" aria-label="3D view of the Storm Roc"></canvas>
+        <div class="hud">
+          <div><div class="hud-name" id="hudName">Scream</div><div class="hud-meta" id="hudMeta"></div></div>
+          <div class="cams" role="group" aria-label="Camera">
+            <button id="camThree" aria-pressed="true">¾</button>
+            <button id="camSide" aria-pressed="false">Side</button>
+            <button id="camFront" aria-pressed="false">Front</button>
+            <button id="camHead" aria-pressed="false">Head</button>
+            <button id="camPlayer" aria-pressed="false" title="From a player's eyes, 1.6 blocks up where the player figure stands, looking at its head">Player</button>
+            <button id="camSpin" aria-pressed="false">Spin</button>
+            <button id="camDark" aria-pressed="false">Storm light</button>
+          </div>
+        </div>
+        <div class="loading" id="loading">Loading the Roc…</div>
+        <div class="hint">Drag to turn · scroll or pinch to zoom · double-click to reset</div>
+      </div>
+      <div class="transport">
+        <button class="play" id="play" aria-label="Pause"><svg viewBox="0 0 16 16" id="playIcon"><rect x="3" y="2" width="3.5" height="12"/><rect x="9.5" y="2" width="3.5" height="12"/></svg></button>
+        <div class="timeline">
+          <div class="track">
+            <div class="ticks" id="ticks"></div>
+            <div class="rail"></div>
+            <div class="fill" id="fill"></div>
+            <div id="marks"></div>
+            <input type="range" id="scrub" min="0" max="1" step="0.001" value="0" aria-label="Clip time">
+            <div class="focus"></div>
+          </div>
+          <div class="readout"><span id="clock">tick 0 / 40 · 0.00 s</span><span class="hit" id="hitLabel"></span></div>
+        </div>
+        <div class="speeds" role="group" aria-label="Speed">
+          <button data-speed="0.25" aria-pressed="false">¼×</button>
+          <button data-speed="0.5" aria-pressed="false">½×</button>
+          <button data-speed="1" aria-pressed="true">1×</button>
+        </div>
+      </div>
+    </section>
+    <aside class="clips" id="clips" aria-label="Clips"></aside>
+  </div>
+
+  <section class="shots" aria-label="In Minecraft">
+    <h2 class="sec">In Minecraft</h2>
+    <p class="notes">Screenshots from the mod's scripted test fight on the summit, rendered by the game itself.</p>
+    <div class="grid">
+      <figure><img src="game-scream.jpg" alt="The Roc screaming with its crest flared" loading="lazy"><figcaption>Scream, crest flared.</figcaption></figure>
+      <figure><img src="game-peck.jpg" alt="The Roc driving its bill into the rock, its sickle talons on the ground" loading="lazy"><figcaption>Peck, with the sickle talons planted.</figcaption></figure>
+      <figure><img src="game-perched.jpg" alt="The Roc perched on a spire above the cloud sea" loading="lazy"><figcaption>Perched on a spire between visits.</figcaption></figure>
+      <figure><img src="game-call.jpg" alt="The Roc rearing up and calling a bolt into the cap cloud" loading="lazy"><figcaption>The call: a bolt from its bill into the cap cloud.</figcaption></figure>
+      <figure><img src="game-wing.jpg" alt="The Roc slamming its wings down on the summit" loading="lazy"><figcaption>Wing wave, at the slam.</figcaption></figure>
+      <figure><img src="game-storm.jpg" alt="Phase two: the Roc in the storm, a red eye glowing" loading="lazy"><figcaption>Phase two: in the storm, its eye glows red.</figcaption></figure>
+    </div>
+  </section>
+
+  <section class="pair" aria-label="Concept">
+    <div class="notes" style="gap:16px">
+      <figure>
+        <img src="crest-states.jpg" alt="The Demon head three times: crest flat in flight, half raised at rest, fully flared while screaming" loading="lazy">
+        <figcaption>The crest, left to right: sleek in flight, half up in the brawl, flared to scream.</figcaption>
+      </figure>
+      <figure>
+        <img src="talons.jpg" alt="The Roc's thick legs and sickle talons, gripping a spire and standing on the summit" loading="lazy">
+        <figcaption>The talons gripping a spire (left) and standing in the brawl (right).</figcaption>
+      </figure>
+    </div>
+    <div class="notes">
+      <h2 class="sec">What you're seeing</h2>
+      <p>This is the game's own model and animation data, baked frame by frame from the files the mod loads, and lit like a Minecraft mob. It is about 300 solid blocks, many of them angled, carrying a pixel-art texture; the eyes are lit by a glow layer, as in game.</p>
+      <p>The ticks on the timeline are server ticks, 20 a second. The blue marks are the moments the fight lands a hit, so you can check each blow against the motion.</p>
+      <p>Not shown here: the server moving the Roc (flights between spires, the dive's climb, the pounce arc and the stampede run), its head turning to track you, the blends between clips, the lightning and its crackle. Those only appear in game.</p>
+      <p>While its feet are down the tail lifts just enough to stay off the rock; on a spire it may hang over the drop.</p>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const CLIPS = {
+  land:        {name: 'Land', d: 'Flares its wings, swings its feet forward to grip the spire, sinks into the landing and folds up.'},
+  perched:     {name: 'Perched', d: 'Bird-like head snaps, a one-eyed head cock, a feather shake and a half-open wing stretch.', tag: 'crest ruffles'},
+  call:        {name: 'Call', d: 'Rears up and calls with its beak to the sky, then whips its head down, wings flung wide, as the strikes land.',
+                marks: [[.5, .5, 'bolt into the clouds'], [2, 2, 'strike'], [2.5, 2.5, 'strike'], [3, 3, 'strike']], tag: 'crest flares'},
+  flight:      {name: 'Flight', d: 'Two slow, heavy beats that travel out along the wing, the hands folding back on the way up, then a long glide.', tag: 'crest sleek'},
+  dive:        {name: 'Dive', d: 'Hard climbing beats, tips over into a falcon stoop and spears its bill into the rock.', tag: 'crest sleek'},
+  stuck:       {name: 'Stuck', d: 'Bill pinned in the rock: its body heaves, wings slap the ground, feet scrabble, until it rips free.',
+                marks: [[5.65, 5.65, 'free']]},
+  hop:         {name: 'Hop', d: 'Yanks its bill free, one huge flap, then drives it back into the rock.', tag: 'crest sleek'},
+  hunched:     {name: 'Hunched', tag: 'Reworked', d: 'The brawl guard between blows. Its head holds dead still, then twitches to a new angle in a few frames and lands with a small electric shiver, '
+    + 'sometimes in a stutter. Under that: uneven breathing, slow weight shifts, a weaving neck, beak clacks, a tail flick, talons kneading the rock, a mantling hiss and a feather rouse. '
+    + 'Crest, cheek fans and tail swing on after each move. The game resumes the loop where it left off, so each pause between attacks shows a different beat.',
+    marks: [[.3, .4, 'twitch'], [.55, .95, 'clack clack'], [1.05, 1.15, 'twitch'], [1.35, 1.55, 'tail flick'], [1.62, 1.85, 'stutter twitch'], [2.4, 2.5, 'twitch'], [2.65, 3.3, 'right talons knead'], [3.15, 3.25, 'twitch'], [3.7, 5.3, 'hiss'], [5.35, 5.5, 'one-eye twitch'], [5.95, 6.1, 'twitch'], [6.25, 6.9, 'left talons knead'], [7.3, 8.0, 'rouse'], [8.1, 8.2, 'twitch'], [8.55, 8.95, 'clack + rattle'], [9.05, 9.15, 'twitch home']]},
+  bite:        {name: 'Thunder Bite', tag: 'New attack', d: 'For prey within reach. Rears up slowly with its bill opening wide, its wings mantled and its head looking down at its prey, lightning crackling at the corners of its mouth, '
+    + 'turning to follow its prey. At 1.20 the aim locks and the crackles grow; it holds, charged, then lunges and snaps its bill shut in the air at player height at 2.30. '
+    + 'Crackles burst from the bill out to 5 blocks: everyone there is hit hard and thrown back. It holds the bite, recoils and pulls back into its guard. The white flickers stand in for the game\'s spark sprites.',
+    marks: [[0, 1.2, 'rears up, following its prey'], [1.2, 1.2, 'aim locks'], [1.2, 2.0, 'charged hold'], [2.0, 2.3, 'lunge'], [2.3, 2.3, 'bite + crackle burst'], [2.3, 2.6, 'holds the bite'], [2.6, 3.9, 'pulls back']]},
+  bite_leap:   {name: 'Thunder Bite (leap)', tag: 'New attack', d: 'For prey out of reach: the game switches to this at the aim lock. It sinks into a deep crouch as its wings rise slowly, its head on its prey, '
+    + 'drives off the rock with straightening legs and one heavy downbeat, and sails through the air for 0.6 s: legs trailing then swinging forward with talons spread, wings recovering and then flaring broadly to brake. '
+    + 'It lands hard, soaks up the weight, and its momentum carries it into the bite at 2.80. The game carries it up to 10 blocks; 6 are shown here.',
+    marks: [[0, 1.2, 'rears up, following its prey'], [1.2, 1.2, 'aim locks'], [1.25, 1.85, 'crouch, wings rising'], [1.85, 2.15, 'push-off + downbeat'], [2.15, 2.75, 'in the air: legs trail, then reach; wings flare'], [2.75, 2.8, 'landing'], [2.8, 2.8, 'bite + crackle burst'], [2.8, 4.4, 'absorb, recover']]},
+  swing_left:  {name: 'Storm Sweep left', tag: 'Reworked', d: 'Coils its neck far round to one side, its body twisting and weight shifting, wings half open and bill crackling; holds a beat, '
+    + 'then scythes its open bill across its whole front at chest height (1.25-1.65), hitting everyone within 5.5 blocks of the bill and throwing them sideways. A crescent of crackles rolls out '
+    + 'across the swept front to 22 blocks: jump it. Overshoots with the tail counter-swinging and settles into its guard. The white flickers stand in for the game\'s spark sprites.',
+    marks: [[0, 1.0, 'coil'], [1.0, 1.25, 'hold, bill crackling'], [1.25, 1.65, 'sweep'], [1.6, 2.05, 'crackle wave rolls out'], [1.65, 2.6, 'overshoot, settle']]},
+  swing_right: {name: 'Storm Sweep right', tag: 'Reworked', d: 'The same sweep the other way.',
+    marks: [[0, 1.0, 'coil'], [1.0, 1.25, 'hold, bill crackling'], [1.25, 1.65, 'sweep'], [1.6, 2.05, 'crackle wave rolls out'], [1.65, 2.6, 'overshoot, settle']]},
+  scream:      {name: 'Storm Scream', tag: 'Reworked', d: 'Reads apart from the bite before it fires: instead of rearing up tall with its head on its prey, it sinks low and draws its head back in an S, '
+    + 'bill to the sky, chest up, wings spread wide and level, tail fanned, crackles gathering in its flared crest (and in the game, a deep rising inhale). It draws in a little more, then whips forward '
+    + 'and blasts straight ahead at 1.60: a line 6 blocks wide and 110 long of crackles racing outward, its body shuddering behind the scream and its wings thrown back. Everyone in the line takes about '
+    + 'eight hearts and is shoved back along it; it can\'t be jumped, and behind it is safe. The white flickers stand in for the game\'s spark sprites.',
+    marks: [[0, 1.3, 'sinks low, head back, wings wide, crest crackling'], [1.3, 1.5, 'draws in'], [1.6, 1.6, 'blast'], [1.6, 2.3, 'scream: crackles race down the line'], [2.3, 2.9, 'settles']]},
+  wing:        {name: 'Thunderclap', tag: 'Reworked', d: 'Its answer to players beside it, behind it or under its neck. It sinks into a deep crouch as its wings rise, then leaps: legs and one huge downbeat '
+    + 'throw it 9 blocks up (in the game a heavy whoosh and dust blown out over the rock). Rising, its legs tuck and wings sweep up; at the top it hangs a moment, wings raised high and head down on '
+    + 'the players below; then it smashes down, legs reaching, and lands hard at 2.60: anyone under it is crushed, and a ring of crackles and dust rolls out to 16 blocks that throws everyone on the '
+    + 'ground far away (jump it). It soaks up the landing, wings thrown out for balance, and slowly folds them.',
+    marks: [[0, .6, 'deep crouch, wings rise'], [.6, .85, 'leap + downbeat'], [.85, 1.75, 'rising'], [1.75, 2.05, 'hangs at the top'], [2.05, 2.6, 'smashes down'], [2.6, 2.6, 'landing: crush + ring'], [2.6, 4.0, 'absorb, slow fold']]},
+  wing_spiral: {name: 'Storm Spiral (try-out)', tag: 'Experiment', d: 'A try-out alternative to the Thunderclap after the flights in How to Train Your Dragon, viewer only for now. The same deep crouch, '
+    + 'then it launches into a corkscrew climb: nose up steeply along a tight helix, barrel-rolling twice around its own spine, wings swept back like a drill, tail streaming, wing edges crackling '
+    + 'into a spiral. At the top it rolls level, spreads its wings wide and stalls with a screech, head turning down to find its prey; then it tucks and dives talons first, flares at the last '
+    + 'moment and slams into the rock at 3.25 (the crush and ring would fire here), soaks it up and slowly folds. The flight path here stands in for the game\'s.',
+    marks: [[0, .6, 'deep crouch'], [.6, .85, 'launch'], [.85, 2.15, 'corkscrew climb: two barrel rolls'], [2.15, 2.55, 'levels out, stalls, screech'], [2.55, 3.05, 'dive, talons out'], [3.05, 3.25, 'flare'], [3.25, 3.25, 'slam'], [3.25, 5.0, 'absorb, slow fold']]},
+  pounce:      {name: 'Raptor Strike', tag: 'Reworked', d: 'Its answer to a player far away, or to standing still too long. It sinks into a low stalking crouch, wings half open and low, '
+    + 'crest pressed flat, its weight rocking from foot to foot and its tail lashing, its head dead still on its prey (in the game its gaze follows the prey until the aim locks at 1.20). Then it '
+    + 'draws back and coils, talons crackling, and drives off at 1.60 with one huge downbeat: it flies flat and fast at its prey on a low arc (at most 4 blocks up), wings wide, legs tucked back, '
+    + 'with a swoop. At the last moment it screeches, pitches up, flares its wings and swings its talons forward onto its prey at 2.60: anyone within 5 blocks is crushed, and a shockwave rolls '
+    + 'out to 26 blocks (jump it). It mantles over the spot, wings arched down and head low, glances about, then settles. No floor circle: the locked head and coil are the warning. '
+    + 'The viewer flies it 18 blocks, with the player having dodged beside the landing.',
+    marks: [[0, .6, 'sinks into a stalk'], [.6, 1.2, 'weight shifts, tail lashes'], [1.2, 1.2, 'aim locks'], [1.0, 1.35, 'draws back, coils'], [1.35, 1.6, 'push + downbeat'], [1.6, 2.25, 'flat, fast leap'],
+      [2.25, 2.55, 'screech, flare, talons forward'], [2.6, 2.6, 'strike: crush + shockwave'], [2.6, 3.4, 'mantles, glances about'], [3.4, 4.0, 'settles']]},
+  stampede:    {name: 'Stampede', d: 'Two bull scrapes, a head-low charge, then a skid with its wings flared as brakes.', marks: [[1.2, 2.7, 'charge']], tag: 'crest flares'},
+  takeoff:     {name: 'Takeoff', d: 'Crouches with its wings opening, one huge downbeat that blasts everyone back, then beats away.',
+                marks: [[1.2, 1.2, 'gust']]},
+};
+const GROUPS = [
+  ['On the spires', ['land', 'perched', 'call', 'flight']],
+  ['Diving and the chain smash', ['dive', 'stuck', 'hop']],
+  ['The brawl', ['hunched', 'bite', 'bite_leap', 'swing_left', 'swing_right', 'scream', 'wing', 'pounce', 'stampede', 'takeoff']],
+];
+const SPIRE = new Set(['perched', 'call', 'land']);
+const WIDE = new Set(['flight', 'dive', 'hop', 'takeoff', 'land', 'wing', 'wing_spiral', 'pounce', 'call']);
+const $ = id => document.getElementById(id);
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const state = {clip: 'scream', t: 0, playing: !reduce, speed: 1, hold: 0, spin: false,
+  yaw: -38, pitch: 12, dist: 46, target: new THREE.Vector3(0, 4.5, 0), view: 'three'};
+let data, parts = [], decoded = {};
+
+// Scene: Minecraft lights an entity with ambient light plus two fixed directions.
+const canvas = $('view'), stage = $('stage');
+const renderer = new THREE.WebGLRenderer({canvas, antialias: true, alpha: true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, 1, .1, 500);
+const lights = [[new THREE.AmbientLight(0xffffff, .52), .52]];
+scene.add(lights[0][0]);
+for (const [x, y, z] of [[.2, 1, -.7], [-.2, 1, .7]]) {
+  const light = new THREE.DirectionalLight(0xffffff, .58); light.position.set(x, y, z); scene.add(light); lights.push([light, .58]);
+}
+// In game GeckoLib mirrors the model's X, so the Roc's left wing is on its left.
+const roc = new THREE.Group(); roc.scale.x = -1; scene.add(roc);
+
+const ground = new THREE.Group(); scene.add(ground);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(90, 90), new THREE.MeshLambertMaterial({color: 0x9b9f99}));
+floor.rotation.x = -Math.PI / 2; ground.add(floor);
+const grid = new THREE.GridHelper(90, 45, 0x7d827d, 0x8c918b); grid.position.y = .02; ground.add(grid);
+const spire = new THREE.Mesh(new THREE.CylinderGeometry(2.7, 6.5, 30, 7, 1), new THREE.MeshLambertMaterial({color: 0x8f918d, flatShading: true}));
+scene.add(spire);
+// A player, 1.8 blocks tall, for scale.
+const player = new THREE.Group();
+for (const [w, h, d, x, y, c] of [[.25, .75, .25, -.125, .375, 0x3b4466], [.25, .75, .25, .125, .375, 0x3b4466],
+  [.5, .75, .25, 0, 1.125, 0x2f8a8a], [.25, .75, .25, -.375, 1.125, 0xb88a66], [.25, .75, .25, .375, 1.125, 0xb88a66], [.5, .5, .5, 0, 1.55, 0xb88a66]]) {
+  const box = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({color: c}));
+  box.position.set(x, y, 0); player.add(box);
+}
+player.position.set(-7, 0, -11); player.rotation.y = .6; scene.add(player);
+
+// The Thunder Bite's leap: the server carries it forward during the lunge (1.9-2.2 s) to bite
+// where its prey stood when the aim locked, up to 10 blocks. The viewer shows a 6-block leap,
+// with the player standing there, and the burst of crackles out to the bite's 5-block reach.
+const BITE_RADIUS = 5, BITE_LEAP = 6, BITE_IMPACT = {bite: 2.3, bite_leap: 2.8}, BITE_AT = {bite: [0, 1.126, -13.563], bite_leap: [0, 1.126, -13.668]};
+const POUNCE_LAUNCH = 1.6, POUNCE_IMPACT = 2.6, POUNCE_LEAP = 18;
+const isBite = () => state.clip === 'bite' || state.clip === 'bite_leap';
+const smoothstep = f => f * f * (3 - 2 * f);
+// The leap's travel is the server's: from push-off (2.15) to landing (2.75), in an arc.
+function biteLeap(t) {
+  if (state.clip === 'wing_spiral') {
+    // The game would carry it: a corkscrew climb up a 3-block helix to 18 blocks by 2.15 s (one turn,
+    // its heading following the helix as it barrel-rolls twice), a stall at the top to 2.55, then
+    // the dive, gathering speed, to land at 3.25.
+    const ease = f => f * f * (3 - 2 * f), clamp = f => Math.min(1, Math.max(0, f));
+    const climb = clamp((t - .85) / 1.3), theta = ease(climb) * Math.PI * 2, r = 3;
+    let h = 0;
+    if (t > .85 && t <= 2.15) h = 18 * (1 - (1 - climb) ** 2);
+    else if (t > 2.15 && t <= 2.55) h = 18 + .2 * Math.sin((t - 2.15) * 8);
+    else if (t > 2.55 && t <= 3.25) h = 18 * (1 - ((t - 2.55) / .7) ** 2);
+    roc.position.set(t > .85 && t <= 2.15 ? r * (Math.cos(theta) - 1) : 0, Math.max(0, h), t > .85 && t <= 2.15 ? -r * Math.sin(theta) : 0);
+    return 0;
+  }
+  if (state.clip === 'wing') {
+    // The Thunderclap's leap is the server's too: up 9 blocks from 0.85 s, slowing to its apex at
+    // 1.75, a hang to 2.05, then gathering speed down to land at 2.60.
+    const k = t * 20;
+    const h = k <= 17 ? 0 : k <= 35 ? 9 * (1 - (1 - (k - 17) / 18) ** 2) : k <= 41 ? 9 + .15 * Math.sin((k - 35) * .5) : k <= 52 ? 9 * (1 - ((k - 41) / 11) ** 2) : 0;
+    roc.position.set(0, Math.max(0, h), 0); return 0;
+  }
+  if (state.clip === 'pounce') {
+    // The Raptor Strike's leap is the server's: from push-off (1.60) straight at its prey at an even
+    // pace, springing up to 4 blocks and gliding down onto it at 2.60.
+    const f = Math.min(1, Math.max(0, (t - POUNCE_LAUNCH) / (POUNCE_IMPACT - POUNCE_LAUNCH)));
+    roc.position.set(0, Math.sin(Math.PI * f ** .7) * 4, -POUNCE_LEAP * f); return 0;
+  }
+  if (state.clip !== 'bite_leap') { roc.position.set(0, 0, 0); return 0; }
+  const f = smoothstep(Math.min(1, Math.max(0, (t - 2.15) / .6)));
+  roc.position.set(0, Math.sin(f * Math.PI) * Math.min(3.5, 1.5 + BITE_LEAP / 4), -BITE_LEAP * f);
+  return f;
+}
+// The bite windup's mouth crackles (the game draws them with its spark sprites): a flickering
+// stand-in at each corner of the mouth and along each side of the lower jaw, until the bite.
+const MOUTH_SPARKS = [['head', [7.5, 162.5, -37.5], .8], ['head', [-7.5, 162.5, -37.5], .8],
+  ['lower_beak', [6.5, 158.5, -45], .55], ['lower_beak', [-6.5, 158.5, -45], .55]];
+const sparkCanvas = document.createElement('canvas'); sparkCanvas.width = sparkCanvas.height = 64;
+{
+  const g = sparkCanvas.getContext('2d'); g.strokeStyle = '#fffbe8'; g.lineWidth = 5; g.lineJoin = 'miter';
+  g.shadowColor = '#ffd27a'; g.shadowBlur = 10;
+  for (const [x0, y0, x1, y1, x2, y2, x3, y3] of [[6, 30, 22, 18, 34, 40, 58, 26], [20, 6, 28, 26, 40, 22, 44, 58]]) {
+    g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.lineTo(x2, y2); g.lineTo(x3, y3); g.stroke();
+  }
+}
+const sparkTexture = new THREE.CanvasTexture(sparkCanvas);
+const mouthSparks = MOUTH_SPARKS.map(() => {
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map: sparkTexture, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending}));
+  sprite.visible = false; roc.add(sprite); return sprite;
+});
+const burstSparks = Array.from({length: 16}, () => {
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map: sparkTexture, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending}));
+  sprite.visible = false; scene.add(sprite); return sprite;
+});
+let boneIndex = null;
+function mouthOverlay(t) {
+  const burst = (t - (BITE_IMPACT[state.clip] || 2.3)) / .45, on = isBite() && burst < 1 || state.clip === 'scream' && t >= 1.6 && t < 2.3;
+  const grow = t < 1.2 ? 1 : burst < 0 ? 1.35 : 2.2 * (1 - burst) + .2;
+  boneIndex ??= Object.fromEntries(data.parts.map((part, i) => [part.bone, i]));
+  MOUTH_SPARKS.forEach(([bone, pivot, size], i) => {
+    const sprite = mouthSparks[i]; sprite.visible = on;
+    if (!on) return;
+    const flicker = Math.floor(performance.now() / 55) + i * 7;
+    sprite.position.set(...pivot.map(v => v * data.scale)).applyMatrix4(parts[boneIndex[bone]].matrix);
+    sprite.material.rotation = (flicker * 2.39996) % (Math.PI * 2);
+    sprite.material.opacity = .65 + .35 * Math.abs(Math.sin(flicker * 1.7));
+    sprite.scale.setScalar(size * grow * (1.2 + .25 * Math.sin(flicker * 2.3)));
+  });
+  const bill = new THREE.Vector3(...(BITE_AT[state.clip] || BITE_AT.bite)); if (state.clip === 'bite_leap') bill.z -= BITE_LEAP;
+  burstSparks.forEach((sprite, i) => {
+    sprite.visible = isBite() && burst >= 0 && burst < 1;
+    if (!sprite.visible) return;
+    const y = 1 - 2 * (i + .5) / 16, ring = Math.sqrt(1 - y * y), a = i * 2.39996;
+    const reach = BITE_RADIUS * Math.min(1, .35 + burst * 1.6) * (.55 + .45 * (i % 3) / 2);
+    sprite.position.set(bill.x + Math.cos(a) * ring * reach, bill.y + y * .6 * reach, bill.z + Math.sin(a) * ring * reach);
+    const flicker = Math.floor(performance.now() / 55) + i * 5;
+    sprite.material.rotation = (flicker * 2.39996) % (Math.PI * 2);
+    sprite.material.opacity = (1 - burst) * (.7 + .3 * Math.abs(Math.sin(flicker)));
+    sprite.scale.setScalar(1.4 * (1 - .4 * burst));
+  });
+}
+// The Storm Sweep's crackle wave: a crescent across the swept front (80 degrees each side of
+// ahead), rolling out from the bill's arc (11 blocks) at 1.25 blocks a tick to 22, from 1.6 s.
+const WAVE = {start: 1.6, from: 11, to: 22, half: 80 * Math.PI / 180, speed: 25};
+const waveSparks = Array.from({length: 28}, () => {
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map: sparkTexture, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending}));
+  sprite.visible = false; scene.add(sprite); return sprite;
+});
+function waveOverlay(t) {
+  const age = t - WAVE.start, r = WAVE.from + age * WAVE.speed;
+  const on = state.clip.startsWith('swing') && age >= 0 && r < WAVE.to + 3;
+  waveSparks.forEach((sprite, i) => {
+    sprite.visible = on;
+    if (!on) return;
+    const a = -WAVE.half + 2 * WAVE.half * (i + .5) / waveSparks.length, flicker = Math.floor(performance.now() / 55) + i * 5;
+    sprite.position.set(Math.sin(a) * Math.min(r, WAVE.to), .6, -Math.cos(a) * Math.min(r, WAVE.to));
+    sprite.material.rotation = (flicker * 2.39996) % (Math.PI * 2);
+    sprite.material.opacity = Math.min(1, (WAVE.to + 3 - r) / 3) * (.7 + .3 * Math.abs(Math.sin(flicker)));
+    sprite.scale.setScalar(1.6);
+  });
+}
+// The Storm Scream's line: crackles racing ahead from the bill, 6 blocks wide, from 1.6 s for 0.7 s.
+const SCREAM_START = 12.0;
+const screamSparks = Array.from({length: 40}, () => {
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map: sparkTexture, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending}));
+  sprite.visible = false; scene.add(sprite); return sprite;
+});
+function screamOverlay(t) {
+  const age = t - 1.6, ticks = age * 20, on = state.clip === 'scream' && age >= 0 && ticks < 14;
+  const flicker = Math.floor(ticks / 2), noise = k => { const x = Math.sin(k * 127.1 + 311.7) * 43758.5453; return (x - Math.floor(x)) * 2 - 1; };
+  screamSparks.forEach((sprite, j) => {
+    sprite.visible = on;
+    if (!on) return;
+    const along = j < 8 ? j * .8 * Math.min(1, ticks / 2 + .2) : (j * 2.9 + ticks * 4.5) % 110;
+    sprite.position.set(noise(j * 7 + flicker * 13) * 3 * .8, 1 + noise(j * 13 + flicker * 5) * 1.5, -(SCREAM_START + along));
+    sprite.material.opacity = Math.min(1, (14 - ticks) / 5) * (.75 + .25 * Math.abs(Math.sin(j + ticks)));
+    sprite.scale.setScalar(j < 8 ? 2.4 : 1.7);
+  });
+}
+// The scream's breath: crackles at the tips of its flared crest plumes, until the blast.
+const CREST_SPARKS = [['crest_plume_0_0', [-8.5, 199.5, -2.7], .7], ['crest_plume_0_1', [-1, 200.5, -8.3], .75], ['crest_plume_0_2', [6.6, 198.4, -1.4], .7],
+  ['crest_plume_1_0', [-6.5, 196.6, 10.6], .5], ['crest_plume_1_2', [6.5, 196.6, 10.6], .5], ['crest_plume_2_1', [1, 191.6, 18.5], .6]];
+const crestSparks = CREST_SPARKS.map(() => {
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map: sparkTexture, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending}));
+  sprite.visible = false; roc.add(sprite); return sprite;
+});
+function crestOverlay(t) {
+  const on = state.clip === 'scream' && t > .3 && t < 1.6, grow = .6 + .9 * Math.min(1, t / 1.6);
+  boneIndex ??= Object.fromEntries(data.parts.map((part, i) => [part.bone, i]));
+  CREST_SPARKS.forEach(([bone, pivot, size], i) => {
+    const sprite = crestSparks[i]; sprite.visible = on && boneIndex[bone] !== undefined;
+    if (!sprite.visible) return;
+    const flicker = Math.floor(performance.now() / 55) + i * 7;
+    sprite.position.set(...pivot.map(v => v * data.scale)).applyMatrix4(parts[boneIndex[bone]].matrix);
+    sprite.material.rotation = (flicker * 2.39996) % (Math.PI * 2);
+    sprite.material.opacity = .65 + .35 * Math.abs(Math.sin(flicker * 1.7));
+    sprite.scale.setScalar(size * grow * (1.2 + .25 * Math.sin(flicker * 2.3)));
+  });
+}
+// The Thunderclap's ring: crackles all round, rolling out from the Roc at 1.25 blocks a tick to 16.
+const clapSparks = Array.from({length: 48}, () => {
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map: sparkTexture, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending}));
+  sprite.visible = false; scene.add(sprite); return sprite;
+});
+function clapOverlay(t) {
+  const ticks = (t - (state.clip === 'wing_spiral' ? 3.25 : 2.6)) * 20, r = Math.min(16, ticks * 1.25),
+    on = (state.clip === 'wing' || state.clip === 'wing_spiral') && ticks >= 0 && ticks < 16;
+  clapSparks.forEach((sprite, i) => {
+    sprite.visible = on && r > .5;
+    if (!sprite.visible) return;
+    const a = Math.PI * 2 * (i + .5) / clapSparks.length, flicker = Math.floor(performance.now() / 55) + i * 5;
+    sprite.position.set(Math.cos(a) * r, .6, Math.sin(a) * r);
+    sprite.material.rotation = (flicker * 2.39996) % (Math.PI * 2);
+    sprite.material.opacity = Math.min(1, (16 - ticks) / 3) * (.7 + .3 * Math.abs(Math.sin(flicker)));
+    sprite.scale.setScalar(1.5);
+  });
+}
+// The wing edges' crackles: as the Thunderclap's wings rise, and as the Storm Spiral spins, a disc of lightning.
+const WING_EDGE = [['wing_wrist', [171.8, 90.5, -34.0], .9], ['primary_09', [228.2, 88.1, 13.7], 1.0], ['primary_06', [204.8, 85.9, 37.9], .7], ['primary_03', [177.2, 80.5, 60.1], .8]];
+const WING_SPARK_SET = ['left', 'right'].flatMap(side => WING_EDGE.map(([bone, [x, y, z], size]) => [`${side}_${bone}`, [side === 'left' ? x : -x, y, z], size]));
+const wingSparks = WING_SPARK_SET.map(() => {
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map: sparkTexture, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending}));
+  sprite.visible = false; roc.add(sprite); return sprite;
+});
+function wingEdgeOverlay(t) {
+  const on = state.clip === 'wing' && t > .2 && t < 2.7 || state.clip === 'wing_spiral' && t > .8 && t < 3.3;
+  boneIndex ??= Object.fromEntries(data.parts.map((part, i) => [part.bone, i]));
+  WING_SPARK_SET.forEach(([bone, pivot, size], i) => {
+    const sprite = wingSparks[i]; sprite.visible = on && boneIndex[bone] !== undefined;
+    if (!sprite.visible) return;
+    const flicker = Math.floor(performance.now() / 55) + i * 7;
+    sprite.position.set(...pivot.map(v => v * data.scale)).applyMatrix4(parts[boneIndex[bone]].matrix);
+    sprite.material.rotation = (flicker * 2.39996) % (Math.PI * 2);
+    sprite.material.opacity = .65 + .35 * Math.abs(Math.sin(flicker * 1.7));
+    sprite.scale.setScalar(size * 1.6 * (1.2 + .25 * Math.sin(flicker * 2.3)));
+  });
+}
+// The Raptor Strike's talons crackle from its coil until they strike, at the tips of the front toes.
+const TALON_SPARK_SET = ['left', 'right'].flatMap(side => [[0, -.7, -51.6, .55], [1, 14.2, -53.3, .75], [2, 27.7, -51.6, .55]]
+  .map(([i, x, z, size]) => [`${side}_toe_${i}_tip`, [side === 'left' ? x : -x, 1.2, z], size]));
+const talonSparks = TALON_SPARK_SET.map(() => {
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map: sparkTexture, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending}));
+  sprite.visible = false; roc.add(sprite); return sprite;
+});
+// Its landing shockwave: a dust ring rolling out at 1.25 blocks a tick to 26 (a plain stand-in).
+const shock = new THREE.Mesh(new THREE.RingGeometry(.92, 1, 96), new THREE.MeshBasicMaterial({color: 0xd9cbb0, transparent: true, side: THREE.DoubleSide, depthWrite: false}));
+shock.rotation.x = -Math.PI / 2; shock.visible = false; scene.add(shock);
+function talonOverlay(t) {
+  const on = state.clip === 'pounce' && t >= 1.2 && t < POUNCE_IMPACT + .4;
+  boneIndex ??= Object.fromEntries(data.parts.map((part, i) => [part.bone, i]));
+  const grow = t < POUNCE_IMPACT ? .8 + .6 * (t - 1.2) / (POUNCE_IMPACT - 1.2) : 2 * (1 - (t - POUNCE_IMPACT) / .4) + .3;
+  TALON_SPARK_SET.forEach(([bone, pivot, size], i) => {
+    const sprite = talonSparks[i]; sprite.visible = on && boneIndex[bone] !== undefined;
+    if (!sprite.visible) return;
+    const flicker = Math.floor(performance.now() / 55) + i * 7;
+    sprite.position.set(...pivot.map(v => v * data.scale)).applyMatrix4(parts[boneIndex[bone]].matrix);
+    sprite.material.rotation = (flicker * 2.39996) % (Math.PI * 2);
+    sprite.material.opacity = .65 + .35 * Math.abs(Math.sin(flicker * 1.7));
+    sprite.scale.setScalar(size * 1.6 * grow * (1.2 + .25 * Math.sin(flicker * 2.3)));
+  });
+  const ticks = (t - POUNCE_IMPACT) * 20, r = Math.min(26, ticks * 1.25);
+  shock.visible = state.clip === 'pounce' && ticks >= 0 && ticks < 23 && r > .5;
+  if (shock.visible) {
+    shock.scale.setScalar(r); shock.position.set(0, .4, -POUNCE_LEAP);
+    shock.material.opacity = .75 * Math.min(1, (23 - ticks) / 4);
+  }
+}
+function biteOverlay(t) {
+  talonOverlay(t);
+  wingEdgeOverlay(t);
+  clapOverlay(t);
+  crestOverlay(t);
+  biteLeap(t);
+  mouthOverlay(t);
+  waveOverlay(t);
+  screamOverlay(t);
+}
+
+
+function decode(b64) {
+  const bin = atob(b64), bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Float32Array(bytes.buffer);
+}
+function matrices(name) { return decoded[name] ??= decode(data.clips[name].matrices); }
+
+function pose(name, t) {
+  const clip = data.clips[name], m = matrices(name), n = parts.length;
+  const f = Math.min(Math.max(t, 0), clip.duration) * (clip.fps ?? data.fps);
+  const i = Math.min(Math.floor(f), clip.frames - 1), j = Math.min(i + 1, clip.frames - 1), a = f - Math.floor(f);
+  for (let p = 0; p < n; p++) {
+    const A = (i * n + p) * 12, B = (j * n + p) * 12, v = k => m[A + k] + (m[B + k] - m[A + k]) * a;
+    parts[p].matrix.set(v(0), v(3), v(6), v(9), v(1), v(4), v(7), v(10), v(2), v(5), v(8), v(11), 0, 0, 0, 1);
+    parts[p].matrixWorldNeedsUpdate = true;
+  }
+}
+
+// The player's view: eyes 1.6 blocks up where the player figure stands (hidden), a wide lens like
+// the game's, always looking at the Roc's head as you would in the fight.
+const headAt = new THREE.Vector3();
+function placeCamera() {
+  player.visible = state.view !== 'player' && !SPIRE.has(state.clip);
+  if (state.view === 'player' && data) {
+    camera.fov = 70; camera.updateProjectionMatrix();
+    const index = data.parts.findIndex(part => part.bone === 'head');
+    roc.updateMatrixWorld(true); headAt.set(0, 165 * data.scale, -22 * data.scale).applyMatrix4(parts[index].matrixWorld);
+    camera.position.set(player.position.x, player.position.y + 1.62, player.position.z);
+    camera.lookAt(headAt.x, headAt.y - 1, headAt.z);
+    return;
+  }
+  if (camera.fov !== 38) { camera.fov = 38; camera.updateProjectionMatrix(); }
+  const y = THREE.MathUtils.degToRad(state.yaw), p = THREE.MathUtils.degToRad(state.pitch);
+  camera.position.set(state.target.x + state.dist * Math.sin(y) * Math.cos(p),
+    state.target.y + state.dist * Math.sin(p), state.target.z - state.dist * Math.cos(y) * Math.cos(p));
+  camera.lookAt(state.target);
+}
+const VIEWS = {three: [-38, 12], side: [90, 6], front: [0, 6], head: [-32, 6], player: [0, 0]};
+function setView(view) {
+  state.view = view;
+  const clip = data.clips[state.clip], [yaw, pitch] = VIEWS[view];
+  state.yaw = yaw; state.pitch = pitch;
+  if (view === 'head') { state.target.set(0, clip.head[1], clip.head[2]); state.dist = 11; }
+  else { state.target.set(0, clip.body[1] - 1, clip.body[2] - (state.clip === 'pounce' ? POUNCE_LEAP / 2 : 0)); state.dist = WIDE.has(state.clip) ? 46 : 36; }
+  for (const [id, v] of [['camThree', 'three'], ['camSide', 'side'], ['camFront', 'front'], ['camHead', 'head'], ['camPlayer', 'player']])
+    $(id).setAttribute('aria-pressed', String(v === view));
+}
+
+function selectClip(name) {
+  state.clip = name; state.t = 0; state.hold = 0;
+  const clip = data.clips[name], info = CLIPS[name];
+  for (const b of document.querySelectorAll('.clip')) b.setAttribute('aria-pressed', String(b.dataset.clip === name));
+  $('hudName').textContent = info.name;
+  $('hudMeta').textContent = `${clip.duration.toFixed(1)} s · ${Math.round(clip.duration * 20)} ticks${clip.loop ? ' · loop' : ''}`;
+  const spireClip = SPIRE.has(name);
+  spire.visible = spireClip; spire.position.y = clip.feet - .45 - 15;
+  ground.position.y = spireClip ? -40 : 0; player.visible = !spireClip;
+  // For the bite, the player stands where it bites, so you can see the head stay on them.
+  if (name === 'bite') player.position.set(0, 0, -13.56); else if (name === 'bite_leap') player.position.set(0, 0, -13.67 - BITE_LEAP);
+  // The pounce's prey has dodged: it stands just clear of the crush, beside where the Roc lands.
+  else if (name === 'pounce') player.position.set(-6.5, 0, -POUNCE_LEAP - 1); else player.position.set(-7, 0, -11);
+  $('scrub').max = clip.duration;
+  // Server ticks: a short mark every tick, a tall one every second.
+  const ticks = $('ticks'); ticks.textContent = '';
+  const total = Math.round(clip.duration * 20);
+  for (let k = 0; k <= total; k++) {
+    const i = document.createElement('i'); i.style.left = `${k / total * 100}%`;
+    if (k % 20 === 0) i.className = 'sec'; if (total <= 80 || k % 2 === 0 || k % 20 === 0) ticks.append(i);
+  }
+  const marks = $('marks'); marks.textContent = '';
+  for (const [from, to] of info.marks || []) {
+    const m = document.createElement('div'); m.className = 'mark';
+    m.style.left = `${from / clip.duration * 100}%`; m.style.width = `${Math.max(.6, (to - from) / clip.duration * 100)}%`;
+    marks.append(m);
+  }
+  setView(state.view === 'head' ? 'head' : state.view);
+  pose(name, 0);
+}
+
+function readout() {
+  const clip = data.clips[state.clip], t = Math.min(state.t, clip.duration);
+  $('clock').textContent = `tick ${Math.round(t * 20)} / ${Math.round(clip.duration * 20)} · ${t.toFixed(2)} s`;
+  $('fill').style.width = `${t / clip.duration * 100}%`;
+  $('scrub').value = t;
+  const hit = (CLIPS[state.clip].marks || []).find(([a, b]) => t >= a - .051 && t <= b + .051);
+  $('hitLabel').textContent = hit ? `◆ ${hit[2]} · tick ${Math.round(hit[0] * 20)}` : '';
+}
+
+function setPlaying(on) {
+  state.playing = on;
+  $('play').setAttribute('aria-label', on ? 'Pause' : 'Play');
+  $('playIcon').innerHTML = on ? '<rect x="3" y="2" width="3.5" height="12"/><rect x="9.5" y="2" width="3.5" height="12"/>' : '<path d="M4 2l10 6-10 6z"/>';
+}
+
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(stage);
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(.1, (now - last) / 1000); last = now;
+  if (data) {
+    const clip = data.clips[state.clip];
+    if (state.playing) {
+      if (state.t >= clip.duration && !clip.loop) {
+        state.hold += dt;
+        if (state.hold > .8) { state.t = 0; state.hold = 0; }
+      } else {
+        state.t += dt * state.speed;
+        if (clip.loop) state.t %= clip.duration;
+      }
+    }
+    if (state.spin) state.yaw += dt * 14;
+    pose(state.clip, state.t); biteOverlay(state.t); readout();
+  }
+  placeCamera(); renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+
+// Orbit: drag to turn, wheel or pinch to zoom.
+const pointers = new Map(); let pinch = 0;
+stage.addEventListener('pointerdown', e => { if (e.target.closest('button')) return; stage.setPointerCapture(e.pointerId); pointers.set(e.pointerId, [e.clientX, e.clientY]); });
+stage.addEventListener('pointermove', e => {
+  if (!pointers.has(e.pointerId)) return;
+  const [x, y] = pointers.get(e.pointerId); pointers.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pointers.size === 1) {
+    state.yaw -= (e.clientX - x) * .35; state.pitch = Math.max(-8, Math.min(80, state.pitch + (e.clientY - y) * .3));
+  } else if (pointers.size === 2) {
+    const [a, b] = [...pointers.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+    if (pinch) state.dist = Math.max(6, Math.min(130, state.dist * pinch / d)); pinch = d;
+  }
+});
+for (const type of ['pointerup', 'pointercancel']) stage.addEventListener(type, e => { pointers.delete(e.pointerId); pinch = 0; });
+stage.addEventListener('wheel', e => { e.preventDefault(); state.dist = Math.max(6, Math.min(130, state.dist * (1 + e.deltaY * .001))); }, {passive: false});
+stage.addEventListener('dblclick', () => setView(state.view));
+
+$('play').addEventListener('click', () => setPlaying(!state.playing));
+$('scrub').addEventListener('input', e => { state.t = +e.target.value; state.hold = 0; setPlaying(false); });
+for (const b of document.querySelectorAll('.speeds button')) b.addEventListener('click', () => {
+  state.speed = +b.dataset.speed;
+  for (const o of document.querySelectorAll('.speeds button')) o.setAttribute('aria-pressed', String(o === b));
+});
+for (const [id, v] of [['camThree', 'three'], ['camSide', 'side'], ['camFront', 'front'], ['camHead', 'head'], ['camPlayer', 'player']])
+  $(id).addEventListener('click', () => setView(v));
+$('camSpin').addEventListener('click', () => { state.spin = !state.spin; $('camSpin').setAttribute('aria-pressed', String(state.spin)); });
+// Storm light: the summit under the phase-two storm, dark enough to see the eyes glow.
+$('camDark').addEventListener('click', () => {
+  const dark = !stage.classList.contains('dark'); stage.classList.toggle('dark', dark);
+  for (const [light, level] of lights) light.intensity = level * (dark ? .32 : 1);
+  $('camDark').setAttribute('aria-pressed', String(dark));
+});
+
+function buildList() {
+  const aside = $('clips');
+  for (const [title, names] of GROUPS) {
+    const group = document.createElement('div'); group.className = 'group';
+    const h = document.createElement('h2'); h.textContent = title; group.append(h);
+    for (const name of names) {
+      const clip = data.clips[name], info = CLIPS[name], b = document.createElement('button');
+      b.className = 'clip'; b.dataset.clip = name; b.setAttribute('aria-pressed', 'false');
+      b.innerHTML = `<span class="row"><b></b><span class="len">${clip.duration.toFixed(1)} s${clip.loop ? ' · <em>loop</em>' : ''}</span></span>${info.tag ? `<span class="new">${info.tag}</span>` : ''}<span class="d"></span>`;
+      b.querySelector('b').textContent = info.name; b.querySelector('.d').textContent = info.d;
+      b.addEventListener('click', () => { selectClip(name); if (!reduce) setPlaying(true); });
+      group.append(b);
+    }
+    aside.append(group);
+  }
+}
+
+async function start() {
+  const [json, atlas, glow] = await Promise.all([
+    fetch('roc.json', {cache: 'no-cache'}).then(r => { if (!r.ok) throw Error(r.status); return r.json(); }),
+    new THREE.TextureLoader().loadAsync('storm_roc.png'), new THREE.TextureLoader().loadAsync('storm_roc_glowmask.png')]);
+  data = json;
+  for (const tex of [atlas, glow]) { tex.flipY = false; tex.magFilter = tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false; tex.needsUpdate = true; }
+  const material = new THREE.MeshLambertMaterial({map: atlas, emissiveMap: glow, emissive: 0xffffff, side: THREE.DoubleSide, alphaTest: .5});
+  let triangles = 0;
+  for (const part of data.parts) {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(part.positions, 3));
+    g.setAttribute('normal', new THREE.Float32BufferAttribute(part.normals, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(part.uvs, 2));
+    const mesh = new THREE.Mesh(g, material); mesh.matrixAutoUpdate = false; roc.add(mesh); parts.push(mesh);
+    triangles += part.positions.length / 9;
+  }
+  $('stats').innerHTML = `<span><b>${Math.round(triangles / 12)}</b> blocks</span><span><b>${atlas.image.width}×${atlas.image.height}</b> pixel-art texture</span><span><b>${parts.length}</b> moving parts</span><span><b>16</b> clips</span><span><b>1.25×</b> scale · 34-block wingspan</span>`;
+  buildList(); selectClip(state.clip); setPlaying(state.playing);
+  $('loading').hidden = true;
+}
+start().catch(err => { $('loading').textContent = `Couldn't load the model (${err.message}). Reload the page to try again.`; });
+requestAnimationFrame(frame);
+</script>

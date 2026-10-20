@@ -27,6 +27,8 @@ import net.minecraft.util.math.*;
 
 /** Dedicated, real-damage scripted phase-one regression; never a balance approval. */
 public final class StormRocServerSmoke implements ModInitializer {
+    /** A quick head attack that only puts the Roc in its brawl: it sweeps where its target first stood, so it can't follow them into a later check. */
+    private static final StormRocRules.Action SETUP=StormRocRules.Action.SWING_LEFT;
     private int tick, step, elapsed, melee;
     private StormRocEntity boss;
     private ServerPlayerEntity target, dodge, outsider;
@@ -79,7 +81,7 @@ public final class StormRocServerSmoke implements ModInitializer {
                 require(p.getArmor()==20&&Math.abs(p.getAttributeValue(EntityAttributes.ARMOR_TOUGHNESS)-8)<.001,"Dummy diamond armor attributes were not installed");
             }
             boss=new StormRocEntity(ModEntities.STORM_ROC,world);boss.startFight(CENTRE,List.of(target,dodge));world.spawnEntity(boss);
-            boss.testAction(target,StormRocRules.Action.PECK);
+            boss.testAction(target,SETUP);
             beginStrike(false);return;
         }
         if(boss==null)return;
@@ -95,11 +97,11 @@ public final class StormRocServerSmoke implements ModInitializer {
                 if(elapsed==29)require(target.getHealth()==before,"Large strike hit before warning elapsed");
                 if(elapsed==33)damage(before-target.getHealth(),16,"Large first bolt diamond damage");
                 if(elapsed==54){damage(before-target.getHealth(),48,"Large triple bolt damage");checks.add("Large warning and three full repeated bolts");next();
-                    target.setHealth(200);dodge.setHealth(200);boss.testAction(target,StormRocRules.Action.PECK);strike=boss.testStrike(target.getEntityPos(),false);
+                    target.setHealth(200);dodge.setHealth(200);boss.testAction(target,SETUP);strike=boss.testStrike(target.getEntityPos(),false);
                     target.setPosition(53.5,101,.5);}
             }
             case 2 -> {
-                if(elapsed==35){require(target.getHealth()==200,"Marked strike tracked a dodging player");checks.add("Locked strike aim and moving dodge");boss.testAction(target,StormRocRules.Action.PECK);
+                if(elapsed==35){require(target.getHealth()==200,"Marked strike tracked a dodging player");checks.add("Locked strike aim and moving dodge");boss.testAction(target,SETUP);
                     RocEffectEntity a=boss.testStrike(target.getEntityPos(),false),b=boss.testStrike(target.getEntityPos(),true);
                     require(a!=null&&b!=null&&a.getEntityPos().subtract(b.getEntityPos()).horizontalLength()>=Math.max(a.radius(),b.radius())+.04,"Lightning circle centers stacked inside one another");
                     require(!boss.damage(world,outsider.getDamageSources().playerAttack(outsider),100),"Outsider damaged Roc");
@@ -108,7 +110,7 @@ public final class StormRocServerSmoke implements ModInitializer {
             case 3 -> {
                 if(elapsed==5){
                     require(effects().isEmpty(),"Stop left Roc effects alive");require(target.getHealth()==200,"Cancelled strike still damaged");checks.add("Cancellation clears effects and delayed damage");
-                    boss.startFight(CENTRE,List.of(target,dodge));boss.testAction(target,StormRocRules.Action.PECK);
+                    boss.startFight(CENTRE,List.of(target,dodge));boss.testAction(target,SETUP);
                     target.setPosition(-10,101,.5);target.setHealth(200);target.setVelocity(Vec3d.ZERO);tornado=boss.testTornado(target.getEntityPos());
                 }
                 if(elapsed==6+StormRocRules.TORNADO_HOLD/2)require(target.getVelocity().y>.5&&target.getHealth()==200,"Tornado did not catch and whirl its challenger up unhurt: "+target.getVelocity());
@@ -156,7 +158,7 @@ public final class StormRocServerSmoke implements ModInitializer {
                 if(elapsed==2)require(boss.combat().stage()==StormRocRules.Stage.TAKEOFF,"Landing quota did not trigger takeoff: "+boss.status());
                 if(elapsed>StormRocRules.TAKEOFF_TICKS+5){
                     require(!boss.phaseTwo()&&boss.stage()!=StormRocRules.Stage.CHARGE,"First landing ended entire phase");checks.add("Landing health quota triggers takeoff safely");
-                    boss.testAction(target,StormRocRules.Action.PECK);boss.setHealth(boss.getMaxHealth()*.5f);next();
+                    boss.testAction(target,SETUP);boss.setHealth(boss.getMaxHealth()*.5f);next();
                 }
             }
             case 6 -> {
@@ -220,7 +222,7 @@ public final class StormRocServerSmoke implements ModInitializer {
                         throw new AssertionError("Retry active boss not queryable within20ticks: "+retryDiagnostics(reference));
                     }
                     boss=found.get();
-                    boss.testAction(dodge,StormRocRules.Action.PECK);boss.setHealth(boss.getMaxHealth()*.5f);next();
+                    boss.testAction(dodge,SETUP);boss.setHealth(boss.getMaxHealth()*.5f);next();
                 }
             }
             case 10 -> {
@@ -287,31 +289,56 @@ public final class StormRocServerSmoke implements ModInitializer {
                     dodge.setPosition(50.5,101,45.5);dodge.setHealth(200);outsider.setHealth(200);
                     boss.testAction(target,action);
                     Vec3d point=switch(action){
-                        case PECK,SWING_LEFT,SWING_RIGHT -> boss.modelToWorld(StormRocPose.socket(action.pose,action==StormRocRules.Action.PECK?12:20,"beak"));
-                        case SCREAM -> boss.modelToWorld(StormRocPose.socket(action.pose,24,"beak")).add(Vec3d.fromPolar(0,boss.getYaw()).multiply(20));
+                        case BITE,SWING_LEFT,SWING_RIGHT -> boss.modelToWorld(StormRocPose.socket(action.pose,action==StormRocRules.Action.BITE?action.impact:action.impact+StormRocRules.SWING_SWEEP/2,"beak"));
+                        case SCREAM -> boss.modelToWorld(StormRocPose.socket(action.pose,action.impact,"beak")).add(Vec3d.fromPolar(0,boss.getYaw()).multiply(20));
                         case WING -> new Vec3d(12.5,101,.5);
                         case POUNCE -> new Vec3d(.5,101,30.5);
                         case STAMPEDE -> new Vec3d(.5,101,45.5);
                     };
+                    // The bite's prey stands 6 blocks beyond its bill's reach: it must leap to bite there.
+                    if(action==StormRocRules.Action.BITE)point=point.add(Vec3d.fromPolar(0,boss.getYaw()).multiply(6));
                     target.setPosition(point.x,101,point.z);outsider.setPosition(point.x,101,point.z);
                     if(action==StormRocRules.Action.SWING_LEFT||action==StormRocRules.Action.SWING_RIGHT||action==StormRocRules.Action.WING)dodge.setPosition(point.x,135,point.z);
+                    // The bite's burst reaches past its target: a player 4.5 blocks to the side is caught too.
+                    if(action==StormRocRules.Action.BITE){Vec3d side=Vec3d.fromPolar(0,boss.getYaw()+90).multiply(4.5);dodge.setPosition(point.x+side.x,101,point.z+side.z);dodge.setVelocity(Vec3d.ZERO);}
                 }
-                int hitAt=action==StormRocRules.Action.SWING_LEFT||action==StormRocRules.Action.SWING_RIGHT?25:action==StormRocRules.Action.STAMPEDE?55:action.impact+1;
+                int hitAt=action==StormRocRules.Action.SWING_LEFT||action==StormRocRules.Action.SWING_RIGHT?action.impact+StormRocRules.SWING_SWEEP+1:action==StormRocRules.Action.STAMPEDE?55
+                        :action==StormRocRules.Action.BITE?StormRocRules.BITE_LEAP_IMPACT+1
+                        // The Thunderclap's ring rolls out from the clap and reaches its target 12 blocks off later.
+                        :action==StormRocRules.Action.WING?action.impact+12:action.impact+1;
+                // Its bite's prey stands out of reach, so it plays the longer leap.
+                int done=action==StormRocRules.Action.BITE?StormRocRules.BITE_LEAP_DURATION:action.duration;
                 if(elapsed==hitAt){
-                    float expected=switch(action){case PECK,SWING_LEFT,SWING_RIGHT->10;case SCREAM,STAMPEDE->16;case WING->4;case POUNCE->20;};
+                    float expected=switch(action){case SWING_LEFT,SWING_RIGHT->10;case BITE,SCREAM,STAMPEDE->16;case WING->6;case POUNCE->20;};
                     damage(200-target.getHealth(),expected,action+" diamond hit damage");
                     if(action==StormRocRules.Action.STAMPEDE)require(boss.getZ()>40,"Stampede did not reach its locked ranged target: "+boss.getEntityPos());
-                    require(dodge.getHealth()==200,action+" hit distant dodger");require(outsider.getHealth()==200,action+" hit outsider");
-                    if(action==StormRocRules.Action.PECK||action==StormRocRules.Action.SCREAM)require(target.getVelocity().lengthSquared()<.0001,action+" unexpectedly pushed target");
+                    if(action==StormRocRules.Action.BITE){
+                        require(dodge.getHealth()<200,"Thunder Bite burst missed a player beside its target");
+                        require(target.getVelocity().horizontalLengthSquared()>.01,"Thunder Bite did not throw its target back");
+                        require(boss.poseName().equals("bite_leap"),"Thunder Bite did not switch to its leap: "+boss.poseName());
+                        require(boss.getEntityPos().subtract(CENTRE.toCenterPos()).horizontalLength()>5,"Thunder Bite did not leap to its prey: "+boss.getEntityPos());
+                        checks.add("Thunder Bite leaps to prey beyond its reach, bursts over everyone near its bite and throws them back");
+                    }
+                    else require(dodge.getHealth()==200,action+" hit distant dodger");
+                    require(outsider.getHealth()==200,action+" hit outsider");
+                    if(action==StormRocRules.Action.SCREAM)require(target.getVelocity().horizontalLengthSquared()>.01,"Storm Scream did not shove its target back along its line");
+                }
+                // The sweep's crackle wave rolls out over the front: a player on the rock 19 blocks
+                // ahead, beyond the bill, is caught by it. The dodger moves there off its spot above
+                // the sweep as the sweep ends, before the wave (from 10 blocks) has passed under it.
+                if(action.swing()&&elapsed==action.impact+StormRocRules.SWING_SWEEP){Vec3d ahead=CENTRE.toCenterPos().add(Vec3d.fromPolar(0,boss.getYaw()).multiply(19));dodge.setPosition(ahead.x,101,ahead.z);dodge.setVelocity(Vec3d.ZERO);}
+                if(action.swing()&&elapsed==hitAt+10){
+                    require(dodge.getHealth()<200,action+" crackle wave missed a grounded player ahead");
+                    checks.add(action+" crackle wave rolls out over the front and catches a grounded player");
                 }
                 // The landing ring reaches a crushed player two ticks later; it must not add to the crush.
                 if(action==StormRocRules.Action.POUNCE&&elapsed==action.impact+7){
                     damage(200-target.getHealth(),20,"Pounce ring stacked on its crush");
                     checks.add("Crushed player takes the pounce once, not crush plus ring");
                 }
-                if(elapsed==action.duration+3){
+                if(elapsed==done+3){
                     checks.add(action+" hit-frame damage, dodge and outsider exclusion");
-                    if(++melee>=StormRocRules.Action.values().length){target.setPosition(30.5,101,.5);target.setHealth(200);target.setVelocity(Vec3d.ZERO);boss.stopFight();boss.startFight(CENTRE,List.of(target,dodge));boss.testAction(target,StormRocRules.Action.PECK);target.setPosition(.5,101,.5);dodge.setPosition(20.5,104,.5);dodge.setHealth(200);outsider.setPosition(.5,101,.5);outsider.setHealth(200);boss.testDive(new Vec3d(.5,101.03,.5));step=16;elapsed=0;}
+                    if(++melee>=StormRocRules.Action.values().length){target.setPosition(30.5,101,.5);target.setHealth(200);target.setVelocity(Vec3d.ZERO);boss.stopFight();boss.startFight(CENTRE,List.of(target,dodge));boss.testAction(target,SETUP);target.setPosition(.5,101,.5);dodge.setPosition(20.5,104,.5);dodge.setHealth(200);outsider.setPosition(.5,101,.5);outsider.setHealth(200);boss.testDive(new Vec3d(.5,101.03,.5));step=16;elapsed=0;}
                     else elapsed=0;
                 }
             }
@@ -335,13 +362,13 @@ public final class StormRocServerSmoke implements ModInitializer {
                     target.setPosition(58.5,101,.5);target.setHealth(200);target.setVelocity(Vec3d.ZERO);dodge.setPosition(58.5,135,.5);dodge.setHealth(200);outsider.setPosition(58.5,101,.5);outsider.setHealth(200);
                     boss.testAction(target,StormRocRules.Action.WING);boss.setPosition(45.5,101.03,.5);
                 }
-                if(elapsed==21){
-                    damage(200-target.getHealth(),4,"Wing hit at rim");Vec3d impulse=target.getVelocity().multiply(1,0,1);
+                if(elapsed==StormRocRules.Action.WING.impact+13){
+                    damage(200-target.getHealth(),6,"Wing hit at rim");Vec3d impulse=target.getVelocity().multiply(1,0,1);
                     require(impulse.dotProduct(CENTRE.toCenterPos().subtract(target.getEntityPos()))>0,"Wing knocked rim player toward the edge");
                     require(StormSummit.beyondRim(CENTRE,target.getEntityPos().add(impulse.multiply(12)))<=-8,"Wing impulse projected outside interior safety margin");
                     require(outsider.getHealth()==200,"Rim wing hit outsider");require(dodge.getHealth()==200,"Rim wing hit elevated dodger");checks.add("Rim wing impulse points inward and stops within interior margin");
                 }
-                if(elapsed==23){target.setPosition(30.5,101,.5);target.setHealth(200);target.setVelocity(Vec3d.ZERO);dodge.setPosition(30.5,101,12.5);boss.stopFight();boss.startFight(CENTRE,List.of(target,dodge));boss.testAction(target,StormRocRules.Action.PECK);step=18;elapsed=0;}
+                if(elapsed==StormRocRules.Action.WING.impact+15){target.setPosition(30.5,101,.5);target.setHealth(200);target.setVelocity(Vec3d.ZERO);dodge.setPosition(30.5,101,12.5);boss.stopFight();boss.startFight(CENTRE,List.of(target,dodge));boss.testAction(target,SETUP);step=18;elapsed=0;}
             }
             case 18 -> {
                 if(elapsed==1){
@@ -392,7 +419,7 @@ public final class StormRocServerSmoke implements ModInitializer {
                     require(SpellCombat.damage(head,world,world.getDamageSources().inFire(),10,target,WizardAffinity.FIRE),"Anonymous owned Inferno damage rejected");
                     damage(health-boss.getHealth(),10,"Owned Inferno canonical health");require(Math.abs(WandProgression.get(target,WizardAffinity.FIRE).xp()-xp-10)<.01,"Owned Inferno XP incorrect");
                     checks.add("Owned anonymous Pyre/Inferno sources retain damage and canonical XP");
-                    boss.stopFight();boss.startFight(CENTRE,List.of(target,dodge));boss.testAction(target,StormRocRules.Action.PECK);step=19;elapsed=0;
+                    boss.stopFight();boss.startFight(CENTRE,List.of(target,dodge));boss.testAction(target,SETUP);step=19;elapsed=0;
                 }
             }
             case 19 -> {
@@ -409,7 +436,7 @@ public final class StormRocServerSmoke implements ModInitializer {
                     require(Math.abs(WandProgression.get(target,WizardAffinity.NATURE).xp()-flowerXp-(flowerHealth-boss.getHealth()))<.01,"Real planted thicket did not credit canonical health XP");
                     require(SeedlingManager.destroySeedlingAtAnchor(world,flower),"Real planted fixture thicket failed cleanup");
                     checks.add("Actual planted Seedling ground query/footprint reaches Roc and ticked thorns reward canonical damage XP");
-                    boss.stopFight();boss.startFight(CENTRE,List.of(target,dodge));boss.testAction(target,StormRocRules.Action.PECK);step=20;elapsed=0;
+                    boss.stopFight();boss.startFight(CENTRE,List.of(target,dodge));boss.testAction(target,SETUP);step=20;elapsed=0;
                 }
             }
             case 20 -> {
@@ -417,13 +444,13 @@ public final class StormRocServerSmoke implements ModInitializer {
                 if(elapsed==5){
                     require(boss.getHealth()<flowerHealth,"Actual owned foot coals dealt no Roc damage");
                     require(Math.abs(WandProgression.get(target,WizardAffinity.FIRE).xp()-flowerXp-(flowerHealth-boss.getHealth()))<.01,"Actual foot coals did not credit canonical health XP");
-                    TemporaryBlockManager.restoreTemporaryBlocks(world,firePlacement);boss.stopFight();boss.startFight(CENTRE,List.of(target,dodge));boss.testAction(target,StormRocRules.Action.PECK);placeFootFire(target,true);
+                    TemporaryBlockManager.restoreTemporaryBlocks(world,firePlacement);boss.stopFight();boss.startFight(CENTRE,List.of(target,dodge));boss.testAction(target,SETUP);placeFootFire(target,true);
                 }
                 if(elapsed==9){
                     require(boss.getHealth()<flowerHealth,"Actual owned foot flame dealt no Roc damage");
                     require(boss.isOnFire()&&SpellCombat.burnOwner(boss,world.getDamageSources().onFire())==target,"Actual placed Inferno flame did not ignite canonical boss with caster owner");
                     require(Math.abs(WandProgression.get(target,WizardAffinity.FIRE).xp()-flowerXp-(flowerHealth-boss.getHealth()))<.01,"Actual foot flame did not credit canonical health XP");
-                    TemporaryBlockManager.restoreTemporaryBlocks(world,firePlacement);boss.extinguish();boss.stopFight();boss.startFight(CENTRE,List.of(target,dodge));boss.testAction(target,StormRocRules.Action.PECK);placeFootFire(outsider,false);
+                    TemporaryBlockManager.restoreTemporaryBlocks(world,firePlacement);boss.extinguish();boss.stopFight();boss.startFight(CENTRE,List.of(target,dodge));boss.testAction(target,SETUP);placeFootFire(outsider,false);
                 }
                 if(elapsed==13){
                     require(boss.getHealth()==flowerHealth&&WandProgression.get(outsider,WizardAffinity.FIRE).xp()==flowerXp,"Nonparticipant foot coals damaged/rewarded Roc");
@@ -432,7 +459,7 @@ public final class StormRocServerSmoke implements ModInitializer {
                 if(elapsed==17){
                     require(boss.getHealth()==flowerHealth&&!boss.isOnFire()&&WandProgression.get(outsider,WizardAffinity.FIRE).xp()==flowerXp,"Nonparticipant foot flame damaged/ignited/rewarded Roc");
                     TemporaryBlockManager.restoreTemporaryBlocks(world,firePlacement);checks.add("Actual owned foot coals/flame damage and credit XP/burn owner; outsider ground fire ignored");
-                    boss.stopFight();boss.startFight(CENTRE,List.of(target,dodge));boss.testAction(target,StormRocRules.Action.PECK);step=4;elapsed=0;
+                    boss.stopFight();boss.startFight(CENTRE,List.of(target,dodge));boss.testAction(target,SETUP);step=4;elapsed=0;
                 }
             }
             case 21 -> {
@@ -507,13 +534,13 @@ public final class StormRocServerSmoke implements ModInitializer {
                 if(elapsed<=50){int pulses=elapsed/10;damage(200-target.getHealth(),pulses,"Live ground grounded pulse damage");require(dodge.getHealth()==200,"Live ground hit outside player");require(outsider.getHealth()==200,"Live ground hit outsider");}
                 if(elapsed==52){require(live.isRemoved(),"Live ground survived52ticks");checks.add("Phase-two small10HP/large18HP and radii; third bolt leaves matching LIVE_GROUND, five1HP grounded pulses, outside/outsider exclusion and expiry");
                     // A separate field checks the airborne case without sacrificing the full grounded pulse run.
-                    boss.testAction(target,StormRocRules.Action.PECK);target.setPosition(45.5,104,.5);strike=boss.testStrike(target.getEntityPos(),true);step=27;elapsed=0;}
+                    boss.testAction(target,SETUP);target.setPosition(45.5,104,.5);strike=boss.testStrike(target.getEntityPos(),true);step=27;elapsed=0;}
             }
             case 27 -> {
                 if(elapsed==51){target.setHealth(200);target.setOnGround(false);}
                 if(elapsed==102){require(target.getHealth()==200,"Live ground hit airborne player");
                     // Small bolt first, then a large one inside the stacking window: the large still costs its full 18.
-                    boss.testAction(target,StormRocRules.Action.PECK);target.setPosition(45.5,101,.5);target.setVelocity(Vec3d.ZERO);target.setOnGround(true);
+                    boss.testAction(target,SETUP);target.setPosition(45.5,101,.5);target.setVelocity(Vec3d.ZERO);target.setOnGround(true);
                     target.setHealth(200);target.timeUntilRegen=0;
                     strike=boss.testStrike(new Vec3d(52.3,101,.5),true);require(strike!=null&&strike.radius()==7,"Stacking large strike missing");step=29;elapsed=0;}
             }
@@ -523,7 +550,7 @@ public final class StormRocServerSmoke implements ModInitializer {
                 if(elapsed==27)damage(200-target.getHealth(),10,"Small bolt before the large one");
                 if(elapsed==31){damage(200-target.getHealth(),18,"Large bolt after a small one stacks to the large's full cost");
                     // Large first, then a small one inside the window: the small adds nothing.
-                    boss.testAction(target,StormRocRules.Action.PECK);target.setHealth(200);target.timeUntilRegen=0;
+                    boss.testAction(target,SETUP);target.setHealth(200);target.timeUntilRegen=0;
                     strike=boss.testStrike(new Vec3d(52.3,101,.5),true);step=30;elapsed=0;}
             }
             case 30 -> {
@@ -560,7 +587,7 @@ public final class StormRocServerSmoke implements ModInitializer {
         String saved=reference==null?"null":reference.getUuid()+" "+reference.status()+" pos="+reference.getEntityPos()+" bbox="+reference.getBoundingBox()+" removed="+reference.isRemoved()+" age="+reference.age+" participant="+reference.participant(dodge.getUuid())+" worldLookup="+world.getEntity(reference.getUuid());
         return StormSummitManager.status()+"; challenger="+dodge.getEntityPos()+"/"+dodge.getEntityWorld().getRegistryKey().getValue()+"/"+dodge.interactionManager.getGameMode()+"/alive="+dodge.isAlive()+"/health="+dodge.getHealth()+"; allRocs="+rocs+"; managed="+saved+"; worldPlayers="+players;
     }
-    private void beginStrike(boolean large){target.setHealth(200);target.timeUntilRegen=0;dodge.setHealth(200);outsider.setHealth(200);boss.testAction(target,StormRocRules.Action.PECK);before=target.getHealth();target.setVelocity(Vec3d.ZERO);velocity=target.getVelocity();strike=boss.testStrike(target.getEntityPos(),large);require(strike!=null,"testStrike did not create effect");}
+    private void beginStrike(boolean large){target.setHealth(200);target.timeUntilRegen=0;dodge.setHealth(200);outsider.setHealth(200);boss.testAction(target,SETUP);before=target.getHealth();target.setVelocity(Vec3d.ZERO);velocity=target.getVelocity();strike=boss.testStrike(target.getEntityPos(),large);require(strike!=null,"testStrike did not create effect");}
     private void answerChecks(){
         var wing=List.of(StormRocRules.Action.WING);
         require(StormRocCombat.answers(2,1,true,null).equals(wing),"Target between the Roc's feet had no answer");
@@ -568,9 +595,9 @@ public final class StormRocServerSmoke implements ModInitializer {
         require(StormRocCombat.answers(6,1,true,StormRocRules.Action.WING).equals(List.of(StormRocRules.Action.POUNCE)),"Target staying under the neck was not pounced");
         require(StormRocCombat.answers(5,-1,true,null).equals(wing),"Target behind the Roc drew no wing wave");
         var front=StormRocCombat.answers(12.5,1,true,null);
-        require(front.containsAll(List.of(StormRocRules.Action.PECK,StormRocRules.Action.SWING_LEFT,StormRocRules.Action.SCREAM)),"Target in bill reach lacked head attacks: "+front);
-        require(!StormRocCombat.answers(7.5,1,true,null).contains(StormRocRules.Action.PECK),"Peck offered where its bill cannot reach");
-        require(!StormRocCombat.answers(12.5,1,true,StormRocRules.Action.PECK).contains(StormRocRules.Action.PECK),"Brawl repeated its last attack");
+        require(front.containsAll(List.of(StormRocRules.Action.BITE,StormRocRules.Action.SWING_LEFT,StormRocRules.Action.SCREAM)),"Target in bill reach lacked head attacks: "+front);
+        require(!StormRocCombat.answers(7.5,1,true,null).contains(StormRocRules.Action.BITE),"Bite offered where its bill cannot reach");
+        require(!StormRocCombat.answers(12.5,1,true,StormRocRules.Action.BITE).contains(StormRocRules.Action.BITE),"Brawl repeated its last attack");
         checks.add("Brawl answers every place to stand: wings and pounce under the neck, head attacks only within reach, no repeats");
     }
     private List<RocEffectEntity> effects(){return world.getEntitiesByClass(RocEffectEntity.class,AREA,e->!e.isRemoved());}

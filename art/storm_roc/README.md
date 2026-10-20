@@ -23,8 +23,13 @@ python3 art/storm_roc/render_review.py --width 640 --only hunched-side flight-si
 python3 art/storm_roc/render_review.py
 ```
 
-Serve the preview with `python3 -m http.server 8380 --directory .local-previews/storm-roc`
-and open http://localhost:8380. A build copies the concept sheets beside the page
+The animation viewer is `animation_viewer/viewer.template.html`: `export_preview.py` copies it to
+`.local-previews/storm-roc/preview/storm-roc-redesign.html` and bakes the installed clips into
+`roc.json` beside it. Serve it with `python3 -m http.server 8380 --directory .local-previews/storm-roc`
+and open http://localhost:8380/preview/storm-roc-redesign.html. Its Player camera views each clip
+from a player's eyes on the ground.
+
+The older posture study above is served at http://localhost:8380. A build copies the concept sheets beside the page
 and writes renders under `.local-previews/storm-roc/shots/`; that folder stays
 untracked. Rebuilding updates its embedded geometry, clips,
 textures, glow mask and spark sheet. `--check` regenerates in memory and compares
@@ -243,6 +248,18 @@ Partial wing spreads interpolate world orientations and pivots, avoiding scatter
 feathers from folded-wing Euler interpolation. Rotation channels are unwrapped
 before export because Java interpolates their components directly.
 
+Reworked clips share the tools in `motion.py`. Keys can say how a move arrives (`ease`,
+`snap` for a bird's quick turn, `whip` for a landing strike, `drop` for a foot set down,
+`settle` to overshoot and settle), envelopes rise fast and relax slowly, and seeded loop noise
+replaces even sine sways. `twitch` is the Roc's signature head: held dead still, snapped to a
+new angle (0.05 s plus 0.02 s per 10 degrees) and landing with a small electric shiver; reuse
+it wherever the Roc looks around, above all in its lightning moves. `FOLLOW` lists each clip's loose parts (crest plumes, cheek fans,
+cheek feathers, tail fan): a damped spring makes each trail and swing on behind the bone that carries
+it, faded out at a loop's seam, and no faster than 450 degrees a second. Clips in `THIN` drop keys that a straight line between their
+neighbours reproduces within 0.02 degrees; the bones that carry server sockets keep every key.
+`build_runtime.py --only hunched` and `export_preview.py --only hunched` rebuild one clip in
+seconds and keep the rest as installed; the preview bakes reworked clips at 80 Hz.
+
 The stuck bill is pinned **0.9 blocks below the rock** (11.52 model pixels), through
 5.65 s. Wing contact uses the actual rotated cube corners. `WING_REST = -0.125`
 and `WING_SLAP = 0.7` blocks preserve the old model-space clearances at half scale.
@@ -257,15 +274,16 @@ All times below are clip seconds; a second is 20 server ticks.
 | call | 3.0 | no | Rear and skyward gape 0–0.45; trembling hold to 1.90; command snaps down/wide by **2.00**; glare to 2.60; settle by 3.00. Warning at **0.50**; bolts **2.00 / 2.50 / 3.00**. |
 | land | 0.8 | no | Flight-neutral start; flare and feet forward 0–0.20; feet grip at **0.30**; compression peaks 0.40–0.45; fold to perched neutral at 0.80. |
 | flight | 4.8 | yes | Raised wings 0.35 / 1.55; power strokes 0.70 / 1.90; recover by 2.45; glide to 4.80 with primary flex. Stable forward head, tucked legs, no banking. |
-| hunched | 4.8 | yes | Breathing, low head sway and planted weight shifts; sharp cock 1.30–1.45, hold to 2.05, release by 2.25. |
+| hunched | 9.6 | yes | The brawl guard. Head twitches (`GUARD_GLANCES`) at 0.30, 1.05, a stutter 1.62/1.74, 2.40, 3.15, 3.60, a one-eye cock 5.35, 5.95, 6.50, 7.20, 8.10 and home at 9.05, each held still and landing with an electric shiver. Uneven breaths, weight held on the left 2.1–3.5 and the right 4.9–7.2, a weaving neck; clack clack 0.55–0.95; tail flick 1.35; right talons knead 2.65–3.30; hiss with neck thrust, wide bill, flared crest and mantled wings 3.70–5.30; left talons knead 6.25–6.90; rouse 7.30–8.00; clack and rattle 8.55. |
 | dive | 3.0 | no | Perched start, climbing beats to 1.80; tip 1.50–2.05; tight stoop 2.05–2.55; wings reopen 2.55–2.80; spear to exact stuck(0) at **3.00**. |
 | stuck | 6.0 | no | Pinned bill, rocking/heaving torso, wing slaps and scrabbling feet; big heave **4.85–5.65**; bill releases after 5.65, hunched neutral at 6.00. |
-| peck | 1.8 | no | Coil to 0.40, hold to 0.50; committed strike **0.60**, stick through 0.70; yank free and settle by 1.80. |
-| swing_left | 1.8 | no | Draw across 0–0.55; hold to 0.80; low scythe **0.80–1.15**; overshoot 1.30; settle 1.80. |
-| swing_right | 1.8 | no | Opposite sweep, same **0.80–1.15** damage window, with body twist and tail counterbalance. |
-| scream | 2.2 | no | Rear/mantle to 0.85, hold to 1.10; forward open-bill blast **1.20**; shudder to 1.85; settle 2.20. |
-| wing | 2.0 | no | Crouch, rise with overhead wings by 0.75; slam down/forward **1.00**; follow-through to 1.15; settle by 2.00. |
-| pounce | 3.2 | no | Deep crouch and cat wiggle **0–1.20**; talons forward and pumping wings **1.20–2.20**; heavy planted landing **2.20**; settle 3.20. |
+| bite | 3.9 | no | Thunder Bite, standing. Rears up slowly to 1.30 with the bill opening wide and wings mantled, its head looking down the line to the bite point the whole time (the game's gaze then follows the actual player until the aim locks at 1.20; `MOUTH_SPARKS` crackle at the corners of the mouth), holds charged, lunges from 2.00 and snaps the bill shut at **2.30** at player height (the peck's old strike pose, so the reach is the same) with a recoil; holds the bite to 2.60, pulls back by 3.90. No twitches: heavy, slow aiming. |
+| bite_leap | 4.4 | no | The same until the 1.20 lock, where the server switches to it when its prey is 2+ blocks out of reach; its body and head follow the standing bite's timeline stretched from the lock to its bite. Deep crouch as the wings rise slowly 1.25–1.85; push-off and downbeat to **2.15**; 0.6 s in the air, the legs blending by slerp (`blend_local`) into the study's grab legs, trailing back then reaching forward, the wings recovering then flaring broadly; lands at **2.75** and absorbs, the neck lifting the bill back to player height for the bite at **2.80**. The server carries it up to 10 blocks between push-off and landing. |
+| swing_left | 2.6 | no | Storm Sweep. Coils the neck far round to one side over 1.0 (neck base 58 degrees, lower neck 24, body twist 15, weight shifted, wings half open), holds to 1.25 with the bill crackling, scythes the open bill across the whole front at chest height **1.25–1.65** (about 170 degrees, 10–11.5 blocks out), overshoots to 1.85 with the tail counter-swinging, settles by 2.60. The server's crackle wave rolls out over the swept front as it ends. |
+| swing_right | 2.6 | no | The same sweep the other way. |
+| scream | 2.9 | no | Storm Scream. Unlike the bite's tall rear-up, a huge, slow breath low down to 1.30: it sinks, draws the neck back in an S with the bill to the sky (head pitched 68 degrees up), chest up, wings spread wide and level, tail fanned, `CREST_SPARKS` crackling on the plume tips; draws in to 1.50, whips forward and blasts straight ahead at **1.60** with the bill at 48 degrees; the body shudders at 14 Hz through the scream as the wings are thrown back just after it; settles by 2.90. |
+| wing | 4.0 | no | Thunderclap. A deep crouch as the wings rise to 0.60; the leap with legs and one huge downbeat at **0.85** (the server throws it 9 blocks up, slowing to the apex at 1.75, a hang to 2.05, then gathering speed down); rising, the legs blend by slerp toward the grab legs and the body tips nose-up, wings sweeping up; at the top the wings are raised high and the head down on the players below, `WING_SPARKS` on the edges; it smashes down, legs reaching, and lands at **2.60** with the wings thrown out and a roar, the neck lifting as it absorbs; the wings settle (contact solve, rate-limited) and fold slowly by 4.00. |
+| pounce | 4.0 | no | Raptor Strike. Sinks into a low stalking crouch by 0.60, wings half open and low, crest pressed flat, weight rocking foot to foot and the tail lashing in held flicks, the head level on its prey (the game's gaze follows the actual player until the aim locks at 1.20); draws back and coils 1.00–1.35, talons gripping, wings spread wide; pushes off with one huge downbeat at **1.60**, the legs leaving the rock from their push-off pose and swinging back through their hinges into the study's grab legs, tucked back; flies flat and fast (the server carries it on a low arc, at most 4 blocks up), wings wide and level, crest swept back; screeches, pitches up and flares 2.25–2.55 with the tail lifted clear, the talons swinging forward; strikes at **2.60** with `TALON_SPARKS` flaring; mantles to 3.40, wings arched down onto the rock (contact solve, rate-limited) and head low, glancing about; settles by 4.00. A neck solve holds the bill at set heights over the rock throughout. |
 | stampede | 4.2 | no | Bull scrapes peak **0.30 / 0.90**; alternating-stride charge **1.20–2.70**; blend into lean-back skid after 2.70; air-brake wings; head toss 3.65–4.20. |
 | takeoff | 2.5 | no | Crouch, rise, huge spread/downbeat **1.20**; leg lift and flight transition 1.20–2.50; exact flight(0) endpoint. |
 | hop | 1.2 | no | Exact stuck(0) start; bill yank/head throw to 0.30; huge downbeat about 0.55; tip and spear from 0.85 to exact stuck(0) at **1.20**. |
@@ -277,16 +295,16 @@ neutral; its local feet grip at tick 6 and remain planted through tick 16. Keep
 the root on the capstone while it absorbs the landing. The planned crossfade can
 accommodate the preceding flight phase. Takeoff ends at flight(0).
 
-Preserve a separate perched-idle phase or allow a longer idle if its full motion
-should be visible. The current 140-tick visit only gives perched windows at ticks
-16–28 and 88–96; resetting the 7.2-second idle in each window cuts off the later
-head cock, shake and stretch. Head yaw stays within +/-45 degrees for layered
-look-at. Java owns travel arcs, roll from turning, renderer scale and gameplay radii.
+The perched idle and the brawl guard each keep their own clock in Java, so every spire
+visit or pause between attacks resumes the loop where it left off instead of restarting it.
+Head yaw stays within +/-45 degrees for layered look-at. Java owns travel arcs, roll from turning, renderer scale and gameplay radii.
 
 `python3 art/storm_roc/build_runtime.py --check` compares the installed exports.
 `python3 art/storm_roc/validate_runtime.py` checks the head lock, exact geometry/UV
 conversion, fixed leg lengths, planted feet, socket agreement, loop/end poses,
-pinned bill, wing/ground contact and server impact timing. The peck timing check
+pinned bill, wing/ground contact and server impact timing. Hunched feet may leave the rock
+only in their `KNEADS` windows, must return to the same spot and never move fast enough to
+count as a stomp. The peck timing check
 now measures its maximum forward extension at 0.60 s rather than requiring the
 old study's entire strike pose. Flight sanity bounds allow the intentionally deeper
 power strokes: maximum span must stay 32–36.5 blocks and wrist vertical excursion
@@ -295,7 +313,7 @@ study validation still describes its original shallow flap. These are export che
 not native gameplay verification.
 
 `python3 art/storm_roc/render_runtime.py --gifs` creates a contact sheet for every
-clip and 480px / 10fps GIFs for perched, call, flight, dive, peck, scream, wing,
+clip and 480px / 10fps GIFs for perched, call, flight, dive, bite, scream, wing,
 pounce and stampede in `.local-previews/storm-roc/animations/`. It uses the CPU
 renderer at 1.25x, without a browser or generated study HTML. Each clip keeps one
 camera, a floor and a 1.8-block human reference. These show local authored poses;

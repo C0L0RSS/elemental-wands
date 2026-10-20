@@ -18,6 +18,7 @@ import net.minecraft.entity.boss.ServerBossBar;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.damage.DamageType;
 import net.minecraft.entity.effect.StatusEffects;
+import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -51,8 +52,11 @@ final class StormRocCombat {
     private static final class Reaches {
         // Measured from the shipped sockets, so a retimed or reposed clip keeps the choices honest.
         // A one-block margin leaves room for a target drifting through the windup.
-        static final Reach PECK = reach(Action.PECK.pose, Action.PECK.impact, Action.PECK.impact, PECK_RADIUS - 1);
-        static final Reach SWING = reach(Action.SWING_LEFT.pose, Action.SWING_LEFT.impact, Action.SWING_LEFT.impact + 7, SWING_RADIUS - 1);
+        /** The bite closes this far ahead of its feet, standing or after a leap that carries it up to BITE_LUNGE further. */
+        static final double BITE_AT = flat(StormRocPose.socket(Action.BITE.pose, Action.BITE.impact, "beak")).length();
+        static final double BITE_LEAP_AT = flat(StormRocPose.socket("bite_leap", BITE_LEAP_IMPACT, "beak")).length();
+        static final Reach BITE = new Reach(BITE_AT - (BITE_RADIUS - 1), Math.max(BITE_AT, BITE_LEAP_AT) + BITE_LUNGE + BITE_RADIUS - 1);
+        static final Reach SWING = reach(Action.SWING_LEFT.pose, Action.SWING_LEFT.impact, Action.SWING_LEFT.impact + SWING_SWEEP, SWING_RADIUS - 1);
         static final double SCREAM_START = flat(StormRocPose.socket(Action.SCREAM.pose, Action.SCREAM.impact, "beak")).length();
     }
 
@@ -77,8 +81,16 @@ final class StormRocCombat {
 
     private static final class Ring {
         final RocEffectEntity effect;
+        /**
+         * Where its front starts, the half-angle of the sector it covers around the effect's yaw
+         * (180: all round), what it costs a grounded player, and how hard it throws them away.
+         */
+        final double start, half, push;
+        final float damage;
         final Set<UUID> passed = new HashSet<>();
-        Ring(RocEffectEntity effect) { this.effect = effect; }
+        Ring(RocEffectEntity effect, double start, double half, float damage, double push) {
+            this.effect = effect; this.start = start; this.half = half; this.damage = damage; this.push = push;
+        }
     }
 
     /** The costliest Roc hit a player took in the current stacking window, after mitigation, and when the window opened. */
@@ -116,6 +128,8 @@ final class StormRocCombat {
     private int perch, round, selection, sinceMove, smash;
     /** Ticks it has spent in its perched idle, which resumes on each spire so every visit shows more of it. */
     private long idle;
+    /** Ticks it has spent in its brawl guard, which resumes after each blow so every pause shows a different beat. */
+    private long guard;
     private long smashAt;
     private boolean review, phasePending, two, defeated, marked;
     private RocEffectEntity marker;
@@ -226,6 +240,7 @@ final class StormRocCombat {
         if (two && atPhaseGate()) { defeat(); return; }
         trackPlayers(players);
         if (boss.poseName().equals("perched")) idle++;
+        if (boss.poseName().equals("hunched")) guard++;
         // Distant cosmetic bolts can be outside entity-ticking chunks; their owner still
         // expires them on schedule instead of letting an unticked flash repeat forever.
         effects.removeIf(e -> {
@@ -285,7 +300,8 @@ final class StormRocCombat {
         this.stage = stage;
         since = now();
         action = null;
-        boss.pose(pose);
+        if (pose.equals("hunched")) guard();
+        else boss.pose(pose);
         Arrays.fill(lastFeet, null);
     }
 
@@ -337,6 +353,8 @@ final class StormRocCombat {
     }
 
     private void perched() { boss.pose("perched", now() - idle); }
+
+    private void guard() { boss.pose("hunched", now() - guard); }
 
     /** It calls the lightning: a bolt from its raised bill into the clouds, and a large strike at everyone. */
     private void call(List<ServerPlayerEntity> players) {
@@ -792,14 +810,23 @@ final class StormRocCombat {
 
     private void ring(Vec3d mark, double radius) {
         var e = effect(RocEffectEntity.Kind.SHOCKWAVE, mark, radius, 0, (int) Math.ceil(radius / SHOCK_SPEED) + 2);
-        rings.add(new Ring(e));
+        rings.add(new Ring(e, 0, 180, RING_DAMAGE, 0));
+    }
+
+    /** The Storm Sweep's crackle wave, rolling out across the front it swept. */
+    private void sweepWave() {
+        var e = effect(RocEffectEntity.Kind.SWEEP_WAVE, onFloor(boss.getEntityPos()), SWEEP_WAVE_REACH, 0,
+                (int) Math.ceil((SWEEP_WAVE_REACH - SWEEP_WAVE_START) / SHOCK_SPEED) + 3);
+        e.setYaw(boss.getYaw());
+        rings.add(new Ring(e, SWEEP_WAVE_START, SWEEP_WAVE_HALF, RING_DAMAGE, 0));
     }
 
     private void tickRings(List<ServerPlayerEntity> players) {
         for (var it = rings.iterator(); it.hasNext(); ) {
             var ring = it.next();
             if (ring.effect.isRemoved()) { it.remove(); continue; }
-            double radius = Math.min(ring.effect.radius(), ring.effect.effectTicks(0) * SHOCK_SPEED), inner = Math.max(0, radius - SHOCK_SPEED);
+            double radius = Math.min(ring.effect.radius(), ring.start + ring.effect.effectTicks(0) * SHOCK_SPEED), inner = Math.max(0, radius - SHOCK_SPEED);
+            Vec3d ahead = Vec3d.fromPolar(0, ring.effect.getYaw());
             // It stops where it is drawn to stop; its last ticks only fade.
             if (inner >= ring.effect.radius()) continue;
             double floorY = ring.effect.getY();
@@ -807,9 +834,13 @@ final class StormRocCombat {
                 if (ring.passed.contains(p.getUuid())) continue;
                 double distance = horizontal(p.getEntityPos(), ring.effect.getEntityPos());
                 if (distance + p.getWidth() * .5 < inner - .6 || distance - p.getWidth() * .5 > radius + .6) continue;
+                Vec3d off = flat(p.getEntityPos().subtract(ring.effect.getEntityPos()));
+                if (ring.half < 180 && off.lengthSquared() > 1e-6
+                        && Math.toDegrees(Math.acos(MathHelper.clamp(off.normalize().dotProduct(ahead), -1, 1))) > ring.half) continue;
                 // One contact decides, so a player who jumped it is not hit by its trailing smoke.
                 ring.passed.add(p.getUuid());
-                if (grounded(p, floorY)) hurt(p, RING_DAMAGE);
+                if (grounded(p, floorY) && hurt(p, ring.damage) && ring.push > 0)
+                    pushSafe(p, p.getEntityPos().subtract(ring.effect.getEntityPos()), ring.push, .3);
             }
         }
     }
@@ -1010,7 +1041,7 @@ final class StormRocCombat {
      * spell contact explicitly at the actual feet, without allowing ambient world damage.
      */
     private void groundSpells() {
-        if (action == Action.POUNCE && now() - actionAt >= 24 && now() - actionAt < 44) return;
+        if (action == Action.POUNCE && now() - actionAt >= POUNCE_LAUNCH && now() - actionAt < action.impact) return;
         for (String side : FEET) {
             Vec3d foot = boss.socket(side);
             if (foot.y > center().y + 1.8) continue;
@@ -1035,7 +1066,9 @@ final class StormRocCombat {
      */
     private void stomps(List<ServerPlayerEntity> players, boolean scrambling) {
         long t = action == null ? -1 : now() - actionAt;
-        boolean charging = action == Action.POUNCE && t >= 24 && t <= 44 || action == Action.STAMPEDE && t >= 24 && t <= 54;
+        boolean charging = action == Action.POUNCE && t >= POUNCE_LAUNCH && t <= action.impact + 1 || action == Action.STAMPEDE && t >= 24 && t <= 54
+                || action == Action.BITE && t > BITE_LEAP && t <= BITE_LAND + 1
+                || action == Action.WING && t > WING_LIFT && t <= action.impact + 1;
         for (int i = 0; i < FEET.size(); i++) {
             Vec3d foot = boss.socket(FEET.get(i)), before = lastFeet[i];
             lastFeet[i] = foot;
@@ -1075,7 +1108,7 @@ final class StormRocCombat {
         List<Action> options = new ArrayList<>();
         if (facing < .2 && close) options.add(Action.WING); // Beside or behind it, where the head can't reach.
         else {
-            if (Reaches.PECK.has(distance)) options.add(Action.PECK);
+            if (Reaches.BITE.has(distance)) options.add(Action.BITE);
             if (Reaches.SWING.has(distance)) options.add(rightSide ? Action.SWING_LEFT : Action.SWING_RIGHT);
             if (distance >= Reaches.SCREAM_START) options.add(Action.SCREAM);
             // Under its neck and chest no head attack reaches, so the wings answer.
@@ -1140,17 +1173,22 @@ final class StormRocCombat {
             turnToward(aim, TURN_RATE);
         }
         switch (action) {
-            case PECK -> { if (t == action.impact) hitCircle(players, boss.socket("beak"), PECK_RADIUS, PECK_DAMAGE, 9); }
+            case BITE -> bite(players, t);
             case SWING_LEFT, SWING_RIGHT -> swing(players, t);
-            case SCREAM -> { if (t == action.impact) scream(players); }
-            case WING -> { if (t == action.impact) wing(players); }
+            case SCREAM -> {
+                // A deep, rising inhale as it draws breath: a tell apart from the bite, even off-screen.
+                if (t == 4) sound(boss.socket("head"), SoundEvents.ENTITY_BREEZE_INHALE, 4, .45f);
+                if (t == action.impact) scream(players);
+            }
+            case WING -> thunderclap(players, t);
             case POUNCE -> pounce(players, t);
             case STAMPEDE -> stampede(players, t);
         }
-        if (t >= action.duration) {
+        // The Thunder Bite's leap takes longer than its standing bite.
+        if (t >= (action == Action.BITE && boss.poseName().equals("bite_leap") ? BITE_LEAP_DURATION : action.duration)) {
             last = action;
             action = null;
-            boss.pose("hunched");
+            guard();
             int party = Math.min(AIMED_CAP, players.size());
             Difficulty difficulty = world().getDifficulty();
             int pause = 18 - (party - 1) * 2 + (difficulty == Difficulty.EASY ? 8 : difficulty == Difficulty.HARD ? -5 : 0);
@@ -1159,58 +1197,111 @@ final class StormRocCombat {
     }
 
     // Resolve the swept arc across several frames, once per victim, along the actual bill.
+    /**
+     * Storm Sweep: its bill scythes its whole front at chest height, throwing everyone within
+     * SWING_RADIUS of it far to the side; as it ends, its crackle wave rolls out over the front.
+     */
     private void swing(List<ServerPlayerEntity> players, int t) {
-        if (t < action.impact || t > action.impact + 7) return;
+        if (t == action.impact + SWING_SWEEP - 1) sweepWave();
+        if (t < action.impact || t > action.impact + SWING_SWEEP) return;
         Vec3d bill = boss.socket("beak");
         for (var victim : players) {
             if (actionHits.contains(victim.getUuid()) || horizontal(victim.getEntityPos(), bill) >= SWING_RADIUS) continue;
             if (victim.getY() >= bill.y + 2.5 || victim.getY() + victim.getHeight() <= bill.y - 2.5) continue;
-            if (!hurt(victim, PECK_DAMAGE)) continue;
+            if (!hurt(victim, SWING_DAMAGE)) continue;
             actionHits.add(victim.getUuid());
-            pushSafe(victim, Vec3d.fromPolar(0, boss.getYaw() + (action == Action.SWING_LEFT ? 90 : -90)), .65, .16);
+            pushSafe(victim, Vec3d.fromPolar(0, boss.getYaw() + (action == Action.SWING_LEFT ? 90 : -90)), SWING_PUSH, .35);
         }
     }
 
-    /** A straight line ahead from the bill: too wide to sidestep casually, safe behind it. */
+    /**
+     * Storm Scream: a straight line ahead from the bill, crackling, too wide to sidestep casually and
+     * safe behind it. Everyone in it is hit and shoved back along it.
+     */
     private void scream(List<ServerPlayerEntity> players) {
         Vec3d origin = boss.socket("beak"), forward = forward();
-        var e = effect(RocEffectEntity.Kind.SCREAM, new Vec3d(origin.x, center().y + 1, origin.z), SCREAM_HALF_WIDTH, 0, 10);
+        var e = effect(RocEffectEntity.Kind.SCREAM, new Vec3d(origin.x, center().y + 1, origin.z), SCREAM_HALF_WIDTH, 0, 14);
         e.setYaw(boss.getYaw());
         for (var victim : players) {
             Vec3d d = victim.getEntityPos().subtract(origin);
             double along = d.dotProduct(forward), side = Math.abs(d.x * forward.z - d.z * forward.x);
             // The blast is drawn as a tube on the ground, and it can't be jumped, but it passes under
             // anyone lifted well above it.
-            if (along >= -1 && along <= 110 && side <= SCREAM_HALF_WIDTH + victim.getWidth() * .5 && victim.getY() < e.getY() + SCREAM_HALF_WIDTH + .5)
-                hurt(victim, SCREAM_DAMAGE);
+            if (along >= -1 && along <= 110 && side <= SCREAM_HALF_WIDTH + victim.getWidth() * .5 && victim.getY() < e.getY() + SCREAM_HALF_WIDTH + .5
+                    && hurt(victim, SCREAM_DAMAGE)) pushSafe(victim, forward, SCREAM_PUSH, .25);
         }
         sound(origin, SoundEvents.ENTITY_PHANTOM_DEATH, 3, .4f);
     }
 
-    private void wing(List<ServerPlayerEntity> players) {
-        effect(RocEffectEntity.Kind.SHOCKWAVE, boss.getEntityPos(), WING_REACH, 0, 22);
-        for (var victim : players) {
-            if (horizontal(victim.getEntityPos(), boss.getEntityPos()) >= WING_REACH) continue;
-            if (victim.getY() >= center().y + 18 || victim.getY() + victim.getHeight() <= center().y) continue;
-            hurt(victim, WING_DAMAGE);
-            pushSafe(victim, victim.getEntityPos().subtract(boss.getEntityPos()), 1.4, .3);
+    /**
+     * Thunderclap's leap: its legs and one huge downbeat throw it off the rock (a heavy whoosh and
+     * dust blown out over the rock, tells for players close under it); it rises fast and slows to
+     * its apex, hangs there a moment, then smashes down, gathering speed, and lands on its impact.
+     */
+    private void thunderclap(List<ServerPlayerEntity> players, int t) {
+        if (t == WING_LIFT) {
+            from = boss.getEntityPos();
+            sound(boss.getEntityPos(), SoundEvents.ENTITY_ENDER_DRAGON_FLAP, 4, .5f);
+            downwash();
+        }
+        if (t == WING_APEX + 1) sound(boss.getEntityPos(), SoundEvents.ENTITY_ENDER_DRAGON_FLAP, 3, .65f);
+        if (t > WING_LIFT && t <= action.impact) {
+            double h;
+            if (t <= WING_APEX) h = WING_HEIGHT * (1 - Math.pow(1 - (t - WING_LIFT) / (double) (WING_APEX - WING_LIFT), 2));
+            else if (t <= WING_DROP) h = WING_HEIGHT + .15 * Math.sin((t - WING_APEX) * .5);
+            else h = WING_HEIGHT * (1 - Math.pow((t - WING_DROP) / (double) (action.impact - WING_DROP), 2));
+            boss.setPosition(from.add(0, Math.max(0, h), 0));
+        }
+        if (t == action.impact) wing(players);
+    }
+
+    /** Dust blown out over the rock beneath it by a downbeat. */
+    private void downwash() {
+        Vec3d at = onFloor(from);
+        for (int i = 0; i < 36; i++) {
+            double a = boss.getRandom().nextDouble() * Math.PI * 2, r = 2 + boss.getRandom().nextDouble() * 7;
+            world().spawnParticles(ParticleTypes.CLOUD, at.x + Math.cos(a) * r, at.y + .2, at.z + Math.sin(a) * r, 0,
+                    Math.cos(a) * .45, .04, Math.sin(a) * .45, 1);
         }
     }
 
-    /** Cat wiggle, then one huge flap onto a circle marked at launch; its aim locked 0.4 s before. */
+    /**
+     * Thunderclap's landing: anyone under it is crushed, and a ring of crackles and dust rolls out to
+     * WING_REACH. Anyone on the ground the ring reaches is hit and thrown away from the Roc; a jump clears it.
+     */
+    private void wing(List<ServerPlayerEntity> players) {
+        hitCircle(players, onFloor(boss.getEntityPos()), WING_CRUSH, LARGE_DAMAGE, 6);
+        var e = effect(RocEffectEntity.Kind.CLAP_WAVE, onFloor(boss.getEntityPos()), WING_REACH, 0, (int) Math.ceil(WING_REACH / SHOCK_SPEED) + 3);
+        rings.add(new Ring(e, 0, 180, WING_DAMAGE, WING_PUSH));
+        sparks(boss.getEntityPos().add(0, 2, 0), 50, 4);
+        sound(boss.getEntityPos(), SoundEvents.ENTITY_LIGHTNING_BOLT_THUNDER, 3, .8f);
+    }
+
+    /**
+     * Raptor Strike: a low stalk with its gaze on its prey, a coil once its aim locks, then a flat,
+     * fast leap on one huge downbeat, talons first onto where its prey stood. Nothing marks the
+     * spot: its locked head and coil are the warning.
+     */
     private void pounce(List<ServerPlayerEntity> players, int t) {
-        if (t == 24) {
+        if (t == POUNCE_LAUNCH) {
             boss.face(to);
-            marker = effect(RocEffectEntity.Kind.DIVE_MARKER, to, 5, 20, 22);
+            sound(boss.getEntityPos(), SoundEvents.ENTITY_ENDER_DRAGON_FLAP, 4, .55f);
+            from = boss.getEntityPos();
+            downwash();
         }
-        if (t >= 24 && t <= 44) {
-            double f = (t - 24) / 20.0;
-            boss.setPosition(from.lerp(to, f).add(0, Math.sin(f * Math.PI) * 14, 0));
+        if (t >= POUNCE_LAUNCH && t <= action.impact) {
+            double f = (t - POUNCE_LAUNCH) / (double) (action.impact - POUNCE_LAUNCH);
+            // It springs up off the push and glides down onto its prey.
+            boss.setPosition(from.lerp(to, f).add(0, Math.sin(Math.PI * Math.pow(f, .7)) * POUNCE_HEIGHT, 0));
         }
-        if (t == 44) {
+        // A swoop as it comes in, and a screech as it flares to strike.
+        if (t == POUNCE_LAUNCH + 6) sound(boss.getEntityPos(), SoundEvents.ENTITY_PHANTOM_SWOOP, 4, .5f);
+        if (t == action.impact - 3) sound(boss.getEntityPos(), SoundEvents.ENTITY_PHANTOM_AMBIENT, 4, .45f);
+        if (t == action.impact) {
             boss.setPosition(to);
             hitCircle(players, to, 5, POUNCE_DAMAGE, 10);
             ring(to, 26);
+            sparks(to.add(0, 1, 0), 40, 2.5);
             sound(to, SoundEvents.ENTITY_GENERIC_EXPLODE.value(), 2, .65f);
         }
     }
@@ -1235,6 +1326,46 @@ final class StormRocCombat {
             Vec3d slide = flat(to.subtract(from)).normalize().multiply(4 * (1 - (1 - f) * (1 - f)));
             boss.setPosition(interior(to.add(slide), 9));
         }
+    }
+
+    /**
+     * Thunder Bite: it rears up slowly with its bill crackling, turning to follow its prey until its
+     * aim locks at tick 24. If its prey is then out of reach it switches to its leap: a deep crouch,
+     * a push off the rock and a jump of up to BITE_LUNGE that lands it right in front of where its
+     * prey stood. Either way it snaps its bill shut in the air there; lightning bursts from the bill:
+     * everyone within BITE_RADIUS of it, jumping or not, is hit hard and thrown away from the Roc.
+     */
+    private void bite(List<ServerPlayerEntity> players, int t) {
+        boolean leaping = boss.poseName().equals("bite_leap");
+        int impact = leaping ? BITE_LEAP_IMPACT : action.impact;
+        if (t < impact && t % 2 == 0) sparks(boss.socket("beak"), 3, .35);
+        if (t == action.lock) {
+            double distance = horizontal(aim, boss.getEntityPos());
+            from = to = boss.getEntityPos();
+            if (distance - Reaches.BITE_AT >= BITE_LEAP_MIN) {
+                to = interior(from.add(forward().multiply(MathHelper.clamp(distance - Reaches.BITE_LEAP_AT, 0, BITE_LUNGE))), 10);
+                boss.pose("bite_leap", actionAt);
+            }
+        }
+        // In the air from push-off to landing, carried in an arc so its feet clear the rock.
+        if (t > BITE_LEAP && t <= BITE_LAND && leaping) {
+            double f = smooth((t - BITE_LEAP) / (double) (BITE_LAND - BITE_LEAP));
+            boss.setPosition(from.lerp(to, f).add(0, Math.sin(f * Math.PI) * Math.min(3.5, 1.5 + from.distanceTo(to) / 4), 0));
+        }
+        if (t != impact) return;
+        Vec3d bill = boss.socket("beak");
+        for (var victim : players) {
+            if (horizontal(victim.getEntityPos(), bill) >= BITE_RADIUS) continue;
+            if (victim.getY() >= bill.y + BITE_RADIUS || victim.getY() + victim.getHeight() <= bill.y - BITE_RADIUS) continue;
+            if (hurt(victim, BITE_DAMAGE)) pushSafe(victim, victim.getEntityPos().subtract(boss.getEntityPos()), BITE_PUSH, .35);
+        }
+        sparks(bill, 40, 2);
+        sound(bill, SoundEvents.ENTITY_LIGHTNING_BOLT_IMPACT, 3, .7f);
+        sound(bill, SoundEvents.ENTITY_LIGHTNING_BOLT_THUNDER, 1.5f, 1.6f);
+    }
+
+    private void sparks(Vec3d at, int count, double spread) {
+        world().spawnParticles(ParticleTypes.ELECTRIC_SPARK, at.x, at.y, at.z, count, spread, spread, spread, .4);
     }
 
     private void hitCircle(List<ServerPlayerEntity> players, Vec3d point, double radius, float damage, double height) {

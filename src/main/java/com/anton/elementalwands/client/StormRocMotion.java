@@ -5,6 +5,7 @@ import com.anton.elementalwands.entity.roc.StormRocPose;
 import com.anton.elementalwands.entity.roc.StormRocRules;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.WeakHashMap;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
@@ -18,11 +19,13 @@ import org.joml.Vector3d;
  * Presentation layered on the Roc's authored clips, on clients only: a short crossfade whenever
  * the server changes clip, a bird's gaze that holds and then snaps to the player it is striking
  * at (or to you), a heavy head that tracks its prey through the Thunder Bite's windup, and banking
- * through its turns in flight. Server hitboxes keep the plain clips.
+ * through its turns in flight and in the Thunder Charge's run. Server hitboxes keep the plain clips.
  */
 public final class StormRocMotion {
     /** Ticks a clip change takes to blend in. */
     private static final float FADE = 5;
+    /** Clip changes that continue the same motion, frame for frame, so they cut without a blend. */
+    private static final Set<String> CHAINED = Set.of("stampede>stampede_run", "stampede_run>stampede_skid", "stampede>stampede_skid");
     private static final String[] NECK = {"root", "body", "neck_base", "neck_lower", "neck_mid", "neck_upper"};
     /** The bill's direction in the head's own frame. */
     private static final Vector3d BILL = new Vector3d(0, -.0285, -.9996).normalize();
@@ -72,6 +75,13 @@ public final class StormRocMotion {
             case "bite", "bite_leap" -> roc.poseTicks(0) < StormRocRules.Action.BITE.lock ? 1 : 0;
             // So does the Raptor Strike's stalk: its head stays on its prey until it coils to leap.
             case "pounce" -> roc.poseTicks(0) < StormRocRules.Action.POUNCE.lock ? 1 : 0;
+            // Charging, its head leads it round after its prey; once its skid stops, its head whips
+            // round to the player it missed.
+            case "stampede_run" -> .5f;
+            case "stampede_skid" -> {
+                float after = roc.poseTicks(0) - StormRocRules.STAMPEDE_SKID_TICKS;
+                yield after >= -2 && after < 16 ? 1 : 0;
+            }
             default -> 0;
         };
         s.weight += MathHelper.clamp(wanted - s.weight, -.15f, .15f);
@@ -85,8 +95,8 @@ public final class StormRocMotion {
             float yaw = MathHelper.clamp((float) Math.toDegrees(Math.atan2(x, -z)), -80, 80);
             float pitch = MathHelper.clamp((float) Math.toDegrees(Math.atan2(d.y, Math.hypot(x, z))), -50, 35);
             float off = Math.max(Math.abs(yaw - s.yaw), Math.abs(pitch - s.pitch));
-            if (pose.startsWith("bite") || pose.equals("pounce")) {
-                // Rearing up for the bite or stalking, its head is heavy: it follows its prey without snaps.
+            if (pose.startsWith("bite") || pose.equals("pounce") || pose.equals("stampede_run")) {
+                // Rearing up for the bite, stalking or charging, its head is heavy: it follows its prey without snaps.
                 s.yaw += (yaw - s.yaw) * .3f;
                 s.pitch += (pitch - s.pitch) * .3f;
             } else {
@@ -102,7 +112,8 @@ public final class StormRocMotion {
                 }
             }
         }
-        // It banks into its turns and pitches with its climb, in flight only.
+        // It banks into its turns and pitches with its climb in flight, and leans into the Thunder
+        // Charge's curve as it runs.
         float turn = Float.isNaN(s.lastYaw) ? 0 : MathHelper.wrapDegrees(roc.getYaw() - s.lastYaw);
         double rise = roc.getY() - s.lastY;
         s.lastYaw = roc.getYaw();
@@ -110,7 +121,8 @@ public final class StormRocMotion {
         s.prevBank = s.bank;
         s.prevClimb = s.climb;
         boolean flying = pose.equals("flight");
-        s.bank += ((flying ? MathHelper.clamp(turn * 3.5f, -38, 38) : 0) - s.bank) * .2f;
+        float lean = flying ? MathHelper.clamp(turn * 3.5f, -38, 38) : pose.equals("stampede_run") ? MathHelper.clamp(turn * 6, -15, 15) : 0;
+        s.bank += (lean - s.bank) * .2f;
         s.climb += ((flying ? MathHelper.clamp((float) rise * 25, -25, 25) : 0) - s.climb) * .2f;
     }
 
@@ -122,7 +134,10 @@ public final class StormRocMotion {
         long at = roc.poseStart();
         // Seen at render time, not on the next tick, so the new clip never pops in for a frame.
         if (!pose.equals(s.pose) || at != s.poseAt) {
-            if (!s.pose.isEmpty()) {
+            if (CHAINED.contains(s.pose + ">" + pose)) {
+                s.fromPose = null;
+                s.switchedAt = Double.NEGATIVE_INFINITY;
+            } else if (!s.pose.isEmpty()) {
                 s.fromPose = s.pose;
                 s.fromTick = (float) (now - s.poseAt);
                 s.switchedAt = now;
@@ -162,7 +177,7 @@ public final class StormRocMotion {
      */
     private static void gaze(Map<String, float[]> channels, String pose, float yaw, float pitch, float weight) {
         // The bite's and the stalk's clips already aim the head at their prey: turn from there to it.
-        Vector3d rest = pose.startsWith("bite") || pose.equals("pounce") ? bill(channels) : NEUTRAL.computeIfAbsent(pose, StormRocMotion::rest);
+        Vector3d rest = pose.startsWith("bite") || pose.equals("pounce") || pose.startsWith("stampede") ? bill(channels) : NEUTRAL.computeIfAbsent(pose, StormRocMotion::rest);
         double restYaw = Math.toDegrees(Math.atan2(rest.x, -rest.z)), restPitch = Math.toDegrees(Math.asin(MathHelper.clamp(rest.y, -1, 1)));
         double turnYaw = MathHelper.clamp(MathHelper.wrapDegrees(yaw - restYaw), -70, 70) * weight;
         double turnPitch = MathHelper.clamp(pitch - restPitch, -40, 40) * weight;

@@ -51,8 +51,18 @@ SPIRAL_LIFT, SPIRAL_TOP, SPIRAL_DIVE, SPIRAL_IMPACT = .85, 2.15, 2.55, 3.25
 # Raptor Strike: it stalks low and pushes off at 1.60 (tick 32); the server carries it flat and
 # fast on a low arc, and its talons strike its prey at 2.60 (tick 52).
 POUNCE_LAUNCH, POUNCE_IMPACT = 1.6, 2.6
+# Thunder Charge: it rakes the rock three times, slowly, as befits its size, and launches at 2.20
+# (tick 44). Its run lasts as long as the server's charge does, so it is three clips: 'stampede'
+# ends one stride into the run (STAMPEDE_LOOP, tick 53); 'stampede_run' is that one stride, 9 ticks
+# at STRIDE_HZ, looped; 'stampede_skid' takes over on a stride boundary and skids. The server keeps
+# these ticks in StormRocRules (STAMPEDE_RUN_AT, STAMPEDE_STRIDE, STAMPEDE_AFTER).
+STAMPEDE_RUN, STRIDE_HZ = 2.2, 20/9
+STAMPEDE_LOOP = round(STAMPEDE_RUN+1/STRIDE_HZ, 4)
+# Where the skid clip starts in the charge's own time: any stride boundary after the loop.
+STAMPEDE_SKID_AT = round(STAMPEDE_LOOP+1/STRIDE_HZ, 4)
+STAMPEDE_RAKES = (.25, .85, 1.45)
 FAST_KEYS = {'scream':[(1.45,2.2)], 'swing_left':[(1.2,1.95)], 'swing_right':[(1.2,1.95)], 'bite':[(1.95,2.7)], 'bite_leap':[(1.8,3.25)], 'wing':[(.45,1.1),(2.4,3.0)], 'wing_spiral':[(.5,3.6)], 'takeoff':[(1.1,1.2)],
-    'pounce':[(1.3,1.75),(2.35,2.8)], 'call':[(1.9,2.1)],
+    'pounce':[(1.3,1.75),(2.35,2.8)], 'stampede':[(.2,2.1),(2.05,2.65)], 'stampede_run':[(0,.45)], 'stampede_skid':[(0,.3)], 'call':[(1.9,2.1)],
     'hunched':[(.5,1.),(8.5,9.)]+[(g[0],g[0]+.35) for g in GUARD_GLANCES]}
 # Block-space clearances at 1.25x; preserve the original model-space wing solve.
 WING_REST, WING_SLAP = -.125, .7
@@ -62,7 +72,8 @@ DEFINITIONS = {'perched':(round(7.2*SLOW,3),True), 'call':(3,False), 'land':(.8,
     'flight':(round(4.8*SLOW,3),True), 'hunched':(9.6,True), 'dive':(3,False), 'stuck':(6,False),
     'bite':(3.9,False), 'bite_leap':(4.4,False), 'swing_left':(2.6,False), 'swing_right':(2.6,False),
     'scream':(2.9,False), 'wing':(4.0,False), 'pounce':(4.0,False),
-    'stampede':(4.2,False), 'takeoff':(2.5,False), 'hop':(1.2,False)}
+    'stampede':(STAMPEDE_LOOP,False), 'stampede_run':(round(1/STRIDE_HZ,4),True), 'stampede_skid':(1.9,False),
+    'takeoff':(2.5,False), 'hop':(1.2,False)}
 
 def packed(value):
     return (json.dumps(value, separators=(',', ':')) + '\n').encode()
@@ -628,6 +639,89 @@ def main():
     bite_at=point(matrices(bite(BITE_IMPACT)),'upper_beak',tip)
     # The guard's bill height, where the Raptor Strike's neck starts and ends.
     pounce_bill=point(matrices(neutral),'upper_beak',tip)[1];pounce_lift={}
+    def stampede(t,S=1e6):
+        """Thunder Charge, in its own time; S is when it stops running (never, for the windup and
+        the run loop). A bull's challenge: it lowers its head and sways it, crest raised, wings
+        half open and low, and rakes the rock back three times with its right talons, snorting,
+        crackles flying; then it drops lower still and explodes into a charge at 2.20. It runs
+        like a cassowary, head low and level as a battering ram, bill wide open in a screech,
+        wings held out for balance and bouncing with each step, legs pumping, the tail streaming
+        and swaying. At S it slams its feet forward and skids, its bill snapping shut, leaning
+        back with its talons gouging the rock and its wings flared up as brakes; its head whips
+        round to the player it missed, then it steps back into its guard."""
+        R=STAMPEDE_RUN
+        p=copy.deepcopy(neutral);body=p['body'];targets={k:v.copy() for k,v in feet.items()}
+        low=keys(t,[(0,0),(.4,1),(1.95,1),(2.1,1.3),(R,1)])*keys(t,[(0,1),(R-.05,1),(R+.12,0)])
+        # Every stop envelope starts exactly at S, a stride boundary, so the skid clip takes over
+        # from the run loop without a seam.
+        run=keys(t,[(0,0),(R-.08,0),(R+.12,1),(S,1),(S+.12,0,'snap')])
+        skid=keys(t,[(0,0),(S,0),(S+.14,1,'snap'),(S+.75,1),(S+1.0,.3),(S+1.5,0)])
+        whip=keys(t,[(0,0),(S+.75,0),(S+.9,1,'snap'),(S+1.35,1),(S+1.75,0)])
+        # Its wings open slowly from their running hold into the skid's brake, as a giant's would.
+        brake=keys(t,[(0,0),(S,0),(S+.4,1),(S+.75,1),(S+1.0,.3),(S+1.5,0)])
+        hold=keys(t,[(0,0),(R-.08,0),(R+.12,1),(S,1),(S+.4,0)])
+        # Three slow rakes with the right talons, 0.6 s each: lifted high and forward, set down,
+        # dragged back hard. The whole body drives each one: it rocks back onto its left foot and
+        # rears a little as the leg lifts, then lunges forward and down as it drags, head dipping
+        # and tail flicking; the wings open a little after the lunge and settle slowly.
+        rz=ry=wind=thrust=flick=0.
+        for a in STAMPEDE_RAKES:
+            rz+=keys(t,[(a,0),(a+.22,-18),(a+.28,-20),(a+.48,26,'hit'),(a+.6,0)])
+            ry+=keys(t,[(a,0),(a+.13,14),(a+.28,0,'drop'),(a+.48,0),(a+.54,7),(a+.6,0)])
+            wind+=keys(t,[(a-.05,0),(a+.22,1),(a+.3,1),(a+.48,0,'hit')])
+            thrust+=envelope(t,a+.3,.2,.06,.4,'hit','ease')
+            flick+=envelope(t,a+.36,.25,.05,.45,'ease','ease')
+        targets['right']+=np.array([0,ry,rz])
+        snort=sum(envelope(t,a+.38,.06,.08,.2) for a in STAMPEDE_RAKES)
+        # The stride: each foot sweeps back on the rock under it for 45% of a cycle, then swings
+        # forward through the air; the body dips as each foot takes its weight.
+        phase=(t-R)*STRIDE_HZ
+        bob=sway=0.
+        for label,offset in (('left',0),('right',.5)):
+            f=(phase+offset)%1
+            if f<.45:z,y=-20+40*f/.45,0
+            else:u=(f-.45)/.55;z,y=20-40*(u*u*(3-2*u)),16*math.sin(math.pi*u)
+            targets[label]+=np.array([0,y,z])*run
+        bob=-3*math.cos(4*math.pi*(phase-.225))*run
+        sway=math.sin(2*math.pi*phase)*run
+        # Braced at the skid: both feet slammed forward, then stepped back one at a time.
+        for label,(a,b) in (('left',(S+.9,S+1.15)),('right',(S+1.15,S+1.4))):
+            brace=keys(t,[(0,0),(S,0),(S+.14,1,'snap'),(a,1),(b,0)])
+            targets[label]+=np.array([0,8*envelope(t,a,.12,0,.13,'ease','drop'),-18*brace])
+        body['position']+=np.array([3*low-2*sway+3*wind,-8*low-6*run+bob-8*skid+2*whip+3*wind-4*thrust,-4*run+7*skid+6*wind-8*thrust])
+        body['rotation'][0]+=8*low+12*run-18*skid-6*wind+9*thrust
+        body['rotation'][2]+=3*sway*run+4*wind
+        p['tail_fan']['rotation'][0]+=LIFT*(10*low+8*run+12*skid+14*thrust)
+        p['tail_fan']['rotation'][1]+=10*sway-12*thrust
+        fan(p,t,.6*low)
+        # Its head: swaying low as it challenges, level and steady as it runs, thrown back as it
+        # brakes, then whipped round (in the game its gaze finds the player it missed).
+        pitch=18*low+4*run-22*skid*(1-whip)-8*whip-6*wind+10*thrust
+        look=twitch(t,[(S+.7,(0,38,10)),(S+1.5,(0,0,0))])
+        yaw=keys(t,[(0,0),(.3,0),(.7,10),(1.3,-12),(1.8,6),(2.05,0)])+look[1]
+        goal=pounce_bill+(-.75*low-.1*run+.9*skid*(1-whip)+.5*whip)/SCALE
+        base=p['neck_base']['rotation'][0]
+        def bill_y(bend):
+            p['neck_base']['rotation'][0]=base+bend;head(p,pitch+look[0],yaw,look[2])
+            return point(matrices(p),'upper_beak',tip)[1]
+        lo,hi=-60.,40.
+        for _ in range(24):
+            mid=(lo+hi)/2
+            if bill_y(mid)>goal:lo=mid
+            else:hi=mid
+        bill_y((lo+hi)/2)
+        # It screeches the whole way, bill gaping, the screech shaking with each stride; the skid
+        # snaps it shut, and it only huffs as its head whips round.
+        p['lower_beak']['rotation'][0]=14*snort+(44+5*math.sin(4*math.pi*phase))*run+8*whip
+        # Wings: half open and low as it challenges, held out and bouncing with each step, flared up
+        # and forward to brake, half mantled as its head whips round.
+        spread(p,-.15*low+.15*flick+(-.3+.12*math.cos(4*math.pi*(phase-.225)))*hold+.65*brake*(1-whip)+.25*whip,
+            .5*low+.2*flick+.75*hold+.95*brake*(1-whip)+.5*whip,-12*brake*(1-whip))
+        grip=skid+.6*sum(envelope(t,a+.28,.06,.18,.15) for a in STAMPEDE_RAKES)
+        for label in ('left','right'):
+            for i in range(4):p[f'{label}_toe_{i}_tip']['rotation'][0]+=(-1 if i==3 else 1)*25*min(grip,1)
+        plant(p,targets)
+        return p
     def pounce(t):
         """Raptor Strike. It sinks into a low stalking crouch with its wings half open and low and
         its head dead still on its prey, rocking its weight from foot to foot, its tail lashing.
@@ -808,7 +902,11 @@ def main():
         if name=='wing':return REST+(1-REST)*envelope(t,0,.6,2.2,1.0,'ease','ease')
         if name=='wing_spiral':return keys(t,[(0,REST),(.6,1),(SPIRAL_LIFT,1),(1.1,-1),(SPIRAL_TOP-.1,-1),(SPIRAL_TOP+.15,1),
             (SPIRAL_DIVE,1),(2.75,-1),(3.1,-1),(SPIRAL_IMPACT,1),(5.0,REST)])
-        if name=='stampede':return REST+(1-REST)*pulse(t,0,.4,3.65,4.2)
+        # Raised as it challenges, swept back as it runs, flared as its head whips round.
+        if name.startswith('stampede'):
+            R=STAMPEDE_RUN;S={'stampede':1e6,'stampede_run':1e6,'stampede_skid':STAMPEDE_SKID_AT}[name]
+            t+={'stampede':0,'stampede_run':STAMPEDE_LOOP,'stampede_skid':STAMPEDE_SKID_AT}[name]
+            return keys(t,[(0,REST),(.4,1),(R-.1,1),(R+.1,-.6),(S,-.6),(S+.2,.3),(S+.75,.3),(S+.9,1),(S+1.5,1),(S+1.9,REST)])
         if name=='takeoff':return (REST+.5*pulse(t,0,.4,.9,1.2))*(1-ease(t,1.2,2.5))-ease(t,1.2,2.5)
         # Pressed flat as it stalks, swept back in the air, raised over its kill.
         if name=='pounce':return keys(t,[(0,REST),(.6,0),(1.5,0),(POUNCE_LAUNCH,-.6),(2.3,-.6),(2.5,1),(3.4,1),(4.0,REST)])
@@ -1014,35 +1112,9 @@ def main():
                 for joint in ('wing_wrist','wing_elbow','wing_shoulder'):splay(p,0,True,joint)
             return locomotion_mix(p,flight(0),ease(t,1.2,2.5))
         if name=='pounce':return pounce(t)
-        if name=='stampede':
-            p=copy.deepcopy(neutral);targets={k:v.copy() for k,v in feet.items()}
-            if t<1.2:
-                scrape=math.sin(math.pi*(t%.6)/.6)**2
-                targets['right'][1]+=7*scrape;targets['right'][2]+=24*scrape
-                p['body']['position'][1]-=4*scrape
-                head(p,-24*scrape,0,-8*scrape)
-                spread(p,.3,.35*scrape);fan(p,t,.5*scrape)
-            elif t<=2.7:
-                run=ease(t,1.2,1.4);cycle=(t-1.2)*math.tau*2.6
-                p['body']['position'][1]+=3*math.sin(cycle*2)*run-3*run
-                p['body']['rotation'][0]+=9*run
-                p['neck_base']['rotation'][0]-=4*run
-                for label,phase in (('left',0),('right',math.pi)):
-                    step=cycle+phase
-                    targets[label][2]+=19*math.sin(step)*run
-                    targets[label][1]+=10*max(0,math.cos(step))*run
-                spread(p,-.1,.55*run);fan(p,t,.7*run)
-            else:
-                skid=pulse(t,2.7,2.85,3.65,4.2)
-                p['body']['rotation'][0]-=20*skid;p['body']['position'][1]-=7*skid
-                for label in targets:
-                    targets[label][2]-=15*skid
-                p['tail_fan']['rotation'][0]+=24*skid
-                spread(p,.65,.95*skid,-12*skid)
-                head(p,-30*pulse(t,3.65,3.85,3.95,4.2),0,0)
-            plant(p,targets)
-            if 2.7<t<2.9:return locomotion_mix(motion(name,2.7),p,ease(t,2.7,2.9))
-            return p
+        if name=='stampede':return stampede(t)
+        if name=='stampede_run':return stampede(STAMPEDE_LOOP+t)
+        if name=='stampede_skid':return stampede(STAMPEDE_SKID_AT+t,STAMPEDE_SKID_AT)
         raise ValueError(name)
     # Follow-through: in these clips the loose feathers trail the bones that carry them, swinging
     # on after a snap or a shove instead of moving rigidly with the head and body.
@@ -1051,11 +1123,15 @@ def main():
         Spring(loose(lambda n:'_cheek_blue_' in n),3.4,.3,turn=.6,limit=10),
         Spring(loose(lambda n:'_cheek_' in n and '_blue_' not in n),3.8,.35,turn=.6,limit=8),
         Spring(['tail_fan'],1.6,.32,turn=.9,shove=.7,limit=9)]
-    FOLLOW={'hunched':FEATHERS,'bite':FEATHERS,'bite_leap':FEATHERS,'swing_left':FEATHERS,'swing_right':FEATHERS,'scream':FEATHERS,'wing':FEATHERS,'wing_spiral':FEATHERS,'pounce':FEATHERS}
+    # The run loop has its own stride sway and no springs, so the chain's clips meet exactly.
+    FOLLOW={'hunched':FEATHERS,'bite':FEATHERS,'bite_leap':FEATHERS,'swing_left':FEATHERS,'swing_right':FEATHERS,'scream':FEATHERS,'wing':FEATHERS,'wing_spiral':FEATHERS,'pounce':FEATHERS,'stampede':FEATHERS,'stampede_skid':FEATHERS}
+    # Clips another clip continues without a crossfade: their swing settles by their end, as a loop's does.
+    CHAINED={'stampede'}
     shapes={b['name']:shape(b) for b in bones if b.get('cubes')}
     def follow(frames,times,springs,loop):
         worlds=[matrices(p) for p in frames]
-        # A loop's swing fades out over its last moments, so the seam meets its start at rest.
+        # A loop's or a chained clip's swing fades out over its last moments, so the seam meets
+        # the next clip at rest.
         fade=[1-ease(t,times[-1]-.6,times[-1]) if loop else 1 for t in times]
         for spring in springs:
             for n in spring.names:
@@ -1074,7 +1150,7 @@ def main():
     # Reworked clips drop the keys a straight line between their neighbours already gives, within
     # these tolerances (degrees, model pixels, scale). The bones the server's sockets ride on keep
     # every key, so hits land exactly where the export says.
-    THIN={'hunched','bite','bite_leap','swing_left','swing_right','scream','wing','wing_spiral','pounce'};TOLERANCE={'rotation':.02,'position':.005,'scale':.0002}
+    THIN={'hunched','bite','bite_leap','swing_left','swing_right','scream','wing','wing_spiral','pounce','stampede','stampede_run','stampede_skid'};TOLERANCE={'rotation':.02,'position':.005,'scale':.0002}
     exact=set()
     for n,_ in landmarks.values():
         while n:exact.add(n);n=by[n].get('parent')
@@ -1089,7 +1165,7 @@ def main():
             t=frame/KEY_FPS;p=motion(name,t)
             if name in AIRBORNE:lengthen_neck(p)
             crest(p,crest_amount(name,t));posed.append(p)
-        if name in FOLLOW:follow(posed,[i/KEY_FPS for i in frame_ticks],FOLLOW[name],loop)
+        if name in FOLLOW:follow(posed,[i/KEY_FPS for i in frame_ticks],FOLLOW[name],loop or name in CHAINED)
         # The Thunderclap's and Raptor Strike's hands and feathers meet the rock over a few
         # frames, not in one contact-solve jump; the shoulders still drive the clap down on its tick.
         if name in ('wing','wing_spiral','pounce'):limit_rate(posed,[i/KEY_FPS for i in frame_ticks],

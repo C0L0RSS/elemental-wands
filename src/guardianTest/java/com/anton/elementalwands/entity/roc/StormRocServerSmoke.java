@@ -30,6 +30,8 @@ public final class StormRocServerSmoke implements ModInitializer {
     /** A quick head attack that only puts the Roc in its brawl: it sweeps where its target first stood, so it can't follow them into a later check. */
     private static final StormRocRules.Action SETUP=StormRocRules.Action.SWING_LEFT;
     private int tick, step, elapsed, melee;
+    /** When the Thunder Charge under test began its skid: its run lasts as long as its distance needs. */
+    private int skidAt = -1;
     private StormRocEntity boss;
     private ServerPlayerEntity target, dodge, outsider;
     private ServerWorld world;
@@ -285,6 +287,7 @@ public final class StormRocServerSmoke implements ModInitializer {
             case 15 -> {
                 var action=StormRocRules.Action.values()[melee];
                 if(elapsed==1){
+                    skidAt=-1;
                     target.setPosition(.5,101,action==StormRocRules.Action.STAMPEDE?45.5:30.5);target.setHealth(200);target.timeUntilRegen=0;target.setVelocity(Vec3d.ZERO);
                     dodge.setPosition(50.5,101,45.5);dodge.setHealth(200);outsider.setHealth(200);
                     boss.testAction(target,action);
@@ -301,23 +304,34 @@ public final class StormRocServerSmoke implements ModInitializer {
                     if(action==StormRocRules.Action.SWING_LEFT||action==StormRocRules.Action.SWING_RIGHT||action==StormRocRules.Action.WING)dodge.setPosition(point.x,135,point.z);
                     // The bite's burst reaches past its target: a player 4.5 blocks to the side is caught too.
                     if(action==StormRocRules.Action.BITE){Vec3d side=Vec3d.fromPolar(0,boss.getYaw()+90).multiply(4.5);dodge.setPosition(point.x+side.x,101,point.z+side.z);dodge.setVelocity(Vec3d.ZERO);}
+                    // The Thunder Charge tramples its body's width: a player 3.5 blocks beside its path is caught.
+                    if(action==StormRocRules.Action.STAMPEDE){dodge.setPosition(point.x+3.5,101,(boss.getZ()+point.z)/2);dodge.setVelocity(Vec3d.ZERO);}
                 }
-                int hitAt=action==StormRocRules.Action.SWING_LEFT||action==StormRocRules.Action.SWING_RIGHT?action.impact+StormRocRules.SWING_SWEEP+1:action==StormRocRules.Action.STAMPEDE?55
+                if(action==StormRocRules.Action.STAMPEDE&&skidAt<0&&boss.poseName().equals("stampede_skid"))skidAt=elapsed;
+                int hitAt=action==StormRocRules.Action.SWING_LEFT||action==StormRocRules.Action.SWING_RIGHT?action.impact+StormRocRules.SWING_SWEEP+1:action==StormRocRules.Action.STAMPEDE?(skidAt<0?-1:skidAt+1)
                         :action==StormRocRules.Action.BITE?StormRocRules.BITE_LEAP_IMPACT+1
                         // The Thunderclap's ring rolls out from the clap and reaches its target 12 blocks off later.
                         :action==StormRocRules.Action.WING?action.impact+12:action.impact+1;
                 // Its bite's prey stands out of reach, so it plays the longer leap.
-                int done=action==StormRocRules.Action.BITE?StormRocRules.BITE_LEAP_DURATION:action.duration;
+                int done=action==StormRocRules.Action.BITE?StormRocRules.BITE_LEAP_DURATION:action==StormRocRules.Action.STAMPEDE?(skidAt<0?Integer.MAX_VALUE-10:skidAt+StormRocRules.STAMPEDE_AFTER):action.duration;
                 if(elapsed==hitAt){
                     float expected=switch(action){case SWING_LEFT,SWING_RIGHT->10;case BITE,SCREAM,STAMPEDE->16;case WING->6;case POUNCE->20;};
                     damage(200-target.getHealth(),expected,action+" diamond hit damage");
-                    if(action==StormRocRules.Action.STAMPEDE)require(boss.getZ()>40,"Stampede did not reach its locked ranged target: "+boss.getEntityPos());
+                    if(action==StormRocRules.Action.STAMPEDE){
+                        require(boss.getZ()>40,"Stampede did not reach its ranged target: "+boss.getEntityPos());
+                        // Its pace is its stride's, so a long charge takes longer rather than running faster.
+                        require(skidAt>action.impact+30,"Thunder Charge stopped before running its distance: skid at "+skidAt);
+                    }
                     if(action==StormRocRules.Action.BITE){
                         require(dodge.getHealth()<200,"Thunder Bite burst missed a player beside its target");
                         require(target.getVelocity().horizontalLengthSquared()>.01,"Thunder Bite did not throw its target back");
                         require(boss.poseName().equals("bite_leap"),"Thunder Bite did not switch to its leap: "+boss.poseName());
                         require(boss.getEntityPos().subtract(CENTRE.toCenterPos()).horizontalLength()>5,"Thunder Bite did not leap to its prey: "+boss.getEntityPos());
                         checks.add("Thunder Bite leaps to prey beyond its reach, bursts over everyone near its bite and throws them back");
+                    }
+                    else if(action==StormRocRules.Action.STAMPEDE){
+                        require(dodge.getHealth()<200,"Thunder Charge missed a player 3.5 blocks beside its path");
+                        checks.add("Thunder Charge tramples its body's width along its path");
                     }
                     else require(dodge.getHealth()==200,action+" hit distant dodger");
                     require(outsider.getHealth()==200,action+" hit outsider");

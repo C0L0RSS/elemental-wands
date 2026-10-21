@@ -138,7 +138,16 @@ Where its target stands decides the answer, so every spot has one:
   26 blocks that a jump clears. Nothing marks the spot: its locked head and coil are the warning,
   so sprint clear once it coils. It then mantles over the spot to 3.4 s, a window to punish it,
   and settles by 4 s. Its feet don't stomp while it is in the air.
-- **Stampede** at the player who last hit it from more than 22 blocks, at most every eight seconds.
+- **Thunder Charge** (its stampede) at the player who last hit it from more than 22 blocks, at
+  most every eight seconds. It lowers its head and rakes the rock three times with its right
+  talons, sparks flying, while it turns to its target (its aim locks at 1.8 s), then charges at
+  2.2 s, bill gaping in a crackling screech and lightning cracking at each footfall. It runs at
+  about 15 blocks a second for as long as the chase takes, curving after its target at up to 40°
+  a second and leaning into the turn, until it is 15 blocks away (about a second out); then it
+  holds its line, so a sprint sideways clears it. Anyone within 4.5 blocks of its path is
+  trampled (about eight hearts through full diamond) and tossed aside. It runs on 8 blocks past
+  where its target stood (less at the rim, and 4.5 s at most), then skids 5 blocks with its bill
+  snapped shut and its head whips round to the player it missed: about two seconds to punish it.
 
 It never repeats an attack back to back and picks among the rest at random. Its target is
 chosen at random, weighted by each player's recent damage (counting half after five seconds),

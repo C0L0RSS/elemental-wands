@@ -67,23 +67,30 @@ public final class StormRocCrackleLayer extends GeoRenderLayer<StormRocEntity,Vo
         var pounce=StormRocRules.Action.POUNCE;
         float pounceTick=state.pose.equals("pounce")?state.poseTick:-1;
         boolean striking=pounceTick>=pounce.lock&&pounceTick<pounce.impact+TALON_TICKS;
+        // The Thunder Charge's talons crackle from its first rake through its run until its skid
+        // stops; its gaping bill blazes with crackles from the launch for as long as it runs, and
+        // goes dark as the skid snaps it shut.
+        float stampedeTick=state.pose.equals("stampede")?state.poseTick:-1;
+        boolean running=state.pose.equals("stampede_run"),skidding=state.pose.equals("stampede_skid")&&state.poseTick<StormRocRules.STAMPEDE_SKID_TICKS;
+        boolean rushing=stampedeTick>=4||running||skidding;
+        boolean screeching=stampedeTick>=StormRocRules.Action.STAMPEDE.impact-2||running;
         List<JsonObject> anchors=new ArrayList<>();
         for(JsonElement element:DATA.getAsJsonArray("anchors"))anchors.add(element.getAsJsonObject());
         int head=anchors.size();
         if(breathing)for(JsonElement element:DATA.getAsJsonArray("crest_anchors"))anchors.add(element.getAsJsonObject());
         else if(clapping)for(JsonElement element:DATA.getAsJsonArray("wing_anchors"))anchors.add(element.getAsJsonObject());
-        else if(striking)for(JsonElement element:DATA.getAsJsonArray("talon_anchors"))anchors.add(element.getAsJsonObject());
-        else if(biteTick>=0&&burst<1||sweeping||screaming)
+        else if(striking||rushing)for(JsonElement element:DATA.getAsJsonArray("talon_anchors"))anchors.add(element.getAsJsonObject());
+        if(screeching||(!breathing&&!clapping&&!striking&&!rushing)&&(biteTick>=0&&burst<1||sweeping||screaming))
             for(JsonElement element:DATA.getAsJsonArray("mouth_anchors"))anchors.add(element.getAsJsonObject());
         List<Matrix4f> transforms=new ArrayList<>();
         for(var anchor:anchors)transforms.add(transform(getGeoModel().getBone(anchor.get("bone").getAsString()).orElseThrow(),channels));
         // It flares while calling the lightning down, as it does in the dive, the scream and the
         // Thunder Bite, until its burst dies away.
-        boolean charged=state.charged || state.pose.equals("dive") || state.pose.equals("call") || screaming || clapping || striking
+        boolean charged=state.charged || state.pose.equals("dive") || state.pose.equals("call") || screaming || clapping || striking || rushing
                 || biteTick>=0&&burst<1 || sweeping
                 || state.pose.equals("stuck")&&state.poseTick>=100;
         // The mouth crackles grow when the aim locks, and flare at the bite before they fade.
-        float mouthSize=striking?pounceTick<pounce.impact?.8f+.6f*(pounceTick-pounce.lock)/(pounce.impact-pounce.lock):2f*(1-(pounceTick-pounce.impact)/TALON_TICKS)+.3f
+        float mouthSize=screeching?1.7f:rushing?1.1f:striking?pounceTick<pounce.impact?.8f+.6f*(pounceTick-pounce.lock)/(pounce.impact-pounce.lock):2f*(1-(pounceTick-pounce.impact)/TALON_TICKS)+.3f
                 :clapping?.7f+.8f*Math.min(1,clapTick/clap.impact):breathing?.6f+.9f*Math.min(1,screamTick/scream.impact):screaming?2.2f*(1-(screamTick-scream.impact)/14)+.3f
                 :biteTick<bite.lock?1:burst<0?1.35f:2.2f*(1-burst)+.2f;
         float time=state.age/20;

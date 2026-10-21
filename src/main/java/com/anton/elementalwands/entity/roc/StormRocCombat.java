@@ -131,6 +131,15 @@ final class StormRocCombat {
     /** Ticks it has spent in its brawl guard, which resumes after each blow so every pause shows a different beat. */
     private long guard;
     private long smashAt;
+    /**
+     * The Thunder Charge in progress: the tick its skid began (-1 while it runs), whether it has
+     * locked its line and how far it still runs once it has, whether it wants to skid at the next
+     * stride boundary, and where and which way the skid slides.
+     */
+    private int stampedeStop = -1;
+    private double stampedeLeft;
+    private boolean stampedeLocked, stampedeEnding;
+    private Vec3d skidFrom = Vec3d.ZERO, skidHeading = Vec3d.ZERO;
     private boolean review, phasePending, two, defeated, marked;
     private RocEffectEntity marker;
     /** The storm's presence at the summit's centre, which every challenger's client tracks. */
@@ -1066,7 +1075,7 @@ final class StormRocCombat {
      */
     private void stomps(List<ServerPlayerEntity> players, boolean scrambling) {
         long t = action == null ? -1 : now() - actionAt;
-        boolean charging = action == Action.POUNCE && t >= POUNCE_LAUNCH && t <= action.impact + 1 || action == Action.STAMPEDE && t >= 24 && t <= 54
+        boolean charging = action == Action.POUNCE && t >= POUNCE_LAUNCH && t <= action.impact + 1 || action == Action.STAMPEDE && t >= action.impact && (stampedeStop < 0 || t <= stampedeStop)
                 || action == Action.BITE && t > BITE_LEAP && t <= BITE_LAND + 1
                 || action == Action.WING && t > WING_LIFT && t <= action.impact + 1;
         for (int i = 0; i < FEET.size(); i++) {
@@ -1157,6 +1166,8 @@ final class StormRocCombat {
         if (chosen == Action.STAMPEDE) {
             nextStampede = now() + STAMPEDE_COOLDOWN;
             rangedBy = null;
+            stampedeStop = -1;
+            stampedeLocked = stampedeEnding = false;
             if (flat(to.subtract(from)).lengthSquared() < 16) to = interior(from.add(forward().multiply(20)), 10);
         }
     }
@@ -1184,8 +1195,11 @@ final class StormRocCombat {
             case POUNCE -> pounce(players, t);
             case STAMPEDE -> stampede(players, t);
         }
-        // The Thunder Bite's leap takes longer than its standing bite.
-        if (t >= (action == Action.BITE && boss.poseName().equals("bite_leap") ? BITE_LEAP_DURATION : action.duration)) {
+        // The Thunder Bite's leap takes longer than its standing bite; the Thunder Charge lasts as
+        // long as its run.
+        int end = action == Action.BITE && boss.poseName().equals("bite_leap") ? BITE_LEAP_DURATION
+                : action == Action.STAMPEDE && stampedeStop >= 0 ? stampedeStop + STAMPEDE_AFTER : action.duration;
+        if (t >= end) {
             last = action;
             action = null;
             guard();
@@ -1306,25 +1320,74 @@ final class StormRocCombat {
         }
     }
 
-    /** Two bull scrapes, a straight charge that can't stop in time, then a long skid. */
+    /**
+     * Thunder Charge: three crackling rakes of its talons, then a head-down charge too heavy to
+     * stop in time, screeching with its bill gaping and spitting sparks, lightning cracking at
+     * every footfall. It curves after its prey until it is close, then holds its line, runs on
+     * past where its prey stood and skids on gouging talons, its head whipping round.
+     */
     private void stampede(List<ServerPlayerEntity> players, int t) {
+        // Its three slow rakes drag its right talons back across the rock in a spray of sparks.
+        if (t == 13 || t == 25 || t == 37) {
+            sparks(boss.socket("right_foot"), 14, .6);
+            sound(boss.socket("right_foot"), SoundEvents.BLOCK_GRINDSTONE_USE, 2.5f, .5f);
+        }
         if (t == action.impact) boss.face(to);
-        if (t >= 24 && t <= 54) {
+        if (t >= action.impact && stampedeStop < 0) {
             Vec3d old = boss.getEntityPos();
-            boss.setPosition(from.lerp(to, (t - 24) / 30.0));
+            // It curves after its prey until it is close, then holds its line and runs on past.
+            var p = player(target);
+            if (!stampedeLocked) {
+                if (p != null && boss.eligible(p)) aim = p.getEntityPos();
+                double close = horizontal(old, aim);
+                if (close <= STAMPEDE_COMMIT) {
+                    stampedeLocked = true;
+                    stampedeLeft = close + STAMPEDE_PAST;
+                } else turnToward(aim, STAMPEDE_TURN);
+            }
+            // It gathers speed over its first strides, then keeps its stride's pace.
+            double speed = STAMPEDE_SPEED * Math.min(1, (t - action.impact + 1) / 5.0);
+            Vec3d ahead = old.add(forward().multiply(speed)), inside = interior(ahead, 9);
+            boss.setPosition(inside);
+            if (stampedeLocked) stampedeLeft -= speed;
+            if (stampedeLocked && stampedeLeft <= 0 || inside.squaredDistanceTo(ahead) > 1e-6 || t - action.impact >= STAMPEDE_MAX_RUN) stampedeEnding = true;
+            // It screeches the whole way, bill gaping and spitting sparks.
+            if ((t - action.impact) % 16 == 0) sound(boss.socket("head"), SoundEvents.ENTITY_PHANTOM_AMBIENT, 4, t == action.impact ? .5f : .45f);
+            if (t % 2 == 0) sparks(boss.socket("beak"), 6, .5);
+            String clip = boss.poseName();
+            float k = boss.poseTicks(0);
+            for (String side : FEET)
+                if (k >= 1 && StormRocPose.socket(clip, k - 1, side).y > .45 && StormRocPose.socket(clip, k, side).y <= .45) {
+                    Vec3d foot = boss.socket(side);
+                    sparks(foot, 16, .8);
+                    sound(foot, SoundEvents.ENTITY_LIGHTNING_BOLT_IMPACT, 1.6f, 1.3f);
+                }
             for (var victim : players) {
                 if (actionHits.contains(victim.getUuid()) || victim.getY() >= center().y + 10) continue;
-                if (distanceToSegment(victim.getEntityPos(), old, boss.getEntityPos()) >= 2.2 || !hurt(victim, STAMPEDE_DAMAGE)) continue;
+                if (distanceToSegment(victim.getEntityPos(), old, boss.getEntityPos()) >= STAMPEDE_HALF_WIDTH || !hurt(victim, STAMPEDE_DAMAGE)) continue;
                 actionHits.add(victim.getUuid());
                 // Tossed aside, off whichever side of its path they stood on.
                 double side = flat(victim.getEntityPos().subtract(old)).crossProduct(forward()).y;
                 pushSafe(victim, Vec3d.fromPolar(0, boss.getYaw() + (side > 0 ? 90 : -90)), .8, .2);
             }
+            // Its clips only hand over on a stride boundary: the run loop starts one stride in,
+            // and once it means to stop it skids at the next boundary (the windup's end is one).
+            boolean boundary = t >= STAMPEDE_RUN_AT && (t - STAMPEDE_RUN_AT) % STAMPEDE_STRIDE == 0;
+            if (stampedeEnding && boundary) {
+                stampedeStop = t;
+                skidFrom = boss.getEntityPos();
+                skidHeading = forward();
+                boss.pose("stampede_skid");
+            } else if (t == STAMPEDE_RUN_AT) boss.pose("stampede_run");
         }
-        if (t > 54) {
-            double f = Math.min(1, (t - 54) / 30.0);
-            Vec3d slide = flat(to.subtract(from)).normalize().multiply(4 * (1 - (1 - f) * (1 - f)));
-            boss.setPosition(interior(to.add(slide), 9));
+        if (stampedeStop >= 0 && t > stampedeStop) {
+            double f = Math.min(1, (t - stampedeStop) / (double) STAMPEDE_SKID_TICKS);
+            boss.setPosition(interior(skidFrom.add(skidHeading.multiply(STAMPEDE_SKID * (1 - (1 - f) * (1 - f)))), 9));
+            // Its talons gouge the rock as it skids.
+            if (t == stampedeStop + 1) sound(boss.getEntityPos(), SoundEvents.BLOCK_GRINDSTONE_USE, 4, .35f);
+            if (f < 1) for (String side : FEET) sparks(boss.socket(side), 4, .5);
+            // Its head whips round to the player it missed with a huff, its bill shut.
+            if (t == stampedeStop + STAMPEDE_SKID_TICKS + 2) sound(boss.socket("head"), SoundEvents.ENTITY_HORSE_BREATHE, 3, .5f);
         }
     }
 

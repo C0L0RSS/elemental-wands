@@ -102,6 +102,20 @@ public final class StormRocRules {
     /** Hitting it from beyond this distance draws a stampede at that player. */
     public static final double RANGED_DISTANCE = 22;
     public static final int RANGED_MEMORY = 160, STAMPEDE_COOLDOWN = 160;
+    /**
+     * The Thunder Charge launches on the Action's impact and runs at STAMPEDE_SPEED blocks a tick,
+     * its stride's pace, for as long as the charge lasts, trampling anyone within
+     * STAMPEDE_HALF_WIDTH of its path. It steers toward its target at up to STAMPEDE_TURN degrees
+     * a tick until it is within STAMPEDE_COMMIT blocks, then holds its line and runs on
+     * STAMPEDE_PAST blocks beyond where its target stood (stopping short of the rim, and after
+     * STAMPEDE_MAX_RUN ticks at most). It skids on the next stride boundary, STAMPEDE_SKID blocks
+     * over STAMPEDE_SKID_TICKS, and is back in its guard STAMPEDE_AFTER ticks after the skid began.
+     * Its clips match build_runtime.py: the windup hands over to the run loop at STAMPEDE_RUN_AT,
+     * whose stride is STAMPEDE_STRIDE ticks, and the skid clip is STAMPEDE_AFTER ticks long.
+     */
+    public static final int STAMPEDE_RUN_AT = 53, STAMPEDE_STRIDE = 9, STAMPEDE_MAX_RUN = 90, STAMPEDE_SKID_TICKS = 16, STAMPEDE_AFTER = 38;
+    public static final double STAMPEDE_HALF_WIDTH = 4.5, STAMPEDE_SKID = 5, STAMPEDE_SPEED = .77, STAMPEDE_COMMIT = 15, STAMPEDE_PAST = 8;
+    public static final float STAMPEDE_TURN = 2;
     /** It pounces at a target this far away, or after this many attacks in one spot. */
     public static final double POUNCE_FAR = 26;
     public static final int ACTIONS_BEFORE_POUNCE = 4;
@@ -162,7 +176,8 @@ public final class StormRocRules {
         SCREAM("scream", 32, 26, 58),
         WING("wing", 52, 0, 80),
         POUNCE("pounce", 52, 24, 80),
-        STAMPEDE("stampede", 24, 20, 84);
+        // The Thunder Charge ends STAMPEDE_AFTER ticks after its skid starts; this is its longest run.
+        STAMPEDE("stampede", 44, 36, STAMPEDE_RUN_AT + STAMPEDE_MAX_RUN + STAMPEDE_STRIDE + STAMPEDE_AFTER);
 
         public final String pose;
         public final int impact, lock, duration;

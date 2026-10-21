@@ -16,7 +16,7 @@ def unreflect(item):
         r=item['rotation'];item['rotation']=[r[0],-r[1],-r[2]] if isinstance(r,list) else {k:[v[0],-v[1],-v[2]] for k,v in r.items()}
 
 def main():
-    from build_runtime import SCALE,DEFINITIONS,WING_REST,WING_SLAP,KEY_FPS,KNEADS,BITE_IMPACT,BITE_TAKEOFF,BITE_LANDING,BITE_LEAP_IMPACT,SWEEP_START,SWEEP_END,SCREAM_IMPACT,WING_LIFT,WING_APEX,WING_IMPACT,POUNCE_LAUNCH,POUNCE_IMPACT,MODEL,shape,bill,glowing
+    from build_runtime import SCALE,DEFINITIONS,WING_REST,WING_SLAP,KEY_FPS,KNEADS,BITE_IMPACT,BITE_TAKEOFF,BITE_LANDING,BITE_LEAP_IMPACT,SWEEP_START,SWEEP_END,SCREAM_IMPACT,WING_LIFT,WING_APEX,WING_IMPACT,POUNCE_LAUNCH,POUNCE_IMPACT,STAMPEDE_RUN,STAMPEDE_LOOP,MODEL,shape,bill,glowing
     approved=read(MODEL/'storm_roc.geo.json')
     geo=read(ASSETS/'geckolib/models/storm_roc.geo.json')
     for b in geo['minecraft:geometry'][0]['bones']:
@@ -48,6 +48,7 @@ def main():
         'swing_left':[(0,DEFINITIONS['swing_left'][0],'hunched')],'swing_right':[(0,DEFINITIONS['swing_right'][0],'hunched')],'scream':[(0,DEFINITIONS['scream'][0],'hunched')],
         'wing':[(0,WING_LIFT-.06,'hunched'),(WING_IMPACT+.05,DEFINITIONS['wing'][0],'hunched')],'takeoff':[(0,1.2,'hunched')],
         # The Raptor Strike's feet leave the rock between its last planted key and the 1.575 one.
+        'stampede':[(0,.2,'hunched')],'stampede_skid':[(1.45,DEFINITIONS['stampede_skid'][0],'hunched')],
         'pounce':[(0,POUNCE_LAUNCH-.04,'hunched'),(POUNCE_IMPACT+.05,DEFINITIONS['pounce'][0],'hunched')]}
     reference={name:world(name,0) for name in ('perched','hunched')}
     worst=foot_error=socket_error=0.;snapshots={}
@@ -89,6 +90,10 @@ def main():
     for a,ta,b,tb in [('dive',3,'stuck',0),('hop',0,'stuck',0),('hop',1.2,'stuck',0),
         ('stuck',6,'hunched',0),('land',0,'flight',0),('land',.8,'perched',0),
         ('call',0,'perched',0),('call',3,'perched',0),('takeoff',2.5,'flight',0)]:endpoint(a,ta,b,tb)
+    # The Thunder Charge's clips hand over with no crossfade: the windup into the run loop, and the
+    # loop, on any stride boundary, into the skid.
+    endpoint('stampede',STAMPEDE_LOOP,'stampede_run',0,.05)
+    endpoint('stampede_run',DEFINITIONS['stampede_run'][0],'stampede_skid',0,.05)
     # The Storm Sweep scythes its whole front at chest height through the server's hit ticks.
     sweep=slice(round(SWEEP_START*20),round(SWEEP_END*20)+1)
     for name in ('swing_left','swing_right'):
@@ -138,6 +143,15 @@ def main():
         assert foot[round(2.0*20),1]>foot[0,1]+3,('Raptor Strike legs must tuck up in flight',side)
         assert foot[round((POUNCE_IMPACT-.1)*20),2]<foot[round(2.0*20),2]-4,('Raptor Strike talons must swing forward to strike',side)
         assert abs(foot[round(POUNCE_IMPACT*20)+1,1]-foot[0,1])<.02,('Raptor Strike must land on its tick',side)
+    # The Thunder Charge's feet stride off the rock in each loop of its run (the server cracks
+    # lightning where each comes down, below 0.45 blocks) and are both down through its skid.
+    rest=np.array([f[side+'_foot'][1] for f in sockets['stampede'][:1] for side in ('left','right')])
+    for k,side in enumerate(('left','right')):
+        y=np.array([f[side+'_foot'][1] for f in sockets['stampede_run']])
+        falls=np.sum((y[:-1]>.45)&(y[1:]<=.45))
+        assert y.max()>rest[k]+1 and falls==1,('Thunder Charge must stride once per loop on each foot',side,y.max(),falls)
+        skid=np.array([f[side+'_foot'][1] for f in sockets['stampede_skid']])
+        assert np.all(np.abs(skid[3:16]-rest[k])<.02),('Thunder Charge skids on both feet',side)
     assert shoulder('takeoff',1.1)>35 and shoulder('takeoff',1.2)<-35,'Takeoff downbeat misses tick 24'
     for t in [.45,1.2,1.9]:
         d=world('call',t)['head'][:3,:3]@np.array([0,0,-1])

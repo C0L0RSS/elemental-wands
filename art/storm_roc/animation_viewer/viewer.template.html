@@ -198,7 +198,7 @@ figcaption { font-size: 13.5px; color: var(--muted); }
       <h2 class="sec">What you're seeing</h2>
       <p>This is the game's own model and animation data, baked frame by frame from the files the mod loads, and lit like a Minecraft mob. It is about 300 solid blocks, many of them angled, carrying a pixel-art texture; the eyes are lit by a glow layer, as in game.</p>
       <p>The ticks on the timeline are server ticks, 20 a second. The blue marks are the moments the fight lands a hit, so you can check each blow against the motion.</p>
-      <p>Not shown here: the server moving the Roc (flights between spires, the dive's climb, the pounce arc and the stampede run), its head turning to track you, the blends between clips, the lightning and its crackle. Those only appear in game.</p>
+      <p>Not shown here: the server moving the Roc (flights between spires, the dive's climb, the pounce arc), its head turning to track you, the blends between clips, the lightning and its crackle. Those only appear in game.</p>
       <p>While its feet are down the tail lifts just enough to stay off the rock; on a spire it may hang over the drop.</p>
     </div>
   </section>
@@ -257,7 +257,14 @@ const CLIPS = {
     + 'The viewer flies it 18 blocks, with the player having dodged beside the landing.',
     marks: [[0, .6, 'sinks into a stalk'], [.6, 1.2, 'weight shifts, tail lashes'], [1.2, 1.2, 'aim locks'], [1.0, 1.35, 'draws back, coils'], [1.35, 1.6, 'push + downbeat'], [1.6, 2.25, 'flat, fast leap'],
       [2.25, 2.55, 'screech, flare, talons forward'], [2.6, 2.6, 'strike: crush + shockwave'], [2.6, 3.4, 'mantles, glances about'], [3.4, 4.0, 'settles']]},
-  stampede:    {name: 'Stampede', d: 'Two bull scrapes, a head-low charge, then a skid with its wings flared as brakes.', marks: [[1.2, 2.7, 'charge']], tag: 'crest flares'},
+  stampede:    {name: 'Thunder Charge', tag: 'Reworked', d: 'Its answer to a player hitting it from more than 22 blocks away. A bull\'s challenge: it lowers its head and sways it, crest raised, '
+    + 'wings half open and low, and slowly rakes the rock back three times with its right talons, its whole body heaving into each rake, snorting, sparks and crackles flying (the aim locks at 1.80). It drops lower still and at 2.20 '
+    + 'explodes into a charge: a heavy cassowary run at its stride\'s pace, head low and level as a battering ram, bill gaping in a screech and spitting sparks, wings held out for balance, legs pumping, lightning cracking where each foot comes down. '
+    + 'It runs for as long as the charge takes, curving after its prey and leaning into the turn, until it is about a second away (15 blocks); then it holds its line, so a sprint sideways clears it. '
+    + 'Anyone within 4.5 blocks of its path is trampled (about eight hearts through full diamond) and tossed aside. It runs on 8 blocks past where its prey stood, then slams its feet forward and skids '
+    + '5 blocks, bill snapping shut, leaning back with its talons gouging the rock and its wings flared as brakes; its head whips round to the player it missed, and it steps back into its '
+    + 'guard: a window to punish it. The viewer plays one charge at a player 30 blocks ahead who sprints to the side as it launches.',
+    marks: []},
   takeoff:     {name: 'Takeoff', d: 'Crouches with its wings opening, one huge downbeat that blasts everyone back, then beats away.',
                 marks: [[1.2, 1.2, 'gust']]},
 };
@@ -267,7 +274,7 @@ const GROUPS = [
   ['The brawl', ['hunched', 'bite', 'bite_leap', 'swing_left', 'swing_right', 'scream', 'wing', 'pounce', 'stampede', 'takeoff']],
 ];
 const SPIRE = new Set(['perched', 'call', 'land']);
-const WIDE = new Set(['flight', 'dive', 'hop', 'takeoff', 'land', 'wing', 'wing_spiral', 'pounce', 'call']);
+const WIDE = new Set(['flight', 'dive', 'hop', 'takeoff', 'land', 'wing', 'wing_spiral', 'pounce', 'stampede', 'call']);
 const $ = id => document.getElementById(id);
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -309,10 +316,17 @@ player.position.set(-7, 0, -11); player.rotation.y = .6; scene.add(player);
 // with the player standing there, and the burst of crackles out to the bite's 5-block reach.
 const BITE_RADIUS = 5, BITE_LEAP = 6, BITE_IMPACT = {bite: 2.3, bite_leap: 2.8}, BITE_AT = {bite: [0, 1.126, -13.563], bite_leap: [0, 1.126, -13.668]};
 const POUNCE_LAUNCH = 1.6, POUNCE_IMPACT = 2.6, POUNCE_LEAP = 18;
+// The Thunder Charge's path, heading and prey come baked from the game's charge rules (see export_preview.py).
+const charge = () => data.clips.stampede;
+const stampedeMarks = c => [[0, .25, 'head lowers'], [.25, 2.05, 'three slow talon rakes'], [1.8, 1.8, 'aim locks'], [2.05, 2.2, 'drops low'],
+  [c.launch, c.stop, 'charge: curves after its prey, screech, lightning footfalls'], [c.stop, c.stop + .8, 'skid, bill shut, wings brake'],
+  [c.stop + .75, c.stop + 1.5, 'head whips round'], [c.stop + .9, c.stop + 1.4, 'steps back'], [c.stop + 1.5, c.stop + 1.9, 'settles']];
 const isBite = () => state.clip === 'bite' || state.clip === 'bite_leap';
 const smoothstep = f => f * f * (3 - 2 * f);
 // The leap's travel is the server's: from push-off (2.15) to landing (2.75), in an arc.
 function biteLeap(t) {
+  // Only the charge turns the Roc; every other clip faces it straight ahead.
+  if (state.clip !== 'stampede') roc.rotation.set(0, 0, 0);
   if (state.clip === 'wing_spiral') {
     // The game would carry it: a corkscrew climb up a 3-block helix to 18 blocks by 2.15 s (one turn,
     // its heading following the helix as it barrel-rolls twice), a stall at the top to 2.55, then
@@ -338,6 +352,22 @@ function biteLeap(t) {
     // pace, springing up to 4 blocks and gliding down onto it at 2.60.
     const f = Math.min(1, Math.max(0, (t - POUNCE_LAUNCH) / (POUNCE_IMPACT - POUNCE_LAUNCH)));
     roc.position.set(0, Math.sin(Math.PI * f ** .7) * 4, -POUNCE_LEAP * f); return 0;
+  }
+  if (state.clip === 'stampede') {
+    // The Thunder Charge's run is the server's: its baked path and heading, tick by tick, with the
+    // game's lean into the curve (its turn each tick, times six, eased), and its prey running.
+    const c = charge(), k = Math.min(t * 20, c.path.length - 1), i = Math.floor(k), j = Math.min(i + 1, c.path.length - 1), f = k - i;
+    const at = (list, n) => list[i][n] + (list[j][n] - list[i][n]) * f;
+    let lean = 0;
+    for (let n = 1; n <= Math.min(i, 30); n++) {
+      const turn = c.path[i - n + 1][2] - c.path[i - n][2], eased = (1 - .2) ** (n - 1) * .2;
+      lean += Math.max(-15, Math.min(15, turn * 6)) * eased;
+    }
+    roc.rotation.order = 'YXZ';
+    roc.position.set(at(c.path, 0), 0, at(c.path, 1));
+    roc.rotation.set(0, THREE.MathUtils.degToRad(at(c.path, 2)), THREE.MathUtils.degToRad(lean));
+    player.position.set(at(c.prey, 0), 0, at(c.prey, 1)); player.rotation.y = Math.PI / 2;
+    return 0;
   }
   if (state.clip !== 'bite_leap') { roc.position.set(0, 0, 0); return 0; }
   const f = smoothstep(Math.min(1, Math.max(0, (t - 2.15) / .6)));
@@ -367,8 +397,10 @@ const burstSparks = Array.from({length: 16}, () => {
 });
 let boneIndex = null;
 function mouthOverlay(t) {
-  const burst = (t - (BITE_IMPACT[state.clip] || 2.3)) / .45, on = isBite() && burst < 1 || state.clip === 'scream' && t >= 1.6 && t < 2.3;
-  const grow = t < 1.2 ? 1 : burst < 0 ? 1.35 : 2.2 * (1 - burst) + .2;
+  // The Thunder Charge's gaping bill blazes with crackles for as long as it runs; the skid shuts it.
+  const running = state.clip === 'stampede' && t >= charge().launch - .1 && t < charge().stop;
+  const burst = (t - (BITE_IMPACT[state.clip] || 2.3)) / .45, on = isBite() && burst < 1 || state.clip === 'scream' && t >= 1.6 && t < 2.3 || running;
+  const grow = running ? 1.7 : t < 1.2 ? 1 : burst < 0 ? 1.35 : 2.2 * (1 - burst) + .2;
   boneIndex ??= Object.fromEntries(data.parts.map((part, i) => [part.bone, i]));
   MOUTH_SPARKS.forEach(([bone, pivot, size], i) => {
     const sprite = mouthSparks[i]; sprite.visible = on;
@@ -499,9 +531,11 @@ const talonSparks = TALON_SPARK_SET.map(() => {
 const shock = new THREE.Mesh(new THREE.RingGeometry(.92, 1, 96), new THREE.MeshBasicMaterial({color: 0xd9cbb0, transparent: true, side: THREE.DoubleSide, depthWrite: false}));
 shock.rotation.x = -Math.PI / 2; shock.visible = false; scene.add(shock);
 function talonOverlay(t) {
-  const on = state.clip === 'pounce' && t >= 1.2 && t < POUNCE_IMPACT + .4;
+  // The Thunder Charge's talons crackle from its first rake to the end of its skid.
+  const rushing = state.clip === 'stampede' && t >= .2 && t < charge().stop + .8;
+  const on = state.clip === 'pounce' && t >= 1.2 && t < POUNCE_IMPACT + .4 || rushing;
   boneIndex ??= Object.fromEntries(data.parts.map((part, i) => [part.bone, i]));
-  const grow = t < POUNCE_IMPACT ? .8 + .6 * (t - 1.2) / (POUNCE_IMPACT - 1.2) : 2 * (1 - (t - POUNCE_IMPACT) / .4) + .3;
+  const grow = rushing ? 1.1 : t < POUNCE_IMPACT ? .8 + .6 * (t - 1.2) / (POUNCE_IMPACT - 1.2) : 2 * (1 - (t - POUNCE_IMPACT) / .4) + .3;
   TALON_SPARK_SET.forEach(([bone, pivot, size], i) => {
     const sprite = talonSparks[i]; sprite.visible = on && boneIndex[bone] !== undefined;
     if (!sprite.visible) return;
@@ -573,6 +607,11 @@ function setView(view) {
   const clip = data.clips[state.clip], [yaw, pitch] = VIEWS[view];
   state.yaw = yaw; state.pitch = pitch;
   if (view === 'head') { state.target.set(0, clip.head[1], clip.head[2]); state.dist = 11; }
+  // The charge is framed on its whole run: the middle of its path, from further back.
+  else if (state.clip === 'stampede') {
+    const xs = clip.path.map(p => p[0]), zs = clip.path.map(p => p[1]);
+    state.target.set((Math.min(...xs) + Math.max(...xs)) / 2, clip.body[1] - 1, (Math.min(...zs) + Math.max(...zs)) / 2); state.dist = 58;
+  }
   else { state.target.set(0, clip.body[1] - 1, clip.body[2] - (state.clip === 'pounce' ? POUNCE_LEAP / 2 : 0)); state.dist = WIDE.has(state.clip) ? 46 : 36; }
   for (const [id, v] of [['camThree', 'three'], ['camSide', 'side'], ['camFront', 'front'], ['camHead', 'head'], ['camPlayer', 'player']])
     $(id).setAttribute('aria-pressed', String(v === view));
@@ -590,7 +629,10 @@ function selectClip(name) {
   // For the bite, the player stands where it bites, so you can see the head stay on them.
   if (name === 'bite') player.position.set(0, 0, -13.56); else if (name === 'bite_leap') player.position.set(0, 0, -13.67 - BITE_LEAP);
   // The pounce's prey has dodged: it stands just clear of the crush, beside where the Roc lands.
-  else if (name === 'pounce') player.position.set(-6.5, 0, -POUNCE_LEAP - 1); else player.position.set(-7, 0, -11);
+  else if (name === 'pounce') player.position.set(-6.5, 0, -POUNCE_LEAP - 1);
+  // The charge's prey runs along its baked path (see biteLeap).
+  else if (name !== 'stampede') player.position.set(-7, 0, -11);
+  if (name !== 'stampede') player.rotation.y = .6;
   $('scrub').max = clip.duration;
   // Server ticks: a short mark every tick, a tall one every second.
   const ticks = $('ticks'); ticks.textContent = '';
@@ -718,6 +760,7 @@ async function start() {
     triangles += part.positions.length / 9;
   }
   $('stats').innerHTML = `<span><b>${Math.round(triangles / 12)}</b> blocks</span><span><b>${atlas.image.width}×${atlas.image.height}</b> pixel-art texture</span><span><b>${parts.length}</b> moving parts</span><span><b>16</b> clips</span><span><b>1.25×</b> scale · 34-block wingspan</span>`;
+  CLIPS.stampede.marks = stampedeMarks(data.clips.stampede);
   buildList(); selectClip(state.clip); setPlaying(state.playing);
   $('loading').hidden = true;
 }

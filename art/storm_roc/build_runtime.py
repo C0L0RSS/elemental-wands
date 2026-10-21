@@ -48,6 +48,10 @@ WING_LIFT, WING_APEX, WING_DROP, WING_IMPACT = .85, 1.75, 2.05, 2.6
 # stalls at the top to 2.55; dives talons first, flares and lands at 3.25. Parked (2026-10-19): it
 # needs more work, so it is not in DEFINITIONS and doesn't ship; add it back to try it again.
 SPIRAL_LIFT, SPIRAL_TOP, SPIRAL_DIVE, SPIRAL_IMPACT = .85, 2.15, 2.55, 3.25
+# The hop between spires is the whole of the server's flight (StormRocRules: AIR_CYCLE - FLY_AT
+# ticks). The server holds it on its spire until SPIRE_PUSH (tick 8) while it turns toward the next
+# one, then flies it there; it lands as the clip ends.
+SPIRE_PUSH, SPIRE_FLIGHT = .4, 2.6
 # Raptor Strike: it stalks low and pushes off at 1.60 (tick 32); the server carries it flat and
 # fast on a low arc, and its talons strike its prey at 2.60 (tick 52).
 POUNCE_LAUNCH, POUNCE_IMPACT = 1.6, 2.6
@@ -62,14 +66,14 @@ STAMPEDE_LOOP = round(STAMPEDE_RUN+1/STRIDE_HZ, 4)
 STAMPEDE_SKID_AT = round(STAMPEDE_LOOP+1/STRIDE_HZ, 4)
 STAMPEDE_RAKES = (.25, .85, 1.45)
 FAST_KEYS = {'scream':[(1.45,2.2)], 'swing_left':[(1.2,1.95)], 'swing_right':[(1.2,1.95)], 'bite':[(1.95,2.7)], 'bite_leap':[(1.8,3.25)], 'wing':[(.45,1.1),(2.4,3.0)], 'wing_spiral':[(.5,3.6)], 'takeoff':[(1.1,1.2)],
-    'pounce':[(1.3,1.75),(2.35,2.8)], 'stampede':[(.2,2.1),(2.05,2.65)], 'stampede_run':[(0,.45)], 'stampede_skid':[(0,.3)], 'call':[(1.9,2.1)],
+    'pounce':[(1.3,1.75),(2.35,2.8)], 'spire_flight':[(.3,1.0),(1.3,2.6)], 'stampede':[(.2,2.1),(2.05,2.65)], 'stampede_run':[(0,.45)], 'stampede_skid':[(0,.3)], 'call':[(1.9,2.1)],
     'hunched':[(.5,1.),(8.5,9.)]+[(g[0],g[0]+.35) for g in GUARD_GLANCES]}
 # Block-space clearances at 1.25x; preserve the original model-space wing solve.
 WING_REST, WING_SLAP = -.125, .7
 # The idle and flight loops play their authored motion this much slower: a giant moves slowly.
 SLOW = 1.5
 DEFINITIONS = {'perched':(round(7.2*SLOW,3),True), 'call':(3,False), 'land':(.8,False),
-    'flight':(round(4.8*SLOW,3),True), 'hunched':(9.6,True), 'dive':(3,False), 'stuck':(6,False),
+    'flight':(round(4.8*SLOW,3),True), 'spire_flight':(SPIRE_FLIGHT,False), 'hunched':(9.6,True), 'dive':(3,False), 'stuck':(6,False),
     'bite':(3.9,False), 'bite_leap':(4.4,False), 'swing_left':(2.6,False), 'swing_right':(2.6,False),
     'scream':(2.9,False), 'wing':(4.0,False), 'pounce':(4.0,False),
     'stampede':(STAMPEDE_LOOP,False), 'stampede_run':(round(1/STRIDE_HZ,4),True), 'stampede_skid':(1.9,False),
@@ -183,7 +187,9 @@ def main():
     # section, so the head reaches further forward. Ground attacks keep the study's neck.
     NECK = (('neck_base_skin','neck_lower'), ('neck_lower_skin','neck_mid'), ('neck_mid_skin','neck_upper'),
         ('neck_upper_skin','neck_tip'), ('neck_tip_skin','head'))
-    AIRBORNE = {'flight', 'land', 'dive', 'takeoff', 'hop'}
+    # The neck lengthens by how far its skin has shrunk toward the study's flying neck, so a clip
+    # blending from a perch into flight grows its neck as it goes.
+    AIRBORNE = {'flight', 'spire_flight', 'land', 'dive', 'takeoff', 'hop'}
     def lengthen_neck(p):
         for skin, joint in NECK:
             f = float(np.clip((1-p[skin]['scale'][1])/.6, 0, 1))
@@ -453,7 +459,9 @@ def main():
         p['tail_fan']['rotation'][0]+=5*breathe+9*shake
         plant(p,perch_feet)
         return p
-    def flight(time,slow=SLOW):
+    def flight_base(time,slow=SLOW):
+        """Existing aerial motion used by the dive and the shared landing/takeoff handoff.
+        Keep those clips independent while the cruising flight is reworked."""
         t=(time/slow)%4.8
         # Two weighty, asymmetric beats; rapid power stroke, slow recovery, glide.
         # The downstroke ends shallower than the raise: a giant's wings don't point at the ground.
@@ -472,6 +480,104 @@ def main():
                 p[f'{label}_primary_{f:02}']['rotation'][0]+=3*math.sin(t*7-i*.35)*glide
                 p[f'{label}_primary_{f:02}']['rotation'][2]+=side*2.5*math.sin(t*5-i*.5)*glide
         return p
+    flight_rest=flight_base(0)
+    def flight(time):
+        """Two unequal, heavy strokes, then a living glide. Shoulders commit first, hands
+        and primaries lag behind, and the chest rises only after the wings have pushed.
+        Recovery takes longer than the push; the head searches the rock below."""
+        period=DEFINITIONS['flight'][0];t=time%period
+        stroke=lambda x:keys(x%period,[(0,0),(.25,.08),(.95,.96),(1.10,.92),
+            (1.55,-.68,'hit'),(1.82,-.59),(2.35,.12),(3.0,.84),(3.14,.80),
+            (3.60,-.60,'hit'),(3.90,-.50),(4.65,0),(period,0)])
+        p=pose('flight',0)
+        flap(p,t,stroke,lag=.13)
+        # Sink as the wings unload, then lift after the push. The second effort is weaker.
+        lift=keys(t,[(0,0),(.95,-3.5),(1.35,-2.5),(1.95,6.5),(2.55,1.0),
+            (3.0,-3),(3.42,-2),(4.02,5.0),(4.85,.5),(5.8,-.7),(6.8,0),(period,0)])
+        pitch=keys(t,[(0,0),(.95,-3.5),(1.35,-3),(1.92,2.8),(2.5,.4),
+            (3.0,-2.8),(3.4,-2.4),(4.0,2.0),(4.8,0),(period,0)])
+        p['body']['position'][1]+=lift
+        p['body']['rotation'][0]+=pitch
+        # The neck absorbs the chest's effort; head orientation is solved in world space.
+        p['neck_base']['rotation'][0]-=.35*pitch
+        p['tail_fan']['rotation'][0]+=-.65*pitch+keys(t,[(0,0),(1.55,0),(1.95,-2),
+            (2.5,1),(3.6,0),(4.05,-1.6),(4.75,.7),(5.5,0),(period,0)])
+        glide=envelope(t,4.25,.65,1.0,1.1,'ease','ease')
+        trim=keys(t,[(0,0),(4.5,0),(5.0,1),(5.55,.4),(6.05,-.65),(6.8,0),(period,0)])
+        p['tail_fan']['rotation'][1]+=3.5*trim
+        # Small hand corrections and irregular feather flex keep the glide alive.
+        for label,side in (('left',1),('right',-1)):
+            p[label+'_wing_wrist']['rotation'][2]+=side*(1.4*trim+glide*noise(t,period,21+side,(2,3,5)))
+            for i,f in enumerate(FINGERS):
+                flex=glide*noise(t,period,31+i+side*7,(2,3,5))
+                p[f'{label}_primary_{f:02}']['rotation'][0]+=1.8*flex
+                p[f'{label}_primary_{f:02}']['rotation'][2]+=side*.9*flex
+        # Watch the ground in held glances, with the quick turns and little settling
+        # shiver used by the brawl. In game, occasional player focus takes over these looks.
+        look=twitch(t,[(.25,(22,-24,-5)),(1.35,(34,14,4)),(2.65,(23,30,6)),
+            (4.2,(38,-20,-6)),(5.6,(28,22,4)),(6.7,(0,0,0))],spark=1.0,hz=12,duration_scale=2.70)
+        head(p,-4+look[0]+.35*trim,look[1]+1.5*trim,look[2]-.3*trim)
+        # Airborne legs stay tucked. The grounded locomotion blend re-solves them
+        # as planted feet and flips their knees at the beginning/end of this loop.
+        return mix(flight_rest,p,ease(t,0,.3)*(1-ease(t,6.85,period)))
+    SPIRE_OFF=SPIRE_PUSH+.12   # its talons leave the rock
+    spire_lift={}
+    def spire_flight(t):
+        """The hop to the next spire, all of it as the game plays it. The server holds it on its
+        spire until SPIRE_PUSH while it turns toward the next one: it sinks into a crouch, crest
+        lifting and head locked on where it is going, and opens and raises its wings. Then it drives
+        off with straightening legs into one huge downbeat, its legs streaming back and tucking. A
+        slow recovery, then it sets its wings and glides the rest of the way, glancing down over the
+        summit, and arrives in the flight's neutral glide, where the landing begins."""
+        P,OFF,END=SPIRE_PUSH,SPIRE_OFF,SPIRE_FLIGHT
+        load=keys(t,[(0,0),(.05,0),(P,1),(OFF,0,'snap')])
+        push=keys(t,[(0,0),(P-.04,0),(OFF,1,'hit'),(.95,0)])
+        # From the perch's body and legs into the flight's, over the push and the downbeat.
+        airborne=keys(t,[(0,0),(P,0),(.9,1)])
+        # Raised slowly through the crouch and the push, one heavy downbeat as the feet leave, a
+        # slow recovery that only half raises them, then set level to glide.
+        stroke=lambda x:keys(x,[(0,0),(.05,0),(.5,1.05),(.88,-1.0,'hit'),(1.05,-.9),(1.6,.42),(1.85,.32),(2.2,0),(END,0)])
+        air=pose('flight',0);flap(air,t,stroke,lag=.11)
+        ground=copy.deepcopy(perch);blend_wings(ground,air,keys(t,[(0,0),(.05,0),(.42,1)]))
+        p=mix(ground,air,airborne);body=p['body']
+        # Down and back into the crouch, up and forward off the rock, and heaved up after the downbeat.
+        lift=keys(t,[(0,0),(.95,0),(1.25,4.5),(1.75,1.2),(2.2,0)])
+        body['position']+=np.array([0,-9*load+7*push+lift,5*load-8*push])
+        body['rotation'][0]+=9*load-10*push+keys(t,[(0,0),(.85,0),(1.2,3),(1.7,0)])
+        p['neck_base']['rotation'][0]+=6*load-4*push
+        p['tail_fan']['rotation'][0]+=-12*load+14*push
+        # A grunt with the push.
+        p['lower_beak']['rotation'][0]=10*envelope(t,P-.05,.1,.12,.3)
+        # Small hand and tail corrections keep the glide alive.
+        glide=keys(t,[(0,0),(1.85,0),(2.1,1),(2.25,1),(2.45,0)])
+        trim=keys(t,[(0,0),(1.9,0),(2.1,1),(2.3,-.5),(2.45,0)])
+        p['tail_fan']['rotation'][1]+=3.5*trim
+        for label,side in (('left',1),('right',-1)):
+            p[label+'_wing_wrist']['rotation'][2]+=side*(1.4*trim+glide*noise(t,END,21+side,(2,3,5)))
+            for i,f in enumerate(FINGERS):
+                flex=glide*noise(t,END,31+i+side*7,(2,3,5))
+                p[f'{label}_primary_{f:02}']['rotation'][0]+=1.8*flex
+                p[f'{label}_primary_{f:02}']['rotation'][2]+=side*.9*flex
+        # Talons gripping the rock until they leave it; then the legs stream back from the push
+        # and tuck, swinging straight through on their hinges (see the Raptor Strike).
+        if t<OFF:
+            for label in ('left','right'):
+                for i in range(4):p[f'{label}_toe_{i}_tip']['rotation'][0]+=(-1 if i==3 else 1)*20*envelope(t,P-.15,.1,.12,.05)
+            plant(p,perch_feet)
+        else:
+            if 'legs' not in spire_lift:spire_lift['legs']=spire_flight(OFF-.01)
+            for n in LEG_BONES:p[n]=copy.deepcopy(spire_lift['legs'][n])
+            w=keys(t,[(OFF,0),(OFF+.4,1)])
+            hinge=lambda n:n.split('_',1)[1] in ('thigh','shin','tarsus')
+            for n in filter(hinge,LEG_BONES):
+                for k in ('rotation','position'):p[n][k]=p[n][k]*(1-w)+air[n][k]*w
+            blend_local(p,air,[n for n in LEG_BONES if not hinge(n)],w)
+        # Locked on the next spire through the crouch and the launch, then held glances down over
+        # the summit, turned at the flight's slow pace, and forward again for the landing.
+        look=twitch(t,[(.08,(12,0,0)),(1.3,(32,-22,-5)),(1.8,(24,18,4)),(2.15,(0,0,0))],spark=1.0,hz=12,duration_scale=2.70)
+        head(p,-4*airborne+look[0],look[1],look[2])
+        # It arrives exactly in the pose the landing starts from.
+        return mix(p,flight_rest,ease(t,2.3,END))
     HUNCHED=DEFINITIONS['hunched'][0]
     def hunched_breath(t):
         # Uneven breaths: a slow draw, a short catch and a quicker sigh out, each its own depth.
@@ -890,6 +996,8 @@ def main():
             u=t/SLOW;return .8*pulse(u,3.6,3.75,4.25,4.6)+.25*pulse(u,2.05,2.2,2.9,3.1)
         if name=='call':return pulse(t,0,.45,2,2.8)
         if name=='flight':return -1
+        # Lifted as it gathers itself on the spire, swept flat as it launches.
+        if name=='spire_flight':return keys(t,[(0,0),(.08,0),(SPIRE_PUSH-.05,.45),(SPIRE_PUSH+.22,-1),(SPIRE_FLIGHT,-1)])
         if name=='land':return -1+ease(t,.2,.8)
         if name=='hunched':return hunched_crest(t)
         if name=='stuck':return stuck_crest(t)
@@ -946,6 +1054,7 @@ def main():
         """(floor, weight, reach) while the feet are on the summit or a spire."""
         if name in ('perched','call'):return [(perch_ground,1,capstone)]
         if name=='flight':return []
+        if name=='spire_flight':return [(perch_ground,1-ease(t,SPIRE_PUSH+.07,SPIRE_PUSH+.22),capstone)]
         if name=='land':return [(perch_ground,ease(t,0,.3),capstone)]
         if name=='dive':return [(perch_ground,1-ease(t,0,.25),capstone),(ground,ease(t,2.65,3))]
         if name=='hop':return [(ground,1-ease(t,0,.3)),(ground,ease(t,.85,1.2))]
@@ -958,6 +1067,7 @@ def main():
     def motion(name,t):
         if name=='perched':return perched(t)
         if name=='flight':return flight(t)
+        if name=='spire_flight':return spire_flight(t)
         if name=='hunched':return hunched(t)
         if name=='stuck':return stuck(t)
         if name=='call':
@@ -975,8 +1085,8 @@ def main():
                 p[label+'_wing_wrist']['rotation'][2]+=side*3*tremble
             plant(p,perch_feet);return p
         if name=='land':
-            if t==0:return flight(0)
-            p=flight(0);spread(p,.85*ease(t,0,.2),1,-12*ease(t,0,.2))
+            if t==0:return flight_base(0)
+            p=flight_base(0);spread(p,.85*ease(t,0,.2),1,-12*ease(t,0,.2))
             m=matrices(p)
             targets={label:point(m,label+'_foot',by[label+'_foot']['pivot']) for label in ('left','right')}
             for v in targets.values():v[2]-=18*ease(t,0,.2);v[1]-=10*ease(t,0,.2)
@@ -988,7 +1098,7 @@ def main():
             return locomotion_mix(p,landing,ease(t,0,.3))
         if name in ('dive','hop'):
             if name=='dive':
-                p=flight((t*1.2)%4.8,1)
+                p=flight_base((t*1.2)%4.8,1)
                 # Climb first; body tips at the apex, then a tight falcon stoop.
                 p['root']['rotation'][0]=-22*pulse(t,0,.3,1.4,1.8)+78*ease(t,1.5,2.05)
                 fold=pulse(t,1.65,2.05,2.55,2.8)
@@ -1000,7 +1110,7 @@ def main():
                 fan(p,t,.3*(1-fold))
                 p=locomotion_mix(perch,p,ease(t,0,.25))
                 return locomotion_mix(p,buried,ease(t,2.65,3))
-            p=flight(0)
+            p=flight_base(0)
             p['root']['rotation'][0]=curve(t,[(0,-25),(.3,-32),(.55,-10),(.85,75),(1.2,75)])
             flap(p,t,lambda x:curve(x,[(0,0),(.3,1),(.55,-1),(.85,.2),(1.2,0)]))
             head(p,curve(t,[(0,-45),(.35,-50),(.7,35),(1.2,65)]))
@@ -1110,7 +1220,7 @@ def main():
             # The slam curls the hand up off the rock first; only then does the shoulder give.
             if slam>0:
                 for joint in ('wing_wrist','wing_elbow','wing_shoulder'):splay(p,0,True,joint)
-            return locomotion_mix(p,flight(0),ease(t,1.2,2.5))
+            return locomotion_mix(p,flight_base(0),ease(t,1.2,2.5))
         if name=='pounce':return pounce(t)
         if name=='stampede':return stampede(t)
         if name=='stampede_run':return stampede(STAMPEDE_LOOP+t)
@@ -1125,8 +1235,9 @@ def main():
         Spring(['tail_fan'],1.6,.32,turn=.9,shove=.7,limit=9)]
     # The run loop has its own stride sway and no springs, so the chain's clips meet exactly.
     FOLLOW={'hunched':FEATHERS,'bite':FEATHERS,'bite_leap':FEATHERS,'swing_left':FEATHERS,'swing_right':FEATHERS,'scream':FEATHERS,'wing':FEATHERS,'wing_spiral':FEATHERS,'pounce':FEATHERS,'stampede':FEATHERS,'stampede_skid':FEATHERS}
+    FOLLOW['flight']=FOLLOW['spire_flight']=FEATHERS
     # Clips another clip continues without a crossfade: their swing settles by their end, as a loop's does.
-    CHAINED={'stampede'}
+    CHAINED={'stampede','spire_flight'}
     shapes={b['name']:shape(b) for b in bones if b.get('cubes')}
     def follow(frames,times,springs,loop):
         worlds=[matrices(p) for p in frames]
@@ -1151,6 +1262,7 @@ def main():
     # these tolerances (degrees, model pixels, scale). The bones the server's sockets ride on keep
     # every key, so hits land exactly where the export says.
     THIN={'hunched','bite','bite_leap','swing_left','swing_right','scream','wing','wing_spiral','pounce','stampede','stampede_run','stampede_skid'};TOLERANCE={'rotation':.02,'position':.005,'scale':.0002}
+    THIN.update(('flight','spire_flight'))
     exact=set()
     for n,_ in landmarks.values():
         while n:exact.add(n);n=by[n].get('parent')

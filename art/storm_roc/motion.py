@@ -78,18 +78,18 @@ def shake(t, start, length, hz, decay=3.):
     return math.sin(math.tau*hz*u)*math.exp(-decay*u/length)*(1-shaped(u, .8*length, length))
 
 
-def twitch(t, glances, period=None, spark=3, hz=18):
+def twitch(t, glances, period=None, spark=3, hz=18, duration_scale=1):
     """The Roc's signature head: held dead still, then snapped to a new angle in a few frames,
     landing with a small electric shiver, as if the storm in it jolts the muscles. glances are
     (time, (pitch, yaw, roll)) or (time, angles, spark size) in time order, each held until the
     next. Two glances a few hundredths apart make a stutter. A snap takes 0.05 s plus 0.02 s per
     10 degrees it turns, so small flicks are near instant and big swings still read. With a
     period the last glance is held over the seam into the first. Returns pitch, yaw, roll in
-    degrees."""
+    degrees. duration_scale lengthens only the turns, leaving the glance schedule intact."""
     points, landings, before = [], [], glances[-1][1] if period else (0, 0, 0)
     for glance in glances:
         at, angles = glance[0], glance[1]
-        quick = .05+np.linalg.norm(np.subtract(angles, before))/500
+        quick = (.05+np.linalg.norm(np.subtract(angles, before))/500)*duration_scale
         points += [(at, before), (at+quick, angles, 'snap')]
         landings.append((at+quick, glance[2] if len(glance) > 2 else spark))
         before = angles

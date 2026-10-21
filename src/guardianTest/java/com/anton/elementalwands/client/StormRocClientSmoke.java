@@ -17,6 +17,7 @@ import net.minecraft.resource.featuretoggle.FeatureFlags;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.sound.SoundCategory;
 import net.minecraft.util.math.*;
 import net.minecraft.world.*;
 import net.minecraft.world.gen.*;
@@ -38,6 +39,11 @@ public final class StormRocClientSmoke implements ClientModInitializer {
     private final Set<String> phaseShots=new HashSet<>();
     private boolean stormChecked;
     private boolean sawBoss,sawEffects,partsChecked;
+    private boolean sawFlightScan,sawFlightFocus,sawFlightRelease;
+    private int flightCameraAt=-1,spireCameraAt=-1,landingCameraAt=-1,focusedAt=-1,focusedPlayer=-1,releaseTicks;
+    private String focusedPose;
+    private long focusedPoseAt;
+    private float spireHopTick=-1,spireLandTick=-1;
     private final Map<Integer,Vec3d> serverParts=new java.util.concurrent.ConcurrentHashMap<>();
     private final Set<String> poses=new HashSet<>();
     private final Set<RocEffectEntity.Kind> effects=EnumSet.noneOf(RocEffectEntity.Kind.class);
@@ -47,6 +53,10 @@ public final class StormRocClientSmoke implements ClientModInitializer {
         try{
             if(++ticks>9000)throw new AssertionError("Roc client timeout at scene "+scene);
             if(!started){
+                // Hidden rehearsals must be silent too; this run has its own options file.
+                c.options.getSoundVolumeOption(SoundCategory.MASTER).setValue(0.0);
+                c.getSoundManager().stopAll();
+                c.options.write();
                 started=true;c.options.pauseOnLostFocus=false;c.options.tutorialStep=net.minecraft.client.tutorial.TutorialStep.NONE;
                 c.options.getNarrator().setValue(net.minecraft.client.option.NarratorMode.OFF);c.getNarratorManager().clear();
                 c.options.getViewDistance().setValue(16);c.options.getFov().setValue(70);
@@ -106,7 +116,7 @@ public final class StormRocClientSmoke implements ClientModInitializer {
             if(scene==1310)shot(c,"roc-storm-ground.png");
             if(scene==1330)onServer(server,()->{serverBoss.testAction(target,StormRocRules.Action.BITE);serverBoss.testStrike(centre.toCenterPos().add(28,0,12),true);camera(server,id,46,115,36,28,101,12);});
             var clientBoss=c.world.getEntities().iterator();while(clientBoss.hasNext()){
-                var entity=clientBoss.next();if(entity instanceof StormRocEntity roc){sawBoss=true;poses.add(roc.poseName());}if(entity instanceof RocEffectEntity effect){sawEffects=true;effects.add(effect.kind());require(effect.shouldRender(100*100),"Tracked Roc effect was distance-culled at100blocks: "+effect.kind());}
+                var entity=clientBoss.next();if(entity instanceof StormRocEntity roc){sawBoss=true;poses.add(roc.poseName());if(roc.poseName().equals("flight")||roc.poseName().equals("spire_flight"))observeFlight(c,roc);if(roc.poseName().equals("land"))observeLanding(c,roc);}if(entity instanceof RocEffectEntity effect){sawEffects=true;effects.add(effect.kind());require(effect.shouldRender(100*100),"Tracked Roc effect was distance-culled at100blocks: "+effect.kind());}
             }
             // Use synchronized effect ages for brief phase-two shots, allowing the server camera
             // teleport to reach the client before the framebuffer is captured.
@@ -128,7 +138,7 @@ public final class StormRocClientSmoke implements ClientModInitializer {
                     if(scene>=1158&&phaseShots.add("hop"))shot(c,"roc-chain-hop.png");
                 }
             }
-            if(scene==20)shot(c,"roc-perched.png");if(scene==66)shot(c,"roc-large-warning.png");
+            if(scene==20){require(c.world.getPlayerByUuid(target.getUuid())!=null,"Scripted gaze target never spawned on the client");shot(c,"roc-perched.png");}if(scene==66)shot(c,"roc-large-warning.png");
             if(scene==90)shot(c,"roc-small-warning.png");if(scene==104)shot(c,"roc-small-bolt.png");
             if(scene==145)shot(c,"roc-dive-warning.png");if(scene==180)shot(c,"roc-dive-impact.png");if(scene==195)shot(c,"roc-stuck.png");
             for(int i=0;i<StormRocRules.Action.values().length;i++){
@@ -137,12 +147,16 @@ public final class StormRocClientSmoke implements ClientModInitializer {
             }
             if(scene==790)shot(c,"roc-takeoff.png");
             if(scene>=1450&&completedShots.get()==requestedShots){
-                require(sawBoss,"No synchronized Roc reached the native client");require(sawEffects,"No synchronized Roc effects reached native client");require(poses.containsAll(Set.of("perched","call","land","flight","dive","stuck","bite","swing_left","swing_right","scream","wing","pounce","stampede","takeoff","hop")),"Requested tracked poses missing from native client: "+poses);
+                require(sawBoss,"No synchronized Roc reached the native client");require(sawEffects,"No synchronized Roc effects reached native client");require(poses.containsAll(Set.of("perched","call","land","flight","spire_flight","dive","stuck","bite","swing_left","swing_right","scream","wing","pounce","stampede","takeoff","hop")),"Requested tracked poses missing from native client: "+poses);
                 require(effects.containsAll(Set.of(RocEffectEntity.Kind.SMALL_STRIKE,RocEffectEntity.Kind.LARGE_STRIKE,RocEffectEntity.Kind.TORNADO,RocEffectEntity.Kind.DIVE_MARKER,RocEffectEntity.Kind.SHOCKWAVE,RocEffectEntity.Kind.SCREAM,RocEffectEntity.Kind.LIVE_GROUND,RocEffectEntity.Kind.CHARGE_BOLT,RocEffectEntity.Kind.STORM_BOLT,RocEffectEntity.Kind.CALL_BOLT)),"Required tracked effect kinds missing: "+effects);
-                require(requestedShots==26,"Expected26 native screenshots, requested"+requestedShots);
+                require(sawFlightScan,"Authored flying Roc clip never looked down toward the ground");
+                require(sawFlightFocus,"Flying Roc never focused a player below beyond its authored scan");
+                require(sawFlightRelease,"Flying Roc never released its player focus back to the authored scan within the same clip");
+                require(phaseShots.containsAll(Set.of("charge","flight-look","spire-hop","spire-land")),"Required charge/flight/spire screenshots missing: "+phaseShots);
+                require(requestedShots==29,"Expected29 native screenshots, requested"+requestedShots);
                 require(stormChecked&&SummitStormClient.level(1)>.95,"Storm level did not remain above.95");
                 require(partsChecked,"Client hurtbox positions were never compared");
-                Files.writeString(Path.of("ROC_CLIENT_PASSED.txt"),"Scripted native summit rehearsal: "+completedShots.get()+" completed screenshots; phase two storm level="+SummitStormClient.level(1)+"; synchronized Roc, effects "+effects+" and poses "+poses+"; client head/neck hurtboxes follow the server's. Not human input or Lunar balance approval.\n");
+                Files.writeString(Path.of("ROC_CLIENT_PASSED.txt"),"Scripted native summit rehearsal: "+completedShots.get()+" completed screenshots; phase two storm level="+SummitStormClient.level(1)+"; synchronized Roc, effects "+effects+" and poses "+poses+"; authored flight scan, player focus and release checked; spire hop clip tick="+spireHopTick+", landing clip tick="+spireLandTick+"; client head/neck hurtboxes follow the server's. Not human input or Lunar balance approval.\n");
                 done=true;c.scheduleStop();
             }
         }catch(Throwable error){error.printStackTrace();try{Files.writeString(Path.of("ROC_CLIENT_FAILED.txt"),error+"\n");}catch(Exception ignored){}done=true;c.scheduleStop();}
@@ -154,6 +168,10 @@ public final class StormRocClientSmoke implements ClientModInitializer {
         helper.setAccessible(true);target=(ServerPlayerEntity)helper.invoke(null,server,world,UUID.randomUUID(),"RocRehearsal",centre.getX()+.5,101,12.5);
         target.setLoaded(true);target.onTeleportationDone();target.setNoGravity(true);target.getAttributeInstance(EntityAttributes.MAX_HEALTH).setBaseValue(10000);target.setHealth(10000);target.getAbilities().invulnerable=true;target.sendAbilitiesUpdate();
         target.changeGameMode(GameMode.SURVIVAL);target.getAbilities().invulnerable=true;target.sendAbilitiesUpdate();
+        // The server-only helper bypasses normal login. Advertise it before its spawn so
+        // the native client can render it and the Roc can actually watch this player.
+        camera.networkHandler.sendPacket(net.minecraft.network.packet.s2c.play.PlayerListS2CPacket.entryFromPlayer(List.of(target)));
+        camera.networkHandler.sendPacket(new net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket(target.getId(),target.getUuid(),target.getX(),target.getY(),target.getZ(),target.getPitch(),target.getYaw(),target.getType(),0,target.getVelocity(),target.getHeadYaw()));
         serverBoss=new StormRocEntity(ModEntities.STORM_ROC,world);serverBoss.startFight(centre,List.of(target));require(serverBoss.eligible(target),"Scripted survival target was not eligible");world.spawnEntity(serverBoss);bossId=serverBoss.getUuid();
         camera.changeGameMode(GameMode.SPECTATOR);camera(server,observer,24,142,-60,2,140,-88);ready=true;
     }
@@ -161,6 +179,59 @@ public final class StormRocClientSmoke implements ClientModInitializer {
         var player=server.getPlayerManager().getPlayer(id);double dx=tx-x,dz=tz-z,dy=ty-y;
         float yaw=(float)Math.toDegrees(Math.atan2(-dx,dz)),pitch=(float)-Math.toDegrees(Math.atan2(dy,Math.hypot(dx,dz)));
         player.networkHandler.requestTeleport(centre.getX()+x,y,centre.getZ()+z,yaw,pitch);player.setHeadYaw(yaw);player.setNoGravity(true);
+    }
+    private void observeFlight(MinecraftClient c,StormRocEntity roc){
+        var forward=StormRocMotion.bill(StormRocMotion.frame(roc,1).channels());
+        var plain=StormRocMotion.bill(StormRocPose.pose(roc.poseName(),roc.poseTicks(1)));
+        sawFlightScan|=plain.y<-.20;
+        if(roc.poseName().equals("spire_flight")&&!phaseShots.contains("spire-hop")){
+            float tick=roc.poseTicks(1);
+            if(spireCameraAt<0&&tick<=3){
+                spireCameraAt=scene;
+                double x=roc.getX()-centre.getX(),z=roc.getZ()-centre.getZ(),y=roc.getY()+4;
+                onServer(c.getServer(),()->camera(c.getServer(),c.player.getUuid(),x+24,101.6,z+38,x,y,z));
+            }else if(spireCameraAt>=0&&scene>=spireCameraAt+4&&tick>=10&&tick<=16){
+                spireHopTick=tick;phaseShots.add("spire-hop");shot(c,"roc-spire-hop.png");
+            }
+        }
+        boolean released=false;
+        for(var player:c.world.getPlayers()){
+            if(!player.isAlive()||player.isSpectator()||player.isCreative())continue;
+            Vec3d d=player.getEyePos().subtract(roc.socket("head"));if(d.y>=-4)continue;
+            double a=Math.toRadians(roc.getYaw()),cs=Math.cos(a),sn=Math.sin(a);
+            var aim=new org.joml.Vector3d(d.x*cs+d.z*sn,d.y,d.x*sn-d.z*cs).normalize();
+            // A later matching authored direction only proves release when that direction
+            // is still clearly different from the player it had focused, in this same clip.
+            if(player.getId()==focusedPlayer&&roc.poseName().equals(focusedPose)&&roc.poseStart()==focusedPoseAt&&scene>focusedAt&&forward.dot(plain)>.995&&plain.dot(aim)<.93)released=true;
+            if(forward.dot(aim)>.97&&forward.dot(aim)>plain.dot(aim)+.04){
+                sawFlightFocus=true;
+                if(focusedAt<0||!roc.poseName().equals(focusedPose)||roc.poseStart()!=focusedPoseAt){
+                    focusedAt=scene;focusedPlayer=player.getId();focusedPose=roc.poseName();focusedPoseAt=roc.poseStart();
+                }
+                if(scene>800&&scene<1000&&!phaseShots.contains("flight-look")){
+                    if(flightCameraAt<0){
+                        flightCameraAt=scene;
+                        double x=roc.getX()-centre.getX(),z=roc.getZ()-centre.getZ(),y=roc.getY()+4;
+                        onServer(c.getServer(),()->camera(c.getServer(),c.player.getUuid(),x+16,101.6,z+24,x,y,z));
+                    }else if(scene>=flightCameraAt+4){
+                        phaseShots.add("flight-look");shot(c,"roc-flight-look-down.png");
+                    }
+                }
+            }
+        }
+        releaseTicks=released?releaseTicks+1:0;
+        sawFlightRelease|=releaseTicks>=3;
+    }
+    private void observeLanding(MinecraftClient c,StormRocEntity roc){
+        if(phaseShots.contains("spire-land"))return;
+        float tick=roc.poseTicks(1);
+        if(landingCameraAt<0&&tick<=3){
+            landingCameraAt=scene;
+            double x=roc.getX()-centre.getX(),z=roc.getZ()-centre.getZ(),y=roc.getY()+4;
+            onServer(c.getServer(),()->camera(c.getServer(),c.player.getUuid(),x+24,y,z+38,x,y,z));
+        }else if(landingCameraAt>=0&&scene>=landingCameraAt+4&&tick>=10&&tick<=15){
+            spireLandTick=tick;phaseShots.add("spire-land");shot(c,"roc-spire-land.png");
+        }
     }
     private void onServer(MinecraftServer server,Checked action){server.execute(()->{try{action.run();}catch(Throwable error){failure=error.toString();}});}
     private interface Checked{void run()throws Exception;}

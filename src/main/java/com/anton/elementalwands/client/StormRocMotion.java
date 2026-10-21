@@ -8,7 +8,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import org.joml.Matrix3d;
@@ -25,7 +27,9 @@ public final class StormRocMotion {
     /** Ticks a clip change takes to blend in. */
     private static final float FADE = 5;
     /** Clip changes that continue the same motion, frame for frame, so they cut without a blend. */
-    private static final Set<String> CHAINED = Set.of("stampede>stampede_run", "stampede_run>stampede_skid", "stampede>stampede_skid");
+    private static final Set<String> CHAINED = Set.of("stampede>stampede_run", "stampede_run>stampede_skid", "stampede>stampede_skid", "spire_flight>land");
+    /** The spire hop's head stays on the next spire through its launch; only then may its gaze settle on a player below. */
+    private static final int SPIRE_LOOK = 26;
     private static final String[] NECK = {"root", "body", "neck_base", "neck_lower", "neck_mid", "neck_upper"};
     /** The bill's direction in the head's own frame. */
     private static final Vector3d BILL = new Vector3d(0, -.0285, -.9996).normalize();
@@ -41,6 +45,9 @@ public final class StormRocMotion {
         float yaw, pitch, prevYaw, prevPitch, weight, prevWeight;
         boolean snapping;
         long holdUntil;
+        boolean wasFlying;
+        int flightTarget = -1;
+        long focusUntil, nextFocus;
         float bank, prevBank, climb, prevClimb, lastYaw = Float.NaN;
         double lastY;
     }
@@ -50,10 +57,19 @@ public final class StormRocMotion {
 
     private static final Map<StormRocEntity, State> STATES = new WeakHashMap<>();
     private static final Map<String, Vector3d> NEUTRAL = new HashMap<>();
+    /** Entities compare by their network id, which a new world reuses: its Rocs start afresh. */
+    private static ClientWorld world;
 
     private StormRocMotion() {}
 
+    /** Its long flight and its hop between spires. */
+    private static boolean flying(String pose) { return pose.equals("flight") || pose.equals("spire_flight"); }
+
     public static void tick(MinecraftClient client) {
+        if (client.world != world) {
+            STATES.clear();
+            world = client.world;
+        }
         if (client.world == null || client.isPaused()) return;
         for (Entity e : client.world.getEntities()) if (e instanceof StormRocEntity roc) tick(client, roc);
     }
@@ -62,6 +78,19 @@ public final class StormRocMotion {
         State s = STATES.computeIfAbsent(roc, r -> new State());
         long now = roc.getEntityWorld().getTime();
         String pose = roc.poseName();
+        boolean flying = flying(pose);
+        // Crouched on its spire for the hop's push-off, it doesn't bank yet.
+        boolean aloft = flying && !(pose.equals("spire_flight") && roc.poseTicks(0) < StormRocRules.SPIRE_PUSH);
+        Entity flightTarget = null;
+        if (flying) {
+            if (!s.wasFlying) {
+                s.flightTarget = -1;
+                s.focusUntil = 0;
+                s.nextFocus = now + (pose.equals("spire_flight") ? Math.max(8, SPIRE_LOOK - (long) roc.poseTicks(0)) : 8);
+            }
+            flightTarget = flightTarget(client, roc, s, now);
+        }
+        s.wasFlying = flying;
         // Gaze: perched and between brawl attacks it watches; in flight, now and then; never mid-attack.
         s.prevYaw = s.yaw;
         s.prevPitch = s.pitch;
@@ -69,7 +98,7 @@ public final class StormRocMotion {
         float wanted = switch (pose) {
             case "perched", "hunched" -> 1;
             case "land" -> .6f;
-            case "flight" -> .55f;
+            case "flight", "spire_flight" -> flightTarget != null ? 1 : 0;
             // The bite's windup keeps its head on its prey until the aim locks, then lets go
             // before the lunge, which bites where the server aimed.
             case "bite", "bite_leap" -> roc.poseTicks(0) < StormRocRules.Action.BITE.lock ? 1 : 0;
@@ -87,13 +116,14 @@ public final class StormRocMotion {
         s.weight += MathHelper.clamp(wanted - s.weight, -.15f, .15f);
         Entity target = roc.lookTarget() >= 0 ? roc.getEntityWorld().getEntityById(roc.lookTarget()) : null;
         if (target == null || !target.isAlive()) target = client.player;
+        if (flying) target = flightTarget;
         if (target != null) {
             Vec3d d = target.getEyePos().subtract(roc.socket("head"));
             double a = Math.toRadians(roc.getYaw()), c = Math.cos(a), sn = Math.sin(a);
             // Into the model's own space, which faces -z.
             double x = d.x * c + d.z * sn, z = d.x * sn - d.z * c;
             float yaw = MathHelper.clamp((float) Math.toDegrees(Math.atan2(x, -z)), -80, 80);
-            float pitch = MathHelper.clamp((float) Math.toDegrees(Math.atan2(d.y, Math.hypot(x, z))), -50, 35);
+            float pitch = MathHelper.clamp((float) Math.toDegrees(Math.atan2(d.y, Math.hypot(x, z))), flying ? -75 : -50, 35);
             float off = Math.max(Math.abs(yaw - s.yaw), Math.abs(pitch - s.pitch));
             if (pose.startsWith("bite") || pose.equals("pounce") || pose.equals("stampede_run")) {
                 // Rearing up for the bite, stalking or charging, its head is heavy: it follows its prey without snaps.
@@ -103,8 +133,10 @@ public final class StormRocMotion {
                 // A bird holds its gaze dead still, then snaps to where it wants to look.
                 if (!s.snapping && (now >= s.holdUntil && off > 6 || off > 35)) s.snapping = true;
                 if (s.snapping) {
-                    s.yaw += (yaw - s.yaw) * .55f;
-                    s.pitch += (pitch - s.pitch) * .55f;
+                    // 1 - sqrt(1 - .45) gives half the previous flight turn speed.
+                    float speed = flying ? .25838f : .55f;
+                    s.yaw += (yaw - s.yaw) * speed;
+                    s.pitch += (pitch - s.pitch) * speed;
                     if (Math.abs(yaw - s.yaw) < 2 && Math.abs(pitch - s.pitch) < 2) {
                         s.snapping = false;
                         s.holdUntil = now + 6 + roc.getRandom().nextInt(18);
@@ -120,10 +152,41 @@ public final class StormRocMotion {
         s.lastY = roc.getY();
         s.prevBank = s.bank;
         s.prevClimb = s.climb;
-        boolean flying = pose.equals("flight");
-        float lean = flying ? MathHelper.clamp(turn * 3.5f, -38, 38) : pose.equals("stampede_run") ? MathHelper.clamp(turn * 6, -15, 15) : 0;
+        float lean = aloft ? MathHelper.clamp(turn * 3.5f, -38, 38) : pose.equals("stampede_run") ? MathHelper.clamp(turn * 6, -15, 15) : 0;
         s.bank += (lean - s.bank) * .2f;
-        s.climb += ((flying ? MathHelper.clamp((float) rise * 25, -25, 25) : 0) - s.climb) * .2f;
+        s.climb += ((aloft ? MathHelper.clamp((float) rise * 25, -25, 25) : 0) - s.climb) * .2f;
+    }
+
+    /** Briefly watch a living player below, then release back into the authored ground scan. */
+    private static Entity flightTarget(MinecraftClient client, StormRocEntity roc, State s, long now) {
+        if (now < s.focusUntil) {
+            Entity current = client.world.getEntityById(s.flightTarget);
+            if (canWatch(roc, current)) return current;
+            s.focusUntil = now;
+            s.nextFocus = now + 8;
+        }
+        if (now < s.nextFocus) return null;
+        var players = client.world.getPlayers().stream().filter(p -> canWatch(roc, p)).toList();
+        if (players.isEmpty()) {
+            s.nextFocus = now + 10;
+            return null;
+        }
+        var choices = players.stream().filter(p -> p.getId() != s.flightTarget).toList();
+        Entity selected = (choices.isEmpty() ? players : choices).get(roc.getRandom().nextInt(choices.isEmpty() ? players.size() : choices.size()));
+        s.flightTarget = selected.getId();
+        s.snapping = true;
+        s.focusUntil = now + 18 + roc.getRandom().nextInt(11);
+        s.nextFocus = s.focusUntil + 12 + roc.getRandom().nextInt(15);
+        return selected;
+    }
+
+    private static boolean canWatch(StormRocEntity roc, Entity entity) {
+        if (!(entity instanceof PlayerEntity player) || !player.isAlive() || player.isSpectator() || player.isCreative()) return false;
+        Vec3d d = player.getEyePos().subtract(roc.socket("head"));
+        if (d.y >= -2 || d.lengthSquared() > 128 * 128) return false;
+        double a = Math.toRadians(roc.getYaw());
+        double x = d.x * Math.cos(a) + d.z * Math.sin(a), z = d.x * Math.sin(a) - d.z * Math.cos(a);
+        return Math.abs(Math.toDegrees(Math.atan2(x, -z))) < 95;
     }
 
     /** The channels to draw this frame, shared by the model and its crackle so neither drifts from the other. */
@@ -177,10 +240,13 @@ public final class StormRocMotion {
      */
     private static void gaze(Map<String, float[]> channels, String pose, float yaw, float pitch, float weight) {
         // The bite's and the stalk's clips already aim the head at their prey: turn from there to it.
-        Vector3d rest = pose.startsWith("bite") || pose.equals("pounce") || pose.startsWith("stampede") ? bill(channels) : NEUTRAL.computeIfAbsent(pose, StormRocMotion::rest);
+        boolean flight = flying(pose);
+        Vector3d rest = flight || pose.startsWith("bite") || pose.equals("pounce") || pose.startsWith("stampede") ? bill(channels) : NEUTRAL.computeIfAbsent(pose, StormRocMotion::rest);
         double restYaw = Math.toDegrees(Math.atan2(rest.x, -rest.z)), restPitch = Math.toDegrees(Math.asin(MathHelper.clamp(rest.y, -1, 1)));
-        double turnYaw = MathHelper.clamp(MathHelper.wrapDegrees(yaw - restYaw), -70, 70) * weight;
-        double turnPitch = MathHelper.clamp(pitch - restPitch, -40, 40) * weight;
+        // In flight its authored glances swing far to either side, so the gaze, already held within
+        // reach, turns all the way from wherever the clip has the head.
+        double turnYaw = (flight ? MathHelper.wrapDegrees(yaw - restYaw) : MathHelper.clamp(MathHelper.wrapDegrees(yaw - restYaw), -70, 70)) * weight;
+        double turnPitch = (flight ? pitch - restPitch : MathHelper.clamp(pitch - restPitch, -40, 40)) * weight;
         Vector3d goal = direction(restYaw + turnYaw, restPitch + turnPitch);
         Quaterniond turn = new Quaterniond().rotationTo(rest, goal);
         if (Math.abs(turn.angle()) < 1e-4) return;
@@ -199,7 +265,7 @@ public final class StormRocMotion {
     private static Vector3d rest(String pose) { return bill(StormRocPose.pose(pose, 0)); }
 
     /** Where the bill points with these channels, in the model's space. */
-    private static Vector3d bill(Map<String, float[]> channels) {
+    static Vector3d bill(Map<String, float[]> channels) {
         Matrix3d m = new Matrix3d();
         for (String bone : NECK) m.mul(rotation(channels.get(bone)));
         m.mul(rotation(channels.get("neck_tip"))).mul(rotation(channels.get("head")));

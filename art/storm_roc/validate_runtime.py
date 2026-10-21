@@ -16,7 +16,7 @@ def unreflect(item):
         r=item['rotation'];item['rotation']=[r[0],-r[1],-r[2]] if isinstance(r,list) else {k:[v[0],-v[1],-v[2]] for k,v in r.items()}
 
 def main():
-    from build_runtime import SCALE,DEFINITIONS,WING_REST,WING_SLAP,KEY_FPS,KNEADS,BITE_IMPACT,BITE_TAKEOFF,BITE_LANDING,BITE_LEAP_IMPACT,SWEEP_START,SWEEP_END,SCREAM_IMPACT,WING_LIFT,WING_APEX,WING_IMPACT,POUNCE_LAUNCH,POUNCE_IMPACT,STAMPEDE_RUN,STAMPEDE_LOOP,MODEL,shape,bill,glowing
+    from build_runtime import SCALE,DEFINITIONS,WING_REST,WING_SLAP,KEY_FPS,KNEADS,BITE_IMPACT,BITE_TAKEOFF,BITE_LANDING,BITE_LEAP_IMPACT,SWEEP_START,SWEEP_END,SCREAM_IMPACT,WING_LIFT,WING_APEX,WING_IMPACT,POUNCE_LAUNCH,POUNCE_IMPACT,SPIRE_PUSH,SPIRE_FLIGHT,STAMPEDE_RUN,STAMPEDE_LOOP,MODEL,shape,bill,glowing
     approved=read(MODEL/'storm_roc.geo.json')
     geo=read(ASSETS/'geckolib/models/storm_roc.geo.json')
     for b in geo['minecraft:geometry'][0]['bones']:
@@ -49,7 +49,9 @@ def main():
         'wing':[(0,WING_LIFT-.06,'hunched'),(WING_IMPACT+.05,DEFINITIONS['wing'][0],'hunched')],'takeoff':[(0,1.2,'hunched')],
         # The Raptor Strike's feet leave the rock between its last planted key and the 1.575 one.
         'stampede':[(0,.2,'hunched')],'stampede_skid':[(1.45,DEFINITIONS['stampede_skid'][0],'hunched')],
-        'pounce':[(0,POUNCE_LAUNCH-.04,'hunched'),(POUNCE_IMPACT+.05,DEFINITIONS['pounce'][0],'hunched')]}
+        'pounce':[(0,POUNCE_LAUNCH-.04,'hunched'),(POUNCE_IMPACT+.05,DEFINITIONS['pounce'][0],'hunched')],
+        # The spire hop's talons grip its spire through the crouch and the push.
+        'spire_flight':[(0,SPIRE_PUSH+.1,'perched')]}
     reference={name:world(name,0) for name in ('perched','hunched')}
     worst=foot_error=socket_error=0.;snapshots={}
     for name,clip in clips.items():
@@ -89,7 +91,10 @@ def main():
         for n in by:assert np.allclose(ma[n],mb[n],atol=atol),(a,b,n,'endpoint')
     for a,ta,b,tb in [('dive',3,'stuck',0),('hop',0,'stuck',0),('hop',1.2,'stuck',0),
         ('stuck',6,'hunched',0),('land',0,'flight',0),('land',.8,'perched',0),
-        ('call',0,'perched',0),('call',3,'perched',0),('takeoff',2.5,'flight',0)]:endpoint(a,ta,b,tb)
+        ('call',0,'perched',0),('call',3,'perched',0),('takeoff',2.5,'flight',0),
+        ('spire_flight',0,'perched',0)]:endpoint(a,ta,b,tb)
+    # The spire hop hands over to the landing with no crossfade.
+    endpoint('spire_flight',SPIRE_FLIGHT,'land',0)
     # The Thunder Charge's clips hand over with no crossfade: the windup into the run loop, and the
     # loop, on any stride boundary, into the skid.
     endpoint('stampede',STAMPEDE_LOOP,'stampede_run',0,.05)
@@ -166,6 +171,22 @@ def main():
     excursion=np.ptp(wrists[:,1]);assert 8<excursion<16,('flight wrist excursion',excursion)
     for m in flight:
         assert abs(m['root'][1,0])<.00001 and abs(m['body'][1,0])<.00001,'Flight banking belongs to Java'
+    # Flight's legs are carried rigidly tucked under the body, including both seam
+    # blends. A ground IK solve here used to kick them out for the first six ticks.
+    tucked={side+'_'+joint:np.linalg.inv(flight[0]['body'])@flight[0][side+'_'+joint]
+        for side in ('left','right') for joint in ('thigh','shin','tarsus','foot')}
+    for index,m in enumerate(flight):
+        body_inverse=np.linalg.inv(m['body'])
+        for name,rest in tucked.items():
+            assert np.allclose(body_inverse@m[name],rest,atol=.003),('flight tucked leg popped',index/(KEY_FPS*2),name)
+    # Once the spire hop's legs have tucked, they ride as rigidly as the flight's.
+    for index,m in enumerate(snapshots['spire_flight']):
+        if index/(KEY_FPS*2)<SPIRE_PUSH+.53:continue
+        body_inverse=np.linalg.inv(m['body'])
+        for name,rest in tucked.items():
+            assert np.allclose(body_inverse@m[name],rest,atol=.003),('spire hop tucked leg popped',index/(KEY_FPS*2),name)
+    looks=np.array([m['head'][:3,:3]@np.array([0,0,-1]) for m in flight])
+    assert looks[:,1].min()<-.3 and np.ptp(looks[:,0])>.5,'Flight must scan down and to both sides'
     corners=[]
     for b in bones:
         if not any(k in b['name'] for k in ('wing','primary','secondary','covert','leading','root_','primaries','secondaries')):continue

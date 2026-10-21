@@ -124,7 +124,7 @@ figcaption { font-size: 13.5px; color: var(--muted); }
   <header>
     <span class="eyebrow">Elemental Wands · Wind boss · Demon face and talons</span>
     <h1>Storm Roc redesign</h1>
-    <p>The Roc as it is now installed: the Demon face, with steep slim brows over glowing red slit eyes set in dark sockets, brow spikes and war paint under a raised rust crest. It has huge legs with big black sickle talons, a slate back and a long wedge tail. The crest rests half up in the brawl, flares when the Roc screams, calls lightning or winds up a blow, ruffles in the perched shake and lies sleek in flight. The toes stand flat with their talons biting the rock and curl down to grip a spire. Try Scream, Perched and Pounce, and turn on Storm light to see the eyes glow. Drag to turn it, scroll or pinch to zoom, and pick a clip from the list.</p>
+    <p>The current Roc model and authored animations. The Spire hop is its whole flight from one spire to the next as the game plays it, along the server's path: a crouch and turn on the spire, a push-off with one huge downbeat, then a glide. The longer Flight loop now only plays in the phase change's stand-in. In game its gaze sometimes settles on a player below. Try the Player camera to watch it from the summit floor. Drag to turn, scroll or pinch to zoom, and use the timeline to scrub. This preview does not confirm installation into Lunar.</p>
     <div class="stats" id="stats"></div>
   </header>
 
@@ -133,7 +133,7 @@ figcaption { font-size: 13.5px; color: var(--muted); }
       <div class="stage" id="stage">
         <canvas id="view" aria-label="3D view of the Storm Roc"></canvas>
         <div class="hud">
-          <div><div class="hud-name" id="hudName">Scream</div><div class="hud-meta" id="hudMeta"></div></div>
+          <div><div class="hud-name" id="hudName">Spire hop</div><div class="hud-meta" id="hudMeta"></div></div>
           <div class="cams" role="group" aria-label="Camera">
             <button id="camThree" aria-pressed="true">¾</button>
             <button id="camSide" aria-pressed="false">Side</button>
@@ -211,7 +211,10 @@ const CLIPS = {
   perched:     {name: 'Perched', d: 'Bird-like head snaps, a one-eyed head cock, a feather shake and a half-open wing stretch.', tag: 'crest ruffles'},
   call:        {name: 'Call', d: 'Rears up and calls with its beak to the sky, then whips its head down, wings flung wide, as the strikes land.',
                 marks: [[.5, .5, 'bolt into the clouds'], [2, 2, 'strike'], [2.5, 2.5, 'strike'], [3, 3, 'strike']], tag: 'crest flares'},
-  flight:      {name: 'Flight', d: 'Two slow, heavy beats that travel out along the wing, the hands folding back on the way up, then a long glide.', tag: 'crest sleek'},
+  spire_flight: {name: 'Spire hop', tag: 'New', d: 'Its flight from one spire to the next, the whole of it as the game plays it, along the server\'s path. The server holds it on its spire for 0.4 s while it turns toward the next one: it sinks into a crouch, crest lifting and head locked on where it is going, and opens and raises its wings. It drives off with straightening legs into one huge downbeat, its legs streaming back and tucking, recovers slowly, then sets its wings and glides the rest of the way, glancing down over the summit and banking as it swings round to face the arena. It arrives in the pose Land starts from. In game its gaze may settle on a player below during the glide.',
+                marks: [[0, .4, 'crouches and turns on the spire'], [.4, .52, 'push-off'], [.52, .88, 'downbeat'], [.88, 1.85, 'slow recovery'], [1.85, 2.6, 'glide; glances down']]},
+  flight:      {name: 'Flight', tag: 'Phase change only', d: 'The long flight loop, which now only plays in the phase change\'s stand-in (the climb, the hover while the bolt charges it, and the flight to the tallest spire). Two unequal, heavy wingbeats followed by a long glide. The wings gather slowly, the shoulders drive down first and the hands and feather tips follow. The chest lifts after each push. The head scans down and to either side in held glances; each turn now takes twice as long as the previous version, with a small settling shiver. In game it watches a living player below for about a second, then releases back into the scan. The second beat is weaker. Small hand and tail corrections keep the glide alive, and crest, cheek feathers and tail follow through like the brawl.',
+                marks: [[.25, 1.1, 'gathers the wings'], [1.1, 1.55, 'first power stroke'], [1.55, 3.14, 'slow recovery; chest lifts after the push'], [3.14, 3.6, 'second, lighter power stroke'], [4.65, 7.2, 'glide and small balance corrections']]},
   dive:        {name: 'Dive', d: 'Hard climbing beats, tips over into a falcon stoop and spears its bill into the rock.', tag: 'crest sleek'},
   stuck:       {name: 'Stuck', d: 'Bill pinned in the rock: its body heaves, wings slap the ground, feet scrabble, until it rips free.',
                 marks: [[5.65, 5.65, 'free']]},
@@ -269,16 +272,16 @@ const CLIPS = {
                 marks: [[1.2, 1.2, 'gust']]},
 };
 const GROUPS = [
-  ['On the spires', ['land', 'perched', 'call', 'flight']],
+  ['On the spires', ['land', 'perched', 'call', 'spire_flight', 'flight']],
   ['Diving and the chain smash', ['dive', 'stuck', 'hop']],
   ['The brawl', ['hunched', 'bite', 'bite_leap', 'swing_left', 'swing_right', 'scream', 'wing', 'pounce', 'stampede', 'takeoff']],
 ];
 const SPIRE = new Set(['perched', 'call', 'land']);
-const WIDE = new Set(['flight', 'dive', 'hop', 'takeoff', 'land', 'wing', 'wing_spiral', 'pounce', 'stampede', 'call']);
+const WIDE = new Set(['flight', 'spire_flight', 'dive', 'hop', 'takeoff', 'land', 'wing', 'wing_spiral', 'pounce', 'stampede', 'call']);
 const $ = id => document.getElementById(id);
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-const state = {clip: 'scream', t: 0, playing: !reduce, speed: 1, hold: 0, spin: false,
+const state = {clip: 'spire_flight', t: 0, playing: !reduce, speed: 1, hold: 0, spin: false,
   yaw: -38, pitch: 12, dist: 46, target: new THREE.Vector3(0, 4.5, 0), view: 'three'};
 let data, parts = [], decoded = {};
 
@@ -302,6 +305,10 @@ floor.rotation.x = -Math.PI / 2; ground.add(floor);
 const grid = new THREE.GridHelper(90, 45, 0x7d827d, 0x8c918b); grid.position.y = .02; ground.add(grid);
 const spire = new THREE.Mesh(new THREE.CylinderGeometry(2.7, 6.5, 30, 7, 1), new THREE.MeshLambertMaterial({color: 0x8f918d, flatShading: true}));
 scene.add(spire);
+// The Spire hop flies to a second spire, and both stand on the summit rock below.
+const nextSpire = spire.clone(); scene.add(nextSpire);
+const HOP_DROP = 29;
+function standSpire(mesh, x, top, z, base) { mesh.scale.y = (top - base) / 30; mesh.position.set(x, (top + base) / 2, z); }
 // A player, 1.8 blocks tall, for scale.
 const player = new THREE.Group();
 for (const [w, h, d, x, y, c] of [[.25, .75, .25, -.125, .375, 0x3b4466], [.25, .75, .25, .125, .375, 0x3b4466],
@@ -327,6 +334,17 @@ const smoothstep = f => f * f * (3 - 2 * f);
 function biteLeap(t) {
   // Only the charge turns the Roc; every other clip faces it straight ahead.
   if (state.clip !== 'stampede') roc.rotation.set(0, 0, 0);
+  if (state.clip === 'spire_flight') {
+    // The hop's path, heading, bank and climb are the server's and the client's, baked tick by tick
+    // (see export_preview.py). As in the game, the bank and climb turn it about its chest.
+    const c = data.clips.spire_flight, k = Math.min(t * 20, c.path.length - 1), i = Math.floor(k), j = Math.min(i + 1, c.path.length - 1), f = k - i;
+    const at = n => c.path[i][n] + (c.path[j][n] - c.path[i][n]) * f, rad = THREE.MathUtils.degToRad;
+    roc.rotation.order = 'YZX';
+    roc.rotation.set(rad(at(5)), rad(at(3)), -rad(at(4)));
+    const pivot = new THREE.Vector3(0, at(6), 0);
+    roc.position.set(at(0), at(1), at(2)).add(pivot).sub(pivot.clone().applyEuler(roc.rotation));
+    return 0;
+  }
   if (state.clip === 'wing_spiral') {
     // The game would carry it: a corkscrew climb up a 3-block helix to 18 blocks by 2.15 s (one turn,
     // its heading following the helix as it barrel-rolls twice), a stall at the top to 2.55, then
@@ -612,6 +630,10 @@ function setView(view) {
     const xs = clip.path.map(p => p[0]), zs = clip.path.map(p => p[1]);
     state.target.set((Math.min(...xs) + Math.max(...xs)) / 2, clip.body[1] - 1, (Math.min(...zs) + Math.max(...zs)) / 2); state.dist = 58;
   }
+  // The hop is framed on its whole flight, from spire to spire.
+  else if (state.clip === 'spire_flight') {
+    const [x, y, z] = clip.to; state.target.set(x / 2, clip.body[1] + 4 + y / 2, z / 2); state.dist = 105;
+  }
   else { state.target.set(0, clip.body[1] - 1, clip.body[2] - (state.clip === 'pounce' ? POUNCE_LEAP / 2 : 0)); state.dist = WIDE.has(state.clip) ? 46 : 36; }
   for (const [id, v] of [['camThree', 'three'], ['camSide', 'side'], ['camFront', 'front'], ['camHead', 'head'], ['camPlayer', 'player']])
     $(id).setAttribute('aria-pressed', String(v === view));
@@ -624,8 +646,8 @@ function selectClip(name) {
   $('hudName').textContent = info.name;
   $('hudMeta').textContent = `${clip.duration.toFixed(1)} s · ${Math.round(clip.duration * 20)} ticks${clip.loop ? ' · loop' : ''}`;
   const spireClip = SPIRE.has(name);
-  spire.visible = spireClip; spire.position.y = clip.feet - .45 - 15;
-  ground.position.y = spireClip ? -40 : 0; player.visible = !spireClip;
+  spire.visible = spireClip; spire.scale.y = 1; spire.position.set(0, clip.feet - .45 - 15, 0);
+  ground.position.set(0, spireClip ? -40 : 0, 0); player.visible = !spireClip; nextSpire.visible = false;
   // For the bite, the player stands where it bites, so you can see the head stay on them.
   if (name === 'bite') player.position.set(0, 0, -13.56); else if (name === 'bite_leap') player.position.set(0, 0, -13.67 - BITE_LEAP);
   // The pounce's prey has dodged: it stands just clear of the crush, beside where the Roc lands.
@@ -633,6 +655,14 @@ function selectClip(name) {
   // The charge's prey runs along its baked path (see biteLeap).
   else if (name !== 'stampede') player.position.set(-7, 0, -11);
   if (name !== 'stampede') player.rotation.y = .6;
+  if (name === 'spire_flight') {
+    // The summit rock lies 29 blocks under the spire it leaves. The player stands on it partway in
+    // from under the flight toward the summit's centre, where a challenger would watch it go over.
+    const top = clip.feet - .45, base = top - HOP_DROP, [x, y, z] = clip.to, [cx, , cz] = clip.centre;
+    standSpire(spire, 0, top, 0, base); standSpire(nextSpire, x, top + y, z, base);
+    spire.visible = nextSpire.visible = true; ground.position.set(x / 2, base, z / 2);
+    player.position.set(x / 2 + (cx - x / 2) * .3, base, z / 2 + (cz - z / 2) * .3);
+  }
   $('scrub').max = clip.duration;
   // Server ticks: a short mark every tick, a tall one every second.
   const ticks = $('ticks'); ticks.textContent = '';
@@ -759,7 +789,7 @@ async function start() {
     const mesh = new THREE.Mesh(g, material); mesh.matrixAutoUpdate = false; roc.add(mesh); parts.push(mesh);
     triangles += part.positions.length / 9;
   }
-  $('stats').innerHTML = `<span><b>${Math.round(triangles / 12)}</b> blocks</span><span><b>${atlas.image.width}×${atlas.image.height}</b> pixel-art texture</span><span><b>${parts.length}</b> moving parts</span><span><b>16</b> clips</span><span><b>1.25×</b> scale · 34-block wingspan</span>`;
+  $('stats').innerHTML = `<span><b>${Math.round(triangles / 12)}</b> blocks</span><span><b>${atlas.image.width}×${atlas.image.height}</b> pixel-art texture</span><span><b>${parts.length}</b> moving parts</span><span><b>${Object.keys(data.clips).length}</b> clips</span><span><b>1.25×</b> scale · 34-block wingspan</span>`;
   CLIPS.stampede.marks = stampedeMarks(data.clips.stampede);
   buildList(); selectClip(state.clip); setPlaying(state.playing);
   $('loading').hidden = true;

@@ -338,9 +338,10 @@ final class StormRocCombat {
             from = boss.getEntityPos();
             perch = (perch + 1) % StormSummitLayout.PERCHES.length;
             to = perch(perch);
-            boss.pose("flight");
+            boss.pose("spire_flight");
         }
-        if (cycle >= FLY_AT) fly(Math.min(1, (cycle - FLY_AT) / (double) (AIR_CYCLE - FLY_AT - 1)));
+        // Held on its spire for the push-off, then carried to the next one.
+        if (cycle >= FLY_AT) fly(Math.clamp((cycle - FLY_AT - SPIRE_PUSH) / (double) (AIR_CYCLE - FLY_AT - SPIRE_PUSH - 1), 0, 1));
         if (cycle == 0 && t > 0) {
             boss.setPosition(perch(perch));
             boss.face(center());

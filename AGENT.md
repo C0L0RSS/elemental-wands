@@ -20,6 +20,9 @@ relevant to the task; the docs archive is optional history, not required context
   old release hashes, test dumps, or implementation inventories to this file.
 - Distinguish build checks, native Minecraft tests, and human Lunar playtests.
   A successful build or browser preview does not establish in-game appearance.
+- Mute automated Minecraft test clients before loading a world, including hidden
+  screenshot/recording runs. Set master volume to zero in the disposable test
+  client's options; do not change system audio or the user's Lunar settings.
 
 ## Where to read next
 

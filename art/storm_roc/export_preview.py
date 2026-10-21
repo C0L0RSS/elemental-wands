@@ -18,7 +18,7 @@ ASSETS=ROOT/'src/main/resources/assets/elementalwands'
 OUT=ROOT/'.local-previews/storm-roc/preview'
 FPS=20
 # Reworked clips have snaps quicker than a 20 Hz bake can show; the page reads each clip's own rate.
-CLIP_FPS={'hunched':80,'bite':80,'bite_leap':80,'swing_left':80,'swing_right':80,'scream':80,'wing':80,'pounce':80,'stampede':80}
+CLIP_FPS={'flight':80,'spire_flight':80,'hunched':80,'bite':80,'bite_leap':80,'swing_left':80,'swing_right':80,'scream':80,'wing':80,'pounce':80,'stampede':80}
 # The Thunder Charge's run lasts as long as the server's charge does, so the page shows one whole
 # charge: its windup, as many strides of the run loop as it needs, then its skid. Its path follows
 # StormRocRules' charge (ticks and blocks): its prey stands 30 blocks ahead and sprints off to the
@@ -51,6 +51,34 @@ def charge():
         roc.append([round(x,4),round(z,4),round(yaw,4)]);prey.append([round(px,4),round(pz,4)])
         if stop is not None and t>=stop+c['after']:break
     return roc,prey,stop
+
+# The hop between spires follows StormRocCombat's tickAir and fly: held on its spire until the push
+# while it turns toward the next spire at 10 degrees a tick, then carried there along a 12-block
+# arc, turning back toward the summit's centre past 65% of the way. Its bank and climb are
+# StormRocMotion's, which only bank it once it has left the rock. Spires 1 to 2, centre-relative.
+HOP=dict(push=8,travel=43,arc=12,turn=10,start=(73,29,-54),end=(80,32,34))
+
+def hop(body):
+    """The hop's ticks in the page's frame, where the Roc starts at the origin facing -z: [x, y, z,
+    heading, bank, climb, pivot] (heading positive turns left, as the charge's), and where the
+    next spire and the summit's centre are. body is the clip's body socket height each tick."""
+    h=HOP;start,end=np.array(h['start'],float),np.array(h['end'],float)
+    def wanted(pos,at):return math.degrees(math.atan2(-(at[0]-pos[0]),at[2]-pos[2]))
+    yaw=wanted(start,(0,0,0));yaw0=math.radians(yaw)
+    forward,right=np.array([-math.sin(yaw0),math.cos(yaw0)]),np.array([-math.cos(yaw0),-math.sin(yaw0)])
+    page=lambda v:[float(np.dot(v[[0,2]],right)),float(v[1]),-float(np.dot(v[[0,2]],forward))]
+    bank=climb=0.;last_yaw,last=yaw,start.copy();path=[]
+    for tick in range(h['push']+h['travel']+2):
+        f=min(1,max(0,(tick-h['push'])/h['travel']));s=f*f*(3-2*f)
+        pos=start+(end-start)*s+np.array([0,math.sin(f*math.pi)*h['arc'],0])
+        yaw+=max(-h['turn'],min(h['turn'],(wanted(pos,end if f<.65 else (0,0,0))-yaw+180)%360-180))
+        turn,rise=yaw-last_yaw,pos[1]-last[1];last_yaw,last=yaw,pos
+        aloft=tick>=h['push']
+        bank+=((max(-38,min(38,turn*3.5)) if aloft else 0)-bank)*.2
+        climb+=((max(-25,min(25,rise*25)) if aloft else 0)-climb)*.2
+        x,y,z=page(pos-start)
+        path.append([round(v,4) for v in (x,y,z,-(yaw-math.degrees(yaw0)),bank,climb,body[min(tick,len(body)-1)])])
+    return path,page(end-start),page(-start)
 
 def chained(T,stop):
     """Which clip, and when in it, the game is playing T seconds into the charge."""
@@ -102,6 +130,9 @@ def main():
         if name=='stampede':
             path,prey,stop=charge();duration=(stop+CHARGE['after'])/20
             extra={'path':path,'prey':prey,'launch':STAMPEDE_RUN,'stop':stop/20}
+        if name=='spire_flight':
+            path,to,centre=hop([frame['body'][1] for frame in sockets[name]])
+            extra={'path':path,'to':to,'centre':centre}
         frames=[]
         for i in range(round(duration*fps)+1):
             t=i/fps;world={};clip,at=chained(t,stop) if name=='stampede' else (name,t)

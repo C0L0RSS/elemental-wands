@@ -37,10 +37,10 @@ It records known verification limits; it is not a fresh installation receipt.
     face (glowing red slit eyes in sockets, brow spikes), an animated crest, thick legs with
     big sickle talons, and a tail that lifts off the rock while the feet are down. The
     server fixture passed with the new poses and the client fixture with the final model.
-  - **Verified:** the server fixture covers both phases and the spire call (40 checks), and
-    the native client fixture has 26 reviewed screenshots, including the call bolt, bolts
-    from the cap cloud, the textured tornado, the charge, the storm, the chain smash and live
-    ground.
+  - **Verified:** the server fixture covers both phases and the spire call (44 checks), and
+    the native client fixture has 29 reviewed screenshots, including the spire hop's push-off
+    and landing, the call bolt, bolts from the cap cloud, the textured tornado, the charge,
+    the storm, the chain smash and live ground.
   - **Pending:**
     - human Lunar/co-op balance and appearance: the half-size reach, the hunting tornadoes,
       phase two's density (three big tornadoes, strikes during the brawl, chain-smash damage)
@@ -49,7 +49,9 @@ It records known verification limits; it is not a fresh installation receipt.
       textured tornadoes;
     - the phase-two "fewer perches";
     - the new look in Lunar, including how far the talons bite into the rock (about a third
-      of a block standing, up to a block while it scrabbles when stuck).
+      of a block standing, up to a block while it scrabbles when stuck);
+    - the spire hop in Lunar: the crouch, push-off and glide between spires, and its gaze
+      settling on players below.
   - See the [summit reference](reference/storm-summit.md) and [testing guide](reference/testing.md)
     for commands and verification boundaries.
 - **Hollow Necromancer (in progress):** reworked after the first co-op playtest (duels and

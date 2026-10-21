@@ -77,7 +77,8 @@ Hard). Each spire visit lasts 7.5 seconds:
 - About 1.7 seconds in, it rears up and calls the lightning: a bolt shoots from its raised
   bill into the cap cloud, the sky flashes, and a large strike marks each challenger (up to
   four, like every aimed volley). It whips its head down as those bolts land, 1.5 seconds later.
-- About 5.3 seconds in, it flies to the next spire.
+- About 4.9 seconds in, it crouches on its spire and turns toward the next one. At 5.3 seconds
+  it pushes off with one huge downbeat and glides there, landing as the visit ends.
 
 It dives only from a spire, once its call has landed, and commits to a fixed dive marker for
 three seconds. Small lightning circles have a one-second warning and two bolts; large circles
@@ -202,9 +203,19 @@ they are removed when the fight ends and are never serialized.
 On clients the Roc's clips crossfade over a quarter second whenever the server changes them.
 Its gaze holds dead still, then snaps its head to the player it is striking at or attacking
 (the server tracks that player), or else to you: fully while perched or between brawl attacks,
-partly in flight, never mid-attack, except that through the Thunder Bite's windup its head
+intermittently at players below in flight, never mid-attack, except that through the Thunder Bite's windup its head
 follows its prey smoothly, without snaps, until the aim locks. In flight it banks into its turns and pitches with its
-climb. All of this is presentation; hitboxes follow the authored clips.
+climb, but not while it is still crouched on a spire.
+
+The hop between spires has its own clip, `spire_flight`, which lasts exactly as long as the
+hop: a crouch and turn on the spire, the push-off with one huge downbeat as its legs stream
+back and tuck, a slow recovery, then a glide with held glances down over the summit. It ends
+in the pose the landing starts from, so the landing follows without a crossfade. The 7.2-second
+`flight` loop, with two unequal power strokes and a long glide, now only plays in the phase
+change's stand-in. In either flight it briefly watches a living player below (only once the
+hop's launch is over), then returns to its authored glances; spectators and creative players
+don't draw its gaze. All of this client tracking and banking is presentation; hitboxes follow
+the authored clips.
 
 The body, head and neck share the boss's health and damage admission. The latter two
 hurtboxes follow authored sockets; their client copies step their position every tick, so melee

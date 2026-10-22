@@ -91,10 +91,12 @@ def main():
         for n in by:assert np.allclose(ma[n],mb[n],atol=atol),(a,b,n,'endpoint')
     for a,ta,b,tb in [('dive',3,'stuck',0),('hop',0,'stuck',0),('hop',1.2,'stuck',0),
         ('stuck',6,'hunched',0),('land',0,'flight',0),('land',LAND,'perched',0),
-        ('call',0,'perched',0),('call',3,'perched',0),('takeoff',2.5,'flight',0),
+        ('call',0,'perched',0),('call',3,'perched',0),('takeoff',DEFINITIONS['takeoff'][0],'flight',0),
         ('spire_flight',0,'perched',0)]:endpoint(a,ta,b,tb)
     # The spire hop hands over to the landing with no crossfade.
     endpoint('spire_flight',SPIRE_FLIGHT,'land',0)
+    # So does the takeoff, to the landing or, bound for the phase change, to the flight loop.
+    endpoint('takeoff',DEFINITIONS['takeoff'][0],'land',0)
     # The Thunder Charge's clips hand over with no crossfade: the windup into the run loop, and the
     # loop, on any stride boundary, into the skid.
     endpoint('stampede',STAMPEDE_LOOP,'stampede_run',0,.05)
@@ -157,7 +159,20 @@ def main():
         assert y.max()>rest[k]+1 and falls==1,('Thunder Charge must stride once per loop on each foot',side,y.max(),falls)
         skid=np.array([f[side+'_foot'][1] for f in sockets['stampede_skid']])
         assert np.all(np.abs(skid[3:16]-rest[k])<.02),('Thunder Charge skids on both feet',side)
-    assert shoulder('takeoff',1.1)>35 and shoulder('takeoff',1.2)<-35,'Takeoff downbeat misses tick 24'
+    # The takeoff's downbeat sweeps through level as its feet leave the rock on tick 24: its wrist is
+    # high above its shoulder just before, level with it at the push and well below it just after.
+    # Nothing touches the rock, and once its legs have tucked they ride as rigidly as the flight's.
+    from build_runtime import TAKEOFF_PUSH
+    def wrist(t):m=world('takeoff',t);return pt(m,'left_wing_wrist')[1]-pt(m,'left_wing_shoulder')[1]
+    assert wrist(TAKEOFF_PUSH-.2)>40 and abs(wrist(TAKEOFF_PUSH))<12 and wrist(TAKEOFF_PUSH+.2)<-40,'Takeoff downbeat misses tick 24'
+    feathers=[(b['name'],shape(b)) for b in bones if b.get('cubes') and any(k in b['name'] for k in ('wing','primary','secondary','covert','leading','root_','primaries','secondaries'))]
+    soles=min((shape(by[n])@snapshots['takeoff'][0][n].T)[:,1].min() for n in ('left_foot','right_foot'))
+    clearance=min((v@m[n].T)[:,1].min() for m in snapshots['takeoff'] for n,v in feathers)-soles
+    assert clearance*SCALE>.5,('Takeoff wings must clear the rock',clearance*SCALE)
+    tuck={n:np.linalg.inv(snapshots['flight'][0]['body'])@snapshots['flight'][0][n] for n in by if n.split('_',1)[-1] in ('thigh','shin','tarsus','foot')}
+    for index,m in enumerate(snapshots['takeoff']):
+        if index/(KEY_FPS*2)<1.9:continue
+        for n,rest in tuck.items():assert np.allclose(np.linalg.inv(m['body'])@m[n],rest,atol=.003),('takeoff tucked leg popped',index/(KEY_FPS*2),n)
     # Skyward from its stuttered snaps until it whips down onto its mark with the first strike.
     for t in [.45,1.2,1.75]:
         d=world('call',t)['head'][:3,:3]@np.array([0,0,-1])

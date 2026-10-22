@@ -11,7 +11,14 @@ public final class StormRocRules {
     // Stage timing, in ticks. Easy and Hard lengthen or shorten only the air stretch.
     /** Normal sees three calls, Easy three and an arrival, Hard two; see AIR_CYCLE. */
     public static final int AIR_TICKS = 394, AIR_TICKS_EASY = 450, AIR_TICKS_HARD = 300;
-    public static final int DIVE_TICKS = 60, STUCK_TICKS = 120, TAKEOFF_TICKS = 50;
+    public static final int DIVE_TICKS = 60, STUCK_TICKS = 120;
+    /**
+     * Its takeoff as the brawl ends: crouched, it turns toward where it is going, and its feet leave
+     * the rock at TAKEOFF_PUSH as its downbeat blasts everyone back. Its first beats lift it slowly,
+     * then it is carried there; LAND_LEAD before it arrives it flares into its landing, or, bound for
+     * the phase change, flies on in the flight loop. Its clip lasts TAKEOFF_TICKS - LAND_LEAD.
+     */
+    public static final int TAKEOFF_TICKS = 74, TAKEOFF_PUSH = 24;
 
     // Lightning: each strike warns, then hits the same circle with every bolt at full strength.
     public static final double SMALL_RADIUS = 2.5, LARGE_RADIUS = 5;

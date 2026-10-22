@@ -385,12 +385,19 @@ final class StormRocCombat {
      * of this many ticks it climbs in an arc and flares into its landing LAND_LEAD before it
      * arrives, settling to its spire's height halfway through the flare as it brakes.
      */
-    private void fly(double f, int ticks) {
+    private void fly(double f, int ticks) { fly(f, ticks, 12, false); }
+
+    /**
+     * A flight whose arc rises height blocks over the straight line. Taking off from the rock, its
+     * arc eases in: its first downbeats lift it off slowly before it gathers speed.
+     */
+    private void fly(double f, int ticks, double height, boolean fromRock) {
         double g = Math.min(1, f / (1 - LAND_LEAD / 2.0 / ticks)), arc = Math.sin(g * Math.PI);
         // Past the top the arc eases down, level as it settles rather than still dropping.
         if (g > .5) arc *= arc;
+        if (fromRock) arc *= smooth(Math.min(1, g / .6));
         Vec3d across = from.lerp(to, smooth(f));
-        boss.setPosition(across.x, MathHelper.lerp(smooth(g), from.y, to.y) + arc * 12, across.z);
+        boss.setPosition(across.x, MathHelper.lerp(smooth(g), from.y, to.y) + arc * height, across.z);
         turnToward(f < .65 ? to : center(), FLIGHT_TURN_RATE);
     }
 
@@ -415,20 +422,31 @@ final class StormRocCombat {
     private void takeoff() {
         phasePending |= !two && atPhaseGate();
         from = boss.getEntityPos();
-        perch = (perch + 1) % StormSummitLayout.PERCHES.length;
-        to = perch(perch);
+        // Bound for the phase change, it climbs straight to where the charge holds it.
+        if (phasePending) to = chargePoint();
+        else {
+            perch = (perch + 1) % StormSummitLayout.PERCHES.length;
+            to = perch(perch);
+        }
         enter(Stage.TAKEOFF, "takeoff");
     }
 
     private void tickTakeoff(List<ServerPlayerEntity> players, long t) {
-        // The huge wing spread blasts everyone away without damage, then it flies up.
-        if (t == 24) for (var p : players)
+        boolean phase = !two && (phasePending || atPhaseGate());
+        // Crouched for the push, it turns toward where it is going, as on a spire before the hop.
+        if (t < TAKEOFF_PUSH) turnToward(to, FLIGHT_TURN_RATE);
+        // Its downbeat blasts everyone away without damage as its feet leave the rock.
+        if (t == TAKEOFF_PUSH) for (var p : players)
             if (horizontal(p.getEntityPos(), boss.getEntityPos()) < 24) pushSafe(p, p.getEntityPos().subtract(boss.getEntityPos()), 1.8, .38);
-        if (t >= 24) fly(Math.clamp((t - 24) / 26.0, 0, 1), 26);
-        // Bound for a spire rather than the phase change, it flares into its landing on the way in.
-        if (t == TAKEOFF_TICKS - LAND_LEAD && (two || !(phasePending || atPhaseGate()))) boss.pose("land");
+        // Its first beats lift it off slowly, then it gathers speed: to its next spire over an arc,
+        // or straight up into the charge.
+        int travel = TAKEOFF_TICKS - TAKEOFF_PUSH;
+        if (t >= TAKEOFF_PUSH) fly(Math.clamp((t - TAKEOFF_PUSH) / (double) travel, 0, 1), travel, phase ? 0 : 12, true);
+        // Bound for a spire it flares into its landing on the way in; bound for the phase change it
+        // flies on, with no crossfade either way.
+        if (t == TAKEOFF_TICKS - LAND_LEAD) boss.pose(phase ? "flight" : "land");
         if (t < TAKEOFF_TICKS) return;
-        if (!two && (phasePending || atPhaseGate())) charge();
+        if (phase) charge();
         else {
             floor = Math.max(phaseHealth(), floor - boss.getMaxHealth() * (float) LANDING_SHARE);
             round++;
@@ -447,13 +465,19 @@ final class StormRocCombat {
         phasePending = false;
         review = false;
         from = boss.getEntityPos();
+        // Its takeoff already flies on in the flight loop: it carries on rather than starting again.
+        boolean flying = boss.poseName().equals("flight");
+        long start = boss.poseStart();
         enter(Stage.CHARGE, "flight");
+        if (flying) boss.pose("flight", start);
         sound(from, SoundEvents.ENTITY_PHANTOM_AMBIENT, 4, .4f);
     }
 
+    /** Well below the storm's scud, where the whole summit can watch the bolt come down into it. */
+    private Vec3d chargePoint() { return center().add(0, StormSummit.STORM_CEILING - StormSummit.SURFACE_Y - 40, 0); }
+
     private void tickCharge(long t) {
-        // Well below the storm's scud, where the whole summit can watch the bolt come down into it.
-        Vec3d high = center().add(0, StormSummit.STORM_CEILING - StormSummit.SURFACE_Y - 40, 0);
+        Vec3d high = chargePoint();
         if (t <= 50) {
             boss.setPosition(from.lerp(high, smooth(t / 50.0)));
             if (horizontal(boss.getEntityPos(), high) > 2) turnToward(high, FLIGHT_TURN_RATE);

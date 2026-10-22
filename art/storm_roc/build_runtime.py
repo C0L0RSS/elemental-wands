@@ -60,6 +60,12 @@ CALL_BOLT, CALL_STRIKES = .5, (2.0, 2.5, 3.0)
 # Raptor Strike: it stalks low and pushes off at 1.60 (tick 32); the server carries it flat and
 # fast on a low arc, and its talons strike its prey at 2.60 (tick 52).
 POUNCE_LAUNCH, POUNCE_IMPACT = 1.6, 2.6
+# The takeoff from the summit floor as the brawl ends: its feet leave the rock at TAKEOFF_PUSH
+# (tick 24, StormRocRules.TAKEOFF_PUSH) as its first downbeat sweeps through level and the gust
+# blasts everyone back. The server lifts it slowly off the rock, then carries it to its next spire;
+# the clip ends in the flight's neutral glide at TAKEOFF (TAKEOFF_TICKS - LAND_LEAD), where the
+# landing's flare, or the phase change's flight, carries on with no crossfade.
+TAKEOFF_PUSH, TAKEOFF = 1.2, 2.9
 # Thunder Charge: it rakes the rock three times, slowly, as befits its size, and launches at 2.20
 # (tick 44). Its run lasts as long as the server's charge does, so it is three clips: 'stampede'
 # ends one stride into the run (STAMPEDE_LOOP, tick 53); 'stampede_run' is that one stride, 9 ticks
@@ -73,6 +79,7 @@ STAMPEDE_RAKES = (.25, .85, 1.45)
 FAST_KEYS = {'scream':[(1.45,2.2)], 'swing_left':[(1.2,1.95)], 'swing_right':[(1.2,1.95)], 'bite':[(1.95,2.7)], 'bite_leap':[(1.8,3.25)], 'wing':[(.45,1.1),(2.4,3.0)], 'wing_spiral':[(.5,3.6)], 'takeoff':[(1.1,1.2)],
     'pounce':[(1.3,1.75),(2.35,2.8)], 'spire_flight':[(.3,1.0),(1.3,SPIRE_FLIGHT)], 'land':[(.6,1.0)], 'call':[(0,.6),(1.75,2.1),(2.45,2.7),(2.85,3.0)], 'stampede':[(.2,2.1),(2.05,2.65)], 'stampede_run':[(0,.45)], 'stampede_skid':[(0,.3)],
     'hunched':[(.5,1.),(8.5,9.)]+[(g[0],g[0]+.35) for g in GUARD_GLANCES]}
+FAST_KEYS['takeoff']=[(.3,.6),(.95,2.7)]
 # Block-space clearances at 1.25x; preserve the original model-space wing solve.
 WING_REST, WING_SLAP = -.125, .7
 # The idle and flight loops play their authored motion this much slower: a giant moves slowly.
@@ -83,6 +90,7 @@ DEFINITIONS = {'perched':(round(7.2*SLOW,3),True), 'call':(3,False), 'land':(LAN
     'scream':(2.9,False), 'wing':(4.0,False), 'pounce':(4.0,False),
     'stampede':(STAMPEDE_LOOP,False), 'stampede_run':(round(1/STRIDE_HZ,4),True), 'stampede_skid':(1.9,False),
     'takeoff':(2.5,False), 'hop':(1.2,False)}
+DEFINITIONS['takeoff']=(TAKEOFF,False)
 
 def continuous(prev, cur):
     """cur's Euler angles in the form nearest prev's: wrapped by 360s, or the same turn's twin
@@ -1088,6 +1096,83 @@ def main():
             for k in ('rotation','position'):p[n][k]=p[n][k]*(1-w)+grab[n][k]*w
         blend_local(p,air,[n for n in LEG_BONES if not hinge(n)],w)
         return p
+    takeoff_lift={}
+    def takeoff(t):
+        """Its takeoff from the summit floor as the brawl ends, every move of its body slow and heavy
+        for its size. It holds its guard a moment while the game's gaze lets go, then its head snaps
+        up onto the spire it is leaving for and holds there, dead still, through the launch, while
+        the server turns it to face its way and its neck slowly rises. Its wings swing out from its
+        sides into a Z laid flat and unfold from the shoulder out, the hands last, rising high, as it
+        sinks into a deep crouch and grips the rock.
+        Its legs drive it up and its feet leave the rock at TAKEOFF_PUSH as its first downbeat sweeps
+        through level: the gust. Nothing touches the rock. Its legs trail straight back from the
+        push, then fold up under it on their hinges as the server lifts it slowly off the rock. A
+        slow recovery; its head snaps down onto the players it blasted; a second, weaker beat heaves
+        it on up; then it looks ahead and sets its wings into the flight's neutral glide, where the
+        landing's flare begins."""
+        P,END=TAKEOFF_PUSH,TAKEOFF
+        # Down and back into the crouch, held, then driven up and forward off the rock.
+        crouch=keys(t,[(0,0),(.4,0),(.9,1),(.98,1),(P,0,'hit')])
+        push=keys(t,[(0,0),(.98,0),(P,1,'hit'),(1.6,.35),(2.0,0)])
+        # From the guard's body and legs into the flight's once its feet leave the rock.
+        airborne=keys(t,[(0,0),(P,0),(1.75,1)])
+        # Nose up as it climbs off the rock, levelling as it gathers speed; heaved up by each beat.
+        climb=keys(t,[(0,0),(P,0),(1.55,1),(2.2,.6),(END,0)])
+        heave=keys(t,[(0,0),(1.3,0),(1.6,1),(2.0,.2),(2.3,0),(2.55,.7),(END,0)])
+        # Raised slowly as it opens them and crouches, one heavy downbeat through level as its feet
+        # leave, a slow recovery, a second, weaker beat, and set level to glide.
+        stroke=lambda x:keys(x,[(0,0),(.2,0),(.94,1.05),(.98,1.05),(1.3,-.7),
+            (2.0,.8),(2.06,.8),(2.32,-.65,'hit'),(2.65,.2),(END,0)])
+        air=pose('flight',0);flap(air,t,stroke,lag=.08)
+        # The wings open as a bird opens them, the landing's fold in reverse: they swing out from
+        # its sides into a Z laid flat, then unfold from the shoulder out, the hands last, rising.
+        order=lambda n:2 if n in HANDS else 1 if n in FOREARMS else 0
+        opening=copy.deepcopy(air);joint_mix(opening,flat_fold,lambda n:1-keys(t,[(.45+.08*order(n),0),(.85+.08*order(n),1)]))
+        ground=copy.deepcopy(neutral);fold_wings(ground,opening,lambda n:keys(t,[(.15,0),(.55,1)]))
+        p=mix(ground,air,airborne);body=p['body']
+        body['position']+=np.array([0,-13*crouch+8*push+4*heave,6*crouch-8*push])
+        body['rotation'][0]+=9*crouch-10*push-7*climb
+        # Its neck rises slowly, lifting its head toward the spire, and stays up through the push.
+        rear=keys(t,[(0,0),(.3,0),(.85,1),(1.03,1),(1.7,0)])
+        p['neck_base']['rotation'][0]-=24*rear+14*crouch
+        p['tail_fan']['rotation'][0]+=-12*crouch+14*push
+        # A grunt with the push.
+        p['lower_beak']['rotation'][0]=10*envelope(t,P-.12,.1,.12,.3)
+        # Once the game's gaze has let go of its challenger, it snaps up onto the spire it is leaving
+        # for and stays locked there through the launch; then a look down at the players it blasted,
+        # and ahead again for the glide.
+        look=twitch(t,[(.35,(-18,0,0)),(1.7,(34,-16,-6)),(2.45,(-4,0,0))],spark=1.0,duration_scale=1.5)
+        head(p,look[0],look[1],look[2])
+        if t<=P:
+            # Its talons clench into the rock for the push.
+            for label in ('left','right'):
+                for i in range(4):p[f'{label}_toe_{i}_tip']['rotation'][0]+=(-1 if i==3 else 1)*24*envelope(t,.55,.35,.23,.07)
+            plant(p,feet)
+        else:
+            # Its legs leave the rock straight from the push and trail back, talons open, then fold
+            # up under it into the flight's tuck. The hip, knee and ankle swing straight through on
+            # their hinges (see the Raptor Strike); the feet and toes turn the short way.
+            if 'legs' not in takeoff_lift:
+                pushed=takeoff(P);trail=copy.deepcopy(pushed)
+                for label in ('left','right'):
+                    trail[label+'_thigh']['rotation'][0]+=35
+                    for i in range(4):trail[f'{label}_toe_{i}_tip']['rotation'][0]+=(-1 if i==3 else 1)*12
+                takeoff_lift['legs'],takeoff_lift['trail']=pushed,trail
+            pushed,trail=takeoff_lift['legs'],takeoff_lift['trail']
+            for n in LEG_BONES:p[n]=copy.deepcopy(pushed[n])
+            # The hip and knee fold first and the ankle last, so its feet rise steadily into the
+            # tuck instead of swinging down through a dangling, straightened leg.
+            back=keys(t,[(P,0),(1.45,1)])
+            tuck={'thigh':keys(t,[(1.45,0),(1.75,1)]),'shin':keys(t,[(1.45,0),(1.8,1)]),'tarsus':keys(t,[(1.5,0),(1.9,1)])}
+            hinge=lambda n:n.split('_',1)[1] in tuck
+            for n in filter(hinge,LEG_BONES):
+                w=tuck[n.split('_',1)[1]]
+                for k in ('rotation','position'):
+                    p[n][k]=(pushed[n][k]*(1-back)+trail[n][k]*back)*(1-w)+air[n][k]*w
+            rest=[n for n in LEG_BONES if not hinge(n)]
+            blend_local(p,trail,rest,back);blend_local(p,air,rest,tuck['tarsus'])
+        # It hands over exactly in the pose the landing starts from.
+        return mix(p,flight_rest,ease(t,2.55,END))
     def spiral_body(t):
         """Storm Spiral (experimental), after the flights in How to Train Your Dragon. The
         Thunderclap's crouch, then it launches into a corkscrew climb: nose up steeply along a tight
@@ -1196,7 +1281,8 @@ def main():
             R=STAMPEDE_RUN;S={'stampede':1e6,'stampede_run':1e6,'stampede_skid':STAMPEDE_SKID_AT}[name]
             t+={'stampede':0,'stampede_run':STAMPEDE_LOOP,'stampede_skid':STAMPEDE_SKID_AT}[name]
             return keys(t,[(0,REST),(.4,1),(R-.1,1),(R+.1,-.6),(S,-.6),(S+.2,.3),(S+.75,.3),(S+.9,1),(S+1.5,1),(S+1.9,REST)])
-        if name=='takeoff':return (REST+.5*pulse(t,0,.4,.9,1.2))*(1-ease(t,1.2,2.5))-ease(t,1.2,2.5)
+        # Lifted as it crouches for the push, swept flat as it leaves the rock.
+        if name=='takeoff':return keys(t,[(0,REST),(.1,REST),(.9,.6),(TAKEOFF_PUSH-.05,.6),(TAKEOFF_PUSH+.25,-1),(TAKEOFF,-1)])
         # Pressed flat as it stalks, swept back in the air, raised over its kill.
         if name=='pounce':return keys(t,[(0,REST),(.6,0),(1.5,0),(POUNCE_LAUNCH,-.6),(2.3,-.6),(2.5,1),(3.4,1),(4.0,REST)])
         raise ValueError(name)
@@ -1358,26 +1444,7 @@ def main():
             blend_local(p,hang,LEG_BONES,keys(t,[(WING_LIFT-.05,0),(WING_LIFT+.3,1),(WING_IMPACT-.12,1),(WING_IMPACT+.04,0,'drop')]))
             return p
         if name=='wing_spiral':return spiral(t)
-        if name=='takeoff':
-            p=copy.deepcopy(neutral);hit=1.2
-            # A crouch with the wings opening, the huge downbeat at tick 24, then it beats away.
-            strokes=[(0,0),(.45,.3),(1.1,1.15),(1.2,-1.1),(1.65,.85),(2.1,-.8),(2.5,0)]
-            weight=ease(t,.15,.6)
-            crouch=pulse(t,0,.3,.45,.7)
-            raise_=pulse(t,.2,hit-.15,hit-.1,hit)
-            slam=pulse(t,hit-.1,hit,hit+.15,hit+.5)
-            v=flap(p,t,lambda x:curve(x,strokes),weight,sweep=18*slam)
-            # Each downstroke heaves the body up a little.
-            heave=2.5*min(1,max(0,-v/4))*weight
-            p['body']['position'][1]+=-7*crouch+7*raise_-9*slam+heave
-            p['body']['rotation'][0]+=-8*raise_+10*slam
-            p['neck_base']['rotation'][0]-=8*raise_+9*slam
-            fan(p,t,.35*weight)
-            plant(p,feet)
-            # The slam curls the hand up off the rock first; only then does the shoulder give.
-            if slam>0:
-                for joint in ('wing_wrist','wing_elbow','wing_shoulder'):splay(p,0,True,joint)
-            return locomotion_mix(p,flight_base(0),ease(t,1.2,2.5))
+        if name=='takeoff':return takeoff(t)
         if name=='pounce':return pounce(t)
         if name=='stampede':return stampede(t)
         if name=='stampede_run':return stampede(STAMPEDE_LOOP+t)
@@ -1393,9 +1460,11 @@ def main():
     # The run loop has its own stride sway and no springs, so the chain's clips meet exactly.
     FOLLOW={'hunched':FEATHERS,'bite':FEATHERS,'bite_leap':FEATHERS,'swing_left':FEATHERS,'swing_right':FEATHERS,'scream':FEATHERS,'wing':FEATHERS,'wing_spiral':FEATHERS,'pounce':FEATHERS,'stampede':FEATHERS,'stampede_skid':FEATHERS}
     FOLLOW['flight']=FOLLOW['spire_flight']=FOLLOW['land']=FOLLOW['call']=FEATHERS
+    FOLLOW['takeoff']=FEATHERS
     # Clips another clip continues without a crossfade, or that must end exactly at rest: their swing
     # settles by their end, as a loop's does.
     CHAINED={'stampede','spire_flight','land','call'}
+    CHAINED.add('takeoff')
     shapes={b['name']:shape(b) for b in bones if b.get('cubes')}
     def follow(frames,times,springs,loop):
         worlds=[matrices(p) for p in frames]
@@ -1421,6 +1490,7 @@ def main():
     # every key, so hits land exactly where the export says.
     THIN={'hunched','bite','bite_leap','swing_left','swing_right','scream','wing','wing_spiral','pounce','stampede','stampede_run','stampede_skid'};TOLERANCE={'rotation':.02,'position':.005,'scale':.0002}
     THIN.update(('flight','spire_flight','land','call'))
+    THIN.add('takeoff')
     exact=set()
     for n,_ in landmarks.values():
         while n:exact.add(n);n=by[n].get('parent')

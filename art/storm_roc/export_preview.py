@@ -12,6 +12,7 @@ from validate_review import matrix
 from fold import rotation
 from validate_runtime import read,unreflect
 from build_runtime import SCALE,DEFINITIONS,STAMPEDE_RUN,SPIRE_FLIGHT,LAND
+from build_runtime import TAKEOFF
 HERE=Path(__file__).resolve().parent
 ROOT=HERE.parents[1]
 ASSETS=ROOT/'src/main/resources/assets/elementalwands'
@@ -19,6 +20,7 @@ OUT=ROOT/'.local-previews/storm-roc/preview'
 FPS=20
 # Reworked clips have snaps quicker than a 20 Hz bake can show; the page reads each clip's own rate.
 CLIP_FPS={'flight':80,'spire_flight':80,'land':80,'hunched':80,'bite':80,'bite_leap':80,'swing_left':80,'swing_right':80,'scream':80,'wing':80,'pounce':80,'stampede':80}
+CLIP_FPS['takeoff']=80
 # The Thunder Charge's run lasts as long as the server's charge does, so the page shows one whole
 # charge: its windup, as many strides of the run loop as it needs, then its skid. Its path follows
 # StormRocRules' charge (ticks and blocks): its prey stands 30 blocks ahead and sprints off to the
@@ -82,6 +84,33 @@ def hop(body):
         ticks.append((pos,yaw,bank,climb,body[tick]))
     return ticks
 
+# The takeoff follows StormRocCombat's tickTakeoff: crouched on the summit floor until the push
+# (TAKEOFF_PUSH) while it turns toward its next spire at 10 degrees a tick, then carried there along
+# a 12-block arc that eases in, its first beats lifting it slowly off the rock. It flares into its
+# landing LAND_LEAD before it arrives. The client banks and climbs it from the push until the
+# landing. From a guard spot on the summit floor, facing the centre, to spire 1; centre-relative.
+TAKEOFF_PATH=dict(push=24,ticks=74,arc=12,turn=10,lead=16,start=(-6,0,14),end=(73,29,-54))
+
+def took(body):
+    """The takeoff and its landing, tick by tick, as hop() gives the hop's."""
+    h=TAKEOFF_PATH;start,end=np.array(h['start'],float),np.array(h['end'],float);travel=h['ticks']-h['push']
+    def wanted(pos,at):return math.degrees(math.atan2(-(at[0]-pos[0]),at[2]-pos[2]))
+    smooth=lambda f:f*f*(3-2*f)
+    yaw=wanted(start,(0,0,0));bank=climb=0.;last_yaw,last=yaw,start.copy();ticks=[];pos=start.copy()
+    for tick in range(len(body)):
+        if tick<h['push']:yaw+=max(-h['turn'],min(h['turn'],(wanted(pos,end)-yaw+180)%360-180))
+        elif tick<=h['ticks']:
+            f=min(1,(tick-h['push'])/travel);g=min(1,f/(1-h['lead']/2/travel))
+            arc=math.sin(g*math.pi)**(2 if g>.5 else 1)*smooth(min(1,g/.6))
+            pos=start+(end-start)*smooth(f);pos[1]=start[1]+(end[1]-start[1])*smooth(g)+arc*h['arc']
+            yaw+=max(-h['turn'],min(h['turn'],(wanted(pos,end if f<.65 else (0,0,0))-yaw+180)%360-180))
+        turn,rise=yaw-last_yaw,pos[1]-last[1];last_yaw,last=yaw,pos.copy()
+        aloft=h['push']<=tick<h['ticks']-h['lead']
+        bank+=((max(-38,min(38,turn*3.5)) if aloft else 0)-bank)*.2
+        climb+=((max(-25,min(25,rise*25)) if aloft else 0)-climb)*.2
+        ticks.append((pos.copy(),yaw,bank,climb,body[tick]))
+    return ticks
+
 def framed(ticks,origin,heading):
     """Ticks in a page frame with the Roc at origin facing -z at heading: [x, y, z, heading, bank,
     climb, pivot] (heading positive turns left, as the charge's)."""
@@ -97,6 +126,10 @@ def chained(T,stop):
     if tick<run_at:return 'stampede',T
     if tick<stop:return 'stampede_run',((tick-run_at)/20)%DEFINITIONS['stampede_run'][0]
     return 'stampede_skid',min((tick-stop)/20,DEFINITIONS['stampede_skid'][0])
+
+def taken(T):
+    """Which clip, and when in it, the game is playing T seconds into the takeoff: it, then its landing."""
+    return ('takeoff',T) if T<TAKEOFF else ('land',min(T-TAKEOFF,LAND))
 
 def hopped(T):
     """Which clip, and when in it, the game is playing T seconds into the hop: the hop, then its landing."""
@@ -158,9 +191,16 @@ def main():
                 extra={'path':path,'centre':page(-end)}
                 # It stands on its spire, and is framed there, as it ends.
                 first=sockets[name][-1]
+        if name=='takeoff':
+            # The takeoff, too, plays on into its landing on its next spire, along the server's path.
+            ticks=took([frame['body'][1] for frame in sockets['takeoff'][:-1]+sockets['land']])
+            start,end=np.array(TAKEOFF_PATH['start'],float),np.array(TAKEOFF_PATH['end'],float)
+            path,page=framed(ticks,start,ticks[0][1]);duration=TAKEOFF+LAND
+            extra={'path':path,'to':page(end-start),'centre':page(-start),'land':TAKEOFF,
+                'landFeet':min(sockets['land'][-1]['left_foot'][1],sockets['land'][-1]['right_foot'][1])}
         frames=[]
         for i in range(round(duration*fps)+1):
-            t=i/fps;world={};clip,at=chained(t,stop) if name=='stampede' else hopped(t) if name=='spire_flight' else (name,t)
+            t=i/fps;world={};clip,at=chained(t,stop) if name=='stampede' else hopped(t) if name=='spire_flight' else taken(t) if name=='takeoff' else (name,t)
             for b in bones:world[b['name']]=world.get(b.get('parent'),np.eye(4))@matrix(b,clips[clip]['bones'].get(b['name'],{}),at)
             for b in meshes:
                 M=world[b['name']].copy();M[:3,3]*=SCALE

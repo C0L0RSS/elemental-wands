@@ -269,8 +269,13 @@ const CLIPS = {
     + '5 blocks, bill snapping shut, leaning back with its talons gouging the rock and its wings flared as brakes; its head whips round to the player it missed, and it steps back into its '
     + 'guard: a window to punish it. The viewer plays one charge at a player 30 blocks ahead who sprints to the side as it launches.',
     marks: []},
-  takeoff:     {name: 'Takeoff', d: 'Crouches with its wings opening, one huge downbeat that blasts everyone back, then beats away.',
-                marks: [[1.2, 1.2, 'gust']]},
+  takeoff:     {name: 'Takeoff', tag: 'New', d: 'Its takeoff from the summit floor as the brawl ends, the whole of it as the game plays it, along the server\'s path: every move of its body slow and heavy, its head quick. '
+    + 'It holds its guard while its gaze lets go of you, then its head snaps up onto the spire it is leaving for and stays there, dead still, while the server turns it to face its way and its neck slowly rises. '
+    + 'Its wings swing out from its sides into a Z laid flat and unfold from the shoulder out, the hands last, rising high, as it sinks into a deep crouch and grips the rock. '
+    + 'Its legs drive it up and its feet leave the rock at 1.20 as its downbeat sweeps through level: the gust that blasts everyone back. Its legs trail straight back, then fold up under it as its first beats lift it slowly off the rock. '
+    + 'A slow recovery; its head snaps down onto the players it blasted; a second, weaker beat; then it looks ahead and glides, gathering speed, banking round toward its spire. At 2.9 s, 0.8 s out, it flares into Land.',
+                marks: [[0, .3, 'holds its guard'], [.35, .35, 'head snaps up onto the spire'], [.15, 1.0, 'wings open; crouches'], [1.03, 1.2, 'push-off'], [1.2, 1.2, 'gust: feet leave the rock'],
+                  [1.2, 1.9, 'legs trail back, then tuck'], [1.7, 1.7, 'looks down at the players'], [2.06, 2.32, 'second beat'], [2.45, 2.9, 'glide'], [2.9, 3.7, 'Land: flares, braking beat'], [3.7, 3.7, 'touchdown']]},
 };
 const GROUPS = [
   ['On the spires', ['land', 'perched', 'call', 'spire_flight', 'flight']],
@@ -335,7 +340,7 @@ const smoothstep = f => f * f * (3 - 2 * f);
 function biteLeap(t) {
   // Only the charge turns the Roc; every other clip faces it straight ahead.
   if (state.clip !== 'stampede') roc.rotation.set(0, 0, 0);
-  if (state.clip === 'spire_flight' || state.clip === 'land') {
+  if (state.clip === 'spire_flight' || state.clip === 'land' || state.clip === 'takeoff') {
     // The hop's and the landing's path, heading, bank and climb are the server's and the client's,
     // baked tick by tick (see export_preview.py). As in the game, the bank and climb turn it about its chest.
     const c = data.clips[state.clip], k = Math.min(t * 20, c.path.length - 1), i = Math.floor(k), j = Math.min(i + 1, c.path.length - 1), f = k - i;
@@ -632,7 +637,7 @@ function setView(view) {
     state.target.set((Math.min(...xs) + Math.max(...xs)) / 2, clip.body[1] - 1, (Math.min(...zs) + Math.max(...zs)) / 2); state.dist = 58;
   }
   // The hop is framed on its whole flight, from spire to spire.
-  else if (state.clip === 'spire_flight') {
+  else if (state.clip === 'spire_flight' || state.clip === 'takeoff') {
     const [x, y, z] = clip.to; state.target.set(x / 2, clip.body[1] + 4 + y / 2, z / 2); state.dist = 105;
   }
   else { state.target.set(0, clip.body[1] - 1, clip.body[2] - (state.clip === 'pounce' ? POUNCE_LEAP / 2 : 0)); state.dist = WIDE.has(state.clip) ? 46 : 36; }
@@ -656,6 +661,11 @@ function selectClip(name) {
   // The charge's prey runs along its baked path (see biteLeap).
   else if (name !== 'stampede') player.position.set(-7, 0, -11);
   if (name !== 'stampede') player.rotation.y = .6;
+  if (name === 'takeoff') {
+    // It flies from the summit floor to its next spire, which rises from the rock it leaves.
+    const [x, y, z] = clip.to;
+    standSpire(nextSpire, x, y + clip.landFeet - .45, z, 0); nextSpire.visible = true;
+  }
   if (name === 'spire_flight') {
     // The summit rock lies 29 blocks under the spire it leaves. The player stands on it partway in
     // from under the flight toward the summit's centre, where a challenger would watch it go over.

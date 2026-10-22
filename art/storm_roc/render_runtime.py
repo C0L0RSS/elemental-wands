@@ -34,6 +34,7 @@ KEYS={
  'stampede':[.3,.95,1.5,1.85,2.2,3.2,3.6,4.1],
  'takeoff':[0,.3,.7,1.05,1.2,1.45,2,2.5],
  'hop':[0,.15,.3,.5,.7,.85,1,1.2]}
+KEYS['takeoff']=[0,.35,.8,1.0,1.2,1.4,1.75,2.3]
 GIFS={'perched','call','flight','dive','bite','scream','wing','pounce','stampede'}
 
 def raster(args):

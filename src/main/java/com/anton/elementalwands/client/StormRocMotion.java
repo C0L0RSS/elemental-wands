@@ -27,7 +27,7 @@ public final class StormRocMotion {
     /** Ticks a clip change takes to blend in. */
     private static final float FADE = 5;
     /** Clip changes that continue the same motion, frame for frame, so they cut without a blend. */
-    private static final Set<String> CHAINED = Set.of("stampede>stampede_run", "stampede_run>stampede_skid", "stampede>stampede_skid", "spire_flight>land", "land>call");
+    private static final Set<String> CHAINED = Set.of("stampede>stampede_run", "stampede_run>stampede_skid", "stampede>stampede_skid", "spire_flight>land", "land>call", "takeoff>land", "takeoff>flight");
     /** The spire hop's head stays on the next spire through its launch; only then may its gaze settle on a player below. */
     private static final int SPIRE_LOOK = 26;
     /** The landing's ticks before it has settled and glares at its challenger. */
@@ -81,8 +81,10 @@ public final class StormRocMotion {
         long now = roc.getEntityWorld().getTime();
         String pose = roc.poseName();
         boolean flying = flying(pose);
-        // Crouched on its spire for the hop's push-off, it doesn't bank yet.
-        boolean aloft = flying && !(pose.equals("spire_flight") && roc.poseTicks(0) < StormRocRules.SPIRE_PUSH);
+        // Crouched on its spire for the hop's push-off, it doesn't bank yet; taking off from the
+        // summit, it banks and climbs once its feet leave the rock.
+        boolean aloft = flying && !(pose.equals("spire_flight") && roc.poseTicks(0) < StormRocRules.SPIRE_PUSH)
+            || pose.equals("takeoff") && roc.poseTicks(0) >= StormRocRules.TAKEOFF_PUSH;
         Entity flightTarget = null;
         if (flying) {
             if (!s.wasFlying) {

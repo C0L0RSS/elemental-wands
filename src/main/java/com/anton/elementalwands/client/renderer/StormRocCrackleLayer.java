@@ -74,13 +74,23 @@ public final class StormRocCrackleLayer extends GeoRenderLayer<StormRocEntity,Vo
         boolean running=state.pose.equals("stampede_run"),skidding=state.pose.equals("stampede_skid")&&state.poseTick<StormRocRules.STAMPEDE_SKID_TICKS;
         boolean rushing=stampedeTick>=4||running||skidding;
         boolean screeching=stampedeTick>=StormRocRules.Action.STAMPEDE.impact-2||running;
+        // Calling the lightning, its crest and wing edges crackle as it gathers the storm until its
+        // command; its bill blazes as the bolt leaves it, and again as it whips down onto its mark.
+        float callTick=state.pose.equals("call")?state.poseTick:-1;
+        int bolt=StormRocRules.CALL_VOLLEY,command=bolt+StormRocRules.LARGE_WARNING;
+        boolean gathering=callTick>=2&&callTick<command+4;
+        boolean commanding=callTick>=bolt-1&&callTick<bolt+8||callTick>=command-2&&callTick<command+6;
         List<JsonObject> anchors=new ArrayList<>();
         for(JsonElement element:DATA.getAsJsonArray("anchors"))anchors.add(element.getAsJsonObject());
         int head=anchors.size();
-        if(breathing)for(JsonElement element:DATA.getAsJsonArray("crest_anchors"))anchors.add(element.getAsJsonObject());
+        if(gathering){
+            for(JsonElement element:DATA.getAsJsonArray("crest_anchors"))anchors.add(element.getAsJsonObject());
+            for(JsonElement element:DATA.getAsJsonArray("wing_anchors"))anchors.add(element.getAsJsonObject());
+        }
+        else if(breathing)for(JsonElement element:DATA.getAsJsonArray("crest_anchors"))anchors.add(element.getAsJsonObject());
         else if(clapping)for(JsonElement element:DATA.getAsJsonArray("wing_anchors"))anchors.add(element.getAsJsonObject());
         else if(striking||rushing)for(JsonElement element:DATA.getAsJsonArray("talon_anchors"))anchors.add(element.getAsJsonObject());
-        if(screeching||(!breathing&&!clapping&&!striking&&!rushing)&&(biteTick>=0&&burst<1||sweeping||screaming))
+        if(screeching||commanding||(!breathing&&!clapping&&!striking&&!rushing)&&(biteTick>=0&&burst<1||sweeping||screaming))
             for(JsonElement element:DATA.getAsJsonArray("mouth_anchors"))anchors.add(element.getAsJsonObject());
         List<Matrix4f> transforms=new ArrayList<>();
         for(var anchor:anchors)transforms.add(transform(getGeoModel().getBone(anchor.get("bone").getAsString()).orElseThrow(),channels));
@@ -90,7 +100,7 @@ public final class StormRocCrackleLayer extends GeoRenderLayer<StormRocEntity,Vo
                 || biteTick>=0&&burst<1 || sweeping
                 || state.pose.equals("stuck")&&state.poseTick>=100;
         // The mouth crackles grow when the aim locks, and flare at the bite before they fade.
-        float mouthSize=screeching?1.7f:rushing?1.1f:striking?pounceTick<pounce.impact?.8f+.6f*(pounceTick-pounce.lock)/(pounce.impact-pounce.lock):2f*(1-(pounceTick-pounce.impact)/TALON_TICKS)+.3f
+        float mouthSize=gathering?(callTick<bolt?.6f+.6f*callTick/bolt:commanding?1.8f:1.1f):screeching?1.7f:rushing?1.1f:striking?pounceTick<pounce.impact?.8f+.6f*(pounceTick-pounce.lock)/(pounce.impact-pounce.lock):2f*(1-(pounceTick-pounce.impact)/TALON_TICKS)+.3f
                 :clapping?.7f+.8f*Math.min(1,clapTick/clap.impact):breathing?.6f+.9f*Math.min(1,screamTick/scream.impact):screaming?2.2f*(1-(screamTick-scream.impact)/14)+.3f
                 :biteTick<bite.lock?1:burst<0?1.35f:2.2f*(1-burst)+.2f;
         float time=state.age/20;

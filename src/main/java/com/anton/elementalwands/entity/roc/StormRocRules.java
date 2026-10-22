@@ -25,12 +25,14 @@ public final class StormRocRules {
     public static final int AIMED_CAP = 4;
 
     /**
-     * Each spire visit lasts AIR_CYCLE: it lands (LAND_TICKS), then CALL_AT into the visit it rears up
-     * and calls a large volley down on every challenger CALL_VOLLEY into its call, which lasts
-     * CALL_TICKS. At FLY_AT it starts its hop to the next spire: it crouches there for SPIRE_PUSH, turning
-     * toward it, then flies, arriving as the visit ends. The hop's clip lasts AIR_CYCLE - FLY_AT.
+     * Each spire visit lasts AIR_CYCLE: it settles from its landing, then CALL_AT into the visit it
+     * rears up and calls a large volley down on every challenger CALL_VOLLEY into its call, which
+     * lasts CALL_TICKS. At FLY_AT it starts its hop to the next spire: it crouches there for SPIRE_PUSH,
+     * turning toward it, then flies. LAND_LEAD before it arrives it flares into its landing, which
+     * touches down as the next visit begins and runs until its call. The hop's clip lasts
+     * AIR_CYCLE - FLY_AT - LAND_LEAD; the landing's, LAND_LEAD + CALL_AT.
      */
-    public static final int AIR_CYCLE = 150, LAND_TICKS = 16, CALL_AT = 34, CALL_VOLLEY = 10, CALL_TICKS = 60, FLY_AT = 98, SPIRE_PUSH = 8;
+    public static final int AIR_CYCLE = 150, CALL_AT = 34, CALL_VOLLEY = 10, CALL_TICKS = 60, FLY_AT = 98, SPIRE_PUSH = 8, LAND_LEAD = 16;
 
     // Tornadoes, the dive and shockwave rings.
     public static final double DIVE_RADIUS = 14, TORNADO_RADIUS = 5;

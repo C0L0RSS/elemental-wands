@@ -27,9 +27,11 @@ public final class StormRocMotion {
     /** Ticks a clip change takes to blend in. */
     private static final float FADE = 5;
     /** Clip changes that continue the same motion, frame for frame, so they cut without a blend. */
-    private static final Set<String> CHAINED = Set.of("stampede>stampede_run", "stampede_run>stampede_skid", "stampede>stampede_skid", "spire_flight>land");
+    private static final Set<String> CHAINED = Set.of("stampede>stampede_run", "stampede_run>stampede_skid", "stampede>stampede_skid", "spire_flight>land", "land>call");
     /** The spire hop's head stays on the next spire through its launch; only then may its gaze settle on a player below. */
     private static final int SPIRE_LOOK = 26;
+    /** The landing's ticks before it has settled and glares at its challenger. */
+    private static final int LAND_GLARE = 37;
     private static final String[] NECK = {"root", "body", "neck_base", "neck_lower", "neck_mid", "neck_upper"};
     /** The bill's direction in the head's own frame. */
     private static final Vector3d BILL = new Vector3d(0, -.0285, -.9996).normalize();
@@ -97,7 +99,14 @@ public final class StormRocMotion {
         s.prevWeight = s.weight;
         float wanted = switch (pose) {
             case "perched", "hunched" -> 1;
-            case "land" -> .6f;
+            // Landing, its head holds on the rock; once it has settled it turns slowly to glare.
+            case "land" -> roc.poseTicks(0) >= LAND_GLARE ? 1 : 0;
+            // Calling, its head is on the sky until it whips down onto the player its first strike
+            // is aimed at, as that strike lands, and holds there until the second.
+            case "call" -> {
+                float after = roc.poseTicks(0) - StormRocRules.CALL_VOLLEY - StormRocRules.LARGE_WARNING;
+                yield after >= -2 && after < StormRocRules.BOLT_GAP + 2 ? 1 : 0;
+            }
             case "flight", "spire_flight" -> flightTarget != null ? 1 : 0;
             // The bite's windup keeps its head on its prey until the aim locks, then lets go
             // before the lunge, which bites where the server aimed.
@@ -125,8 +134,9 @@ public final class StormRocMotion {
             float yaw = MathHelper.clamp((float) Math.toDegrees(Math.atan2(x, -z)), -80, 80);
             float pitch = MathHelper.clamp((float) Math.toDegrees(Math.atan2(d.y, Math.hypot(x, z))), flying ? -75 : -50, 35);
             float off = Math.max(Math.abs(yaw - s.yaw), Math.abs(pitch - s.pitch));
-            if (pose.startsWith("bite") || pose.equals("pounce") || pose.equals("stampede_run")) {
-                // Rearing up for the bite, stalking or charging, its head is heavy: it follows its prey without snaps.
+            if (pose.startsWith("bite") || pose.equals("pounce") || pose.equals("stampede_run") || pose.equals("land")) {
+                // Rearing up for the bite, stalking, charging or settling from a landing, its head is
+                // heavy: it follows its prey without snaps.
                 s.yaw += (yaw - s.yaw) * .3f;
                 s.pitch += (pitch - s.pitch) * .3f;
             } else {
@@ -218,8 +228,17 @@ public final class StormRocMotion {
                 float[] a = from.get(bone);
                 if (a == null) return to;
                 float[] out = new float[9];
+                // A turn has two Euler forms, (x, y, z) and (x + 180, 180 - y, z + 180); blend toward
+                // the nearer one, or the part spins through the crossfade.
+                float[] twin = {to[0] + 180, 180 - to[1], to[2] + 180};
+                float near = 0, far = 0;
+                for (int i = 0; i < 3; i++) {
+                    near += Math.abs(MathHelper.wrapDegrees(to[i] - a[i]));
+                    far += Math.abs(MathHelper.wrapDegrees(twin[i] - a[i]));
+                }
+                float[] goal = far < near ? twin : to;
                 for (int i = 0; i < 9; i++) {
-                    float d = to[i] - a[i];
+                    float d = (i < 3 ? goal[i] : to[i]) - a[i];
                     if (i < 3) d = MathHelper.wrapDegrees(d);
                     out[i] = a[i] + d * f;
                 }
@@ -241,7 +260,7 @@ public final class StormRocMotion {
     private static void gaze(Map<String, float[]> channels, String pose, float yaw, float pitch, float weight) {
         // The bite's and the stalk's clips already aim the head at their prey: turn from there to it.
         boolean flight = flying(pose);
-        Vector3d rest = flight || pose.startsWith("bite") || pose.equals("pounce") || pose.startsWith("stampede") ? bill(channels) : NEUTRAL.computeIfAbsent(pose, StormRocMotion::rest);
+        Vector3d rest = flight || pose.equals("land") || pose.equals("call") || pose.startsWith("bite") || pose.equals("pounce") || pose.startsWith("stampede") ? bill(channels) : NEUTRAL.computeIfAbsent(pose, StormRocMotion::rest);
         double restYaw = Math.toDegrees(Math.atan2(rest.x, -rest.z)), restPitch = Math.toDegrees(Math.asin(MathHelper.clamp(rest.y, -1, 1)));
         // In flight its authored glances swing far to either side, so the gaze, already held within
         // reach, turns all the way from wherever the clip has the head.

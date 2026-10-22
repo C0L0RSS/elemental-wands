@@ -11,14 +11,14 @@ import numpy as np
 from validate_review import matrix
 from fold import rotation
 from validate_runtime import read,unreflect
-from build_runtime import SCALE,DEFINITIONS,STAMPEDE_RUN
+from build_runtime import SCALE,DEFINITIONS,STAMPEDE_RUN,SPIRE_FLIGHT,LAND
 HERE=Path(__file__).resolve().parent
 ROOT=HERE.parents[1]
 ASSETS=ROOT/'src/main/resources/assets/elementalwands'
 OUT=ROOT/'.local-previews/storm-roc/preview'
 FPS=20
 # Reworked clips have snaps quicker than a 20 Hz bake can show; the page reads each clip's own rate.
-CLIP_FPS={'flight':80,'spire_flight':80,'hunched':80,'bite':80,'bite_leap':80,'swing_left':80,'swing_right':80,'scream':80,'wing':80,'pounce':80,'stampede':80}
+CLIP_FPS={'flight':80,'spire_flight':80,'land':80,'hunched':80,'bite':80,'bite_leap':80,'swing_left':80,'swing_right':80,'scream':80,'wing':80,'pounce':80,'stampede':80}
 # The Thunder Charge's run lasts as long as the server's charge does, so the page shows one whole
 # charge: its windup, as many strides of the run loop as it needs, then its skid. Its path follows
 # StormRocRules' charge (ticks and blocks): its prey stands 30 blocks ahead and sprints off to the
@@ -54,31 +54,42 @@ def charge():
 
 # The hop between spires follows StormRocCombat's tickAir and fly: held on its spire until the push
 # while it turns toward the next spire at 10 degrees a tick, then carried there along a 12-block
-# arc, turning back toward the summit's centre past 65% of the way. Its bank and climb are
-# StormRocMotion's, which only bank it once it has left the rock. Spires 1 to 2, centre-relative.
-HOP=dict(push=8,travel=43,arc=12,turn=10,start=(73,29,-54),end=(80,32,34))
+# arc, turning back toward the summit's centre past 65% of the way. It flares into its landing
+# LAND_LEAD before it arrives, settling to the next spire's height halfway through the flare as it
+# brakes; on arrival it faces the centre. Its bank and climb are StormRocMotion's, which
+# only bank it in the hop once it has left the rock. Spires 1 to 2, centre-relative.
+HOP=dict(push=8,travel=43,arc=12,turn=10,lead=16,start=(73,29,-54),end=(80,32,34))
 
 def hop(body):
-    """The hop's ticks in the page's frame, where the Roc starts at the origin facing -z: [x, y, z,
-    heading, bank, climb, pivot] (heading positive turns left, as the charge's), and where the
-    next spire and the summit's centre are. body is the clip's body socket height each tick."""
+    """The hop and its landing, tick by tick: the server's position, heading, and the client's
+    bank and climb. body is the body socket height each tick of the two chained clips."""
     h=HOP;start,end=np.array(h['start'],float),np.array(h['end'],float)
     def wanted(pos,at):return math.degrees(math.atan2(-(at[0]-pos[0]),at[2]-pos[2]))
-    yaw=wanted(start,(0,0,0));yaw0=math.radians(yaw)
-    forward,right=np.array([-math.sin(yaw0),math.cos(yaw0)]),np.array([-math.cos(yaw0),-math.sin(yaw0)])
-    page=lambda v:[float(np.dot(v[[0,2]],right)),float(v[1]),-float(np.dot(v[[0,2]],forward))]
-    bank=climb=0.;last_yaw,last=yaw,start.copy();path=[]
-    for tick in range(h['push']+h['travel']+2):
-        f=min(1,max(0,(tick-h['push'])/h['travel']));s=f*f*(3-2*f)
-        pos=start+(end-start)*s+np.array([0,math.sin(f*math.pi)*h['arc'],0])
-        yaw+=max(-h['turn'],min(h['turn'],(wanted(pos,end if f<.65 else (0,0,0))-yaw+180)%360-180))
+    smooth=lambda f:f*f*(3-2*f)
+    yaw=wanted(start,(0,0,0));bank=climb=0.;last_yaw,last=yaw,start.copy();ticks=[]
+    arrive=h['push']+h['travel']+1
+    for tick in range(len(body)):
+        if tick<arrive:
+            f=min(1,max(0,(tick-h['push'])/h['travel']));g=min(1,f/(1-h['lead']/2/h['travel']))
+            arc=math.sin(g*math.pi)**(2 if g>.5 else 1)
+            pos=start+(end-start)*smooth(f);pos[1]=start[1]+(end[1]-start[1])*smooth(g)+arc*h['arc']
+            yaw+=max(-h['turn'],min(h['turn'],(wanted(pos,end if f<.65 else (0,0,0))-yaw+180)%360-180))
+        else:pos=end.copy();yaw=yaw if tick>arrive else wanted(end,(0,0,0))
         turn,rise=yaw-last_yaw,pos[1]-last[1];last_yaw,last=yaw,pos
-        aloft=tick>=h['push']
+        aloft=h['push']<=tick<arrive-h['lead']
         bank+=((max(-38,min(38,turn*3.5)) if aloft else 0)-bank)*.2
         climb+=((max(-25,min(25,rise*25)) if aloft else 0)-climb)*.2
-        x,y,z=page(pos-start)
-        path.append([round(v,4) for v in (x,y,z,-(yaw-math.degrees(yaw0)),bank,climb,body[min(tick,len(body)-1)])])
-    return path,page(end-start),page(-start)
+        ticks.append((pos,yaw,bank,climb,body[tick]))
+    return ticks
+
+def framed(ticks,origin,heading):
+    """Ticks in a page frame with the Roc at origin facing -z at heading: [x, y, z, heading, bank,
+    climb, pivot] (heading positive turns left, as the charge's)."""
+    a=math.radians(heading)
+    forward,right=np.array([-math.sin(a),math.cos(a)]),np.array([-math.cos(a),-math.sin(a)])
+    page=lambda v:[float(np.dot(v[[0,2]],right)),float(v[1]),-float(np.dot(v[[0,2]],forward))]
+    path=[[round(v,4) for v in (*page(pos-origin),-(yaw-heading),bank,climb,pivot)] for pos,yaw,bank,climb,pivot in ticks]
+    return path,page
 
 def chained(T,stop):
     """Which clip, and when in it, the game is playing T seconds into the charge."""
@@ -86,6 +97,10 @@ def chained(T,stop):
     if tick<run_at:return 'stampede',T
     if tick<stop:return 'stampede_run',((tick-run_at)/20)%DEFINITIONS['stampede_run'][0]
     return 'stampede_skid',min((tick-stop)/20,DEFINITIONS['stampede_skid'][0])
+
+def hopped(T):
+    """Which clip, and when in it, the game is playing T seconds into the hop: the hop, then its landing."""
+    return ('spire_flight',T) if T<SPIRE_FLIGHT else ('land',min(T-SPIRE_FLIGHT,LAND))
 
 def bake_parts(bones,W,H):
     """Each meshed bone's triangles in the study basis, in bone order, as the page draws them."""
@@ -130,12 +145,22 @@ def main():
         if name=='stampede':
             path,prey,stop=charge();duration=(stop+CHARGE['after'])/20
             extra={'path':path,'prey':prey,'launch':STAMPEDE_RUN,'stop':stop/20}
-        if name=='spire_flight':
-            path,to,centre=hop([frame['body'][1] for frame in sockets[name]])
-            extra={'path':path,'to':to,'centre':centre}
+        if name in ('spire_flight','land'):
+            # The hop plays on into its landing, as in the game; the landing alone comes in over
+            # its spire along the hop's last stretch.
+            ticks=hop([frame['body'][1] for frame in sockets['spire_flight'][:-1]+sockets['land']])
+            start,end=np.array(HOP['start'],float),np.array(HOP['end'],float)
+            if name=='spire_flight':
+                path,page=framed(ticks,start,ticks[0][1]);duration=SPIRE_FLIGHT+LAND
+                extra={'path':path,'to':page(end-start),'centre':page(-start),'land':SPIRE_FLIGHT}
+            else:
+                path,page=framed(ticks[len(sockets['spire_flight'])-1:],end,ticks[-1][1])
+                extra={'path':path,'centre':page(-end)}
+                # It stands on its spire, and is framed there, as it ends.
+                first=sockets[name][-1]
         frames=[]
         for i in range(round(duration*fps)+1):
-            t=i/fps;world={};clip,at=chained(t,stop) if name=='stampede' else (name,t)
+            t=i/fps;world={};clip,at=chained(t,stop) if name=='stampede' else hopped(t) if name=='spire_flight' else (name,t)
             for b in bones:world[b['name']]=world.get(b.get('parent'),np.eye(4))@matrix(b,clips[clip]['bones'].get(b['name'],{}),at)
             for b in meshes:
                 M=world[b['name']].copy();M[:3,3]*=SCALE

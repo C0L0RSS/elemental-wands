@@ -327,7 +327,7 @@ The client runs a hidden, scripted rehearsal in the authored summit and saves in
 screenshots with its master volume muted in the test profile. It saves those
 screenshots under `build/roc-client-smoke/screenshots/`. The 29 views include the spire hop
 just after push-off (clip ticks 10–16) and flight looking down, both from ground cameras,
-plus a dedicated spire landing view (clip ticks 10–15). Both `spire_flight` and the charge's
+plus a dedicated spire landing view just after touchdown (`land` ticks `LAND_LEAD`+4 to +12). Both `spire_flight` and the charge's
 `flight` must reach the native client, and the charge bolt must be captured. Assertions check
 the actual pose's plain authored clip for a downward head scan, a client gaze focus on a living
 player beyond that scan, and release back close to the authored bill for three consecutive

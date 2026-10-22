@@ -50,8 +50,11 @@ It records known verification limits; it is not a fresh installation receipt.
     - the phase-two "fewer perches";
     - the new look in Lunar, including how far the talons bite into the rock (about a third
       of a block standing, up to a block while it scrabbles when stuck);
-    - the spire hop in Lunar: the crouch, push-off and glide between spires, and its gaze
-      settling on players below.
+    - the older dive, takeoff and hop clips each still have a key where a foot flips about half
+      a turn in one step (the old leg blend); fix it when those clips are reworked;
+    - the spire hop, landing and call in Lunar: the crouch, push-off and glide between spires,
+      its gaze settling on players below, the flare and touchdown on the capstone, the dive
+      that now waits for a landing to settle, and the call's crackles and command glare.
   - See the [summit reference](reference/storm-summit.md) and [testing guide](reference/testing.md)
     for commands and verification boundaries.
 - **Hollow Necromancer (in progress):** reworked after the first co-op playtest (duels and

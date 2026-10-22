@@ -16,7 +16,7 @@ def unreflect(item):
         r=item['rotation'];item['rotation']=[r[0],-r[1],-r[2]] if isinstance(r,list) else {k:[v[0],-v[1],-v[2]] for k,v in r.items()}
 
 def main():
-    from build_runtime import SCALE,DEFINITIONS,WING_REST,WING_SLAP,KEY_FPS,KNEADS,BITE_IMPACT,BITE_TAKEOFF,BITE_LANDING,BITE_LEAP_IMPACT,SWEEP_START,SWEEP_END,SCREAM_IMPACT,WING_LIFT,WING_APEX,WING_IMPACT,POUNCE_LAUNCH,POUNCE_IMPACT,SPIRE_PUSH,SPIRE_FLIGHT,STAMPEDE_RUN,STAMPEDE_LOOP,MODEL,shape,bill,glowing
+    from build_runtime import SCALE,DEFINITIONS,WING_REST,WING_SLAP,KEY_FPS,KNEADS,BITE_IMPACT,BITE_TAKEOFF,BITE_LANDING,BITE_LEAP_IMPACT,SWEEP_START,SWEEP_END,SCREAM_IMPACT,WING_LIFT,WING_APEX,WING_IMPACT,POUNCE_LAUNCH,POUNCE_IMPACT,SPIRE_PUSH,SPIRE_FLIGHT,LAND_TOUCH,LAND,STAMPEDE_RUN,STAMPEDE_LOOP,MODEL,shape,bill,glowing
     approved=read(MODEL/'storm_roc.geo.json')
     geo=read(ASSETS/'geckolib/models/storm_roc.geo.json')
     for b in geo['minecraft:geometry'][0]['bones']:
@@ -42,7 +42,7 @@ def main():
         'neck':('neck_upper',by['neck_upper']['pivot']),'body':('body',[0,65,5]),
         'left_foot':('left_foot',by['left_foot']['pivot']),'right_foot':('right_foot',by['right_foot']['pivot'])}
     planted={'perched':[(0,DEFINITIONS['perched'][0],'perched')],'call':[(0,3,'perched')],
-        'land':[(.3,.8,'perched')],'hunched':[(0,DEFINITIONS['hunched'][0],'hunched')],
+        'land':[(LAND_TOUCH+.08,LAND,'perched')],'hunched':[(0,DEFINITIONS['hunched'][0],'hunched')],
         'bite':[(0,DEFINITIONS['bite'][0],'hunched')],
         'bite_leap':[(0,BITE_TAKEOFF-.03,'hunched'),(BITE_LANDING+.05,DEFINITIONS['bite_leap'][0],'hunched')],
         'swing_left':[(0,DEFINITIONS['swing_left'][0],'hunched')],'swing_right':[(0,DEFINITIONS['swing_right'][0],'hunched')],'scream':[(0,DEFINITIONS['scream'][0],'hunched')],
@@ -90,7 +90,7 @@ def main():
         ma,mb=world(a,ta),world(b,tb)
         for n in by:assert np.allclose(ma[n],mb[n],atol=atol),(a,b,n,'endpoint')
     for a,ta,b,tb in [('dive',3,'stuck',0),('hop',0,'stuck',0),('hop',1.2,'stuck',0),
-        ('stuck',6,'hunched',0),('land',0,'flight',0),('land',.8,'perched',0),
+        ('stuck',6,'hunched',0),('land',0,'flight',0),('land',LAND,'perched',0),
         ('call',0,'perched',0),('call',3,'perched',0),('takeoff',2.5,'flight',0),
         ('spire_flight',0,'perched',0)]:endpoint(a,ta,b,tb)
     # The spire hop hands over to the landing with no crossfade.
@@ -158,7 +158,8 @@ def main():
         skid=np.array([f[side+'_foot'][1] for f in sockets['stampede_skid']])
         assert np.all(np.abs(skid[3:16]-rest[k])<.02),('Thunder Charge skids on both feet',side)
     assert shoulder('takeoff',1.1)>35 and shoulder('takeoff',1.2)<-35,'Takeoff downbeat misses tick 24'
-    for t in [.45,1.2,1.9]:
+    # Skyward from its stuttered snaps until it whips down onto its mark with the first strike.
+    for t in [.45,1.2,1.75]:
         d=world('call',t)['head'][:3,:3]@np.array([0,0,-1])
         assert d[1]>.9,('call skyward hold',t,d)
     d=world('call',2)['head'][:3,:3]@np.array([0,0,-1])

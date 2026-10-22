@@ -316,7 +316,11 @@ final class StormRocCombat {
 
     /** landing: it arrives on its spire from a flight, rather than starting the fight there. */
     private void air(boolean landing) {
+        boolean flaring = boss.poseName().equals("land");
+        long flare = boss.poseStart();
         enter(Stage.AIR, "land");
+        // Its landing began on the way in: it carries on rather than starting again.
+        if (landing && flaring) boss.pose("land", flare);
         if (!landing) perched();
         nextSmall = now() + 25;
         nextLarge = now() + LARGE_EVERY;
@@ -341,22 +345,24 @@ final class StormRocCombat {
             boss.pose("spire_flight");
         }
         // Held on its spire for the push-off, then carried to the next one.
-        if (cycle >= FLY_AT) fly(Math.clamp((cycle - FLY_AT - SPIRE_PUSH) / (double) (AIR_CYCLE - FLY_AT - SPIRE_PUSH - 1), 0, 1));
+        int travel = AIR_CYCLE - FLY_AT - SPIRE_PUSH - 1;
+        if (cycle >= FLY_AT) fly(Math.clamp((cycle - FLY_AT - SPIRE_PUSH) / (double) travel, 0, 1), travel);
+        if (cycle == AIR_CYCLE - LAND_LEAD) boss.pose("land");
         if (cycle == 0 && t > 0) {
             boss.setPosition(perch(perch));
             boss.face(center());
-            boss.pose("land");
         }
-        if (cycle == LAND_TICKS && t > 0) perched();
-        if (cycle == CALL_AT) {
+        boolean due = t >= airDuration();
+        if (cycle == CALL_AT && !due) {
             boss.pose("call");
             sound(boss.getEntityPos(), SoundEvents.ENTITY_PHANTOM_AMBIENT, 4, .5f);
         }
         if (cycle == CALL_AT + CALL_VOLLEY) call(players);
         if (cycle == CALL_AT + CALL_TICKS) perched();
-        // It dives only from its spire, once its call has landed: never mid-call or mid-flight.
-        boolean calling = cycle >= CALL_AT && cycle < CALL_AT + CALL_TICKS;
-        if (t >= airDuration() && !calling && cycle < FLY_AT) {
+        // It dives only from its spire once it has landed, never mid-call or mid-flight. A dive that
+        // comes due while it lands waits for the landing to settle, then takes that visit's call's place.
+        boolean calling = cycle > CALL_AT && cycle < CALL_AT + CALL_TICKS;
+        if (due && cycle >= CALL_AT && !calling && cycle < FLY_AT) {
             if (two) chain();
             else dive(chooseLanding());
         }
@@ -374,9 +380,17 @@ final class StormRocCombat {
         nextLarge = now() + LARGE_EVERY;
     }
 
-    /** It banks toward the next spire, then turns to face the summit before it lands. */
-    private void fly(double f) {
-        boss.setPosition(from.lerp(to, smooth(f)).add(0, Math.sin(f * Math.PI) * 12, 0));
+    /**
+     * It banks toward the next spire, then turns to face the summit before it lands. Over a flight
+     * of this many ticks it climbs in an arc and flares into its landing LAND_LEAD before it
+     * arrives, settling to its spire's height halfway through the flare as it brakes.
+     */
+    private void fly(double f, int ticks) {
+        double g = Math.min(1, f / (1 - LAND_LEAD / 2.0 / ticks)), arc = Math.sin(g * Math.PI);
+        // Past the top the arc eases down, level as it settles rather than still dropping.
+        if (g > .5) arc *= arc;
+        Vec3d across = from.lerp(to, smooth(f));
+        boss.setPosition(across.x, MathHelper.lerp(smooth(g), from.y, to.y) + arc * 12, across.z);
         turnToward(f < .65 ? to : center(), FLIGHT_TURN_RATE);
     }
 
@@ -410,7 +424,9 @@ final class StormRocCombat {
         // The huge wing spread blasts everyone away without damage, then it flies up.
         if (t == 24) for (var p : players)
             if (horizontal(p.getEntityPos(), boss.getEntityPos()) < 24) pushSafe(p, p.getEntityPos().subtract(boss.getEntityPos()), 1.8, .38);
-        if (t >= 24) fly(Math.clamp((t - 24) / 26.0, 0, 1));
+        if (t >= 24) fly(Math.clamp((t - 24) / 26.0, 0, 1), 26);
+        // Bound for a spire rather than the phase change, it flares into its landing on the way in.
+        if (t == TAKEOFF_TICKS - LAND_LEAD && (two || !(phasePending || atPhaseGate()))) boss.pose("land");
         if (t < TAKEOFF_TICKS) return;
         if (!two && (phasePending || atPhaseGate())) charge();
         else {
@@ -460,7 +476,8 @@ final class StormRocCombat {
             perch = tallestPerch();
             to = perch(perch);
         }
-        if (t >= 120) fly(Math.min(1, (t - 120) / (double) (CHARGE_TICKS - 120)));
+        if (t >= 120) fly(Math.min(1, (t - 120) / (double) (CHARGE_TICKS - 120)), CHARGE_TICKS - 120);
+        if (t == CHARGE_TICKS - LAND_LEAD) boss.pose("land");
         if (t >= CHARGE_TICKS) beginPhaseTwo();
     }
 

@@ -225,11 +225,13 @@ public final class StormRocClientSmoke implements ClientModInitializer {
     private void observeLanding(MinecraftClient c,StormRocEntity roc){
         if(phaseShots.contains("spire-land"))return;
         float tick=roc.poseTicks(1);
-        if(landingCameraAt<0&&tick<=3){
+        // Its landing flares on the way in; the camera frames the spire once it has touched down.
+        int touch=StormRocRules.LAND_LEAD;
+        if(landingCameraAt<0&&tick>=touch&&tick<=touch+3){
             landingCameraAt=scene;
             double x=roc.getX()-centre.getX(),z=roc.getZ()-centre.getZ(),y=roc.getY()+4;
             onServer(c.getServer(),()->camera(c.getServer(),c.player.getUuid(),x+24,y,z+38,x,y,z));
-        }else if(landingCameraAt>=0&&scene>=landingCameraAt+4&&tick>=10&&tick<=15){
+        }else if(landingCameraAt>=0&&scene>=landingCameraAt+4&&tick>=touch+4&&tick<=touch+12){
             spireLandTick=tick;phaseShots.add("spire-land");shot(c,"roc-spire-land.png");
         }
     }

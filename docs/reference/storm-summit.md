@@ -72,16 +72,25 @@ a running fight to the phase change. There is no aerie entrance yet.
 
 The Roc flies between the six spires for about 20 seconds on Normal (22.5 on Easy, 15 on
 Hard). Each spire visit lasts 7.5 seconds:
-- It lands, and its perched idle plays: a bird's head snaps, a feather shake, a wing stretch.
-  The idle resumes on each spire, so every visit shows more of it.
-- About 1.7 seconds in, it rears up and calls the lightning: a bolt shoots from its raised
+- It touches down as the visit begins, having flared 0.8 seconds out, every move slow and
+  heavy for its size. It sinks deep under its weight, holds its wings high while it finds its
+  balance, takes one slow look aside, folds its wings and turns to glare at a challenger.
+- About 1.7 seconds in, it calls the lightning: its head jerks up to the sky in electric
+  stutters while its body swells and rises, and half a second later a bolt shoots from its
   bill into the cap cloud, the sky flashes, and a large strike marks each challenger (up to
-  four, like every aimed volley). It whips its head down as those bolts land, 1.5 seconds later.
+  four, like every aimed volley). Its crest and wing edges crackle as it opens its wings and
+  holds. It whips its head down onto its mark as the first bolt lands, 1.5 seconds later, and
+  folds its wings as the others follow.
 - About 4.9 seconds in, it crouches on its spire and turns toward the next one. At 5.3 seconds
-  it pushes off with one huge downbeat and glides there, landing as the visit ends.
+  it pushes off with one huge downbeat and glides there. About 6.7 seconds in it flares into its
+  landing, settling to the next spire's height as it brakes over the last stretch.
 
-It dives only from a spire, once its call has landed, and commits to a fixed dive marker for
-three seconds. Small lightning circles have a one-second warning and two bolts; large circles
+Its perched idle (a bird's head snaps, a feather shake, a wing stretch) plays when the fight
+starts and briefly after each call, resuming where it left off.
+
+It dives only from a spire, once it has landed and never mid-call. A dive that comes due while
+it lands waits for the landing to settle and takes the place of that visit's call. It commits
+to a fixed dive marker for three seconds. Small lightning circles have a one-second warning and two bolts; large circles
 have a 1.5-second warning and three. Repeats arrive half a second apart, with full damage on
 each bolt. Their centres cannot sit inside another live circle. Small aimed strikes keep
 coming every two seconds, some leading movement; random damaging strikes and harmless distant
@@ -203,14 +212,19 @@ they are removed when the fight ends and are never serialized.
 On clients the Roc's clips crossfade over a quarter second whenever the server changes them.
 Its gaze holds dead still, then snaps its head to the player it is striking at or attacking
 (the server tracks that player), or else to you: fully while perched or between brawl attacks,
-intermittently at players below in flight, never mid-attack, except that through the Thunder Bite's windup its head
+intermittently at players below in flight, once it has settled from a landing (turning slowly,
+1.85 seconds in), never mid-attack, except that through the Thunder Bite's windup its head
 follows its prey smoothly, without snaps, until the aim locks. In flight it banks into its turns and pitches with its
 climb, but not while it is still crouched on a spire.
 
-The hop between spires has its own clip, `spire_flight`, which lasts exactly as long as the
-hop: a crouch and turn on the spire, the push-off with one huge downbeat as its legs stream
+The hop between spires has its own clip, `spire_flight`, which lasts until the landing's
+flare: a crouch and turn on the spire, the push-off with one huge downbeat as its legs stream
 back and tuck, a slow recovery, then a glide with held glances down over the summit. It ends
-in the pose the landing starts from, so the landing follows without a crossfade. The 7.2-second
+in the pose the landing starts from, so the landing follows without a crossfade. The landing,
+`land`, starts 0.8 seconds before it arrives, so it flares (body pitched up, wings cupped,
+legs forward, head steady) and beats once to brake on the way in, then touches down as it
+arrives and settles until the call, which follows it without a crossfade. The takeoff from the
+brawl and the phase change's flight end in the same landing, crossfading into its flare. The 7.2-second
 `flight` loop, with two unequal power strokes and a long glide, now only plays in the phase
 change's stand-in. In either flight it briefly watches a living player below (only once the
 hop's launch is over), then returns to its authored glances; spectators and creative players

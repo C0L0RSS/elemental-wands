@@ -12,6 +12,12 @@ public final class StormRocRules {
     /** Normal sees three calls, Easy three and an arrival, Hard two; see AIR_CYCLE. */
     public static final int AIR_TICKS = 394, AIR_TICKS_EASY = 450, AIR_TICKS_HARD = 300;
     public static final int DIVE_TICKS = 60, STUCK_TICKS = 120, TAKEOFF_TICKS = 50;
+    /**
+     * The dive, and the chain smash's first slam, hold it on its spire for DIVE_PUSH while it crouches,
+     * as the hop between spires does, then launch it; the impact stays at DIVE_TICKS. Stuck, it gathers
+     * itself to rip free from STUCK_GATHER, crackling, and its bill comes loose at tick 100.
+     */
+    public static final int DIVE_PUSH = 8, STUCK_GATHER = 88;
 
     // Lightning: each strike warns, then hits the same circle with every bolt at full strength.
     public static final double SMALL_RADIUS = 2.5, LARGE_RADIUS = 5;

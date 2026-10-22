@@ -16,7 +16,7 @@ def unreflect(item):
         r=item['rotation'];item['rotation']=[r[0],-r[1],-r[2]] if isinstance(r,list) else {k:[v[0],-v[1],-v[2]] for k,v in r.items()}
 
 def main():
-    from build_runtime import SCALE,DEFINITIONS,WING_REST,WING_SLAP,KEY_FPS,KNEADS,BITE_IMPACT,BITE_TAKEOFF,BITE_LANDING,BITE_LEAP_IMPACT,SWEEP_START,SWEEP_END,SCREAM_IMPACT,WING_LIFT,WING_APEX,WING_IMPACT,POUNCE_LAUNCH,POUNCE_IMPACT,SPIRE_PUSH,SPIRE_FLIGHT,LAND_TOUCH,LAND,STAMPEDE_RUN,STAMPEDE_LOOP,MODEL,shape,bill,glowing
+    from build_runtime import SCALE,DEFINITIONS,WING_REST,STUCK_FREE,SMASH_PAUSE,DIVE_APEXES,HOP_LOWEST,stuck_slap,KEY_FPS,KNEADS,BITE_IMPACT,BITE_TAKEOFF,BITE_LANDING,BITE_LEAP_IMPACT,SWEEP_START,SWEEP_END,SCREAM_IMPACT,WING_LIFT,WING_APEX,WING_IMPACT,POUNCE_LAUNCH,POUNCE_IMPACT,SPIRE_PUSH,SPIRE_FLIGHT,LAND_TOUCH,LAND,STAMPEDE_RUN,STAMPEDE_LOOP,MODEL,shape,bill,glowing
     approved=read(MODEL/'storm_roc.geo.json')
     geo=read(ASSETS/'geckolib/models/storm_roc.geo.json')
     for b in geo['minecraft:geometry'][0]['bones']:
@@ -89,7 +89,9 @@ def main():
     def endpoint(a,ta,b,tb,atol=.003):
         ma,mb=world(a,ta),world(b,tb)
         for n in by:assert np.allclose(ma[n],mb[n],atol=atol),(a,b,n,'endpoint')
-    for a,ta,b,tb in [('dive',3,'stuck',0),('hop',0,'stuck',0),('hop',1.2,'stuck',0),
+    # The dive and each chain hop slam into stuck's first frame; the hop takes over from stuck where the
+    # chain smash's pause ends.
+    for a,ta,b,tb in [('dive',3,'stuck',0),('hop',0,'stuck',SMASH_PAUSE),('hop',1.2,'stuck',0),
         ('stuck',6,'hunched',0),('land',0,'flight',0),('land',LAND,'perched',0),
         ('call',0,'perched',0),('call',3,'perched',0),('takeoff',2.5,'flight',0),
         ('spire_flight',0,'perched',0)]:endpoint(a,ta,b,tb)
@@ -112,12 +114,23 @@ def main():
         assert steps.max()<.075,('hunched knead would stomp',side,steps.max())
         for foot,a,b in KNEADS:
             if foot==side:assert np.allclose(sockets['hunched'][round(a*20)][side+'_foot'],sockets['hunched'][round(b*20)][side+'_foot'],atol=1e-4),('knead must set the foot back',side)
-    pin=np.array([frame['beak'] for frame in sockets['stuck'][:114]])
-    assert np.max(np.ptp(pin,axis=0))<.0001,'Beak moved before release at 5.65s'
+    pin=np.array([frame['beak'] for frame in sockets['stuck'][:round(STUCK_FREE*20)+1]])
+    assert np.max(np.ptp(pin,axis=0))<.0001,('Beak moved before its release at',STUCK_FREE)
     assert -.99<pin[0,1]<-.8,'Bill must be visibly buried at 1.25x'
     # At subframes, linear Euler interpolation may orbit the pin very slightly.
-    pin_error=max(np.linalg.norm(pt(m,'upper_beak',tip)*SCALE-pin[0]) for m in snapshots['stuck'][:round(5.65*KEY_FPS*2)+1])
+    pin_error=max(np.linalg.norm(pt(m,'upper_beak',tip)*SCALE-pin[0]) for m in snapshots['stuck'][:round(STUCK_FREE*KEY_FPS*2)+1])
     assert pin_error<.06,('interpolated beak pin',pin_error)
+    # Coming down with the server, its bill stays above the rock until it strikes: in the dive along
+    # either phase's descent, and in the chain hop even on its lowest arc.
+    smooth=lambda f:f*f*(3-2*f);dive=DEFINITIONS['dive'][0]
+    def descent(t):return min(h*(1-smooth(min(1,max(0,(t-at)/(dive-at))))) for at,h in DIVE_APEXES)
+    for k in range(round(min(at for at,_ in DIVE_APEXES)*20),round(dive*20)):
+        y=sockets['dive'][k]['beak'][1]+descent(k/20)
+        assert y>=0,('dive bill under the rock before its strike',k/20,y)
+    hop=DEFINITIONS['hop'][0]
+    for k in range(3,round(hop*20)):
+        y=sockets['hop'][k]['beak'][1]+HOP_LOWEST*math.sin(math.pi*k/20/hop)
+        assert y>=0,('hop bill under the rock before its slam',k/20,y)
     # Thunder Bite, standing and leaping: reared tall and looking down at its prey when its aim
     # locks (tick 24), then first at its furthest at the impact tick, where the server bursts its
     # electricity, at player height. Both clips match until the lock, where the server may switch.
@@ -196,11 +209,11 @@ def main():
     spans=[np.ptp(np.concatenate([(v@m[n].T)[:,0] for n,v in corners]))*SCALE for m in flight]
     assert 32<max(spans)<36.5,('flight wingspan',max(spans))
     wing_error=0
-    for i in range(114):
+    for i in range(round(STUCK_FREE*20)+1):
         t=i/20;m=snapshots['stuck'][i*(KEY_FPS//10)]
-        for label,side in (('left',1),('right',-1)):
+        for label in ('left','right'):
             low=min(np.min(v@m[n][1]) for n,v in corners if n.startswith(label+'_'))*SCALE
-            target=WING_REST+WING_SLAP*max(0,math.sin(t*7+side*.9))**2
+            target=WING_REST+stuck_slap(t,label)
             wing_error=max(wing_error,abs(low-target))
     assert wing_error<.02,('wing/rock contact solve',wing_error)
     # The clips are still authored on the cube study, so keep its head lock intact too.

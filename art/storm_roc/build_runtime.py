@@ -70,11 +70,36 @@ STAMPEDE_LOOP = round(STAMPEDE_RUN+1/STRIDE_HZ, 4)
 # Where the skid clip starts in the charge's own time: any stride boundary after the loop.
 STAMPEDE_SKID_AT = round(STAMPEDE_LOOP+1/STRIDE_HZ, 4)
 STAMPEDE_RAKES = (.25, .85, 1.45)
+# The dive: the server holds it on its spire until DIVE_PUSH (StormRocRules.DIVE_PUSH, tick 8) while
+# it crouches, then carries it up to its apex over its mark (at 1.80 in phase one, 2.00 in the chain
+# smash) and down onto it, braking over the last few tenths; its bill spears into the rock at 3.00
+# (DIVE_TICKS, tick 60), where stuck begins.
+DIVE_PUSH = .4
+# The server's path, for the checks that its bill stays above the rock until it strikes: its apex
+# over the mark (time, height in blocks) in phase one and the chain smash, from which it comes down
+# along a smoothstep to land at 3.00; and the chain hop's lowest arc (5 blocks plus 0.3 per block
+# hopped), a sine over the hop's 1.20.
+DIVE_APEXES, HOP_LOWEST = ((1.8,64),(2.0,42)), 5
+# Stuck: its bill stays pinned in the rock until STUCK_FREE, when it rips free; its guard follows
+# at 6.00 (STUCK_TICKS). The chain smash leaves it buried SMASH_PAUSE (tick 8) after each slam but
+# the last, then its hop takes over from that frame.
+STUCK_FREE, SMASH_PAUSE = 5.0, .4
+# While stuck its splayed wings rest on the rock; this is how far their lowest feathers lift off it
+# (blocks above WING_REST), the right wing a moment behind the left: a bounce at the impact, one slow
+# lift and heavy slap as it heaves, a shove as it wrenches, then raised high as it gathers itself to
+# rip free. The validator checks the contact solve against it.
+STUCK_SLAPS = ((0,0),(.1,.35,'snap'),(.32,0,'drop'),(1.5,0),(1.95,1.6),(2.02,1.65),(2.14,0,'hit'),
+    (3.3,0),(3.6,1.0),(3.68,1.05),(3.8,0,'hit'),(4.4,0),(4.95,2.2),(STUCK_FREE,2.25))
+def stuck_slap(t, label):
+    return keys(t-(.06 if label=='right' else 0), STUCK_SLAPS)
 FAST_KEYS = {'scream':[(1.45,2.2)], 'swing_left':[(1.2,1.95)], 'swing_right':[(1.2,1.95)], 'bite':[(1.95,2.7)], 'bite_leap':[(1.8,3.25)], 'wing':[(.45,1.1),(2.4,3.0)], 'wing_spiral':[(.5,3.6)], 'takeoff':[(1.1,1.2)],
     'pounce':[(1.3,1.75),(2.35,2.8)], 'spire_flight':[(.3,1.0),(1.3,SPIRE_FLIGHT)], 'land':[(.6,1.0)], 'call':[(0,.6),(1.75,2.1),(2.45,2.7),(2.85,3.0)], 'stampede':[(.2,2.1),(2.05,2.65)], 'stampede_run':[(0,.45)], 'stampede_skid':[(0,.3)],
     'hunched':[(.5,1.),(8.5,9.)]+[(g[0],g[0]+.35) for g in GUARD_GLANCES]}
+FAST_KEYS['dive']=[(.05,.25),(.4,.6),(.95,1.15),(1.5,1.95),(2.5,3.0)]
+FAST_KEYS['stuck']=[(0,.3),(2.0,2.2),(3.65,3.85),(4.9,5.75)]
+FAST_KEYS['hop']=[(0,.45),(.85,1.2)]
 # Block-space clearances at 1.25x; preserve the original model-space wing solve.
-WING_REST, WING_SLAP = -.125, .7
+WING_REST = -.125
 # The idle and flight loops play their authored motion this much slower: a giant moves slowly.
 SLOW = 1.5
 DEFINITIONS = {'perched':(round(7.2*SLOW,3),True), 'call':(3,False), 'land':(LAND,False),
@@ -399,14 +424,13 @@ def main():
     for b in bones:children.setdefault(b.get('parent'),[]).append(b['name'])
     def subtree(n):return {n}.union(*[subtree(c) for c in children.get(n,[])])
     def splay(p,t,contact_only=False,joint='wing_shoulder'):
-        # Roll each shoulder down until that wing's lowest feather meets the rock, then let
-        # it lift and slap down again: the wings splay out and beat weakly against the ground.
+        # Roll each shoulder down until that wing's lowest feather meets the rock, then lift it
+        # off and slap it down again as stuck's STUCK_SLAPS say: the wings splay out on the ground.
         # With another joint, only the wing beyond it bends up off the rock.
         parts={label:{n:v for n,v in wing_cubes[label].items() if n in subtree(f'{label}_{joint}')} for label in ('left','right')}
         base={label:p[f'{label}_{joint}']['rotation'][2] for label in ('left','right')}
         lo={'left':-60.,'right':-60.};hi={'left':65.,'right':65.}
-        targets={label:(WING_REST+(0 if contact_only else WING_SLAP*max(0,math.sin(t*7+side*.9))**2))/SCALE
-            for label,side in (('left',1),('right',-1))}
+        targets={label:(WING_REST+(0 if contact_only else stuck_slap(t,label)))/SCALE for label in ('left','right')}
         if contact_only:
             m=matrices(p)
             for label in list(lo):
@@ -808,31 +832,204 @@ def main():
     def hunched_crest(t):
         # Up a little on each breath, flared by the hiss, ruffled by the rouse.
         return REST+.12*hunched_breath(t)+(1-REST)*hunched_hiss(t)+.25*envelope(t,7.3,.12,.1,.5)
-    def stuck(t):
+    # Its bill driven into the rock at a slant, its neck bent down to it and its wings splayed out.
+    STUCK_HEAD=42   # its head's pitch below level, degrees, while its bill is buried
+    def stuck_pose():
         p=pose('peck',.5);spread(p,-.1)
-        effort=pulse(t,0,.15,4.55,4.85)
-        heave=ease(t,4.85,5.65)
-        p['root']['rotation'][0]=10+3*math.sin(t*9)*effort-3*heave
-        p['body']['rotation'][0]+=6*math.sin(t*7)*effort-7*heave
-        p['body']['rotation'][2]+=7*math.sin(t*10)*effort
-        p['neck_base']['rotation'][0]+=2*math.sin(t*8)*effort+6*heave
-        p['tail_fan']['rotation'][1]+=32*math.sin(t*11)*effort
-        p['tail_fan']['rotation'][0]+=18*math.sin(t*8)*effort
-        p['lower_beak']['rotation'][0]=12+12*math.sin(t*16)*effort
-        # Anchor the BILL after the whole-body heave. Release only after 5.65.
+        p['root']['rotation'][0]=10
+        p['neck_base']['rotation'][0]-=16;p['neck_upper']['rotation'][0]+=10
+        return p
+    guard_pose=hunched(0);stuck_free={}
+    def stuck(t):
+        """Stuck by its bill: the players' opening, shaped so it reads. The impact crumples it onto its
+        bill, its legs folding deep and its tail whipping up, its wings bouncing on the rock; it
+        settles into a crouch (where the chain smash's hop takes over, at SMASH_PAUSE) and lies
+        stunned, only breathing, a shiver of the storm running through it. Then it heaves, straining
+        against its pinned bill, its hips rising as its legs straighten, lifts its wings slowly and
+        slaps them down once, and slumps, panting. It wrenches its neck to its right, then its left, its body swinging
+        about its pinned bill, rakes the rock with its right talons and shoves at it with its wings, and
+        slumps again. From 4.40 it gathers itself: crest flared and crackling, tail up, its wings
+        raised high off the rock, its whole body trembling. At STUCK_FREE its bill rips free."""
+        F=STUCK_FREE
+        if t>F:return stuck_release(t)
+        p=stuck_pose();body=p['body']
+        crumple=keys(t,[(0,0),(.12,1,'snap'),(.4,.7),(1.3,0)])
+        heave=keys(t,[(0,0),(1.4,0),(1.95,.9),(2.05,.95),(2.5,0,'drop'),(4.4,0),(4.95,1.05),(F,1.1)])
+        # Heavy yanks, each held a moment: a whole neck can't snap like a bill.
+        wrench=keys(t,[(0,0),(3.2,0),(3.45,1),(3.55,1),(3.82,-1.1),(3.95,-1),(4.25,0)])
+        breath=sum(d*envelope(t,a,.55,.1,.65,'ease','ease') for a,d in ((.5,.7),(2.55,1),(3.05,.8),(4.0,.6)))
+        tremble=math.sin(t*math.tau*11)*envelope(t,4.55,.2,.25,0,'ease','ease')
+        shiver=shake(t,.9,.3,14)+.7*shake(t,2.95,.3,14)+.6*tremble
+        # Its bill is pinned, so its body moves about it as its neck bends: folding the neck sinks it
+        # onto its bill, straining it out raises its hips, legs straightening under it.
+        body['rotation']+=np.array([2*crumple-heave-1.2*breath,0,-3*wrench+shiver])
+        p['neck_base']['rotation']+=np.array([-9*crumple+10*heave+1.5*breath,6*wrench,0])
+        p['neck_upper']['rotation'][0]-=4*heave
+        p['neck_lower']['rotation'][1]+=3*wrench
+        p['tail_fan']['rotation'][0]+=LIFT*(18*crumple+12*heave)
+        p['tail_fan']['rotation'][1]-=10*wrench
+        p['lower_beak']['rotation'][0]=6+4*breath+3*heave
+        # Its head is held by its bill: it only shivers, and turns as its neck wrenches.
+        head(p,STUCK_HEAD+.8*shiver,9*wrench,3*wrench+2*shiver)
+        # The bill stays pinned however its body moves.
         p['root']['position']+=pin-point(matrices(p),'upper_beak',tip)
         splay(p,t)
-        m=matrices(p);targets={}
-        for label,side in (('left',1),('right',-1)):
-            foot=point(m,label+'_foot',by[label+'_foot']['pivot'])
-            hip=point(m,label+'_thigh',by[label+'_thigh']['pivot'])
-            foot[1]=max(hip[1]-54,3.75+11*max(0,math.sin(t*13+side*math.pi/2))*effort)
-            foot[2]+=8*math.sin(t*13+side*math.pi/2)*effort
-            targets[label]=foot
-            for i in range(4):p[f'{label}_toe_{i}_tip']['rotation'][0]+=30*math.sin(t*17+i+side)*effort
+        # Its feet stay where its guard will stand; once, its right talons rake the rock: lifted,
+        # reached forward, slammed down and dragged back, then set back in place.
+        targets={k:v.copy() for k,v in feet.items()}
+        targets['right']+=np.array([0,keys(t,[(0,0),(3.4,0),(3.52,12),(3.64,8),(3.7,0,'drop'),(3.95,0),(4.05,5),(4.15,0,'drop')]),
+            keys(t,[(0,0),(3.4,0),(3.55,-10),(3.66,-10),(3.8,10,'hit'),(3.95,10),(4.15,0)])])
+        grip=.5+.5*heave+.5*envelope(t,3.68,.05,.15,.2)
+        for label in ('left','right'):
+            for i in range(4):p[f'{label}_toe_{i}_tip']['rotation'][0]+=(-1 if i==3 else 1)*26*grip
         plant(p,targets)
-        return locomotion_mix(p,neutral,ease(t,5.65,6))
-    buried=stuck(0)
+        return p
+    def stuck_release(t):
+        """It rips its bill free and snaps its head up, rocks back onto its legs as it comes loose, shakes
+        its head, and folds its raised wings as a bird does, hands first, settling into its guard."""
+        F=STUCK_FREE
+        if 'pose' not in stuck_free:stuck_free['pose']=stuck(F)
+        start=stuck_free['pose']
+        p=mix(start,guard_pose,keys(t,[(F,0),(F+.1,.04),(6.0,1)]))
+        rock=keys(t,[(F,0),(F+.22,1,'snap'),(F+.6,-.25),(5.85,0)])
+        p['body']['rotation'][0]-=9*rock
+        p['body']['position']+=np.array([0,3*rock,2*rock])
+        p['tail_fan']['rotation'][0]+=LIFT*6*rock
+        look=twitch(t,[(F,(-STUCK_HEAD-14,0,0),4),(F+.34,(-STUCK_HEAD-5,-18,-9)),(F+.42,(-STUCK_HEAD-5,15,7)),
+            (F+.5,(-STUCK_HEAD-3,-8,-3)),(F+.62,(-STUCK_HEAD,0,0))])
+        head(p,STUCK_HEAD+look[0],look[1],look[2])
+        p['lower_beak']['rotation'][0]=keys(t,[(F,start['lower_beak']['rotation'][0]),(F+.08,34,'snap'),(F+.3,30),(F+.6,4),(6.0,0)])
+        # Its raised wings come down and fold flat at its sides, the hands leading, then swing in.
+        for n in WING_PARTS:p[n]=copy.deepcopy(guard_pose[n])
+        folding=copy.deepcopy(p)
+        for n in WING_PARTS:folding[n]=copy.deepcopy(start[n])
+        lower={n:F+.05 if n in HANDS else F+.1 if n in FOREARMS else F+.15 for n in by}
+        joint_mix(folding,flat_fold,lambda n:keys(t,[(lower[n],0),(lower[n]+.45,1)]))
+        fold_wings(p,folding,lambda n:1-keys(t,[(F+.45,0),(5.95,1)]))
+        plant(p,feet)
+        return p
+    # Stuck's frames where the dive and each hop slam in (0) and where the hop takes over, crouched
+    # after its slam (SMASH_PAUSE); built when first needed, once the tail's lift is known.
+    stuck_frames={}
+    def stuck_frame(t):
+        if t not in stuck_frames:stuck_frames[t]=stuck(t)
+        return stuck_frames[t]
+    hinge=lambda n:n.split('_',1)[1] in ('thigh','shin','tarsus')
+    def swing_legs(p,a,b,w):
+        """Its legs, from a's toward b's. The hip, knee and ankle are hinges: they swing straight
+        through (a slerp would fold a knee through itself, as two bends can go opposite ways); the
+        feet and toes turn the short way, each carried by its blended parent."""
+        target=copy.deepcopy(p)
+        for n in LEG_BONES:p[n]=copy.deepcopy(a[n]);target[n]=copy.deepcopy(b[n])
+        for n in filter(hinge,LEG_BONES):
+            for k in ('rotation','position'):p[n][k]=a[n][k]*(1-w)+b[n][k]*w
+        blend_local(p,target,[n for n in LEG_BONES if not hinge(n)],w)
+    def strike(p,t,start,beat,end):
+        """Drives a pose into stuck's first frame by end, arriving at speed: the body, neck and head from
+        start, the wings beating down onto the rock from beat. The legs land on their own."""
+        body,wings=keys(t,[(start,0),(end,1,'hit')]),keys(t,[(beat,0),(end,1,'hit')])
+        if max(body,wings)<=0:return p
+        q,w=mix(p,stuck_frame(0),body),mix(p,stuck_frame(0),wings)
+        for n in WING_PARTS:q[n]=w[n]
+        for n in LEG_BONES:q[n]=p[n]
+        return q
+    DIVE_OFF=DIVE_PUSH+.12   # its talons leave the rock
+    dive_lift={}
+    def dive(t):
+        """The dive from its spire. The server holds it there until DIVE_PUSH: it sinks into a crouch,
+        crest lifting, its head snapping down onto its mark and locking there, and opens and raises its
+        wings, the spire hop's opening. It drives off with straightening legs into one huge downbeat,
+        its legs streaming back and tucking; a slow recovery, a second, labored beat (where the chain
+        smash picks its player its head snaps onto them), then its wings rise high and wide over the
+        top. It tips slowly over into its stoop around a head held dead still on its mark, folds its
+        wings in against its body, hands first, as a falcon stoops, and draws its neck back into an S.
+        As the server brakes
+        it flares, the warning seen from below: its body swings back toward level around its still
+        head, its wings open high and wide, its tail fans and its legs swing down, screeching. Then
+        its neck shoots out, its wings beat down onto the rock and its bill spears in at 3.00,
+        stuck's first frame, the bill above the rock until then."""
+        P,OFF=DIVE_PUSH,DIVE_OFF
+        load=keys(t,[(0,0),(.05,0),(P,1),(OFF,0,'snap')])
+        push=keys(t,[(0,0),(P-.04,0),(OFF,1,'hit'),(.95,0)])
+        airborne=keys(t,[(0,0),(P,0),(.9,1)])
+        flare=keys(t,[(0,0),(2.5,0),(2.75,1)])
+        # Raised slowly through the crouch, one huge downbeat as its feet leave, a slow recovery and a
+        # second, weaker beat; raised high over the top; flung up and forward in the flare.
+        stroke=lambda x:keys(x,[(0,0),(.05,0),(.5,1.05),(.88,-1.0,'hit'),(1.32,.75),(1.6,-.7,'hit'),(1.95,1.05),(2.5,1.0),(2.72,.75),(3.0,-.5,'hit')])
+        air=pose('flight',0);flap(air,t,stroke,lag=.11,sweep=22*flare)
+        reach={n:.2 if n in HANDS else .17 if n in FOREARMS else .14 for n in by}
+        opening=copy.deepcopy(air);joint_mix(opening,flat_fold,lambda n:1-keys(t,[(reach[n],0),(reach[n]+.28,1)]))
+        ground=copy.deepcopy(perch);fold_wings(ground,opening,lambda n:keys(t,[(.02,0),(.26,1)]))
+        p=mix(ground,air,airborne);body=p['body']
+        # Folded flat at its sides for the stoop, the hands first; opened from the shoulder out to flare.
+        tuck={n:1.92 if n in HANDS else 1.97 if n in FOREARMS else 2.02 for n in by}
+        spread_={n:2.56 if n in HANDS else 2.53 if n in FOREARMS else 2.5 for n in by}
+        joint_mix(p,flat_fold,lambda n:keys(t,[(tuck[n],0),(tuck[n]+.3,1),(spread_[n],1),(spread_[n]+.22,0)]))
+        # Then swung in most of the way against its body, as a falcon stoops, and out again to flare.
+        close=keys(t,[(0,0),(2.05,0),(2.32,.65),(2.47,.65),(2.6,0)])
+        if close>0:
+            closed=copy.deepcopy(p)
+            for n in WING_PARTS:closed[n]=copy.deepcopy(perch[n])
+            fold_wings(closed,p,lambda n:1-close)
+            for n in WING_PARTS:p[n]=closed[n]
+        # Down and back into the crouch, up and forward off the rock, heaved up after each downbeat;
+        # nose up as it climbs, tipped slowly over into the stoop, swung back toward level to brake.
+        lift=keys(t,[(0,0),(.95,0),(1.15,4.5),(1.5,1.2),(1.62,0),(1.8,3.5),(2.0,0)])
+        pitch=keys(t,[(0,0),(.7,0),(1.05,-10),(1.6,-7),(1.78,0),(2.22,60),(2.5,62),(2.8,-6)])
+        body['position']+=np.array([0,-9*load+7*push+lift,5*load-8*push])
+        body['rotation'][0]+=9*load-10*push+pitch
+        coil=keys(t,[(0,0),(2.0,0),(2.35,1),(2.8,1)])
+        p['neck_base']['rotation'][0]+=6*load-4*push-20*coil
+        p['neck_upper']['rotation'][0]+=12*coil
+        p['tail_fan']['rotation'][0]+=-12*load+14*push-LIFT*12*flare
+        # A grunt with the push, a screech in the flare.
+        p['lower_beak']['rotation'][0]=10*envelope(t,P-.05,.1,.12,.3)+keys(t,[(0,0),(2.55,0),(2.72,30,'snap'),(2.82,26)])
+        # Its head: down onto its mark as it crouches, then held there in the world, snapping lower as
+        # it nears the top and fixed on its mark as its body tips over under it and swings back.
+        look=twitch(t,[(.08,(22,0,0)),(1.0,(40,0,0),2),(1.55,(58,0,0),2),(1.78,(70,0,0),2),(2.58,(55,0,0),2)])
+        head(p,look[0],look[1],look[2])
+        # Talons gripping the rock until they leave it; then its legs stream back from the push and
+        # tuck, swing down to reach as it flares, and land planted, swinging on their hinges.
+        if t<OFF:
+            for label in ('left','right'):
+                for i in range(4):p[f'{label}_toe_{i}_tip']['rotation'][0]+=(-1 if i==3 else 1)*20*envelope(t,P-.15,.1,.12,.05)
+            plant(p,perch_feet)
+        else:
+            if 'legs' not in dive_lift:dive_lift['legs']=dive(OFF-.01)
+            grab=pose('grab',keys(t,[(OFF,.8),(1.0,.3),(1.6,.15),(2.5,.1),(2.82,1.2)]))
+            swing_legs(p,dive_lift['legs'],grab,keys(t,[(OFF,0),(OFF+.35,1)]))
+            if t>2.84:swing_legs(p,copy.deepcopy(p),stuck_frame(0),keys(t,[(2.84,0),(3.0,1,'drop')]))
+        # The strike: its body, neck and head drive into stuck's first frame, arriving at speed, its
+        # wings beating down onto the rock from a moment before.
+        return strike(p,t,2.82,2.82,3.0)
+    hop_lift={}
+    def hop(t):
+        """The chain smash's hop: one wingbeat. From its crouch after the slam, its legs drive, its
+        wings shove down off the rock and its bill tears free, its head snapping up with a screech;
+        its legs stream back and tuck as its wings rise slowly through one long upstroke. Its head
+        snaps down onto the next circle and holds there while its body tips over under it, wings held
+        high as the warning, legs swinging forward to reach. Then its neck spears down, its wings beat
+        onto the rock and its bill drives in at 1.20, stuck's first frame, the bill above the rock
+        until then even on the server's lowest arc."""
+        OFF=.08
+        stroke=lambda x:keys(x,[(0,-.2),(.12,-.95,'hit'),(.62,.9),(.92,.85),(1.2,-.5,'hit')])
+        flare=keys(t,[(0,0),(.6,0),(.85,1)])
+        air=pose('flight',0);flap(air,t,stroke,lag=.1,sweep=18*flare)
+        p=mix(stuck_frame(SMASH_PAUSE),air,keys(t,[(0,0),(.25,1)]));body=p['body']
+        # Reared up as it tears free and leaps, level over the top, tipped down onto its circle.
+        body['rotation'][0]+=keys(t,[(0,0),(.12,-16),(.45,-6),(.62,0),(.88,16)])
+        p['neck_base']['rotation'][0]+=keys(t,[(0,0),(.12,-12),(.5,-4),(.9,6)])
+        p['tail_fan']['rotation'][0]+=LIFT*keys(t,[(0,0),(.12,10),(.5,0),(.88,-8)])
+        p['lower_beak']['rotation'][0]=keys(t,[(0,stuck_frame(SMASH_PAUSE)['lower_beak']['rotation'][0]),(.06,34,'snap'),(.3,28),(.55,0),(.85,0),(.95,12)])
+        look=twitch(t,[(.02,(-STUCK_HEAD-12,0,0),4),(.3,(6,0,0),2),(.85,(10,0,0),1)])
+        head(p,STUCK_HEAD+look[0],look[1],look[2])
+        if t<OFF:plant(p,feet)
+        else:
+            if 'legs' not in hop_lift:hop_lift['legs']=hop(OFF-.01)
+            grab=pose('grab',keys(t,[(OFF,.8),(.4,.3),(.6,.25),(.92,1.1),(1.05,1.2)]))
+            swing_legs(p,hop_lift['legs'],grab,keys(t,[(OFF,0),(OFF+.25,1)]))
+            if t>1.04:swing_legs(p,copy.deepcopy(p),stuck_frame(0),keys(t,[(1.04,0),(1.2,1,'drop')]))
+        return strike(p,t,.97,1.0,1.2)
     def bite(t,leap=False):
         """Thunder Bite. It rears up slowly with its bill opening wide and its wings mantled, its
         head on its prey, holds there charged while it aims, then lunges and snaps its bill shut
@@ -1167,8 +1364,11 @@ def main():
                     p[n]['rotation'][0]+=22*max(a,0);p[n]['rotation'][2]-=side*16*max(a,0)
     REST=.3   # on the ground the brawler keeps it up
     def stuck_crest(t):
-        effort=pulse(t,0,.15,4.55,4.85)
-        return (.5+.35*math.sin(t*9)*effort)*(1-ease(t,5.65,6))+REST*ease(t,5.65,6)
+        # Flared by the impact, drooping as it lies stunned, up with each effort, flared and crackling
+        # as it gathers itself to rip free, and at rest in its guard.
+        F=STUCK_FREE
+        return keys(t,[(0,1),(.15,1),(.7,.15),(1.4,.15),(1.95,.6),(2.5,.2),(3.3,.2),(3.5,.55),(4.0,.5),(4.3,.25),
+            (4.62,1,'snap'),(F+.1,1),(5.6,.6),(6.0,REST)])
     def crest_amount(name,t):
         if name=='perched':
             u=t/SLOW;return .8*pulse(u,3.6,3.75,4.25,4.6)+.25*pulse(u,2.05,2.2,2.9,3.1)
@@ -1182,8 +1382,11 @@ def main():
         if name=='land':return keys(t,[(0,-1),(LAND_TOUCH-.05,-1),(LAND_TOUCH+.5,.35),(1.95,.35),(LAND,0)])
         if name=='hunched':return hunched_crest(t)
         if name=='stuck':return stuck_crest(t)
-        if name=='dive':return -ease(t,.1,.6)*(1-ease(t,2.65,3))+stuck_crest(0)*ease(t,2.65,3)
-        if name=='hop':return stuck_crest(0)-(1+stuck_crest(0))*pulse(t,0,.3,.85,1.2)
+        # Lifted as it gathers itself on its spire, sleek from the launch, flared as it screeches in the
+        # flare, still flared from the impact as stuck begins.
+        if name=='dive':return keys(t,[(0,0),(.08,0),(DIVE_PUSH-.05,.45),(DIVE_PUSH+.22,-1),(2.55,-1),(2.72,1,'snap'),(3.0,stuck_crest(0))])
+        # Flared as it tears free, swept back in the air, flared again as it slams.
+        if name=='hop':return keys(t,[(0,stuck_crest(SMASH_PAUSE)),(.06,1,'snap'),(.35,-.8),(.8,-.8),(.95,.6),(1.2,stuck_crest(0))])
         if name=='bite':return REST+(1-REST)*envelope(t,0,1.1,1.5,.9,'ease','ease')
         if name=='bite_leap':return REST+(1-REST)*envelope(t,0,1.1,2.0,.9,'ease','ease')
         if name.startswith('swing'):return REST+(1-REST)*envelope(t,0,.8,1.0,.8,'ease','ease')
@@ -1237,8 +1440,8 @@ def main():
         if name=='flight':return []
         if name=='spire_flight':return [(perch_ground,1-ease(t,SPIRE_PUSH+.07,SPIRE_PUSH+.22),capstone)]
         if name=='land':return [(perch_ground,ease(t,LAND_TOUCH-.05,LAND_TOUCH+.15),capstone)]
-        if name=='dive':return [(perch_ground,1-ease(t,0,.25),capstone),(ground,ease(t,2.65,3))]
-        if name=='hop':return [(ground,1-ease(t,0,.3)),(ground,ease(t,.85,1.2))]
+        if name=='dive':return [(perch_ground,1-ease(t,DIVE_PUSH+.07,DIVE_PUSH+.22),capstone),(ground,ease(t,2.88,3))]
+        if name=='hop':return [(ground,1-ease(t,0,.15)),(ground,ease(t,1.08,1.2))]
         if name=='takeoff':return [(ground,1-ease(t,1.2,2.5))]
         if name=='pounce':return [(ground,1-ease(t,POUNCE_LAUNCH-.05,POUNCE_LAUNCH+.05)*(1-ease(t,POUNCE_IMPACT-.05,POUNCE_IMPACT+.05)))]
         if name=='wing':return [(ground,1-ease(t,WING_LIFT-.05,WING_LIFT+.1)*(1-ease(t,WING_IMPACT-.1,WING_IMPACT)))]
@@ -1253,26 +1456,8 @@ def main():
         if name=='stuck':return stuck(t)
         if name=='call':return call(t)
         if name=='land':return land(t)
-        if name in ('dive','hop'):
-            if name=='dive':
-                p=flight_base((t*1.2)%4.8,1)
-                # Climb first; body tips at the apex, then a tight falcon stoop.
-                p['root']['rotation'][0]=-22*pulse(t,0,.3,1.4,1.8)+78*ease(t,1.5,2.05)
-                fold=pulse(t,1.65,2.05,2.55,2.8)
-                folded=pose('hunched',0)
-                # Fold using the approved articulated wing, swept aft as a unit.
-                blend_wings(p,folded,fold)
-                for label,side in (('left',1),('right',-1)):
-                    p[label+'_wing_shoulder']['rotation'][0]-=22*fold
-                fan(p,t,.3*(1-fold))
-                p=locomotion_mix(perch,p,ease(t,0,.25))
-                return locomotion_mix(p,buried,ease(t,2.65,3))
-            p=flight_base(0)
-            p['root']['rotation'][0]=curve(t,[(0,-25),(.3,-32),(.55,-10),(.85,75),(1.2,75)])
-            flap(p,t,lambda x:curve(x,[(0,0),(.3,1),(.55,-1),(.85,.2),(1.2,0)]))
-            head(p,curve(t,[(0,-45),(.35,-50),(.7,35),(1.2,65)]))
-            p=locomotion_mix(buried,p,ease(t,0,.3))
-            return locomotion_mix(p,buried,ease(t,.85,1.2))
+        if name=='dive':return dive(t)
+        if name=='hop':return hop(t)
         if name=='bite':return bite(t)
         if name=='bite_leap':return bite(t,True)
         if name.startswith('swing'):
@@ -1396,12 +1581,18 @@ def main():
     # Clips another clip continues without a crossfade, or that must end exactly at rest: their swing
     # settles by their end, as a loop's does.
     CHAINED={'stampede','spire_flight','land','call'}
+    # The dive chain's clips cut into each other mid-motion, so their swing is at rest wherever another
+    # clip takes over or hands over: the dive's and hop's at their slams, stuck's where the hop takes
+    # over (it builds up from there, ringing on from the impact) and in its guard at the end.
+    FOLLOW['dive']=FOLLOW['stuck']=FOLLOW['hop']=FEATHERS
+    FADES={'dive':lambda t:1-ease(t,2.7,3.0),'hop':lambda t:1-ease(t,.85,1.2),
+        'stuck':lambda t:ease(t,SMASH_PAUSE,1.0)*(1-ease(t,5.4,6.0))}
     shapes={b['name']:shape(b) for b in bones if b.get('cubes')}
-    def follow(frames,times,springs,loop):
+    def follow(frames,times,springs,loop,fade=None):
         worlds=[matrices(p) for p in frames]
         # A loop's or a chained clip's swing fades out over its last moments, so the seam meets
-        # the next clip at rest.
-        fade=[1-ease(t,times[-1]-.6,times[-1]) if loop else 1 for t in times]
+        # the next clip at rest; fade, a function of clip time, sets it instead.
+        fade=[fade(t) for t in times] if fade else [1-ease(t,times[-1]-.6,times[-1]) if loop else 1 for t in times]
         for spring in springs:
             for n in spring.names:
                 parent=by[n]['parent'];parts=[c for c in subtree(n) if c in shapes]
@@ -1421,6 +1612,9 @@ def main():
     # every key, so hits land exactly where the export says.
     THIN={'hunched','bite','bite_leap','swing_left','swing_right','scream','wing','wing_spiral','pounce','stampede','stampede_run','stampede_skid'};TOLERANCE={'rotation':.02,'position':.005,'scale':.0002}
     THIN.update(('flight','spire_flight','land','call'))
+    THIN.update(('dive','stuck','hop'))
+    # Frames another clip takes over from mid-clip keep their keys exactly.
+    KEEP={'stuck':(SMASH_PAUSE,)}
     exact=set()
     for n,_ in landmarks.values():
         while n:exact.add(n);n=by[n].get('parent')
@@ -1435,7 +1629,7 @@ def main():
             t=frame/KEY_FPS;p=motion(name,t)
             if name in AIRBORNE:lengthen_neck(p)
             crest(p,crest_amount(name,t));posed.append(p)
-        if name in FOLLOW:follow(posed,[i/KEY_FPS for i in frame_ticks],FOLLOW[name],loop or name in CHAINED)
+        if name in FOLLOW:follow(posed,[i/KEY_FPS for i in frame_ticks],FOLLOW[name],loop or name in CHAINED,FADES.get(name))
         # The Thunderclap's and Raptor Strike's hands and feathers meet the rock over a few
         # frames, not in one contact-solve jump; the shoulders still drive the clap down on its tick.
         if name in ('wing','wing_spiral','pounce'):limit_rate(posed,[i/KEY_FPS for i in frame_ticks],
@@ -1462,7 +1656,8 @@ def main():
                 values=[[round(float(v),4) for v in f[b['name']][k]] for f in frames]
                 if all(v==default for v in values):continue
                 if all(v==values[0] for v in values):ch[k]=values[0];continue
-                kept=range(len(values)) if name not in THIN or b['name'] in exact else thin(frame_ticks,values,TOLERANCE[k])
+                kept=range(len(values)) if name not in THIN or b['name'] in exact else sorted(set(thin(frame_ticks,values,TOLERANCE[k]))
+                    |{frame_ticks.index(round(at*KEY_FPS)) for at in KEEP.get(name,())})
                 ch[k]={f'{frame_ticks[i]/KEY_FPS:.4f}':values[i] for i in kept}
             channels[b['name']]=ch
         animations[name]={'loop':loop,'animation_length':duration,'bones':channels}

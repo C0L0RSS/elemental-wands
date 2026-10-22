@@ -95,10 +95,10 @@ public final class StormRocCrackleLayer extends GeoRenderLayer<StormRocEntity,Vo
         List<Matrix4f> transforms=new ArrayList<>();
         for(var anchor:anchors)transforms.add(transform(getGeoModel().getBone(anchor.get("bone").getAsString()).orElseThrow(),channels));
         // It flares while calling the lightning down, as it does in the dive, the scream and the
-        // Thunder Bite, until its burst dies away.
+        // Thunder Bite, until its burst dies away, and stuck, as it gathers itself to rip free.
         boolean charged=state.charged || state.pose.equals("dive") || state.pose.equals("call") || screaming || clapping || striking || rushing
                 || biteTick>=0&&burst<1 || sweeping
-                || state.pose.equals("stuck")&&state.poseTick>=100;
+                || state.pose.equals("stuck")&&state.poseTick>=StormRocRules.STUCK_GATHER;
         // The mouth crackles grow when the aim locks, and flare at the bite before they fade.
         float mouthSize=gathering?(callTick<bolt?.6f+.6f*callTick/bolt:commanding?1.8f:1.1f):screeching?1.7f:rushing?1.1f:striking?pounceTick<pounce.impact?.8f+.6f*(pounceTick-pounce.lock)/(pounce.impact-pounce.lock):2f*(1-(pounceTick-pounce.impact)/TALON_TICKS)+.3f
                 :clapping?.7f+.8f*Math.min(1,clapTick/clap.impact):breathing?.6f+.9f*Math.min(1,screamTick/scream.impact):screaming?2.2f*(1-(screamTick-scream.impact)/14)+.3f

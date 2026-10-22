@@ -89,8 +89,10 @@ Its perched idle (a bird's head snaps, a feather shake, a wing stretch) plays wh
 starts and briefly after each call, resuming where it left off.
 
 It dives only from a spire, once it has landed and never mid-call. A dive that comes due while
-it lands waits for the landing to settle and takes the place of that visit's call. It commits
-to a fixed dive marker for three seconds. Small lightning circles have a one-second warning and two bolts; large circles
+it lands waits for the landing to settle and takes the place of that visit's call. It crouches
+on its spire for 0.4 seconds with its head locked on the marker, drives off with one huge
+downbeat, climbs, hangs and tips over into a tight stoop, then flares high and wide just before
+it strikes: the warning from the ground. It commits to the fixed marker for three seconds. Small lightning circles have a one-second warning and two bolts; large circles
 have a 1.5-second warning and three. Repeats arrive half a second apart, with full damage on
 each bolt. Their centres cannot sit inside another live circle. Small aimed strikes keep
 coming every two seconds, some leading movement; random damaging strikes and harmless distant
@@ -100,8 +102,11 @@ challengers at once.
 The dive marker keeps clear of tornadoes. Its impact is lethal against full unenchanted
 diamond and launches a jumpable smoke/lightning ring; it rolls over low rocks, so only being
 in the air clears it. Sky strikes stop on impact. The Roc stays stuck for six seconds with
-its bill driven into the rock, its wings splayed and beating weakly on the ground (harmless)
-and its scrambling feet hurting anyone close. Then it brawls.
+its bill driven into the rock and its wings splayed on the ground (harmless): stunned at first,
+then a slow heave against the bill, panting, and a wrench to each side as its talons rake
+(its feet hurt anyone close). From 4.4 seconds it gathers itself, crest flaring and crackling,
+and at 5 seconds it rips its bill free, rocks back and folds its wings into its guard. Then it
+brawls.
 
 Where its target stands decides the answer, so every spot has one:
 
@@ -169,6 +174,10 @@ Between attacks it holds its brawl guard: electric head twitches, uneven breathi
 shifts, beak clacks, talon kneads, a mantling hiss and a rouse. Its clock resumes after each blow, so each pause shows a
 different beat, and a knead never moves a foot fast enough to count as a stomp.
 The brawl has no timeout: the next takeoff requires another eighth of total health lost.
+The takeoff lasts 3.7 seconds: it turns toward the spire it is leaving for and sinks into a deep
+crouch as its wings open, and on its 24th tick its legs drive it off the rock as its downbeat
+blasts everyone back without damage. It climbs slowly at first and is carried to the spire,
+flaring into its landing on the way in.
 Burst damage holds at each landing's gate. Reaching half health plays the takeoff, then the
 phase change.
 
@@ -224,7 +233,8 @@ in the pose the landing starts from, so the landing follows without a crossfade.
 `land`, starts 0.8 seconds before it arrives, so it flares (body pitched up, wings cupped,
 legs forward, head steady) and beats once to brake on the way in, then touches down as it
 arrives and settles until the call, which follows it without a crossfade. The takeoff from the
-brawl and the phase change's flight end in the same landing, crossfading into its flare. The 7.2-second
+brawl ends in the same landing, cutting into its flare without a crossfade, and the half-health
+takeoff flies straight on into the phase change's flight loop the same way. The 7.2-second
 `flight` loop, with two unequal power strokes and a long glide, now only plays in the phase
 change's stand-in. In either flight it briefly watches a living player below (only once the
 hop's launch is over), then returns to its authored glances; spectators and creative players
@@ -242,8 +252,9 @@ multiply one attack's reward.
 ## Phase change and phase two
 
 The phase change is a stand-in for its planned cinematic. After the half-health takeoff the
-arena goes quiet: strikes, rings and live ground clear, and only the tornadoes remain. The Roc
-climbs to about 36 blocks above the centre, well under where the storm clouds form. The
+arena goes quiet: strikes, rings and live ground clear, and only the tornadoes remain. Its
+takeoff climbs straight to about 36 blocks above the centre, well under where the storm clouds
+form, and it hovers there. The
 storm rolls in over about three and a half seconds. A huge bolt strikes the Roc, which then
 lands on the tallest spire. It takes no damage during the eight seconds.
 
@@ -270,9 +281,10 @@ Phase two keeps phase one's loop, but the storm is on its side:
 - **More landings:** the air stretch is about 15 seconds on Normal (20 Easy, 12 Hard).
 - **Chain smash** in place of the dive: four beak slams with radius-8 circles, each turned on
   the next player in turn and fixed once marked.
-  - The first launches up from the perch, marks its player and falls on them two seconds
-    later. Like the dive it is lethal.
-  - After each slam it stays buried for 0.4 seconds, then rips free and hops at most 25
+  - The first crouches on the perch for 0.4 seconds, launches up, marks its player and falls
+    on them two seconds after launching. Like the dive it is lethal.
+  - After each slam it stays buried for 0.4 seconds, then tears free with a screech and hops,
+    one slow wingbeat with its wings held high as the warning, at most 25
     blocks to the next circle, which lands 1.2 seconds after it appears and costs about six
     hearts.
   - Every slam sends a jumpable ring 26 blocks out.

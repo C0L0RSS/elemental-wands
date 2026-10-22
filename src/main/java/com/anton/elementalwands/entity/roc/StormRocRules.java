@@ -19,6 +19,12 @@ public final class StormRocRules {
      * the phase change, flies on in the flight loop. Its clip lasts TAKEOFF_TICKS - LAND_LEAD.
      */
     public static final int TAKEOFF_TICKS = 74, TAKEOFF_PUSH = 24;
+    /**
+     * The dive, and the chain smash's first slam, hold it on its spire for DIVE_PUSH while it crouches,
+     * as the hop between spires does, then launch it; the impact stays at DIVE_TICKS. Stuck, it gathers
+     * itself to rip free from STUCK_GATHER, crackling, and its bill comes loose at tick 100.
+     */
+    public static final int DIVE_PUSH = 8, STUCK_GATHER = 88;
 
     // Lightning: each strike warns, then hits the same circle with every bolt at full strength.
     public static final double SMALL_RADIUS = 2.5, LARGE_RADIUS = 5;

@@ -40,7 +40,7 @@ public final class StormRocClientSmoke implements ClientModInitializer {
     private boolean stormChecked;
     private boolean sawBoss,sawEffects,partsChecked;
     private boolean sawFlightScan,sawFlightFocus,sawFlightRelease;
-    private int flightCameraAt=-1,spireCameraAt=-1,landingCameraAt=-1,focusedAt=-1,focusedPlayer=-1,releaseTicks;
+    private int flightCameraAt=-1,spireCameraAt=-1,landingCameraAt=-1,challengerMovedAt=-1,focusedAt=-1,focusedPlayer=-1,releaseTicks;
     private String focusedPose;
     private long focusedPoseAt;
     private float spireHopTick=-1,spireLandTick=-1;
@@ -111,6 +111,7 @@ public final class StormRocClientSmoke implements ClientModInitializer {
             if(scene==1000){require(SummitStormClient.level(1)>.95,"Charged summit storm did not roll in: "+SummitStormClient.level(1));stormChecked=true;shot(c,"roc-storm-sky.png");}
             if(scene==1010)onServer(server,()->camera(server,id,58,133,62,0,106,0));
             if(scene==1030)shot(c,"roc-storm-tornadoes.png");
+            if(scene==1070&&challengerMovedAt>=0)onServer(server,()->{target.setPosition(centre.getX()+.5,101,centre.getZ()+12.5);target.onTeleportationDone();});
             if(scene==1080)onServer(server,()->{require(serverBoss.phaseTwo(),"Chain rehearsal began before phase two");serverBoss.testChain();camera(server,id,45,134,55,0,108,12);});
             if(scene==1300)onServer(server,()->camera(server,id,35,101,25,-25,106,-20));
             if(scene==1310)shot(c,"roc-storm-ground.png");
@@ -181,6 +182,14 @@ public final class StormRocClientSmoke implements ClientModInitializer {
         player.networkHandler.requestTeleport(centre.getX()+x,y,centre.getZ()+z,yaw,pitch);player.setHeadYaw(yaw);player.setNoGravity(true);
     }
     private void observeFlight(MinecraftClient c,StormRocEntity roc){
+        // The phase change's takeoff climbs straight from wherever the brawl left it, so its flight
+        // faces no fixed way: stand the challenger on the rock ahead of and below it, so its gaze has
+        // someone in front of it to find. The chain rehearsal puts the challenger back.
+        if(roc.poseName().equals("flight")&&!sawFlightFocus&&challengerMovedAt<0){
+            challengerMovedAt=scene;
+            onServer(c.getServer(),()->{double a=Math.toRadians(serverBoss.getYaw());
+                target.setPosition(serverBoss.getX()-Math.sin(a)*22,101,serverBoss.getZ()+Math.cos(a)*22);target.onTeleportationDone();});
+        }
         var forward=StormRocMotion.bill(StormRocMotion.frame(roc,1).channels());
         var plain=StormRocMotion.bill(StormRocPose.pose(roc.poseName(),roc.poseTicks(1)));
         sawFlightScan|=plain.y<-.20;

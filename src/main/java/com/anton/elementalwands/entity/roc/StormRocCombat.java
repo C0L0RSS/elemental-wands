@@ -403,9 +403,12 @@ final class StormRocCombat {
 
     private void tickDive(List<ServerPlayerEntity> players, long t) {
         if (!review) storm(players);
-        double f = Math.clamp(t / (double) DIVE_TICKS, 0, 1);
+        // Held on its spire while it crouches, it climbs to its apex over the mark by three fifths of
+        // the dive, then falls onto it.
+        int top = DIVE_TICKS * 3 / 5;
+        double up = Math.clamp((t - DIVE_PUSH) / (double) (top - DIVE_PUSH), 0, 1), down = Math.clamp((t - top) / (double) (DIVE_TICKS - top), 0, 1);
         Vec3d apex = mark.add(0, 64, 0);
-        boss.setPosition(f < .6 ? from.lerp(apex, smooth(f / .6)) : apex.lerp(to, smooth((f - .6) / .4)));
+        boss.setPosition(t < top ? from.lerp(apex, smooth(up)) : apex.lerp(to, smooth(down)));
         if (t < DIVE_TICKS) return;
         boss.setPosition(to);
         if (marker != null) marker.discard();
@@ -951,11 +954,12 @@ final class StormRocCombat {
 
     private void tickSmash(List<ServerPlayerEntity> players, long t) {
         if (smash == 0) {
-            // It launches straight up, picks its first player, then falls on them like the dive.
+            // It crouches on its spire, launches straight up, picks its first player, then falls on
+            // them like the dive.
             if (!review) storm(players);
             int launch = DIVE_TICKS - FIRST_SMASH_WARNING;
             if (t < launch) {
-                boss.setPosition(from.add(0, 14 * smooth(t / (double) launch), 0));
+                boss.setPosition(from.add(0, 14 * smooth(Math.max(0, t - DIVE_PUSH) / (double) (launch - DIVE_PUSH)), 0));
                 turnToward(center(), FLIGHT_TURN_RATE);
                 return;
             }

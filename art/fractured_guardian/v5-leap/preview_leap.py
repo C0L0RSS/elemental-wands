@@ -4,6 +4,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image,ImageDraw
 HERE=Path(__file__).resolve().parent
+OUT=HERE.parents[2]/'.local-previews/guardian-v5'
+OUT.mkdir(parents=True,exist_ok=True)
 base=HERE.parent/'v4-expressive'
 p=runpy.run_path(str(base/'preview_motion.py'))
 clips=json.loads((HERE/'fractured_guardian.animation.json').read_text())['animations']
@@ -16,7 +18,7 @@ for i,(name,t) in enumerate(frames):
  r['mesh']=p['moved'](clips['animation.fractured_guardian.'+name],t)
  x,y=(i%3)*600,(i//3)*660;sheet.paste(r['render'](-32,12,600),(x,y))
  draw.text((x+20,y+610),f'{name.upper()} / {t:.2f}s',fill=(50,60,50),font=r['font'](21))
-sheet.save(HERE/'leap-review.png')
+sheet.save(OUT/'leap-review.png')
 report={}
 for name in ['leap_launch','leap_air','leap_land']:
  clip=clips['animation.fractured_guardian.'+name];lowest=999
@@ -30,5 +32,5 @@ template=(base/'viewer.template.html').read_text().replace('FULL-BODY PERFORMANC
 template=template.replace("let clipName='idle'","let clipName='leap_launch'")
 template=runpy.run_path(str(HERE/'sequence_preview.py'))['extend'](template)
 for a,b in {'__MESH_DATA__':json.dumps(p['mesh'],separators=(',',':')),'__BONES_DATA__':json.dumps(p['bones'],separators=(',',':')),'__ANIMATION_DATA__':json.dumps(clips,separators=(',',':')),'__CUBE_COUNT__':'132','__ATLAS_DATA__':base64.b64encode((source/'fractured_guardian.png').read_bytes()).decode()}.items():template=template.replace(a,b)
-(HERE/'preview.html').write_text(template)
+(OUT/'index.html').write_text(template)
 print(json.dumps(report,indent=2))

@@ -1,9 +1,13 @@
 """Phase transition, retimed and delayed physical attacks, the fan and the core pulse; original clips remain intact."""
-import json,math,runpy,copy
+import argparse,json,math,runpy,copy
 from pathlib import Path
 import numpy as np
 HERE=Path(__file__).resolve().parent
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--check',action='store_true')
+args=parser.parse_args()
 rig=runpy.run_path(str(HERE.parent/'v4-expressive/build_animations.py'))
+heavy=runpy.run_path(str(HERE/'heavy_casts.py'))
 base=json.loads((HERE.parent/'v5-leap/fractured_guardian.animation.json').read_text())['animations']
 def smooth(t):
  t=max(0,min(1,t));return t*t*(3-2*t)
@@ -49,28 +53,10 @@ for name,impact,new_impact,duration in [('slam',1.3,1.05,2.25),('throw',2.2,1.45
  clips['animation.fractured_guardian.'+name+'_fast']=clip
 # Separate full-body fan cast: brace, draw both hands out, then sweep to release.
 def fan_pose(t):
- a=smooth(t/.55)*(1-smooth((t-1.8)/.6))
- sweep=sum(smooth((t-(release-.2))/.2)*(1-smooth((t-release)/.2)) for release in [.9,1.3,1.7])
- p={'pelvis':{'position':np.array([0,-3*a,0.])},
-    'torso':{'rotation':[5*a,-12*a+24*sweep,0]},
-    'head':{'rotation':[-5*a,8*a-16*sweep,0]}}
- for side,sign in [('right',-1),('left',1)]:
-  p[side+'_shoulder']={'position':np.array([0,0.,0]),'rotation':[0,0,-sign*10*a]}
-  p[side+'_upper_arm']={'rotation':[-65*a+25*sweep,sign*18*a,-sign*24*a]}
-  p[side+'_forearm']={'rotation':[-35*a+25*sweep,0,sign*10*a]}
-  p[side+'_hand']={'rotation':[-15*a,sign*15*sweep,0]}
-  rig['fingers'](p,side,8*a,7*a,0)
- rig['legs'](p,t,False)
- for side in ['right','left']:
-  mats=rig['transforms'](p);low=999
-  for c in rig['mesh']:
-   if c['bone'].startswith(side+'_') and not any(k in c['bone'] for k in ['thigh','shin','foot']):
-    m=mats[c['bone']];v=np.array(c['vertices'])@m[:3,:3].T+m[:3,3];low=min(low,float(v[:,1].min()))
-  if low<.8:p[side+'_shoulder']['position'][1]+=(.8-low)/mats['torso'][1,1]
- return p
+ return heavy['pose']('fan',t,rig)
 fan_bones={};fan_lowest=999
-for i in range(97):
- t=round(i*.025,4);p=fan_pose(t);mats=rig['transforms'](p)
+for i in range(193):
+ t=round(i*.0125,4);p=fan_pose(t);mats=rig['transforms'](p)
  for b,channels in p.items():
   for name,value in channels.items():fan_bones.setdefault(b,{}).setdefault(name,{})[str(t)]=[round(float(v),5) for v in value]
  for c in rig['mesh']:
@@ -96,10 +82,8 @@ def held(clip,hold):
     if float(t)<APEX:moved[t]=v
     elif float(t)>APEX:moved[str(round(float(t)+seconds,5))]=v
    moved[str(APEX)]=pose;moved[str(round(APEX+seconds,5))]=pose
-   if bone=='torso' and channel=='rotation':
-    # The torso strains under the raised stone: a faint shiver through the hold.
-    for i in range(1,round(seconds/.05)):
-     tremor=math.sin(i*2.5)*.6;moved[str(round(APEX+i*.05,5))]=[pose[0],round(pose[1]+tremor,5),round(pose[2]+tremor*.6,5)]
+   # Bear the stone at the exact apex. A rapid torso shiver made this massive
+   # pose look busy and dragged the fists sideways throughout the hold.
    channels[channel]=dict(sorted(moved.items(),key=lambda kv:float(kv[0])))
  return out
 for hold in HOLDS:clips[f'animation.fractured_guardian.slam_hold_{hold}']=held(base['animation.fractured_guardian.slam'],hold)
@@ -107,31 +91,10 @@ for hold in HOLDS:clips[f'animation.fractured_guardian.slam_hold_{hold}']=held(b
 # everyone in, then heaves forward as it detonates. Ticks match GuardianPulseRules: pull 10-50, blast 50, end 76.
 PULSE_SECONDS=3.8
 def pulse_pose(t):
- plant=smooth(t/.5)*(1-smooth((t-2.5)/.3))
- draw=smooth((t-.5)/2)*(1-smooth((t-2.5)/.15))
- heave=smooth((t-2.4)/.12)*(1-smooth((t-2.7)/1.0))
- shake=math.sin(t*38)*draw
- p={'pelvis':{'position':np.array([0,-4*plant-2*heave,-.5*plant])},
-    'torso':{'rotation':[-12*plant-16*draw+30*heave,1.2*shake,.8*shake]},
-    'head':{'rotation':[-10*plant-12*draw+12*heave,1.5*shake,0]},
-    'jaw':{'rotation':[8*plant+18*draw+10*heave,0,0]}}
- for side,sign in [('right',-1),('left',1)]:
-  p[side+'_shoulder']={'position':np.array([0,0.,0]),'rotation':[0,0,-sign*(10*plant+6*draw)]}
-  p[side+'_upper_arm']={'rotation':[22*plant+14*draw-62*heave,sign*8*plant,-sign*(34*plant+14*draw+10*heave)]}
-  p[side+'_forearm']={'rotation':[-18*plant-10*draw-12*heave,0,sign*6*plant]}
-  p[side+'_hand']={'rotation':[10*plant-20*heave,0,sign*8*draw]}
-  rig['fingers'](p,side,6*plant+30*heave*(1-draw),14*draw,shake*3)
- rig['legs'](p,t,False)
- for side in ['right','left']:
-  mats=rig['transforms'](p);low=999
-  for c in rig['mesh']:
-   if c['bone'].startswith(side+'_') and not any(k in c['bone'] for k in ['thigh','shin','foot']):
-    m=mats[c['bone']];v=np.array(c['vertices'])@m[:3,:3].T+m[:3,3];low=min(low,float(v[:,1].min()))
-  if low<.8:p[side+'_shoulder']['position'][1]+=(.8-low)/mats['torso'][1,1]
- return p
+ return heavy['pose']('core_pulse',t,rig)
 pulse_bones={};pulse_lowest=999
-for i in range(round(PULSE_SECONDS/.025)+1):
- t=round(i*.025,4);p=pulse_pose(t);mats=rig['transforms'](p)
+for i in range(round(PULSE_SECONDS/.0125)+1):
+ t=round(i*.0125,4);p=pulse_pose(t);mats=rig['transforms'](p)
  for b,channels in p.items():
   for name,value in channels.items():pulse_bones.setdefault(b,{}).setdefault(name,{})[str(t)]=[round(float(v),5) for v in value]
  for c in rig['mesh']:
@@ -139,7 +102,11 @@ for i in range(round(PULSE_SECONDS/.025)+1):
 assert pulse_lowest>-.08,pulse_lowest
 clips['animation.fractured_guardian.core_pulse']={'loop':False,'animation_length':PULSE_SECONDS,'bones':pulse_bones}
 print('Core pulse floor clearance:',pulse_lowest)
-(HERE/'phase.animation.json').write_text(json.dumps({'format_version':'1.8.0','animations':clips},indent=2)+'\n')
-(HERE/'motion-validation.json').write_text(json.dumps({'samples':129,'minimum_vertex':lowest,'phase_seconds':3.2,'slam_impact_tick':21,'throw_release_tick':29,
- 'slam_apex_seconds':APEX,'slam_holds':list(HOLDS),'core_pulse_seconds':PULSE_SECONDS,'core_pulse_minimum_vertex':pulse_lowest},indent=2)+'\n')
+outputs={'phase.animation.json':{'format_version':'1.8.0','animations':clips},
+ 'motion-validation.json':{'samples':129,'minimum_vertex':lowest,'phase_seconds':3.2,'slam_impact_tick':21,'throw_release_tick':29,
+ 'slam_apex_seconds':APEX,'slam_holds':list(HOLDS),'core_pulse_seconds':PULSE_SECONDS,'core_pulse_minimum_vertex':pulse_lowest}}
+for name,data in outputs.items():
+ text=json.dumps(data,indent=2)+'\n';path=HERE/name
+ if args.check:assert path.read_text()==text,f'Stale Guardian phase output: {path}'
+ else:path.write_text(text)
 print('Phase clips generated; minimum vertex',lowest)

@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 
 HERE=Path(__file__).resolve().parent
+OUT=HERE.parents[2]/'.local-previews/guardian-v4'
 SOURCE=HERE.parent/'v2-textured'
 mesh=json.loads((SOURCE/'mesh.json').read_text())
 geo=json.loads((SOURCE/'fractured_guardian.geo.json').read_text())['minecraft:geometry'][0]
@@ -54,6 +55,7 @@ def moved(clip,t):
     return out
 
 if __name__=='__main__':
+    OUT.mkdir(parents=True,exist_ok=True)
     # Reuse the existing deterministic rasterizer, without its file-writing entrypoint.
     code=(SOURCE/'render_preview.py').read_text().split("views=[")[0].replace('scale=size/112','scale=size/160').replace('tri-[0,40,0]','tri-[0,60,0]')
     renderer={'__file__':str(SOURCE/'render_preview.py')};exec(code,renderer)
@@ -65,7 +67,7 @@ if __name__=='__main__':
         img=renderer['render'](-32,12,600)
         x,y=(i%3)*600,(i//3)*660
         sheet.paste(img,(x,y));draw.text((x+30,y+610),f'{name.upper()} / {t:.2f}s',fill=(50,60,50),font=renderer['font'](23))
-    sheet.save(HERE/'animation-review.png')
+    sheet.save(OUT/'animation-review.png')
     report={}
     for name,clip in clips.items():
         lowest=1000;footlow=1000;foothigh=-1000
@@ -89,4 +91,4 @@ if __name__=='__main__':
     template=(HERE/'viewer.template.html').read_text()
     replacements={'__MESH_DATA__':json.dumps(mesh,separators=(',',':')),'__BONES_DATA__':json.dumps(bones,separators=(',',':')),'__ANIMATION_DATA__':json.dumps(clips,separators=(',',':')),'__CUBE_COUNT__':'132','__ATLAS_DATA__':base64.b64encode((SOURCE/'fractured_guardian.png').read_bytes()).decode()}
     for a,b in replacements.items():template=template.replace(a,b)
-    (HERE/'preview.html').write_text(template)
+    (OUT/'index.html').write_text(template)

@@ -1,10 +1,13 @@
 """Add the double-shockwave leap without changing any approved V4 clip or model geometry."""
 from pathlib import Path
-import copy,json,runpy,math
+import argparse,copy,json,runpy,math
 import numpy as np
 HERE=Path(__file__).resolve().parent
 BASE=HERE.parent/'v4-expressive'
 h=runpy.run_path(str(BASE/'build_animations.py'))
+# Leap choreography is a separate approved chain. Its old slam dependency must
+# not inherit the standing combat slam's new windup or contact pose.
+h['performance']=h['legacy_performance']
 rot,pos,ease=h['rot'],h['pos'],h['ease']
 slam=h['legacy']['build']()['animations']['animation.fractured_guardian.slam']
 
@@ -83,10 +86,15 @@ def build():
     return data
 
 if __name__=='__main__':
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--check',action='store_true')
+    args=parser.parse_args()
     data=build()
-    (HERE/'fractured_guardian.animation.json').write_text(json.dumps(data,indent=2)+'\n')
     project=h['legacy']['blockbench'](data);project['name']='Fractured Guardian — Double shockwave leap 05'
-    (HERE/'fractured_guardian.bbmodel').write_text(json.dumps(project,indent=2)+'\n')
+    for name,value in [('fractured_guardian.animation.json',data),('fractured_guardian.bbmodel',project)]:
+        text=json.dumps(value,indent=2)+'\n';path=HERE/name
+        if args.check:assert path.read_text()==text,f'Stale Guardian V5 output: {path}'
+        else:path.write_text(text)
     base=json.loads((BASE/'fractured_guardian.animation.json').read_text())
     assert all(data['animations'][name]==clip for name,clip in base['animations'].items())
     print('Added launch, airborne and landing clips; all six V4 animations preserved exactly.')

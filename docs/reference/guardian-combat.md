@@ -147,8 +147,15 @@ The original six clips are in `v4-expressive/`; `v5-leap/build_leap.py` carries
 those forward and adds leap phases. The runtime exporter also merges `arrival/`,
 and `phase/` animation sources. `phase/build_phase.py` authors the phase change, fast
 slam/throw, fan, delayed slams and core pulse; `phase/preview_phase.py` renders a pose sheet
-and offline viewer into `.local-previews/guardian-phase/`. Read `tools/prepare_guardian_assets.py`
-before changing clips; do not assume an old report's clip count is current.
+and offline viewer into `.local-previews/guardian-phase/`. The heavy performance pass
+(`v4-expressive/heavy_performance.py` for awaken, slam and beam, which the fast and held slams
+follow; `phase/heavy_casts.py` for fan and core pulse) keeps every impact and release time but gives each
+attack a slower load, a planted brace and a long recovery; only the blow is quick. The throws
+are unchanged because the server samples their held-rock pose through tick 44.
+`combat-review/build_preview.py` builds a review of all 18 clips into
+`.local-previews/guardian-combat-review/`, with the reworked clips marked. Read
+`tools/prepare_guardian_assets.py` before changing clips; do not assume an old report's clip
+count is current.
 Regenerate downstream sources when their inputs change, then use exporter checks.
 
 Keep authored impact times aligned with server clocks and actual bone transforms.

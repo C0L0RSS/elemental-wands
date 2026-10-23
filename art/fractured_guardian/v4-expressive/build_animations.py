@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Full-body performance pass. Bake eased poses, planted-foot IK, and head stabilization."""
+import argparse
 import copy
 import json
 import math
@@ -81,7 +82,7 @@ def fingers(p,side,grip,spread=0,lag=0):
     rot(p,side+'_thumb_tip',[-grip*.65,0,0])
 
 
-def performance(name,t,base):
+def legacy_performance(name,t,base):
     p=original(base,t)
     if name=='idle':
         a=t*math.pi/3; breath=(1-math.cos(a))*.5
@@ -182,6 +183,15 @@ def performance(name,t,base):
     return p
 
 
+heavy=runpy.run_path(str(HERE/'heavy_performance.py'))
+
+
+def performance(name,t,base):
+    if name not in heavy['REWORKED']:
+        return legacy_performance(name,t,base)
+    return heavy['pose'](name,t,globals())
+
+
 def reduce_keys(keys,tolerance):
     # Remove samples only when straight interpolation stays within the authored error budget.
     entries=sorted((float(k),v) for k,v in keys.items());times=np.array([e[0] for e in entries]);values=np.array([e[1] for e in entries])
@@ -201,7 +211,8 @@ def build():
     for key,base in old['animations'].items():
         name=key.removeprefix(PREFIX);duration=3.6 if name=='beam' else base['animation_length']
         clip={'loop':base['loop'],'animation_length':duration,'bones':{}}
-        rate=80 if name=='slam' else 40
+        # The short downstroke must retain floor clearance after fast remapping.
+        rate=160 if name=='slam' else 40
         for i in range(round(duration*rate)+1):
             t=round(i/rate,4);p=performance(name,t,base)
             for bone,chs in p.items():
@@ -218,7 +229,13 @@ def build():
     return out
 
 if __name__=='__main__':
-    data=build();(HERE/'fractured_guardian.animation.json').write_text(json.dumps(data,indent=2)+'\n')
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--check',action='store_true')
+    args=parser.parse_args()
+    data=build()
     project=legacy['blockbench'](data);project['name']='Fractured Guardian — Full-body performance 04'
-    (HERE/'fractured_guardian.bbmodel').write_text(json.dumps(project,indent=2)+'\n')
+    for name,value in [('fractured_guardian.animation.json',data),('fractured_guardian.bbmodel',project)]:
+        text=json.dumps(value,indent=2)+'\n';path=HERE/name
+        if args.check:assert path.read_text()==text,f'Stale Guardian V4 output: {path}'
+        else:path.write_text(text)
     print('Baked six full-body clips with planted-foot IK, eased timing and layered hand motion.')

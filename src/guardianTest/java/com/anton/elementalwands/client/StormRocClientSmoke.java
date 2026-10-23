@@ -106,16 +106,16 @@ public final class StormRocClientSmoke implements ClientModInitializer {
             if(scene==328)onServer(server,()->camera(server,id,-4,104,16,-18,110,0));
             if(scene==336)shot(c,"roc-tornado.png");
             if(scene==760)onServer(server,()->{serverBoss.setHealth(serverBoss.getMaxHealth()*.5f);camera(server,id,60,140,70,0,125,0);});
-            if(scene==865)onServer(server,()->camera(server,id,30,112,36,0,145,0));
-            if(scene==990)onServer(server,()->camera(server,id,62,123,70,0,157,-30));
-            if(scene==1000){require(SummitStormClient.level(1)>.95,"Charged summit storm did not roll in: "+SummitStormClient.level(1));stormChecked=true;shot(c,"roc-storm-sky.png");}
-            if(scene==1010)onServer(server,()->camera(server,id,58,133,62,0,106,0));
-            if(scene==1030)shot(c,"roc-storm-tornadoes.png");
-            if(scene==1070&&challengerMovedAt>=0)onServer(server,()->{target.setPosition(centre.getX()+.5,101,centre.getZ()+12.5);target.onTeleportationDone();});
-            if(scene==1080)onServer(server,()->{require(serverBoss.phaseTwo(),"Chain rehearsal began before phase two");serverBoss.testChain();camera(server,id,45,134,55,0,108,12);});
-            if(scene==1300)onServer(server,()->camera(server,id,35,101,25,-25,106,-20));
-            if(scene==1310)shot(c,"roc-storm-ground.png");
-            if(scene==1330)onServer(server,()->{serverBoss.testAction(target,StormRocRules.Action.BITE);serverBoss.testStrike(centre.toCenterPos().add(28,0,12),true);camera(server,id,46,115,36,28,101,12);});
+            if(scene==903)onServer(server,()->camera(server,id,30,112,36,0,145,0));
+            if(scene==1076)onServer(server,()->camera(server,id,62,123,70,0,157,-30));
+            if(scene==1086){require(SummitStormClient.level(1)>.95,"Charged summit storm did not roll in: "+SummitStormClient.level(1));stormChecked=true;shot(c,"roc-storm-sky.png");}
+            if(scene==1096)onServer(server,()->camera(server,id,58,133,62,0,106,0));
+            if(scene==1116)shot(c,"roc-storm-tornadoes.png");
+            if(scene==1156&&challengerMovedAt>=0)onServer(server,()->{target.setPosition(centre.getX()+.5,101,centre.getZ()+12.5);target.onTeleportationDone();});
+            if(scene==1166)onServer(server,()->{require(serverBoss.phaseTwo(),"Chain rehearsal began before phase two");serverBoss.testChain();camera(server,id,45,134,55,0,108,12);});
+            if(scene==1386)onServer(server,()->camera(server,id,35,101,25,-25,106,-20));
+            if(scene==1396)shot(c,"roc-storm-ground.png");
+            if(scene==1416)onServer(server,()->{serverBoss.testAction(target,StormRocRules.Action.BITE);serverBoss.testStrike(centre.toCenterPos().add(28,0,12),true);camera(server,id,46,115,36,28,101,12);});
             var clientBoss=c.world.getEntities().iterator();while(clientBoss.hasNext()){
                 var entity=clientBoss.next();if(entity instanceof StormRocEntity roc){sawBoss=true;poses.add(roc.poseName());if(roc.poseName().equals("flight")||roc.poseName().equals("spire_flight"))observeFlight(c,roc);if(roc.poseName().equals("land"))observeLanding(c,roc);}if(entity instanceof RocEffectEntity effect){sawEffects=true;effects.add(effect.kind());require(effect.shouldRender(100*100),"Tracked Roc effect was distance-culled at100blocks: "+effect.kind());}
             }
@@ -126,17 +126,17 @@ public final class StormRocClientSmoke implements ClientModInitializer {
                     // Its call's bolt and the first of the large bolts it calls down, timed by their own ages.
                     if(e.kind()==RocEffectEntity.Kind.CALL_BOLT&&scene<110&&e.effectTicks(0)>=6&&e.effectTicks(0)<8&&phaseShots.add("call"))shot(c,"roc-call.png");
                     if(e.kind()==RocEffectEntity.Kind.LARGE_STRIKE&&scene>56&&scene<110&&e.effectTicks(0)>=e.warningTicks()+1&&e.effectTicks(0)<e.warningTicks()+3&&phaseShots.add("large"))shot(c,"roc-large-bolt.png");
-                    if(e.kind()==RocEffectEntity.Kind.CHARGE_BOLT&&e.effectTicks(0)>=3&&e.effectTicks(0)<6&&scene<1000&&phaseShots.add("charge"))shot(c,"roc-charge-bolt.png");
-                    if(e.kind()==RocEffectEntity.Kind.DIVE_MARKER&&scene>1080&&scene<1140){
+                    if(e.kind()==RocEffectEntity.Kind.CHARGE_BOLT&&e.effectTicks(0)>=3&&e.effectTicks(0)<6&&scene<1086&&phaseShots.add("charge"))shot(c,"roc-charge-bolt.png");
+                    if(e.kind()==RocEffectEntity.Kind.DIVE_MARKER&&scene>1166&&scene<1226){
                         if(e.effectTicks(0)<5)onServer(server,()->camera(server,id,e.getX()-centre.getX()+35,128,e.getZ()-centre.getZ()+38,e.getX()-centre.getX(),102,e.getZ()-centre.getZ()));
                         if(e.effectTicks(0)>=8&&phaseShots.add("mark"))shot(c,"roc-chain-mark.png");
                     }
-                    if(e.kind()==RocEffectEntity.Kind.SHOCKWAVE&&scene>1140&&scene<1170&&e.effectTicks(0)>=5&&phaseShots.add("slam"))shot(c,"roc-chain-slam.png");
-                    if(e.kind()==RocEffectEntity.Kind.LIVE_GROUND&&scene>1380&&e.effectTicks(0)>=12&&phaseShots.add("live"))shot(c,"roc-live-ground.png");
+                    if(e.kind()==RocEffectEntity.Kind.SHOCKWAVE&&scene>1226&&scene<1256&&e.effectTicks(0)>=5&&phaseShots.add("slam"))shot(c,"roc-chain-slam.png");
+                    if(e.kind()==RocEffectEntity.Kind.LIVE_GROUND&&scene>1466&&e.effectTicks(0)>=12&&phaseShots.add("live"))shot(c,"roc-live-ground.png");
                 }
-                if(entity instanceof StormRocEntity roc&&roc.poseName().equals("hop")&&scene>1148&&scene<1230){
-                    if(scene<1153)onServer(server,()->camera(server,id,roc.getX()-centre.getX()+38,125,roc.getZ()-centre.getZ()+45,roc.getX()-centre.getX(),roc.getY()+5,roc.getZ()-centre.getZ()));
-                    if(scene>=1158&&phaseShots.add("hop"))shot(c,"roc-chain-hop.png");
+                if(entity instanceof StormRocEntity roc&&roc.poseName().equals("hop")&&scene>1234&&scene<1316){
+                    if(scene<1239)onServer(server,()->camera(server,id,roc.getX()-centre.getX()+38,125,roc.getZ()-centre.getZ()+45,roc.getX()-centre.getX(),roc.getY()+5,roc.getZ()-centre.getZ()));
+                    if(scene>=1244&&phaseShots.add("hop"))shot(c,"roc-chain-hop.png");
                 }
             }
             if(scene==20){require(c.world.getPlayerByUuid(target.getUuid())!=null,"Scripted gaze target never spawned on the client");shot(c,"roc-perched.png");}if(scene==66)shot(c,"roc-large-warning.png");
@@ -147,7 +147,7 @@ public final class StormRocClientSmoke implements ClientModInitializer {
                 if(scene==280+i*64+action.impact+2)shot(c,"roc-"+action.pose+".png");
             }
             if(scene==790)shot(c,"roc-takeoff.png");
-            if(scene>=1450&&completedShots.get()==requestedShots){
+            if(scene>=1536&&completedShots.get()==requestedShots){
                 require(sawBoss,"No synchronized Roc reached the native client");require(sawEffects,"No synchronized Roc effects reached native client");require(poses.containsAll(Set.of("perched","call","land","flight","spire_flight","dive","stuck","bite","swing_left","swing_right","scream","wing","pounce","stampede","takeoff","hop")),"Requested tracked poses missing from native client: "+poses);
                 require(effects.containsAll(Set.of(RocEffectEntity.Kind.SMALL_STRIKE,RocEffectEntity.Kind.LARGE_STRIKE,RocEffectEntity.Kind.TORNADO,RocEffectEntity.Kind.DIVE_MARKER,RocEffectEntity.Kind.SHOCKWAVE,RocEffectEntity.Kind.SCREAM,RocEffectEntity.Kind.LIVE_GROUND,RocEffectEntity.Kind.CHARGE_BOLT,RocEffectEntity.Kind.STORM_BOLT,RocEffectEntity.Kind.CALL_BOLT)),"Required tracked effect kinds missing: "+effects);
                 require(sawFlightScan,"Authored flying Roc clip never looked down toward the ground");
@@ -217,7 +217,7 @@ public final class StormRocClientSmoke implements ClientModInitializer {
                 if(focusedAt<0||!roc.poseName().equals(focusedPose)||roc.poseStart()!=focusedPoseAt){
                     focusedAt=scene;focusedPlayer=player.getId();focusedPose=roc.poseName();focusedPoseAt=roc.poseStart();
                 }
-                if(scene>800&&scene<1000&&!phaseShots.contains("flight-look")){
+                if(scene>800&&scene<1086&&!phaseShots.contains("flight-look")){
                     if(flightCameraAt<0){
                         flightCameraAt=scene;
                         double x=roc.getX()-centre.getX(),z=roc.getZ()-centre.getZ(),y=roc.getY()+4;

@@ -10,15 +10,16 @@ public final class StormRocRules {
 
     // Stage timing, in ticks. Easy and Hard lengthen or shorten only the air stretch.
     /** Normal sees three calls, Easy three and an arrival, Hard two; see AIR_CYCLE. */
-    public static final int AIR_TICKS = 394, AIR_TICKS_EASY = 450, AIR_TICKS_HARD = 300;
+    public static final int AIR_TICKS = 450, AIR_TICKS_EASY = 534, AIR_TICKS_HARD = 356;
     public static final int DIVE_TICKS = 60, STUCK_TICKS = 120;
     /**
-     * Its takeoff as the brawl ends: crouched, it turns toward where it is going, and its feet leave
-     * the rock at TAKEOFF_PUSH as its downbeat blasts everyone back. Its first beats lift it slowly,
-     * then it is carried there; LAND_LEAD before it arrives it flares into its landing, or, bound for
-     * the phase change, flies on in the flight loop. Its clip lasts TAKEOFF_TICKS - LAND_LEAD.
+     * Its takeoff as the brawl ends: crouched, it turns onto its way out, and its feet leave the rock
+     * at TAKEOFF_PUSH as its downbeat blasts everyone back. Its first beats lift it slowly, then it
+     * flies out past its spire and banks round onto it (see RocApproach); LAND_LEAD before it arrives
+     * it flares into its landing, or, bound for the phase change, flies on in the flight loop. Its
+     * clip lasts TAKEOFF_TICKS - LAND_LEAD.
      */
-    public static final int TAKEOFF_TICKS = 74, TAKEOFF_PUSH = 24;
+    public static final int TAKEOFF_TICKS = 112, TAKEOFF_PUSH = 24;
     /**
      * The dive, and the chain smash's first slam, hold it on its spire for DIVE_PUSH while it crouches,
      * as the hop between spires does, then launch it; the impact stays at DIVE_TICKS. Stuck, it gathers
@@ -41,11 +42,13 @@ public final class StormRocRules {
      * Each spire visit lasts AIR_CYCLE: it settles from its landing, then CALL_AT into the visit it
      * rears up and calls a large volley down on every challenger CALL_VOLLEY into its call, which
      * lasts CALL_TICKS. At FLY_AT it starts its hop to the next spire: it crouches there for SPIRE_PUSH,
-     * turning toward it, then flies. LAND_LEAD before it arrives it flares into its landing, which
-     * touches down as the next visit begins and runs until its call. The hop's clip lasts
-     * AIR_CYCLE - FLY_AT - LAND_LEAD; the landing's, LAND_LEAD + CALL_AT.
+     * turning onto its way out, then flies out to the side of the next spire and banks round onto it
+     * (see RocApproach). LAND_LEAD before it arrives it flares into its landing, which touches down as
+     * the next visit begins and runs until its call. The hop's clip lasts AIR_CYCLE - FLY_AT -
+     * LAND_LEAD; the landing's, LAND_LEAD + CALL_AT. Its legs start reaching for the spire LAND_REACH
+     * before the landing begins, in the last stretch of the hop or the takeoff.
      */
-    public static final int AIR_CYCLE = 150, CALL_AT = 34, CALL_VOLLEY = 10, CALL_TICKS = 60, FLY_AT = 98, SPIRE_PUSH = 8, LAND_LEAD = 16;
+    public static final int AIR_CYCLE = 178, CALL_AT = 34, CALL_VOLLEY = 10, CALL_TICKS = 60, FLY_AT = 98, SPIRE_PUSH = 8, LAND_LEAD = 16, LAND_REACH = 9;
 
     // Tornadoes, the dive and shockwave rings.
     public static final double DIVE_RADIUS = 14, TORNADO_RADIUS = 5;
@@ -153,11 +156,14 @@ public final class StormRocRules {
     public static int health(int players) { return 2400 + Math.max(0, players - 1) * 1600; }
 
     // Phase two: the storm is on its side. Nowhere is safe and the ground is always live.
-    /** The storm gathers this long between the phase-one takeoff and phase two's first air stretch. */
-    public static final int CHARGE_TICKS = 160;
+    /**
+     * The storm gathers this long between the phase-one takeoff and phase two's first air stretch.
+     * From CHARGE_DESCENT it flies down onto the tallest spire, out past it and round (see RocApproach).
+     */
+    public static final int CHARGE_TICKS = 208, CHARGE_DESCENT = 120;
     /** It comes down to the players more often. */
     /** It dives from a spire, so a stretch runs on to the next perched moment after this. */
-    public static final int AIR_TICKS_TWO = 300, AIR_TICKS_TWO_EASY = 394, AIR_TICKS_TWO_HARD = 244;
+    public static final int AIR_TICKS_TWO = 356, AIR_TICKS_TWO_EASY = 450, AIR_TICKS_TWO_HARD = 272;
     /** Larger strikes that hit harder: about 5 and 9 hearts against diamond. */
     public static final double SMALL_RADIUS_TWO = 3.5, LARGE_RADIUS_TWO = 7;
     public static final float SMALL_DAMAGE_TWO = 23.2f, LARGE_DAMAGE_TWO = 33.6f;

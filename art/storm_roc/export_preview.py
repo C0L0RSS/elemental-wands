@@ -54,62 +54,124 @@ def charge():
         if stop is not None and t>=stop+c['after']:break
     return roc,prey,stop
 
-# The hop between spires follows StormRocCombat's tickAir and fly: held on its spire until the push
-# while it turns toward the next spire at 10 degrees a tick, then carried there along a 12-block
-# arc, turning back toward the summit's centre past 65% of the way. It flares into its landing
-# LAND_LEAD before it arrives, settling to the next spire's height halfway through the flare as it
-# brakes; on arrival it faces the centre. Its bank and climb are StormRocMotion's, which
-# only bank it in the hop once it has left the rock. Spires 1 to 2, centre-relative.
-HOP=dict(push=8,travel=43,arc=12,turn=10,lead=16,start=(73,29,-54),end=(80,32,34))
+# Its way onto a spire is StormRocCombat's RocApproach: out to one side of the spire, round in one
+# banked turn of APPROACH_RADIUS, and in along a straight run-in of RUN_IN, so it comes down facing
+# the summit; the shorter way round, the turn rolled in and out over ROLL blocks. Centre-relative.
+APPROACH_RADIUS,RUN_IN,ROUTE_STEP,ROLL=20,20,.5,6
+# The client banks it into its turns by BANK_RATE degrees per degree of turn a tick, up to BANK_MAX.
+BANK_RATE,BANK_MAX=4.6,45
 
-def hop(body):
-    """The hop and its landing, tick by tick: the server's position, heading, and the client's
-    bank and climb. body is the body socket height each tick of the two chained clips."""
-    h=HOP;start,end=np.array(h['start'],float),np.array(h['end'],float)
+def approach(start,spire):
+    """RocApproach.onto, from start onto spire with the centre at the origin: its points [x, z] every
+    step blocks along the way and the heading (radians, from +x toward +z) at each."""
+    a,s=np.array([start[0],start[2]],float),np.array([spire[0],spire[2]],float)
+    n=-s/np.linalg.norm(s);e=s-n*RUN_IN;r=APPROACH_RADIUS;best=None
+    for side in (1,-1):
+        c=np.array([e[0]-side*n[1]*r,e[1]+side*n[0]*r]);d=a-c;D=np.linalg.norm(d)
+        if D<=r*1.05:continue
+        half,base=math.acos(r/D),math.atan2(d[1],d[0])
+        for k in (1,-1):
+            t=c+r*np.array([math.cos(base+k*half),math.sin(base+k*half)]);h=t-a;straight=np.linalg.norm(h)
+            m=np.array([-side*(t[1]-c[1]),side*(t[0]-c[0])])/r
+            if np.dot(m,h)/straight<.999:continue
+            frm,to=math.atan2(t[1]-c[1],t[0]-c[0]),math.atan2(e[1]-c[1],e[0]-c[0])
+            arc=r*(((to-frm)*side)%(2*math.pi))
+            if best is None or straight+arc<best[0]:best=(straight+arc,straight,arc,math.atan2(h[1],h[0]),side)
+            break
+    _,straight,arc,start_heading,side=best;total=straight+arc+RUN_IN
+    count=math.ceil(total/ROUTE_STEP);step=total/count;s=np.arange(count+1)*step
+    heading=start_heading+side*np.clip(s-straight,0,arc)/r;half=round(ROLL/step)
+    for _ in range(3):heading=np.array([heading[np.clip(np.arange(i-half,i+half+1),0,count)].mean() for i in range(count+1)])
+    pts=np.zeros((count+1,2));pts[0]=a
+    for i in range(1,count+1):pts[i]=pts[i-1]+np.array([math.cos(heading[i-1]),math.sin(heading[i-1])])*step
+    # Rounding the turn moved its end a little: spread the difference along the way.
+    pts+=np.outer(np.arange(count+1)/count,np.array([spire[0],spire[2]])-pts[-1])
+    return pts,heading,step
+
+def along(route,distance):
+    """Where it is, and its yaw (degrees, as the game's), this far along its route."""
+    pts,heading,step=route;k=min(max(distance/step,0),len(pts)-1);i=min(int(k),len(pts)-2);f=k-i
+    h=heading[i]+(heading[i+1]-heading[i])*f
+    return pts[i]+(pts[i+1]-pts[i])*f,math.degrees(math.atan2(-math.cos(h),math.sin(h)))
+
+def flown(body,h,height_ease):
+    """A flight onto its spire tick by tick, as StormRocCombat flies it: held for the push while it
+    turns evenly onto its way out, then along its route over a rising and settling arc. With the
+    client's bank, climb and look into the turn (StormRocMotion), aloft from the push until the
+    landing's flare. body is the body socket height each tick of the chained clips."""
+    start,end=np.array(h['start'],float),np.array(h['end'],float);route=approach(start,end)
+    length=(len(route[0])-1)*route[2];travel=h['travel'];push=h['push'];arrive=push+travel+1
     def wanted(pos,at):return math.degrees(math.atan2(-(at[0]-pos[0]),at[2]-pos[2]))
-    smooth=lambda f:f*f*(3-2*f)
-    yaw=wanted(start,(0,0,0));bank=climb=0.;last_yaw,last=yaw,start.copy();ticks=[]
-    arrive=h['push']+h['travel']+1
+    smooth=lambda f:f*f*(3-2*f);wrap=lambda a:(a+180)%360-180
+    yaw=h['facing'];bank=climb=look=0.;last_yaw,last=yaw,start.copy();ticks=[];pos=start.copy()
+    goal=along(route,0)[1]
     for tick in range(len(body)):
+        if tick<push:yaw+=wrap(goal-yaw)/(push-tick)
         if tick<arrive:
-            f=min(1,max(0,(tick-h['push'])/h['travel']));g=min(1,f/(1-h['lead']/2/h['travel']))
-            arc=math.sin(g*math.pi)**(2 if g>.5 else 1)
-            pos=start+(end-start)*smooth(f);pos[1]=start[1]+(end[1]-start[1])*smooth(g)+arc*h['arc']
-            yaw+=max(-h['turn'],min(h['turn'],(wanted(pos,end if f<.65 else (0,0,0))-yaw+180)%360-180))
-        else:pos=end.copy();yaw=yaw if tick>arrive else wanted(end,(0,0,0))
-        turn,rise=yaw-last_yaw,pos[1]-last[1];last_yaw,last=yaw,pos
-        aloft=h['push']<=tick<arrive-h['lead']
-        bank+=((max(-38,min(38,turn*3.5)) if aloft else 0)-bank)*.2
+            f=min(1,max(0,(tick-push)/travel));g=min(1,f/(1-h['lead']/2/travel))
+            arc=math.sin(g*math.pi)**(2 if g>.5 else 1)*height_ease(g)
+            across,heading=along(route,smooth(f)*length)
+            pos=np.array([across[0],start[1]+(end[1]-start[1])*smooth(g)+arc*h['arc'],across[1]])
+            if f>0:yaw=last_yaw+wrap(heading-last_yaw)
+        else:pos=end.copy();yaw=last_yaw+wrap(wanted(end,(0,0,0))-last_yaw)
+        turn,rise=yaw-last_yaw,pos[1]-last[1];last_yaw,last=yaw,pos.copy()
+        aloft=push<=tick<arrive-h['lead']
+        bank+=((max(-BANK_MAX,min(BANK_MAX,turn*BANK_RATE)) if aloft else 0)-bank)*.2
         climb+=((max(-25,min(25,rise*25)) if aloft else 0)-climb)*.2
-        ticks.append((pos,yaw,bank,climb,body[tick]))
+        look+=((max(-35,min(35,turn*3)) if aloft else 0)-look)*.15
+        ticks.append((pos.copy(),yaw,bank,climb,body[tick],look))
     return ticks
 
+# The hop between spires follows StormRocCombat's tickAir: held on its spire for the push (SPIRE_PUSH)
+# while it turns onto its way out, then flown along its route over a 12-block arc. It flares into its
+# landing LAND_LEAD before it arrives, settling to the next spire's height halfway through the flare
+# as it brakes; on arrival it faces the centre. Spires 1 to 2, centre-relative; it starts facing the centre.
+HOP=dict(push=8,travel=71,arc=12,lead=16,start=(73,29,-54),end=(80,32,34))
+HOP['facing']=math.degrees(math.atan2(73,54))
+
+def hop(body):
+    """The hop and its landing, tick by tick: the server's position and heading, and the client's
+    bank, climb and look. body is the body socket height each tick of the two chained clips."""
+    return flown(body,HOP,lambda g:1)
+
 # The takeoff follows StormRocCombat's tickTakeoff: crouched on the summit floor until the push
-# (TAKEOFF_PUSH) while it turns toward its next spire at 10 degrees a tick, then carried there along
-# a 12-block arc that eases in, its first beats lifting it slowly off the rock. It flares into its
-# landing LAND_LEAD before it arrives. The client banks and climbs it from the push until the
-# landing. From a guard spot on the summit floor, facing the centre, to spire 1; centre-relative.
-TAKEOFF_PATH=dict(push=24,ticks=74,arc=12,turn=10,lead=16,start=(-6,0,14),end=(73,29,-54))
+# (TAKEOFF_PUSH) while it turns onto its way out, then flown along its route over a 12-block arc that
+# eases in, its first beats lifting it slowly off the rock. It flares into its landing LAND_LEAD
+# before it arrives. From a guard spot on the summit floor, facing the centre, to spire 1; centre-relative.
+TAKEOFF_PATH=dict(push=24,travel=88,arc=12,lead=16,start=(-6,0,14),end=(73,29,-54))
+TAKEOFF_PATH['facing']=math.degrees(math.atan2(-6,-14))
 
 def took(body):
     """The takeoff and its landing, tick by tick, as hop() gives the hop's."""
-    h=TAKEOFF_PATH;start,end=np.array(h['start'],float),np.array(h['end'],float);travel=h['ticks']-h['push']
-    def wanted(pos,at):return math.degrees(math.atan2(-(at[0]-pos[0]),at[2]-pos[2]))
-    smooth=lambda f:f*f*(3-2*f)
-    yaw=wanted(start,(0,0,0));bank=climb=0.;last_yaw,last=yaw,start.copy();ticks=[];pos=start.copy()
-    for tick in range(len(body)):
-        if tick<h['push']:yaw+=max(-h['turn'],min(h['turn'],(wanted(pos,end)-yaw+180)%360-180))
-        elif tick<=h['ticks']:
-            f=min(1,(tick-h['push'])/travel);g=min(1,f/(1-h['lead']/2/travel))
-            arc=math.sin(g*math.pi)**(2 if g>.5 else 1)*smooth(min(1,g/.6))
-            pos=start+(end-start)*smooth(f);pos[1]=start[1]+(end[1]-start[1])*smooth(g)+arc*h['arc']
-            yaw+=max(-h['turn'],min(h['turn'],(wanted(pos,end if f<.65 else (0,0,0))-yaw+180)%360-180))
-        turn,rise=yaw-last_yaw,pos[1]-last[1];last_yaw,last=yaw,pos.copy()
-        aloft=h['push']<=tick<h['ticks']-h['lead']
-        bank+=((max(-38,min(38,turn*3.5)) if aloft else 0)-bank)*.2
-        climb+=((max(-25,min(25,rise*25)) if aloft else 0)-climb)*.2
-        ticks.append((pos.copy(),yaw,bank,climb,body[tick]))
-    return ticks
+    return flown(body,TAKEOFF_PATH,lambda g:(lambda x:x*x*(3-2*x))(min(1,g/.6)))
+
+# In a banked turn the game holds its head near level and turns it into the turn (StormRocMotion's
+# steady): a turn in the model's space that the top of the neck takes NECK_SHARE of.
+LEVEL,NECK_SHARE=.85,.35
+
+def axis_turn(axis,degrees):
+    a=math.radians(degrees);c,s=math.cos(a),math.sin(a)
+    return {'x':np.array([[1,0,0],[0,c,-s],[0,s,c]]),'y':np.array([[c,0,s],[0,1,0],[-s,0,c]]),'z':np.array([[c,-s,0],[s,c,0],[0,0,1]])}[axis]
+
+def steady_turn(ticks,t):
+    """The head's turn t seconds into a flight baked by flown(): back against the client's bank,
+    about its climbing body's long axis, and into the turn."""
+    k=min(t*20,len(ticks)-1);i=int(k);j=min(i+1,len(ticks)-1);f=k-i
+    bank,climb,look=(ticks[i][n]+(ticks[j][n]-ticks[i][n])*f for n in (2,3,5))
+    return axis_turn('x',-climb)@axis_turn('z',-bank*LEVEL)@axis_turn('x',climb)@axis_turn('y',look)
+
+def part_of(turn,share):
+    """The same turn, share as far."""
+    angle=math.acos(float(np.clip((np.trace(turn)-1)/2,-1,1)))
+    if angle<1e-6:return np.eye(3)
+    axis=np.array([turn[2,1]-turn[1,2],turn[0,2]-turn[2,0],turn[1,0]-turn[0,1]])/(2*math.sin(angle))
+    K=np.array([[0,-axis[2],axis[1]],[axis[2],0,-axis[0]],[-axis[1],axis[0],0]]);a=angle*share
+    return np.eye(3)+math.sin(a)*K+(1-math.cos(a))*K@K
+
+def turned(M,pivot,turn):
+    """A bone's world matrix turned in the model's space about its own pivot."""
+    p=M[:3,:3]@np.array(pivot,float)+M[:3,3];R=np.eye(4);R[:3,:3]=turn;R[:3,3]=p-turn@p
+    return R@M
 
 def framed(ticks,origin,heading):
     """Ticks in a page frame with the Roc at origin facing -z at heading: [x, y, z, heading, bank,
@@ -117,7 +179,7 @@ def framed(ticks,origin,heading):
     a=math.radians(heading)
     forward,right=np.array([-math.sin(a),math.cos(a)]),np.array([-math.cos(a),-math.sin(a)])
     page=lambda v:[float(np.dot(v[[0,2]],right)),float(v[1]),-float(np.dot(v[[0,2]],forward))]
-    path=[[round(v,4) for v in (*page(pos-origin),-(yaw-heading),bank,climb,pivot)] for pos,yaw,bank,climb,pivot in ticks]
+    path=[[round(v,4) for v in (*page(pos-origin),-(yaw-heading),bank,climb,pivot)] for pos,yaw,bank,climb,pivot,*_ in ticks]
     return path,page
 
 def chained(T,stop):
@@ -174,7 +236,7 @@ def main():
     for name,(duration,loop) in DEFINITIONS.items():
         if args.only and name not in args.only:
             baked[name]=previous[name];continue
-        first=sockets[name][0];fps=CLIP_FPS.get(name,FPS);extra={}
+        first=sockets[name][0];fps=CLIP_FPS.get(name,FPS);extra={};flight=None
         if name=='stampede':
             path,prey,stop=charge();duration=(stop+CHARGE['after'])/20
             extra={'path':path,'prey':prey,'launch':STAMPEDE_RUN,'stop':stop/20}
@@ -184,10 +246,11 @@ def main():
             ticks=hop([frame['body'][1] for frame in sockets['spire_flight'][:-1]+sockets['land']])
             start,end=np.array(HOP['start'],float),np.array(HOP['end'],float)
             if name=='spire_flight':
-                path,page=framed(ticks,start,ticks[0][1]);duration=SPIRE_FLIGHT+LAND
+                path,page=framed(ticks,start,ticks[0][1]);duration=SPIRE_FLIGHT+LAND;flight=ticks
                 extra={'path':path,'to':page(end-start),'centre':page(-start),'land':SPIRE_FLIGHT}
             else:
-                path,page=framed(ticks[len(sockets['spire_flight'])-1:],end,ticks[-1][1])
+                flight=ticks[len(sockets['spire_flight'])-1:]
+                path,page=framed(flight,end,ticks[-1][1])
                 extra={'path':path,'centre':page(-end)}
                 # It stands on its spire, and is framed there, as it ends.
                 first=sockets[name][-1]
@@ -195,13 +258,18 @@ def main():
             # The takeoff, too, plays on into its landing on its next spire, along the server's path.
             ticks=took([frame['body'][1] for frame in sockets['takeoff'][:-1]+sockets['land']])
             start,end=np.array(TAKEOFF_PATH['start'],float),np.array(TAKEOFF_PATH['end'],float)
-            path,page=framed(ticks,start,ticks[0][1]);duration=TAKEOFF+LAND
+            path,page=framed(ticks,start,ticks[0][1]);duration=TAKEOFF+LAND;flight=ticks
             extra={'path':path,'to':page(end-start),'centre':page(-start),'land':TAKEOFF,
                 'landFeet':min(sockets['land'][-1]['left_foot'][1],sockets['land'][-1]['right_foot'][1])}
         frames=[]
         for i in range(round(duration*fps)+1):
             t=i/fps;world={};clip,at=chained(t,stop) if name=='stampede' else hopped(t) if name=='spire_flight' else taken(t) if name=='takeoff' else (name,t)
-            for b in bones:world[b['name']]=world.get(b.get('parent'),np.eye(4))@matrix(b,clips[clip]['bones'].get(b['name'],{}),at)
+            head=steady_turn(flight,t) if flight else None
+            for b in bones:
+                world[b['name']]=world.get(b.get('parent'),np.eye(4))@matrix(b,clips[clip]['bones'].get(b['name'],{}),at)
+                # The top of the neck takes its share of the head's turn; the head, the rest.
+                if head is not None and b['name']=='neck_tip':world['neck_tip']=turned(world['neck_tip'],b['pivot'],part_of(head,NECK_SHARE))
+                if head is not None and b['name']=='head':world['head']=turned(world['head'],b['pivot'],head@part_of(head,NECK_SHARE).T)
             for b in meshes:
                 M=world[b['name']].copy();M[:3,3]*=SCALE
                 frames.append(M[:3,:4].T.ravel())

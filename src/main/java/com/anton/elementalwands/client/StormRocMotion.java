@@ -41,6 +41,8 @@ public final class StormRocMotion {
     private static final Vector3d BILL = new Vector3d(0, -.0285, -.9996).normalize();
     /** Share of a head turn the top of the neck takes; the head takes the rest. */
     private static final double NECK_SHARE = .35;
+    /** How much of its bank a banked turn takes out of its head, which a bird holds near level. */
+    private static final double LEVEL = .85;
 
     private static final class State {
         String pose = "";
@@ -54,7 +56,7 @@ public final class StormRocMotion {
         boolean wasFlying;
         int flightTarget = -1;
         long focusUntil, nextFocus;
-        float bank, prevBank, climb, prevClimb, lastYaw = Float.NaN;
+        float bank, prevBank, climb, prevClimb, look, prevLook, lastYaw = Float.NaN;
         double lastY;
     }
 
@@ -168,9 +170,12 @@ public final class StormRocMotion {
         s.lastY = roc.getY();
         s.prevBank = s.bank;
         s.prevClimb = s.climb;
-        float lean = aloft ? MathHelper.clamp(turn * 3.5f, -38, 38) : pose.equals("stampede_run") ? MathHelper.clamp(turn * 6, -15, 15) : 0;
+        s.prevLook = s.look;
+        float lean = aloft ? MathHelper.clamp(turn * 4.6f, -45, 45) : pose.equals("stampede_run") ? MathHelper.clamp(turn * 6, -15, 15) : 0;
         s.bank += (lean - s.bank) * .2f;
         s.climb += ((aloft ? MathHelper.clamp((float) rise * 25, -25, 25) : 0) - s.climb) * .2f;
+        // Banked round onto a spire, it looks ahead into its turn.
+        s.look += ((aloft ? MathHelper.clamp(turn * 3, -35, 35) : 0) - s.look) * .15f;
     }
 
     /** Briefly watch a living player below, then release back into the authored ground scan. */
@@ -253,8 +258,23 @@ public final class StormRocMotion {
         }
         float weight = MathHelper.lerp(partial, s.prevWeight, s.weight);
         if (weight > .01f) gaze(channels, pose, MathHelper.lerp(partial, s.prevYaw, s.yaw), MathHelper.lerp(partial, s.prevPitch, s.pitch), weight);
+        float bank = MathHelper.lerp(partial, s.prevBank, s.bank), climb = MathHelper.lerp(partial, s.prevClimb, s.climb);
+        // The Thunder Charge's lean is its whole body's; only in the air does it steady its head.
+        float look = MathHelper.lerp(partial, s.prevLook, s.look) * (1 - weight);
+        if (!pose.startsWith("stampede") && (Math.abs(bank) > .2f || Math.abs(look) > .2f)) steady(channels, bank, climb, look);
         Vec3d body = StormRocPose.socket(pose, tick, "body");
-        return new Frame(channels, MathHelper.lerp(partial, s.prevBank, s.bank), MathHelper.lerp(partial, s.prevClimb, s.climb), (float) body.y);
+        return new Frame(channels, bank, climb, (float) body.y);
+    }
+
+    /**
+     * In a banked turn a bird holds its head near level and looks into the turn: the head turns
+     * back against the bank the renderer gives its body (about the climbing body's long axis), and
+     * look degrees toward the turn (positive to its right). The renderer's model mirrors the
+     * study's X, so its roll about Z by -bank is a roll by +bank here.
+     */
+    private static void steady(Map<String, float[]> channels, float bank, float climb, float look) {
+        double c = Math.toRadians(climb);
+        turnHead(channels, new Quaterniond().rotationX(-c).rotateZ(Math.toRadians(-bank * LEVEL)).rotateX(c).rotateY(Math.toRadians(look)));
     }
 
     /**
@@ -273,7 +293,11 @@ public final class StormRocMotion {
         double turnYaw = (flight ? MathHelper.wrapDegrees(yaw - restYaw) : MathHelper.clamp(MathHelper.wrapDegrees(yaw - restYaw), -70, 70)) * weight;
         double turnPitch = (flight ? pitch - restPitch : MathHelper.clamp(pitch - restPitch, -40, 40)) * weight;
         Vector3d goal = direction(restYaw + turnYaw, restPitch + turnPitch);
-        Quaterniond turn = new Quaterniond().rotationTo(rest, goal);
+        turnHead(channels, new Quaterniond().rotationTo(rest, goal));
+    }
+
+    /** Turns the head by turn in the model's space; the top of the neck takes its share of it. */
+    private static void turnHead(Map<String, float[]> channels, Quaterniond turn) {
         if (Math.abs(turn.angle()) < 1e-4) return;
         Quaterniond neckTurn = new Quaterniond().slerp(turn, NECK_SHARE);
         Matrix3d parent = new Matrix3d();

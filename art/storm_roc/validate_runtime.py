@@ -16,7 +16,7 @@ def unreflect(item):
         r=item['rotation'];item['rotation']=[r[0],-r[1],-r[2]] if isinstance(r,list) else {k:[v[0],-v[1],-v[2]] for k,v in r.items()}
 
 def main():
-    from build_runtime import SCALE,DEFINITIONS,WING_REST,STUCK_FREE,SMASH_PAUSE,DIVE_APEXES,HOP_LOWEST,stuck_slap,KEY_FPS,KNEADS,BITE_IMPACT,BITE_TAKEOFF,BITE_LANDING,BITE_LEAP_IMPACT,SWEEP_START,SWEEP_END,SCREAM_IMPACT,WING_LIFT,WING_APEX,WING_IMPACT,POUNCE_LAUNCH,POUNCE_IMPACT,SPIRE_PUSH,SPIRE_FLIGHT,LAND_TOUCH,LAND,STAMPEDE_RUN,STAMPEDE_LOOP,MODEL,shape,bill,glowing
+    from build_runtime import SCALE,DEFINITIONS,WING_REST,STUCK_FREE,SMASH_PAUSE,DIVE_APEXES,HOP_LOWEST,stuck_slap,KEY_FPS,KNEADS,BITE_IMPACT,BITE_TAKEOFF,BITE_LANDING,BITE_LEAP_IMPACT,SWEEP_START,SWEEP_END,SCREAM_IMPACT,WING_LIFT,WING_APEX,WING_IMPACT,POUNCE_LAUNCH,POUNCE_IMPACT,SPIRE_PUSH,SPIRE_FLIGHT,LAND_TOUCH,LAND,LEG_REACH,STAMPEDE_RUN,STAMPEDE_LOOP,MODEL,shape,bill,glowing
     approved=read(MODEL/'storm_roc.geo.json')
     geo=read(ASSETS/'geckolib/models/storm_roc.geo.json')
     for b in geo['minecraft:geometry'][0]['bones']:
@@ -92,13 +92,14 @@ def main():
     # The dive and each chain hop slam into stuck's first frame; the hop takes over from stuck where the
     # chain smash's pause ends.
     for a,ta,b,tb in [('dive',3,'stuck',0),('hop',0,'stuck',SMASH_PAUSE),('hop',1.2,'stuck',0),
-        ('stuck',6,'hunched',0),('land',0,'flight',0),('land',LAND,'perched',0),
-        ('call',0,'perched',0),('call',3,'perched',0),('takeoff',DEFINITIONS['takeoff'][0],'flight',0),
-        ('spire_flight',0,'perched',0)]:endpoint(a,ta,b,tb)
-    # The spire hop hands over to the landing with no crossfade.
+        ('stuck',6,'hunched',0),('land',LAND,'perched',0),
+        ('call',0,'perched',0),('call',3,'perched',0),('spire_flight',0,'perched',0)]:endpoint(a,ta,b,tb)
+    # The spire hop hands over to the landing with no crossfade, its legs already reaching.
     endpoint('spire_flight',SPIRE_FLIGHT,'land',0)
-    # So does the takeoff, to the landing or, bound for the phase change, to the flight loop.
+    # So does the takeoff, to the landing or, bound for the phase change, to the flight loop
+    # LEG_REACH sooner, before its legs reach for a spire.
     endpoint('takeoff',DEFINITIONS['takeoff'][0],'land',0)
+    endpoint('takeoff',DEFINITIONS['takeoff'][0]-LEG_REACH,'flight',0)
     # The Thunder Charge's clips hand over with no crossfade: the windup into the run loop, and the
     # loop, on any stride boundary, into the skid.
     endpoint('stampede',STAMPEDE_LOOP,'stampede_run',0,.05)
@@ -174,7 +175,8 @@ def main():
         assert np.all(np.abs(skid[3:16]-rest[k])<.02),('Thunder Charge skids on both feet',side)
     # The takeoff's downbeat sweeps through level as its feet leave the rock on tick 24: its wrist is
     # high above its shoulder just before, level with it at the push and well below it just after.
-    # Nothing touches the rock, and once its legs have tucked they ride as rigidly as the flight's.
+    # Nothing touches the rock, and once its legs have tucked they ride as rigidly as the flight's
+    # until they reach for its spire, LEG_REACH before the end.
     from build_runtime import TAKEOFF_PUSH
     def wrist(t):m=world('takeoff',t);return pt(m,'left_wing_wrist')[1]-pt(m,'left_wing_shoulder')[1]
     assert wrist(TAKEOFF_PUSH-.2)>40 and abs(wrist(TAKEOFF_PUSH))<12 and wrist(TAKEOFF_PUSH+.2)<-40,'Takeoff downbeat misses tick 24'
@@ -184,7 +186,7 @@ def main():
     assert clearance*SCALE>.5,('Takeoff wings must clear the rock',clearance*SCALE)
     tuck={n:np.linalg.inv(snapshots['flight'][0]['body'])@snapshots['flight'][0][n] for n in by if n.split('_',1)[-1] in ('thigh','shin','tarsus','foot')}
     for index,m in enumerate(snapshots['takeoff']):
-        if index/(KEY_FPS*2)<1.9:continue
+        if not 1.9<=index/(KEY_FPS*2)<=DEFINITIONS['takeoff'][0]-LEG_REACH:continue
         for n,rest in tuck.items():assert np.allclose(np.linalg.inv(m['body'])@m[n],rest,atol=.003),('takeoff tucked leg popped',index/(KEY_FPS*2),n)
     # Skyward from its stuttered snaps until it whips down onto its mark with the first strike.
     for t in [.45,1.2,1.75]:
@@ -208,9 +210,10 @@ def main():
         body_inverse=np.linalg.inv(m['body'])
         for name,rest in tucked.items():
             assert np.allclose(body_inverse@m[name],rest,atol=.003),('flight tucked leg popped',index/(KEY_FPS*2),name)
-    # Once the spire hop's legs have tucked, they ride as rigidly as the flight's.
+    # Once the spire hop's legs have tucked, they ride as rigidly as the flight's until they reach
+    # for the next spire.
     for index,m in enumerate(snapshots['spire_flight']):
-        if index/(KEY_FPS*2)<SPIRE_PUSH+.53:continue
+        if not SPIRE_PUSH+.53<=index/(KEY_FPS*2)<=SPIRE_FLIGHT-LEG_REACH:continue
         body_inverse=np.linalg.inv(m['body'])
         for name,rest in tucked.items():
             assert np.allclose(body_inverse@m[name],rest,atol=.003),('spire hop tucked leg popped',index/(KEY_FPS*2),name)

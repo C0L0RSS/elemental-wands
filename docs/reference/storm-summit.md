@@ -70,8 +70,8 @@ it and permits another attempt; `/ew summit status` includes the current combat 
 Both start and reset require operator permission. For playtests, `/ew summit skip` jumps
 a running fight to the phase change. There is no aerie entrance yet.
 
-The Roc flies between the six spires for about 20 seconds on Normal (22.5 on Easy, 15 on
-Hard). Each spire visit lasts 7.5 seconds:
+The Roc flies between the six spires for about 22.5 seconds on Normal (26.7 on Easy, 17.8 on
+Hard). Each spire visit lasts 8.9 seconds:
 - It touches down as the visit begins, having flared 0.8 seconds out, every move slow and
   heavy for its size. It sinks deep under its weight, holds its wings high while it finds its
   balance, takes one slow look aside, folds its wings and turns to glare at a challenger.
@@ -81,9 +81,12 @@ Hard). Each spire visit lasts 7.5 seconds:
   four, like every aimed volley). Its crest and wing edges crackle as it opens its wings and
   holds. It whips its head down onto its mark as the first bolt lands, 1.5 seconds later, and
   folds its wings as the others follow.
-- About 4.9 seconds in, it crouches on its spire and turns toward the next one. At 5.3 seconds
-  it pushes off with one huge downbeat and glides there. About 6.7 seconds in it flares into its
-  landing, settling to the next spire's height as it brakes over the last stretch.
+- About 4.9 seconds in, it crouches on its spire and turns onto its way out. At 5.3 seconds
+  it pushes off with one huge downbeat, and a second, weaker beat carries it out to the side of
+  the next spire; it never flies straight at it. It banks round onto the spire in one wide turn
+  (`RocApproach`: a 20-block radius, rolled in and out, the shorter way round) and comes in on
+  a straight 20-block run, so it lands already facing the summit. About 8.1 seconds in it flares
+  into its landing, settling to the next spire's height as it brakes over the last stretch.
 
 Its perched idle (a bird's head snaps, a feather shake, a wing stretch) plays when the fight
 starts and briefly after each call, resuming where it left off.
@@ -174,10 +177,11 @@ Between attacks it holds its brawl guard: electric head twitches, uneven breathi
 shifts, beak clacks, talon kneads, a mantling hiss and a rouse. Its clock resumes after each blow, so each pause shows a
 different beat, and a knead never moves a foot fast enough to count as a stomp.
 The brawl has no timeout: the next takeoff requires another eighth of total health lost.
-The takeoff lasts 3.7 seconds: it turns toward the spire it is leaving for and sinks into a deep
-crouch as its wings open, and on its 24th tick its legs drive it off the rock as its downbeat
-blasts everyone back without damage. It climbs slowly at first and is carried to the spire,
-flaring into its landing on the way in.
+The takeoff lasts 5.6 seconds: it turns onto its way out and sinks into a deep crouch as its
+wings open, and on its 24th tick its legs drive it off the rock as its downbeat blasts everyone
+back without damage. It climbs slowly at first, beats twice more as it climbs out past the side
+of its next spire, then banks round over the void in one wide turn (about 190 degrees) and comes
+back in to it, flaring into its landing on the way in.
 Burst damage holds at each landing's gate. Reaching half health plays the takeoff, then the
 phase change.
 
@@ -224,14 +228,16 @@ Its gaze holds dead still, then snaps its head to the player it is striking at o
 intermittently at players below in flight, once it has settled from a landing (turning slowly,
 1.85 seconds in), never mid-attack, except that through the Thunder Bite's windup its head
 follows its prey smoothly, without snaps, until the aim locks. In flight it banks into its turns and pitches with its
-climb, but not while it is still crouched on a spire.
+climb, but not while it is still crouched on a spire. As a bird does in a banked turn, it holds
+its head near level against the bank and turns it into the turn, toward the spire.
 
 The hop between spires has its own clip, `spire_flight`, which lasts until the landing's
 flare: a crouch and turn on the spire, the push-off with one huge downbeat as its legs stream
-back and tuck, a slow recovery, then a glide with held glances down over the summit. It ends
+back and tuck, a slow recovery and a second, weaker beat with held glances down over the
+summit, then a set-wing glide through its banked turn onto the next spire. It ends
 in the pose the landing starts from, so the landing follows without a crossfade. The landing,
 `land`, starts 0.8 seconds before it arrives, so it flares (body pitched up, wings cupped,
-legs forward, head steady) and beats once to brake on the way in, then touches down as it
+legs forward, head steady) and beats once to brake on the way in (its legs start reaching for the spire about 1.1 seconds before it touches down, over the hop's or the takeoff's last stretch), then touches down as it
 arrives and settles until the call, which follows it without a crossfade. The takeoff from the
 brawl ends in the same landing, cutting into its flare without a crossfade, and the half-health
 takeoff flies straight on into the phase change's flight loop the same way. The 7.2-second
@@ -256,7 +262,8 @@ arena goes quiet: strikes, rings and live ground clear, and only the tornadoes r
 takeoff climbs straight to about 36 blocks above the centre, well under where the storm clouds
 form, and it hovers there. The
 storm rolls in over about three and a half seconds. A huge bolt strikes the Roc, which then
-lands on the tallest spire. It takes no damage during the eight seconds.
+turns where it hovers and flies down past the tallest spire, banks round and lands on it. It
+takes no damage during the 10.4 seconds.
 
 Phase two keeps phase one's loop, but the storm is on its side:
 
@@ -278,7 +285,7 @@ Phase two keeps phase one's loop, but the storm is on its side:
   taking off and between smashes. Aimed strikes stay in the air stretch.
 - **Tornadoes:** they swell to radius 7 and a third joins them. The core, catch height and
   spacing grow with them.
-- **More landings:** the air stretch is about 15 seconds on Normal (20 Easy, 12 Hard).
+- **More landings:** the air stretch is about 17.8 seconds on Normal (22.5 Easy, 13.6 Hard).
 - **Chain smash** in place of the dive: four beak slams with radius-8 circles, each turned on
   the next player in turn and fixed once marked.
   - The first crouches on the perch for 0.4 seconds, launches up, marks its player and falls

@@ -50,8 +50,10 @@ It records known verification limits; it is not a fresh installation receipt.
     - the phase-two "fewer perches";
     - the new look in Lunar, including how far the talons bite into the rock (about a third
       of a block standing, up to a block while it scrabbles when stuck);
-    - the reworked animations in Lunar: the spire hop, landing and call (its crackles and
-      command glare), the slower takeoff (1.2 s longer, climbing at the hop's pace), and the dive
+    - the reworked animations in Lunar: the spire hop and its banked turn onto the spire (and
+      whether the 1.4 s longer spire visits make the air stretch drag), landing and call (its
+      crackles and command glare), the slower takeoff (5.6 s, climbing out past its spire and
+      banking round onto it), and the dive
       chain (the dive's crouch, stoop and flare warning, the stuck opening's heaves and its rip
       free at 5 seconds, the chain hop); the dive that waits for a landing to settle; and whether
       the slams' last-tick drop reads as a hit or a pop.

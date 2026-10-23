@@ -88,7 +88,7 @@ Hard). Each spire visit lasts 8.9 seconds:
   a straight 20-block run, so it lands already facing the summit. About 8.1 seconds in it flares
   into its landing, settling to the next spire's height as it brakes over the last stretch.
 
-Its perched idle (a bird's head snaps, a feather shake, a wing stretch) plays when the fight
+Its perched idle (electric head snaps, a feather rouse, a slow wing stretch over its back) plays when the fight
 starts and briefly after each call, resuming where it left off.
 
 It dives only from a spire, once it has landed and never mid-call. A dive that comes due while

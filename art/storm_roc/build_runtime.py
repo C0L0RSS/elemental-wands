@@ -29,6 +29,12 @@ KNEADS = (('right',2.65,3.3),('left',6.25,6.9))
 GUARD_GLANCES = ((.3,(2,18,6)),(1.05,(-3,-14,-4)),(1.62,(-4,-20,-8)),(1.74,(-5,-31,-15)),
     (2.4,(0,4,0)),(3.15,(3,13,10)),(3.6,(0,0,0)),(5.35,(-2,-6,-24),4),(5.95,(4,22,8)),
     (6.5,(0,9,-3)),(7.2,(0,0,0)),(8.1,(-3,-16,-6)),(9.05,(0,0,0)))
+# The perched idle's loop and its head's looks: aside, a stutter the other way, a one-eyed cock down
+# at the summit (crest up), a bob, forward through the rouse and the stretch, one look down after it.
+# Its yaw stays within 45 degrees, so the game's gaze has room to turn it toward a challenger.
+PERCHED = 10.8
+PERCH_GLANCES = ((.55,(2,34,5)),(1.9,(-3,-28,-6)),(1.98,(-5,-40,-12)),(3.0,(10,-20,26),4),
+    (3.75,(0,0,0)),(3.86,(11,0,0)),(4.0,(0,0,0)),(5.75,(-6,0,0)),(7.95,(0,0,0)),(8.95,(5,26,6)),(9.75,(0,0,0)))
 # Thunder Bite: the bill snaps shut on the air at player height at 2.30 (tick 46); the standing
 # bite's impact is the peck's strike pose, so it reaches as far. The server's aim follows its prey
 # until 1.20. When its prey is out of reach, it plays bite_leap instead from the lock on, slower as
@@ -114,7 +120,7 @@ FAST_KEYS['hop']=[(0,.45),(.85,1.2)]
 WING_REST = -.125
 # The idle and flight loops play their authored motion this much slower: a giant moves slowly.
 SLOW = 1.5
-DEFINITIONS = {'perched':(round(7.2*SLOW,3),True), 'call':(3,False), 'land':(LAND,False),
+DEFINITIONS = {'perched':(PERCHED,True), 'call':(3,False), 'land':(LAND,False),
     'flight':(round(4.8*SLOW,3),True), 'spire_flight':(SPIRE_FLIGHT,False), 'hunched':(9.6,True), 'dive':(3,False), 'stuck':(6,False),
     'bite':(3.9,False), 'bite_leap':(4.4,False), 'swing_left':(2.6,False), 'swing_right':(2.6,False),
     'scream':(2.9,False), 'wing':(4.0,False), 'pounce':(4.0,False),
@@ -516,25 +522,41 @@ def main():
     perch_m=matrices(perch)
     perch_feet={label:point(perch_m,label+'_foot',by[label+'_foot']['pivot']) for label in ('left','right')}
     plant(perch,perch_feet)
-    def perched(time):
-        t=time/SLOW;p=copy.deepcopy(perch);phase=math.tau*t/7.2
-        breathe=math.sin(phase*2)
-        shake=pulse(t,3.75,3.85,4.12,4.25)*math.sin((t-3.75)*math.tau*9)
-        stretch=pulse(t,4.55,5.05,5.65,6.3)
-        p['body']['position'][1]+=1.5*breathe
-        p['body']['position'][0]+=2.5*math.sin(phase)
-        p['body']['rotation'][2]+=2*math.sin(phase)+5*shake
-        p['body']['rotation'][0]+=2*breathe+3*shake
-        yaw=curve(t,[(0,0),(.45,0),(.60,38),(1.65,38),(1.8,-42),(2.95,-42),(3.1,-28),(3.55,-28),(3.7,0),(6.3,0),(6.45,24),(6.9,24),(7.2,0)])
-        cock=curve(t,[(0,0),(2.05,0),(2.2,28),(2.9,28),(3.1,0),(7.2,0)])
-        bob=pulse(t,3.15,3.25,3.35,3.5)
-        p['neck_base']['rotation'][0]+=5*bob+2*breathe
-        head(p,-3*breathe+10*bob,yaw,cock+3*shake)
+    def perched(t):
+        """Its idle on a spire. Slow, uneven breaths and its weight rocking from foot to foot, held
+        a while on each, never stop. Over them its head holds dead still and snaps from look to look,
+        electric: aside, a stutter the other way, a one-eyed cock down at the summit, a bob. It rouses,
+        crest flaring, shaking its whole plumage, then stretches slowly as a great eagle does: its wings
+        swing out from its sides, unfold from the shoulder out and rise half open over its back, hold,
+        and fold back in, the hands first. The game resumes this loop where it left off."""
+        P=PERCHED
+        p=copy.deepcopy(perch);body=p['body']
+        breath=sum(d*envelope(t,a,1.0,.2,1.1,'ease','ease') for a,d in ((.2,1),(2.9,.75),(5.2,.6),(7.9,1.1)))
+        # Its weight rolls onto its left foot, then its right, holding each a while.
+        weight=keys(t,[(0,0),(1.0,0),(2.3,1),(4.0,1),(5.3,-1),(8.7,-1),(9.9,0),(P,0)])
+        rouse=envelope(t,4.35,.12,.1,.6,'snap','settle');flutter=shake(t,4.4,.6,9,2.5)
+        # The stretch: wings out and up over its back, held, and home; its neck reaches as it lifts.
+        reach=keys(t,[(0,0),(5.6,0),(6.5,1),(7.1,1),(8.1,0),(P,0)])
+        flick=envelope(t,1.25,.1,.12,.7,'snap','settle')+.8*envelope(t,5.0,.1,.1,.6,'snap','settle')
+        body['position']+=np.array([3*weight,1.4*breath-.8*weight*weight-2*reach,1.5*reach])
+        body['rotation']+=np.array([-1.6*breath+2*flutter+6*reach,0,2*weight+1.5*flutter])
+        p['neck_base']['rotation'][0]+=-1.2*breath-5*reach
+        # Its head holds its own level and snaps between looks; the rouse shivers through it.
+        look=twitch(t,PERCH_GLANCES,P)
+        head(p,look[0]-2*breath,look[1],look[2]+3*flutter)
+        # Wings out of the fold as a bird opens them: they swing out from its sides into a Z laid flat,
+        # unfold from the shoulder out, the hands last, and rise; then back the same way, hands first.
+        stroke=lambda x:keys(x,[(0,0),(5.75,0),(6.55,.7),(7.05,.7),(7.7,.15),(P,0)])
+        air=pose('flight',0);flap(air,t,stroke,lag=.12)
+        order=lambda n:2 if n in HANDS else 1 if n in FOREARMS else 0
+        opening=copy.deepcopy(air)
+        joint_mix(opening,flat_fold,lambda n:1-keys(t,[(5.85+.08*order(n),0),(6.5+.08*order(n),1),(7.05-.08*order(n),1),(7.7-.08*order(n),0)]))
+        fold_wings(p,opening,lambda n:keys(t,[(5.45+.05*order(n),0),(6.0+.05*order(n),1),(7.6-.05*order(n),1),(8.3-.05*order(n),0)]))
         for label,side in (('left',1),('right',-1)):
-            p[label+'_wing_shoulder']['rotation'][2]+=side*5*shake
-        spread(p,.75,.48*stretch)
-        p['tail_fan']['rotation'][1]+=22*pulse(t,.85,.95,1.05,1.3)-28*pulse(t,4.1,4.2,4.35,4.65)
-        p['tail_fan']['rotation'][0]+=5*breathe+9*shake
+            p[label+'_wing_shoulder']['rotation'][2]+=side*(1.5*breath+6*rouse+3*flutter)
+        p['tail_fan']['rotation']+=np.array([5*breath+8*rouse-4*reach,18*flick-5*weight,4*flick])
+        # A soft click of the bill as it settles from the stretch.
+        p['lower_beak']['rotation'][0]=7*envelope(t,8.7,.06,.04,.08,'snap','whip')+5*envelope(t,8.9,.06,.03,.08,'snap','whip')
         plant(p,perch_feet)
         return p
     def flight_base(time,slow=SLOW):
@@ -1485,8 +1507,9 @@ def main():
         return keys(t,[(0,1),(.15,1),(.7,.15),(1.4,.15),(1.95,.6),(2.5,.2),(3.3,.2),(3.5,.55),(4.0,.5),(4.3,.25),
             (4.62,1,'snap'),(F+.1,1),(5.6,.6),(6.0,REST)])
     def crest_amount(name,t):
+        # Raised a little for the one-eyed cock, flared for the rouse, a breath of lift in the stretch.
         if name=='perched':
-            u=t/SLOW;return .8*pulse(u,3.6,3.75,4.25,4.6)+.25*pulse(u,2.05,2.2,2.9,3.1)
+            return .3*envelope(t,3.0,.1,.65,.3)+.85*envelope(t,4.25,.12,.35,.6,'snap','ease')+.2*keys(t,[(0,0),(5.6,0),(6.5,1),(7.1,1),(8.1,0),(PERCHED,0)])
         # Rising as it gathers the storm, flared as the bolt leaves its bill, ruffled at the second
         # strike, lowered as it settles.
         if name=='call':return keys(t,[(0,0),(.1,0),(.42,.75),(CALL_BOLT,1,'snap'),(2.2,1),(2.45,.85),(2.52,1,'snap'),(2.65,.8),(3.0,0)])
@@ -1676,6 +1699,7 @@ def main():
     FOLLOW={'hunched':FEATHERS,'bite':FEATHERS,'bite_leap':FEATHERS,'swing_left':FEATHERS,'swing_right':FEATHERS,'scream':FEATHERS,'wing':FEATHERS,'wing_spiral':FEATHERS,'pounce':FEATHERS,'stampede':FEATHERS,'stampede_skid':FEATHERS}
     FOLLOW['flight']=FOLLOW['spire_flight']=FOLLOW['land']=FOLLOW['call']=FEATHERS
     FOLLOW['takeoff']=FEATHERS
+    FOLLOW['perched']=FEATHERS
     # Clips another clip continues without a crossfade, or that must end exactly at rest: their swing
     # settles by their end, as a loop's does.
     CHAINED={'stampede','spire_flight','land','call'}

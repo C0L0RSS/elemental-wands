@@ -23,7 +23,7 @@ import sys
 from pathlib import Path
 
 from PIL import Image
-from geometry import bones, cubes, resolve_shell_uvs
+from geometry import bones, cubes, resolve_shell_uvs, TRANSFORM_ONLY
 from animations import animations
 import numpy as np
 from rig import hand, rotation, sample
@@ -511,6 +511,41 @@ def validate(data):
         for side in ('right', 'left'):
             wrist = hand(data['animations']['animation.hollow_necromancer.colossus_lunge'], time, side)
             assert wrist[2] <= -55 and wrist[1] >= 15, f'Lunge {side} arm is tucked during flight: {wrist}'
+    # GeckoLib blends Euler keys linearly: a key stored as the other form of the same turn spins the
+    # part round between keys. Fast blows stay well under 100 degrees a key; only the blink's cut,
+    # made while he is a thread of shadow at the teleport, may jump.
+    for name, clip in data['animations'].items():
+        if name.endswith(('.transform', '.intro')):
+            continue
+        for bone_, channels in clip['bones'].items():
+            frames = sorted((float(t), v) for t, v in channels.get('rotation', {}).items())
+            for (t0, a), (t1, b) in zip(frames, frames[1:]):
+                if name.endswith('.blink') and bone_ == 'robe' and t1 - t0 < .01:
+                    continue
+                assert max(abs(x - y) for x, y in zip(a, b)) < 100, f'{name}: {bone_} spins between {t0} and {t1}'
+    # Reworked clips leave from and return to their form's rest pose (the idle's first frame), and
+    # chained clips meet; loops close.
+    clips = {k.split('.')[-1]: v for k, v in data['animations'].items()}
+    def pose(clip_, t):
+        return {(b, ch): sample(fr, t, [1, 1, 1] if ch == 'scale' else [0, 0, 0]) for b, chs in clip_['bones'].items() for ch, fr in chs.items()}
+    def meet(a, ta, b, tb, limit):
+        pa, pb = pose(clips[a], ta), pose(clips[b], tb)
+        for key in set(pa) | set(pb):
+            d = 1. if key[1] == 'scale' else 0.
+            gap = max(abs(x - y) for x, y in zip(pa.get(key, [d] * 3), pb.get(key, [d] * 3)))
+            assert gap < limit, f'{a}@{ta} does not meet {b}@{tb}: {key} off by {gap:.1f}'
+    for name in ('cast_bolt', 'cast_hands', 'blink'):
+        meet(name, 0, 'idle', 0, 2)
+        meet(name, clips[name]['animation_length'], 'idle', 0, 2)
+    meet('ambush_burst', 1.7, 'idle', 0, 4)
+    for name in ('colossus_swipe', 'colossus_cast_bolt', 'colossus_cast_hands', 'colossus_harvest', 'colossus_dive', 'colossus_rush_crouch'):
+        meet(name, 0, 'colossus_idle', 0, 2)
+    for name in ('colossus_swipe', 'colossus_cast_bolt', 'colossus_cast_hands', 'colossus_harvest'):
+        meet(name, clips[name]['animation_length'], 'colossus_idle', 0, 2)
+    meet('colossus_rush_crouch', .6, 'colossus_rush_coil', 0, 4)
+    meet('perch_cast', .8, 'perch_channel', 0, 2)
+    for name in ('idle', 'walk', 'perch_channel', 'colossus_idle', 'colossus_rush_coil'):
+        meet(name, clips[name]['animation_length'], name, 0, .05)
 
 
 def outputs():
@@ -549,7 +584,9 @@ def main():
     for name, path in INSTALL.items():
         if not name.endswith('_socket'):
             (candidate / path.name).write_bytes(files[name])
-    (candidate / 'manifest.json').write_text(json.dumps({**REVISION, 'texture': [TEX_W, TEX_H], 'cubes': len(cubes), 'bones': len(bones)}, indent=2) + '\n')
+    # The workshop hides the cinematic's own parts outside the transformation, as NecromancerModel does.
+    (candidate / 'manifest.json').write_text(json.dumps({**REVISION, 'texture': [TEX_W, TEX_H], 'cubes': len(cubes), 'bones': len(bones),
+                                                         'transformOnly': sorted(TRANSFORM_ONLY)}, indent=2) + '\n')
     print(f'Candidate written: {len(cubes)} cubes, {TEX_W}x{TEX_H} texture.')
     if '--install' in sys.argv:
         installed = WORKSHOP / 'installed'

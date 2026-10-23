@@ -1,0 +1,202 @@
+{
+  "date": "2026-10-22",
+  "clips": {
+    "idle": {
+      "summary": "A watchful caster who is never quite still. His weight rests on the staff leg with soft knees, his soles and the staff's butt stay put, and his staff hand now grips the shaft. Every robed attack starts and ends on this pose.",
+      "beats": [
+        "0.0–4.0 s: two slow breaths lift the chest, and the hips drift a little onto the staff leg and back.",
+        "1.3–2.8 s: one long look over his right shoulder, held, then back to the front by 3.6 s.",
+        "2.0–3.3 s: the free hand's fingers roll shut and open again, one after another."
+      ]
+    },
+    "walk": {
+      "summary": "A long, deliberate stalk that carries the idle's upper body, so walking and standing blend cleanly. In game he moves at about 3 blocks a second, faster than two strides of this 1.5 s loop can cover, so his feet still slide. The walk would need to play faster as he moves faster to fix that, which is a code change.",
+      "beats": [
+        "0.0 s: right foot forward. 0.75 s: left foot forward.",
+        "Each heel strike (0.0 and 0.75 s): the hips drop onto it, then rise over the planted leg and sway across it.",
+        "The shoulders counter-turn, the head stays level and fixed ahead, and the staff swings with the far leg like a carried stick.",
+        "The robe tail trails in the draught and the skirt panels follow the knees."
+      ]
+    },
+    "cast_bolt": {
+      "summary": "Soul Bolt. A big staff throw with three thrusts, one for each skull the server fires at 0.6, 1.0 and 1.4 s. The skull of the staff points at the target on each release. The old clip's jabs fell at 0.6, 0.9 and 1.2 s, out of step with the skulls.",
+      "beats": [
+        "0.0–0.16 s: he sinks onto his knees and lifts the staff.",
+        "0.16–0.40 s: he hoists it up and back over his shoulder and winds his body away. His free hand comes up to aim and the flame swells.",
+        "0.40–0.48 s: he hangs at the top.",
+        "0.48–0.60 s: he whips the staff over and down. Skull 1 leaves at 0.60 s with a flare and a flick of the aiming hand.",
+        "0.72–1.00 s: a shorter lift and thrust. Skull 2 leaves at 1.00 s.",
+        "1.12–1.40 s: the biggest wind-up, then a lunge onto the front foot. Skull 3 leaves at 1.40 s.",
+        "1.40–1.72 s: the staff dips low as he follows through.",
+        "1.72–2.0 s: he straightens slowly back to the idle."
+      ]
+    },
+    "cast_hands": {
+      "summary": "Grasping Hands, read as one slow haul against a great weight. The rings close at 1.6 s, the moment he clenches his fist and wrenches it down.",
+      "beats": [
+        "0.0–0.24 s: a short lift, then the staff's butt is driven into the floor. It stays planted until 1.9 s.",
+        "0.24–0.75 s: the free hand sweeps out low and wide, palm down and fingers spread. He leans over it.",
+        "0.75–1.42 s: he lifts the hand high against the weight. The fingers hook into claws and a tremble grows.",
+        "1.42–1.60 s: the fist snaps shut and is wrenched down as the rings close.",
+        "1.60–1.85 s: he holds the clench.",
+        "1.85–2.4 s: he lets go, lifts the staff, and returns to the idle."
+      ]
+    },
+    "drain": {
+      "summary": "Life Drain, dressed around its fixed arm. The braid's focus follows the raised hand through a socket baked into Java, so the raised arm and the body keep their old keys exactly; everything that hangs off them is new. The arm still rises on the old 0.7 s timing and waits for the 1.5 s first pulse. Changing the arm means regenerating that socket.",
+      "beats": [
+        "0.0–0.3 s: he plants the staff beside him and grips it hard.",
+        "0.45–1.45 s: he glares down his raised arm. The hand spreads its fingers and trembles while the motes gather.",
+        "1.5, 2.0, 2.5, 3.0, 3.5, 4.0 s: on each pulse the fingers clench as if hauling on the strands. His head jerks, the flame flares and the hem stirs toward the victim.",
+        "3.8–4.2 s: he lets go and returns to the idle."
+      ]
+    },
+    "blink": {
+      "summary": "The blink, shift and ambush teleport. The server moves him at 0.35 s. He no longer just squashes: he whirls up into a thread of shadow and spins back out at the new spot.",
+      "beats": [
+        "0.0–0.12 s: he gathers in. He crouches, wraps his free arm across his chest and draws the staff close.",
+        "0.12–0.33 s: he whirls round and is drawn up into a thin thread as the flame gutters.",
+        "0.35 s: the teleport. The ambush cuts to ambush_burst here.",
+        "0.36–0.50 s: he spins out of the thread with the robe hem flung wide and his arms thrown out.",
+        "0.50–0.80 s: he lands low, absorbs the landing, and rises into the idle."
+      ]
+    },
+    "ambush_burst": {
+      "summary": "Ambush burst, from the moment he appears behind his victim. The staff is driven into the floor with his whole weight at 0.7 s, when the burst hits. He then holds still for a second, open to punishment.",
+      "beats": [
+        "0.0–0.16 s: he spins out of the blink's thread into a low crouch.",
+        "0.16–0.52 s: he rises tall and hoists the staff overhead in both hands. The flame roars.",
+        "0.52–0.60 s: he hangs at the top for a beat.",
+        "0.60–0.70 s: he drives the staff's butt into the floor ahead and drops into a deep crouch. The burst lands at 0.70 s.",
+        "0.70–1.10 s: he holds the crouch over the planted staff while the blown-out hem settles.",
+        "1.10–1.70 s: he hauls himself up slowly into the idle."
+      ]
+    },
+    "perch_channel": {
+      "summary": "Siege channel, a 3 s loop while his waves fight. He leans out over the edge of his bough with the staff's skull aimed down at the clearing. His free hand is spread over his army, its fingers working like a puppeteer's, and the robe billows in the soul fire's updraft.",
+      "beats": [
+        "The whole loop: one slow breath, a slight lean, and the hood drifting as he watches the clearing.",
+        "Every 1.5 s: the fingers ripple shut and open, one after another, and the wrist rolls with them.",
+        "The skirt panels, hem and tail billow up and out, never the same way twice in a loop."
+      ]
+    },
+    "perch_cast": {
+      "summary": "Soul Fire Rain, 0.8 s, chained back into the channel. The fireballs leave at the very start of the clip, so the release comes first: there is no wind-up the server would wait for.",
+      "beats": [
+        "0.0–0.10 s: he jabs the staff down at the clearing and lurches after it. The flame flares and his free hand is flung open.",
+        "0.10–0.30 s: the staff kicks back up as the volley goes, and the hem and tail flick.",
+        "0.30–0.80 s: he settles back into the channel's pose."
+      ]
+    },
+    "crash": {
+      "summary": "Crash, the 6 s exposed window after the first siege, from the moment he hits the floor. He drops onto one knee and leans on the staff, plainly spent, until he hauls himself up at the end.",
+      "beats": [
+        "0.0–0.14 s: he lands hard. His legs buckle onto his right knee as he drives the staff in ahead to catch himself, and his head is thrown down.",
+        "0.14–2.3 s: he heaves for breath over the planted staff, the shin of the kneeling leg laid along the floor. The flame gutters.",
+        "2.3–3.2 s: one failed push to rise, and he sinks back.",
+        "3.6–4.6 s: he lifts his head to glare, then lets it drop.",
+        "5.0–5.65 s: he hauls himself up the staff. The kneeling leg swings through and the front foot steps back under him.",
+        "5.65–6.0 s: he settles into the idle."
+      ]
+    },
+    "colossus_idle": {
+      "summary": "The colossus at rest, and the pose every colossus clip starts and ends on. It is a heavy creature breathing: the hind feet and the gripping claws stay put.",
+      "beats": [
+        "0.0–1.6 s: one deep breath in heaves the ribcage and swells the core. The breath out runs to 4.0 s.",
+        "0.0–4.0 s: its weight drifts from one forefoot to the other and back.",
+        "0.7–1.5 s: the right claw lifts and re-grips the ground. The left does the same at 2.7–3.5 s.",
+        "1.0–3.8 s: the skull turns to look, cocks once at 2.6 s, and turns back.",
+        "1.6–2.42 s: the jaw creaks open on the breath out and clacks shut."
+      ]
+    },
+    "colossus_swipe": {
+      "summary": "Swipe, made heavier: a long, readable cock and one fast blow. The hind feet stay planted, and the free claw braces the rearing body. The server stops turning it at 0.6 s and lands the blow across the arc at 0.9 s.",
+      "beats": [
+        "0.0–0.25 s: it sinks back onto its haunches and shifts the left claw in under its chest.",
+        "0.25–0.55 s: it rears and twists away, cocking the right arm high behind its shoulder. The jaws gape.",
+        "0.55–0.72 s: it hangs there, the cocked claw quivering.",
+        "0.72–0.92 s: the arm whips round through the front of the arc, crossing the front at 0.86 s. The torso wrenches after it.",
+        "1.10 s: the claw smashes into the ground at its left front.",
+        "1.10–1.45 s: it holds over the claw, heaving.",
+        "1.45–1.8 s: it drags the arm home and settles onto all fours."
+      ]
+    },
+    "colossus_cast_bolt": {
+      "summary": "Soul Bolt for the colossus. It now rears onto its haunches to spit, which reads from far off and lifts its jaws much closer to where the skulls appear. Skulls leave at 0.6, 0.9, 1.2 and 1.5 s.",
+      "beats": [
+        "0.0–0.42 s: it rears back with its claws lifted before its chest. The jaws prise open and the core brightens.",
+        "0.6, 0.9, 1.2, 1.5 s: on each spit the skull lunges, the jaws gape and the chest jolts back. The claws flinch.",
+        "1.5–1.75 s: it hangs reared with the jaws slack.",
+        "1.75–2.0 s: it drops onto its claws with its whole weight and settles."
+      ]
+    },
+    "colossus_cast_hands": {
+      "summary": "Grasping Hands for the colossus: one heave and slam, a long press, and a wrench at the close. Both claws strike the floor at 0.25 s, where the dust bursts, and the rings close at 1.6 s.",
+      "beats": [
+        "0.0–0.17 s: it heaves its chest up with both claws raised and the jaws open.",
+        "0.17–0.25 s: both claws are driven into the earth.",
+        "0.25–1.45 s: it presses down on them, sinking and trembling. The claws hook deeper and a growl slowly opens its jaws.",
+        "1.45–1.60 s: it wrenches both claws shut and rakes them back toward its chest as the rings close.",
+        "1.60–1.85 s: it holds the grip.",
+        "1.85–2.4 s: it lifts the claws and sets them back down at rest."
+      ]
+    },
+    "colossus_cast_drain": {
+      "summary": "Life Drain for the colossus. It rears to drink, with one claw reaching for its victim. The six pulses now land on the server's beats, 1.5 to 4.0 s every 0.5 s; the old claw curls fell between them.",
+      "beats": [
+        "0.0–0.6 s: it rears onto its haunches with two short sniffs of the skull.",
+        "0.6–1.5 s: the right claw reaches out at the victim, fingers spread and trembling, while the jaws prise wide for the focus.",
+        "1.5, 2.0, 2.5, 3.0, 3.5, 4.0 s: on each pulse the claw clenches and drags back, the chest heaves, the core flares and the jaws gulp.",
+        "4.0–4.2 s: it drops back onto its claws."
+      ]
+    },
+    "colossus_rush_crouch": {
+      "summary": "Charge, part one (0.6 s). The hind feet now stay planted, and it ends exactly on the coil's first pose, so the crouch and the coil join without a hitch.",
+      "beats": [
+        "0.0–0.14 s: a small lift as it fixes its eyes on the target.",
+        "0.14–0.6 s: it sinks its chest low over the forefeet with the haunches coiled. The claws spread and grip, and the left one is already raked back for the coil."
+      ]
+    },
+    "colossus_rush_coil": {
+      "summary": "Charge, part two: a 0.8 s loop that repeats until the aim locks. Its weight rolls from one forefoot to the other. Each claw rakes back through the dirt as the server's dirt bursts fly: the right at the loop's start, the left at 0.4 s. The hind feet no longer slide sideways as it rocks.",
+      "beats": [
+        "0.0–0.4 s: weight on the right forefoot. The right claw sets and rakes back (0.0–0.16 s) while the left lifts and reaches.",
+        "0.4–0.8 s: the same on the left (rake at 0.4–0.56 s).",
+        "Throughout: the shoulders roll with the load, the skull counter-turns so its stare never leaves the target, and a low rattle works the jaw."
+      ]
+    },
+    "colossus_rush_set": {
+      "summary": "Charge, part three (0.3 s, held). It goes dead still and loads lower as the aim locks, with the hind feet planted.",
+      "beats": [
+        "0.0–0.3 s: the chest sinks a little lower, the claws bite in, and the jaws clamp shut at 0.3 s. It holds there until it runs."
+      ]
+    },
+    "colossus_dive": {
+      "summary": "Grave Dive. A huge, readable rear, then a head-first plunge, with the body clawing itself under. The server makes it untouchable at 0.8 s and hides it at 1.2 s. The old clip had a tiny rear and one arm that snapped round between two keys.",
+      "beats": [
+        "0.0–0.38 s: it rears as high as it can, claws reaching for the sky and jaws wide.",
+        "0.38–0.48 s: it hangs at the top.",
+        "0.48–0.62 s: it pitches over and plunges head first. The claws bite into the ground ahead at 0.62 s.",
+        "0.62–1.0 s: it hauls itself down after them while the hind legs kick and scrabble in turn.",
+        "1.0–1.2 s: it is under."
+      ]
+    },
+    "colossus_harvest": {
+      "summary": "Soul Harvest. The scream at 0.8 s and the rise of the souls at 1.8 s are unchanged. It now kneels up with the hind feet planted; before, they sank into the floor and slid.",
+      "beats": [
+        "0.0–0.5 s: it kneels up off its claws, head bowed.",
+        "0.5–0.75 s: a long breath swells its chest and spreads its arms.",
+        "0.8 s: it throws its head back and screams at the sky, back arched and arms swept behind it.",
+        "0.85–1.8 s: it trembles with the effort while the core blazes.",
+        "1.8–2.3 s: it slumps as the souls rise.",
+        "2.3–2.8 s: it drops back onto all fours."
+      ]
+    }
+  },
+  "touched": {
+    "colossus_grab": "Only the hind feet changed: they now stay planted instead of sliding. The body, arms and the wrist path the server holds the player on are exactly as before.",
+    "colossus_bite_throw": "Only the hind feet changed: they now stay planted instead of sliding. The body, arms and the wrist path the server holds the player on are exactly as before.",
+    "colossus_split": "Only the hind feet changed: they now stay planted as it rears, instead of sliding and sinking into the floor.",
+    "colossus_collapse": "Only the hind feet changed: they now stay planted as it folds and rises, instead of sliding."
+  }
+}

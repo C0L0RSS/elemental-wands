@@ -205,7 +205,7 @@ grab pulls the victim to its jaws for a bite and forward throw:
 | Rush | Only its body tells the charge: no lane and no roar until it goes. It sinks its chest and coils its hind legs, then rocks its weight from side to side while each forefoot digs into the dirt and its skull stays fixed on the target. The rocking lasts a random 1.2–2 seconds in total, so it cannot be counted. For the last 0.3 seconds it goes still with its jaws clamped as the aim locks, then roars and runs, steering 1.2° a tick. Contact grabs one player, bites once for 14 damage after 0.9 seconds, throws them forward at 1.4 seconds, and recovers by 2.2 seconds. Walls stop the run; sidestepping after the lock makes it miss. Teammate damage does not interrupt this sequence. |
 | Grave Dive | Used when every player stands at least 9 blocks off; it needs no sight. It rears and plunges head first into the ground (shielded from 0.8 seconds, gone by 1.2), then tunnels toward its target at 7.2 blocks a second, faster than a sprint, leaving cracked earth and soul fire along the surface. Beneath the target, or after four seconds, it stops: the ground cracks in a 3.5-block ring for one second, then it bursts out jaws first for 16 damage and throws everyone in the ring into the air. A player who keeps moving through the warning leaves the ring. If nobody is caught it is stuck half out of the ground for 3.5 seconds, taking ×1.5 damage, before it hauls itself free. While underground it cannot be hit or targeted. |
 | Soul Harvest | Every 20 seconds or so (never while its soul is out) it kneels up, draws a breath and at 0.8 seconds screams at the sky, arms swept behind its back (a sculk shriek, a ghast scream and a warden roar; a sonic boom above its skull and a ring of souls rolling out over the ground). The spots it calls, 16–28 blocks away and at least 6 from every player (three souls solo, one more per extra player, at most six), glow with a ring and a low column of soul fire for one second and crack; then the souls claw out of them and drift toward its ribcage at 1.8 blocks a second. Each one that arrives heals 3% of its maximum health. Any hit destroys a soul; interrupting the call raises none. |
-| Spells | Four-skull bolt volleys (jaws kindling first, plus the extra skull for a noticed Astral Double), 5-block hands (both claws strike the floor) and the drain (a sniff and heartbeat; the same 10-block range and 1.5-second windup). When Hands catches a player, the skeleton rushes the nearest caught player after a 0.5-second windup, then uses the same bite and throw. Only one victim is pursued per cast. Escape the ring before it closes to avoid the combo. |
+| Spells | Four-skull bolt volleys (it rears onto its haunches, jaws kindling first, plus the extra skull for a noticed Astral Double), 5-block hands (both claws strike the floor) and the drain (it rears with a sniff and a heartbeat and reaches a claw at its victim; the same 10-block range and 1.5-second windup). When Hands catches a player, the skeleton rushes the nearest caught player after a 0.5-second windup, then uses the same bite and throw. Only one victim is pursued per cast. Escape the ring before it closes to avoid the combo. |
 
 In full iron armor (15 points) the Hands + bite combo costs about 15.5 of 20 health.
 
@@ -242,15 +242,53 @@ still takes fire damage) it shows small flames and smoke along its frame instead
 The transformed colossus is the fight's only elite; the sieges use the ordinary
 [Hollow undead](hollow-undead.md), where the Hunched Brute is the heavy.
 
-Each tell has its own clip, authored in `v2/animations.py`. `siege_and_windup_clips`: the
-robed `perch_channel` loop, `crash` (kneeling through the exposed window) and `ambush_burst`,
-and the colossus `colossus_cast_bolt` (jaws spit with each skull), `colossus_cast_hands`
-(claws strike the floor at 0.25 seconds, clench as the rings close) and `colossus_cast_drain`.
-`second_playtest_clips`: the robed `perch_cast` (the staff hoisted and driven down at each
-volley, chained back into the channel), the charge's `colossus_rush_crouch`, looping
-`colossus_rush_coil` and held `colossus_rush_set`, the dive's `colossus_dive`, `colossus_erupt`,
-looping `colossus_stuck` and `colossus_haul`, and `colossus_split`, `colossus_collapse` and
-`colossus_harvest`. The older standalone `roar` and `raise` clips are no longer used in combat.
+Each tell has its own clip. Most clips were reworked in the October 2026 animation pass.
+They are authored in `v2/robed.py` and `v2/colossus.py` with the tools in `v2/motion.py`:
+shaped keys, spring follow-through for the robe, loop-safe drift, and contact solving that
+keeps soles, the staff's butt and planted claws in place. Every reworked robed clip starts and
+ends on the idle's first frame. Every colossus clip does the same on the crawl's rest pose
+(the colossus idle's first frame). The controller's three-tick crossfades therefore land on
+matching poses.
+
+Robed clips:
+
+- `idle`, `walk`.
+- `cast_bolt`: a staff thrust for each skull at 0.6, 1.0 and 1.4 seconds.
+- `cast_hands`: the fist is wrenched shut as the rings close at 1.6 seconds.
+- `drain`: only the parts that hang off the raised arm are new. The drain socket fixes the
+  arm.
+- `blink`: he is drawn up into a thread of shadow for the 0.35-second teleport.
+- `ambush_burst`: the staff is driven into the floor at the 0.7-second burst.
+- `perch_channel` (looping) and `perch_cast`. The cast releases on its first frame and is
+  chained back into the channel.
+- `crash`: he stays down on one knee through the exposed window.
+
+Colossus clips:
+
+- `colossus_idle`.
+- `colossus_swipe`: a held cock, then the blow crosses the front of the arc at 0.86–0.9
+  seconds.
+- `colossus_cast_bolt` and `colossus_cast_drain`: it rears onto its haunches. The drain claw
+  clenches on the six pulses.
+- `colossus_cast_hands`: the claws strike the floor at 0.25 seconds and are wrenched shut as
+  the rings close.
+- The charge: `colossus_rush_crouch`, the looping `colossus_rush_coil` (each claw rakes as its
+  dirt flies) and the held `colossus_rush_set`.
+- `colossus_dive` and `colossus_harvest`.
+
+`colossus_grab`, `colossus_bite_throw`, `colossus_split` and `colossus_collapse` keep their
+older bodies, but their hind feet are now planted; the grab and bite sockets are unchanged.
+
+Still authored in `v2/animations.py`:
+
+- `colossus_walk` and the `colossus_rush` run derived from it;
+- `colossus_erupt`, the looping `colossus_stuck` and `colossus_haul`;
+- the older bodies of the four clips above;
+- `raise`, `colossus_roar` and `colossus_lunge`, which are not used in combat.
+
+`build_art.py` checks that no rotation key turns 100 degrees or more from its neighbour, which
+would be an Euler flip. It also checks that the reworked clips meet their rest poses and
+chained neighbours.
 
 The Soul Fire Rain fireball and the harvested souls are GeckoLib models from
 `art/hollow_necromancer/soul_fire/build_art.py`. The fireball is a white-hot core inside a
@@ -291,11 +329,13 @@ for a second and a half; keep new glowing spells to this pattern and modest coun
 
 Both forms use the authored V2 model generated by
 `art/hollow_necromancer/v2/build_art.py`. `geometry.py` owns the layered mage and
-open skeletal anatomy; `animations.py` owns the timing and poses. `rig.py` bakes
-hand contacts and the server grab socket from the same transforms. The exporter
-requires Pillow and NumPy. Default invocation writes the workshop candidate;
-`--install` writes mod resources and the Java grab socket; `--check` compares all
-five runtime outputs. Neither option installs a JAR into Lunar.
+open skeletal anatomy; `animations.py` assembles the clips, the reworked ones from `robed.py`
+and `colossus.py`. `rig.py` bakes hand contacts and the server grab socket from the same
+transforms. The exporter requires Pillow and NumPy. Default invocation writes the workshop
+candidate; `--install` writes mod resources and the Java grab and rush sockets; `--check`
+compares all six runtime outputs. Neither option installs a JAR into Lunar. The workshop
+(`art/hollow_necromancer/workshop/serve.py`, port 8350) previews the candidate. It flags the
+clips of the latest rework pass from `workshop/rework.json`.
 
 The transformation clip is authored in `v2/transform.py` (the fall through the
 convulsions) and `v2/growth.py` (the growth, the giant and the howl), whose `BEATS` own the
@@ -323,9 +363,9 @@ eight ticks. Cover, homing, damage and volley sizes retain their existing rules.
 Life Drain rendering is owned by `NecromancerDrainEffects` and
 `NecromancerDrainOverlay`. The server tracks the victim and cast start tick; the
 client follows the 1.5-second windup (`Action.DRAIN.impact`) and 0.5-second pulse spacing.
-The robed and colossus drain clips were authored for the earlier 0.7-second windup, so the
-raised hand holds for a moment before the first pulse and the colossus claw curls do not
-land exactly on the pulses. The braid is
+The robed drain's raised arm was authored for the earlier 0.7-second windup, so the hand holds
+for a moment before the first pulse; its fingers clench on each pulse, as the colossus's
+reaching claw does. The braid is
 full-bright soul cyan with a soft additive halo, so it reads in the dark crypt; a
 bright bead travels victim → focus each pulse and both ends flare as it lands.
 Full-bright soul wisps gather at the focus during the windup, then flow along the

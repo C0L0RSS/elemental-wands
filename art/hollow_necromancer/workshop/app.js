@@ -116,6 +116,9 @@ function vec(v, fallback) {
 
 function formOf(clipName) { return clipName.includes('colossus') ? 'colossus' : clipName.includes('transform') ? 'both' : 'robed'; }
 
+// The transformation's own parts (snapped staff, claws, rags, smoke, ghosts) show only in it,
+// and its ghost sockets never do, as in NecromancerModel#setCustomAnimations.
+let transformOnly = new Set();
 function poseBones(model, clip, t, form) {
   const out = [], hidden = [], byName = {};
   model.bones.forEach((bone, i) => {
@@ -130,6 +133,7 @@ function poseBones(model, clip, t, form) {
     let hide = parent !== undefined && hidden[parent];
     if (bone.name === 'robe' && form === 'colossus') hide = true;
     if (bone.name === 'colossus' && form === 'robed') hide = true;
+    if (transformOnly.has(bone.name) && (form !== 'both' || bone.name.startsWith('soul_'))) hide = true;
     out[i] = m; hidden[i] = hide; byName[bone.name] = i;
   });
   return {matrices: out, hidden};
@@ -245,6 +249,7 @@ async function loadSet(version) {
   const image = f => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(Error(dir + f + ' did not load')); i.src = dir + f + bust; });
   const [geo, anim, texture, glowmask] = await Promise.all([json(FILES.geo), json(FILES.animation), image(FILES.texture), image(FILES.glowmask)]);
   let manifest = null; try { const r = await fetch(dir + 'manifest.json' + bust); if (r.ok) manifest = await r.json(); } catch {}
+  if (manifest && manifest.transformOnly) transformOnly = new Set(manifest.transformOnly);
   const model = bakeModel(geo);
   const set = {model, anim, texture, glowmask, manifest, gl: {tex: makeTexture(texture), glow: makeTexture(glowmask), faceCube: faceCubeTexture(model)}};
   state.sets[version] = set;
@@ -254,19 +259,92 @@ const current = () => state.sets[state.version];
 const clips = () => current().anim.animations;
 const shortName = n => n.replace(/^animation\.[^.]+\./, '');
 
-function fillClips() {
-  const select = $('#clip'), keep = state.clip ? shortName(state.clip) : 'idle';
-  select.innerHTML = '';
+// ---------- Clips, and the latest rework pass ----------
+// rework.json names the clips reworked in the latest pass, with a plain account of each, and the
+// clips only touched up in passing ("touched").
+let rework = {clips: {}, touched: {}};
+const isReworked = name => !name.startsWith('rest:') && !!rework.clips[shortName(name)];
+const isTouched = name => !name.startsWith('rest:') && !isReworked(name) && !!rework.touched[shortName(name)];
+const clipLabel = name => name.startsWith('rest:') ? 'rest pose' : shortName(name).replace('colossus_', '');
+function clipGroups() {
   const groups = {'Robed form': [], 'Transformation': [], 'Colossus': []};
   for (const name of Object.keys(clips())) groups[{robed: 'Robed form', both: 'Transformation', colossus: 'Colossus'}[formOf(name)]].push(name);
   groups['Robed form'].unshift('rest:robed'); groups['Colossus'].unshift('rest:colossus');
-  for (const [label, names] of Object.entries(groups)) {
+  return groups;
+}
+function fillClips() {
+  const select = $('#clip'), keep = state.clip ? shortName(state.clip) : 'idle';
+  select.innerHTML = '';
+  const list = $('#clip-list'); list.innerHTML = '';
+  for (const [label, names] of Object.entries(clipGroups())) {
     const og = document.createElement('optgroup'); og.label = label;
-    for (const n of names) { const o = document.createElement('option'); o.value = n; o.textContent = n.startsWith('rest:') ? 'rest pose' : shortName(n).replace('colossus_', ''); og.append(o); }
+    const heading = document.createElement('h3'); heading.textContent = label; list.append(heading);
+    for (const n of names) {
+      const o = document.createElement('option'); o.value = n;
+      o.textContent = (isReworked(n) ? '★ ' : '') + clipLabel(n) + (isReworked(n) ? '  (reworked tonight)' : ''); og.append(o);
+      const b = document.createElement('button'); b.type = 'button'; b.dataset.clip = n; b.setAttribute('role', 'option');
+      const text = document.createElement('span'); text.textContent = clipLabel(n); b.append(text);
+      if (isReworked(n)) { b.classList.add('reworked'); const badge = document.createElement('span'); badge.className = 'badge-new'; badge.textContent = 'REWORKED TONIGHT'; b.append(badge); }
+      else if (isTouched(n)) { const badge = document.createElement('span'); badge.className = 'badge-touched'; badge.textContent = 'FEET FIXED'; b.append(badge); }
+      b.onclick = () => chooseClip(n);
+      list.append(b);
+    }
     select.append(og);
   }
+  const total = Object.keys(clips()).length, fresh = Object.keys(clips()).filter(isReworked).length;
+  $('#clip-count').textContent = `${total} clips${fresh ? ` · ${fresh} reworked tonight` : ''}`;
   const match = [...select.options].find(o => shortName(o.value) === keep) || [...select.options].find(o => o.value.endsWith('.idle'));
   select.value = match.value; setClip(match.value, true);
+  buildBanner();
+}
+function chooseClip(name) {
+  if (![...$('#clip').options].some(o => o.value === name)) return;
+  $('#clip').value = name; setClip(name); state.playing = true; syncPlay(); dirty = true;
+}
+function buildBanner() {
+  const names = Object.keys(rework.clips || {}), banner = $('#rework-banner'), chips = $('#rework-chips');
+  chips.innerHTML = '';
+  if (!names.length || !current()) { banner.hidden = true; return; }
+  $('#rework-title').textContent = `REWORKED TONIGHT · ${names.length} CLIPS`;
+  for (const [form, label] of [['robed', 'Robed'], ['colossus', 'Colossus']]) {
+    const group = names.map(short => Object.keys(clips()).find(n => shortName(n) === short)).filter(full => full && formOf(full) === form);
+    if (!group.length) continue;
+    const tag = document.createElement('span'); tag.className = 'rework-group'; tag.textContent = label; chips.append(tag);
+    for (const full of group) {
+      const b = document.createElement('button'); b.type = 'button'; b.dataset.clip = full;
+      b.textContent = clipLabel(full);
+      b.onclick = () => chooseClip(full);
+      chips.append(b);
+    }
+  }
+  banner.hidden = false;
+  markClip();
+}
+function markClip() {
+  document.querySelectorAll('[data-clip]').forEach(b => { b.classList.toggle('active', b.dataset.clip === state.clip); b.setAttribute('aria-selected', b.dataset.clip === state.clip); });
+  // Keep the chosen clip in view inside its list without scrolling the page.
+  const list = $('#clip-list'), item = list.querySelector(`button[data-clip="${CSS.escape(state.clip || '')}"]`);
+  if (item && (item.offsetTop < list.scrollTop || item.offsetTop + item.offsetHeight > list.scrollTop + list.clientHeight))
+    list.scrollTop = item.offsetTop - list.clientHeight / 2;
+  const note = $('#rework-note'), short = state.clip ? shortName(state.clip) : '';
+  const entry = rework.clips[short] || (rework.touched[short] ? {summary: rework.touched[short]} : null);
+  if (!entry || state.clip.startsWith('rest:')) { note.hidden = true; return; }
+  note.innerHTML = '';
+  const title = document.createElement('b');
+  title.textContent = `${rework.clips[short] ? 'Reworked tonight' : 'Touched up tonight'} · ${clipLabel(state.clip)} · ${clipLength().toFixed(2)} s`; note.append(title);
+  const summary = document.createElement('div'); summary.textContent = entry.summary; note.append(summary);
+  if (entry.beats && entry.beats.length) {
+    const ol = document.createElement('ol');
+    for (const beat of entry.beats) { const li = document.createElement('li'); li.textContent = beat; ol.append(li); }
+    note.append(ol);
+  }
+  note.hidden = false;
+}
+async function loadRework() {
+  try { const r = await fetch('rework.json?v=' + Date.now()); if (r.ok) rework = await r.json(); } catch {}
+  rework.clips = rework.clips || {}; rework.touched = rework.touched || {};
+  // serve.py maps before/ to a local snapshot of the art from before the pass, when one exists.
+  try { const r = await fetch('before/available.json'); if (r.ok && (await r.json()).available) $('[data-version="before"]').hidden = false; } catch {}
 }
 function clipData() { return state.clip.startsWith('rest:') ? null : clips()[state.clip]; }
 function clipForm() { return state.clip.startsWith('rest:') ? state.clip.slice(5) : formOf(state.clip); }
@@ -277,6 +355,7 @@ function setClip(name, keepTime) {
   const colossal = clipForm() !== 'robed';
   state.target = colossal ? [0, 2.1, 0] : [0, 1.1, 0];
   if (!keepTime) state.cam.dist = colossal ? 10.5 : 5.2;
+  markClip();
 }
 
 // ---------- Geometry upload ----------
@@ -537,7 +616,7 @@ addEventListener('resize', () => dirty = true);
 // Link settings: ?version=installed&clip=colossus_idle&view=front&light=day&zoom=2&t=1.2&paused&clean
 const params = new URLSearchParams(location.search);
 if (params.has('clean')) document.body.classList.add('clean');
-switchVersion(params.get('version') || 'candidate').then(() => {
+loadRework().then(() => switchVersion(params.get('version') || 'candidate')).then(() => {
   const clip = params.get('clip');
   if (clip) { const o = [...$('#clip').options].find(x => x.value === clip || shortName(x.value) === clip || x.value === 'rest:' + clip); if (o) { $('#clip').value = o.value; setClip(o.value); } }
   if (params.get('light')) document.querySelector(`[data-light="${params.get('light')}"]`)?.click();

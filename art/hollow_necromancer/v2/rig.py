@@ -111,16 +111,12 @@ def plant(clip, side, targets):
 
 def bake_contacts(clips):
     for side, sign in [('right', 1), ('left', -1)]:
-        for name in ['colossus_idle', 'colossus_walk', 'colossus_roar', 'colossus_swipe', 'colossus_lunge']:
+        for name in ['colossus_walk', 'colossus_roar', 'colossus_lunge']:
             clip = clips[name]
             targets = []
             for tick in range(round(clip['animation_length'] * 20) + 1):
                 t = tick / 20
-                if name == 'colossus_idle':
-                    weight = 1
-                    target = [sign * 20, 5.5, -43 - .6 * math.sin(t * math.pi / 2)]
-                    pitch = -65
-                elif name == 'colossus_walk':
+                if name == 'colossus_walk':
                     # During the loaded half of each step, the wrist slides
                     # backward relative to the advancing body. The other half
                     # lifts and reaches forward; left and right alternate.
@@ -132,8 +128,8 @@ def bake_contacts(clips):
                         target = [sign * 20, 5 + 10 * math.sin(math.pi * swing), -32 - 17 * swing]
                     weight = 1
                     pitch = -65 if phase < .55 else -65 + 25 * math.sin(math.pi * swing)
-                elif name in ('colossus_roar', 'colossus_swipe'):
-                    # Reared attacks begin and recover on the same four points
+                elif name == 'colossus_roar':
+                    # A reared attack begins and recovers on the same four points
                     # of contact as the crawl, avoiding a standing-pose pop.
                     duration = clip['animation_length']
                     weight = max(0, 1 - t / .55, (t - duration + .55) / .55)

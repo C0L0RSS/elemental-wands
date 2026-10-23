@@ -50,5 +50,29 @@ textarea{min-height:110px;resize:vertical;background:#100f15;border:1px solid va
 .stats{font-size:11px;color:var(--muted);line-height:1.6;border-top:1px solid var(--line);padding-top:8px}
 .error{position:absolute;inset:auto 16px 50% 16px;text-align:center;color:#ffb4a8;font-size:14px}
 @media (max-width:980px){body{height:auto;overflow:auto}main{grid-template-columns:1fr}.stage{height:70vh}aside{border-left:0;border-top:1px solid var(--line)}}
-body.clean header,body.clean aside,body.clean .stage-top,body.clean .stage-bottom,body.clean .picked{display:none}body.clean main{grid-template-columns:1fr}
+body.clean header,body.clean aside,body.clean .stage-top,body.clean .stage-bottom,body.clean .picked,body.clean .rework-banner,body.clean .rework-note{display:none}body.clean main{grid-template-columns:1fr}
 body.clean .stage{height:100vh}
+/* Clips reworked in the latest animation pass: loud on purpose, so review starts with them. */
+.rework-banner{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:9px 22px;background:#ffe14d;color:#141008;border-bottom:3px solid #141008}
+.rework-banner[hidden]{display:none}
+.rework-banner strong{font-size:13px;letter-spacing:1.6px;font-weight:900;white-space:nowrap}
+.rework-chips{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.rework-group{font-size:10px;font-weight:900;letter-spacing:1.4px;text-transform:uppercase;margin-left:6px}
+.rework-group:first-child{margin-left:0}
+.rework-chips button{background:#141008;color:#ffe14d;border:2px solid #141008;border-radius:999px;padding:4px 11px;font-size:12px;font-weight:700;cursor:pointer}
+.rework-chips button:hover{background:#3a2f05}
+.rework-chips button.active{background:#fff;color:#141008}
+.clip-list{position:relative;flex:none;max-height:min(38vh,420px);overflow:auto;border:1px solid var(--line);border-radius:8px;background:#100f15;padding:4px}
+.clip-list h3{margin:8px 8px 4px;font-size:10px;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted)}
+.clip-list button{display:flex;width:100%;align-items:center;justify-content:space-between;gap:8px;background:transparent;border:0;border-radius:6px;padding:6px 8px;font-size:12.5px;color:#d9d4e4;text-align:left}
+.clip-list button:hover{background:#221f2b}
+.clip-list button.active{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.clip-list button.reworked{color:#fff4b8}
+.badge-new{flex:none;background:#ffe14d;color:#141008;border-radius:4px;padding:2px 6px;font-size:9.5px;font-weight:900;letter-spacing:.9px;white-space:nowrap;box-shadow:0 0 0 1px #141008}
+.badge-touched{flex:none;border:1px solid #ffe14d99;color:#ffe14d;border-radius:4px;padding:1px 5px;font-size:9px;font-weight:800;letter-spacing:.8px;white-space:nowrap}
+.clip-count{font-size:11px;color:var(--muted)}
+.rework-note{flex:none;background:#141008;border:2px solid #ffe14d;border-radius:10px;padding:10px 13px;font-size:12.5px;line-height:1.5;color:#f3eedc}
+.rework-note[hidden]{display:none}
+.rework-note b{display:block;color:#ffe14d;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin-bottom:4px}
+.rework-note ol{margin:6px 0 0;padding-left:18px}
+.rework-note li{margin:2px 0}

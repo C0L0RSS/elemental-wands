@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Hollow Necromancer Workshop</title>
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -12,8 +13,13 @@
   <div class="versions" role="group" aria-label="Art version">
     <button data-version="candidate" class="active">Candidate <small id="candidate-label"></small></button>
     <button data-version="installed">Mod resources</button>
+    <button data-version="before" title="The art from before the latest rework pass, if a local snapshot exists" hidden>Before tonight</button>
   </div>
 </header>
+<nav class="rework-banner" id="rework-banner" aria-label="Clips reworked tonight" hidden>
+  <strong id="rework-title">REWORKED TONIGHT</strong>
+  <div class="rework-chips" id="rework-chips"></div>
+</nav>
 <main>
   <section class="stage">
     <canvas id="view" aria-label="Interactive 3D model"></canvas>
@@ -43,6 +49,9 @@
     </div>
   </section>
   <aside>
+    <div class="panel-head"><h2>Clips</h2><span class="clip-count" id="clip-count"></span></div>
+    <div class="clip-list" id="clip-list" role="listbox" aria-label="Animation clips"></div>
+    <div class="rework-note" id="rework-note" aria-live="polite" hidden></div>
     <div class="panel-head">
       <h2>Texture</h2>
       <div class="group small" role="group" aria-label="Texture layer">

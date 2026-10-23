@@ -184,9 +184,12 @@ def legacy_performance(name,t,base):
 
 
 heavy=runpy.run_path(str(HERE/'heavy_performance.py'))
+locomotion=runpy.run_path(str(HERE/'heavy_locomotion.py'))
 
 
 def performance(name,t,base):
+    if name in ('idle','walk'):
+        return locomotion['pose'](name,t,globals())
     if name not in heavy['REWORKED']:
         return legacy_performance(name,t,base)
     return heavy['pose'](name,t,globals())

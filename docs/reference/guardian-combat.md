@@ -149,9 +149,11 @@ and `phase/` animation sources. `phase/build_phase.py` authors the phase change,
 slam/throw, fan, delayed slams and core pulse; `phase/preview_phase.py` renders a pose sheet
 and offline viewer into `.local-previews/guardian-phase/`. The heavy performance pass
 (`v4-expressive/heavy_performance.py` for awaken, slam and beam, which the fast and held slams
-follow; `phase/heavy_casts.py` for fan and core pulse) keeps every impact and release time but gives each
-attack a slower load, a planted brace and a long recovery; only the blow is quick. The throws
-are unchanged because the server samples their held-rock pose through tick 44.
+follow; `v4-expressive/heavy_locomotion.py` for idle and walk; `v5-leap/heavy_leap.py` for the
+leap; `phase/heavy_casts.py` for fan and core pulse; `phase/heavy_phase.py` for the phase change)
+keeps every impact and release time, the walk's stride and the leap's arc, but gives each attack a
+slower load, a planted brace and a long recovery; only the blow is quick. The throws are
+unchanged because the server samples their held-rock pose through tick 44.
 `combat-review/build_preview.py` builds a review of all 18 clips into
 `.local-previews/guardian-combat-review/`, with the reworked clips marked. Read
 `tools/prepare_guardian_assets.py` before changing clips; do not assume an old report's clip

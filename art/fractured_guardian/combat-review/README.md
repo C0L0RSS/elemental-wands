@@ -1,7 +1,7 @@
 # Guardian combat review
 
 An offline review page for all 18 packaged Guardian clips, with the clips from the heavy
-performance pass (awaken, slam and its fast and held variants, beam, fan, core pulse) marked
+performance pass (every clip but the throws and the intro: 15 of 18) marked
 "Reworked tonight", each with its timings and events. The 3D view uses the same pose math as
 `v4-expressive/preview_motion.py`.
 

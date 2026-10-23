@@ -9,34 +9,12 @@ args=parser.parse_args()
 rig=runpy.run_path(str(HERE.parent/'v4-expressive/build_animations.py'))
 heavy=runpy.run_path(str(HERE/'heavy_casts.py'))
 base=json.loads((HERE.parent/'v5-leap/fractured_guardian.animation.json').read_text())['animations']
-def smooth(t):
- t=max(0,min(1,t));return t*t*(3-2*t)
+transition=runpy.run_path(str(HERE/'heavy_phase.py'))
 def pose(t):
- # Brace low, wrench the shoulders back as the core erupts, then recover urgently.
- a=smooth(t/.65)*(1-smooth((t-2.45)/.75))
- burst=smooth((t-.65)/.65)*(1-smooth((t-2.3)/.9))
- shake=math.sin(t*35)*burst
- p={'pelvis':{'position':np.array([0,-5*a,-a])},
-    'torso':{'rotation':[16*a-38*burst,shake,shake*.7]},
-    'head':{'rotation':[-15*burst,shake*1.5,0]},
-    'jaw':{'rotation':[22*burst,0,0]}}
- for side,sign in [('right',-1),('left',1)]:
-  p[side+'_shoulder']={'position':np.array([0,0.,0]),'rotation':[0,0,-sign*9*burst]}
-  p[side+'_upper_arm']={'rotation':[-12*a+44*burst,0,-sign*18*burst]}
-  p[side+'_forearm']={'rotation':[-20*a,0,sign*8*burst]}
-  p[side+'_hand']={'rotation':[18*a,0,sign*8*burst]}
-  rig['fingers'](p,side,40*a-30*burst,8*burst,shake)
- rig['legs'](p,t,False)
- for side in ['right','left']:
-  mats=rig['transforms'](p);low=999
-  for c in rig['mesh']:
-   if c['bone'].startswith(side+'_') and not any(k in c['bone'] for k in ['thigh','shin','foot']):
-    m=mats[c['bone']];v=np.array(c['vertices'])@m[:3,:3].T+m[:3,3];low=min(low,float(v[:,1].min()))
-  if low<.8:p[side+'_shoulder']['position'][1]+=(.8-low)/mats['torso'][1,1]
- return p
+ return transition['pose'](t,rig)
 bones={};lowest=999
-for i in range(129):
- t=round(i*.025,4);p=pose(t)
+for i in range(257):
+ t=round(i*.0125,4);p=pose(t)
  for b,channels in p.items():
   for name,value in channels.items():bones.setdefault(b,{}).setdefault(name,{})[str(t)]=[round(float(v),5) for v in value]
  mats=rig['transforms'](p)
@@ -103,7 +81,7 @@ assert pulse_lowest>-.08,pulse_lowest
 clips['animation.fractured_guardian.core_pulse']={'loop':False,'animation_length':PULSE_SECONDS,'bones':pulse_bones}
 print('Core pulse floor clearance:',pulse_lowest)
 outputs={'phase.animation.json':{'format_version':'1.8.0','animations':clips},
- 'motion-validation.json':{'samples':129,'minimum_vertex':lowest,'phase_seconds':3.2,'slam_impact_tick':21,'throw_release_tick':29,
+ 'motion-validation.json':{'samples':257,'minimum_vertex':lowest,'phase_seconds':3.2,'slam_impact_tick':21,'throw_release_tick':29,
  'slam_apex_seconds':APEX,'slam_holds':list(HOLDS),'core_pulse_seconds':PULSE_SECONDS,'core_pulse_minimum_vertex':pulse_lowest}}
 for name,data in outputs.items():
  text=json.dumps(data,indent=2)+'\n';path=HERE/name

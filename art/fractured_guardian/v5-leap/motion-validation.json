@@ -1,11 +1,11 @@
 {
   "leap_launch": {
-    "lowest_vertex_with_flight": -0.001
+    "lowest_vertex_with_flight": -0.0011
   },
   "leap_air": {
-    "lowest_vertex_with_flight": -0.0
+    "lowest_vertex_with_flight": 0.0
   },
   "leap_land": {
-    "lowest_vertex_with_flight": -0.0014
+    "lowest_vertex_with_flight": -0.0018
   }
 }

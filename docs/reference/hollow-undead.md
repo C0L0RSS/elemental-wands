@@ -23,22 +23,29 @@ bodies do not. All three are tagged `#minecraft:undead` and `#minecraft:skeleton
 ## Clips and combat timing
 
 Each mob has `idle`, `walk`, `rise`, `attack` and `death` clips. A rise plays when a
-body spawns (except chunk generation) or rises in a Necromancer siege wave. The body
+body spawns (except chunk generation) or rises in a Necromancer siege wave: it claws
+its way out of the ground and ends standing in its idle pose. The body
 stands on the floor and cannot act until the clip ends. Goal controls are disabled
 rather than NoAI, so a body saved mid-rise reloads active.
 
 The attack goal chases, then plants and plays the attack clip. The effect lands on
 the clip's hit frame, taken from `HollowUndeadClips`:
 
-- Crawler: tick 12, when the rake meets the target, with a small hop forward.
+- Crawler: tick 12, when the rake meets the target, with a small hop forward (tick 9).
+  The clip shoves off into the hop and its claws rake back through the dirt while the
+  hop slides the body, so they stay put.
 - Archer: tick 52, when the string releases. The model draws side-on, so the body
-  turns its left shoulder toward the target while drawing. The model's own arrow
-  hides at release and a real arrow leaves the bow hand.
-- Brute: tick 43. It tracks the target for the first 30 ticks, then commits. Everything
-  near the maul head is hit.
+  turns its left shoulder toward the target while drawing; it pulls the arrow from its
+  quiver and draws to the jaw. The model's own arrow hides at release and a real arrow
+  leaves the bow hand.
+- Brute: tick 43. It tracks the target for the first 30 ticks with the maul held high,
+  then commits: it steps in and the blow passes the hit point on tick 43, burying the
+  maul head in the ground just after. It stays hunched over the maul until about tick 56,
+  its opening. Everything near the maul head is hit.
 
 The death clip holds the corpse until it settles, instead of vanilla's one-second
-sideways tip. Hurt feedback is the standard red flash.
+sideways tip: the crawler scrabbles and goes limp, the archer crumples and drops its bow,
+the brute falls forward like a tree. Hurt feedback is the standard red flash.
 
 Bodies the Necromancer raises in a siege are quickened (a speed modifier added when
 they are bound): crawlers +30%, brutes +15%, archers +10%. The walk still plays at

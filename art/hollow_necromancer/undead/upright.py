@@ -235,247 +235,128 @@ def build(source,out,brute=False):
     # A walk covers `stride` pixels per cycle at about the body's chase speed (archer 1.8,
     # brute 1.65 blocks/s); the game plays it at the travel speed, so planted feet stay put.
     stride=24 if brute else 22
-    lengths={'idle':4,'walk':(27 if brute else 23)/30,'attack':4.6 if brute else 4,'rise':3.6,'death':1.7}
-    for kind,duration in lengths.items():
-        c=Clip(duration,loop=kind not in ('rise','death'));samples=round(duration*30);bow_release=None
-        for frame in range(samples+1):
-            t=frame/30;p=t/duration;wave=math.sin(p*math.tau)
-            bob=.1*wave if kind=='idle' else 0
-            lean=0;shift=0
-            if kind=='attack' and brute:
-                # Rock back into the windup, then drop the weight forward into the hit.
-                wind=ease(t/1.4);slam=ease((t-1.7)/.45);recover=ease((t-2.6)/2)
-                lean=(1.4*wind-3.2*slam)*(1-recover);bob=-2.4*slam*(1-recover)
-            if kind=='walk':
-                # Bent knees carry the long stride: the hips ride lowest as each foot lands.
-                bob=-(2 if brute else 1.6)-(.6 if brute else .5)*(1+math.cos(2*p*math.tau))/2
-                shift=(.32 if brute else .16)*wave
-            if kind=='rise':bob=-12*(1-ease((t-.65)/2.4));lean=-1.5*(1-ease((t-.65)/2.4))
-            c.pose('root',t,[0,-24*(1-ease(t/.9)) if kind=='rise' else 0,-stride*p if kind=='walk' else 0])
-            body_pos=[shift,bob,lean];body_rot=[0,0,0]
-            if kind=='walk':
-                # The upper body leans into the walk about the hips.
-                body_rot=[7 if brute else 4,0,0]
-                body_pos=add(sub([0,hip_y,0],apply(mat(body_rot),[0,hip_y,0])),[shift,bob,0])
-            if kind=='death':
-                # Recoil, buckle onto the knees, then topple face down about the hips.
-                hit=ease(t/.15)*(1-ease((t-.15)/.25));kneel=ease((t-.12)/.45);fall=ease((t-.45)/.7)
-                bounce=.5*math.sin(max(0,min(1,(t-1.15)/.3))*math.pi)
-                body_rot=[-6*hit+80*fall,0,6*fall]
-                hips=[0,hip_y+((7.5 if brute else 6.5)-hip_y)*kneel,0]
-                hips=lerp(hips,[0,(3.5 if brute else 2.6)+bounce,-2],fall)
-                pivot=apply(mat(body_rot),[0,hip_y,0]);body_pos=sub(hips,pivot)
-            torso_at=lambda q:add(apply(mat(body_rot),q),body_pos)
-            c.pose('torso',t,body_pos,body_rot)
-            c.put('skull','rotation',t,[3*wave if brute else 2*wave,2*math.sin(p*math.tau),-3 if brute else 0])
-            c.put('jaw','rotation',t,[4+(7*max(0,math.sin(p*math.pi)) if kind=='attack' and brute else wave),0,0])
-            if kind=='walk':
-                # The skull levels its gaze against the lean and nods with each step.
-                c.put('skull','rotation',t,[-(5 if brute else 3)+2*math.sin(2*p*math.tau),4*wave,-3 if brute else 0])
-            if kind=='death':
-                # The skull snaps back on the hit, then turns its face aside on the ground.
-                c.put('skull','rotation',t,[-18*hit+10*fall,55*fall,18*fall])
-                c.put('jaw','rotation',t,[4+18*ease(t/.2)-6*fall,0,0])
-            hand_positions={}
-            for side,label in ((-1,'left'),(1,'right')):
-                shoulder=torso_at([side*half,shoulder_y+(.6 if brute and side==1 else 0),-2.7 if brute else -.3])
-                if brute:
-                    hand=[side*(half+.3),shoulder[1]-sum(arm_lengths[label])+.7,-3.5+lean]
-                    if kind=='walk':
-                        # Hanging arms follow the lean and swing against the legs; the club arm less.
-                        # The club elbow bends to carry the maul above the lowered hips.
-                        hand=torso_at([side*(half+.3),shoulder_y+(2.2 if side==1 else 0)-sum(arm_lengths[label])+.7,-3.5])
-                        hand[2]-=(2.8 if side<0 else 1)*side*math.cos(p*math.tau)
-                    if kind=='attack' and side==1:
-                        # The hand travels an arc around the shoulder, just outside
-                        # the skull: bent and cocked high behind the head, then
-                        # accelerating down and extending into the hit.
-                        strike=max(0,min(1,(t-1.7)/.45))
-                        phi=3+202*wind+5*ease((t-1.4)/.3);phi+=(32-phi)*strike*strike
-                        reach=15.8-4.3*wind;reach+=(15.9-reach)*strike
-                        wide=.3+1.9*wind;wide+=(.8-wide)*strike
-                        phi+=(3-phi)*recover;reach+=(15.8-reach)*recover;wide+=(.3-wide)*recover
-                        a=math.radians(phi)
-                        hand=add(shoulder,[wide,-reach*math.cos(a),-reach*math.sin(a)])
-                else:
-                    # Side-on archery stance: load close to the body, then extend
-                    # the bow arm while the drawing hand anchors beside the cheek.
-                    grip=[-4.5,17.2,-3.5]
-                    right=[4.8,15,-1.5]
-                    # Each arm swings forward as the opposite foot lands; the bow arm less.
-                    if kind=='walk':grip[2]+=1.2*math.cos(p*math.tau);right[2]-=2.6*math.cos(p*math.tau)
-                    if kind=='attack':
-                        lift=ease(t/.65);draw=ease((t-.65)/1.35)
-                        lower=ease((t-3.15)/.85);release=ease((t-2.6)/.13)
-                        loaded=[-4.3,22,-6]
-                        grip=lerp(lerp(grip,loaded,lift),[-14,25,-3.8],draw)
-                        grip=lerp(grip,[-4.5,17.2,-3.5],lower)
-                        if t<.3:right=lerp(right,[5.5,23,-5.4],ease(t/.3))
-                        elif t<.65:right=lerp([5.5,23,-5.4],[-.8,22,-5.4],ease((t-.3)/.35))
-                        else:right=lerp([-.8,22,-5.4],[-.1,25.3,-1.7],draw)
-                        # Release follows the cheek backward, then moves outward
-                        # before lowering, keeping the forearm outside the rib cage.
-                        right=lerp(right,[1.4,25.3,-1.7],release)
-                        right=lerp(right,[5.2,25,-3.8],ease((t-2.78)/.37))
-                        right=lerp(right,[4.8,15,-1.5],lower)
-                        c.put('skull','rotation',t,[1,-80*ease(t/1.1)*(1-lower),0])
-                    # A vertical bow handle lies across the curled fingers.
-                    hand=add(grip,[1,0,.6]) if side<0 else right
-                    if kind=='walk':hand=torso_at(hand)
-                if kind=='death':
-                    # Arms flail up as the knees go, then land along the sides; the
-                    # brute's club arm sprawls forward with the club across the ground.
-                    final={'left':[-8,1.2,-12],'right':[8.5,3.8,-27]} if brute else {'left':[-5.5,1,-8],'right':[5.5,1,-8]}
-                    if not brute:hand=torso_at(hand)
-                    hand=lerp(hand,final[label],fall);hand[1]+=3*math.sin(kneel*math.pi)*(1-fall)
-                    reach=sub(hand,shoulder);span=math.sqrt(dot(reach,reach));lo,hi=abs(arm_lengths[label][0]-arm_lengths[label][1])+.1,sum(arm_lengths[label])*.97
-                    hand=add(shoulder,mul(reach,max(lo,min(hi,span))/span))
-                if kind=='rise':
-                    rest=[side*(half+.3),shoulder_y-sum(arm_lengths[label])+.7,-3.5] if brute else ([-4.5,18.2,-3.5] if side<0 else [4.5,15,-1.5])
-                    hand=lerp([side*5,3.5,-5],rest,ease((t-.65)/2.4))
-                draw_roll=0
-                # A hanging drawing arm bends its elbow back. Lifting the arrow swings
-                # the elbow out and forward, clear of the ribs and skull, for the draw;
-                # it swings back out and behind as the bow lowers.
-                draw_pole=[side,.2,1]
-                if kind=='attack':
-                    draw_pole=lerp(draw_pole,[side,0,-1],ease(t/.3))
-                    draw_pole=lerp(draw_pole,[side,.2,1],ease((t-3.15)/.85))
-                # The drawing palm continues the forearm instead of folding back
-                # at the wrist. Retarget the wrist around the same string contact.
-                if not brute and side>0 and kind=='attack' and .45<=t<=3.1:
-                    anchor=add(hand,[-1.7,0,-.6])
-                    for _ in range(16):
-                        e,_,_=chain(shoulder,hand,arm_lengths[label],draw_pole)
-                        direction=sub(hand,e)
-                        draw_roll=math.atan2(direction[2],-direction[0])*ease((t-.45)/.3)*(1-ease((t-2.78)/.32))
-                        off=[-1.7*math.cos(draw_roll)-.6*math.sin(draw_roll),0,1.7*math.sin(draw_roll)-.6*math.cos(draw_roll)]
-                        hand=lerp(hand,sub(anchor,off),.65)
-                # The bow elbow stays below and outside the shoulder. A pole in
-                # the reach plane becomes nearly parallel halfway through drawing
-                # and makes the elbow swivel over the shoulder.
-                pole=[side,.15,1] if brute else [-1,-1,0] if side<0 else draw_pole
-                # The swinging elbow trails the arc: behind when low, forward overhead.
-                if brute and side==1 and kind=='attack':pole=[.6,-math.sin(a),math.cos(a)]
-                if kind=='death':pole=lerp(pole,[side,-1,.3],fall)
-                elbow,ur,fr=chain(shoulder,hand,arm_lengths[label],pole)
-                if not brute:
-                    # Use a stable axis solution for each segment's motion plane.
-                    # The bow forearm and drawing upper arm pass through the old
-                    # solver's Z-axis singularity during extension and release.
-                    axis=norm(sub(hand,elbow) if side<0 else sub(elbow,shoulder))
-                    stable=[math.degrees(math.acos(max(-1,min(1,-axis[1])))),math.degrees(math.atan2(-axis[0],axis[2])),0]
-                    if side<0:fr=stable
-                    else:ur=stable
-                c.pose(label+'_upper',t,shoulder,ur);c.pose(label+'_fore',t,elbow,fr)
-                # Relaxed hands turn their palms toward the thighs, thumbs forward.
-                # The bow palm faces forward around the handle with the thumb up.
-                if not brute and side<0:wrist=[0,0,-90]
-                elif not brute:
-                    aim=ease(t/.65)*(1-ease((t-3.15)/.85)) if kind=='attack' else 0
-                    wrist=[0,-90*(1-aim),-90*aim]
-                else:wrist=[0,-side*90,0]
-                if not brute and side>0 and kind=='attack':wrist[0]=math.degrees(draw_roll)
-                if brute and side==1:
-                    # The fist stays in line with the forearm, thumb side leading.
-                    # The club angle comes only from wrist tilt in the arm's swing
-                    # plane: 90 is square to the forearm, lower tips the head down.
-                    fore=norm(sub(hand,elbow));swing=norm(cross([1,0,0],fore))
-                    tilt=66+(4*wave if kind=='walk' else 0)
-                    if kind=='attack':
-                        # The wrist stays cocked through the swing and whips late.
-                        tilt=66+(125-66)*wind+5*ease((t-1.4)/.3);tilt+=(48-tilt)*strike**3;tilt+=(66-tilt)*recover
-                    a=math.radians(tilt)
-                    club=add(mul(fore,math.cos(a)),mul(swing,math.sin(a)))
-                    # A slight outward splay keeps the head clear of the body.
-                    club=norm(add(club,[.2,0,0]))
-                    fingers=sub(mul(fore,math.sin(a)),mul(swing,math.cos(a)))
-                    fingers=norm(sub(fingers,mul(club,dot(fingers,club))))
-                    if kind=='death':
-                        # The club rolls out flat to the side of the outstretched arm.
-                        club=norm(lerp(club,norm([1,0,-.35]),fall))
-                        fingers=norm(sub(fore,mul(club,dot(fore,club))))
-                    wrist=euler(club,mul(fingers,-1))
-                elif kind=='death':wrist=compose(body_rot,wrist)
-                c.pose(label+'_hand',t,hand,wrist)
-                hand_positions[label]=hand
-                for f in range(4):
-                    ripple=.5+.5*math.sin(p*math.tau-f*.65)
-                    if brute and side==1:
-                        # Keep the club enclosed; tiny sequential squeezes tighten at windup.
-                        squeeze=(wind*(1-recover) if kind=='attack' else .35*ripple)
-                        curls=[-64-8*squeeze,-76-8*squeeze,-43-6*squeeze]
-                    elif brute:
-                        close=(ease(t/1.6)*(1-ease((t-2.5)/2.1)) if kind=='attack' else ripple)
-                        curls=[-12-32*close,-15-46*close,-10-38*close]
-                    elif side<0:
-                        curls=[-60-5*ripple,-74-5*ripple,-40-5*ripple]
-                    else:
-                        tension=ease((t-.42)/.22)*(1-ease((t-2.6)/.1)) if kind=='attack' else .2*ripple
-                        # Index and middle fingers hook the string, then open on release.
-                        grip=tension if f<3 else tension*.35
-                        curls=[-10-35*grip,-12-62*grip,-8-40*grip]
-                    if kind=='death' and not (brute and side==1):
-                        curls=lerp(curls,[-15-3*f,-20-4*f,-12],ease((t-.3)/.5))
-                    for joint,angle in enumerate(curls):
-                        c.put(label+'_finger_'+str(f)+'_'+str(joint),'rotation',t,[angle,0,side*(1.5-f)*(2 if (brute and side==1) or (not brute and side<0) else 6)*(1-.4*ripple) if joint==0 else 0])
-                c.put(label+'_thumb_0','rotation',t,[-45 if side==1 and brute or side<0 and not brute else -20-15*wave,-side*30,-side*35])
-                c.put(label+'_thumb_1','rotation',t,[-55 if side==1 and brute or side<0 and not brute else -25-15*wave,0,0])
-                # Thighs stay attached to the pelvis when the torso shifts or tips.
-                ankle=[side*(3.4 if brute else 2.5),.7,0]
-                if kind=='walk':
-                    offset=0 if side<0 else .5
-                    n=math.floor(p+offset);ph=p+offset-n
-                    contact=n-offset
-                    # The foot lands well ahead of the hip and pushes off well behind it.
-                    old=-stride*contact-(stride*.31+.4);new=old-stride
-                    ankle[2]=old+stride*p if ph<.62 else old+(new-old)*ease((ph-.62)/.38)+stride*p
-                    # The brute favors its club side with a lower, dragging step.
-                    ankle[1]+=(1.2 if brute and side==1 else 2)*max(0,math.sin((ph-.62)/.38*math.pi)) if ph>=.62 else 0
-                if kind=='attack' and brute:ankle[2]=-1.5 if side>0 else 1
-                leg_pole=[side*.1,0,-1]
-                hip=torso_at([side*(2.6 if brute else 2),hip_y,0])
-                if kind=='death':
-                    # Feet slide back as the knees drop, then the legs lie out straight.
-                    ankle[2]=4*kneel
-                    ankle[2]+=((13.2 if brute else 11.4)+bounce*.3-ankle[2])*fall
-                    leg_pole=[side*(.1+.3*fall),-fall,-(1-fall)]
-                knee,tr,sr=chain(hip,ankle,leg_lengths,leg_pole)
-                c.pose(label+'_thigh',t,hip,tr);c.pose(label+'_shin',t,knee,sr);c.pose(label+'_foot',t,ankle)
+    walk_length=(27 if brute else 23)/30
+    # Idle, rise, attack and death are authored in brute.py / archer.py on the shared rig
+    # (rig.py); only the walk is built here.
+    import brute as brute_clips, archer as archer_clips
+    from rig import Upright
+    rig=Upright(brute,hip_y,shoulder_y,half,arm_lengths,leg_lengths)
+    reworked=(brute_clips if brute else archer_clips).REWORKED
+    c=Clip(walk_length);samples=round(walk_length*30)
+    for frame in range(samples+1):
+        t=frame/30;p=t/walk_length;wave=math.sin(p*math.tau)
+        # Bent knees carry the long stride: the hips ride lowest as each foot lands.
+        bob=-(2 if brute else 1.6)-(.6 if brute else .5)*(1+math.cos(2*p*math.tau))/2
+        shift=(.32 if brute else .16)*wave
+        c.pose('root',t,[0,0,-stride*p])
+        # The upper body leans into the walk about the hips.
+        body_rot=[7 if brute else 4,0,0]
+        body_pos=add(sub([0,hip_y,0],apply(mat(body_rot),[0,hip_y,0])),[shift,bob,0])
+        torso_at=lambda q:add(apply(mat(body_rot),q),body_pos)
+        c.pose('torso',t,body_pos,body_rot)
+        # The skull levels its gaze against the lean and nods with each step.
+        c.put('skull','rotation',t,[-(5 if brute else 3)+2*math.sin(2*p*math.tau),4*wave,-3 if brute else 0])
+        c.put('jaw','rotation',t,[4+wave,0,0])
+        hand_positions={}
+        for side,label in ((-1,'left'),(1,'right')):
+            shoulder=torso_at([side*half,shoulder_y+(.6 if brute and side==1 else 0),-2.7 if brute else -.3])
+            if brute:
+                # Hanging arms follow the lean and swing against the legs; the club arm less.
+                # The club elbow bends to carry the maul above the lowered hips.
+                hand=torso_at([side*(half+.3),shoulder_y+(2.2 if side==1 else 0)-sum(arm_lengths[label])+.7,-3.5])
+                hand[2]-=(2.8 if side<0 else 1)*side*math.cos(p*math.tau)
+            else:
+                # Each arm swings forward as the opposite foot lands; the bow arm less.
+                # A vertical bow handle lies across the curled fingers.
+                grip=[-4.5,17.2,-3.5];right=[4.8,15,-1.5]
+                grip[2]+=1.2*math.cos(p*math.tau);right[2]-=2.6*math.cos(p*math.tau)
+                hand=torso_at(add(grip,[1,0,.6]) if side<0 else right)
+            # The bow elbow stays below and outside the shoulder; a hanging drawing arm
+            # bends its elbow back.
+            pole=[side,.15,1] if brute else [-1,-1,0] if side<0 else [side,.2,1]
+            elbow,ur,fr=chain(shoulder,hand,arm_lengths[label],pole)
             if not brute:
-                # Weapon transform is derived from the bow hand contact, not
-                # inherited from a palm orientation that points the bow sideways.
-                grip=add(hand_positions['left'],[-1,0,-.6])
-                bow_origin=add(grip,[.6,1,0]);tip=0
-                if kind=='death' and t>=.3:
-                    # Released at the recoil, the bow drops and tips flat beside the body.
-                    bow_release=bow_release or bow_origin
-                    drop=max(0,min(1,(t-.3)/.55))
-                    bow_origin=lerp(bow_release,[-12,.4,1.5],drop*drop);tip=90*ease(drop)
-                c.pose('bow',t,bow_origin,[0,-90,tip])
-                spin=lambda v:add(bow_origin,[v[0]*math.cos(math.radians(tip))-v[1]*math.sin(math.radians(tip)),v[0]*math.sin(math.radians(tip))+v[1]*math.cos(math.radians(tip)),v[2]])
-                relaxed=spin([1.2,-1,0])
-                nock=add(hand_positions['right'],[-1.7*math.cos(draw_roll)-.6*math.sin(draw_roll),0,1.7*math.sin(draw_roll)-.6*math.cos(draw_roll)])
-                tension=ease((t-.5)/.15)*(1-ease((t-2.6)/.1)) if kind=='attack' else 0
-                center=lerp(relaxed,nock,tension)
-                for part,y in (('string_top',7.1),('string_bottom',-7.1)):
-                    endpoint=spin([1.2,y-1,0]);v=sub(center,endpoint)
-                    c.pose(part,t,endpoint,rot(v));c.put(part,'scale',t,[1,math.sqrt(dot(v,v)),1])
-                direction=norm(sub(grip,nock));arrowpos=nock[:]
-                visible=kind=='attack' and .6<t<2.92
-                if t>=2.6 and kind=='attack':
-                    direction=norm(sub([-14,25,-3.8],[-1.8,25.3,-2.3]))
-                    arrowpos=add([-1.8,25.3,-2.3],mul(direction,(t-2.6)*65))
-                c.pose('arrow',t,arrowpos,rot(direction));c.put('arrow','scale',t,[1,1,1] if visible else [0,0,0])
-        # Euler-equivalent angles must stay on the same branch for the
-        # viewer/GeckoLib linear keyframe interpolation, including lowering.
-        for name in ('left_hand','right_hand') if brute else ('left_upper','left_fore','right_upper','right_fore','left_hand','right_hand','string_top','string_bottom'):
-            keys=c.data['bones'][name]['rotation'];previous=None
-            for key in sorted(keys,key=float):
-                value=keys[key]
-                if previous is not None:
-                    value=[previous[i]+(value[i]-previous[i]+180)%360-180 for i in range(3)]
-                    keys[key]=value
-                previous=value
-        m.clips[kind]=c.data
+                # Use a stable axis solution for the bow forearm and drawing upper arm.
+                axis=norm(sub(hand,elbow) if side<0 else sub(elbow,shoulder))
+                stable=[math.degrees(math.acos(max(-1,min(1,-axis[1])))),math.degrees(math.atan2(-axis[0],axis[2])),0]
+                if side<0:fr=stable
+                else:ur=stable
+            c.pose(label+'_upper',t,shoulder,ur);c.pose(label+'_fore',t,elbow,fr)
+            # Relaxed hands turn their palms toward the thighs, thumbs forward.
+            # The bow palm faces forward around the handle with the thumb up.
+            wrist=[0,0,-90] if not brute and side<0 else [0,-90,0] if not brute else [0,-side*90,0]
+            if brute and side==1:
+                # The fist stays in line with the forearm, thumb side leading.
+                # The club angle comes only from wrist tilt in the arm's swing
+                # plane: 90 is square to the forearm, lower tips the head down.
+                fore=norm(sub(hand,elbow));swing=norm(cross([1,0,0],fore))
+                a=math.radians(66+4*wave)
+                club=add(mul(fore,math.cos(a)),mul(swing,math.sin(a)))
+                # A slight outward splay keeps the head clear of the body.
+                club=norm(add(club,[.2,0,0]))
+                fingers=sub(mul(fore,math.sin(a)),mul(swing,math.cos(a)))
+                fingers=norm(sub(fingers,mul(club,dot(fingers,club))))
+                wrist=euler(club,mul(fingers,-1))
+            c.pose(label+'_hand',t,hand,wrist)
+            hand_positions[label]=hand
+            for f in range(4):
+                ripple=.5+.5*math.sin(p*math.tau-f*.65)
+                if brute and side==1:
+                    # Keep the club enclosed with tiny sequential squeezes.
+                    squeeze=.35*ripple
+                    curls=[-64-8*squeeze,-76-8*squeeze,-43-6*squeeze]
+                elif brute:
+                    curls=[-12-32*ripple,-15-46*ripple,-10-38*ripple]
+                elif side<0:
+                    curls=[-60-5*ripple,-74-5*ripple,-40-5*ripple]
+                else:
+                    tension=.2*ripple
+                    grip=tension if f<3 else tension*.35
+                    curls=[-10-35*grip,-12-62*grip,-8-40*grip]
+                for joint,angle in enumerate(curls):
+                    c.put(label+'_finger_'+str(f)+'_'+str(joint),'rotation',t,[angle,0,side*(1.5-f)*(2 if (brute and side==1) or (not brute and side<0) else 6)*(1-.4*ripple) if joint==0 else 0])
+            c.put(label+'_thumb_0','rotation',t,[-45 if side==1 and brute or side<0 and not brute else -20-15*wave,-side*30,-side*35])
+            c.put(label+'_thumb_1','rotation',t,[-55 if side==1 and brute or side<0 and not brute else -25-15*wave,0,0])
+            # Thighs stay attached to the pelvis when the torso shifts or tips.
+            ankle=[side*(3.4 if brute else 2.5),.7,0]
+            offset=0 if side<0 else .5
+            n=math.floor(p+offset);ph=p+offset-n
+            contact=n-offset
+            # The foot lands well ahead of the hip and pushes off well behind it.
+            old=-stride*contact-(stride*.31+.4);new=old-stride
+            ankle[2]=old+stride*p if ph<.62 else old+(new-old)*ease((ph-.62)/.38)+stride*p
+            # The brute favors its club side with a lower, dragging step.
+            ankle[1]+=(1.2 if brute and side==1 else 2)*max(0,math.sin((ph-.62)/.38*math.pi)) if ph>=.62 else 0
+            hip=torso_at([side*(2.6 if brute else 2),hip_y,0])
+            knee,tr,sr=chain(hip,ankle,leg_lengths,[side*.1,0,-1])
+            c.pose(label+'_thigh',t,hip,tr);c.pose(label+'_shin',t,knee,sr);c.pose(label+'_foot',t,ankle)
+        if not brute:
+            # Weapon transform is derived from the bow hand contact, not
+            # inherited from a palm orientation that points the bow sideways.
+            grip=add(hand_positions['left'],[-1,0,-.6])
+            bow_origin=add(grip,[.6,1,0]);tip=0
+            c.pose('bow',t,bow_origin,[0,-90,tip])
+            spin=lambda v:add(bow_origin,[v[0]*math.cos(math.radians(tip))-v[1]*math.sin(math.radians(tip)),v[0]*math.sin(math.radians(tip))+v[1]*math.cos(math.radians(tip)),v[2]])
+            relaxed=spin([1.2,-1,0])
+            nock=add(hand_positions['right'],[-1.7*math.cos(0)-.6*math.sin(0),0,1.7*math.sin(0)-.6*math.cos(0)])
+            center=lerp(relaxed,nock,0)
+            for part,y in (('string_top',7.1),('string_bottom',-7.1)):
+                endpoint=spin([1.2,y-1,0]);v=sub(center,endpoint)
+                c.pose(part,t,endpoint,rot(v));c.put(part,'scale',t,[1,math.sqrt(dot(v,v)),1])
+            c.pose('arrow',t,nock[:],rot(norm(sub(grip,nock))));c.put('arrow','scale',t,[0,0,0])
+    # Euler-equivalent angles must stay on the same branch for the
+    # viewer/GeckoLib linear keyframe interpolation.
+    for name in ('left_hand','right_hand') if brute else ('left_upper','left_fore','right_upper','right_fore','left_hand','right_hand','string_top','string_bottom'):
+        keys=c.data['bones'][name]['rotation'];previous=None
+        for key in sorted(keys,key=float):
+            value=keys[key]
+            if previous is not None:
+                value=[previous[i]+(value[i]-previous[i]+180)%360-180 for i in range(3)]
+                keys[key]=value
+            previous=value
+    m.clips={'idle':None,'walk':c.data,'attack':None,'rise':None,'death':None}
+    # Reworked clips keep the walk's Euler forms at the ends that blend into other clips.
+    walk=m.clips['walk']['bones']
+    rig.reference={bone:ch['rotation'][min(ch['rotation'],key=float)] for bone,ch in walk.items() if 'rotation' in ch}
+    for kind in reworked:m.clips[kind]=reworked[kind](rig)
     return m.export(out)

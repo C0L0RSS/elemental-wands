@@ -35,7 +35,12 @@ function sample(channel,time){
  }
  return keys.at(-1)[1];
 }
-const state={yaw:rad(-35),pitch:rad(28),distance:8.4,time:0,motion:true,variant:1,clip:"idle",compare:false,hands:false,glow:true};
+const state={yaw:rad(-35),pitch:rad(28),distance:8.4,time:0,motion:true,variant:1,clip:"idle",compare:false,hands:false,glow:true,speed:1,view:'hero',player:1};
+// Where a player stands for each creature's attack (blocks): in front of the crawler and brute,
+// off the archer's left shoulder along its arrow. Eyes are 1.62 blocks up.
+const PLAYER=[{at:[.1,0,-1.8],look:.35},{at:[-8,0,-1.0],look:1.35},{at:[.35,0,-3],look:1.25}];
+const notes=payload.notes||{},tonight=payload.tonight||[];
+const noteFor=(variant,clip)=>(notes[variant]||{})[clip];
 const vertex=`#version 300 es
 in vec3 pos;in vec3 normal;in vec2 uv;uniform mat4 vp;out vec3 n;out vec2 texUv;out float height;
 void main(){gl_Position=vp*vec4(pos,1.);n=normal;texUv=uv;height=pos.y;}`;
@@ -97,40 +102,78 @@ function draw(){
  const follow=!state.compare&&rootMotion?sample(rootMotion,state.time)[2]/16:0;
  let at=[0,crawler?.5:state.compare?1.0:state.variant===2?1.1:1.0,(crawler?-.15:0)+follow];
  if(state.hands&&!state.compare){const mats=pose(variants[state.variant],state.time,state.clip);const a=transform(mats.left_hand,[0,0,0]),b=transform(mats.right_hand,[0,0,0]);at=a.map((v,i)=>(v+b[i])/32);}
- const d=(state.hands&&!state.compare?(state.variant===0?1.65:2.05):state.compare?7.2:state.distance*.5)/Math.min(1,w/h),eye=[at[0]+Math.sin(state.yaw)*Math.cos(state.pitch)*d,at[1]+Math.sin(state.pitch)*d,at[2]-Math.cos(state.yaw)*Math.cos(state.pitch)*d];
+ const d=(state.hands&&!state.compare?(state.variant===0?1.65:2.05):state.compare?7.2:state.distance*.5)/Math.min(1,w/h);let eye=[at[0]+Math.sin(state.yaw)*Math.cos(state.pitch)*d,at[1]+Math.sin(state.pitch)*d,at[2]-Math.cos(state.yaw)*Math.cos(state.pitch)*d],fov=38;
+ if(state.view==='player'&&!state.compare&&!state.hands){const p=PLAYER[state.variant];at=[0,p.look,follow];eye=[p.at[0]*state.player,1.62,p.at[2]*state.player+follow];fov=60;}
 
- gl.useProgram(pipeline);gl.bindVertexArray(vao);gl.uniformMatrix4fv(uniforms.vp,false,M.mul(M.perspective(rad(38),w/h,.01,50),M.lookAt(eye,at)));gl.activeTexture(gl.TEXTURE0);gl.uniform1i(uniforms.tex,0);scene(state.time);gl.bindVertexArray(null);
+ gl.useProgram(pipeline);gl.bindVertexArray(vao);gl.uniformMatrix4fv(uniforms.vp,false,M.mul(M.perspective(rad(fov),w/h,.01,80),M.lookAt(eye,at)));gl.activeTexture(gl.TEXTURE0);gl.uniform1i(uniforms.tex,0);scene(state.time);gl.bindVertexArray(null);
  document.querySelector('#timeline').value=state.time;
- document.querySelector('#phase').textContent=state.compare?'Same scale · Crawler / Archer / Brute':state.clip==='death'?(state.variant===0?(state.time<.2?'Jolt':state.time<.9?'Collapse':'Still'):(state.time<.15?'Recoil':state.time<.6?'Knees buckle':state.time<1.2?'Topple':'Still')):state.variant===0?(state.clip==='attack'?(state.time<.44?'Rear up':state.time<.62?'Claw rake':'Recover'):state.clip==='walk'?'Dragging':state.clip==='rise'?(state.time<.75?'Claws break through':'Hauling free'):'Idle'):state.clip==='attack'?(state.variant===1?(state.time<.65?'Load arrow':state.time<2?'Extend & draw':state.time<2.6?'Aim':state.time<2.95?'Release':'Lower bow'):(state.time<1.7?'Heavy windup':state.time<2.6?'Downward strike':'Recover')):state.clip==='walk'?'Walking':state.clip==='rise'?(state.time<.9?'Emerging':state.time<2.6?'Hauling upright':'Standing'):'Idle';
+ const note=!state.compare&&noteFor(state.variant,state.clip);
+ if(note){const beat=note.beats.filter(x=>x[0]<=state.time+1e-6).at(-1);document.querySelector('#phase').textContent=(beat?beat[1]:'')+' · '+state.time.toFixed(2)+' s';
+  document.querySelectorAll('#rework .beats li').forEach(li=>li.classList.toggle('now',beat&&+li.dataset.t===beat[0]));
+  const hit=(note.server||[]).find(x=>Math.abs(x[0]-state.time)<.12);const m=document.querySelector('#marker');m.hidden=!hit;if(hit)m.textContent=hit[1]+' · '+hit[0].toFixed(2)+' s';return;}
+ document.querySelector('#marker').hidden=true;
+ document.querySelector('#phase').textContent=state.compare?'Same scale · Crawler / Archer / Brute':state.clip==='walk'?(state.variant===0?'Dragging':'Walking'):'Idle';
 }
 function sync(){const b=document.querySelector('#motion');b.textContent=state.motion?'Pause':'Play';b.classList.toggle('active',state.motion);}
 function controls(){
  let drag=null;canvas.onpointerdown=e=>{drag=[e.clientX,e.clientY];canvas.setPointerCapture(e.pointerId);canvas.classList.add('dragging');};
- canvas.onpointermove=e=>{if(!drag)return;state.yaw-=(e.clientX-drag[0])*.008;state.pitch=Math.max(.05,Math.min(1.5,state.pitch+(e.clientY-drag[1])*.008));drag=[e.clientX,e.clientY];document.querySelectorAll('[data-view]').forEach(b=>b.classList.remove('active'));};
+ canvas.onpointermove=e=>{if(!drag)return;state.yaw-=(e.clientX-drag[0])*.008;state.pitch=Math.max(.05,Math.min(1.5,state.pitch+(e.clientY-drag[1])*.008));drag=[e.clientX,e.clientY];state.view='orbit';document.querySelectorAll('[data-view]').forEach(b=>b.classList.remove('active'));};
  const release=()=>{drag=null;canvas.classList.remove('dragging');};canvas.onpointerup=release;canvas.onpointercancel=release;
- canvas.onwheel=e=>{e.preventDefault();state.distance=Math.max(3,Math.min(14,state.distance*Math.exp(e.deltaY*.0012)));};
- const views={hero:[-35,28],front:[0,8],top:[-15,78],side:[90,12]};document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{[state.yaw,state.pitch]=views[b.dataset.view].map(rad);document.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('active',x===b));});
+ canvas.onwheel=e=>{e.preventDefault();if(state.view==='player')state.player=Math.max(.4,Math.min(2.5,state.player*Math.exp(e.deltaY*.0012)));else state.distance=Math.max(3,Math.min(14,state.distance*Math.exp(e.deltaY*.0012)));};
+ const views={hero:[-35,28],front:[0,8],top:[-15,78],side:[90,12]};document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{state.view=b.dataset.view;if(views[state.view])[state.yaw,state.pitch]=views[state.view].map(rad);else state.player=1;document.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('active',x===b));});
+ document.querySelectorAll('[data-speed]').forEach(b=>b.onclick=()=>{state.speed=+b.dataset.speed;document.querySelectorAll('[data-speed]').forEach(x=>x.classList.toggle('active',x===b));});
  document.querySelector('#motion').onclick=()=>{state.motion=!state.motion;sync();};document.querySelector('#replay').onclick=()=>{state.time=0;state.motion=true;sync();};
  document.querySelectorAll('[data-creature]').forEach(b=>b.onclick=()=>selectCreature(+b.dataset.creature));
- document.querySelectorAll('[data-clip]').forEach(b=>b.onclick=()=>{state.clip=b.dataset.clip;state.time=0;state.motion=true;sync();updatePanel();});
+ document.querySelectorAll('[data-clip]').forEach(b=>b.onclick=()=>selectClip(b.dataset.clip));
  document.querySelector('#compare').onclick=()=>{state.compare=!state.compare;if(state.compare){state.yaw=0;state.pitch=rad(14);}updatePanel();};
  document.querySelector('#timeline').oninput=e=>{state.time=+e.target.value;state.motion=false;sync();};
  document.querySelector('#hands').onclick=e=>{state.hands=!state.hands;e.currentTarget.classList.toggle('active',state.hands);};
  document.querySelector('#glow').onclick=e=>{state.glow=!state.glow;e.currentTarget.classList.toggle('active',state.glow);};
 }
 const descriptions=[
- {name:'Hollow Crawler',text:'The approved legless skeleton. Slender arms pull the rib cage forward while the pelvis trails along the ground.',silhouette:'Human skull, open ribs, and outward-bending elbows.',motion:'Idle breathing and a restless claw; the crawl pulls with staggered finger grips; rise bursts both claws out of the ground first; the claw lunge rears up and rakes down; death jolts, collapses and rolls.'},
- {name:'Risen Archer',text:'A lean skeleton in the remnants of a burial hood. A worn wooden bow and a small quiver keep its ranged role readable.',silhouette:'Upright anatomy, exposed ribs, narrow limbs, and frayed olive-gray cloth.',motion:'Inspect the measured walk, then Draw & fire: the arrow is loaded, the bow arm extends, and three fingers draw to the cheek before releasing. On death it drops the bow, buckles and topples face down.'},
- {name:'Hunched Brute',text:'A broad, stooped skeleton with an uneven spine, one heavier arm, a worn club, and a torn burial mantle.',silhouette:'Wider ribs and pelvis, a forward-set skull, old iron bindings, and a worn wooden club.',motion:'An uneven walk favors one leg. The strike has a long windup, a forceful downward swing, and a slow recovery. On death it buckles and topples, the club rolling out beside its arm.'}
+ {name:'Hollow Crawler',text:'The approved legless skeleton. Slender arms pull the rib cage forward while the pelvis trails along the ground.',silhouette:'Human skull, open ribs, and outward-bending elbows.',motion:'Idle breathing and a restless claw; the crawl pulls with staggered finger grips. Reworked: a desperate lunge that rakes and drags its claws, a scrabbling rise out of the ground, and death throes before it goes limp.'},
+ {name:'Risen Archer',text:'A lean skeleton in the remnants of a burial hood. A worn wooden bow and a small quiver keep its ranged role readable.',silhouette:'Upright anatomy, exposed ribs, narrow limbs, and frayed olive-gray cloth.',motion:'A measured walk. Reworked: a hunter\'s draw from the quiver with a held follow-through, a rise that keeps the bow clear of the dirt, a puppet-like crumple on death, and a watchful idle.'},
+ {name:'Hunched Brute',text:'A broad, stooped skeleton with an uneven spine, one heavier arm, a spiked maul, and a torn burial mantle.',silhouette:'Wider ribs and pelvis, a forward-set skull, old iron bindings, and a long spiked maul.',motion:'An uneven walk favors one leg. Reworked: a slow heave, a held overhead maul and a stepping blow that buries itself in the ground; a rise that shoulders the maul; a fall like a felled tree; a heavy, breathing idle.'}
 ];
-function selectCreature(index){state.variant=index;state.clip='idle';state.time=0;state.compare=false;state.hands=false;document.querySelector('#hands').classList.remove('active');state.distance=[5.8,8.4,9.5][index];state.motion=true;state.pitch=rad(index===0?28:14);sync();updatePanel();}
+function selectCreature(index,clip='idle'){state.variant=index;state.clip=clip;state.time=0;state.compare=false;state.hands=false;document.querySelector('#hands').classList.remove('active');state.distance=[5.8,8.4,9.5][index];state.motion=true;if(state.view!=='player')state.pitch=rad(index===0?28:14);sync();updatePanel();}
+function selectClip(clip){state.clip=clip;state.time=0;state.motion=true;sync();updatePanel();}
+const clipNames=[{attack:'Claw lunge',walk:'Crawl'},{attack:'Draw & fire'},{attack:'Club strike'}];
+const clipName=(variant,clip)=>clipNames[variant][clip]||clip[0].toUpperCase()+clip.slice(1);
+// Links such as #brute/attack/2.15/player open a clip paused at a moment, from a chosen camera.
+function openHash(){
+ const [creature,clip,time,view]=decodeURIComponent(location.hash.slice(1)).split('/');const index=['crawler','archer','brute'].indexOf(creature);
+ if(index<0)return;selectCreature(index,variants[index].clips[clip]?clip:'idle');
+ if(view)document.querySelector(`[data-view="${view}"]`)?.click();
+ if(time!==undefined&&time!==''){state.time=Math.max(0,Math.min(+time||0,variants[index].clips[state.clip].animation_length));state.motion=false;sync();}
+}
+function buildTonight(){
+ const bar=document.querySelector('#tonight');if(!tonight.length){bar.hidden=true;return;}
+ bar.insertAdjacentHTML('beforeend','<strong>Reworked tonight</strong>');
+ for(const t of tonight){const b=document.createElement('button');b.dataset.tonight=t.variant+':'+t.clip;b.textContent=['Crawler','Archer','Brute'][t.variant]+' · '+clipName(t.variant,t.clip);b.onclick=()=>selectCreature(t.variant,t.clip);bar.append(b);}
+ const s=document.createElement('small');s.textContent=payload.tonightNote||'';bar.append(s);
+}
+function renderRework(){
+ const box=document.querySelector('#rework'),note=!state.compare&&noteFor(state.variant,state.clip);box.innerHTML='';
+ if(!note){if(!state.compare){const p=document.createElement('p');p.className='unchanged';p.textContent=clipName(state.variant,state.clip)+': not reworked tonight (the approved study as before).';box.append(p);}return;}
+ const card=document.createElement('div');card.className='rework';
+ card.innerHTML='<span class="label">Reworked tonight</span><h3></h3><p></p><ul class="beats"></ul>';
+ card.querySelector('h3').textContent=clipName(state.variant,state.clip)+' · '+variants[state.variant].clips[state.clip].animation_length.toFixed(2)+' s';
+ card.querySelector('p').textContent=note.summary;
+ const list=card.querySelector('.beats');
+ const rows=[...note.beats.map(b=>[b[0],b[1],false]),...(note.server||[]).map(b=>[b[0],b[1],true])].sort((a,b)=>a[0]-b[0]||a[2]-b[2]);
+ for(const [t,label,server] of rows){const li=document.createElement('li');li.dataset.t=t;if(server)li.className='server';li.innerHTML='<time></time><span></span>';li.querySelector('time').textContent=t.toFixed(2)+' s';li.querySelector('span').textContent=(server?'Server: ':'')+label;li.onclick=()=>{state.time=t;state.motion=false;sync();};list.append(li);}
+ box.append(card);
+}
 function updatePanel(){
  const d=descriptions[state.variant];document.querySelector('h1').textContent=state.compare?'The Hollow Army':d.name;
  document.querySelector('#creature-title').textContent=state.compare?'The Hollow Army':d.name;document.querySelector('#description').textContent=state.compare?'Crawler, archer, and brute at the same scale. Choose a creature to inspect its model and animations.':d.text;
  document.querySelector('#silhouette').textContent=state.compare?'A low crawler, a lean upright archer, and a broader stooped brute.':d.silhouette;document.querySelector('#movement').textContent=state.compare?'Select a creature for Idle, Walk, Rise, its attack, and Death.':d.motion;
  document.querySelector('#timeline').max=variants[state.variant].clips[state.clip].animation_length;
  document.querySelectorAll('[data-creature]').forEach(b=>b.classList.toggle('active',+b.dataset.creature===state.variant&&!state.compare));
- document.querySelectorAll('[data-clip]').forEach(b=>{b.hidden=state.compare;b.classList.toggle('active',b.dataset.clip===state.clip);if(b.dataset.clip==='attack')b.textContent=['Claw lunge','Draw & fire','Club strike'][state.variant];if(b.dataset.clip==='walk')b.textContent=state.variant===0?'Crawl':'Walk';});
+ document.querySelectorAll('[data-clip]').forEach(b=>{b.hidden=state.compare;b.classList.toggle('active',b.dataset.clip===state.clip);b.textContent=clipName(state.variant,b.dataset.clip);b.classList.toggle('new',!!noteFor(state.variant,b.dataset.clip));});
+ document.querySelectorAll('[data-creature]').forEach(b=>{b.classList.toggle('has-new',!!notes[b.dataset.creature]);b.title=notes[b.dataset.creature]?'Has clips reworked tonight':'';});
+ document.querySelectorAll('[data-tonight]').forEach(b=>b.classList.toggle('active',!state.compare&&b.dataset.tonight===state.variant+':'+state.clip));
+ renderRework();
  document.querySelector('#compare').classList.toggle('active',state.compare);
  canvas.setAttribute('aria-label',state.compare?'Three skeletal creatures at the same scale':'Animated '+d.name);
 }
@@ -141,6 +184,6 @@ async function main(){
  vao=gl.createVertexArray();buffer=gl.createBuffer();gl.bindVertexArray(vao);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);for(const [name,size,off]of [['pos',3,0],['normal',3,3],['uv',2,6]]){const loc=gl.getAttribLocation(pipeline,name);gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,size,gl.FLOAT,false,32,off*4);}gl.bindVertexArray(null);
  const pixel=document.createElement('canvas');pixel.width=pixel.height=1;pixel.getContext('2d').fillStyle='white';pixel.getContext('2d').fillRect(0,0,1,1);white=upload(pixel);
  variants=await Promise.all(payload.variants.map(async v=>{const g=v.geo['minecraft:geometry'][0],skin=await loadImage(v.images[v.stem+'.png']),glow=await loadImage(v.images[v.stem+'_glowmask.png']);return {bones:g.bones,tw:g.description.texture_width,th:g.description.texture_height,clips:v.clips,texture:upload(skin),glow:upload(glow)};}));
- controls();updatePanel();document.body.dataset.ready='true';let previous=performance.now();function frame(now){const dt=Math.min(.1,(now-previous)/1000);previous=now;if(state.motion){state.time+=dt;const duration=state.compare?4:variants[state.variant].clips[state.clip].animation_length;if(state.time>duration){if(!state.compare&&!variants[state.variant].clips[state.clip].loop){state.time=duration;state.motion=false;sync();}else state.time=state.time-duration;}}draw();requestAnimationFrame(frame);}requestAnimationFrame(frame);
+ controls();buildTonight();updatePanel();openHash();window.addEventListener('hashchange',openHash);document.body.dataset.ready='true';let previous=performance.now();function frame(now){const dt=Math.min(.1,(now-previous)/1000);previous=now;if(state.motion){state.time+=dt*state.speed;const duration=state.compare?4:variants[state.variant].clips[state.clip].animation_length;if(state.time>duration){if(!state.compare&&!variants[state.variant].clips[state.clip].loop){state.time=duration;state.motion=false;sync();}else state.time=state.time-duration;}}draw();requestAnimationFrame(frame);}requestAnimationFrame(frame);
 }
 main().catch(e=>{document.body.dataset.error=e.message;document.querySelector('aside').insertAdjacentHTML('afterbegin','<p id="error"></p>');document.querySelector('#error').textContent=e.message;console.error(e);});

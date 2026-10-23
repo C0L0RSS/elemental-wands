@@ -13,6 +13,11 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 OUT = HERE / 'candidate'
 PREVIEW = ROOT / '.local-previews/undead'
+# Clips reworked in the latest session, highlighted in the preview (variant index, clip).
+TONIGHT = [(2, 'attack'), (0, 'attack'), (1, 'attack'), (0, 'rise'), (2, 'rise'), (1, 'rise'),
+           (0, 'death'), (2, 'death'), (1, 'death'), (2, 'idle'), (1, 'idle')]
+TONIGHT_NOTE = ('Night of 22 Oct: weight, anticipation and follow-through pass. Server hit and release '
+                'frames, clip lengths and the walks are unchanged. Use ½× or ¼× and Player eye to judge the blows.')
 
 
 def make_variant(index):
@@ -156,8 +161,6 @@ def make_variant(index):
     def ease(v):
         v = max(0, min(1, v))
         return v*v*(3-2*v)
-    def mix(a, b, t):
-        return [a[i]+(b[i]-a[i])*t for i in range(len(a))] if isinstance(a, list) else a+(b-a)*t
     def norm(v):
         length=math.sqrt(sum(x*x for x in v))
         return [x/length for x in v]
@@ -238,68 +241,19 @@ def make_variant(index):
             p['hands'][side]=hand_state(pos,fingers,5+8*flight,(-12+18*flight,20+15*flight,28-15*flight),side=side)
         return p
 
-    def rise(t):
-        p=base();body=ease((t-.35)/1.35)
-        p['root']=[0,-11*(1-body),0]
-        p['torso_rot']=[-12*(1-body)*ease(t/.5),0,0]
-        p['skull']=[-18*(1-body),6*math.sin(t*4),0]
-        p['jaw']=[4+12*math.sin(min(1,t/1.3)*math.pi),0,0]
-        for side in (-1,1):
-            # Each claw bursts up out of the ground and slams down before the body hauls.
-            planted=.5 if side>0 else .72
-            home=[rest[side][0],.55,rest[side][2]]
-            burst=ease((t-planted+.45)/.33)
-            world=mix([side*4.6,-5,home[2]+3],[side*5,1.3,home[2]+1],burst)
-            world=mix(world,home,ease((t-planted+.12)/.12))
-            pos=[world[0],world[1]-p['root'][1],world[2]]
-            flight=1-ease((t-planted)/.15)
-            fingers=[grip(.5+.5*math.sin(t*5-f*.7),flight) for f in range(4)]
-            p['hands'][side]=hand_state(pos,fingers,5+8*flight,side=side)
-        return p
-
-    def attack(t):
-        # Rear up, rake the right claw down into the target (hit at ~0.58s), recover.
-        p=base();rear=ease(t/.42);strike=ease((t-.44)/.16);rec=ease((t-.72)/.6)
-        rx=mix(mix(0,-14,rear),7,strike);p['torso_rot']=[mix(rx,0,rec),0,0]
-        p['torso_pos']=mix(mix(mix([0,0,0],[0,1.6,.4],rear),[0,-.3,-2.4],strike),[0,0,0],rec)
-        p['skull']=[mix(mix(mix(0,-14,rear),10,strike),0,rec),0,0]
-        p['jaw']=[mix(mix(mix(3,24,rear),2,ease((t-.56)/.06)),3,rec),0,0]
-        left=mix(rest[-1],[-4.8,.55,-9],ease(t/.3));left[1]+=.8*math.sin(min(1,t/.3)*math.pi)
-        left=mix(left,rest[-1],rec)
-        p['hands'][-1]=hand_state(left,[grip(1,0) for f in range(4)],side=-1)
-        struck=[3.6,.7,-15+1.2*ease((t-.6)/.12)]
-        right=mix(mix(rest[1],[4.9,9.2,-6.5],rear),struck,strike)
-        right=mix(right,rest[1],rec);right[1]+=2.2*math.sin(rec*math.pi)
-        opened=[grip(.2,1) for f in range(4)]
-        raked=[[-8,70,50] for f in range(4)]
-        fingers=[mix(mix(mix(grip(.5,0),opened[f],rear),raked[f],strike),grip(.5,0),rec) for f in range(4)]
-        pitch=mix(mix(mix(0,-45,rear),20,strike),0,rec)
-        p['hands'][1]=hand_state(right,fingers,5+8*rear*(1-strike),rot=(pitch,0,0),side=1)
-        return p
-
-    def death(t):
-        # A jolt, then the arms give out and the frame drops, rolls and settles.
-        p=base();jolt=ease(t/.18);fall=ease((t-.2)/.6)
-        bounce=.16*math.sin(max(0,min(1,(t-.8)/.35))*math.pi)
-        p['torso_rot']=[mix(mix(0,-9,jolt),5,fall),0,9*fall]
-        p['torso_pos']=[0,mix(mix(0,.6,jolt),-1,fall)+bounce,mix(0,.8,jolt)*(1-fall)]
-        p['skull']=mix(mix([0,0,0],[-16,0,0],jolt),[16,24,26],fall)
-        p['jaw']=[mix(mix(3,20,jolt),26,fall),0,0]
-        for side in (-1,1):
-            target=[-6.6,.5,-10.5] if side<0 else [6.8,.5,-6.8]
-            pos=mix(rest[side],target,fall);pos[1]+=1.3*math.sin(min(1,t/.5)*math.pi)*(1-fall)
-            fingers=[mix(grip(.5,.8*jolt),[-4,14+2*f,10],fall) for f in range(4)]
-            p['hands'][side]=hand_state(pos,fingers,5+6*jolt,rot=(-15*jolt*(1-fall),12*fall,0),side=side)
-        return p
-
+    # Rise, attack and death are authored in crawler.py with the same pose helpers.
+    import crawler
+    kit={'base':base,'hand_state':hand_state,'grip':grip,'rest':rest,'torso_point':torso_point}
     clips={}
-    for name,length,loop,sampler in (('idle',4,True,idle),('walk',CRAWL,True,walk),('rise',1.9,False,rise),
-                                      ('attack',1.4,False,attack),('death',1.6,False,death)):
+    for name,length,loop,sampler in (('idle',4,True,idle),('walk',CRAWL,True,walk),('rise',1.9,False,None),
+                                      ('attack',1.4,False,None),('death',1.6,False,None)):
+        extra=[]
+        if name in crawler.REWORKED:sampler,extra=crawler.REWORKED[name](kit)
         animation={'animation_length':length,'loop':loop,'bones':{}}
         def put(bone,kind,t,value):
             animation['bones'].setdefault(bone,{}).setdefault(kind,{})[str(round(t,4))]=[round(v,4) for v in value]
-        for frame in range(round(length*30)+1):
-            t=frame/30;p=sampler(t)
+        for t in sorted(set([frame/30 for frame in range(round(length*30)+1)]+extra)):
+            p=sampler(t)
             put('root','position',t,p['root']);put('torso','position',t,p['torso_pos']);put('torso','rotation',t,p['torso_rot'])
             put('skull','rotation',t,p['skull']);put('jaw','rotation',t,p['jaw'])
             for side,label in ((-1,'left'),(1,'right')):
@@ -332,6 +286,11 @@ if __name__ == '__main__':
     from upright import build
     crawler = make_variant(0)
     payload = {'variants': [crawler, build(crawler, OUT), build(crawler, OUT, brute=True)]}
+    # Review notes for reworked clips, and tonight's set for the banner (most-seen first).
+    import crawler as crawler_clips, archer as archer_clips, brute as brute_clips
+    payload['notes'] = {i: module.NOTES for i, module in enumerate((crawler_clips, archer_clips, brute_clips))}
+    payload['tonight'] = [{'variant': v, 'clip': c} for v, c in TONIGHT]
+    payload['tonightNote'] = TONIGHT_NOTE
     page = (HERE / 'viewer.template.html').read_text()
     page = page.replace('<!-- MODEL_DATA -->', '<script id="model-data" type="application/json">'
                         + json.dumps(payload).replace('</', '<\\/') + '</script>')

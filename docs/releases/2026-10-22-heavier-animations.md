@@ -1,4 +1,10 @@
-# Heavier, more readable Necromancer and undead animations
+# Heavier, more readable boss and undead animations
+
+- **The Fractured Guardian** moves like a slow stone brawler: every attack loads slowly with
+  its feet braced, the blow lands fast, and it takes a long time to recover. Its slams, beam,
+  fan, core pulse, awakening, phase change, leap, idle and walk are all reworked; the throws
+  and the intro are unchanged. Attack timings are the same as before. Its chest now stays shut
+  when the shell breaks: the core throbs inside instead of coming out.
 
 - **The Hollow Necromancer** leans on its staff and hoists it with every soul bolt, which now
   thrusts as each bolt leaves. It stoops and wrenches its fist shut to raise the hands, whirls

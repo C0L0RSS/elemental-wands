@@ -59,6 +59,12 @@ It records known verification limits; it is not a fresh installation receipt.
       the slams' last-tick drop reads as a hit or a pop.
   - See the [summit reference](reference/storm-summit.md) and [testing guide](reference/testing.md)
     for commands and verification boundaries.
+- **Heavier animation pass (October 22):** 20 Necromancer clips and 11 hollow undead clips
+  were reworked for weight and readable windups, keeping every clip length and server timing.
+  Approved in the browser previews on October 23; pending in Lunar. The Guardian's pass is still
+  in review. Ideas that need gameplay changes: the archer's 83° snap turn before it shoots, the
+  Necromancer's walk playback speed, an earlier `perch_cast` trigger, its drain arm (needs the
+  drain socket regenerated) and the colossus bolt origin.
 - **Hollow Necromancer (in progress):** reworked after the first co-op playtest (duels and
   sieges, heavier telegraphed hits) and again after a solo playtest where phase two felt
   easier than phase one and the siege waves were easy. Sieges now bring larger waves,

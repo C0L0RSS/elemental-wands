@@ -5,6 +5,7 @@ are not claims of public publication. Older entries describe what changed then;
 use [current guides](../README.md) for today’s behavior and [status](../STATUS.md)
 for outstanding verification. Detailed historical reports are optional background.
 
+- [2026-10-22 — Heavier, more readable Necromancer and undead animations](2026-10-22-heavier-animations.md)
 - [2026-10-21 — Storm Roc: heavier, more natural movement](2026-10-21-storm-roc-flight.md)
 - [2026-10-19 — Storm Roc: a new look](2026-10-19-storm-roc-new-look.md)
 - [2026-10-14 — Storm Roc: the storm phase](2026-10-14-storm-roc-phase-two.md)

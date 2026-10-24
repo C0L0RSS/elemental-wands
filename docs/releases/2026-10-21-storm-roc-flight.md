@@ -30,3 +30,5 @@
 - Its head searches the ground in held glances with deliberate turns and sometimes watches a player below.
 - The legs stay tucked smoothly through the flight loop, including its first few ticks.
 - Small wing and tail adjustments keep the glide alive between strokes.
+- Perched on a spire it turns its head slowly and heavily from look to look, rouses its
+  feathers and stretches its huge wings out over its back before folding them home.

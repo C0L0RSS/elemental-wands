@@ -29,12 +29,14 @@ KNEADS = (('right',2.65,3.3),('left',6.25,6.9))
 GUARD_GLANCES = ((.3,(2,18,6)),(1.05,(-3,-14,-4)),(1.62,(-4,-20,-8)),(1.74,(-5,-31,-15)),
     (2.4,(0,4,0)),(3.15,(3,13,10)),(3.6,(0,0,0)),(5.35,(-2,-6,-24),4),(5.95,(4,22,8)),
     (6.5,(0,9,-3)),(7.2,(0,0,0)),(8.1,(-3,-16,-6)),(9.05,(0,0,0)))
-# The perched idle's loop and its head's looks: aside, a stutter the other way, a one-eyed cock down
-# at the summit (crest up), a bob, forward through the rouse and the stretch, one look down after it.
-# Its yaw stays within 45 degrees, so the game's gaze has room to turn it toward a challenger.
-PERCHED = 10.8
-PERCH_GLANCES = ((.55,(2,34,5)),(1.9,(-3,-28,-6)),(1.98,(-5,-40,-12)),(3.0,(10,-20,26),4),
-    (3.75,(0,0,0)),(3.86,(11,0,0)),(4.0,(0,0,0)),(5.75,(-6,0,0)),(7.95,(0,0,0)),(8.95,(5,26,6)),(9.75,(0,0,0)))
+# The perched idle's loop and its head's looks: aside, a slow turn the other way, a one-eyed cock down
+# at the summit (crest up), forward through the rouse and the stretch, one look down after it. Each
+# turn takes PERCH_TURN times a brawl twitch (a 76-degree turn about half a second), as befits so
+# heavy a bird, and lands with only a small shiver. Its yaw stays within 45 degrees, so the game's
+# gaze has room to turn it toward a challenger.
+PERCHED, PERCH_TURN = 10.8, 2.6
+PERCH_GLANCES = ((.55,(2,34,5)),(1.9,(-5,-40,-12)),(3.0,(10,-20,26),2),(3.75,(0,0,0)),
+    (5.75,(-6,0,0)),(7.95,(0,0,0)),(8.95,(5,26,6)),(9.75,(0,0,0)))
 # Thunder Bite: the bill snaps shut on the air at player height at 2.30 (tick 46); the standing
 # bite's impact is the peck's strike pose, so it reaches as far. The server's aim follows its prey
 # until 1.20. When its prey is out of reach, it plays bite_leap instead from the lock on, slower as
@@ -524,8 +526,9 @@ def main():
     plant(perch,perch_feet)
     def perched(t):
         """Its idle on a spire. Slow, uneven breaths and its weight rocking from foot to foot, held
-        a while on each, never stop. Over them its head holds dead still and snaps from look to look,
-        electric: aside, a stutter the other way, a one-eyed cock down at the summit, a bob. It rouses,
+        a while on each, never stop. Over them its head holds dead still, then turns heavily from look
+        to look, landing with a small shiver: aside, the other way, a one-eyed cock down at the summit.
+        It rouses,
         crest flaring, shaking its whole plumage, then stretches slowly as a great eagle does: its wings
         swing out from its sides, unfold from the shoulder out and rise half open over its back, hold,
         and fold back in, the hands first. The game resumes this loop where it left off."""
@@ -542,7 +545,7 @@ def main():
         body['rotation']+=np.array([-1.6*breath+2*flutter+6*reach,0,2*weight+1.5*flutter])
         p['neck_base']['rotation'][0]+=-1.2*breath-5*reach
         # Its head holds its own level and snaps between looks; the rouse shivers through it.
-        look=twitch(t,PERCH_GLANCES,P)
+        look=twitch(t,PERCH_GLANCES,P,spark=1.2,hz=12,duration_scale=PERCH_TURN)
         head(p,look[0]-2*breath,look[1],look[2]+3*flutter)
         # Wings out of the fold as a bird opens them: they swing out from its sides into a Z laid flat,
         # unfold from the shoulder out, the hands last, and rise; then back the same way, hands first.

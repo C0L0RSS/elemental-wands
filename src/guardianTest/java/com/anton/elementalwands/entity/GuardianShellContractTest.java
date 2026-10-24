@@ -21,14 +21,6 @@ public final class GuardianShellContractTest {
                 && GuardianShellRules.cracks(1225, 1400, false) == 1 && GuardianShellRules.cracks(1050, 1400, false) == 2
                 && GuardianShellRules.cracks(875, 1400, false) == 3 && GuardianShellRules.cracks(700, 1400, false) == 3
                 && GuardianShellRules.cracks(1400, 1400, true) == 3, "Crack stages no longer track the way to the break");
-        require(GuardianShellRules.openness(-1, false) == 0 && GuardianShellRules.openness(40, false) == 0,
-                "Ribs opened before the break");
-        require(GuardianShellRules.openness(0, true) == 0 && GuardianShellRules.openness(GuardianPhaseRules.BURST, true) == 0,
-                "Ribs opened before the burst");
-        require(GuardianShellRules.openness(GuardianPhaseRules.BURST + GuardianShellRules.RIB_OPEN_TICKS, true) == 1
-                && GuardianShellRules.openness(-1, true) == 1, "Ribs did not stay open after the break");
-        require(GuardianPhaseRules.BURST + GuardianShellRules.RIB_OPEN_TICKS <= GuardianPhaseRules.TRANSITION_TICKS,
-                "Ribs still opening when the fight resumes");
         require(GuardianPhaseRules.BURST >= 30, "The break's warning is shorter than a second and a half");
 
         // The pull, integrated like vanilla ground movement (input + pull, then 0.546 friction).
@@ -90,7 +82,7 @@ public final class GuardianShellContractTest {
         require(GuardianCombatRules.fistContact(Vec3d.ZERO, 0, body.offset(ahead.multiply(-1))), "Fists missed a player at its feet");
         require(!GuardianCombatRules.fistContact(Vec3d.ZERO, 0, body.offset(ahead.multiply(6))), "Fists reached too far");
         require(!GuardianCombatRules.fistContact(Vec3d.ZERO, 0, body.offset(ahead.multiply(3)).offset(0, 4, 0)), "Fists hit a player high above");
-        System.out.println("Guardian shell checks passed: party health, burst envelope, half-health gate, crack stages, rib opening, "
+        System.out.println("Guardian shell checks passed: party health, burst envelope, half-health gate, crack stages, "
                 + "pull escape by walking/sprinting, blast edge, volley sockets, pressure cap and difficulty, delayed slams, fist reach.");
     }
 

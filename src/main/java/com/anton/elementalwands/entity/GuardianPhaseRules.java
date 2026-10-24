@@ -2,7 +2,7 @@ package com.anton.elementalwands.entity;
 
 /** Shared phase timing: authored animation seconds and server impacts use this same clock. */
 public final class GuardianPhaseRules {
-    /** The shell break: a telegraphed stagger, a burst at {@link #BURST}, then the ribs swing open. */
+    /** The shell break: a telegraphed stagger, a burst at {@link #BURST}, then a roar as it settles. */
     public static final int TRANSITION_TICKS = 64, BURST = 32;
     public static final double THRESHOLD = .50, BURST_RADIUS = 6;
     public static final float BURST_DAMAGE = 10;

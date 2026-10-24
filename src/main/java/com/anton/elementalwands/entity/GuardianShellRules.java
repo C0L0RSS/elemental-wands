@@ -2,11 +2,9 @@ package com.anton.elementalwands.entity;
 
 /**
  * Health and the stone shell. Phase one wears the shell toward the break (visible crack stages);
- * the break at half health is the phase change, and the ribs stay open for the rest of the fight.
+ * the break at half health is the phase change. The chest stays shut: the core never comes out.
  */
 public final class GuardianShellRules {
-    /** Ticks for the ribs to swing open after the break's burst. */
-    public static final int RIB_OPEN_TICKS = 24;
     /** Height of the core above its feet: where the burst and the pulse come from. */
     public static final double CORE_HEIGHT = 3.3;
     private GuardianShellRules() {}
@@ -24,12 +22,5 @@ public final class GuardianShellRules {
         if (broken) return 3;
         float worn = (1 - health / Math.max(1, maximum)) / (1 - (float)GuardianPhaseRules.THRESHOLD);
         return Math.clamp((int)Math.floor(worn * 4 + 1e-4f), 0, 3);
-    }
-    /** Rib openness: shut through phase one, swinging open after the burst, then open for good. */
-    public static float openness(float phaseTicks, boolean broken) {
-        if (!broken) return 0;
-        if (phaseTicks < 0) return 1;
-        float u = Math.clamp((phaseTicks - GuardianPhaseRules.BURST) / RIB_OPEN_TICKS, 0, 1);
-        return u * u * (3 - 2 * u);
     }
 }

@@ -226,8 +226,7 @@ It records known verification limits; it is not a fresh installation receipt.
   extra player, a starting estimate. Contract checks and the shell, phase, combat, cover,
   Nature, wall, Wind and Space server fixtures cover the mechanics. Pending: a solo and co-op
   Lunar playtest with `/ew guardian log on` to tune health and fight length. Also pending: an
-  in-game look at the core pulse clip, the held slams, the ribs staying open (clipping against the
-  slam and throw), the pull's feel and the ring's readability. The pull is applied by each
+  in-game look at the core pulse clip, the held slams, the pull's feel and the ring's readability. The pull is applied by each
   client, so a fixture with fake players cannot show it; it needs a real client.
 - **Guardian/church:** the fight moved from the sky floor into its own dimension, the
   Shattered Nave, on September 29; the user approved the hall in the browser preview. The

@@ -123,7 +123,7 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
         dataTracker.set(PHASE_START, getEntityWorld().getTime());
         updateCracks();
     }
-    /** Mid-break: the stagger, burst and ribs opening, during which it cannot be hurt. */
+    /** Mid-break: the stagger, burst and roar, during which it cannot be hurt. */
     public boolean isBreaking() { return dataTracker.get(PHASE_START) >= 0; }
     public float getPhaseTime(float partialTick) {
         long start = dataTracker.get(PHASE_START);

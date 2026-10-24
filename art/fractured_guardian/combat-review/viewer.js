@@ -7,15 +7,13 @@ const review=__REWORKED_DATA__;
 let playerEye=false,distance=10;
 function floorVertices(){for(let x=-192;x<192;x+=16)for(let z=-192;z<192;z+=16){const drift=clipName==='walk'?((motionTime+completedLoops*2)*10/1.2)%32:0;const q=[[x,-.08,z+drift],[x+15.8,-.08,z+drift],[x+15.8,-.08,z+15.8+drift],[x,-.08,z+15.8+drift]];for(const i of [0,1,2,0,2,3])vertices.push(...q[i],0,1,0,0,0,((x+z)/16)%2===0?-1:-2)}}
 function previewChannels(name,ch){
- if(!document.querySelector('#shell').checked)return ch;
- const smooth=u=>{u=Math.max(0,Math.min(1,u));return u*u*(3-2*u)};
- const tick=motionTime*20,phase=clipName==='phase_change',pulse=clipName==='core_pulse';
+ // Phase two, as FracturedGuardianModel poses it: the chest stays shut and the core throbs inside it, swelling for a pulse.
+ if(name!=='core'||!document.querySelector('#shell').checked)return ch;
+ const tick=motionTime*20,pulse=clipName==='core_pulse';
  const charge=pulse?(tick<10?.25*tick/10:tick<50?.25+.75*(tick-10)/40:Math.max(0,1-(tick-50)/12)):0;
- const open=(phase?smooth((tick-32)/24):1)*(1+.3*charge);
+ const size=(1.04+.035*Math.sin(tick*1.7))*(1+.35*charge);
  const r=sample(ch.rotation,motionTime).slice(),pos=sample(ch.position,motionTime).slice(),scale=ch.scale?sample(ch.scale,motionTime).slice():[1,1,1];
- if(name.startsWith('chest_plate_')){const sign=name.endsWith('_-1')?-1:1;r[1]-=68*sign*open;pos[0]+=3*sign*open;pos[2]-=2*open;}
- if(name==='core'){const jitter=open*(phase?1:.35+.65*charge);pos[0]+=Math.sin(motionTime*31)*.5*jitter;pos[1]+=Math.sin(motionTime*21)*.4*jitter;pos[2]-=12*open;r[1]+=Math.sin(motionTime*17)*8*jitter;r[2]+=Math.sin(motionTime*23)*7*jitter;const size=phase?1:(1.04+.035*Math.sin(tick*1.7))*(1+.35*charge);[.65,.3,1.4].forEach((v,i)=>scale[i]*=size*(1+v*open));}
- return {rotation:{0:r},position:{0:pos},scale:{0:scale}};
+ return {rotation:{0:r},position:{0:pos},scale:{0:scale.map(v=>v*size)}};
 }
 
 function selectedClip(){return clips['animation.fractured_guardian.'+clipName]}

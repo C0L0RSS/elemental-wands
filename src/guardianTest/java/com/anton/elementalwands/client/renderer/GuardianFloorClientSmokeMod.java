@@ -51,7 +51,7 @@ public final class GuardianFloorClientSmokeMod implements ClientModInitializer {
                 guardModel.getBakedModel(guardModel.getModelResource(guardState));
                 var core=guardModel.getBone("core").orElseThrow();
                 var leftPlate=guardModel.getBone("chest_plate_1").orElseThrow();
-                // Shell break clock: shut until the burst, swinging open, then open for good (-1).
+                // The chest stays shut through and after the break; only the core's throb changes it.
                 for(float time:new float[]{0,32,44,56,64,-1}) {
                     for(var bone:guardModel.getAnimationProcessor().getRegisteredBones()) {
                         bone.setPosX(0);bone.setPosY(0);bone.setPosZ(0);
@@ -60,10 +60,9 @@ public final class GuardianFloorClientSmokeMod implements ClientModInitializer {
                     }
                     guardState.unstable=true;guardState.phaseTime=time;guardState.pulseTime=-1;guardState.magicTime=0;
                     guardModel.setCustomAnimations(new software.bernie.geckolib.animatable.processing.AnimationState<>(guardState,null,0,new it.unimi.dsi.fastutil.objects.Reference2DoubleOpenHashMap<>(),null));
-                    float open=com.anton.elementalwands.entity.GuardianShellRules.openness(time,true);
-                    require(Math.abs(core.getPosZ()+12*open)<.001,"Core visual travel disagrees with the break clock");
-                    require(Math.abs(core.getScaleZ()-1.04f*(1+1.4f*open))<.001,"Core scale disagrees with preview");
-                    require(Math.abs(leftPlate.getRotY()-Math.toRadians(68*open))<.001,"Rib rotation disagrees with preview");
+                    require(core.getPosX()==0 && core.getPosY()==0 && core.getPosZ()==0,"The core left the chest after the break");
+                    require(Math.abs(core.getScaleZ()-1.04f)<.001,"Core throb disagrees with preview");
+                    require(leftPlate.getRotY()==0 && leftPlate.getPosX()==0 && leftPlate.getPosZ()==0,"The ribs opened after the break");
                     for(int stage=1;stage<=3;stage++) {
                         guardState.cracks=stage;
                         require(guardModel.getTextureResource(guardState).getPath().contains("cracks_"+stage),"Wrong fracture material");

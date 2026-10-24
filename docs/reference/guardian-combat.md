@@ -30,10 +30,10 @@ The Guardian cannot be damaged at any point during it:
 
 1. For 1.6 seconds it braces while the cracks spark and the stone grinds. This is the cue to back away.
 2. At tick 32 the shell bursts: 10 damage and knockback within 6 blocks, blocked by cover.
-3. The ribs swing open over 24 ticks and it roars.
+3. It heaves through the burst, roars and settles back into its stance.
 
-The ribs and the exposed core then stay open for the rest of the fight. The core settles to a
-tremor that the core pulse stirs up again. Phase two adds unstable magic, faster throws, triple
+The chest stays shut and the core never comes out; it throbs inside the chest for the rest of
+the fight and swells for the core pulse. Phase two adds unstable magic, faster throws, triple
 slams and throws, wider waves, the leap's follow-up slam and the core pulse. It gives no damage
 bonus: phase two is where the Guardian gets meaner. Preserve telegraphs when tuning difficulty.
 Change health only from fight-log evidence, not to fix rhythm.
@@ -95,7 +95,7 @@ The core pulse (`GuardianPulseRules`) is phase two only, first about eight secon
 break and then on a 20-second cooldown (scaled). It needs a visible player within 12 blocks
 and takes priority over everything except a due beam.
 
-1. For 0.5 seconds it plants and the ribs flare.
+1. For 0.5 seconds it plants and its core swells.
 2. For 2 seconds its core drags every player within 12 blocks toward it. The pull is a per-tick
    impulse sent to each pulled client (`GuardianPullPayload`) and added to the player's own
    movement, so sprinting escapes, walking barely does, and standing still drags a player about

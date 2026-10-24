@@ -115,13 +115,8 @@ public final class GuardianShellSmokeMod implements ModInitializer {
             players.get(0).setInvulnerable(true);players.get(1).setInvulnerable(true);
             report.append("Shell break: immune throughout, burst hits within six blocks only.\n");
         }
-        if(breakStart>=0 && tick==breakStart+44) {
-            float open=GuardianShellRules.openness(boss.getPhaseTime(0),boss.isUnstable());
-            require(open>0 && open<1,"Ribs not swinging open after the burst: "+open);
-        }
         if(breakStart>=0 && tick==breakStart+GuardianPhaseRules.TRANSITION_TICKS+4) {
             require(!boss.isBreaking() && boss.isUnstable() && !boss.isAiDisabled(),"Break did not hand back to phase two");
-            require(GuardianShellRules.openness(boss.getPhaseTime(0),true)==1,"Ribs closed after the break");
             var output=net.minecraft.storage.NbtWriteView.create(net.minecraft.util.ErrorReporter.EMPTY,world.getRegistryManager());
             boss.writeCustomData(output);
             var copy=new FracturedGuardianEntity(com.anton.elementalwands.registry.ModEntities.FRACTURED_GUARDIAN,world);

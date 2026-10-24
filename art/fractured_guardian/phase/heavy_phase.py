@@ -22,7 +22,7 @@ def pose(t,rig):
         rot(p,side+'_hand',[curve([0,.65,1.48,1.7,1.9,2.4,3.2],[0,8,13,-8,-12,-9,0]),0,0])
         grip=curve([0,.65,1.25,1.48,1.6,1.85,2.4,3.2],[0,22,48,48,40,8,8,0])
         rig['fingers'](p,side,grip,curve([0,1.48,1.85,2.4,3.2],[0,0,8,8,0]))
-    # Ribs/core still come from the timestamp-driven client shell overlay.
+    # The chest stays shut; only the core throbs, posed in code (FracturedGuardianModel).
     rig['legs'](p,t,False)
     for side in ('right','left'):
         mats=rig['transforms'](p);low=999

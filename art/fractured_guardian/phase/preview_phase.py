@@ -1,7 +1,8 @@
 """Review the shell's crack stages and the phase clips on the real rig and textures; no Minecraft needed.
 
-Writes a pose sheet and an offline viewer to .local-previews/guardian-phase/. In game the ribs and
-core are posed in code (FracturedGuardianModel); the preview bakes the same pose into its copy.
+Writes a pose sheet and an offline viewer to .local-previews/guardian-phase/. In game the core's
+phase-two throb is posed in code (FracturedGuardianModel); the preview bakes the same throb into its copy.
+The chest stays shut: the core never comes out.
 """
 import base64,copy,json,runpy,math
 from pathlib import Path
@@ -15,35 +16,21 @@ source=p['SOURCE']
 phase=json.loads((HERE/'phase.animation.json').read_text())['animations']
 NAME='animation.fractured_guardian.'
 
-def smooth(u):
-    u=max(0,min(1,u));return u*u*(3-2*u)
-def ribs(seconds):
-    """GuardianShellRules.openness over the shell break's clock (burst at tick 32, open by 56)."""
-    return smooth((seconds*20-32)/24)
 def charge(seconds):
     """GuardianPulseRules.charge: plant to tick 10, pull to the blast at 50, fade over 12 ticks."""
     tick=seconds*20
     if tick<10:return .25*tick/10
     if tick<50:return .25+.75*(tick-10)/40
     return max(0,1-(tick-50)/12)
-def shell(clip,openness,pulse):
-    out=copy.deepcopy(clip);bones=out['bones']
-    for name in ['chest_plate_-1','chest_plate_1','core']:bones[name]={}
+def shell(clip,pulse):
+    out=copy.deepcopy(clip);bones=out['bones'];bones['core']={}
     for i in range(int(out['animation_length']/.05)+1):
-        t=round(i*.05,3);c=charge(t) if pulse else 0;a=openness(t)*(1+.3*c);key=str(t)
-        jitter=a*(1 if not pulse and openness(t)<1 else .35+.65*c)
-        size=(1.04)*(1+.35*c)
-        bones['chest_plate_-1'].setdefault('rotation',{})[key]=[0,68*a,0]
-        bones['chest_plate_-1'].setdefault('position',{})[key]=[-3*a,0,-2*a]
-        bones['chest_plate_1'].setdefault('rotation',{})[key]=[0,-68*a,0]
-        bones['chest_plate_1'].setdefault('position',{})[key]=[3*a,0,-2*a]
-        bones['core'].setdefault('rotation',{})[key]=[0,math.sin(t*17)*8*jitter,math.sin(t*23)*7*jitter]
-        bones['core'].setdefault('position',{})[key]=[math.sin(t*31)*.5*jitter,math.sin(t*21)*.4*jitter,-12*a]
-        bones['core'].setdefault('scale',{})[key]=[size*(1+.65*a),size*(1+.3*a),size*(1+1.4*a)]
+        t=round(i*.05,3);size=1.04*(1+.35*(charge(t) if pulse else 0))
+        bones['core'].setdefault('scale',{})[str(t)]=[size,size,size]
     return out
 clips=dict(phase)
-clips[NAME+'phase_change']=shell(phase[NAME+'phase_change'],ribs,False)
-clips[NAME+'core_pulse']=shell(phase[NAME+'core_pulse'],lambda t:1,True)
+clips[NAME+'phase_change']=shell(phase[NAME+'phase_change'],False)
+clips[NAME+'core_pulse']=shell(phase[NAME+'core_pulse'],True)
 
 # Extend the reference sampler to include the core's scale channel.
 def matrices(clip,t):
@@ -68,7 +55,7 @@ assets=ROOT/'src/main/resources/assets/elementalwands/textures/entity'
 OUT.mkdir(parents=True,exist_ok=True)
 sheet=Image.new('RGB',(2400,1260),(239,237,232));draw=ImageDraw.Draw(sheet)
 frames=[('Fresh shell',NAME+'slam_hold_22',0,0),('Worn: fists held overhead',NAME+'slam_hold_22',1.6,2),
-        ('Delayed slam lands',NAME+'slam_hold_22',2.45,2),('Shell break: ribs swing open',NAME+'phase_change',2.6,3),
+        ('Delayed slam lands',NAME+'slam_hold_22',2.45,2),('Shell break: after the burst',NAME+'phase_change',2.6,3),
         ('Core pulse: braced',NAME+'core_pulse',.6,3),('Core pulse: drawing in',NAME+'core_pulse',2.2,3),
         ('Core pulse: blast',NAME+'core_pulse',2.55,3),('Core pulse: recovering',NAME+'core_pulse',3.2,3)]
 for i,(label,clip,t,stage) in enumerate(frames):
@@ -87,7 +74,7 @@ template=template.replace("let clipName='idle'","let clipName='core_pulse'")
 template=template.replace('max="6"','max="3.9"').replace('zoom=1','zoom=1.45').replace('pos-vec3(0.,60.,0.)','pos-vec3(0.,42.,0.)')
 template=template.replace('href="fractured_guardian.bbmodel" download>Download Blockbench source','href="phase-review.png">Pose sheet')
 template=template.replace('href="../v1/approved-concept.png">Approved concept','href="phase-review.png">View crack stages')
-template=template.replace('FULL-BODY PERFORMANCE 04','FRACTURED GUARDIAN · PHASE TWO').replace('Braced legs, opening chest, expressive hands.','The shell breaks open; the core pulls and detonates.').replace('Actual animated rig · Beam effects run in Minecraft.','Actual phase clips · Particles, pull and damage run in Minecraft.')
+template=template.replace('FULL-BODY PERFORMANCE 04','FRACTURED GUARDIAN · PHASE TWO').replace('Braced legs, opening chest, expressive hands.','The shell breaks; the core pulls and detonates.').replace('Actual animated rig · Beam effects run in Minecraft.','Actual phase clips · Particles, pull and damage run in Minecraft.')
 # Viewer matrices already support rotation/translation; scale core vertices explicitly before its transform.
 needle='return mul(m.r,v).map((x,i)=>x+m.p[i])'
 replacement="if(name==='core'){const ch=selectedClip().bones.core||{};const s=ch.scale?sample(ch.scale,motionTime):[1,1,1],pivot=bones.core.pivot;v=v.map((x,i)=>pivot[i]+(x-pivot[i])*s[i]);}return mul(m.r,v).map((x,i)=>x+m.p[i])"

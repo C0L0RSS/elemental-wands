@@ -1,6 +1,7 @@
 package com.anton.elementalwands.church;
 
 import com.anton.elementalwands.mixin.GuardianChurchChunkAccessor;
+import com.anton.elementalwands.world.StructureArrival;
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -105,10 +106,12 @@ public final class GuardianChurchLocator {
                 var pos=pending.placement().getLocatePos(pending.pos());
                 release();checked++;
                 if(start!=null && start.hasChildren()) {
-                    var coordinates=Text.literal("["+pos.getX()+", ~, "+pos.getZ()+"]")
-                            .styled(style -> style.withUnderline(true).withClickEvent(new ClickEvent.SuggestCommand("/tp @s "+pos.getX()+" ~ "+pos.getZ())));
+                    var arrival=StructureArrival.of(world,structure,start);
+                    var at=arrival==null?pos:arrival;String y=arrival==null?"~":String.valueOf(arrival.getY());
+                    var coordinates=Text.literal("["+at.getX()+", "+y+", "+at.getZ()+"]")
+                            .styled(style -> style.withUnderline(true).withClickEvent(new ClickEvent.SuggestCommand("/tp @s "+at.getX()+" "+y+" "+at.getZ())));
                     source.sendFeedback(() -> Text.literal("Natural church: ").append(coordinates)
-                            .append(" (at the surface; the socket may be nearby)."),false);
+                            .append(arrival==null?" (at the surface; the socket may be nearby).":" (the entrance path, before the pedestal)."),false);
                     LoggerFactory.getLogger("elementalwands-church").info("Incremental church locate found {} after {} candidates in {} ms",pos,checked,(System.nanoTime()-started)/1_000_000);
                     active=null;return;
                 }

@@ -7,6 +7,7 @@ import java.util.*;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.registry.Registries;
+import net.minecraft.structure.PoolStructurePiece;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.math.BlockPos;
@@ -48,5 +49,12 @@ public final class ChurchLayout {
         return new BlockPos(MIN_X+index%33,MIN_Y+(index/33)%36,MIN_Z+index/(33*36));
     }
     public static BlockPos at(BlockPos anchor,BlockRotation rotation,BlockPos local) { return anchor.add(local.rotate(rotation)); }
+    /** Where /locate sends players: the entrance path, three blocks before the pedestal, open to the sky in both layouts. */
+    public static final BlockPos ARRIVAL=new BlockPos(0,-1,-9);
+    /** The generated template starts at the layout's minimum corner. */
+    public static BlockPos arrival(PoolStructurePiece piece) {
+        var anchor=piece.getPos().add(new BlockPos(-MIN_X,-MIN_Y,-MIN_Z).rotate(piece.getRotation()));
+        return at(anchor,piece.getRotation(),ARRIVAL);
+    }
     public static BlockState state(boolean whole,BlockPos local,BlockRotation rotation) { return blocks(whole).getOrDefault(local,Blocks.AIR.getDefaultState()).rotate(rotation); }
 }

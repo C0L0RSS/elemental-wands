@@ -22,6 +22,7 @@
     "GuardianChurchPlacementMixin",
     "GuardianChurchChunkAccessor",
     "GuardianChurchLocateMixin",
+    "LocateArrivalMixin",
     "SpellBurnDamageMixin",
     "SpellRegenerationMixin",
     "BossRealmDeathMixin"

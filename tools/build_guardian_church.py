@@ -301,6 +301,9 @@ def build(restored, legacy=False):
         put(0,5,-4,'elementalwands:guardian_chest_rune')
     return {(x,y-2,z):b for (x,y,z),b in B.items()}
 RUIN=build(False);WHOLE=build(True)
+# /locate's arrival (ChurchLayout.ARRIVAL) must stay open to the sky over a solid floor.
+for layout in (RUIN,WHOLE):
+    assert (0,-2,-9) in layout and not any((0,y,-9) in layout for y in range(-1,31)),'Church arrival is not open ground'
 
 def string(s):
     b=s.encode();return struct.pack('>H',len(b))+b

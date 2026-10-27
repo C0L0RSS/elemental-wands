@@ -380,14 +380,42 @@ These come from the Guardian and Necromancer playtests:
 - **Decided:** high in the air, the player struggles in the Roc's talon in a chaotic
   fight before it throws them at the summit. How they survive the landing depends on
   their wand's element.
-- **Proposed:** the intro runs in four parts: the snatch at the aerie, the climb through
-  the clouds, the struggle high above them with the summit and spires below, and the
-  throw and landing. The cloud part stretches to cover the move into the sky realm. It
-  replaces the game's loading screen with a full-screen cloud effect (wind, wingbeats,
-  lightning flashing inside the cloud) and lasts as long as the load takes. It has a
-  short minimum so it never just flashes past.
-- **Proposed:** the struggle ends with the player striking the talon with their wand.
-  The Roc shrieks and flings them away.
+- **Decided (Oct 27):** the intro is about 15 seconds, held Sneak skips it, and it plays in
+  ten shots. Shots 1–6 are first person, then it cuts to third person for the struggle, the
+  throw and the landing:
+  1. **Quiet (0–2 s):** the last toll fades; wind, sideways snow, the light dims. The sky is
+     empty, because the Roc stays unseen until the snatch.
+  2. **The caw (2–2.5 s):** a loud caw from above and behind.
+  3. **The snatch (2.5–3 s):** black talons snap into the edges of the screen, a jolt, and the
+     ground falls away.
+  4. **Carried off (3–5 s):** looking down between the talons as the peak shrinks; its wing
+     shadows sweep over with each beat, and each beat lurches the view.
+  5. **The reveal (5–6.5 s):** you look up and see it for the first time. It screams down at
+     you, head bent, red eyes, lightning round its head.
+  6. **Storm clouds (6.5–8.5 s):** cloud fills the view and lightning lights it from inside;
+     the Roc is a black shape between flashes. This shot hides the move into the sky realm, so
+     it replaces the loading screen and stretches while the summit loads, with a short minimum.
+  7. **The struggle (8.5–12 s), close third person:** above the sea of clouds, the camera cuts
+     beside the talon. The player, in their own skin, is clamped in its claws, kicking and
+     pulling at its toes. Its head looms above, glancing down and snapping. The camera is
+     shaky and circling, lit by flashes. The player frees their wand arm and strikes the talon
+     in a flash of their element's colour.
+  8. **The throw (12–13 s):** it shrieks and flings them; the camera follows behind them as
+     they tumble toward the summit.
+  9. **The landing (13–14.5 s):** they crash into the snow, roll and push up to their feet
+     facing the home spire, as the Roc sweeps overhead and lands on it.
+  10. **Hand back (14.5–15.5 s):** the camera glides into the player's eyes, the letterbox
+      bars slide away, and the fight begins.
+- **Decided (Oct 27):** the Roc is a near-black silhouette with glowing red eyes in the
+  clouds and against the sky; lightning flashes rim-light it for a moment. Above the clouds it
+  is dark but readable. The camera moves a lot: wingbeat lurches, shake, tilts and whip pans,
+  with cloud layers and wisps across the view.
+- **Decided (Oct 27):** build it breadth first: one shared landing for everyone now, with
+  the element only colouring the wand strike's flash. The six element landings below come in
+  the polish pass. A custom Roc voice comes later; for now its existing screech.
+- **Decided (Oct 27):** each player sees only their own scene. Teammates are hidden on that
+  client until control returns, and the fight starts once everyone has landed or skipped. A
+  player who skips waits on the summit.
 - **Decided:** the landings go bigger than the spells can in normal play.
 - **Proposed:** every landing takes the same time, about 3.5 seconds from the throw to
   control, and ends in the same standing pose facing the Roc's spire. Their effects fade
@@ -407,11 +435,6 @@ These come from the Guardian and Necromancer playtests:
   - **Space:** they throw their Astral Double down ahead of them. It hits the rock and
     cracks, and they swap into its place as it shatters. (Alternative: a Blink just
     before impact.)
-- **Proposed:** in co-op, the cloud part lasts until every player has loaded. Everyone's
-  sky part then starts at the same moment, and because every landing is the same length,
-  the whole party lands together. A player who skips waits on the summit.
-- **Proposed:** build the intro in stages: first end to end with the no-element landing,
-  then the other five landings one at a time.
 - **Proposed:** Windcallers are masked cultists who roam the mountain peaks. They dash,
   throw daggers and glide like wand players.
 - **Proposed:** players of every element can fight it. Its damage window is on the

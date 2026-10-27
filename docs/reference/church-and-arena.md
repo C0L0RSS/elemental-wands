@@ -11,6 +11,15 @@ retrofitted. Biome/terrain filtering means structure spacing is not a guaranteed
 distance between churches. Locating churches is incremental and cancellable so
 large searches do not block the server. Keep ticket cleanup and search timeouts.
 
+`/locate` reports a church or graveyard at a standing cell of its own template, with a real
+height, and its click-to-teleport link goes there rather than keeping the player's height
+(vanilla's `~`): the church's entrance path three blocks before the pedestal
+(`ChurchLayout.ARRIVAL`), or the graveyard's path two blocks outside the lychgate
+(`HollowGraveyardStructure`). Both are open to the sky over the template's floor, so the
+height is known before the terrain generates; once the ground there is built, the cell's
+current surface is used instead, which covers older layouts and player changes
+(`world/StructureArrival`). The layout builders refuse to move or cover either cell.
+
 The courtyard holds a stone effigy, an offering chest, and a carved pedestal.
 The chest supplies the site-specific Guardian Heart; the short interaction hint
 replaces old lore-book onboarding. Use that heart on the bowl or column to begin.
@@ -201,7 +210,8 @@ the region's chunk. It refuses any spot where a sample is more than 3 blocks fro
 water or lava covers the footprint, or the biome is wrong, and seats the one-layer floor at
 the median ground height. `beard_thin` levels the land to the floor, and cave gaps under it
 are filled with dirt. A region with no suitable spot has no graveyard, and
-`/place structure` fails on unsuitable ground. `/locate` can take several seconds.
+`/place structure` fails on unsuitable ground. `/locate` can take several seconds; its
+result stands the player at the lychgate (see Discovery and ritual).
 
 The graveyard generates in the last feature step, after trees, so its template clears any
 tree that grew in the yard. Its post-placement (`world/GraveyardBlight`) then kills the woods

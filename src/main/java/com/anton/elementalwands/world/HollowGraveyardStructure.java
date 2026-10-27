@@ -75,6 +75,11 @@ public final class HollowGraveyardStructure extends Structure {
     private static final int FILL_DEPTH = 8;
     /** Candidate offsets in search steps, nearest to the chunk centre first. */
     private static final int[][] CANDIDATES = candidates(2);
+    /**
+     * Template column where /locate sends players: the path two blocks outside the lychgate, open to
+     * the sky. {@code GRAVEYARD_ARRIVAL} in {@code art/hollow_crypt/build_layout.py} checks it.
+     */
+    private static final int ARRIVAL_X = 16, ARRIVAL_Z = 42;
 
     private final RegistryEntry<StructurePool> startPool;
     private final int floorLayer;
@@ -130,6 +135,11 @@ public final class HollowGraveyardStructure extends Structure {
                 StructureLiquidSettings.APPLY_WATERLOGGING);
         BlockPos centre = new BlockPos(bestFootprint.getCenter().getX(), bestFloor, bestFootprint.getCenter().getZ());
         return Optional.of(new StructurePosition(centre, collector -> collector.addPiece(piece)));
+    }
+
+    /** Standing cell, one above the floor, in front of this yard's gate. */
+    public BlockPos arrival(PoolStructurePiece piece) {
+        return piece.getPos().add(new BlockPos(ARRIVAL_X, floorLayer + 1, ARRIVAL_Z).rotate(piece.getRotation()));
     }
 
     /** The whole blight, not just the piece; it also covers the terrain beard's usual 12 blocks. */

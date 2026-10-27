@@ -6,6 +6,7 @@ use [current guides](../README.md) for today’s behavior and [status](../STATUS
 for outstanding verification. Detailed historical reports are optional background.
 
 - [2026-10-27 — Storm Roc: the aerie](2026-10-27-storm-roc-aerie.md)
+- [2026-10-27 — /locate teleports land on the ground](2026-10-27-locate-heights.md)
 - [2026-10-22 — Heavier, more readable boss and undead animations](2026-10-22-heavier-animations.md)
 - [2026-10-21 — Storm Roc: heavier, more natural movement](2026-10-21-storm-roc-flight.md)
 - [2026-10-19 — Storm Roc: a new look](2026-10-19-storm-roc-new-look.md)

@@ -1145,6 +1145,10 @@ GRAVEYARD = ROOT / 'src/main/resources/data/elementalwands/structure/hollow_grav
 # Template layer holding the graveyard floor (layout y=0). Shared with "floor_layer" in
 # data/elementalwands/worldgen/structure/hollow_graveyard.json, which seats it on the ground.
 GRAVEYARD_FLOOR_LAYER = 2
+# Layout cell where /locate sends players: the path two blocks outside the lychgate. Its template
+# column is ARRIVAL_X/ARRIVAL_Z in world/HollowGraveyardStructure.java, so it must not move, and it
+# must stay open to the sky over a solid floor.
+GRAVEYARD_ARRIVAL = (0, 1, 15)
 
 
 def graveyard_nbt(lay):
@@ -1155,6 +1159,10 @@ def graveyard_nbt(lay):
     xs, ys, zs = zip(*lay.b)
     lo = (min(xs), min(ys), min(zs))
     assert lo[1] == -GRAVEYARD_FLOOR_LAYER, f'Graveyard floor moved to template layer {-lo[1]}'
+    ax, ay, az = GRAVEYARD_ARRIVAL
+    assert (ax - lo[0], az - lo[2]) == (16, 42), f'Graveyard arrival moved to template column {(ax - lo[0], az - lo[2])}'
+    assert (ax, ay - 1, az) in lay.b and not any((ax, y, az) in lay.b for y in range(ay, max(ys) + 1)), \
+        'Graveyard arrival is not open ground'
     size = (max(xs) - lo[0] + 1, max(ys) - lo[1] + 1, max(zs) - lo[2] + 1)
     blocks = {}
     for x in range(size[0]):

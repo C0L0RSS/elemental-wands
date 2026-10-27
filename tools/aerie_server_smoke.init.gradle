@@ -1,0 +1,72 @@
+// Storm aerie real-server fixture: places the aerie template in four rotations on stone pads in a flat Overworld and
+// drives the gong (anchor and parts, swings sent to clients), the call, summit landing, loss, wins, the reward chest
+// and books, busy slots, disconnects, deaths and recovery.
+// Receipt: build/aerie-smoke-run/AERIE_SERVER_PASSED.txt (or AERIE_SERVER_FAILED.txt). All worlds and metadata stay under build/.
+// ./gradlew -I tools/aerie_server_smoke.init.gradle runServer --args nogui
+allprojects {
+    plugins.withId('fabric-loom') {
+        def smokeRoot = layout.buildDirectory.dir('aerie-smoke').get().asFile
+        def runRoot = file('build/aerie-smoke-run')
+        def recovery = false
+        tasks.register('aerieSmokeSetup') {
+            doLast {
+                runRoot.mkdirs()
+                def oldWorld = new File(runRoot, 'aerie-test')
+                if (!recovery && oldWorld.exists() && !oldWorld.renameTo(new File(runRoot, 'aerie-test-before-' + System.currentTimeMillis()))) {
+                    throw new GradleException('Could not preserve the previous disposable test world.')
+                }
+                def acceptedEula = file('run/eula.txt')
+                if (!acceptedEula.exists() || !acceptedEula.text.contains('eula=true')) {
+                    throw new GradleException('Accept the Minecraft EULA in run/eula.txt before using this test server.')
+                }
+                new File(runRoot, 'eula.txt').text = acceptedEula.text
+                new File(runRoot, 'server.properties').text = '''server-ip=127.0.0.1
+server-port=0
+online-mode=false
+level-type=minecraft:flat
+generate-structures=false
+level-name=aerie-test
+generator-settings={"layers":[{"block":"minecraft:bedrock","height":1},{"block":"minecraft:dirt","height":2},{"block":"minecraft:grass_block","height":1}],"biome":"minecraft:plains"}
+spawn-protection=0
+view-distance=8
+simulation-distance=8
+difficulty=normal
+max-tick-time=-1
+pause-when-empty-seconds=0
+'''
+                new File(runRoot,'AERIE_SERVER_FAILED.txt').delete()
+                new File(runRoot,'AERIE_SERVER_PASSED.txt').delete()
+            }
+        }
+        tasks.register('aerieSmokeMetadata') {
+            doLast {
+                def metadata = new File(smokeRoot,'metadata')
+                metadata.mkdirs()
+                new File(metadata,'fabric.mod.json').text = '''{
+  "schemaVersion": 1, "id": "aerie_smoke", "version": "1.0.0", "environment": "server",
+  "entrypoints": {"main": ["com.anton.elementalwands.summit.StormAerieServerSmoke"]},
+  "depends": {"elementalwands": "*"}
+}'''
+            }
+        }
+        tasks.register('aerieSmokeJar', Jar) {
+            dependsOn guardianTestClasses, aerieSmokeMetadata
+            archiveFileName = 'aerie-smoke.jar'
+            destinationDirectory = smokeRoot
+            from sourceSets.guardianTest.output
+            from new File(smokeRoot,'metadata')
+        }
+        loom.runs.server.runDir('build/aerie-smoke-run')
+        loom.runs.server.vmArg('-Dfabric.addMods=' + new File(smokeRoot,'aerie-smoke.jar').absolutePath)
+        tasks.named('runServer') {
+            dependsOn aerieSmokeJar, aerieSmokeSetup
+            standardInput = System.in
+            doLast {
+                def marker = new File(runRoot,'AERIE_SERVER_PASSED.txt')
+                if (!marker.exists() || new File(runRoot,'AERIE_SERVER_FAILED.txt').exists()) {
+                    throw new GradleException('Storm aerie runtime checks did not pass; inspect build/aerie-smoke-run/logs/latest.log')
+                }
+            }
+        }
+    }
+}

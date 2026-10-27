@@ -60,7 +60,7 @@ Pillars:
 | --- | --- | --- | --- | --- |
 | Stone | Fractured Guardian | Ruined churches, Shattered Nave | 0 | Built, rebalanced October 3; playtest pending |
 | Nature (life turned to death) | Hollow Necromancer | Graveyards, Hollow Crypt | 1 | Built, in tuning |
-| Wind | Storm Roc | Mountain peaks, a sky realm above the clouds | 2 | Concept chosen |
+| Wind | Storm Roc | Mountain peaks, a sky realm above the clouds | 2 | Built with its aerie (Oct 27); intro, cinematic and death to come; playtest pending |
 | Fire | New | The Nether | 3 | Open |
 | Space | New | The End or the deep dark | 4 | Open |
 | — | Final: the wizard who tried to hold all five | Opened by all five shards | 5 | Open |
@@ -369,6 +369,11 @@ These come from the Guardian and Necromancer playtests:
 - **Decided:** the entrance is an aerie at the top of a mountain in the Overworld.
   Ringing a big storm bell there calls the Roc. It attacks, snatches the player and throws
   them onto the arena.
+- **Built (Oct 27):** the aerie is an abandoned Windcaller summoning gong on a levelled peak
+  summit whose ground comes from the biome. Striking it twice takes the striker and their nearby
+  party up; three strikes and a gust stand in for the snatch until the intro exists. Until shards exist, a win fills reward chests at the aerie and each
+  victor claims one Ultimate spell book there, once per aerie. Like the other bosses, it has
+  no death yet; deaths come with the polish pass.
 - **Decided:** every player sees their own version of the intro, with their own skin as
   the one snatched. Only that player appears in it; teammates meet them on the summit.
   It plays on every attempt and can be skipped.

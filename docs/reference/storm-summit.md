@@ -1,9 +1,10 @@
 # Storm Summit
 
-The Storm Roc's realm, with a playable two-phase fight. The Overworld aerie, intro, the
-phase-change cinematic, and the Roc's death and reward remain planned in the
-[roadmap](../ROADMAP.md).
-The realm and encounter lifecycle live under `summit/`; combat lives under `entity/roc/`.
+The Storm Roc's realm, with a playable two-phase fight that survival players reach from an
+aerie on an Overworld peak. The intro, the phase-change cinematic and the Roc's death remain
+planned in the [roadmap](../ROADMAP.md).
+The realm, the aerie and the encounter lifecycle live under `summit/`; combat lives under
+`entity/roc/`; the aerie's placement is `world/StormAerieStructure`.
 
 ## The realm
 
@@ -44,6 +45,65 @@ it. During that storm it also draws a dark ceiling of storm cloud at y=176
 (`StormSummit.STORM_CEILING`) with torn scud racing 11 blocks beneath it, darkens the sea,
 and lights every layer during a lightning flash.
 
+## The aerie
+
+The way in is an abandoned Windcaller summoning gong, `elementalwands:storm_aerie`, that
+generates on the summits of jagged, frozen and stony peaks (`random_spread` 24/12):
+
+- **The gong:** a round bronze gong four blocks across, with a raised boss. It hangs on two
+  cords from a weathered dark oak frame of blocks: two posts, knee braces, a beam broken off
+  at its west end, and a slab roof with a gap. One lightning rod is left standing. A wrapped
+  mallet leans on a post, and a skeleton skull, bones and Roc feathers lie on the ground.
+- **How it's drawn:** the gong is a GeckoLib model on an invisible anchor block,
+  `storm_gong`, at its foot. It sways a little in the wind and swings when struck; every
+  strike restarts the swing (it alternates two identical strike clips, because GeckoLib won't
+  restart a playing one). Invisible `storm_gong_part` blocks across its face catch the click.
+  Each part's `cell` picks its outline and collision from `StormAerieLayout.GONG_CELLS`: the
+  plate's own stepped edge within that cell, so the round rim is struck where it is drawn.
+- **Finding one:** `/locate structure elementalwands:storm_aerie`.
+
+The template carries no ground. Worldgen levels the real summit to the template's box
+(about 13 × 11 blocks) and the biome's own surface covers it: snow and ice on jagged and
+frozen peaks, bare stone and calcite on stony peaks.
+
+Placement (`world/StormAerieStructure`):
+
+- **Finding the summit:** it surveys noise heights up to 48 blocks around the region's chunk
+  and tries the highest local summits whose surface biome fits. The box is centred on one,
+  with its floor at the median ground under it.
+- **Limits:** the floor is at most 8 blocks below the summit's top and at most 24 above the
+  lowest ground under the box, and never below y=140. Water, lava and mountainsides (ground
+  nearby higher than the box) are refused.
+- **Terrain:** `beard_thin` levels the box and eases the slopes into it. After placement, a
+  cone of rock fills any air or fluid left under the summit, so nothing floats.
+
+Striking the gong (`StormAerie`):
+
+- **Confirm:** the first right-click anywhere on the gong strikes it once and names who
+  would go. A second strike by the same player, 0.5–5 seconds later, calls the Storm Roc. A
+  held click never confirms.
+- **Who goes:** the striker and the striker's party members within 24 blocks of the gong who
+  are alive, in Survival or Adventure, and not already in a fight. Creative and spectating
+  players can't strike it.
+- **The call:** a stand-in for the planned intro. Three strikes with thunder, the Roc's cry
+  and brief blindness, then the party is carried to a free summit slot (raised first if
+  needed). If all eight slots are busy: "The Storm Roc is fighting elsewhere."
+- **The fight:** it starts about 3 seconds after landing, with exactly the players who came.
+- **Afterwards:** a loss, a reset or an interruption sends everyone back to the stand point
+  in front of the gong. A win keeps them safe on the empty summit for 10 seconds, then sends
+  them home. Anyone who died up there and respawned elsewhere is sent to the aerie as well.
+
+Every return point, and who a gong took up, is saved in `storm-summit.json` before anyone
+moves. A record is retired only after the player has been moved and saved. So a crash, stop or
+relog on the summit still ends at the aerie.
+
+**Rewards.** The first win at an aerie places a chest at the gong's foot, filled once from a
+roll seeded by the site: church treasure plus feathers, copper and perhaps a lightning rod.
+Every challenger, fallen ones included, becomes a victor. Each victor may claim one personal
+Ultimate spell book (a free Basic, Technique or Ultimate spell) by opening the chest, once
+per aerie. If the chest is broken or its cell is blocked, a later win puts it back empty, so
+victors can still claim. The Wind Shard replaces this once shards exist.
+
 ## Visiting
 
 Operators raise and visit a slot with `/ew summit enter [slot]`.
@@ -68,7 +128,9 @@ After the slot is ready, `/ew summit start` begins a fight with the living Survi
 Adventure players on that summit. The roster seals at the start. `/ew summit reset` ends
 it and permits another attempt; `/ew summit status` includes the current combat state.
 Both start and reset require operator permission. For playtests, `/ew summit skip` jumps
-a running fight to the phase change. There is no aerie entrance yet.
+a running fight to the phase change. These operator fights have no aerie: they give no
+rewards and leave everyone on the summit when they end. Survival players start fights at an
+[aerie](#the-aerie).
 
 The Roc flies between the six spires for about 22.5 seconds on Normal (26.7 on Easy, 17.8 on
 Hard). Each spire visit lasts 8.9 seconds:
@@ -305,8 +367,8 @@ Phase two keeps phase one's loop, but the storm is on its side:
 
 Its brawl moves, the caw and the landing gates are unchanged.
 Phase two takes four more landings of an eighth of total health each. At the last gate
-it is defeated. Its death and the shard reward are still to come, so for now the encounter
-ends there and the group may fight again.
+it is defeated. It has no death yet: it simply vanishes and the encounter ends. An aerie
+fight's victors go home to its [rewards](#the-aerie) after 10 seconds.
 
 ## Authoring
 
@@ -328,6 +390,34 @@ ends there and the group may fight again.
 seven viewpoints into `build/summit-client-smoke/screenshots/`, counts the remains, tries to
 break the rock as a survival player, drops a player off the east rim to check the rescue,
 and leaves. Screenshots are not a Lunar look.
+
+`art/storm_aerie/build_layout.py` authors the aerie:
+
+- **Default run:** writes a browser preview to `.local-previews/storm-aerie/`; serve that
+  folder on port 8395. It shows the build on a generated sample peak whose top has been
+  levelled, with a snowy surface (`?biome=snowy`) or a stony one (`?biome=stony`).
+- **`--install`:** writes:
+  - `structure/storm_aerie.nbt`: the frame, the gong's anchor and part blocks and the
+    remains, in a box sized to the summit it levels;
+  - the generated `summit/StormAerieLayout.java`: the box, its floor layer, the anchor, and
+    the stand point and chest cell in the gong's forward/right/up frame;
+  - the gong's GeckoLib model, texture sheet and its idle and strike animations. The face is
+    the painted `art/storm_aerie/gong_face.png` (a worn thunderbird crest), clipped to the
+    plate's outline. GeckoLib mirrors Bedrock geometry in x, so the model is written mirrored
+    and the renderer turns it from south to the anchor's facing;
+  - the anchor and part blocks' (empty) block states.
+- **`--check`:** detects drift in all of these.
+
+Three fixtures cover the aerie:
+
+- `tools/aerie_server_smoke.init.gradle` places the template in all four rotations and drives
+  the gong (through its anchor and its parts), the party, the call, a loss, wins, claims, busy
+  slots, deaths and recovery.
+- `tools/aerie_worldgen_smoke.init.gradle` locates natural aeries on a seed (`-PaerieSeed`,
+  default 12345) and measures the floor, support, biome and the earthwork around them.
+- `tools/aerie_client_smoke.init.gradle` photographs natural aeries and the template in all
+  four rotations in a hidden, muted client, at rest and mid-swing (`-PaerieSeed`,
+  `-PaerieGongs="label@x,y,z;…"` with the anchors the worldgen fixture reports).
 
 The approved study stays under `art/storm_roc/candidate/`; its skeleton and clips drive the
 game model. `art/storm_roc_mod/build_mod.py` builds that model: 307 blocks on the study's

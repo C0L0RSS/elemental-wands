@@ -10,9 +10,40 @@ It records known verification limits; it is not a fresh installation receipt.
   - **Phase two (Oct 14):** a client-side thunderstorm with storm clouds, rain and flashes;
     larger, harder strikes with live ground after the large ones; strikes during the brawl;
     swollen tornadoes plus a third; and the chain smash in place of the dive.
-  - **Defeat:** it ends the fight without rewards. Falls, death and disconnect eliminate a
+  - **Defeat:** it vanishes, with no death yet. Falls, death and disconnect eliminate a
     challenger; a wipe or reset releases the group for retry.
-  - **Not yet built:** the aerie, intro, phase-change cinematic, death and victory rewards.
+  - **Aerie (Oct 27):** survival players reach the fight from an abandoned Windcaller gong on
+    Overworld peaks: a GeckoLib gong in a small dark oak frame on a summit that worldgen levels,
+    surfaced by the biome. Striking it twice takes the striker's nearby party up, and a loss sends
+    them back. A win fills a reward chest at its foot, and each victor claims one Ultimate spell
+    book per aerie. It replaced a first bell-shrine design the user turned down.
+    - **Verified:**
+      - `aerie_server_smoke` passed 34 steps in all four rotations, including strikes through
+        the part blocks, part shapes matching the round plate, and the swing reaching nearby
+        players. The client fixture confirms a strike mid-swing restarts the swing.
+      - On seed 12345 the worldgen fixture checked six aeries: two frozen, two jagged and two
+        stony. In every one, all 195 columns of the box sit at the floor, the build makes no
+        snow (stony ones are bare stone), the remains rest on the ground, and no bare wall
+        nearby is taller than 10 blocks.
+      - The native client photographed snowy and stony aeries, all four rotations, at rest
+        and mid-swing.
+      - The Roc and summit regressions still pass.
+    - **Pending:**
+      - a Lunar look and a solo and co-op playtest of the bell, the call and the rewards;
+      - how the levelled summit reads on more peaks in Lunar, and that stony peaks never get
+        snow from the build;
+      - how findable aeries are without the hub map page;
+      - whether an Ultimate book per aerie is the right pace.
+    - **Known gaps:**
+      - a party member who walks away during the tolling still goes up;
+      - an operator `/ew summit start` on a slot a call has reserved takes the called players
+        into an operator fight with no rewards;
+      - a broken reward chest only comes back after the next win there.
+      - the gong model's swing and lighting in Lunar.
+      - on jagged peaks an aerie can sit on a shoulder below taller spires that are too narrow
+        to level.
+  - **Not yet built:** the intro (the bell's tolling is a stand-in), the phase-change
+    cinematic and a death.
   - **October 14 fixes:**
     - First pass: client hurtboxes, the safe spot under the neck, stampede targeting,
       permanent threat, stacking, shields, the pounce aim and the stuck pose.

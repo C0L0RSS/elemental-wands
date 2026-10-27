@@ -89,6 +89,24 @@ public class ModBlocks {
                         .allowsSpawning((state,world,pos,type) -> false).pistonBehavior(net.minecraft.block.piston.PistonBehavior.DESTROY)));
     }
 
+    // The aerie's summoning gong: an anchor at its foot whose block entity draws the GeckoLib model, and
+    // click targets across its face. art/storm_aerie writes their (empty) block states and the model.
+    public static final net.minecraft.block.Block STORM_GONG=stormGong("storm_gong",com.anton.elementalwands.summit.StormGongBlock.Anchor::new);
+    public static final net.minecraft.block.Block STORM_GONG_PART=stormGong("storm_gong_part",com.anton.elementalwands.summit.StormGongBlock.Part::new);
+    public static final net.minecraft.block.entity.BlockEntityType<com.anton.elementalwands.summit.StormGongBlockEntity> STORM_GONG_ENTITY=
+            net.minecraft.registry.Registry.register(net.minecraft.registry.Registries.BLOCK_ENTITY_TYPE,net.minecraft.util.Identifier.of("elementalwands","storm_gong"),
+                    net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder.create(com.anton.elementalwands.summit.StormGongBlockEntity::new,STORM_GONG).build());
+    private static net.minecraft.block.Block stormGong(String name,
+            java.util.function.Function<net.minecraft.block.AbstractBlock.Settings,net.minecraft.block.Block> factory) {
+        var id=net.minecraft.util.Identifier.of("elementalwands",name);
+        var key=net.minecraft.registry.RegistryKey.of(net.minecraft.registry.RegistryKeys.BLOCK,id);
+        return net.minecraft.registry.Registry.register(net.minecraft.registry.Registries.BLOCK,id,
+                factory.apply(net.minecraft.block.AbstractBlock.Settings.create().registryKey(key)
+                        .strength(-1,3600000).mapColor(net.minecraft.block.MapColor.ORANGE).sounds(net.minecraft.sound.BlockSoundGroup.COPPER)
+                        .nonOpaque().dropsNothing().allowsSpawning((state,world,pos,type) -> false)
+                        .pistonBehavior(net.minecraft.block.piston.PistonBehavior.BLOCK)));
+    }
+
     public static void registerAll() {
         // Internal encounter blocks; no items or recipes. Crystal ores remain removed.
     }

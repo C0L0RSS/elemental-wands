@@ -65,6 +65,19 @@ public final class StormSummitManager {
         List<Integer> built = new ArrayList<>();
         Map<String, Point> returns = new LinkedHashMap<>();
         Map<String, String> modes = new LinkedHashMap<>();
+        /** Players an aerie gong took up; a login with no fight or call holding them goes back to the aerie. */
+        List<String> called = new ArrayList<>();
+        /** Aeries that have been won, by {@link StormAerie} site key. */
+        Map<String, Site> sites = new LinkedHashMap<>();
+    }
+
+    static final class Site {
+        /** The reward chest cells, placed again after a victory if broken or blocked. */
+        List<Long> chests = new ArrayList<>();
+        /** Cells whose chest has been filled; a chest placed there again stays empty. */
+        List<Long> filled = new ArrayList<>();
+        /** Everyone who has won here; each may claim one spell book from the chests. */
+        List<String> victors = new ArrayList<>();
     }
 
     private static final class Build {
@@ -88,6 +101,7 @@ public final class StormSummitManager {
 
     public static void init() {
         StormRocEncounter.init();
+        StormAerie.init();
         ServerLifecycleEvents.SERVER_STARTED.register(StormSummitManager::load);
         ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resources, success) -> layout = fingerprint(server));
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> { state = null; path = null; builds.clear(); kept.clear(); });
@@ -148,7 +162,7 @@ public final class StormSummitManager {
         StringBuilder out = new StringBuilder("Storm Summit generation ").append(state.generation)
                 .append(", slots built: ").append(state.built).append('.');
         builds.values().forEach(b -> out.append(" Slot ").append(b.slot).append(" building ").append(b.next).append('/').append(b.tiles.size()).append('.'));
-        return out.append(StormRocEncounter.status()).toString();
+        return out.append(StormRocEncounter.status()).append(StormAerie.status()).toString();
     }
 
     public static String start(ServerPlayerEntity player) {
@@ -170,6 +184,9 @@ public final class StormSummitManager {
     }
 
     static Map<String, String> savedModes() { return state == null ? null : state.modes; }
+    static Map<String, Point> savedReturns() { return state == null ? null : state.returns; }
+    static List<String> savedCalls() { return state == null ? null : state.called; }
+    static Map<String, Site> savedSites() { return state == null ? null : state.sites; }
 
     // ------------------------------------------------------------------ moving players
 
@@ -177,22 +194,28 @@ public final class StormSummitManager {
         transfer(player, realm, StormSummit.arrival(StormSummit.centre(state.generation, slot)), StormSummit.ARRIVAL_YAW, 0);
     }
 
-    /** Back to the recorded entry point, or world spawn. */
-    private static boolean sendHome(ServerPlayerEntity player) {
+    /** Back to the recorded entry point (an aerie's for a called player), or world spawn. */
+    static boolean sendHome(ServerPlayerEntity player) {
         MinecraftServer server = player.getEntityWorld().getServer();
-        Point point = state.returns.remove(player.getUuidAsString());
-        persist();
+        String id = player.getUuidAsString();
+        Point point = state.returns.get(id);
         ServerWorld world = point == null ? null : server.getWorld(RegistryKey.of(RegistryKeys.WORLD, Identifier.of(point.dimension())));
-        if (world != null && world.getRegistryKey() != StormSummit.WORLD) {
-            transfer(player, world, new Vec3d(point.x(), point.y(), point.z()), point.yaw(), point.pitch());
-            return true;
+        boolean recorded = world != null && world.getRegistryKey() != StormSummit.WORLD;
+        if (recorded) transfer(player, world, new Vec3d(point.x(), point.y(), point.z()), point.yaw(), point.pitch());
+        else {
+            ServerWorld spawn = server.getSpawnWorld();
+            BlockPos pos = server.getSpawnPoint().getPos();
+            spawn.getChunk(pos.getX() >> 4, pos.getZ() >> 4);
+            int y = spawn.getTopY(Heightmap.Type.MOTION_BLOCKING, pos.getX(), pos.getZ());
+            transfer(player, spawn, new Vec3d(pos.getX() + .5, y, pos.getZ() + .5), server.getSpawnPoint().yaw(), 0);
         }
-        ServerWorld spawn = server.getSpawnWorld();
-        BlockPos pos = server.getSpawnPoint().getPos();
-        spawn.getChunk(pos.getX() >> 4, pos.getZ() >> 4);
-        int y = spawn.getTopY(Heightmap.Type.MOTION_BLOCKING, pos.getX(), pos.getZ());
-        transfer(player, spawn, new Vec3d(pos.getX() + .5, y, pos.getZ() + .5), server.getSpawnPoint().yaw(), 0);
-        return false;
+        // Save where they now stand before retiring the record: a crash in between repeats the trip
+        // home instead of leaving them on the summit with no way back.
+        server.getPlayerManager().saveAllPlayerData();
+        state.returns.remove(id);
+        state.called.remove(id);
+        persist();
+        return recorded;
     }
 
     static void transfer(ServerPlayerEntity player, ServerWorld world, Vec3d pos, float yaw, float pitch) {
@@ -214,6 +237,17 @@ public final class StormSummitManager {
         refreshGeneration();
         return state.built.contains(slot) && !builds.containsKey(slot);
     }
+
+    static boolean building(int slot) { return builds.containsKey(slot); }
+
+    /** A slot's centre in the current generation. */
+    static BlockPos slotCentre(int slot) {
+        refreshGeneration();
+        return StormSummit.centre(state.generation, slot);
+    }
+
+    /** Starts laying out a slot for an aerie call, which moves its players itself once it is ready. */
+    static void raise(ServerWorld realm, int slot) { if (!ready(slot)) build(realm, slot); }
 
     /** A changed layout never overwrites an old one in place: it moves to untouched ground. */
     private static void refreshGeneration() {
@@ -317,7 +351,10 @@ public final class StormSummitManager {
             state = Files.exists(path) ? JSON.fromJson(Files.readString(path), State.class) : new State();
             if (state == null || state.version != 1 || state.built == null || state.returns == null || state.layout == null)
                 throw new IOException("Invalid Storm Summit record");
+            // Records from before the aerie lack these.
             if (state.modes == null) state.modes = new LinkedHashMap<>();
+            if (state.called == null) state.called = new ArrayList<>();
+            if (state.sites == null) state.sites = new LinkedHashMap<>();
             persist();
         } catch (Exception e) {
             state = null;

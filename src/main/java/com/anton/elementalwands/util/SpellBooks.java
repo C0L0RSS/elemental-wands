@@ -4,6 +4,7 @@ import com.anton.elementalwands.data.*;
 import com.anton.elementalwands.registry.ModItems;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.text.Text;
@@ -41,11 +42,15 @@ public final class SpellBooks {
     }
     /** One personal book per receipt key, e.g. per church or per graveyard. */
     public static boolean claim(ServerPlayerEntity p,String key,String message) {
+        return claim(p,ModItems.SECONDARY_SPELL_BOOK,key,message);
+    }
+    /** As above, for a reward that hands out a different book, such as the Storm Roc's Ultimate one. */
+    public static boolean claim(ServerPlayerEntity p,Item item,String key,String message) {
         var n=p.getAttachedOrElse(EWAttachments.SPELL_BOOKS,new NbtCompound()).copy();
         if(n.getBoolean(key,false)) return false;
         // One-slot item: require actual space before recording a receipt; never drop a personal reward.
         if(p.getInventory().getEmptySlot()<0) {p.sendMessage(Text.literal("Make room, then open this chest to claim your spell book."),true);return false;}
-        var book=new ItemStack(ModItems.SECONDARY_SPELL_BOOK);
+        var book=new ItemStack(item);
         if(!p.getInventory().insertStack(book)) return false;
         n.putBoolean(key,true);p.setAttached(EWAttachments.SPELL_BOOKS,n);
         p.sendMessage(Text.literal(message),false);

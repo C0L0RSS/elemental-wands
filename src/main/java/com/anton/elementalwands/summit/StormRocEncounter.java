@@ -28,11 +28,15 @@ public final class StormRocEncounter {
                     net.minecraft.server.world.ChunkTicketType.FOR_LOADING | net.minecraft.server.world.ChunkTicketType.FOR_SIMULATION));
     private static final int TICKET_RADIUS = 7 + net.minecraft.server.world.ChunkLevels.getLevelFromType(net.minecraft.server.world.ChunkLevelType.FULL)
             - net.minecraft.server.world.ChunkLevels.getLevelFromType(net.minecraft.server.world.ChunkLevelType.ENTITY_TICKING);
+    /** Set while the server stops: an aerie fight's challengers then go home on their next login instead. */
+    private static boolean stopping;
     private static final class Fight {
         final BlockPos centre;
         final StormRocEntity boss;
+        /** The aerie whose gong called this fight ({@link StormAerie#siteKey}); null for an operator start. */
+        final String site;
         final Set<UUID> roster = new HashSet<>(), standing = new HashSet<>();
-        Fight(BlockPos centre, StormRocEntity boss) { this.centre = centre; this.boss = boss; }
+        Fight(BlockPos centre, StormRocEntity boss, String site) { this.centre = centre; this.boss = boss; this.site = site; }
     }
     public static void init() {
         ServerTickEvents.END_SERVER_TICK.register(StormRocEncounter::tick);
@@ -53,7 +57,10 @@ public final class StormRocEncounter {
         });
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> eliminate(handler.getPlayer()));
         ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resources, success) -> stopAll(server, "Storm Roc encounter reset after reload."));
-        ServerLifecycleEvents.SERVER_STOPPING.register(server -> stopAll(server, "Storm Roc encounter stopped."));
+        ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+            stopping = true;
+            try { stopAll(server, "Storm Roc encounter stopped."); } finally { stopping = false; }
+        });
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> fights.clear());
     }
     public static boolean activeAt(BlockPos centre) { return fights.containsKey(centre); }
@@ -65,31 +72,41 @@ public final class StormRocEncounter {
     private static Fight at(PlayerEntity player) {
         return StormSummitManager.inRealm(player) ? fights.get(StormSummit.nearestCentre(player.getEntityPos())) : null;
     }
+    /** Operator start: everyone living on this summit in Survival or Adventure becomes the roster. */
     public static String start(MinecraftServer server, BlockPos centre) {
+        ServerWorld realm = server.getWorld(StormSummit.WORLD);
+        return start(server, centre, realm == null ? List.of() : realm.getPlayers(), null);
+    }
+    /**
+     * Starts a fight with an explicit roster: those of the candidates still alive and standing on
+     * this summit. An aerie call passes the players it brought up and its site; the operator start
+     * passes everyone in the realm and no site.
+     */
+    public static String start(MinecraftServer server, BlockPos centre, List<ServerPlayerEntity> candidates, String site) {
         if (activeAt(centre)) return "This summit already has a fight in progress.";
         ServerWorld realm = server.getWorld(StormSummit.WORLD);
         if (realm == null) return "Storm Summit is unavailable.";
         var modes = StormSummitManager.savedModes();
         if (modes == null) return "Storm Summit storage is unavailable.";
-        List<ServerPlayerEntity> players = realm.getPlayers().stream().filter(p -> p.isAlive()
+        List<ServerPlayerEntity> players = candidates.stream().filter(p -> p.getEntityWorld() == realm && p.isAlive()
                 && !p.isCreative() && !p.isSpectator() && StormSummit.nearestCentre(p.getEntityPos()).equals(centre)
                 && !StormSummit.fallen(centre, p.getEntityPos()) && !enrolled(p)).toList();
         if (players.isEmpty()) return "No living Survival or Adventure challengers are on this summit.";
         for (var player : players) modes.putIfAbsent(player.getUuidAsString(), player.interactionManager.getGameMode().getId());
         if (!StormSummitManager.persist()) return "Could not record player recovery; fight was not started.";
         StormRocEntity boss = new StormRocEntity(ModEntities.STORM_ROC, realm);
-        Fight fight = new Fight(centre.toImmutable(), boss);
+        Fight fight = new Fight(centre.toImmutable(), boss, site);
         for (var player : players) { fight.roster.add(player.getUuid()); fight.standing.add(player.getUuid()); }
         fights.put(fight.centre, fight);
         realm.getChunkManager().addTicket(FIGHT_TICKET, new net.minecraft.util.math.ChunkPos(fight.centre), TICKET_RADIUS);
         try {
             boss.startFight(centre, players);
             if (!realm.spawnEntity(boss)) {
-                end(server, fight, "Storm Roc could not spawn; encounter reset.");
+                end(server, fight, "Storm Roc could not spawn; encounter reset.", false);
                 return "Storm Roc could not spawn.";
             }
         } catch (RuntimeException failure) {
-            end(server, fight, "Storm Roc could not begin; encounter reset.");
+            end(server, fight, "Storm Roc could not begin; encounter reset.", false);
             return "Storm Roc could not begin: " + failure.getClass().getSimpleName() + ".";
         }
         announce(server, fight, "The Storm Roc attacks. The challenger roster is sealed.");
@@ -105,14 +122,15 @@ public final class StormRocEncounter {
     public static String reset(MinecraftServer server, BlockPos centre) {
         Fight fight = fights.get(centre);
         if (fight == null) return "No active fight on this summit.";
-        end(server, fight, "Storm Roc encounter reset. You may retry.");
+        end(server, fight, "Storm Roc encounter reset. You may retry.", false);
         return "Storm Roc encounter reset.";
     }
     public static String status() {
         if (fights.isEmpty()) return " No active Roc fights.";
         StringBuilder result = new StringBuilder();
         for (Fight fight : fights.values()) result.append(" Roc at ").append(fight.centre.getX()).append(": ")
-                .append(fight.boss.status()).append("; standing ").append(fight.standing.size()).append('/').append(fight.roster.size()).append('.');
+                .append(fight.boss.status()).append("; standing ").append(fight.standing.size()).append('/').append(fight.roster.size())
+                .append(fight.site == null ? "" : "; called at an aerie").append('.');
         return result.toString();
     }
     public static void leave(ServerPlayerEntity player) {
@@ -159,11 +177,15 @@ public final class StormRocEncounter {
             }
             // A defeat earned in the same tick the last challenger fell is still a victory.
             if (fight.boss.fightComplete()) {
-                end(server, fight, "The Storm Roc falls. Its death and the shard reward are still to come; you may fight it again.");
+                if (fight.site == null) { end(server, fight, "The Storm Roc falls. You may fight it again.", true); continue; }
+                // Victors wait safely on the empty summit for a moment, then go home to the aerie's chests.
+                String reward = StormAerie.reward(server, fight.site, fight.roster);
+                end(server, fight, "The Storm Roc is defeated. The summit releases you in 10 seconds." + reward, true);
+                StormAerie.homecoming(fight.centre, fight.roster, server.getTicks());
                 continue;
             }
-            if (fight.standing.isEmpty()) { end(server, fight, "The challengers have fallen. You may retry."); continue; }
-            if (fight.boss.isRemoved() || !fight.boss.isAlive()) { end(server, fight, "Storm Roc encounter interrupted. You may retry."); continue; }
+            if (fight.standing.isEmpty()) { end(server, fight, "The challengers have fallen. You may retry.", false); continue; }
+            if (fight.boss.isRemoved() || !fight.boss.isAlive()) { end(server, fight, "Storm Roc encounter interrupted. You may retry.", false); continue; }
             for (UUID id : fight.roster) {
                 ServerPlayerEntity player = server.getPlayerManager().getPlayer(id);
                 if (player != null && player.isAlive() && !fight.standing.contains(id) && (!StormSummitManager.inRealm(player) || !player.isSpectator())) spectate(player, fight);
@@ -184,17 +206,25 @@ public final class StormRocEncounter {
         modes.remove(player.getUuidAsString());
         StormSummitManager.persist();
     }
-    private static void end(MinecraftServer server, Fight fight, String message) {
+    /**
+     * Retires a fight and gathers its challengers at the arrival point, except that a lost aerie
+     * fight sends everyone still on its summit back to the aerie (on their next login if the server
+     * is stopping). A won aerie fight's victors wait for {@link StormAerie#homecoming}.
+     */
+    private static void end(MinecraftServer server, Fight fight, String message, boolean won) {
         fights.remove(fight.centre);
         ServerWorld realm=server.getWorld(StormSummit.WORLD);
         if(realm!=null)realm.getChunkManager().removeTicket(FIGHT_TICKET,new net.minecraft.util.math.ChunkPos(fight.centre),TICKET_RADIUS);
         fight.boss.stopFight();
         fight.boss.discard();
         announce(server, fight, message);
+        boolean home = fight.site != null && !won && !stopping && StormSummitManager.savedReturns() != null;
         for (UUID id : fight.roster) {
             ServerPlayerEntity player = server.getPlayerManager().getPlayer(id);
             if (player != null) {
-                if (player.isAlive() && StormSummitManager.inRealm(player)) StormSummitManager.transfer(player, server.getWorld(StormSummit.WORLD), StormSummit.arrival(fight.centre), StormSummit.ARRIVAL_YAW, 0);
+                boolean here = player.isAlive() && StormSummitManager.inRealm(player);
+                if (here && home && StormSummit.nearestCentre(player.getEntityPos()).equals(fight.centre)) StormSummitManager.sendHome(player);
+                else if (here) StormSummitManager.transfer(player, server.getWorld(StormSummit.WORLD), StormSummit.arrival(fight.centre), StormSummit.ARRIVAL_YAW, 0);
                 restore(player);
             }
         }
@@ -202,5 +232,5 @@ public final class StormRocEncounter {
     private static void announce(MinecraftServer server, Fight fight, String message) {
         for (UUID id : fight.roster) { var player = server.getPlayerManager().getPlayer(id); if (player != null) player.sendMessage(Text.literal(message), false); }
     }
-    private static void stopAll(MinecraftServer server, String message) { for (Fight fight : List.copyOf(fights.values())) end(server, fight, message); }
+    private static void stopAll(MinecraftServer server, String message) { for (Fight fight : List.copyOf(fights.values())) end(server, fight, message, false); }
 }

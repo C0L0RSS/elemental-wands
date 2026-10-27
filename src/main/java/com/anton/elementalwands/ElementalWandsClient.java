@@ -114,6 +114,8 @@ public class ElementalWandsClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.FIRE_SPIRIT, FireSpiritRenderer::new);
         EntityRendererRegistry.register(ModEntities.FRACTURED_GUARDIAN, FracturedGuardianRenderer::new);
         EntityRendererRegistry.register(ModEntities.STORM_ROC, com.anton.elementalwands.client.renderer.StormRocRenderer::new);
+        net.minecraft.client.render.block.entity.BlockEntityRendererFactories.register(com.anton.elementalwands.registry.ModBlocks.STORM_GONG_ENTITY,
+                context -> new com.anton.elementalwands.client.renderer.StormGongRenderer<>());
         EntityRendererRegistry.register(ModEntities.ROC_EFFECT, com.anton.elementalwands.client.renderer.RocEffectRenderer::new);
         EntityRendererRegistry.register(ModEntities.ROC_BODY_PART, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.HOLLOW_NECROMANCER, com.anton.elementalwands.client.renderer.NecromancerRenderer::new);

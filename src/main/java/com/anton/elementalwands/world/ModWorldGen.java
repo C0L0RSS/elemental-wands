@@ -9,9 +9,12 @@ public class ModWorldGen {
 
     public static void registerAll() {
         // Church generation is data-driven: worldgen/structure, structure_set and template_pool.
-        // The Hollow graveyard's structure JSON uses this type to pick level, dry ground.
+        // The Hollow graveyard's structure JSON uses this type to pick level, dry ground,
+        // and the Storm aerie's uses its own to seat the shrine on a mountain summit.
         // Crystal ore worldgen remains removed.
         Registry.register(Registries.STRUCTURE_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "hollow_graveyard"),
                 HollowGraveyardStructure.TYPE);
+        Registry.register(Registries.STRUCTURE_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "storm_aerie"),
+                StormAerieStructure.TYPE);
     }
 }

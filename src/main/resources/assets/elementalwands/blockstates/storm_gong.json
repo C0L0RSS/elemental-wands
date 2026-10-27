@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "elementalwands:block/storm_gong_hidden"
+    },
+    "facing=east": {
+      "model": "elementalwands:block/storm_gong_hidden"
+    },
+    "facing=south": {
+      "model": "elementalwands:block/storm_gong_hidden"
+    },
+    "facing=west": {
+      "model": "elementalwands:block/storm_gong_hidden"
+    }
+  }
+}

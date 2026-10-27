@@ -110,6 +110,8 @@
   "block.elementalwands.sword_tip": "Broken Blade",
   "block.elementalwands.old_bones": "Old Bones",
   "block.elementalwands.old_ribcage": "Old Ribcage",
+  "block.elementalwands.storm_gong": "Storm Gong",
+  "block.elementalwands.storm_gong_part": "Storm Gong",
   "entity.elementalwands.storm_roc": "Storm Roc",
   "entity.elementalwands.roc_body_part": "Storm Roc",
   "entity.elementalwands.roc_effect": "Storm",

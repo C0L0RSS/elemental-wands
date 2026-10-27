@@ -1,0 +1,13 @@
+{
+  "type": "elementalwands:storm_aerie",
+  "biomes": "#elementalwands:has_storm_aerie",
+  "step": "top_layer_modification",
+  "spawn_overrides": {},
+  "terrain_adaptation": "beard_thin",
+  "start_pool": "elementalwands:storm_aerie",
+  "floor_layer": 0,
+  "search_radius": 48,
+  "summit_cut": 8,
+  "max_drop": 24,
+  "min_floor": 140
+}

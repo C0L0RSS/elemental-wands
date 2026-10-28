@@ -16,7 +16,7 @@ def unreflect(item):
         r=item['rotation'];item['rotation']=[r[0],-r[1],-r[2]] if isinstance(r,list) else {k:[v[0],-v[1],-v[2]] for k,v in r.items()}
 
 def main():
-    from build_runtime import SCALE,DEFINITIONS,WING_REST,STUCK_FREE,SMASH_PAUSE,DIVE_APEXES,HOP_LOWEST,stuck_slap,KEY_FPS,KNEADS,BITE_IMPACT,BITE_TAKEOFF,BITE_LANDING,BITE_LEAP_IMPACT,SWEEP_START,SWEEP_END,SCREAM_IMPACT,WING_LIFT,WING_APEX,WING_IMPACT,POUNCE_LAUNCH,POUNCE_IMPACT,SPIRE_PUSH,SPIRE_FLIGHT,LAND_TOUCH,LAND,LEG_REACH,STAMPEDE_RUN,STAMPEDE_LOOP,MODEL,shape,bill,glowing
+    from build_runtime import SCALE,DEFINITIONS,WING_REST,STUCK_FREE,SMASH_PAUSE,DIVE_APEXES,HOP_LOWEST,stuck_slap,KEY_FPS,KNEADS,BITE_IMPACT,BITE_TAKEOFF,BITE_LANDING,BITE_LEAP_IMPACT,SWEEP_START,SWEEP_END,SCREAM_IMPACT,WING_LIFT,WING_APEX,WING_IMPACT,POUNCE_LAUNCH,POUNCE_IMPACT,SPIRE_PUSH,SPIRE_FLIGHT,LAND_TOUCH,LAND,SUMMON,SUMMON_CALL,SUMMON_BEATS,LEG_REACH,STAMPEDE_RUN,STAMPEDE_LOOP,MODEL,shape,bill,glowing
     approved=read(MODEL/'storm_roc.geo.json')
     geo=read(ASSETS/'geckolib/models/storm_roc.geo.json')
     for b in geo['minecraft:geometry'][0]['bones']:
@@ -41,7 +41,7 @@ def main():
     landmarks={'head':('head',by['head']['pivot']),'beak':('upper_beak',tip),
         'neck':('neck_upper',by['neck_upper']['pivot']),'body':('body',[0,65,5]),
         'left_foot':('left_foot',by['left_foot']['pivot']),'right_foot':('right_foot',by['right_foot']['pivot'])}
-    planted={'perched':[(0,DEFINITIONS['perched'][0],'perched')],'call':[(0,3,'perched')],
+    planted={'perched':[(0,DEFINITIONS['perched'][0],'perched')],'call':[(0,3,'perched')],'summon':[(0,SUMMON,'perched')],
         'land':[(LAND_TOUCH+.08,LAND,'perched')],'hunched':[(0,DEFINITIONS['hunched'][0],'hunched')],
         'bite':[(0,DEFINITIONS['bite'][0],'hunched')],
         'bite_leap':[(0,BITE_TAKEOFF-.03,'hunched'),(BITE_LANDING+.05,DEFINITIONS['bite_leap'][0],'hunched')],
@@ -93,7 +93,8 @@ def main():
     # chain smash's pause ends.
     for a,ta,b,tb in [('dive',3,'stuck',0),('hop',0,'stuck',SMASH_PAUSE),('hop',1.2,'stuck',0),
         ('stuck',6,'hunched',0),('land',LAND,'perched',0),
-        ('call',0,'perched',0),('call',3,'perched',0),('spire_flight',0,'perched',0)]:endpoint(a,ta,b,tb)
+        ('call',0,'perched',0),('call',3,'perched',0),('summon',0,'perched',0),('summon',SUMMON,'perched',0),
+        ('spire_flight',0,'perched',0)]:endpoint(a,ta,b,tb)
     # The spire hop hands over to the landing with no crossfade, its legs already reaching.
     endpoint('spire_flight',SPIRE_FLIGHT,'land',0)
     # So does the takeoff, to the landing or, bound for the phase change, to the flight loop
@@ -194,6 +195,13 @@ def main():
         assert d[1]>.9,('call skyward hold',t,d)
     d=world('call',2)['head'][:3,:3]@np.array([0,0,-1])
     assert d[1]<-.15 and d[2]<-.9,('call command at first bolt',d)
+    # The summon screams to the sky, then glares down at the funnel through its downbeats.
+    for t in [1.5,SUMMON_CALL]:
+        d=world('summon',t)['head'][:3,:3]@np.array([0,0,-1])
+        assert d[1]>.9,('summon skyward scream',t,d)
+    for t in SUMMON_BEATS:
+        d=world('summon',t)['head'][:3,:3]@np.array([0,0,-1])
+        assert d[1]<-.15 and d[2]<-.85,('summon glares down at the funnel',t,d)
     for m in snapshots['perched']:
         forward=m['head'][:3,:3]@np.array([0,0,-1]);yaw=math.degrees(math.atan2(forward[0],-forward[2]))
         assert abs(yaw)<=45.01,('perch yaw leaves look-at room',yaw)

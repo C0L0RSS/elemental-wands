@@ -69,6 +69,11 @@ LEG_REACH = .45
 # The call's bolt leaves its bill at CALL_VOLLEY (tick 10); the large strikes it calls land 1.5 s
 # later (LARGE_WARNING), then every half second (BOLT_GAP).
 CALL_BOLT, CALL_STRIKES = .5, (2.0, 2.5, 3.0)
+# The fight opens with it summoning the summit's first tornado from its spire: it screams the storm
+# down at SUMMON_CALL (tick 34, StormRocRules.SUMMON_CALL), when the bolt strikes the funnel's spot
+# and the funnel starts touching down, drives the wind at it with three heavy downbeats, and is
+# back on its perch's first frame at SUMMON (tick 88, StormRocRules.SUMMON_TICKS).
+SUMMON, SUMMON_CALL, SUMMON_BEATS = 4.4, 1.7, (2.2, 2.8, 3.4)
 # Raptor Strike: it stalks low and pushes off at 1.60 (tick 32); the server carries it flat and
 # fast on a low arc, and its talons strike its prey at 2.60 (tick 52).
 POUNCE_LAUNCH, POUNCE_IMPACT = 1.6, 2.6
@@ -112,7 +117,7 @@ STUCK_SLAPS = ((0,0),(.1,.35,'snap'),(.32,0,'drop'),(1.5,0),(1.95,1.6),(2.02,1.6
 def stuck_slap(t, label):
     return keys(t-(.06 if label=='right' else 0), STUCK_SLAPS)
 FAST_KEYS = {'scream':[(1.45,2.2)], 'swing_left':[(1.2,1.95)], 'swing_right':[(1.2,1.95)], 'bite':[(1.95,2.7)], 'bite_leap':[(1.8,3.25)], 'wing':[(.45,1.1),(2.4,3.0)], 'wing_spiral':[(.5,3.6)], 'takeoff':[(1.1,1.2)],
-    'pounce':[(1.3,1.75),(2.35,2.8)], 'spire_flight':[(.3,1.0),(1.3,SPIRE_FLIGHT)], 'land':[(.6,1.0)], 'call':[(0,.6),(1.75,2.1),(2.45,2.7),(2.85,3.0)], 'stampede':[(.2,2.1),(2.05,2.65)], 'stampede_run':[(0,.45)], 'stampede_skid':[(0,.3)],
+    'pounce':[(1.3,1.75),(2.35,2.8)], 'spire_flight':[(.3,1.0),(1.3,SPIRE_FLIGHT)], 'land':[(.6,1.0)], 'call':[(0,.6),(1.75,2.1),(2.45,2.7),(2.85,3.0)], 'summon':[(1.0,1.9),(2.0,3.5)], 'stampede':[(.2,2.1),(2.05,2.65)], 'stampede_run':[(0,.45)], 'stampede_skid':[(0,.3)],
     'hunched':[(.5,1.),(8.5,9.)]+[(g[0],g[0]+.35) for g in GUARD_GLANCES]}
 FAST_KEYS['takeoff']=[(.3,.6),(.95,3.6)]
 FAST_KEYS['dive']=[(.05,.25),(.4,.6),(.95,1.15),(1.5,1.95),(2.5,3.0)]
@@ -122,7 +127,7 @@ FAST_KEYS['hop']=[(0,.45),(.85,1.2)]
 WING_REST = -.125
 # The idle and flight loops play their authored motion this much slower: a giant moves slowly.
 SLOW = 1.5
-DEFINITIONS = {'perched':(PERCHED,True), 'call':(3,False), 'land':(LAND,False),
+DEFINITIONS = {'perched':(PERCHED,True), 'call':(3,False), 'summon':(SUMMON,False), 'land':(LAND,False),
     'flight':(round(4.8*SLOW,3),True), 'spire_flight':(SPIRE_FLIGHT,False), 'hunched':(9.6,True), 'dive':(3,False), 'stuck':(6,False),
     'bite':(3.9,False), 'bite_leap':(4.4,False), 'swing_left':(2.6,False), 'swing_right':(2.6,False),
     'scream':(2.9,False), 'wing':(4.0,False), 'pounce':(4.0,False),
@@ -836,6 +841,47 @@ def main():
             (1.58,(-81,2,1)),(S1-.2,(20,0,0),4),(S2,(26,2,2),2),(S2+.12,(18,0,0)),(S3-.12,(0,0,0))],spark=1.5)
         head(p,look[0],look[1],look[2]+2*tremble)
         plant(p,perch_feet);return p
+    def summon(t):
+        """It summons the summit's first tornado. A beat still on its perch, then it draws back and
+        low, gathering itself, its wings opening from the shoulder; rears up to its full height with
+        its wings raised high as its head jerks up to the sky in stuttered electric snaps and its bill
+        gapes. At SUMMON_CALL it screams the storm down: the bolt strikes where the funnel will touch
+        down, and the discharge jolts through it. Then, its head whipped down onto the funnel, it
+        drives the wind at it with three heavy downbeats, its body heaving forward with each; folds
+        its wings slowly, the hands first, and settles back on its perch."""
+        C,(B1,B2,B3)=SUMMON_CALL,SUMMON_BEATS
+        p=copy.deepcopy(perch);body=p['body']
+        gather=keys(t,[(0,0),(.3,0),(1.0,1),(1.15,1),(1.55,0)])
+        rise=keys(t,[(0,0),(1.0,0),(1.55,1),(C+.15,1),(B1+.1,.6),(B3+.2,.45),(SUMMON-.3,0)])
+        heave=sum(envelope(t,b-.08,.1,.05,.35,'snap','ease') for b in SUMMON_BEATS)
+        jolt=shake(t,C,.45,13)
+        tremble=math.sin(t*math.tau*11)*envelope(t,C-.3,.2,.35,.2,'ease','ease')
+        body['position']+=np.array([0,-4*gather+12*rise-1.5*heave,2.5*gather-2.5*heave])
+        body['rotation']+=np.array([8*gather-18*rise+7*heave+1.5*jolt,0,2.5*jolt])
+        p['neck_base']['rotation'][0]+=6*gather-18*rise+5*heave
+        p['tail_fan']['rotation'][0]+=-6*gather+16*rise
+        p['tail_fan']['rotation'][1]+=8*jolt
+        # Raised high for the scream, then three heavy strokes down at the funnel, each recovering
+        # high, and down to rest.
+        stroke=lambda x:keys(x,[(0,0),(.5,0),(1.2,.4),(1.6,.95),(C+.15,1.0),(B1-.25,1.0),(B1,-.55,'hit'),
+            (B1+.32,.85),(B2,-.6,'hit'),(B2+.32,.85),(B3,-.65,'hit'),(B3+.4,.25),(SUMMON-.35,0)])
+        air=pose('flight',0);flap(air,t,stroke,lag=.12)
+        order=lambda n:2 if n in HANDS else 1 if n in FOREARMS else 0
+        opening=copy.deepcopy(air)
+        joint_mix(opening,flat_fold,lambda n:1-keys(t,[(.6+.06*order(n),0),(1.3+.06*order(n),1),(B3+.3-.06*order(n),1),(SUMMON-.55-.06*order(n),0)]))
+        fold_wings(p,opening,lambda n:keys(t,[(.35+.05*order(n),0),(.9+.05*order(n),1),(B3+.35-.05*order(n),1),(SUMMON-.25-.05*order(n),0)]))
+        for label,side in (('left',1),('right',-1)):
+            p[label+'_wing_wrist']['rotation'][2]+=side*3*tremble
+            p[label+'_wing_shoulder']['rotation'][2]+=side*4*jolt
+        # Its bill gapes to the sky for the scream and closes; it hisses at each downbeat.
+        p['lower_beak']['rotation'][0]=keys(t,[(0,0),(1.25,0),(1.45,52,'snap'),(C+.2,48),(B1-.2,12),(B1,30,'snap'),
+            (B1+.3,8),(B2,26,'snap'),(B2+.3,8),(B3,30,'snap'),(B3+.4,0)])
+        # Its head: lowered at the summit as it gathers itself; three stuttered snaps up to the sky,
+        # electric tics as it screams; a whip down onto the funnel, a jolt at each beat, and home.
+        look=twitch(t,[(.4,(14,0,0)),(1.15,(-28,6,4)),(1.3,(-55,-5,-3)),(1.45,(-82,0,0),2.5),(C,(-85,4,3)),
+            (C+.15,(24,0,0),3),(B1,(28,2,2),2),(B2,(28,-2,-1),2),(B3,(24,1,1),2),(SUMMON-.45,(0,0,0))],spark=1.5)
+        head(p,look[0],look[1],look[2]+2*tremble)
+        plant(p,perch_feet);return p
     HUNCHED=DEFINITIONS['hunched'][0]
     def hunched_breath(t):
         # Uneven breaths: a slow draw, a short catch and a quicker sigh out, each its own depth.
@@ -1516,6 +1562,8 @@ def main():
         # Rising as it gathers the storm, flared as the bolt leaves its bill, ruffled at the second
         # strike, lowered as it settles.
         if name=='call':return keys(t,[(0,0),(.1,0),(.42,.75),(CALL_BOLT,1,'snap'),(2.2,1),(2.45,.85),(2.52,1,'snap'),(2.65,.8),(3.0,0)])
+        # Rising as it gathers itself, flared at the scream, flaring again with each downbeat, lowered as it settles.
+        if name=='summon':return keys(t,[(0,0),(.4,0),(1.3,.7),(SUMMON_CALL,1,'snap'),(SUMMON_BEATS[2]+.2,.9),(SUMMON-.3,0)])
         if name=='flight':return -1
         # Lifted as it gathers itself on the spire, swept flat as it launches.
         if name=='spire_flight':return keys(t,[(0,0),(.08,0),(SPIRE_PUSH-.05,.45),(SPIRE_PUSH+.22,-1),(SPIRE_FLIGHT,-1)])
@@ -1578,7 +1626,7 @@ def main():
     capstone=(np.mean(list(perch_feet.values()),axis=0),7/SCALE)
     def grounded(name,t):
         """(floor, weight, reach) while the feet are on the summit or a spire."""
-        if name in ('perched','call'):return [(perch_ground,1,capstone)]
+        if name in ('perched','call','summon'):return [(perch_ground,1,capstone)]
         if name=='flight':return []
         if name=='spire_flight':return [(perch_ground,1-ease(t,SPIRE_PUSH+.07,SPIRE_PUSH+.22),capstone)]
         if name=='land':return [(perch_ground,ease(t,LAND_TOUCH-.05,LAND_TOUCH+.15),capstone)]
@@ -1597,6 +1645,7 @@ def main():
         if name=='hunched':return hunched(t)
         if name=='stuck':return stuck(t)
         if name=='call':return call(t)
+        if name=='summon':return summon(t)
         if name=='land':return land(t)
         if name=='dive':return dive(t)
         if name=='hop':return hop(t)
@@ -1700,12 +1749,12 @@ def main():
         Spring(['tail_fan'],1.6,.32,turn=.9,shove=.7,limit=9)]
     # The run loop has its own stride sway and no springs, so the chain's clips meet exactly.
     FOLLOW={'hunched':FEATHERS,'bite':FEATHERS,'bite_leap':FEATHERS,'swing_left':FEATHERS,'swing_right':FEATHERS,'scream':FEATHERS,'wing':FEATHERS,'wing_spiral':FEATHERS,'pounce':FEATHERS,'stampede':FEATHERS,'stampede_skid':FEATHERS}
-    FOLLOW['flight']=FOLLOW['spire_flight']=FOLLOW['land']=FOLLOW['call']=FEATHERS
+    FOLLOW['flight']=FOLLOW['spire_flight']=FOLLOW['land']=FOLLOW['call']=FOLLOW['summon']=FEATHERS
     FOLLOW['takeoff']=FEATHERS
     FOLLOW['perched']=FEATHERS
     # Clips another clip continues without a crossfade, or that must end exactly at rest: their swing
     # settles by their end, as a loop's does.
-    CHAINED={'stampede','spire_flight','land','call'}
+    CHAINED={'stampede','spire_flight','land','call','summon'}
     CHAINED.add('takeoff')
     # The dive chain's clips cut into each other mid-motion, so their swing is at rest wherever another
     # clip takes over or hands over: the dive's and hop's at their slams, stuck's where the hop takes
@@ -1739,7 +1788,7 @@ def main():
     # these tolerances (degrees, model pixels, scale). The bones the server's sockets ride on keep
     # every key, so hits land exactly where the export says.
     THIN={'hunched','bite','bite_leap','swing_left','swing_right','scream','wing','wing_spiral','pounce','stampede','stampede_run','stampede_skid'};TOLERANCE={'rotation':.02,'position':.005,'scale':.0002}
-    THIN.update(('flight','spire_flight','land','call'))
+    THIN.update(('flight','spire_flight','land','call','summon'))
     THIN.add('takeoff')
     THIN.update(('dive','stuck','hop'))
     # Frames another clip takes over from mid-clip keep their keys exactly.

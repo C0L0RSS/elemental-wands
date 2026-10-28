@@ -62,6 +62,15 @@ public final class StormRocRules {
     /** A caught player is whirled this high up the funnel (at phase one's radius). */
     public static final double TORNADO_LIFT = 10;
     public static final double SHOCK_SPEED = 1.25, SHOCK_HEIGHT = .65, SAFE_RADIUS = 32;
+    /**
+     * The fight opens with its summon on its home spire (art/storm_roc/build_runtime.py: SUMMON,
+     * SUMMON_CALL): it screams a bolt into the clouds at SUMMON_SCREAM, the storm strikes the first
+     * tornado's spot at SUMMON_CALL as the funnel starts to form, and it is back on its perch at
+     * SUMMON_TICKS, when the air stretch begins.
+     */
+    public static final int SUMMON_TICKS = 88, SUMMON_CALL = 34, SUMMON_SCREAM = 30;
+    /** A new tornado touches down from the cloud over this long, harmless until it has formed. */
+    public static final int TORNADO_FORM = 50;
     /** A caught player spins this long, then is thrown and can't be caught again for TORNADO_IMMUNITY. */
     public static final int TORNADO_HOLD = 36, TORNADO_IMMUNITY = 60, TORNADO_CHIP_EVERY = 30;
 
@@ -185,7 +194,7 @@ public final class StormRocRules {
     /** The first smash falls like the dive and is as deadly; the hops are about 6 hearts. */
     public static final float HOP_DAMAGE = 26.06f;
 
-    public enum Stage { IDLE, AIR, DIVE, SMASH, STUCK, BRAWL, TAKEOFF, CHARGE, COMPLETE }
+    public enum Stage { IDLE, SUMMON, AIR, DIVE, SMASH, STUCK, BRAWL, TAKEOFF, CHARGE, COMPLETE }
 
     /**
      * impact: the tick its hit lands. lock: the tick it stops turning to follow its target

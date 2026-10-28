@@ -245,11 +245,20 @@ public final class RocEffectRenderer extends EntityRenderer<RocEffectEntity, Roc
             StormRocCrackleLayer.sprite(v,arc,t,at,1.6f,i*1.7+Math.sin(t*6)*.2,fade*(.75+.25*Math.sin(t*43+i)),right,up);
         }
     }
-    /** On the rock, faintly: where its winds start to pull, and where they slow you. */
+    /** On the rock, faintly: where its winds start to pull, and where they slow you (once it has formed). */
     private static void tornado(State s, MatrixStack.Entry m, VertexConsumer v, boolean light) {
         if(!light)return;
-        ring(s,v,m,s.radius*StormRocRules.TORNADO_REACH,.06,.05,0x30DBE8F7,64);
-        ring(s,v,m,s.radius,.065,.06,0x50DBE8F7,48);
+        float a=(float)Math.pow(formed(s),3);
+        ring(s,v,m,s.radius*StormRocRules.TORNADO_REACH,.06,.05,alpha(0xDBE8F7,.19f*a),64);
+        ring(s,v,m,s.radius,.065,.06,alpha(0xDBE8F7,.31f*a),48);
+    }
+    /** How far a new tornado has touched down, 0 to 1, over the ticks it forms in (its warning). */
+    private static double formed(State s) { return s.warning>0?Math.clamp(s.tick/s.warning,0,1):1; }
+    /** Its turn so far: slow as it forms, picking up to its full spin as it touches down, with no jump. */
+    private static double turned(State s) {
+        double w=s.warning;
+        if(w<=0||s.tick>=w)return s.tick-.3*Math.max(0,w);
+        return .4*s.tick+.3*s.tick*s.tick/w;
     }
     /**
      * A blocky tornado built like the game's own clouds: textured cubes of cloud spun in rings,
@@ -257,9 +266,12 @@ public final class RocEffectRenderer extends EntityRenderer<RocEffectEntity, Roc
      * wind that whip around faster than the funnel turns. Rock, snow and ice it has torn up fly
      * around it, and dust swirls across the rock as far as its winds pull. Its size follows the
      * gameplay radius, and everything turns the way its winds drag you.
+     * A new one forms first: dust stirs on the rock under a slow turn in the cloud, then the funnel
+     * reaches down out of it as a rope and thickens as it touches down, its bands and debris last.
      */
     private static void twister(State s, MatrixStack.Entry m, VertexConsumer v) {
         double k=s.radius/5,ground=surface(s,s.x,s.z);
+        double form=formed(s),grown=smooth(form),down=smooth(Math.min(1,form*1.3)),settle=Math.clamp((form-.75)/.25,0,1),turn=turned(s);
         float storm=SummitStormClient.level(0);
         // Under a clear sky its top frays out; in the storm it climbs into the cloud ceiling.
         double free=26+8*k,height=free+(StormSummit.STORM_CEILING+4-(s.y+ground)-free)*storm;
@@ -269,11 +281,15 @@ public final class RocEffectRenderer extends EntityRenderer<RocEffectEntity, Roc
         int lit=s.light;
         for(int i=0;i<layers;i++) {
             double f=i/(double)(layers-1),y=ground+.4+f*height;
+            // Still reaching down: nothing below its tip, which is thin as a rope.
+            double below=f-(1-down);
+            if(below<0)continue;
+            double taper=(1-(.75-.75*Math.min(1,below/.3))*(1-settle))*(.5+.5*grown);
             double fray=Math.max(0,(f-.8)/.2)*(1-storm);
-            double r=k*(1.9+5.2*Math.pow(f,1.5))+fray*1.5;
-            double size=Math.sqrt(k)*(.8+1.25*f)*(1-.35*fray);
+            double r=(k*(1.9+5.2*Math.pow(f,1.5))+fray*1.5)*taper;
+            double size=Math.sqrt(k)*(.8+1.25*f)*(1-.35*fray)*(.6+.4*taper);
             int puffs=(int)Math.round(Math.min(20,Math.max(8,r*2.1))*(1-.5*fray));
-            double spin=s.tick*(.22-.12*f)+i*.55;
+            double spin=turn*(.22-.12*f)+i*.55;
             // A slow, sinuous lean keeps the column from looking rigid.
             double lx=Math.sin(s.tick*.02+f*2)*lean*f,lz=Math.cos(s.tick*.017+f*1.7)*lean*f;
             // Dusty at the rock, cloud-white overhead, slate in the storm.
@@ -285,21 +301,38 @@ public final class RocEffectRenderer extends EntityRenderer<RocEffectEntity, Roc
                 // Solid, like the game's clouds, so no puff shows the sky through another.
                 tile(v,m,Math.cos(a)*rr+lx,y+wobble*.35,Math.sin(a)*rr+lz,w,Math.max(w*.62,gap*.62),w,rgb,1,lit,row+((i+j)&3));
             }
-            if(i%4==2)band(v,m,lx,y,lz,r*1.22+.6,Math.max(1.2,gap*1.6),s.tick*(.38-.1*f)+i,rgb,lit,i);
+            if(i%4==2&&form>.55)band(v,m,lx,y,lz,r*1.22+.6,Math.max(1.2,gap*1.6),turn*(.38-.1*f)+i,rgb,lit,i);
+        }
+        // Forming, a wall of cloud gathers and turns where its top will be and the funnel reaches down
+        // out of it; it draws into the funnel's own top as the funnel settles.
+        double wall=smooth(Math.min(1,form*3))*(1-settle);
+        if(wall>0) {
+            double top=ground+.4+height,wx=Math.sin(s.tick*.02+2)*lean,wz=Math.cos(s.tick*.017+1.7)*lean;
+            int grey=mix(0xCDD1D7,0x8F949C,storm*.75f);
+            for(int ring=0;ring<3;ring++) {
+                double rr=k*7.1*(.75+.35*ring)*(.45+.55*wall),size=Math.sqrt(k)*(1.7+.4*ring)*(.4+.6*wall);
+                int puffs=(int)Math.round(Math.max(8,rr*1.5));
+                for(int j=0;j<puffs;j++) {
+                    double a=turn*(.1-.025*ring)+j*Math.PI*2/puffs+ring*.7,wobble=noise(ring*41+j*3);
+                    tile(v,m,Math.cos(a)*rr*(.9+.2*wobble)+wx,top-.7*ring+wobble*.4,Math.sin(a)*rr*(.9+.2*wobble)+wz,size,size*.45,size,grey,1,lit,WALL+((ring+j)&3));
+                }
+            }
         }
         // Rock, snow and ice it has torn loose, flung up the lower funnel and dropped again.
-        for(int d=0;d<22;d++) {
+        int debris=(int)Math.round(22*Math.clamp((form-.6)/.3,0,1));
+        for(int d=0;d<debris;d++) {
             double phase=s.tick*(.13+.03*noise(d))+d*2.399,lift=Math.min(height,free)*.6,rise=(s.tick*.09+d*1.9)%lift;
             double r=k*(2.4+2.6*rise/free)+.8,w=.22+.18*Math.abs(noise(d*3));
             tile(v,m,Math.cos(phase)*r,ground+.4+rise,Math.sin(phase)*r,w,w,w,0xFFFFFF,1,lit,DEBRIS+(d&3));
         }
         // Dust swirled across the rock, out to where its winds start to pull.
-        double reach=s.radius*StormRocRules.TORNADO_REACH;
+        // Forming, it stirs first, near the spot, spreading as the funnel comes down.
+        double reach=s.radius*StormRocRules.TORNADO_REACH,stir=Math.min(1,form*2.5);
         for(int j=0;j<28;j++) {
-            double a=s.tick*(.16+.06*noise(j))+j*2.399,rr=k*2+(reach-k*2)*(.15+.85*Math.abs(noise(j*7)));
+            double a=s.tick*(.16+.06*noise(j))+j*2.399,rr=(k*2+(reach-k*2)*(.15+.85*Math.abs(noise(j*7))))*(.35+.65*grown);
             double w=(.5+.3*Math.abs(noise(j*5)))*Math.sqrt(k);
             Vec3d at=ground(s,new Vec3d(Math.cos(a)*rr,.3,Math.sin(a)*rr));
-            tile(v,m,at.x,at.y,at.z,w,.2,w,mix(0xE2D9CC,0x8C8A88,storm),.75f*(float)(1-.6*rr/reach),lit,DUST+(j&3));
+            tile(v,m,at.x,at.y,at.z,w,.2,w,mix(0xE2D9CC,0x8C8A88,storm),.75f*(float)(stir*(1-.6*rr/reach)),lit,DUST+(j&3));
         }
     }
     /** One ring of wind around the funnel: streak tiles, open wherever the tile is clear. */
@@ -385,6 +418,7 @@ public final class RocEffectRenderer extends EntityRenderer<RocEffectEntity, Roc
             StormRocCrackleLayer.sprite(v,arc,t,at,(float)(j<8?2.4:1.7),j*1.9+Math.sin(t*6)*.2,fade*(.75+.25*Math.sin(t*43+j)),right,up);
         }
     }
+    private static double smooth(double x) { x=Math.clamp(x,0,1);return x*x*(3-2*x); }
     private static double noise(double seed) { double x=Math.sin(seed*127.1+311.7)*43758.5453;return (x-Math.floor(x))*2-1; }
     private static int alpha(int color,float a) { return (color&0xFFFFFF)|((Math.max(0,Math.min(255,(int)(255*a))))<<24); }
     private static Vec3d polar(double r,double y,double a) { return new Vec3d(Math.cos(a)*r,y,Math.sin(a)*r); }

@@ -30,7 +30,7 @@ public final class StormRocMotion {
      * Clip changes that continue the same motion, frame for frame, so they cut without a blend: a blend
      * from a held frame would also soften the dive's and the chain smash's slams.
      */
-    private static final Set<String> CHAINED = Set.of("stampede>stampede_run", "stampede_run>stampede_skid", "stampede>stampede_skid", "spire_flight>land", "land>call", "takeoff>land", "takeoff>flight",
+    private static final Set<String> CHAINED = Set.of("stampede>stampede_run", "stampede_run>stampede_skid", "stampede>stampede_skid", "spire_flight>land", "land>call", "summon>perched", "takeoff>land", "takeoff>flight",
             "dive>stuck", "hop>stuck", "stuck>hop");
     /** The spire hop's head stays on the next spire through its launch; only then may its gaze settle on a player below. */
     private static final int SPIRE_LOOK = 26;

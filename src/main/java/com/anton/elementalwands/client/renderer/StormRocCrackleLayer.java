@@ -78,8 +78,13 @@ public final class StormRocCrackleLayer extends GeoRenderLayer<StormRocEntity,Vo
         // command; its bill blazes as the bolt leaves it, and again as it whips down onto its mark.
         float callTick=state.pose.equals("call")?state.poseTick:-1;
         int bolt=StormRocRules.CALL_VOLLEY,command=bolt+StormRocRules.LARGE_WARNING;
-        boolean gathering=callTick>=2&&callTick<command+4;
-        boolean commanding=callTick>=bolt-1&&callTick<bolt+8||callTick>=command-2&&callTick<command+6;
+        // Summoning the first tornado, it gathers the storm the same way as it rears up and beats the
+        // wind; its bill blazes from the scream's bolt until the storm strikes the funnel's spot.
+        float summonTick=state.pose.equals("summon")?state.poseTick:-1;
+        boolean summoning=summonTick>=18&&summonTick<StormRocRules.SUMMON_TICKS-16;
+        boolean gathering=callTick>=2&&callTick<command+4||summoning;
+        boolean commanding=callTick>=bolt-1&&callTick<bolt+8||callTick>=command-2&&callTick<command+6
+                ||summonTick>=StormRocRules.SUMMON_SCREAM-1&&summonTick<StormRocRules.SUMMON_CALL+8;
         List<JsonObject> anchors=new ArrayList<>();
         for(JsonElement element:DATA.getAsJsonArray("anchors"))anchors.add(element.getAsJsonObject());
         int head=anchors.size();
@@ -96,11 +101,11 @@ public final class StormRocCrackleLayer extends GeoRenderLayer<StormRocEntity,Vo
         for(var anchor:anchors)transforms.add(transform(getGeoModel().getBone(anchor.get("bone").getAsString()).orElseThrow(),channels));
         // It flares while calling the lightning down, as it does in the dive, the scream and the
         // Thunder Bite, until its burst dies away, and stuck, as it gathers itself to rip free.
-        boolean charged=state.charged || state.pose.equals("dive") || state.pose.equals("call") || screaming || clapping || striking || rushing
+        boolean charged=state.charged || state.pose.equals("dive") || state.pose.equals("call") || summoning || screaming || clapping || striking || rushing
                 || biteTick>=0&&burst<1 || sweeping
                 || state.pose.equals("stuck")&&state.poseTick>=StormRocRules.STUCK_GATHER;
         // The mouth crackles grow when the aim locks, and flare at the bite before they fade.
-        float mouthSize=gathering?(callTick<bolt?.6f+.6f*callTick/bolt:commanding?1.8f:1.1f):screeching?1.7f:rushing?1.1f:striking?pounceTick<pounce.impact?.8f+.6f*(pounceTick-pounce.lock)/(pounce.impact-pounce.lock):2f*(1-(pounceTick-pounce.impact)/TALON_TICKS)+.3f
+        float mouthSize=gathering?(summoning?(commanding?1.8f:1.1f):callTick<bolt?.6f+.6f*callTick/bolt:commanding?1.8f:1.1f):screeching?1.7f:rushing?1.1f:striking?pounceTick<pounce.impact?.8f+.6f*(pounceTick-pounce.lock)/(pounce.impact-pounce.lock):2f*(1-(pounceTick-pounce.impact)/TALON_TICKS)+.3f
                 :clapping?.7f+.8f*Math.min(1,clapTick/clap.impact):breathing?.6f+.9f*Math.min(1,screamTick/scream.impact):screaming?2.2f*(1-(screamTick-scream.impact)/14)+.3f
                 :biteTick<bite.lock?1:burst<0?1.35f:2.2f*(1-burst)+.2f;
         float time=state.age/20;

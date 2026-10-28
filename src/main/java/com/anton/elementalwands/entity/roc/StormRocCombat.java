@@ -183,8 +183,7 @@ final class StormRocCombat {
         last = null;
         boss.setPosition(perch(0));
         boss.face(center());
-        air(false);
-        tornado(center().add(-19, 0, 10));
+        enter(Stage.SUMMON, "summon");
     }
 
     void cancel() {
@@ -258,7 +257,8 @@ final class StormRocCombat {
             if (!e.isRemoved() && e.effectTicks(0) > e.duration()) e.discard();
             return e.isRemoved();
         });
-        if (!review && !two && boss.getHealth() <= boss.getMaxHealth() * .75f && tornadoes.size() < 2) tornado(center().add(19, 0, -12));
+        if (!review && !two && stage != Stage.SUMMON && boss.getHealth() <= boss.getMaxHealth() * .75f && tornadoes.size() < 2)
+            tornado(center().add(19, 0, -12), TORNADO_FORM);
         tickStrikes(players);
         tickFields(players);
         tickTornadoes(players);
@@ -271,6 +271,7 @@ final class StormRocCombat {
         // chipping it from the air never skips that landing.
         long t = now() - since;
         switch (stage) {
+            case SUMMON -> tickSummon(t);
             case AIR -> tickAir(players, t);
             case DIVE -> tickDive(players, t);
             case SMASH -> tickSmash(players, t);
@@ -314,6 +315,26 @@ final class StormRocCombat {
         if (pose.equals("hunched")) guard();
         else boss.pose(pose);
         Arrays.fill(lastFeet, null);
+    }
+
+    /**
+     * The fight's opening, on its home spire: it screams a bolt up into the clouds, the storm strikes
+     * the summit and the first tornado touches down there as it beats the wind at it; then, back on
+     * its perch, the air stretch begins.
+     */
+    private void tickSummon(long t) {
+        if (t == SUMMON_SCREAM) {
+            effect(RocEffectEntity.Kind.CALL_BOLT, boss.socket("beak"), 0, 0, 12);
+            sound(boss.getEntityPos(), SoundEvents.ENTITY_PHANTOM_AMBIENT, 4, .5f);
+        }
+        // Where challengers just landed at the arrival, facing its spire, see it touch down: a little
+        // left of the spire and well clear of it.
+        if (t == SUMMON_CALL) {
+            Vec3d spot = tornado(center().add(-12, 0, 0), TORNADO_FORM).getEntityPos();
+            effect(RocEffectEntity.Kind.DISTANT_BOLT, spot, StormSummit.CAP_Y + 2 - spot.y, 0, 6);
+            thunder(spot, 1.5f, .8f);
+        }
+        if (t >= SUMMON_TICKS) air(false);
     }
 
     /** landing: it arrives on its spire from a flight, rather than starting the fight there. */
@@ -539,7 +560,7 @@ final class StormRocCombat {
         // The tornadoes swell, and a third joins them.
         for (var t : tornadoes) t.effect.resize(TORNADO_RADIUS_TWO);
         for (Vec3d seed : List.of(new Vec3d(-19, 0, 10), new Vec3d(19, 0, -12), new Vec3d(4, 0, 26)))
-            if (tornadoes.size() < TORNADOES_TWO) tornado(center().add(seed));
+            if (tornadoes.size() < TORNADOES_TWO) tornado(center().add(seed), TORNADO_FORM);
         boss.setPosition(perch(perch));
         boss.face(center());
         air(true);
@@ -696,16 +717,24 @@ final class StormRocCombat {
     // ------------------------------------------------------------------ tornadoes
 
     // Persistent drifting obstacles, never homing missiles. Immunity after a throw prevents juggling.
-    RocEffectEntity tornado(Vec3d point) {
+    /** A tornado already formed (for tests). */
+    RocEffectEntity tornado(Vec3d point) { return tornado(point, 0); }
+
+    /** A tornado that touches down from the cloud over form ticks, harmless until it has formed. */
+    RocEffectEntity tornado(Vec3d point, int form) {
         Vec3d spot = clamp(point, SAFE_RADIUS);
         for (int i = 0; i < 64 && nearTornado(spot, tornadoSpacing()); i++) {
             double a = i * GOLDEN_ANGLE;
             spot = center().add(Math.cos(a) * 27, 0, Math.sin(a) * 27);
         }
-        var e = effect(RocEffectEntity.Kind.TORNADO, spot, tornadoRadius(), 0, Integer.MAX_VALUE);
+        var e = effect(RocEffectEntity.Kind.TORNADO, spot, tornadoRadius(), form, Integer.MAX_VALUE);
         tornadoes.add(new Tornado(e, boss.getRandom().nextDouble() * Math.PI * 2));
+        if (form > 0) sound(spot.add(0, 3, 0), SoundEvents.ENTITY_BREEZE_INHALE, 3, .45f);
         return e;
     }
+
+    /** Still touching down: it neither moves nor pulls, catches or hurts anyone yet. */
+    private static boolean forming(RocEffectEntity e) { return e.effectTicks(0) < e.warningTicks(); }
 
     private double tornadoRadius() { return two ? TORNADO_RADIUS_TWO : TORNADO_RADIUS; }
 
@@ -720,7 +749,10 @@ final class StormRocCombat {
     private void tickTornadoes(List<ServerPlayerEntity> players) {
         Set<UUID> inside = new HashSet<>();
         for (var t : tornadoes) {
-            if (t.effect.isRemoved()) continue;
+            if (t.effect.isRemoved() || forming(t.effect)) continue;
+            // It has just touched down: its winds take hold with a gust.
+            if ((int) t.effect.effectTicks(0) == t.effect.warningTicks() && t.effect.warningTicks() > 0)
+                sound(t.effect.getEntityPos().add(0, 3, 0), SoundEvents.ENTITY_BREEZE_WIND_BURST.value(), 2.5f, .5f);
             drift(t, players);
             Vec3d core = t.effect.getEntityPos();
             double radius = t.effect.radius(), reach = radius * TORNADO_REACH;

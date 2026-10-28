@@ -130,11 +130,32 @@ public final class StormRocServerSmoke implements ModInitializer {
                     target.setPosition(30.5,101,.5);target.setVelocity(Vec3d.ZERO);target.setHealth(200);
                     boss.startFight(CENTRE,List.of(target,dodge));boss.setHealth(boss.getMaxHealth()*.74f);
                 }
-                if(elapsed==23+StormRocRules.TORNADO_HOLD){require(effects().stream().filter(e->e.kind()==RocEffectEntity.Kind.TORNADO).count()==2,"75-percent health did not add second tornado");checks.add("Second tornado unlocks below75percent health");
+                // The fight opens with its summon on its spire: no tornado until it screams the storm down,
+                // then one that touches down from the cloud, harmless as it forms; the second (below 75%
+                // health) comes once the summon is over and the air stretch has begun.
+                int open=21+StormRocRules.TORNADO_HOLD,summoned=open+StormRocRules.SUMMON_CALL+1;
+                if(elapsed==summoned-3){
+                    require(boss.stage()==StormRocRules.Stage.SUMMON&&boss.poseName().equals("summon"),"The fight did not open with the summon: "+boss.status()+" / "+boss.poseName());
+                    require(tornadoes().isEmpty(),"A tornado appeared before the summon called it");
+                }
+                if(elapsed==summoned){
+                    var ts=tornadoes();
+                    require(ts.size()==1&&ts.getFirst().warningTicks()==StormRocRules.TORNADO_FORM&&ts.getFirst().effectTicks(0)<StormRocRules.TORNADO_FORM,"The summon did not call one forming tornado: "+ts.size());
+                    require(effects().stream().anyMatch(e->e.kind()==RocEffectEntity.Kind.DISTANT_BOLT)&&effects().stream().anyMatch(e->e.kind()==RocEffectEntity.Kind.CALL_BOLT),"The summon raised no bolt, or none struck the funnel's spot");
+                    target.setPosition(ts.getFirst().getX(),101,ts.getFirst().getZ());target.setVelocity(Vec3d.ZERO);
+                }
+                if(elapsed==summoned+12){
+                    require(target.getHealth()==200&&Math.abs(target.getVelocity().y)<.01&&Math.abs(target.getAttributeValue(EntityAttributes.MOVEMENT_SPEED)-.1)<.0001,"A forming tornado caught, slowed or hurt the challenger at its core: "+target.getVelocity());
+                    target.setPosition(30.5,101,.5);target.setVelocity(Vec3d.ZERO);
+                }
+                if(elapsed==open+StormRocRules.SUMMON_TICKS+2){
+                    require(boss.stage()==StormRocRules.Stage.AIR&&boss.poseName().equals("perched"),"The summon did not hand over to the air stretch on its perch: "+boss.status()+" / "+boss.poseName());
+                    require(tornadoes().size()==2,"75-percent health did not add the second tornado after the summon");
+                    checks.add("The fight opens with the summon: a bolt and one tornado that forms harmlessly, then the air stretch and, below 75% health, a second tornado");
                     boss.stopFight();target.setHealth(200);dodge.setHealth(200);boss.startFight(CENTRE,List.of(target,dodge));
                 }
-                // A fresh air stretch: on its spire it rears into its call, then calls a large strike on everyone.
-                int call=24+StormRocRules.TORNADO_HOLD+StormRocRules.CALL_AT;
+                // A fresh air stretch after its summon: on its spire it rears into its call, then calls a large strike on everyone.
+                int call=open+StormRocRules.SUMMON_TICKS+3+StormRocRules.SUMMON_TICKS+StormRocRules.CALL_AT;
                 if(elapsed==call)require(boss.poseName().equals("call"),"Roc did not rear into its call: "+boss.poseName());
                 if(elapsed==call+StormRocRules.CALL_VOLLEY+1){
                     require(effects().stream().anyMatch(e->e.kind()==RocEffectEntity.Kind.CALL_BOLT),"Call raised no bolt into the clouds");
@@ -615,6 +636,7 @@ public final class StormRocServerSmoke implements ModInitializer {
         checks.add("Brawl answers every place to stand: wings and pounce under the neck, head attacks only within reach, no repeats");
     }
     private List<RocEffectEntity> effects(){return world.getEntitiesByClass(RocEffectEntity.class,AREA,e->!e.isRemoved());}
+    private List<RocEffectEntity> tornadoes(){return effects().stream().filter(e->e.kind()==RocEffectEntity.Kind.TORNADO).toList();}
     private void next(){step++;elapsed=0;}
     private static void damage(float actual,float expected,String name){require(Math.abs(actual-expected)<.12,name+": expected "+expected+" got "+actual);}
     private ServerPlayerEntity player(MinecraftServer server,String name,double x,double y,double z)throws Exception{

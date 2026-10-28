@@ -3,6 +3,7 @@ package com.anton.elementalwands.summit;
 import com.anton.elementalwands.data.EWAttachments;
 import com.anton.elementalwands.entity.roc.StormRocEntity;
 import com.anton.elementalwands.entity.roc.StormRocRules;
+import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.party.PartyManager;
 import com.anton.elementalwands.party.PartyStore;
 import com.anton.elementalwands.registry.ModBlocks;
@@ -13,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +24,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
+import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.block.Block;
@@ -65,9 +69,11 @@ import software.bernie.geckolib.network.packet.blockentity.BlockEntityAnimTrigge
  * Test-only Fabric entrypoint, packaged solely by tools/aerie_server_smoke.init.gradle. Places the
  * real aerie template in four rotations on stone pads (it carries no ground of its own) and drives
  * the gong with simulated players: its anchor and parts in every rotation, the strike swing sent to
- * clients, strike timing, who goes, the summit landing and the sealed roster, a loss by falls, three
- * wins at a rotated aerie with the reward chest and book claims, busy slots, a disconnect during the
- * call, a death during the arrival wait, crash recovery, and a wipe by death.
+ * clients, strike timing, who goes, the intro (simulated clients report the cloud and their landing:
+ * held at the gong, carried up, the fight once all have landed), the sealed roster, a loss by falls,
+ * three wins at a rotated aerie with the reward chest and book claims, busy slots, a disconnect during
+ * the intro, a death during it on the summit, crash recovery, a wipe by death, and clients that never
+ * reach the cloud or never land.
  */
 public final class StormAerieServerSmoke implements ModInitializer {
     private static final Path PASSED = Path.of("AERIE_SERVER_PASSED.txt"), FAILED = Path.of("AERIE_SERVER_FAILED.txt");
@@ -77,6 +83,10 @@ public final class StormAerieServerSmoke implements ModInitializer {
     private static final Map<UUID, List<String>> SWINGS = new ConcurrentHashMap<>();
     /** Simulated players sent a chunk batch they have yet to acknowledge, as a client does next tick. */
     private static final Set<UUID> BATCHES = ConcurrentHashMap.newKeySet();
+    /** The intro each simulated player was told to play: "start <slot centre>", or "end". */
+    private static final Map<UUID, List<String>> INTROS = new ConcurrentHashMap<>();
+    /** Simulated clients play the intro quickly: the cloud this long after it starts, the landing this long after the move up. */
+    private static final int INTRO_CLOUD = 30, INTRO_LAND = 40;
     private static final String NAME_RINGER = "AerieRinger", NAME_NEAR = "AerieNear", NAME_FAR = "AerieFar",
             NAME_BYSTANDER = "AerieBystander", NAME_CREATIVE = "AerieCreative", NAME_SOLO = "AerieSolo";
 
@@ -115,6 +125,10 @@ public final class StormAerieServerSmoke implements ModInitializer {
     private UUID ringer, near, far, bystander, creative, solo;
     private final List<UUID> everyone = new ArrayList<>(), squatters = new ArrayList<>();
     private final Map<UUID, Vec3d> pins = new LinkedHashMap<>();
+    /** When each simulated client's intro started and its player was carried up. */
+    private final Map<UUID, Integer> introAt = new LinkedHashMap<>(), carriedAt = new LinkedHashMap<>();
+    /** Simulated clients that never report the cloud, or never land. */
+    private final Set<UUID> lostInCloud = new HashSet<>(), neverLand = new HashSet<>();
     /** Scenario scratch state. */
     private BlockPos centre;
     private int mark, endedAt;
@@ -138,7 +152,7 @@ public final class StormAerieServerSmoke implements ModInitializer {
     }
 
     private void tick(MinecraftServer server) throws Exception {
-        if (++tick > 12000) throw new AssertionError("Aerie fixture timed out");
+        if (++tick > 16000) throw new AssertionError("Aerie fixture timed out");
         if (tick < 25) return;
         if (tick == 25) { setup(server); begun = tick + 1; return; }
         // Simulated clients: confirm every teleport at once, take and acknowledge the chunks streamed to
@@ -153,6 +167,13 @@ public final class StormAerieServerSmoke implements ModInitializer {
             if (p.isAlive()) p.setHealth(p.getMaxHealth());
             Vec3d pin = pins.get(id);
             if (pin != null && p.isAlive() && StormSummitManager.inRealm(p) && !p.isSpectator()) { p.setPosition(pin); p.setVelocity(Vec3d.ZERO); }
+            // Each plays the intro its own way: into the cloud, then (once carried up) landed.
+            if (p == null || !StormRocIntro.watching(p)) { introAt.remove(id); carriedAt.remove(id); continue; }
+            int start = introAt.computeIfAbsent(id, k -> tick);
+            if (tick - start == INTRO_CLOUD && !lostInCloud.contains(id)) StormRocIntro.inCloud(p);
+            if (!StormRocIntro.carried(id)) continue;
+            int up = carriedAt.computeIfAbsent(id, k -> tick);
+            if (tick - up == INTRO_LAND && !neverLand.contains(id)) StormRocIntro.landed(p);
         }
         Step step = steps.get(index);
         int t = tick - begun;
@@ -412,6 +433,7 @@ public final class StormAerieServerSmoke implements ModInitializer {
             String r = ring(ringer, a, 4);
             require(r != null && r.startsWith("The storm gong calls the Storm Roc for:") && r.contains(NAME_RINGER) && r.contains(NAME_NEAR)
                     && !r.contains(NAME_FAR) && !r.contains(NAME_BYSTANDER), "Second strike 10-100 ticks after the first did not commit: " + r);
+            require(alternating(ringer, a), "Consecutive strikes at A repeated a swing the client would not restart: " + swingsAt(ringer, a));
             swingMark = swings(ringer, a);
             return true;
         });
@@ -428,27 +450,51 @@ public final class StormAerieServerSmoke implements ModInitializer {
             Object call = calls().getFirst();
             centre = (BlockPos) field(call, "centre");
             require(calls().size() == 1 && field(call, "slot").equals(0) && centre.equals(StormSummit.centre(0, 0)), "Unexpected call " + StormSummitManager.status());
+            for (UUID id : List.of(ringer, near)) {
+                ServerPlayerEntity p = player(id);
+                require(StormRocIntro.watching(p) && INTROS.get(id).equals(List.of("start " + centre.toShortString())), name(id) + " was not told to play the intro for this slot: " + INTROS.get(id));
+                require(p.getEntityWorld() == overworld && p.getEntityPos().distanceTo(a.stand()) < .01 && Math.abs(wrap(p.getYaw() - a.standYaw())) < .5,
+                        name(id) + " was not set at A's STAND facing the gong for the intro: " + p.getEntityPos() + " yaw " + p.getYaw());
+            }
+            for (UUID id : List.of(far, bystander, creative, solo)) require(INTROS.get(id).isEmpty(), name(id) + " was told to play the intro");
             return true;
         });
-        step("The call's three strokes swing the gong for the party; then the called pair lands on the reserved slot's arrival point; the far member and the bystander stay in the Overworld", 400, t -> {
-            if (!StormSummitManager.inRealm(player(ringer))) return false;
+        step("The intro holds the pair at A's STAND, unhurt and unmoving, until each client reports the cloud; then both land on the slot's arrival facing where the scene ends, the gong unstruck; the far member and the bystander stay in the Overworld", 200, t -> {
+            if (!StormSummitManager.inRealm(player(ringer))) {
+                for (UUID id : List.of(ringer, near))
+                    require(player(id).getEntityWorld() == overworld && player(id).getEntityPos().distanceTo(a.stand()) < .01, name(id) + " left A's STAND before the cloud: " + player(id).getEntityPos());
+                if (t == 5) {
+                    require(!player(ringer).damage(overworld, overworld.getDamageSources().generic(), 4), "A player in the intro was hurt");
+                    require(player(bystander).damage(overworld, overworld.getDamageSources().generic(), 4), "The bystander could not be hurt either, so the check proves nothing");
+                    require(AttackEntityCallback.EVENT.invoker().interact(player(ringer), overworld, Hand.MAIN_HAND, player(bystander), null) == ActionResult.FAIL
+                            && UseItemCallback.EVENT.invoker().interact(player(ringer), overworld, Hand.MAIN_HAND) == ActionResult.FAIL, "A player in the intro could attack or use an item");
+                    require(AttackEntityCallback.EVENT.invoker().interact(player(bystander), overworld, Hand.MAIN_HAND, player(ringer), null) == ActionResult.PASS, "The bystander could not attack either, so the check proves nothing");
+                    player(near).setPosition(a.stand().add(3, 0, 0));
+                }
+                if (t == 8) require(player(near).getEntityPos().distanceTo(a.stand()) < .01, "A player in the intro was not held at A's STAND: " + player(near).getEntityPos());
+                return false;
+            }
             mark = tick;
-            require(swings(ringer, a) == swingMark + 3, "The call swung the gong " + (swings(ringer, a) - swingMark) + " times for the ringer, expected 3");
-            require(alternating(ringer, a), "Consecutive strikes at A repeated a swing the client would not restart: " + swingsAt(ringer, a));
+            require(t >= INTRO_CLOUD - 3, "Carried up " + t + " ticks into the intro, before the client reported the cloud");
+            require(swings(ringer, a) == swingMark, "The intro struck the gong " + (swings(ringer, a) - swingMark) + " more times");
+            StormRocIntroTrack track = StormRocIntroTrack.get();
             for (UUID id : List.of(ringer, near)) {
                 ServerPlayerEntity p = player(id);
                 require(StormSummitManager.inRealm(p) && p.getEntityPos().distanceTo(StormSummit.arrival(centre)) < .01, name(id) + " did not land at the arrival: " + p.getEntityPos());
-                require(!StormRocEncounter.enrolled(p), name(id) + " was enrolled before the arrival wait");
+                require(Math.abs(wrap(p.getYaw() - track.yaw(track.length()))) < .5, name(id) + " faces " + p.getYaw() + " at the arrival, not where the scene ends");
+                require(StormRocIntro.watching(p) && !StormRocEncounter.enrolled(p), name(id) + " left the intro or was enrolled before landing");
             }
             require(player(far).getEntityWorld() == overworld && player(far).getEntityPos().distanceTo(farAt) < .01, "Far member moved");
             require(player(bystander).getEntityWorld() == overworld && player(bystander).getEntityPos().distanceTo(bystanderAt) < .01, "Bystander moved");
             return true;
         });
-        step("About 60 ticks after arrival the fight starts with exactly {ringer, near} and A's site key", 120, t -> {
+        step("The fight starts as both clients report landing, with exactly {ringer, near} and A's site key, and the intro ends for both", 120, t -> {
             if (!StormRocEncounter.enrolled(player(ringer))) return false;
             int wait = tick - mark;
-            require(wait >= 58 && wait <= 63, "Fight started " + wait + " ticks after arrival");
+            require(wait >= INTRO_LAND - 2 && wait <= INTRO_LAND + 3, "Fight started " + wait + " ticks after arrival; the clients landed " + INTRO_LAND + " after");
             fight(centre, a.key, Set.of(ringer, near));
+            for (UUID id : List.of(ringer, near))
+                require(!StormRocIntro.watching(player(id)) && INTROS.get(id).getLast().equals("end"), name(id) + "'s intro did not end with the fight start: " + INTROS.get(id));
             for (UUID id : List.of(far, bystander, creative, solo)) require(!StormRocEncounter.enrolled(player(id)), name(id) + " was enrolled");
             require(!StormAerie.pending(ringer) && calls().isEmpty(), "The call outlived its fight start");
             return true;
@@ -584,11 +630,13 @@ public final class StormAerieServerSmoke implements ModInitializer {
             require(!StormAerie.pending(ringer) && !called(ringer) && !returns(ringer) && calls().size() == 1, "A refused call recorded the ringer");
             return true;
         });
-        step("The solo ringer disconnects during the tolls: the call ends, its records go, and its slot is free for the next call", 60, t -> {
+        step("The solo ringer disconnects during the intro at the gong: the call ends, its records and scene go, and its slot is free for the next call", 60, t -> {
             if (t == 0) {
                 ServerPlayerEntity s = player(solo);
-                require(calls().size() == 1 && (int) field(calls().getFirst(), "arrived") < 0, "Solo call is no longer tolling");
+                require(calls().size() == 1 && (int) field(calls().getFirst(), "arrived") < 0 && StormRocIntro.watching(s) && !StormRocIntro.carried(solo),
+                        "Solo is not in the intro at the gong");
                 ServerPlayConnectionEvents.DISCONNECT.invoker().onPlayDisconnect(s.networkHandler, server);
+                require(!StormRocIntro.watching(s), "The disconnected ringer's scene remains");
                 server.getPlayerManager().remove(s);
                 everyone.remove(solo);
             }
@@ -612,8 +660,12 @@ public final class StormAerieServerSmoke implements ModInitializer {
             mark = tick;
             return true;
         });
-        step("Near dies during the arrival wait: the respawned player is sent to A's STAND with belongings kept", 30, t -> {
-            if (t == 0) { player(near).kill(realm); require(!player(near).isAlive(), "Near member did not die"); }
+        step("Near dies during the intro on the summit (killing damage still lands): the respawned player is sent to A's STAND with belongings kept, the scene over", 30, t -> {
+            if (t == 0) {
+                require(StormRocIntro.watching(player(near)), "Near is not in the intro on the summit");
+                player(near).kill(realm);
+                require(!player(near).isAlive(), "Near member did not die");
+            }
             if (t == 2) respawn(near);
             if (t < 3) return false;
             ServerPlayerEntity n = player(near);
@@ -624,13 +676,16 @@ public final class StormAerieServerSmoke implements ModInitializer {
                 home(near, a, "after dying in the arrival wait");
             else go(near, overworld, a.stand(), a.standYaw());
             require(books(near) == 1, "Belongings lost on the summit death: books=" + books(near));
-            require(StormAerie.pending(ringer) && StormSummitManager.inRealm(player(ringer)), "The ringer's call ended with the death");
+            require(!StormRocIntro.watching(player(near)) && INTROS.get(near).getLast().equals("end"), "The dead member's scene was not ended: " + INTROS.get(near));
+            require(StormAerie.pending(ringer) && StormSummitManager.inRealm(player(ringer)) && StormRocIntro.watching(player(ringer)), "The ringer's call ended with the death");
             return true;
         });
         step("Recovery: with the call lost (as after a crash) the ringer is on the summit with no fight; the recovery tick sends them to A's STAND and no fight starts", 100, t -> {
             if (t == 0) {
-                require(tick - mark < 40, "Too late to test the arrival wait");
+                require(tick - mark < INTRO_LAND, "Too late to test the arrival wait");
+                // A crash forgets the calls and the scenes alike.
                 calls().clear();
+                watchers().clear();
                 require(!StormAerie.pending(ringer) && called(ringer) && StormSummitManager.inRealm(player(ringer)), "Recovery precondition");
             }
             if (t == 2) home(ringer, a, "by the recovery path");
@@ -657,6 +712,59 @@ public final class StormAerieServerSmoke implements ModInitializer {
             if (soft(there, "Wiped players respawned at " + player(ringer).getEntityPos() + " / " + player(near).getEntityPos()
                     + " instead of A's STAND " + a.stand() + "; called=" + called(ringer) + "," + called(near)))
                 for (UUID id : List.of(ringer, near)) home(id, a, "after a wipe by death");
+            return true;
+        });
+
+        // ---------------------------------------------------------------- clients that never get through the intro
+        step("Late clients: with the far member brought near, ringer + near + far strike at A; far's client will never report the cloud, near's never land", 30, t -> {
+            if (t == 0) {
+                go(far, overworld, Vec3d.ofBottomCenter(a.gong.foot().add(0, 0, -10)), 0);
+                lostInCloud.add(far);
+                neverLand.add(near);
+            }
+            if (t == 2) require(ring(ringer, a, 8).startsWith("Strike the gong again"), "Late-clients first strike");
+            if (t < 15) return false;
+            String r = ring(ringer, a, 9);
+            require(r != null && r.startsWith("The storm gong calls") && r.contains(NAME_NEAR) && r.contains(NAME_FAR), "Late-clients call: " + r);
+            centre = (BlockPos) field(calls().getFirst(), "centre");
+            mark = tick;
+            return true;
+        });
+        step("A client that never reports the cloud is left at the aerie, out of the call, its scene ended and records cleared, and told; the others are carried up without it", StormRocIntro.CLOUD_LATE + 40, t -> {
+            if (StormAerie.pending(far)) {
+                require(player(far).getEntityWorld() == overworld, "Far was carried up without reporting the cloud");
+                return false;
+            }
+            int late = tick - mark;
+            require(late >= StormRocIntro.CLOUD_LATE - 2 && late <= StormRocIntro.CLOUD_LATE + 3, "Far was let go " + late + " ticks after the call, not at " + StormRocIntro.CLOUD_LATE);
+            ServerPlayerEntity f = player(far);
+            require(f.getEntityWorld() == overworld && f.getEntityPos().distanceTo(a.stand()) < .01, "Far moved off A's STAND: " + f.getEntityPos());
+            require(!StormRocIntro.watching(f) && INTROS.get(far).getLast().equals("end"), "Far's scene did not end: " + INTROS.get(far));
+            require(!called(far) && !returns(far), "Far's records remain");
+            require(lastChat(far).equals("The storm passes you by. Strike the gong again in a little while."), "Far was told: " + lastChat(far));
+            // Withholding the cloud can't chain the scene's protection: no call takes them again for a while.
+            require("The storm won't answer you again yet.".equals(ring(far, a, 10)), "Far could ring again at once: " + lastChat(far));
+            require(!StormAerie.group(player(ringer), overworld, a.gong.anchor()).contains(f), "A call could take far again at once");
+            for (UUID id : List.of(ringer, near)) require(StormSummitManager.inRealm(player(id)) && StormRocIntro.watching(player(id)), name(id) + " was not carried up");
+            return true;
+        });
+        step("A scene that never lands doesn't hold up the fight: after its length and grace that member is sent home and the fight starts with the one who landed", StormRocIntro.LENGTH + StormRocIntro.GRACE + 40, t -> {
+            if (!StormRocEncounter.enrolled(player(ringer))) return false;
+            int waited = tick - mark;
+            int due = StormRocIntro.LENGTH + StormRocIntro.GRACE;
+            require(waited >= due - 2 && waited <= due + 3, "The fight started " + waited + " ticks after the call, not at " + due);
+            fight(centre, a.key, Set.of(ringer));
+            home(near, a, "after a scene that never landed");
+            for (UUID id : List.of(ringer, near))
+                require(!StormRocIntro.watching(player(id)) && INTROS.get(id).getLast().equals("end"), name(id) + "'s scene did not end: " + INTROS.get(id));
+            lostInCloud.clear();
+            neverLand.clear();
+            return true;
+        });
+        step("The late-clients fight ends with the ringer's fall, home at A's STAND", 60, t -> {
+            if (t == 0) player(ringer).setPosition(centre.getX() + .5, 60, centre.getZ() + .5);
+            if (StormRocEncounter.activeAt(centre) || player(ringer).getEntityWorld() != overworld) return false;
+            home(ringer, a, "after the late-clients fight");
             return true;
         });
     }
@@ -790,6 +898,11 @@ public final class StormAerieServerSmoke implements ModInitializer {
     private static String lastChat(UUID id) { List<String> c = chat(id); return c.isEmpty() ? "" : c.getLast(); }
     private static float wrap(float degrees) { return net.minecraft.util.math.MathHelper.wrapDegrees(degrees); }
 
+    private static Map<?, ?> watchers() {
+        try { Field f = StormRocIntro.class.getDeclaredField("WATCHING"); f.setAccessible(true); return (Map<?, ?>) f.get(null); }
+        catch (ReflectiveOperationException e) { throw new AssertionError(e); }
+    }
+
     @SuppressWarnings("unchecked")
     private static List<Object> calls() {
         try { Field f = StormAerie.class.getDeclaredField("calls"); f.setAccessible(true); return (List<Object>) f.get(null); }
@@ -833,6 +946,7 @@ public final class StormAerieServerSmoke implements ModInitializer {
         ServerPlayerEntity player = new ServerPlayerEntity(server, world, profile, SyncedClientOptions.createDefault());
         CHAT.put(uuid, new CopyOnWriteArrayList<>());
         SWINGS.put(uuid, new CopyOnWriteArrayList<>());
+        INTROS.put(uuid, new CopyOnWriteArrayList<>());
         ClientConnection connection = new ClientConnection(NetworkSide.SERVERBOUND) {
             @Override public void send(Packet<?> packet) { hear(uuid, packet); }
             @Override public void send(Packet<?> packet, io.netty.channel.ChannelFutureListener listener) { hear(uuid, packet); }
@@ -863,6 +977,10 @@ public final class StormAerieServerSmoke implements ModInitializer {
             if (heard != null) heard.add(message.content().getString());
         }
         if (packet instanceof ChunkSentS2CPacket) BATCHES.add(player);
+        if (packet instanceof CustomPayloadS2CPacket custom && custom.payload() instanceof ModNetworking.StormRocIntroPayload intro) {
+            List<String> told = INTROS.get(player);
+            if (told != null) told.add(intro.active() ? "start " + intro.summit().toShortString() : "end");
+        }
         if (packet instanceof CustomPayloadS2CPacket custom && custom.payload() instanceof BlockEntityAnimTriggerPacket trigger) {
             List<String> seen = SWINGS.get(player);
             if (seen != null) seen.add(trigger.pos().toShortString() + "|" + trigger.controllerName().orElse("?") + "|" + trigger.animName());

@@ -1,0 +1,64 @@
+// The Storm Roc's intro in a real client (hidden, muted window): rings a natural aerie's gong, plays the whole scene,
+// and checks the move into the summit realm never shows the loading screen, the scene hands back and the fight starts.
+// Use a seed and gong anchor from tools/aerie_worldgen_smoke.init.gradle. -ProcIntroVideo saves a frame every
+// -ProcIntroEvery ticks (default 2) for a video; -ProcIntroSkipAt=<beat> holds Sneak from that beat of the scene to skip it.
+// Screenshots: build/roc-intro-client-smoke/screenshots/
+// ./gradlew -I tools/roc_intro_client_smoke.init.gradle runClient -PaerieSeed=12345 -ProcIntroGong=x,y,z -PhubClientAssets="$HOME/.lunarclient/shared/assets" --offline
+allprojects {
+    plugins.withId('fabric-loom') {
+        def smokeRoot=layout.buildDirectory.dir('roc-intro-client-smoke').get().asFile
+        // Optional existing cache for offline verification (for example Lunar shared/assets).
+        def existingAssets=project.findProperty('hubClientAssets')
+        if (existingAssets) {
+            loom.runs.client.vmArg('-Dfabric.dli.config='+new File(smokeRoot,'launch.cfg').absolutePath)
+        }
+        loom.runs.client.vmArg('-Daerie.seed='+(project.findProperty('aerieSeed') ?: '12345'))
+        loom.runs.client.vmArg('-DrocIntro.gong='+(project.findProperty('rocIntroGong') ?: ''))
+        loom.runs.client.vmArg('-DrocIntro.video='+(project.findProperty('rocIntroVideo') ?: 'false'))
+        loom.runs.client.vmArg('-DrocIntro.every='+(project.findProperty('rocIntroEvery') ?: '2'))
+        loom.runs.client.vmArg('-DrocIntro.viewDistance='+(project.findProperty('rocIntroViewDistance') ?: '12'))
+        loom.runs.client.vmArg('-DrocIntro.skipAt='+(project.findProperty('rocIntroSkipAt') ?: ''))
+        tasks.register('rocIntroClientMetadata') {
+            if (existingAssets) dependsOn generateDLIConfig
+            doLast {
+                def metadata=new File(smokeRoot,'metadata')
+                metadata.mkdirs()
+                new File(metadata,'fabric.mod.json').text='''{
+  "schemaVersion": 1, "id": "roc_intro_client_smoke", "version": "1.0.0", "environment": "client",
+  "entrypoints": {"client": ["com.anton.elementalwands.client.RocIntroClientSmoke"]},
+  "depends": {"elementalwands": "*"}
+}'''
+                new File(smokeRoot,'ROC_INTRO_CLIENT_PASSED.txt').delete()
+                new File(smokeRoot,'ROC_INTRO_CLIENT_FAILED.txt').delete()
+                // The disposable client starts silent with the narrator off, before any world loads.
+                def options=new File(smokeRoot,'options.txt')
+                def kept=options.exists() ? options.readLines().findAll { !(it.startsWith('soundCategory_master:') || it.startsWith('narrator:') || it.startsWith('onboardAccessibility:')) } : []
+                options.text=(kept+['soundCategory_master:0.0','narrator:0','onboardAccessibility:false']).join('\n')+'\n'
+                if (existingAssets) {
+                    def assets=file(existingAssets)
+                    if (!new File(assets,'indexes/27.json').exists()) throw new GradleException('Existing asset cache needs indexes/27.json')
+                    def launch=file('.gradle/loom-cache/launch.cfg').text
+                    launch=launch.replaceAll(/(?m)(\t--assetIndex\r?\n)\t[^\r\n]+/, { match, prefix -> prefix+'\t27' })
+                    launch=launch.replaceAll(/(?m)(\t--assetsDir\r?\n)\t[^\r\n]+/, { match, prefix -> prefix+'\t'+assets.absolutePath })
+                    new File(smokeRoot,'launch.cfg').text=launch
+                }
+            }
+        }
+        tasks.register('rocIntroClientJar',Jar) {
+            dependsOn guardianTestClasses, rocIntroClientMetadata
+            archiveFileName='roc-intro-client-smoke.jar'
+            destinationDirectory=smokeRoot
+            from sourceSets.guardianTest.output
+            from new File(smokeRoot,'metadata')
+        }
+        loom.runs.client.runDir('build/roc-intro-client-smoke')
+        loom.runs.client.vmArg('-Dfabric.addMods='+new File(smokeRoot,'roc-intro-client-smoke.jar').absolutePath)
+        tasks.named('runClient') {
+            dependsOn rocIntroClientJar
+            doLast {
+                if (!new File(smokeRoot,'ROC_INTRO_CLIENT_PASSED.txt').exists() || new File(smokeRoot,'ROC_INTRO_CLIENT_FAILED.txt').exists())
+                    throw new GradleException('Roc intro client check failed; inspect build/roc-intro-client-smoke/logs/latest.log')
+            }
+        }
+    }
+}

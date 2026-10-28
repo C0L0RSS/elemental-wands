@@ -42,6 +42,8 @@ public final class StormRocClientSmoke implements ClientModInitializer {
     private boolean sawFlightScan,sawFlightFocus,sawFlightRelease;
     private int flightCameraAt=-1,spireCameraAt=-1,landingCameraAt=-1,challengerMovedAt=-1,focusedAt=-1,focusedPlayer=-1,releaseTicks;
     private String focusedPose;
+    /** Client ticks into the fight's opening summon, before the timeline's scenes begin. */
+    private int opening;
     private long focusedPoseAt;
     private float spireHopTick=-1,spireLandTick=-1;
     private final Map<Integer,Vec3d> serverParts=new java.util.concurrent.ConcurrentHashMap<>();
@@ -76,6 +78,18 @@ public final class StormRocClientSmoke implements ClientModInitializer {
             if(c.world.getRegistryKey()!=StormSummit.WORLD)return;
             if(!arranged){arranged=true;onServer(server,()->arrange(server,id));return;}
             if(!ready)return;
+            // It opens the fight by summoning its first tornado from its home spire: framed on its
+            // spire as it screams the storm down, then from the rock as the funnel touches down. The
+            // timeline below starts once it is back on its perch.
+            if(opening<=StormRocRules.SUMMON_TICKS){
+                if(opening==StormRocRules.SUMMON_SCREAM+1)shot(c,"roc-summon-scream.png");
+                if(opening==StormRocRules.SUMMON_CALL+2)onServer(server,()->camera(server,id,22,106,34,-12,114,0));
+                if(opening==StormRocRules.SUMMON_CALL+16)shot(c,"roc-summon-forming.png");
+                if(opening==StormRocRules.SUMMON_CALL+StormRocRules.TORNADO_FORM+2)shot(c,"roc-summon-formed.png");
+                if(opening==StormRocRules.SUMMON_TICKS)onServer(server,()->camera(server,id,24,142,-60,2,140,-88));
+                for(var entity:c.world.getEntities())if(entity instanceof StormRocEntity roc)poses.add(roc.poseName());
+                opening++;return;
+            }
             scene++;
             if(scene>5&&scene<760&&scene%20==0)onServer(server,()->require(serverBoss.fighting(),"Native combat timeline cancelled at scene"+scene+": "+serverBoss.status()));
             // The first spire visit: its idle, then its call (tick 34) raises a bolt (44) and the
@@ -148,13 +162,13 @@ public final class StormRocClientSmoke implements ClientModInitializer {
             }
             if(scene==790)shot(c,"roc-takeoff.png");
             if(scene>=1536&&completedShots.get()==requestedShots){
-                require(sawBoss,"No synchronized Roc reached the native client");require(sawEffects,"No synchronized Roc effects reached native client");require(poses.containsAll(Set.of("perched","call","land","flight","spire_flight","dive","stuck","bite","swing_left","swing_right","scream","wing","pounce","stampede","takeoff","hop")),"Requested tracked poses missing from native client: "+poses);
+                require(sawBoss,"No synchronized Roc reached the native client");require(sawEffects,"No synchronized Roc effects reached native client");require(poses.containsAll(Set.of("perched","summon","call","land","flight","spire_flight","dive","stuck","bite","swing_left","swing_right","scream","wing","pounce","stampede","takeoff","hop")),"Requested tracked poses missing from native client: "+poses);
                 require(effects.containsAll(Set.of(RocEffectEntity.Kind.SMALL_STRIKE,RocEffectEntity.Kind.LARGE_STRIKE,RocEffectEntity.Kind.TORNADO,RocEffectEntity.Kind.DIVE_MARKER,RocEffectEntity.Kind.SHOCKWAVE,RocEffectEntity.Kind.SCREAM,RocEffectEntity.Kind.LIVE_GROUND,RocEffectEntity.Kind.CHARGE_BOLT,RocEffectEntity.Kind.STORM_BOLT,RocEffectEntity.Kind.CALL_BOLT)),"Required tracked effect kinds missing: "+effects);
                 require(sawFlightScan,"Authored flying Roc clip never looked down toward the ground");
                 require(sawFlightFocus,"Flying Roc never focused a player below beyond its authored scan");
                 require(sawFlightRelease,"Flying Roc never released its player focus back to the authored scan within the same clip");
                 require(phaseShots.containsAll(Set.of("charge","flight-look","spire-hop","spire-land")),"Required charge/flight/spire screenshots missing: "+phaseShots);
-                require(requestedShots==29,"Expected29 native screenshots, requested"+requestedShots);
+                require(requestedShots==32,"Expected32 native screenshots, requested"+requestedShots);
                 require(stormChecked&&SummitStormClient.level(1)>.95,"Storm level did not remain above.95");
                 require(partsChecked,"Client hurtbox positions were never compared");
                 Files.writeString(Path.of("ROC_CLIENT_PASSED.txt"),"Scripted native summit rehearsal: "+completedShots.get()+" completed screenshots; phase two storm level="+SummitStormClient.level(1)+"; synchronized Roc, effects "+effects+" and poses "+poses+"; authored flight scan, player focus and release checked; spire hop clip tick="+spireHopTick+", landing clip tick="+spireLandTick+"; client head/neck hurtboxes follow the server's. Not human input or Lunar balance approval.\n");

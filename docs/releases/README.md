@@ -40,7 +40,7 @@ for outstanding verification. Detailed historical reports are optional backgroun
 
 ## Future entries
 
-Add a few short bullets for a meaningful player-visible update. Combine related
+Add a few short bullets for a meaningful update. Combine related
 same-day changes instead of making a file for every tweak. Mention what players
 can see or do; avoid mesh counts, class names, hashes and copied test commands.
 Record important unresolved verification in the status page. Preserve a separate

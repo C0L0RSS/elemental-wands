@@ -62,6 +62,10 @@ public final class ModNetworking {
         PayloadTypeRegistry.playS2C().register(GuardianIntroPayload.ID, GuardianIntroPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(GuardianIntroSkipPayload.ID, GuardianIntroSkipPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(GuardianPullPayload.ID, GuardianPullPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(StormRocIntroPayload.ID, StormRocIntroPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(StormRocIntroSkipPayload.ID, StormRocIntroSkipPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(StormRocIntroLandedPayload.ID, StormRocIntroLandedPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(StormRocIntroCloudPayload.ID, StormRocIntroCloudPayload.CODEC);
     }
 
     public static void registerC2SReceivers() {
@@ -85,6 +89,12 @@ public final class ModNetworking {
             com.anton.elementalwands.entity.necromancer.NecromancerIntro.skip(context.player());
             com.anton.elementalwands.entity.necromancer.NecromancerTransformScene.skip(context.player());
         });
+        ServerPlayNetworking.registerGlobalReceiver(StormRocIntroSkipPayload.ID,
+                (payload, context) -> com.anton.elementalwands.summit.StormRocIntro.skip(context.player()));
+        ServerPlayNetworking.registerGlobalReceiver(StormRocIntroCloudPayload.ID,
+                (payload, context) -> com.anton.elementalwands.summit.StormRocIntro.inCloud(context.player()));
+        ServerPlayNetworking.registerGlobalReceiver(StormRocIntroLandedPayload.ID,
+                (payload, context) -> com.anton.elementalwands.summit.StormRocIntro.landed(context.player()));
         ServerPlayNetworking.registerGlobalReceiver(GuardianIntroSkipPayload.ID,
                 (payload, context) -> com.anton.elementalwands.entity.GuardianIntro.skip(context.player()));
     }
@@ -312,6 +322,38 @@ public final class ModNetworking {
                 PacketCodecs.VAR_INT,GuardianIntroPayload::guardianId,PacketCodecs.VAR_LONG,GuardianIntroPayload::start,
                 PacketCodecs.FLOAT,GuardianIntroPayload::yaw,net.minecraft.util.math.Vec3d.PACKET_CODEC,GuardianIntroPayload::centre,
                 PacketCodecs.BOOLEAN,GuardianIntroPayload::active,GuardianIntroPayload::new);
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
+    /**
+     * The Storm Roc's intro for this player: where they stand at the gong and which way they face
+     * (the aerie half of the scene is laid out from there), and the summit slot's centre (the other
+     * half); active=false ends it.
+     */
+    public record StormRocIntroPayload(boolean active, net.minecraft.util.math.Vec3d aerie, float aerieYaw, BlockPos summit) implements CustomPayload {
+        public static final Id<StormRocIntroPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"storm_roc_intro"));
+        public static final PacketCodec<RegistryByteBuf,StormRocIntroPayload> CODEC = PacketCodec.tuple(
+                PacketCodecs.BOOLEAN,StormRocIntroPayload::active,net.minecraft.util.math.Vec3d.PACKET_CODEC,StormRocIntroPayload::aerie,
+                PacketCodecs.FLOAT,StormRocIntroPayload::aerieYaw,BlockPos.PACKET_CODEC,StormRocIntroPayload::summit,StormRocIntroPayload::new);
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
+    public record StormRocIntroSkipPayload() implements CustomPayload {
+        public static final StormRocIntroSkipPayload INSTANCE = new StormRocIntroSkipPayload();
+        public static final Id<StormRocIntroSkipPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"storm_roc_intro_skip"));
+        public static final PacketCodec<RegistryByteBuf,StormRocIntroSkipPayload> CODEC = PacketCodec.unit(INSTANCE);
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
+    /** The client's Storm Roc intro is inside the storm cloud: the move into the sky realm can't be seen. */
+    public record StormRocIntroCloudPayload() implements CustomPayload {
+        public static final StormRocIntroCloudPayload INSTANCE = new StormRocIntroCloudPayload();
+        public static final Id<StormRocIntroCloudPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"storm_roc_intro_cloud"));
+        public static final PacketCodec<RegistryByteBuf,StormRocIntroCloudPayload> CODEC = PacketCodec.unit(INSTANCE);
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
+    /** The client's Storm Roc intro has ended on the summit: the player is on their feet facing it. */
+    public record StormRocIntroLandedPayload() implements CustomPayload {
+        public static final StormRocIntroLandedPayload INSTANCE = new StormRocIntroLandedPayload();
+        public static final Id<StormRocIntroLandedPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"storm_roc_intro_landed"));
+        public static final PacketCodec<RegistryByteBuf,StormRocIntroLandedPayload> CODEC = PacketCodec.unit(INSTANCE);
         @Override public Id<? extends CustomPayload> getId() { return ID; }
     }
     public record GuardianIntroSkipPayload() implements CustomPayload {

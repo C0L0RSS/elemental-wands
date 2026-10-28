@@ -101,6 +101,7 @@
   "necromancer.elementalwands.intro_waiting": "Waiting for your party to finish the intro...",
   "guardian.elementalwands.intro_skip": "Hold %s to skip",
   "guardian.elementalwands.intro_waiting": "Waiting for your party to finish the intro...",
+  "storm.elementalwands.intro_waiting": "Waiting for your party to land...",
   "entity.elementalwands.necromancer_soul": "Necromancer’s Soul",
   "death.attack.necromancer_fireball": "%1$s was burned to ash by %2$s’s soul fire",
   "death.attack.necromancer_erupt": "%1$s was caught by %2$s bursting from the grave",

@@ -26,8 +26,6 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.ChestBlock;
 import net.minecraft.block.entity.ChestBlockEntity;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.registry.RegistryKey;
@@ -48,7 +46,8 @@ import net.minecraft.world.World;
 
 /**
  * The Storm Roc's way in: an abandoned Windcaller summoning gong on an Overworld peak. Striking it
- * twice takes the striker's nearby party up to a free summit slot and starts the fight; its end
+ * twice calls the Roc for the striker's nearby party: its intro ({@link StormRocIntro}) snatches each
+ * of them and carries them up to a free summit slot, and the fight starts once all have landed; its end
  * sends them back to the gong, and a win fills the aerie's reward chest, where each victor claims
  * one Ultimate spell book. Return points and who was called are saved with the summit, so a crash,
  * stop or relog on the summit still ends at the aerie.
@@ -58,10 +57,9 @@ public final class StormAerie {
 
     /**
      * Ticks: a second strike confirms within CONFIRM; a held right-click repeats faster than REPEAT and
-     * never counts as one. The party waits ARRIVAL_WAIT on the summit before the Roc attacks, and
-     * victors HOMECOMING after it falls.
+     * never counts as one. Victors wait HOMECOMING on the summit after it falls.
      */
-    private static final int CONFIRM = 100, REPEAT = 10, ARRIVAL_WAIT = 60, HOMECOMING = 200;
+    private static final int CONFIRM = 100, REPEAT = 10, HOMECOMING = 200;
     /** Party members this close to the gong's anchor go with the striker. */
     private static final int RADIUS = 24;
     /** A part finds its anchor in its own plane, as far below it and to either side as the plate's cells reach. */
@@ -83,7 +81,7 @@ public final class StormAerie {
         Ring(String site, int now) { this.site = site; first = last = now; }
     }
 
-    /** A party on its way: tolling at the aerie, then briefly on the summit before the fight. */
+    /** A party on its way: in the intro at the aerie, then on the summit until all have landed. */
     private static final class Call {
         final String site;
         final RegistryKey<World> world;
@@ -92,9 +90,7 @@ public final class StormAerie {
         final BlockPos centre;
         final int committed;
         final Set<UUID> members = new LinkedHashSet<>();
-        /** Tolls the call has rung so far. */
-        int tolls;
-        /** Server tick the party reached the summit, or -1 while still at the aerie. */
+        /** Server tick the last of the party was carried up to the summit, or -1 while any is still at the aerie. */
         int arrived = -1;
         Call(String site, RegistryKey<World> world, Gong gong, int slot, BlockPos centre, int committed) {
             this.site = site; this.world = world; this.gong = gong; this.slot = slot; this.centre = centre; this.committed = committed;
@@ -107,6 +103,11 @@ public final class StormAerie {
     private static final Map<UUID, Ring> rings = new HashMap<>();
     private static final List<Call> calls = new ArrayList<>();
     private static final Map<BlockPos, Homecoming> homecomings = new HashMap<>();
+    /**
+     * Players the storm passed by because their client never covered its screen, until the tick a
+     * call may take them again: otherwise withholding the cloud would chain the scene's protection.
+     */
+    private static final Map<UUID, Integer> passedBy = new HashMap<>();
 
     static void init() {
         ServerTickEvents.END_SERVER_TICK.register(StormAerie::tick);
@@ -119,7 +120,7 @@ public final class StormAerie {
         });
         ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resources, success) -> cancelAll(server, true));
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> cancelAll(server, false));
-        ServerLifecycleEvents.SERVER_STOPPED.register(server -> { rings.clear(); calls.clear(); homecomings.clear(); });
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> { rings.clear(); calls.clear(); homecomings.clear(); passedBy.clear(); });
         // Claim before the chest opens; the chest itself opens as usual.
         UseBlockCallback.EVENT.register((player, world, hand, hit) -> {
             if (hand == Hand.MAIN_HAND && world instanceof ServerWorld server && player instanceof ServerPlayerEntity opener)
@@ -210,6 +211,7 @@ public final class StormAerie {
         if (world.getRegistryKey() == StormSummit.WORLD) return "The gong is silent up here.";
         if (!ringer.isAlive() || ringer.isCreative() || ringer.isSpectator()) return "Only a Survival or Adventure player can call the Storm Roc.";
         if (StormRocEncounter.enrolled(ringer) || pending(ringer.getUuid())) return "The storm is already answering your call.";
+        if (passedBy(ringer.getUuid(), world.getServer().getTicks())) return "The storm won't answer you again yet.";
         if (elsewhere(ringer)) return "Finish your current fight first.";
         return null;
     }
@@ -231,9 +233,16 @@ public final class StormAerie {
         for (UUID id : party.members().keySet()) {
             ServerPlayerEntity p = world.getServer().getPlayerManager().getPlayer(id);
             if (p == null || p == ringer || p.getEntityWorld() != world || p.squaredDistanceTo(at) > RADIUS * RADIUS) continue;
-            if (p.isAlive() && !p.isCreative() && !p.isSpectator() && !StormRocEncounter.enrolled(p) && !pending(id) && !elsewhere(p)) group.add(p);
+            if (p.isAlive() && !p.isCreative() && !p.isSpectator() && !StormRocEncounter.enrolled(p) && !pending(id) && !elsewhere(p)
+                    && !passedBy(id, world.getServer().getTicks())) group.add(p);
         }
         return group;
+    }
+
+    private static boolean passedBy(UUID id, int now) {
+        Integer until = passedBy.get(id);
+        if (until != null && now >= until) passedBy.remove(id);
+        return until != null && now < until;
     }
 
     private static String names(List<ServerPlayerEntity> group) {
@@ -264,6 +273,7 @@ public final class StormAerie {
         group.forEach(p -> call.members.add(p.getUuid()));
         calls.add(call);
         StormSummitManager.raise(realm, slot);
+        StormRocIntro.begin(world, gong, call.centre, group);
         for (ServerPlayerEntity p : group)
             if (p != ringer) p.sendMessage(Text.literal(ringer.getName().getString() + " struck the storm gong. The Storm Roc answers."), false);
         return "The storm gong calls the Storm Roc for: " + names(group) + ".";
@@ -295,27 +305,6 @@ public final class StormAerie {
         if (world.getBlockEntity(gong.anchor()) instanceof StormGongBlockEntity anchor) anchor.strike();
     }
 
-    /**
-     * The call, a stand-in until the intro replaces it: three deep strokes a second apart with distant
-     * thunder, the Roc's scream on the last (its own voice, a low phantom cry), then blindness as the
-     * wind takes the party. Returns true once they may be carried up.
-     */
-    private static boolean callStandIn(ServerWorld world, Call call, int elapsed) {
-        if (call.tolls < 3 && elapsed >= call.tolls * 20) {
-            toll(world, call.gong);
-            Vec3d sky = Vec3d.ofCenter(call.gong.anchor()).add(0, 12, 0);
-            world.playSound(null, sky.x, sky.y, sky.z, SoundEvents.ENTITY_LIGHTNING_BOLT_THUNDER, SoundCategory.WEATHER, 3f, .6f);
-            if (++call.tolls == 3) {
-                world.playSound(null, sky.x, sky.y + 4, sky.z, SoundEvents.ENTITY_PHANTOM_AMBIENT, SoundCategory.HOSTILE, 4f, .4f);
-                for (UUID id : call.members) {
-                    ServerPlayerEntity p = world.getServer().getPlayerManager().getPlayer(id);
-                    if (p != null) p.addStatusEffect(new StatusEffectInstance(StatusEffects.BLINDNESS, 60, 0, false, false));
-                }
-            }
-        }
-        return call.tolls == 3 && elapsed >= 50;
-    }
-
     // ------------------------------------------------------------------ calls and homecomings
 
     /** Held by a call that has not started its fight, or by a won fight's wait on the summit. */
@@ -330,7 +319,7 @@ public final class StormAerie {
         if (realm == null || StormSummitManager.savedCalls() == null) return;
         int now = server.getTicks();
         for (Call call : List.copyOf(calls)) {
-            if (call.arrived < 0) tickTolling(server, realm, call, now);
+            if (call.arrived < 0) tickCarrying(server, realm, call, now);
             else tickWaiting(server, realm, call, now);
         }
         homecomings.entrySet().removeIf(entry -> {
@@ -341,49 +330,79 @@ public final class StormAerie {
             }
             return true;
         });
+        StormRocIntro.hold(server);
         recover(server);
     }
 
-    /** At the aerie: drop whoever left, play the call, and carry the rest up once their slot is ready. */
-    private static void tickTolling(MinecraftServer server, ServerWorld realm, Call call, int now) {
+    /**
+     * The intro: drop whoever left, and carry each of the rest up once their client reports its
+     * screen inside the storm cloud (or they skip), and their slot is ready; until then their scene
+     * waits in the cloud.
+     */
+    private static void tickCarrying(MinecraftServer server, ServerWorld realm, Call call, int now) {
         ServerWorld world = server.getWorld(call.world);
         for (UUID id : List.copyOf(call.members)) {
             ServerPlayerEntity p = server.getPlayerManager().getPlayer(id);
-            if (p == null || !p.isAlive() || p.getEntityWorld() != world || p.isCreative() || p.isSpectator()) {
+            boolean up = StormRocIntro.carried(id);
+            if (p == null || !p.isAlive() || p.isCreative() || p.isSpectator() || (up ? !onSlot(p, call.centre) : p.getEntityWorld() != world)) {
                 call.members.remove(id);
-                forget(id.toString());
+                if (p != null) StormRocIntro.end(p); else StormRocIntro.forget(id);
+                if (!up) forget(id.toString());
             }
         }
         // Nobody left: the slot is free again.
         if (call.members.isEmpty() || world == null) { calls.remove(call); return; }
-        boolean done = callStandIn(world, call, now - call.committed);
         if (!StormSummitManager.ready(call.slot)) {
             StormSummitManager.raise(realm, call.slot);
             return;
         }
-        if (!done) return;
-        for (UUID id : call.members) {
+        boolean late = now - call.committed >= StormRocIntro.CLOUD_LATE;
+        for (UUID id : List.copyOf(call.members)) {
+            if (StormRocIntro.carried(id)) continue;
             ServerPlayerEntity p = server.getPlayerManager().getPlayer(id);
-            StormSummitManager.transfer(p, realm, StormSummit.arrival(call.centre), StormSummit.ARRIVAL_YAW, 0);
-            p.sendMessage(Text.literal("The storm carries you up to its summit."), true);
+            if (StormRocIntro.readyToCarry(id)) StormRocIntro.carryUp(p, realm, call.centre);
+            else if (late) {
+                call.members.remove(id);
+                StormRocIntro.end(p);
+                forget(id.toString());
+                passedBy.put(id, now + StormRocIntro.CLOUD_LATE);
+                p.sendMessage(Text.literal("The storm passes you by. Strike the gong again in a little while."), false);
+            }
         }
-        call.arrived = now;
+        if (call.members.isEmpty()) { calls.remove(call); return; }
+        if (call.members.stream().allMatch(StormRocIntro::carried)) call.arrived = now;
     }
 
     /**
      * On the summit: those who died, left or disconnected drop out (a relog sends them home), and
-     * after a short wait the fight starts with exactly the called players still there.
+     * once every scene has ended (each has landed or skipped; or a scene has run far too long) the
+     * fight starts with exactly the called players still there.
      */
     private static void tickWaiting(MinecraftServer server, ServerWorld realm, Call call, int now) {
         for (UUID id : List.copyOf(call.members)) {
             ServerPlayerEntity p = server.getPlayerManager().getPlayer(id);
-            if (p == null || !p.isAlive() || !onSlot(p, call.centre)) call.members.remove(id);
+            if (p == null || !p.isAlive() || !onSlot(p, call.centre)) {
+                call.members.remove(id);
+                if (p != null) StormRocIntro.end(p); else StormRocIntro.forget(id);
+            }
         }
         if (call.members.isEmpty()) { calls.remove(call); return; }
-        if (now - call.arrived < ARRIVAL_WAIT) return;
+        if (!call.members.stream().allMatch(StormRocIntro::finished)) {
+            if (now - call.committed < StormRocIntro.LENGTH + StormRocIntro.GRACE) return;
+            // A scene that never reported back (a stuck or lost client) doesn't hold up the others,
+            // and its player isn't dropped into the fight blind: they go back to the aerie.
+            for (UUID id : List.copyOf(call.members)) {
+                if (StormRocIntro.finished(id)) continue;
+                call.members.remove(id);
+                ServerPlayerEntity p = server.getPlayerManager().getPlayer(id);
+                if (p != null) { StormRocIntro.end(p); home(p); }
+            }
+            if (call.members.isEmpty()) { calls.remove(call); return; }
+        }
         calls.remove(call);
         List<ServerPlayerEntity> roster = new ArrayList<>();
         for (UUID id : call.members) roster.add(server.getPlayerManager().getPlayer(id));
+        roster.forEach(StormRocIntro::end);
         String result = StormRocEncounter.start(server, call.centre, roster, call.site);
         boolean started = roster.stream().anyMatch(StormRocEncounter::enrolled);
         // Anyone the fight did not take, or everyone if it could not begin, goes back to the aerie;
@@ -418,8 +437,10 @@ public final class StormAerie {
 
     /** A member who dies or disconnects drops out; one still at the aerie never went, so forgets their way home. */
     private static void drop(ServerPlayerEntity player) {
+        boolean up = StormRocIntro.carried(player.getUuid());
+        StormRocIntro.end(player);
         for (Call call : calls)
-            if (call.members.remove(player.getUuid()) && call.arrived < 0) forget(player.getUuidAsString());
+            if (call.members.remove(player.getUuid()) && !up) forget(player.getUuidAsString());
     }
 
     /**
@@ -430,7 +451,9 @@ public final class StormAerie {
         if (StormSummitManager.savedCalls() != null) {
             for (Call call : calls) for (UUID id : call.members) {
                 ServerPlayerEntity p = server.getPlayerManager().getPlayer(id);
-                if (call.arrived < 0) {
+                boolean up = StormRocIntro.carried(id);
+                if (p != null) StormRocIntro.end(p); else StormRocIntro.forget(id);
+                if (!up) {
                     forget(id.toString());
                     if (p != null) p.sendMessage(Text.literal("The storm passes before it answers. Strike the gong again."), false);
                 } else if (reload && p != null && p.isAlive() && onSlot(p, call.centre)) home(p);
@@ -551,7 +574,7 @@ public final class StormAerie {
     static String status() {
         StringBuilder out = new StringBuilder();
         for (Call call : calls) out.append(" Aerie call to slot ").append(call.slot).append(" for ").append(call.members.size())
-                .append(call.arrived < 0 ? " player(s), tolling at the aerie." : " player(s), waiting on the summit.");
+                .append(call.arrived < 0 ? " player(s), in the intro at the aerie." : " player(s), waiting on the summit.");
         homecomings.forEach((centre, home) -> out.append(" Victors at ").append(centre.getX()).append(" go home soon (")
                 .append(home.players().size()).append(")."));
         var sites = StormSummitManager.savedSites();

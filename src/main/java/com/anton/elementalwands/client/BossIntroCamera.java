@@ -12,23 +12,28 @@ import net.minecraft.util.math.Vec3d;
  * realm's fight and the transformation comes long after the intro.
  */
 public final class BossIntroCamera {
-    public record Pose(Vec3d pos, float yaw, float pitch) {}
+    /** Where the camera is and looks; roll in degrees, positive lowering the view's right side. */
+    public record Pose(Vec3d pos, float yaw, float pitch, float roll) {
+        public Pose(Vec3d pos, float yaw, float pitch) { this(pos, yaw, pitch, 0); }
+    }
 
     private BossIntroCamera() {}
 
     /** The player is held by a cinematic: no walking, jumping or sneaking. */
     public static boolean frozen() {
-        return GuardianIntroClient.frozen() || NecromancerIntroClient.frozen() || NecromancerTransformClient.frozen();
+        return GuardianIntroClient.frozen() || NecromancerIntroClient.frozen() || NecromancerTransformClient.frozen() || StormRocIntroClient.frozen();
     }
 
     /** A cinematic owns the camera: HUD, hand, bobbing and block outline stay hidden. */
     public static boolean cinematic() {
-        return GuardianIntroClient.cinematic() || NecromancerIntroClient.cinematic() || NecromancerTransformClient.cinematic();
+        return GuardianIntroClient.cinematic() || NecromancerIntroClient.cinematic() || NecromancerTransformClient.cinematic()
+                || StormRocIntroClient.cinematic();
     }
 
     /** Where the camera looks this frame, or null when the player's own view applies. */
     public static Pose pose(float tickDelta) {
         if (GuardianIntroClient.frozen()) return GuardianIntroClient.pose(tickDelta);
+        if (StormRocIntroClient.frozen()) return StormRocIntroClient.pose(tickDelta);
         if (NecromancerTransformClient.frozen()) return NecromancerTransformClient.pose(tickDelta);
         NecromancerIntroClient.Pose pose = NecromancerIntroClient.pose(tickDelta);
         return pose == null ? null : new Pose(pose.pos(), pose.yaw(), pose.pitch());
@@ -36,6 +41,7 @@ public final class BossIntroCamera {
 
     public static float fov(float fov, float tickDelta) {
         if (GuardianIntroClient.frozen()) return GuardianIntroClient.fov(fov, tickDelta);
+        if (StormRocIntroClient.frozen()) return StormRocIntroClient.fov(fov, tickDelta);
         if (NecromancerTransformClient.frozen()) return NecromancerTransformClient.fov(fov, tickDelta);
         return NecromancerIntroClient.fov(fov, tickDelta);
     }
@@ -52,12 +58,14 @@ public final class BossIntroCamera {
 
     public static void drawCinematic(DrawContext context, RenderTickCounter counter) {
         if (GuardianIntroClient.cinematic()) GuardianIntroClient.drawCinematic(context, counter);
+        else if (StormRocIntroClient.cinematic()) StormRocIntroClient.drawCinematic(context, counter);
         else if (NecromancerTransformClient.cinematic()) NecromancerTransformClient.drawCinematic(context, counter);
         else NecromancerIntroClient.drawCinematic(context, counter);
     }
 
     public static void drawWaiting(DrawContext context) {
         GuardianIntroClient.drawWaiting(context);
+        StormRocIntroClient.drawWaiting(context);
         NecromancerIntroClient.drawWaiting(context);
         NecromancerTransformClient.drawWaiting(context);
     }

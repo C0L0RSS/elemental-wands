@@ -67,7 +67,8 @@ public final class WandLoadouts {
         if (!player.isAlive() || player.isSpectator() || !com.anton.elementalwands.arena.GuardianArenaManager.canCast(player)) return;
         if (com.anton.elementalwands.entity.necromancer.NecromancerIntro.watching(player)
                 || com.anton.elementalwands.entity.necromancer.NecromancerTransformScene.watching(player)
-                || com.anton.elementalwands.entity.GuardianIntro.watching(player)) return; // Held by a boss intro.
+                || com.anton.elementalwands.entity.GuardianIntro.watching(player)
+                || com.anton.elementalwands.summit.StormRocIntro.watching(player)) return; // Held by a boss intro.
         ServerWorld world = player.getEntityWorld();
         if (HollowPurpleChargeManager.isCharging(world, player) || FireLeapManager.flying(player) || StoneChargeManager.active(player)) return;
         var stack = player.getMainHandStack();

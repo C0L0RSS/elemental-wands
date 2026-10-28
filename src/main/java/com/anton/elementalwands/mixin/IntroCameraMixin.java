@@ -5,16 +5,23 @@ import net.minecraft.client.render.Camera;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.BlockView;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** A boss intro flies the camera; the player's own body is then drawn like any other. */
+/** A boss intro flies the camera (and may roll it); the player's own body is then drawn like any other. */
 @Mixin(Camera.class)
 public abstract class IntroCameraMixin {
     @Shadow private boolean thirdPerson;
+    @Shadow @Final private Quaternionf rotation;
+    @Shadow @Final private Vector3f horizontalPlane;
+    @Shadow @Final private Vector3f verticalPlane;
+    @Shadow @Final private Vector3f diagonalPlane;
     @Shadow protected abstract void setPos(Vec3d pos);
     @Shadow protected abstract void setRotation(float yaw, float pitch);
 
@@ -23,6 +30,13 @@ public abstract class IntroCameraMixin {
         BossIntroCamera.Pose pose = BossIntroCamera.pose(tickProgress);
         if (pose == null) return;
         setRotation(pose.yaw(), pose.pitch());
+        if (pose.roll() != 0) {
+            // Positive roll lowers the view's right side; the planes billboards and culling use follow it.
+            rotation.rotateZ((float)Math.toRadians(-pose.roll()));
+            horizontalPlane.set(0, 0, -1).rotate(rotation);
+            verticalPlane.set(0, 1, 0).rotate(rotation);
+            diagonalPlane.set(-1, 0, 0).rotate(rotation);
+        }
         setPos(pose.pos());
         this.thirdPerson = true;
     }

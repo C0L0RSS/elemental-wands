@@ -92,6 +92,7 @@ public class ElementalWandsMod implements ModInitializer {
         com.anton.elementalwands.entity.necromancer.NecromancerIntro.register();
         com.anton.elementalwands.entity.necromancer.NecromancerTransformScene.register();
         com.anton.elementalwands.entity.GuardianIntro.register();
+        com.anton.elementalwands.summit.StormRocIntro.register();
         com.anton.elementalwands.entity.undead.HollowUndeadSpawns.register();
         FabricDefaultAttributeRegistry.register(ModEntities.AWAKENED_TREE, AwakenedTreeEntity.createAttributes().build());
         FabricDefaultAttributeRegistry.register(ModEntities.STONE_ZOMBIE, StoneZombieEntity.createAttributes().build());

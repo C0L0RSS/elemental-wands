@@ -45,6 +45,9 @@
     "IntroLookMixin",
     "NaveFogMixin",
     "SummitStormWeatherMixin",
-    "SummitStormRainMixin"
+    "SummitStormRainMixin",
+    "ClientChunkProgressAccessor",
+    "StormRocIntroLoadingMixin",
+    "StormRocIntroHideMixin"
   ]
 }

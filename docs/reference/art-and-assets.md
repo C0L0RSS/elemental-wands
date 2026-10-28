@@ -58,7 +58,7 @@ Runtime resources live under `src/main/resources/assets/elementalwands/`.
 | `art/storm_summit/build_layout.py` | Storm Summit realm tiles, generated `StormSummitLayout`, remains' blocks and cloud textures; `--check` verifies |
 | `art/storm_roc/build_preview.py` | Storm Roc art study: the skeleton and clips the game model rides, and the head crackles; review-only, `--check` verifies |
 | `art/storm_roc_texture_study/build_texture_v3.py`, `art/storm_roc_mod/build_mod.py` | Storm Roc bearded-vulture atlas, eye glow mask and 307-block model; rebuild texture, then model, then runtime (see that folder's README) |
-| `art/storm_roc/build_runtime.py` | Storm Roc GeckoLib model, atlas, sixteen clips and server sockets; `--check` verifies, `validate_runtime.py` checks anatomy and hit timing |
+| `art/storm_roc/build_runtime.py` | Storm Roc GeckoLib model, atlas, twenty-one clips and server sockets; `--check` verifies, `validate_runtime.py` checks anatomy and hit timing |
 | `art/roc_effects/build_tornado_texture.py` | Roc tornado atlas; `--check` verifies |
 
 Do not run generators with replacement options unless intentionally changing their

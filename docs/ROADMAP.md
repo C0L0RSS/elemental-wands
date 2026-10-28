@@ -60,7 +60,7 @@ Pillars:
 | --- | --- | --- | --- | --- |
 | Stone | Fractured Guardian | Ruined churches, Shattered Nave | 0 | Built, rebalanced October 3; playtest pending |
 | Nature (life turned to death) | Hollow Necromancer | Graveyards, Hollow Crypt | 1 | Built, in tuning |
-| Wind | Storm Roc | Mountain peaks, a sky realm above the clouds | 2 | Built with its aerie (Oct 27); intro, cinematic and death to come; playtest pending |
+| Wind | Storm Roc | Mountain peaks, a sky realm above the clouds | 2 | Built with its aerie and intro (Oct 27); phase cinematic and death to come; playtest pending |
 | Fire | New | The Nether | 3 | Open |
 | Space | New | The End or the deep dark | 4 | Open |
 | — | Final: the wizard who tried to hold all five | Opened by all five shards | 5 | Open |
@@ -371,7 +371,7 @@ These come from the Guardian and Necromancer playtests:
   them onto the arena.
 - **Built (Oct 27):** the aerie is an abandoned Windcaller summoning gong on a levelled peak
   summit whose ground comes from the biome. Striking it twice takes the striker and their nearby
-  party up; three strikes and a gust stand in for the snatch until the intro exists. Until shards exist, a win fills reward chests at the aerie and each
+  party up through the intro below. Until shards exist, a win fills reward chests at the aerie and each
   victor claims one Ultimate spell book there, once per aerie. Like the other bosses, it has
   no death yet; deaths come with the polish pass.
 - **Decided:** every player sees their own version of the intro, with their own skin as
@@ -416,6 +416,18 @@ These come from the Guardian and Necromancer playtests:
 - **Decided (Oct 27):** each player sees only their own scene. Teammates are hidden on that
   client until control returns, and the fight starts once everyone has landed or skipped. A
   player who skips waits on the summit.
+- **Built (Oct 27):** a first version of the intro, played at half the speed first sketched
+  (about 30 seconds), after an animatic was reviewed in the browser. It plays in place of the
+  loading screen: the server moves the player into the sky realm while the storm cloud covers
+  their view, and the cloud shot holds until the summit has loaded and drawn. The Roc and the
+  player are drawn as GeckoLib puppets on the scene's own clock, with the player's own skin,
+  and the talon has its own jointed toes for the grip. Sounds are vanilla stand-ins and the
+  wand isn't drawn in the puppet's hand yet.
+- **Built (Oct 28), after the user's review of the in-game video:**
+  - The landing insert holds 2 seconds longer on the perched Roc.
+  - Its name moved below its feet so it no longer covers its head.
+  - The fight now opens with the Roc summoning the first tornado from its spire, and every
+    tornado touches down from the cloud over 2.5 seconds instead of appearing whole.
 - **Decided:** the landings go bigger than the spells can in normal play.
 - **Proposed:** every landing takes the same time, about 3.5 seconds from the throw to
   control, and ends in the same standing pose facing the Roc's spire. Their effects fade

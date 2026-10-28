@@ -1,8 +1,8 @@
 # Storm Summit
 
 The Storm Roc's realm, with a playable two-phase fight that survival players reach from an
-aerie on an Overworld peak. The intro, the phase-change cinematic and the Roc's death remain
-planned in the [roadmap](../ROADMAP.md).
+aerie on an Overworld peak, through the Roc's intro. The phase-change cinematic and the Roc's
+death remain planned in the [roadmap](../ROADMAP.md).
 The realm, the aerie and the encounter lifecycle live under `summit/`; combat lives under
 `entity/roc/`; the aerie's placement is `world/StormAerieStructure`.
 
@@ -85,13 +85,46 @@ Striking the gong (`StormAerie`):
 - **Who goes:** the striker and the striker's party members within 24 blocks of the gong who
   are alive, in Survival or Adventure, and not already in a fight. Creative and spectating
   players can't strike it.
-- **The call:** a stand-in for the planned intro. Three strikes with thunder, the Roc's cry
-  and brief blindness, then the party is carried to a free summit slot (raised first if
-  needed). If all eight slots are busy: "The Storm Roc is fighting elsewhere."
-- **The fight:** it starts about 3 seconds after landing, with exactly the players who came.
+- **The call:** reserves a free summit slot (raising it if needed) and plays the intro for
+  each player (below). If all eight slots are busy: "The Storm Roc is fighting elsewhere."
+- **The fight:** it starts once everyone has landed (or skipped), with exactly the players who
+  came. A player whose scene never reports back is sent home after its length plus 30 seconds.
 - **Afterwards:** a loss, a reset or an interruption sends everyone back to the stand point
   in front of the gong. A win keeps them safe on the empty summit for 10 seconds, then sends
   them home. Anyone who died up there and respawned elsewhere is sent to the aerie as well.
+
+**The intro** (`summit/StormRocIntro`, `client/StormRocIntroClient`), about 31 seconds, held
+Sneak skips it. Each player sees their own copy, played by their own client on its own clock;
+teammates are hidden until they land. While it plays the server holds them still, and they
+can't be hurt, cast, attack, or use items or blocks.
+- At the aerie each player stands where the striker stood, facing the gong, and the scene is laid
+  out from there in first person: the storm gathers, a caw, the talons, carried up spiralling,
+  a look up at its face as it screams, then into the storm cloud.
+- Inside the cloud the client draws an opaque storm cloud over the screen and tells the server
+  (`storm_roc_intro_cloud`); only then does the server move the player into the realm, at the
+  arrival, already facing where the scene ends. The client skips the vanilla loading screen for
+  that one move (`mixin/StormRocIntroLoadingMixin`; vanilla still tracks the loading and
+  confirms it), and the scene waits on its hold beat until the summit has loaded and drawn.
+  Vanilla only builds the chunk sections its camera sees, so while the cloud covers the screen
+  the camera waits in the player's eyes at the arrival, where vanilla's own loading and the
+  scene's checks look. Once those pass, it moves to where the struggle opens for half a second,
+  so that view is built too.
+- Then third person over the summit: the struggle in its talon, the wand's shock in the
+  player's element's colour, the throw, and the landing. Then a 3.2-second insert of the Roc
+  coming down onto its home spire, with its name low in the frame under its feet, so the title
+  never covers its head. Last, the camera glides back into the player's eyes. The client reports
+  `storm_roc_intro_landed` and the fight starts when everyone has.
+- The Roc and the player are drawn straight into the world each frame (`client/StormRocIntroPuppets`,
+  GeckoLib object renderers), not as entities, so they draw while the summit's chunks load. The
+  player wears their own skin, wide or slim. The scene's Roc stays perched until the fight's
+  own appears.
+- A skip before the summit still goes through the cloud: the screen covers, the player is moved,
+  and the view is handed back once the summit has loaded. A skip later hands back at once, with
+  a glide from a shot near the player or a cut from one out over the clouds.
+- A client that never reports its screen covered (20 seconds after the cloud beat) is left at
+  the aerie, out of the call, and no call takes that player again for as long. Otherwise,
+  withholding the report could chain the scene's protection. A scene that hasn't landed within its length plus 30 seconds is
+  sent home, and the fight starts without it.
 
 Every return point, and who a gong took up, is saved in `storm-summit.json` before anyone
 moves. A record is retired only after the player has been moved and saved. So a crash, stop or
@@ -132,6 +165,16 @@ a running fight to the phase change. These operator fights have no aerie: they g
 rewards and leave everyone on the summit when they end. Survival players start fights at an
 [aerie](#the-aerie).
 
+**The summon.** Every fight opens on the Roc's home spire, where the intro leaves it. It summons
+the summit's first tornado (`summon`, 4.4 seconds):
+- it draws back and rears up, wings raised;
+- its head snaps up to the sky, and at 1.5 seconds it screams a bolt into the clouds;
+- at 1.7 seconds the storm strikes the tornado's spot, and the funnel starts to form there;
+- its head whips down onto the funnel, and it drives the wind at it with three heavy downbeats;
+- it folds its wings and settles, back on its perch's first frame.
+
+The air stretch then begins. Its first strikes come 1.25 seconds later.
+
 The Roc flies between the six spires for about 22.5 seconds on Normal (26.7 on Easy, 17.8 on
 Hard). Each spire visit lasts 8.9 seconds:
 - It touches down as the visit begins, having flared 0.8 seconds out, every move slow and
@@ -150,8 +193,8 @@ Hard). Each spire visit lasts 8.9 seconds:
   a straight 20-block run, so it lands already facing the summit. About 8.1 seconds in it flares
   into its landing, settling to the next spire's height as it brakes over the last stretch.
 
-Its perched idle (slow, heavy head turns, a feather rouse, a slow wing stretch over its back) plays when the fight
-starts and briefly after each call, resuming where it left off.
+Its perched idle (slow, heavy head turns, a feather rouse, a slow wing stretch over its back) plays after
+the summon and briefly after each call, resuming where it left off.
 
 It dives only from a spire, once it has landed and never mid-call. A dive that comes due while
 it lands waits for the landing to settle and takes the place of that visit's call. It crouches
@@ -247,8 +290,15 @@ back in to it, flaring into its landing on the way in.
 Burst damage holds at each landing's gate. Reaching half health plays the takeoff, then the
 phase change.
 
-One tornado starts with the fight; a second appears at 75% total health. They persist through
-the dive and brawl, stay within 32 blocks of the centre and keep apart. They move at a quarter
+The summon calls the first tornado; a second appears at 75% total health, once the summon is
+over. Every new tornado, phase two's third included, touches down rather than appearing whole,
+over 2.5 seconds (`TORNADO_FORM`):
+- dust stirs on the rock under a slow turn in the cloud;
+- the funnel reaches down out of it as a rope and thickens as it touches down;
+- its wind bands and torn-up debris come last, and its spin picks up throughout.
+
+Until it has formed it doesn't move, pull, catch or hurt anyone; a gust marks the moment its
+winds take hold. They persist through the dive and brawl, stay within 32 blocks of the centre and keep apart. They move at a quarter
 of walking pace: in the air stretch, the dive and the chain smash each turns slowly toward the
 nearest challenger on the rock; in the brawl they only wander.
 - **Winds:** from 1.8 times its radius they drag players inward and around it, harder the
@@ -386,6 +436,17 @@ fight's victors go home to its [rewards](#the-aerie) after 10 seconds.
 
 `StormSummit` holds the realm's own numbers: surface height, slot spacing and arrival.
 
+`art/storm_roc/intro/build_intro.py` authors the intro from one set of beats (see its docstring):
+
+- **Default run:** bakes the Roc's clip (composed from its installed clips, with a jointed
+  gripping talon the intro's copy of its model adds to its left foot), the player's clip and
+  geometry (wide and slim), and the per-tick track, and writes the browser animatic to
+  `.local-previews/storm-roc-intro/` (launch entry `storm-roc-intro-preview`, port 8396). The
+  scene is authored at half its playing speed (`PACE`); everything the game reads is in its own ticks.
+- **`--install`:** writes `geckolib/models/storm_roc_intro*.geo.json`, the two clips under
+  `geckolib/animations/`, `cinematics/storm_roc_intro.json` and the cloud cover's texture.
+- **`--check`:** detects drift in all of these.
+
 `tools/summit_client_smoke.init.gradle` is the native check. It enters a slot, photographs
 seven viewpoints into `build/summit-client-smoke/screenshots/`, counts the remains, tries to
 break the rock as a survival player, drops a player off the east rim to check the rescue,
@@ -427,8 +488,8 @@ bones, with a raised crest, wearing the bearded-vulture atlas (revision 3) from 
 (steep slim brows, glowing red slit eyes set in sockets, brow spikes) and Huge legs (thick legs
 and big sickle talons on the same bones). `head_variants.py` bakes the other options for a
 browser picker. `build_texture_v3.py` writes the atlas and the glow mask that lights the eyes.
-`art/storm_roc/build_runtime.py` installs the model and atlas plus sixteen combat poses
-(including the spire landing, the lightning call and the chain smash's hop) and matching
+`art/storm_roc/build_runtime.py` installs the model and atlas plus twenty-one combat poses
+(including the spire landing, the lightning call, the opening summon and the chain smash's hop) and matching
 server sockets; it converts the preview's coordinate basis to GeckoLib without changing the
 approved shape or texture.
 Run `python3 art/storm_roc_mod/build_mod.py --check`, `python3 art/storm_roc/build_runtime.py --check` and

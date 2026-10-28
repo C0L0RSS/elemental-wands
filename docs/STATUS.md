@@ -4,6 +4,19 @@ Reviewed October 3, 2026. This page contains outstanding work, not release histo
 It records known verification limits; it is not a fresh installation receipt.
 
 - **Storm Roc (both phases):** the summit has a sealed, operator-started encounter.
+  - **Opening (Oct 28):** on its home spire the Roc summons the first tornado. It screams a bolt
+    into the clouds, the storm strikes the spot, and the funnel touches down over 2.5 seconds
+    as it beats the wind at it, under a wall cloud it hangs from. Every new tornado now forms
+    this way, harmless until formed.
+    - **Verified:**
+      - `roc_server_smoke` checks that no tornado appears before the call, that one forms
+        harmlessly with a player at its core, and that the second comes only after the summon.
+      - `roc_client_smoke` photographs the scream, the forming funnel and the formed tornado.
+      - `roc_intro_client_smoke`'s video runs on through the summon.
+    - **Pending:** the user's review of the video, then a Lunar look and a playtest.
+    - **Note:** in the approved `stuck` clip, the head shake after it rips free (about 5.4
+      seconds) has keys that overlap in time by up to 0.04 seconds. A few of its tiny moves
+      are skipped. Found while guarding key order; left as it is.
   - **Phase one:** repeated lightning, permanent drifting tornadoes, a marked dive and jumpable
     shockwave, the pinned-beak opening, seven grounded actions and health-driven takeoffs.
   - **Phase change:** at half health a short in-engine stand-in for the planned cinematic.
@@ -35,15 +48,46 @@ It records known verification limits; it is not a fresh installation receipt.
       - how findable aeries are without the hub map page;
       - whether an Ultimate book per aerie is the right pace.
     - **Known gaps:**
-      - a party member who walks away during the tolling still goes up;
       - an operator `/ew summit start` on a slot a call has reserved takes the called players
         into an operator fight with no rewards;
       - a broken reward chest only comes back after the next win there.
       - the gong model's swing and lighting in Lunar.
       - on jagged peaks an aerie can sit on a shoulder below taller spires that are too narrow
         to level.
-  - **Not yet built:** the intro (the bell's tolling is a stand-in), the phase-change
-    cinematic and a death.
+  - **Intro (Oct 27):** a first version of the snatch, about 30 seconds plus however long the
+    summit takes to load. It plays in place of the loading screen: the server moves each called
+    player into the realm only once their client's storm cloud covers the screen, and the
+    cloud holds until the summit has loaded and drawn. The fight starts once everyone has
+    landed or skipped (held Sneak).
+    - **Verified:**
+      - `aerie_server_smoke` passed 38 steps with simulated clients:
+        - players are held at the gong's stand, unhurt, unmoving and unable to attack or use
+          items, and carried up only after their cloud;
+        - the fight starts as they land;
+        - a disconnect at the gong, and a death on the summit, end that player's scene;
+        - a client that never reports the cloud is left at the gong at its deadline, and can't
+          be called again at once;
+        - a scene that never lands is sent home after its length and grace, and the fight
+          starts without it.
+      - `roc_intro_client_smoke` played it in a real client on seed 12345:
+        - no loading screen;
+        - 33 ticks in the cloud after the move;
+        - the camera handed back and the fight started.
+      - The same test skipped it twice, each time with no loading screen and with the fight
+        starting:
+        - from the grip, in the aerie: the cloud covered the screen and cleared on the player's
+          own view;
+        - from the struggle: it cut straight back.
+      - The frames were turned into a review video.
+    - **Pending:** the user's in-game review of the video, then a Lunar look and a solo and
+      co-op playtest.
+    - **Known gaps:**
+      - sounds are vanilla stand-ins;
+      - the wand isn't drawn in the puppet's hand;
+      - lightning bolts in chunks the client hasn't loaded don't draw;
+      - the struggle opens about 200 blocks from the summit, so at short view distances the
+        landing shot may build its terrain in the first moments after the cut.
+  - **Not yet built:** the phase-change cinematic and a death.
   - **October 14 fixes:**
     - First pass: client hurtboxes, the safe spot under the neck, stampede targeting,
       permanent threat, stacking, shields, the pounce aim and the stuck pose.

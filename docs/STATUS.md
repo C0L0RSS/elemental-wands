@@ -292,6 +292,14 @@ It records known verification limits; it is not a fresh installation receipt.
   screenshots from first person, behind and the side. Pending: the user's Lunar review of
   how it looks and performs in real fights. Also pending: multiplayer, where other players'
   streams, leaps and blasts come from the new block-fire events.
+- **Wind block wind (November 1):** all five Wind spells are drawn as 3D block wind
+  (`client/blockwind/`), ported from the approved `art/wind/blockwind/` browser study, with a
+  painted atlas. Zephyr Strike wears 3D feathered wings in place of the flat
+  Elytra model. The build, VFX checks and `wind_blockwind_client_smoke` passed: every spell
+  drew its effect in a native client (72 first- and third-person screenshots), including a
+  Sky Shear hit and miss, a chained dash and a Zephyr landing. Pending: the user's Lunar
+  review together with Fire's, and multiplayer, where other players' dashes, launches and
+  landings come from the new block-wind events.
 - **Wand-tip cast particles:** cast bursts, the fractured beam, the Flamethrower
   stream and projectile wakes now start at an estimated wand tip instead of the
   caster's face. The build passed; the tip placement (right/left hand,

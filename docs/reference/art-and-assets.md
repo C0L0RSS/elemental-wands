@@ -37,7 +37,8 @@ Runtime resources live under `src/main/resources/assets/elementalwands/`.
 | --- | --- |
 | `art/fire/blockfire/` | Block-fire browser study, atlas source and builder for all six Fire spells |
 | `art/fire/workshop/`, `tools/prepare_fire_assets.py` | Earlier workshop 05 Fire frames and meshes (Fire particles still use them) |
-| `art/wind/cloud-white/`, `tools/generate_wind_vfx_assets.py` | Cloud-white Wind atlas, native-grid frames, item/worn wings and icons |
+| `art/wind/blockwind/` | Block-wind browser study, painted atlas source and builder for all five Wind spells |
+| `art/wind/cloud-white/`, `tools/generate_wind_vfx_assets.py` | Cloud-white Wind atlas, native-grid frames, wing item icon and ability icons (the Wind particles and the worn-wing texture are unused now) |
 | `tools/generate_shared_vfx_assets.py` | Legacy neutral wand sprite and wooden HUD frame only |
 | `tools/generate_stone_vfx_assets.py` | Stone spell, block, equipment and HUD textures (41-image family) |
 | `tools/generate_nature_vfx_assets.py` | Nature particle, entity and HUD textures (44-image family); separate from model/layout exporters |
@@ -79,7 +80,16 @@ and very low lingering carpet are distinct. Ordinary ground fire uses
 vanilla-looking flames; the meteor is a stepped all-fire sphere. Preserve
 ordinary falling-block rendering.
 
-Wind uses bright cloud-white clusters with light pearl/blue-gray shading, broad
+Wind spells are block wind: cubes textured from `textures/misc/blockwind.png`
+(8 bands × 4 frames: gale, cloud, mist, streak, swirl, feather, pearl, silver),
+built from a painted source by `art/wind/blockwind/textures/build_atlas.py`;
+the runtime copy must match its output byte for byte. Air is see-through and fades
+by shrinking; only blade rims, wings, motes and the dagger are solid. Thin streaks
+read as wires, loose solid cubes as debris and lines meeting at angles as
+lightning, so trails stay puffy or curved. The Gale Dagger keeps its approved
+flat-coloured box model; only its forging swirl, trail rings and hit puff are block wind.
+
+The older cloud-white sprites use bright clusters with light pearl/blue-gray shading, broad
 curling gusts, open pressure rings and cloudburst impacts. Avoid dark outlines,
 metallic plates and torn shard silhouettes. The source atlas is exported to the
 existing native grids with nearest-neighbor sampling and a fixed eight-color

@@ -93,9 +93,10 @@ Updraft grants fall protection only until the first landing, without slowing the
 fall or reducing combat damage. Walls and ceilings retain normal collision.
 Water/lava contact, climbing, mounting, flight/gliding, death, affinity/world exit,
 disconnect and encounter exclusion end its transient flight state. Putting away
-the wand does not remove the current jump's safe landing. Twenty white smoke
-puffs expand radially from the launch point near the floor (or at the feet for
-midair casts), with a short rising Wind spiral. Owners: `UpdraftManager`,
+the wand does not remove the current jump's safe landing. Twenty cloud puffs
+roll out from the launch point near the floor (or at the feet for midair casts)
+while a double coil winds up the launch column; a small soft puff marks the safe
+landing. Owners: `UpdraftManager`,
 `UpdraftFallMixin`, and the vertical-only `UpdraftLaunchPayload`; the owning client
 preserves its live X/Z velocity rather than receiving stale server components.
 
@@ -109,8 +110,8 @@ death, and reconnects cannot clear it. The shared global tap still applies.
 
 Shots launch three ticks (0.15 seconds) apart, each using the current crosshair
 rotation and converging on its raycast target. After release, each projectile flies
-straight at three blocks per tick for at most 40 blocks, leaving small, spaced
-cloud-white rings that quickly expand and fade. Each deals 5 base damage
+straight at three blocks per tick for at most 40 blocks, leaving crisp cloud rings
+every 1.2 blocks that quickly expand and fade. Each deals 5 base damage
 without range falloff; all three can damage one target for 15 before armor and
 level scaling. The spell-specific damage type bypasses the ordinary hit cooldown,
 but preserves armor, shields, invulnerability, party/team/PvP protection and Wind
@@ -124,10 +125,26 @@ unfired preparation costs no recovery; an interrupted fired volley keeps its
 cooldown. Fired projectiles stop on owner death, exit or encounter exclusion.
 Owners: `GaleDaggers`, `GaleDaggerEntity`, and `GaleDaggerRenderer`.
 
-Preserve vanilla Elytra geometry and restore original equipment through lifecycle
-interruptions. `WaylayDashVfxManager` is a visual tracer, not movement authority.
-Owners: `WindAbilityHandler`, `VacuumBladeEntity`, and the Zephyr lifecycle code.
-Calamity Tornado is retired.
+Zephyr Strike equips the transient wings in the chest slot and must restore the
+original equipment through lifecycle interruptions. The wings keep the vanilla
+glider component but name no equipment model, so the flat Elytra never draws:
+clients draw 3D feathered wings on anyone wearing them instead.
+
+All five Wind spells are drawn client-side as "block wind": see-through cloud
+cubes, chunky streaks and stepped crescent blades from one atlas
+(`textures/misc/blockwind.png`), ported from the approved browser study in
+`art/wind/blockwind/`. Sky Shear blades face the caster and target and trail two
+fainter echoes; Waylay Dash leaves a widening cloud wake with curled swooshes, and
+a chained dash doubles its ring and tints the outer cloud pale blue; Zephyr Strike
+streams off the wings, tightens rings in a dive and lands in a dome and a rolling
+cloud wall out to its visual radius. Clients draw blades and daggers from the spell
+entities; the server sends `BlockWindEvents` for dashes, Updraft, the Zephyr launch
+and landing, and blade/dagger hits. Visuals never decide a hit. Motes and curls
+follow the particle setting; near-lens cubes shrink in first person.
+
+Owners: `WindAbilityHandler`, `VacuumBladeEntity`, and the Zephyr lifecycle code;
+visuals in `client/blockwind/` (`BlockWindEffects`, `BlockWindKit`, one class per
+spell). Calamity Tornado is retired.
 
 ## Stone
 

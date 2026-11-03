@@ -16,8 +16,7 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.Vec3d;
 
 import com.anton.elementalwands.entity.VacuumBladeEntity;
-import com.anton.elementalwands.registry.ModParticles;
-import com.anton.elementalwands.util.WaylayDashVfxManager;
+import com.anton.elementalwands.util.BlockWindEvents;
 import com.anton.elementalwands.util.ZephyrStrikeManager;
 
 public final class WindAbilityHandler {
@@ -94,16 +93,7 @@ public final class WindAbilityHandler {
         world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_BREEZE_WIND_BURST.value(), SoundCategory.PLAYERS,
                 0.6f, 1.5f);
 
-        Vec3d origin = com.anton.elementalwands.util.SpellCastVisuals.burstOrigin(caster);
-        world.spawnParticles(ModParticles.WIND_BURST_RING,
-                origin.x, origin.y, origin.z,
-                1, 0.0, 0.0, 0.0, 0.0);
-        world.spawnParticles(ModParticles.WIND_AIR_RIBBON,
-                origin.x, origin.y, origin.z,
-                7, 0.28, 0.2, 0.28, 0.055);
-        world.spawnParticles(ModParticles.WIND_MOTE,
-                origin.x, origin.y, origin.z,
-                9, 0.32, 0.22, 0.32, 0.045);
+        // The cast bloom is drawn by each client's block-wind blades (client/blockwind/ShearFx).
     }
 
     public static void inventoryTick(ItemStack stack, ServerWorld world, Entity entity, EquipmentSlot slot) {
@@ -189,7 +179,6 @@ public final class WindAbilityHandler {
         if (caster instanceof ServerPlayerEntity serverPlayer) {
             serverPlayer.networkHandler
                     .sendPacket(new net.minecraft.network.packet.s2c.play.EntityVelocityUpdateS2CPacket(caster));
-            WaylayDashVfxManager.start(serverPlayer, chainCount);
         }
         caster.velocityModified = true;
 
@@ -204,15 +193,9 @@ public final class WindAbilityHandler {
         float pitch = 1.0f + (chainCount * 0.1f);
         world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_BREEZE_WIND_BURST.value(), SoundCategory.PLAYERS,
                 1.0f, pitch);
-        world.spawnParticles(ModParticles.WIND_BURST_RING,
-                caster.getX(), caster.getBodyY(0.45), caster.getZ(),
-                1, 0.0, 0.0, 0.0, 0.0);
-        world.spawnParticles(ModParticles.WIND_AIR_RIBBON,
-                caster.getX(), caster.getBodyY(0.45), caster.getZ(),
-                12 + (chainCount * 5), 0.42, 0.24, 0.42, 0.055 + chainCount * 0.012);
-        world.spawnParticles(ModParticles.WIND_MOTE,
-                caster.getX(), caster.getBodyY(0.5), caster.getZ(),
-                8 + (chainCount * 4), 0.48, 0.28, 0.48, 0.045 + chainCount * 0.008);
+        // Clients draw the launch ring and the cloud wake from the dasher's own movement (client/blockwind/DashFx).
+        BlockWindEvents.send(world, BlockWindEvents.DASH, caster.getId(),
+                new Vec3d(caster.getX(), caster.getBodyY(0.48), caster.getZ()), look, chainCount);
 
         // Display charge count and chain info to player
         if (caster instanceof ServerPlayerEntity) {
@@ -244,15 +227,7 @@ public final class WindAbilityHandler {
                 0.8f);
         world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_BREEZE_WIND_BURST.value(), SoundCategory.PLAYERS,
                 2.0f, 0.6f);
-        world.spawnParticles(ModParticles.WIND_BURST_RING,
-                caster.getX(), caster.getBodyY(0.45), caster.getZ(),
-                2, 0.2, 0.15, 0.2, 0.0);
-        world.spawnParticles(ModParticles.WIND_AIR_RIBBON,
-                caster.getX(), caster.getBodyY(0.5), caster.getZ(),
-                24, 0.9, 0.75, 0.9, 0.11);
-        world.spawnParticles(ModParticles.WIND_MOTE,
-                caster.getX(), caster.getBodyY(0.55), caster.getZ(),
-                20, 0.85, 0.7, 0.85, 0.1);
+        BlockWindEvents.send(world, BlockWindEvents.ZEPHYR_LAUNCH, caster.getId(), caster.getEntityPos(), look, 0);
     }
 
     private static NbtCompound getDashData(ItemStack stack) {

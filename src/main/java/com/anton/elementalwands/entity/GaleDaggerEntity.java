@@ -24,7 +24,7 @@ public final class GaleDaggerEntity extends ProjectileEntity {
     private static final TrackedData<Integer> OWNER=DataTracker.registerData(GaleDaggerEntity.class,TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Integer> INDEX=DataTracker.registerData(GaleDaggerEntity.class,TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Boolean> FIRED=DataTracker.registerData(GaleDaggerEntity.class,TrackedDataHandlerRegistry.BOOLEAN);
-    private double travelled, trailTravelled, nextRing=1.5;
+    private double travelled;
     private int flyingTicks;
     public GaleDaggerEntity(EntityType<? extends GaleDaggerEntity> type,World world){super(type,world);setNoGravity(true);}
     public GaleDaggerEntity(ServerWorld world,ServerPlayerEntity p,int index){
@@ -71,25 +71,15 @@ public final class GaleDaggerEntity extends ProjectileEntity {
             double remaining=GaleDaggers.RANGE-travelled;
             if(remaining<=1e-6||++flyingTicks>30){discard();return;}
             Vec3d step=getVelocity();if(step.length()>remaining)step=step.normalize().multiply(remaining);
-            Vec3d from=getEntityPos();
             setVelocity(step);var hit=ProjectileUtil.getCollision(this,this::canHit);
-            if(hit.getType()!=HitResult.Type.MISS){trail(world,from,hit.getPos());setPosition(hit.getPos());onCollision(hit);return;}
+            if(hit.getType()!=HitResult.Type.MISS){
+                // Clients draw the trail rings themselves; the hit point is the one thing they cannot see.
+                BlockWindEvents.send(world,BlockWindEvents.HIT,getId(),hit.getPos(),step,0);
+                setPosition(hit.getPos());onCollision(hit);return;
+            }
             setPosition(getEntityPos().add(step));travelled+=step.length();
-            trail(world,from,getEntityPos());
             if(travelled>=GaleDaggers.RANGE-1e-6)discard();
         }else setPosition(getEntityPos().add(getVelocity()));
-    }
-    private void trail(ServerWorld world,Vec3d from,Vec3d to){
-        Vec3d delta=to.subtract(from);double distance=delta.length();
-        if(distance<1e-6)return;
-        Vec3d axis=delta.normalize();
-        // Distance-based spacing stays even across ticks and ends exactly at cover.
-        while(nextRing<=trailTravelled+distance+1e-6){
-            Vec3d at=from.add(axis.multiply(nextRing-trailTravelled));
-            world.spawnParticles(ModParticles.GALE_DAGGER_TRAIL,at.x,at.y,at.z,0,axis.x,axis.y,axis.z,1);
-            nextRing+=1.5;
-        }
-        trailTravelled+=distance;
     }
 
     @Override protected boolean canHit(Entity e){return fired()&&super.canHit(e)&&!WandAllies.protectedFrom(getOwner(),e);}

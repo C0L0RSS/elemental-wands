@@ -148,7 +148,7 @@ public final class BlockFireEffects {
     // ---- Shared helpers ------------------------------------------------------------------------------
 
     /** The held wand tip as SpellCastVisuals estimates it: 0.75 forward, 0.38 toward the wand hand, 0.32 down. */
-    static Vec3d tip(LivingEntity e, float delta) {
+    public static Vec3d tip(LivingEntity e, float delta) {
         Vec3d eye = e.getCameraPosVec(delta), look = e.getRotationVec(delta).normalize();
         float yaw = e.getYaw(delta) * MathHelper.RADIANS_PER_DEGREE;
         Vec3d right = new Vec3d(-MathHelper.cos(yaw), 0, -MathHelper.sin(yaw)), up = right.crossProduct(look);
@@ -157,7 +157,7 @@ public final class BlockFireEffects {
         return eye.add(look.multiply(.75)).add(right.multiply(.38 * (arm == Arm.RIGHT ? 1 : -1))).subtract(up.multiply(.32));
     }
     /** A stable per-event seed from where and when it happened, so two bursts never look identical. */
-    static double seed(Vec3d p, double now) {
+    public static double seed(Vec3d p, double now) {
         return Math.floorMod((long) Math.floor(p.x * 31.7 + p.y * 7.3 + p.z * 17.9 + now * 20 * 3.1), 997) * 11.0;
     }
     /** True when the point is close enough to the camera to be worth drawing. */

@@ -3,7 +3,7 @@ package com.anton.elementalwands.entity;
 import com.anton.elementalwands.party.WandAllies;
 
 import com.anton.elementalwands.registry.ModEntities;
-import com.anton.elementalwands.registry.ModParticles;
+import com.anton.elementalwands.util.BlockWindEvents;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -32,7 +32,6 @@ public class VacuumBladeEntity extends ProjectileEntity {
     private java.util.Set<java.util.UUID> castHits = new java.util.HashSet<>();
 
     private Vec3d startPos;
-    private com.anton.elementalwands.util.SpellCastVisuals.Wake wake = com.anton.elementalwands.util.SpellCastVisuals.Wake.NONE;
 
     public VacuumBladeEntity(EntityType<? extends VacuumBladeEntity> type, World world) {
         super(type, world);
@@ -45,7 +44,6 @@ public class VacuumBladeEntity extends ProjectileEntity {
         dataTracker.set(MIRRORED, mirrored);
         startPos = owner.getEyePos(); setPosition(startPos);
         setVelocity(direction.normalize().multiply(PROJECTILE_SPEED));
-        wake = com.anton.elementalwands.util.SpellCastVisuals.Wake.from(owner, startPos, direction);
     }
 
     private boolean protectsAlly(Entity target) {
@@ -74,14 +72,12 @@ public class VacuumBladeEntity extends ProjectileEntity {
         Vec3d step=getVelocity();
         if (step.length()>remaining) step=step.normalize().multiply(remaining);
         setVelocity(step); // Collision and movement share the clipped final segment.
-        if (getEntityWorld() instanceof ServerWorld world) {
-            Vec3d start=getEntityPos();
+        if (getEntityWorld() instanceof ServerWorld) {
             HitResult hit=ProjectileUtil.getCollision(this,this::canHit);
             if (hit.getType()!=HitResult.Type.MISS) {
                 setPosition(hit.getPos());
-                spawnInterpolatedWake(world,start,hit.getPos()); onCollision(hit); return;
+                onCollision(hit); return;
             }
-            spawnInterpolatedWake(world,start,start.add(step));
         }
         setPosition(getEntityPos().add(step));
         if (remaining <= step.length()+1e-6) discard();
@@ -145,69 +141,8 @@ public class VacuumBladeEntity extends ProjectileEntity {
         discard();
     }
 
-    private void spawnInterpolatedWake(ServerWorld world, Vec3d from, Vec3d to) {
-        Vec3d delta = to.subtract(from);
-        double distance = delta.length();
-        if (distance < 1.0e-4) {
-            return;
-        }
-
-        Vec3d direction = delta.normalize();
-        Vec3d lateral = horizontalPerpendicular(direction);
-        int samples = Math.max(1, Math.min(4, (int) Math.ceil(distance / .7)));
-        double side = isMirrored() ? -1.0 : 1.0;
-
-        for (int sample = 1; sample <= samples; sample++) {
-            double progress = sample / (double) samples;
-            Vec3d point = wake.at(from.add(delta.multiply(progress)));
-            Vec3d wakeVelocity = direction.multiply(-0.025);
-            spawnDirected(world, ModParticles.WIND_SLIPSTREAM, point, wakeVelocity);
-
-            if (sample == samples && age % 2 == 0) {
-                Vec3d featherPoint = point.add(lateral.multiply(side * 0.11));
-                Vec3d featherVelocity = wakeVelocity.add(lateral.multiply(side * 0.035));
-                spawnDirected(world, ModParticles.WIND_SHEAR_FEATHER, featherPoint, featherVelocity);
-            }
-            if ((sample + age) % 3 == 0) {
-                spawnDirected(world, ModParticles.WIND_MOTE, point, wakeVelocity.multiply(0.45));
-            }
-        }
-    }
-
+    /** Clients draw the blade, its echoes and this burst as block wind (client/blockwind/ShearFx). */
     private void spawnImpact(ServerWorld world, Vec3d impactPos) {
-        world.spawnParticles(ModParticles.WIND_BURST_RING,
-                impactPos.x, impactPos.y, impactPos.z,
-                1, 0.0, 0.0, 0.0, 0.0);
-        world.spawnParticles(ModParticles.WIND_MOTE,
-                impactPos.x, impactPos.y, impactPos.z,
-                8, 0.28, 0.28, 0.28, 0.06);
-
-        Vec3d forward = getVelocity().lengthSquared() > 1.0e-4
-                ? getVelocity().normalize()
-                : new Vec3d(0.0, 0.0, 1.0);
-        Vec3d right = horizontalPerpendicular(forward);
-        for (int i = 0; i < 8; i++) {
-            double angle = Math.PI * 2.0 * i / 8.0;
-            Vec3d radial = right.multiply(Math.cos(angle))
-                    .add(new Vec3d(0.0, Math.sin(angle), 0.0))
-                    .normalize();
-            spawnDirected(world, ModParticles.WIND_SHEAR_FEATHER,
-                    impactPos.add(radial.multiply(0.08)),
-                    radial.multiply(0.10).add(forward.multiply(0.06)));
-        }
-    }
-
-    private static Vec3d horizontalPerpendicular(Vec3d direction) {
-        Vec3d lateral = new Vec3d(-direction.z, 0.0, direction.x);
-        return lateral.lengthSquared() > 1.0e-4
-                ? lateral.normalize()
-                : new Vec3d(1.0, 0.0, 0.0);
-    }
-
-    private static void spawnDirected(ServerWorld world,
-            net.minecraft.particle.SimpleParticleType particle, Vec3d position, Vec3d velocity) {
-        world.spawnParticles(particle,
-                position.x, position.y, position.z,
-                0, velocity.x, velocity.y, velocity.z, 1.0);
+        BlockWindEvents.send(world, BlockWindEvents.HIT, getId(), impactPos, getVelocity(), 0);
     }
 }

@@ -15,8 +15,6 @@ import net.minecraft.item.Item;
 import net.minecraft.item.SpawnEggItem;
 import net.minecraft.item.ItemGroups;
 import net.minecraft.item.ToolMaterial;
-import net.minecraft.item.equipment.EquipmentAsset;
-import net.minecraft.item.equipment.EquipmentAssetKeys;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKey;
@@ -25,10 +23,6 @@ import net.minecraft.util.Unit;
 import net.minecraft.util.Identifier;
 
 public class ModItems {
-
-    public static final RegistryKey<EquipmentAsset> ZEPHYR_WINGS_ASSET = RegistryKey.of(
-            EquipmentAssetKeys.REGISTRY_KEY,
-            Identifier.of(ElementalWandsMod.MOD_ID, "zephyr_wings"));
 
     public static final Item GUARDIAN_HEART = register("guardian_heart", settings -> new Item(settings.fireproof()));
 
@@ -41,13 +35,13 @@ public class ModItems {
     public static final Item TITAN_SWORD = register("titan_sword", settings -> new Item(
             settings.sword(ToolMaterial.NETHERITE, 3.0f, -2.4f).fireproof().maxCount(1)));
 
-    // Transient spell equipment: deliberately excluded from item groups.
+    // Transient spell equipment: deliberately excluded from item groups. It names no equipment model, so the flat
+    // Elytra wings never draw; clients draw 3D feathered wings on its wearer instead (client/blockwind/ZephyrFx).
     public static final Item ZEPHYR_WINGS = register("zephyr_wings", settings -> new ZephyrWingsItem(
             settings.fireproof()
                     .component(DataComponentTypes.GLIDER, Unit.INSTANCE)
                     .component(DataComponentTypes.EQUIPPABLE,
                             EquippableComponent.builder(EquipmentSlot.CHEST)
-                                    .model(ZEPHYR_WINGS_ASSET)
                                     .dispensable(false)
                                     .swappable(false)
                                     .damageOnHurt(false)

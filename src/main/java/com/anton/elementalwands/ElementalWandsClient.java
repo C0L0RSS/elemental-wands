@@ -14,7 +14,6 @@ import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.registry.ModEntities;
 import com.anton.elementalwands.registry.ModParticles;
-import com.anton.elementalwands.client.renderer.AnimatedSpellBillboardRenderer;
 import com.anton.elementalwands.client.renderer.EmptyEntityRenderer;
 import com.anton.elementalwands.client.renderer.FireSpiritRenderer;
 import com.anton.elementalwands.client.renderer.FracturedGuardianRenderer;
@@ -98,11 +97,8 @@ public class ElementalWandsClient implements ClientModInitializer {
         });
         EntityRendererRegistry.register(ModEntities.THORN_LASH,com.anton.elementalwands.client.renderer.ThornLashRenderer::new);
         EntityRendererRegistry.register(ModEntities.SEED_PROJECTILE,com.anton.elementalwands.client.renderer.NatureSeedRenderer::new);
-        EntityRendererRegistry.register(ModEntities.VACUUM_BLADE,
-                context -> new AnimatedSpellBillboardRenderer<>(context,
-                        Identifier.of("elementalwands", "textures/entity/vacuum_blade"),
-                        6, .95f, .42f, 0.0f, true,
-                        blade -> blade.isMirrored()));
+        // Sky Shear blades are drawn as block wind by BlockWindEffects.
+        EntityRendererRegistry.register(ModEntities.VACUUM_BLADE, EmptyEntityRenderer::new);
         // Fire spell entities are drawn as block fire by BlockFireEffects.
         EntityRendererRegistry.register(ModEntities.INFERNO_WAVE, com.anton.elementalwands.client.renderer.EmptyEntityRenderer::new);
         EntityRendererRegistry.register(net.minecraft.entity.EntityType.FALLING_BLOCK, com.anton.elementalwands.client.renderer.FireMeteorRenderer::new);
@@ -205,6 +201,7 @@ public class ElementalWandsClient implements ClientModInitializer {
         HudRenderCallback.EVENT.register(new EntangleHudOverlay());
         com.anton.elementalwands.client.NecromancerDrainEffects.register();
         com.anton.elementalwands.client.blockfire.BlockFireEffects.register();
+        com.anton.elementalwands.client.blockwind.BlockWindEffects.register();
         com.anton.elementalwands.client.NaveShaftEffects.register();
         com.anton.elementalwands.client.SummitCloudEffects.register();
         ClientTickEvents.END_CLIENT_TICK.register(com.anton.elementalwands.client.SummitStormClient::tick);

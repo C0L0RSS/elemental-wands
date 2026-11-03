@@ -92,6 +92,12 @@ checks; those do not launch a live gameplay session. For VFX changes, run:
 git diff --check
 python3 tools/validate_remaining_vfx_assets.py
 python3 tools/prepare_fire_assets.py --check
+python3 art/fire/blockfire/textures/build_atlas.py --check
+node art/fire/blockfire/check.mjs
+cmp art/fire/blockfire/textures/blockfire.png src/main/resources/assets/elementalwands/textures/misc/blockfire.png
+python3 art/wind/blockwind/textures/build_atlas.py --check
+node art/wind/blockwind/check.mjs
+cmp art/wind/blockwind/textures/blockwind.png src/main/resources/assets/elementalwands/textures/misc/blockwind.png
 python3 tools/prepare_guardian_assets.py --check
 python3 tools/prepare_guardian_throw_socket.py --check
 python3 tools/prepare_guardian_pedestal.py --check

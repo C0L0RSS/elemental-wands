@@ -1,5 +1,7 @@
 package com.anton.elementalwands.church;
 
+import com.anton.elementalwands.summit.StormAerie;
+import com.anton.elementalwands.summit.StormAerieLayout;
 import com.anton.elementalwands.world.StructureArrival;
 import java.nio.file.*;
 import java.util.ArrayList;
@@ -107,21 +109,29 @@ public final class GuardianChurchLocateSmokeMod implements ModInitializer {
             check(arrival!=null && result.contains("["+arrival.getX()+", "+arrival.getY()+", "+arrival.getZ()+"]"),"Incremental result differs from vanilla: "+arrival+" vs "+result);
             standing(world,church,expected,arrival);
             trial(server,world,"church",texts.stream().filter(t -> t.getString().startsWith("Natural church:")).findFirst().orElseThrow(),arrival);
-            // The graveyard goes through vanilla /locate, which reports a height for it too.
-            server.getCommandManager().getDispatcher().execute("locate structure elementalwands:hollow_graveyard",source);
-            var found=Pattern.compile("\\[(-?\\d+), (-?\\d+), (-?\\d+)]").matcher(messages.getLast());
-            check(found.find(),"Graveyard locate reported no coordinates: "+messages.getLast());
-            var gate=new BlockPos(Integer.parseInt(found.group(1)),Integer.parseInt(found.group(2)),Integer.parseInt(found.group(3)));
-            var graveyardId=Identifier.of("elementalwands","hollow_graveyard");var graveyard=structure(world,graveyardId);
-            var yard=world.locateStructure(net.minecraft.registry.tag.TagKey.of(RegistryKeys.STRUCTURE,graveyardId),new BlockPos(0,80,0),100,false);
-            check(gate.equals(StructureArrival.find(world,graveyard,yard)),"Graveyard locate did not report its arrival: "+messages.getLast());
-            standing(world,graveyard,yard,gate);
-            trial(server,world,"graveyard",texts.getLast(),gate);
+            var gate=vanilla(server,world,"graveyard","hollow_graveyard");
+            var aerie=vanilla(server,world,"aerie","storm_aerie");
+            // Where the Roc sets players back down: the stand point of the gong actually built there.
+            check(Direction.Type.HORIZONTAL.stream().map(d -> StormAerie.gong(world,aerie.offset(d,StormAerieLayout.STAND[0]).up(StormAerieLayout.GONG_UP)))
+                    .anyMatch(g -> g!=null && StormAerie.cell(g,StormAerieLayout.STAND).equals(aerie)),"The aerie arrival "+aerie+" is not its gong's stand point");
             trialTick=ticks;
             report="LOCATE PASSED seed="+world.getSeed()+" elapsedMs="+(now-started)/1_000_000
                     +" tickingFrames="+(ticks-searchTick)+" maxTickGapMs="+maxGap/1_000_000+" pigAge="+pig.age+" "+result
-                    +" graveyard="+gate.toShortString();
+                    +" graveyard="+gate.toShortString()+" aerie="+aerie.toShortString();
         }
+    }
+    /** The graveyard and aerie go through vanilla /locate, which reports a height for them too; stands on it and clicks its link. */
+    private BlockPos vanilla(MinecraftServer server,ServerWorld world,String name,String path) throws Exception {
+        server.getCommandManager().getDispatcher().execute("locate structure elementalwands:"+path,source);
+        var found=Pattern.compile("\\[(-?\\d+), (-?\\d+), (-?\\d+)]").matcher(messages.getLast());
+        check(found.find(),"The "+name+" locate reported no coordinates: "+messages.getLast());
+        var arrival=new BlockPos(Integer.parseInt(found.group(1)),Integer.parseInt(found.group(2)),Integer.parseInt(found.group(3)));
+        var id=Identifier.of("elementalwands",path);var structure=structure(world,id);
+        var located=world.locateStructure(net.minecraft.registry.tag.TagKey.of(RegistryKeys.STRUCTURE,id),new BlockPos(0,80,0),100,false);
+        check(arrival.equals(StructureArrival.find(world,structure,located)),"The "+name+" locate did not report its arrival: "+messages.getLast());
+        standing(world,structure,located,arrival);
+        trial(server,world,name,texts.getLast(),arrival);
+        return arrival;
     }
     /** Clicks the result's link for a villager; a second one drops in where the old "~" link left the fixture's player (y 80). */
     private void trial(MinecraftServer server,ServerWorld world,String name,Text result,BlockPos arrival) throws Exception {

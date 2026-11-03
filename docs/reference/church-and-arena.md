@@ -18,7 +18,8 @@ height, and its click-to-teleport link goes there rather than keeping the player
 (`HollowGraveyardStructure`). Both are open to the sky over the template's floor, so the
 height is known before the terrain generates; once the ground there is built, the cell's
 current surface is used instead, which covers older layouts and player changes
-(`world/StructureArrival`). The layout builders refuse to move or cover either cell.
+(`world/StructureArrival`). The layout builders refuse to move or cover either cell. The
+Storm Roc's aerie works the same way ([Storm Summit](storm-summit.md)).
 
 The courtyard holds a stone effigy, an offering chest, and a carved pedestal.
 The chest supplies the site-specific Guardian Heart; the short interaction hint

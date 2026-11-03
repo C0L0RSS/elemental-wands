@@ -60,7 +60,10 @@ generates on the summits of jagged, frozen and stony peaks (`random_spread` 24/1
   restart a playing one). Invisible `storm_gong_part` blocks across its face catch the click.
   Each part's `cell` picks its outline and collision from `StormAerieLayout.GONG_CELLS`: the
   plate's own stepped edge within that cell, so the round rim is struck where it is drawn.
-- **Finding one:** `/locate structure elementalwands:storm_aerie`.
+- **Finding one:** `/locate structure elementalwands:storm_aerie`. It reports the aerie's stand
+  point, four blocks in front of the gong where the Roc also sets players back down, with a
+  real height, and its click-to-teleport link goes there (`StormAerieStructure.arrival`, through
+  `world/StructureArrival` like the church and graveyard links).
 
 The template carries no ground. Worldgen levels the real summit to the template's box
 (about 13 × 11 blocks) and the biome's own surface covers it: snow and ice on jagged and

@@ -61,7 +61,7 @@ public final class WandSpells {
                 case "thorn_lash" -> "Range 4.5 / Max heal 1 heart";
                 case "flamethrower" -> "Range: 6 blocks";
                 case "flashover" -> "3 embers / blast: 4 blocks";
-                case "fire_hop" -> "Range: 60 / wave: 5 blocks";
+                case "fire_hop" -> "Range: 22 / wave: 5 blocks";
                 default -> "";
             };
         }

@@ -6,7 +6,6 @@ import java.util.*;
 import com.anton.elementalwands.data.*;
 import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.network.ModNetworking;
-import com.anton.elementalwands.registry.ModParticles;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
@@ -75,12 +74,13 @@ public final class FireBuildManager {
         if (channel!=null && !locked) {
             heat=(float)Math.min(100,old+FireBuildRules.HEAT_PER_TICK);
             WandLoadouts.markCombat(player);
-            if (now%2==0) flameVisual(player);
             int sprayTicks=now-channel.started();
+            if (now%2==0) BlockFireEvents.send(world,64,BlockFireEvents.FLAME,player.getId(),player.getEyePos(),player.getRotationVec(1),new Vec3d(sprayTicks,0,0),heat);
             if (sprayTicks%FireBuildRules.DAMAGE_INTERVAL==1) flameDamage(player,FireBuildRules.flameDamage(sprayTicks));
             if (now%8==0) world.playSound(null,player.getBlockPos(),SoundEvents.BLOCK_FIRE_AMBIENT,SoundCategory.PLAYERS,0.45f,1.1f+heat/180);
             if (heat>=100) {
                 locked=true;stop(player);
+                BlockFireEvents.send(world,64,BlockFireEvents.FLAME_OVERHEAT,player.getId(),player.getEyePos(),Vec3d.ZERO,Vec3d.ZERO,0);
                 world.playSound(null,player.getBlockPos(),SoundEvents.BLOCK_FIRE_EXTINGUISH,SoundCategory.PLAYERS,0.65f,1.2f);
             }
         } else {
@@ -115,24 +115,6 @@ public final class FireBuildManager {
             }
         }
         if (hit) AbstractWandItem.addUltimateCharge(player.getMainHandStack(),2);
-    }
-    private static void flameVisual(ServerPlayerEntity player) {
-        var world=player.getEntityWorld(); var eye=player.getEyePos(); var aim=player.getRotationVec(1).normalize();
-        var right=aim.crossProduct(new Vec3d(0,1,0)); if (right.lengthSquared()<0.01) right=new Vec3d(1,0,0); right=right.normalize();
-        var up=right.crossProduct(aim).normalize();
-        // The stream leaves the wand tip; the damage cone above still uses the eye line.
-        var wake=SpellCastVisuals.Wake.from(player,eye,aim);
-        for (int ray=0;ray<5;ray++) {
-            double angle=ray*Math.PI*2/5+world.getTime()*0.13;
-            var direction=aim.add(right.multiply(Math.cos(angle)*0.22)).add(up.multiply(Math.sin(angle)*0.22)).normalize();
-            var end=eye.add(direction.multiply(FireBuildRules.RANGE));
-            var obstruction=world.raycast(new RaycastContext(eye,end,RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,player));
-            double length=obstruction.getType()==HitResult.Type.MISS ? FireBuildRules.RANGE : Math.max(0,eye.distanceTo(obstruction.getPos())-0.2);
-            for (double d=0.15;d<=length;d+=0.65) {
-                var point=wake.at(eye.add(direction.multiply(d)));
-                world.spawnParticles(ModParticles.FIRE_FLAME_RIBBON,point.x,point.y-0.12,point.z,1,0.04,0.04,0.04,0.02);
-            }
-        }
     }
     private FireBuildManager() {}
 }

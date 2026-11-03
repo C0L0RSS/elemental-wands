@@ -123,8 +123,9 @@ public final class MeteorManager {
             }
         }
 
-        // The client renderer supplies the approved continuous fireball shell and embers.
-        spawnLandingRing(world, landingBrandPos, 0.0);
+        // Clients draw the ball from the falling block and the warning ring from this event.
+        BlockFireEvents.send(world, 160, BlockFireEvents.METEOR_FALL, meteor.getId(), landingBrandPos, Vec3d.ZERO, Vec3d.ZERO,
+                (float) meteor.getY());
     }
 
     /** Highest air cell in the column at or below the requested height, at least four blocks above the target. */
@@ -162,16 +163,9 @@ public final class MeteorManager {
 
             meteor.lastPos = falling.getEntityPos();
 
-            // The visual-only ring closes around the stored projected landing
-            // surface as the real falling block approaches it.
-            if (now % 4 == 0) {
-                double descentDistance = Math.max(1.0, meteor.spawnY - meteor.landingBrandPos.y);
-                double descentProgress = Math.max(0.0, Math.min(1.0,
-                        (meteor.spawnY - meteor.lastPos.y) / descentDistance));
-                spawnLandingRing(world, meteor.landingBrandPos, descentProgress);
-            }
-
-            // Attached flames live in FireMeteorRenderer; avoid a detached billboard core.
+            // Repeated for players who come into range mid-fall; clients keep one ring per meteor.
+            if (now % 10 == 0) BlockFireEvents.send(world, 160, BlockFireEvents.METEOR_FALL, meteor.entityId,
+                    meteor.landingBrandPos, Vec3d.ZERO, Vec3d.ZERO, (float) meteor.spawnY);
 
             if (falling.isOnGround()) {
                 explode(world, meteor);
@@ -205,37 +199,7 @@ public final class MeteorManager {
         world.playSound(null, BlockPos.ofFloored(meteor.lastPos), SoundEvents.ENTITY_GENERIC_EXPLODE.value(),
                 SoundCategory.PLAYERS,
                 1.8f, 0.9f);
-        world.spawnParticles(ModParticles.FIRE_METEOR_IMPACT,
-                meteor.lastPos.x, meteor.lastPos.y + 0.35, meteor.lastPos.z,
-                1, 0.0, 0.0, 0.0, 0.0);
-        world.spawnParticles(ModParticles.FIRE_IMPACT_RING,
-                meteor.lastPos.x, meteor.lastPos.y + 0.22, meteor.lastPos.z,
-                3, 0.45, 0.10, 0.45, 0.0);
-        world.spawnParticles(ModParticles.FIRE_FLAME_RIBBON,
-                meteor.lastPos.x, meteor.lastPos.y + 0.4, meteor.lastPos.z,
-                18, 1.6, 1.05, 1.6, 0.16);
-        world.spawnParticles(ModParticles.FIRE_EMBER,
-                meteor.lastPos.x, meteor.lastPos.y + 0.25, meteor.lastPos.z,
-                36, 2.0, 1.4, 2.0, 0.18);
-        world.spawnParticles(ParticleTypes.LAVA,
-                meteor.lastPos.x, meteor.lastPos.y, meteor.lastPos.z,
-                12, 1.8, 1.25, 1.8, 0.14);
-        world.spawnParticles(ParticleTypes.LARGE_SMOKE,
-                meteor.lastPos.x, meteor.lastPos.y, meteor.lastPos.z,
-                8, 1.7, 1.0, 1.7, 0.06);
-    }
-
-    private static void spawnLandingRing(ServerWorld world, Vec3d targetPos, double descentProgress) {
-        double radius = 5.4 - 0.8 * descentProgress;
-        double phase = world.getServer().getTicks() * 0.18;
-        for (int index = 0; index < 32; index++) {
-            double angle = phase + Math.PI * 2.0 * index / 32.0;
-            double x = targetPos.x + Math.cos(angle) * radius;
-            double z = targetPos.z + Math.sin(angle) * radius;
-            world.spawnParticles(ModParticles.FIRE_METEOR_WARNING,
-                    x, targetPos.y + 0.08, z,
-                    1, 0.0, 0.0, 0.0, 0.0);
-        }
+        BlockFireEvents.send(world, 160, BlockFireEvents.METEOR_IMPACT, -1, meteor.lastPos, Vec3d.ZERO, Vec3d.ZERO, 0);
     }
 
     private static Vec3d findLandingBrandPos(ServerWorld world, Entity meteor,

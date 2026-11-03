@@ -35,7 +35,8 @@ Runtime resources live under `src/main/resources/assets/elementalwands/`.
 
 | Source / exporter | Owns |
 | --- | --- |
-| `art/fire/workshop/`, `tools/prepare_fire_assets.py` | Approved workshop 05 Fire frames and meshes |
+| `art/fire/blockfire/` | Block-fire browser study, atlas source and builder for all six Fire spells |
+| `art/fire/workshop/`, `tools/prepare_fire_assets.py` | Earlier workshop 05 Fire frames and meshes (Fire particles still use them) |
 | `art/wind/cloud-white/`, `tools/generate_wind_vfx_assets.py` | Cloud-white Wind atlas, native-grid frames, item/worn wings and icons |
 | `tools/generate_shared_vfx_assets.py` | Legacy neutral wand sprite and wooden HUD frame only |
 | `tools/generate_stone_vfx_assets.py` | Stone spell, block, equipment and HUD textures (41-image family) |
@@ -71,9 +72,12 @@ that flag, so check its arguments before running it.
 
 ## Element-specific constraints
 
-Fire uses original four-frame workshop art. The traveling Pyre wall and very low
-lingering carpet are distinct. Ordinary ground fire uses vanilla-looking flames;
-the meteor is a stepped all-fire sphere. Preserve ordinary falling-block rendering.
+Fire spells are block fire: cubes textured from `textures/misc/blockfire.png`
+(8 heat bands × 4 frames, built by `art/fire/blockfire/textures/build_atlas.py`),
+reviewed first in the `art/fire/blockfire/` browser study. The traveling Pyre wall
+and very low lingering carpet are distinct. Ordinary ground fire uses
+vanilla-looking flames; the meteor is a stepped all-fire sphere. Preserve
+ordinary falling-block rendering.
 
 Wind uses bright cloud-white clusters with light pearl/blue-gray shading, broad
 curling gusts, open pressure rings and cloudburst impacts. Avoid dark outlines,

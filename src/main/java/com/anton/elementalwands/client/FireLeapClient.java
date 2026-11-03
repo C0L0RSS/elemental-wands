@@ -30,6 +30,7 @@ public final class FireLeapClient {
             var client=context.client();
             if(client.world==null || client.player==null) return;
             boolean own=payload.entityId()==client.player.getId();
+            com.anton.elementalwands.client.blockfire.BlockFireEffects.leap(client.world,payload.entityId(),payload.from(),payload.to(),payload.active());
             if(!payload.active()) { LANDINGS.remove(payload.entityId());if(own) from=null;return; }
             int ticks=FireLeapRules.duration(payload.from(),payload.to());
             LANDINGS.put(payload.entityId(),new Landing(payload.to(),client.world.getTime()+ticks+10));

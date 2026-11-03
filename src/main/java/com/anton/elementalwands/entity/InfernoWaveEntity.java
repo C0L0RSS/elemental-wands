@@ -3,8 +3,8 @@ package com.anton.elementalwands.entity;
 import com.anton.elementalwands.party.WandAllies;
 
 import com.anton.elementalwands.registry.ModEntities;
-import com.anton.elementalwands.registry.ModParticles;
 import com.anton.elementalwands.registry.ModSpellBlocks;
+import com.anton.elementalwands.util.BlockFireEvents;
 import com.anton.elementalwands.util.TemporaryBlockManager;
 
 import net.minecraft.entity.Entity;
@@ -13,7 +13,6 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.projectile.ProjectileUtil;
-import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
@@ -33,11 +32,9 @@ public class InfernoWaveEntity extends ProjectileEntity {
     private static final int MAX_TRAVEL_DISTANCE = 15; // blocks
     private static final double PROJECTILE_SPEED = 1.5;
     private static final int FIRE_TRAIL_DURATION_TICKS = 40; // 2 seconds
-    private static final double WAKE_SPACING = 0.42;
     private static final int MAX_AGE_TICKS = 60; // backstop if startPos is ever lost
 
     private Vec3d startPos;
-    private com.anton.elementalwands.util.SpellCastVisuals.Wake wake = com.anton.elementalwands.util.SpellCastVisuals.Wake.NONE;
     private Set<Integer> hitEntities = new HashSet<>();
 
     public InfernoWaveEntity(EntityType<? extends InfernoWaveEntity> type, World world) {
@@ -53,7 +50,6 @@ public class InfernoWaveEntity extends ProjectileEntity {
         // Set velocity in owner's facing direction
         Vec3d direction = owner.getRotationVec(1.0f).normalize();
         setVelocity(direction.multiply(PROJECTILE_SPEED));
-        wake = com.anton.elementalwands.util.SpellCastVisuals.Wake.from(owner, startPos, direction);
     }
 
     private boolean protectsAlly(Entity target) {
@@ -79,6 +75,8 @@ public class InfernoWaveEntity extends ProjectileEntity {
         if (getEntityWorld() instanceof ServerWorld serverWorld) {
             // Check if traveled too far
             if (age > MAX_AGE_TICKS || (startPos != null && getEntityPos().distanceTo(startPos) > MAX_TRAVEL_DISTANCE)) {
+                // Out of range in open air: the fireball breaks apart where it is.
+                BlockFireEvents.send(serverWorld, BlockFireEvents.INFERNO_BREAK, getEntityPos(), getVelocity().normalize());
                 discard();
                 return;
             }
@@ -101,18 +99,8 @@ public class InfernoWaveEntity extends ProjectileEntity {
                         state -> state.isAir(), owner == null ? null : owner.getUuid());
             }
 
-            // Check for entity collisions
+            // Check for entity collisions; the fireball and its trail are drawn by the client.
             HitResult hitResult = ProjectileUtil.getCollision(this, this::canHit);
-            Vec3d segmentStart = getEntityPos();
-            Vec3d segmentEnd = hitResult.getType() == HitResult.Type.BLOCK
-                    ? hitResult.getPos()
-                    : segmentStart.add(getVelocity());
-
-            // Fill the distance between server ticks so animated ribbons read
-            // as a continuous driven stream instead of disconnected clumps.
-            // Collision still uses the original projectile path and mechanics.
-            emitInterpolatedWake(serverWorld, segmentStart, segmentEnd);
-
             if (hitResult.getType() != HitResult.Type.MISS) {
                 onCollision(hitResult);
                 if (isRemoved()) {
@@ -124,22 +112,6 @@ public class InfernoWaveEntity extends ProjectileEntity {
         // Update position
         Vec3d velocity = getVelocity();
         setPosition(getX() + velocity.x, getY() + velocity.y, getZ() + velocity.z);
-    }
-
-    private void emitInterpolatedWake(ServerWorld world, Vec3d start, Vec3d end) {
-        double distance = start.distanceTo(end);
-        int samples = Math.max(1, (int) Math.ceil(distance / WAKE_SPACING));
-        for (int i = 0; i <= samples; i++) {
-            Vec3d point = wake.at(start.lerp(end, (double) i / samples));
-            world.spawnParticles(ModParticles.FIRE_FLAME_RIBBON,
-                    point.x, point.y, point.z,
-                    1, 0.055, 0.045, 0.055, 0.012);
-            if ((i + age) % 2 == 0) {
-                world.spawnParticles(ModParticles.FIRE_EMBER,
-                        point.x, point.y, point.z,
-                        1, 0.09, 0.08, 0.09, 0.028);
-            }
-        }
     }
 
     @Override
@@ -171,26 +143,8 @@ public class InfernoWaveEntity extends ProjectileEntity {
         // Set target on fire
         com.anton.elementalwands.util.SpellCombat.ignite(target,getOwner(),3); // 3 seconds
 
-        serverWorld.spawnParticles(
-                ModParticles.FIRE_IMPACT_RING,
-                target.getX(), target.getBodyY(0.5), target.getZ(),
-                1, 0.0, 0.0, 0.0, 0.0);
-        serverWorld.spawnParticles(
-                ModParticles.FIRE_FLAME_RIBBON,
-                target.getX(), target.getBodyY(0.5), target.getZ(),
-                7, 0.42, 0.38, 0.42, 0.075);
-        serverWorld.spawnParticles(
-                ModParticles.FIRE_EMBER,
-                target.getX(), target.getBodyY(0.5), target.getZ(),
-                12, 0.42, 0.38, 0.42, 0.10);
-        serverWorld.spawnParticles(
-                ParticleTypes.LAVA,
-                target.getX(), target.getBodyY(0.5), target.getZ(),
-                6, 0.35, 0.35, 0.35, 0.08);
-        serverWorld.spawnParticles(
-                ParticleTypes.SMOKE,
-                target.getX(), target.getBodyY(0.5), target.getZ(),
-                3, 0.3, 0.3, 0.3, 0.035);
+        BlockFireEvents.send(serverWorld, BlockFireEvents.INFERNO_HIT,
+                new Vec3d(target.getX(), target.getBodyY(0.63), target.getZ()), getVelocity().normalize());
 
         serverWorld.playSound(
                 null,
@@ -212,27 +166,8 @@ public class InfernoWaveEntity extends ProjectileEntity {
     protected void onBlockHit(BlockHitResult blockHitResult) {
         // Inferno Wave stops on block collision
         if (getEntityWorld() instanceof ServerWorld serverWorld) {
-            Vec3d impact = blockHitResult.getPos();
-            serverWorld.spawnParticles(
-                    ModParticles.FIRE_IMPACT_RING,
-                    impact.x, impact.y, impact.z,
-                    1, 0.0, 0.0, 0.0, 0.0);
-            serverWorld.spawnParticles(
-                    ModParticles.FIRE_FLAME_RIBBON,
-                    impact.x, impact.y, impact.z,
-                    10, 0.5, 0.4, 0.5, 0.09);
-            serverWorld.spawnParticles(
-                    ModParticles.FIRE_EMBER,
-                    impact.x, impact.y, impact.z,
-                    16, 0.55, 0.45, 0.55, 0.12);
-            serverWorld.spawnParticles(
-                    ParticleTypes.LAVA,
-                    impact.x, impact.y, impact.z,
-                    8, 0.45, 0.35, 0.45, 0.09);
-            serverWorld.spawnParticles(
-                    ParticleTypes.SMOKE,
-                    impact.x, impact.y, impact.z,
-                    4, 0.4, 0.3, 0.4, 0.04);
+            BlockFireEvents.send(serverWorld, 96, BlockFireEvents.INFERNO_BREAK, -1, blockHitResult.getPos(),
+                    getVelocity().normalize(), Vec3d.of(blockHitResult.getSide().getVector()), 0);
         }
         discard();
     }

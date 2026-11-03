@@ -56,9 +56,19 @@ Spell alternate. Bomb slots recover independently after blast or loss; pending
 staggered blasts remain disarmable. Shared hit accounting caps a sequence's
 per-victim damage. Never add terrain destruction or unowned spreading fire.
 
+All six Fire spells are drawn client-side as "block fire": emissive cubes from
+one atlas that rise, tumble, cool through heat bands and shrink away, ported from
+the approved browser study in `art/fire/blockfire/`. The server sends spell
+moments (cast, hit, break, landing, pop, impact, flamethrower heat) as
+`BlockFireEvents`; spell entities supply the rest. Visuals never decide a hit.
+Burning targets keep vanilla's on-fire look. Sparks and smoke follow the
+particle setting; near-lens cubes shrink in first person. The Pyre's
+`PYRE_FLAME` block draws nothing itself; the client draws its carpet.
+
 Owners: `FireAbilityHandler`, `FireBuildManager`/`FireBuildRules`,
 `FireLeapManager`/`FireLeapRules`/`client/FireLeapClient`, `FlashoverManager`/
-`FlashoverRules`/`FlashoverEmberEntity`, `MeteorManager`.
+`FlashoverRules`/`FlashoverEmberEntity`, `MeteorManager`; visuals in
+`client/blockfire/` (`BlockFireEffects`, `BlockFireKit`, one class per spell).
 
 ## Wind
 

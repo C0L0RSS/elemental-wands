@@ -45,6 +45,7 @@ public final class ModNetworking {
         PayloadTypeRegistry.playC2S().register(StoneChargeHoldPayload.ID, StoneChargeHoldPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(StoneMotionPayload.ID, StoneMotionPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(FireLeapPayload.ID, FireLeapPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(BlockFirePayload.ID, BlockFirePayload.CODEC);
         // S2C
         PayloadTypeRegistry.playS2C().register(UpdraftLaunchPayload.ID, UpdraftLaunchPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncPlayerDataPayload.ID, SyncPlayerDataPayload.CODEC);
@@ -286,6 +287,16 @@ public final class ModNetworking {
         public static final PacketCodec<RegistryByteBuf,FireLeapPayload> CODEC = PacketCodec.tuple(
                 PacketCodecs.VAR_INT,FireLeapPayload::entityId,net.minecraft.util.math.Vec3d.PACKET_CODEC,FireLeapPayload::from,
                 net.minecraft.util.math.Vec3d.PACKET_CODEC,FireLeapPayload::to,PacketCodecs.BOOLEAN,FireLeapPayload::active,FireLeapPayload::new);
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
+    /** A one-off Fire spell moment (burst, landing, blast) for the client's block-fire visuals; see BlockFireEvents. */
+    public record BlockFirePayload(int kind, int entity, net.minecraft.util.math.Vec3d pos, net.minecraft.util.math.Vec3d dir,
+            net.minecraft.util.math.Vec3d aux, float value) implements CustomPayload {
+        public static final Id<BlockFirePayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"block_fire"));
+        public static final PacketCodec<RegistryByteBuf,BlockFirePayload> CODEC = PacketCodec.tuple(
+                PacketCodecs.VAR_INT,BlockFirePayload::kind,PacketCodecs.VAR_INT,BlockFirePayload::entity,
+                net.minecraft.util.math.Vec3d.PACKET_CODEC,BlockFirePayload::pos,net.minecraft.util.math.Vec3d.PACKET_CODEC,BlockFirePayload::dir,
+                net.minecraft.util.math.Vec3d.PACKET_CODEC,BlockFirePayload::aux,PacketCodecs.FLOAT,BlockFirePayload::value,BlockFirePayload::new);
         @Override public Id<? extends CustomPayload> getId() { return ID; }
     }
     /** The Necromancer's intro cinematic for this watcher: its first frame's world time and the circle it plays around; active=false ends it. */

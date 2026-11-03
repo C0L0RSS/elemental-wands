@@ -70,6 +70,12 @@ public final class FlashoverEmberEntity extends Entity {
         if(!w.isChunkLoaded(getBlockPos()) || !w.getFluidState(getBlockPos()).isEmpty()) { discard();return false; }
         return true;
     }
+    /** Server side: the outward face of the block this ember is stuck to, or zero on a creature or in flight. */
+    public Vec3d stuckFace() {
+        if(attachedId()>=0 || anchor==null) return Vec3d.ZERO;
+        Vec3d d=getEntityPos().subtract(Vec3d.ofCenter(anchor));
+        return Vec3d.of(net.minecraft.util.math.Direction.getFacing(d.x,d.y,d.z).getVector());
+    }
     public boolean armed() { return dataTracker.get(ARMED); }
     public boolean settled() { return dataTracker.get(SETTLED); }
     public ServerPlayerEntity caster() { return caster; }
@@ -80,7 +86,6 @@ public final class FlashoverEmberEntity extends Entity {
         if(!refreshAttachment())return;
         if(settled()) {
             if(w.getTime()-settledAt>=FlashoverRules.ARM_TICKS)dataTracker.set(ARMED,true);
-            if(armed() && age%12==0)w.spawnParticles(ModParticles.FIRE_EMBER,getX(),getY()+.12,getZ(),1,.035,.04,.035,.002);
             return;
         }
         Vec3d from=getEntityPos(),to=from.add(getVelocity());

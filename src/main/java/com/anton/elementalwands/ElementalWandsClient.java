@@ -16,7 +16,6 @@ import com.anton.elementalwands.registry.ModEntities;
 import com.anton.elementalwands.registry.ModParticles;
 import com.anton.elementalwands.client.renderer.AnimatedSpellBillboardRenderer;
 import com.anton.elementalwands.client.renderer.EmptyEntityRenderer;
-import com.anton.elementalwands.client.renderer.FireWaveRenderer;
 import com.anton.elementalwands.client.renderer.FireSpiritRenderer;
 import com.anton.elementalwands.client.renderer.FracturedGuardianRenderer;
 import com.anton.elementalwands.client.renderer.StoneZombieRenderer;
@@ -104,9 +103,10 @@ public class ElementalWandsClient implements ClientModInitializer {
                         Identifier.of("elementalwands", "textures/entity/vacuum_blade"),
                         6, .95f, .42f, 0.0f, true,
                         blade -> blade.isMirrored()));
-        EntityRendererRegistry.register(ModEntities.INFERNO_WAVE, FireWaveRenderer::new);
+        // Fire spell entities are drawn as block fire by BlockFireEffects.
+        EntityRendererRegistry.register(ModEntities.INFERNO_WAVE, com.anton.elementalwands.client.renderer.EmptyEntityRenderer::new);
         EntityRendererRegistry.register(net.minecraft.entity.EntityType.FALLING_BLOCK, com.anton.elementalwands.client.renderer.FireMeteorRenderer::new);
-        EntityRendererRegistry.register(ModEntities.PYRE_FRONT, com.anton.elementalwands.client.renderer.PyreFrontRenderer::new);
+        EntityRendererRegistry.register(ModEntities.PYRE_FRONT, com.anton.elementalwands.client.renderer.EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.SINGULARITY_BOLT, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.HOLLOW_PURPLE_ORB, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.AWAKENED_TREE, EmptyEntityRenderer::new);
@@ -138,7 +138,7 @@ public class ElementalWandsClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.HOLLOW_BRUTE, context -> new com.anton.elementalwands.client.renderer.HollowUndeadRenderer<>(context, "hollow_brute", .6f));
         com.anton.elementalwands.client.FireLeapClient.init();
         com.anton.elementalwands.client.FireLeapPreview.init();
-        EntityRendererRegistry.register(ModEntities.FLASHOVER_EMBER, com.anton.elementalwands.client.renderer.FlashoverEmberRenderer::new);
+        EntityRendererRegistry.register(ModEntities.FLASHOVER_EMBER, com.anton.elementalwands.client.renderer.EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.GUARDIAN_ROCK, com.anton.elementalwands.client.renderer.GuardianRockRenderer::new);
         EntityRendererRegistry.register(ModEntities.STONE_CLUSTER, com.anton.elementalwands.client.renderer.StoneClusterRenderer::new);
 
@@ -204,6 +204,7 @@ public class ElementalWandsClient implements ClientModInitializer {
         HudRenderCallback.EVENT.register(new com.anton.elementalwands.client.overlay.WandHudOverlay());
         HudRenderCallback.EVENT.register(new EntangleHudOverlay());
         com.anton.elementalwands.client.NecromancerDrainEffects.register();
+        com.anton.elementalwands.client.blockfire.BlockFireEffects.register();
         com.anton.elementalwands.client.NaveShaftEffects.register();
         com.anton.elementalwands.client.SummitCloudEffects.register();
         ClientTickEvents.END_CLIENT_TICK.register(com.anton.elementalwands.client.SummitStormClient::tick);

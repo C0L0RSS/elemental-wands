@@ -18,7 +18,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 
 import com.anton.elementalwands.entity.InfernoWaveEntity;
-import com.anton.elementalwands.registry.ModParticles;
+import com.anton.elementalwands.util.BlockFireEvents;
 import com.anton.elementalwands.registry.ModSpellBlocks;
 import com.anton.elementalwands.util.TemporaryBlockManager;
 import com.anton.elementalwands.util.MeteorManager;
@@ -93,17 +93,9 @@ public final class FireAbilityHandler {
         InfernoWaveEntity infernoWave = new InfernoWaveEntity(world, caster);
         world.spawnEntity(infernoWave);
 
-        // A compressed ignition establishes the source of the forceful stream.
+        // A compressed ignition just past the wand tip establishes the source of the fireball.
         Vec3d ignition = com.anton.elementalwands.util.SpellCastVisuals.burstOrigin(caster);
-        world.spawnParticles(ModParticles.FIRE_IMPACT_RING,
-                ignition.x, ignition.y, ignition.z,
-                1, 0.0, 0.0, 0.0, 0.0);
-        world.spawnParticles(ModParticles.FIRE_FLAME_RIBBON,
-                ignition.x, ignition.y, ignition.z,
-                3, 0.16, 0.13, 0.16, 0.025);
-        world.spawnParticles(ModParticles.FIRE_EMBER,
-                ignition.x, ignition.y, ignition.z,
-                6, 0.20, 0.16, 0.20, 0.055);
+        BlockFireEvents.send(world, BlockFireEvents.INFERNO_CAST, ignition, caster.getRotationVec(1.0f).normalize());
 
         // Sound effects
         world.playSound(null, caster.getBlockPos(), SoundEvents.ITEM_FIRECHARGE_USE, SoundCategory.PLAYERS, 1.0f, 0.7f);
@@ -127,6 +119,7 @@ public final class FireAbilityHandler {
 
         PyreSchedulerEntity scheduler = new PyreSchedulerEntity(world, caster, origin, forward);
         world.spawnEntity(scheduler);
+        BlockFireEvents.send(world, 128, BlockFireEvents.PYRE_CAST, caster.getId(), origin, forward, Vec3d.ZERO, 0);
 
         world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_ENDER_DRAGON_SHOOT, SoundCategory.PLAYERS, 1.0f,
                 0.8f);
@@ -271,12 +264,8 @@ public final class FireAbilityHandler {
                         }
                         com.anton.elementalwands.util.SpellCombat.ignite(target,caster,5);
                         hitTargets.add(target.getUuid());
-                        sw.spawnParticles(ModParticles.FIRE_IMPACT_RING,
-                                target.getX(), target.getBodyY(0.45), target.getZ(),
-                                1, 0.0, 0.0, 0.0, 0.0);
-                        sw.spawnParticles(ModParticles.FIRE_EMBER,
-                                target.getX(), target.getBodyY(0.5), target.getZ(),
-                                7, 0.36, 0.34, 0.36, 0.07);
+                        BlockFireEvents.send(sw, BlockFireEvents.PYRE_HIT,
+                                new Vec3d(target.getX(), target.getBodyY(0.55), target.getZ()), forward);
                     }
                 }
             }

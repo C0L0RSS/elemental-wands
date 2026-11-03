@@ -188,8 +188,7 @@ public final class FlashoverManager {
             boolean accepted=damage>0 && com.anton.elementalwands.util.SpellCombat.damage(target,world,source,damage,p,com.anton.elementalwands.data.WizardAffinity.FIRE);
             if(accepted)AbstractWandItem.onWandDamageDealt(p,damage,1,WizardAffinity.FIRE);
         }
-        world.spawnParticles(net.minecraft.particle.ParticleTypes.EXPLOSION_EMITTER,at.x,at.y,at.z,1,0,0,0,0);
-        world.spawnParticles(ModParticles.FIRE_EMBER,at.x,at.y,at.z,18,.7,.3,.7,.08);
+        BlockFireEvents.send(world,112,BlockFireEvents.FLASHOVER_POP,ember.getId(),at,Vec3d.ZERO,ember.stuckFace(),contacts.size());
         world.playSound(null,ember.getBlockPos(),SoundEvents.ENTITY_GENERIC_EXPLODE.value(),SoundCategory.PLAYERS,.65f,1.3f);
         ember.finishExplosion();
     }

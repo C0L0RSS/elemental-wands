@@ -286,6 +286,12 @@ It records known verification limits; it is not a fresh installation receipt.
   progression, persistence, credits and UI implementation. They do not establish a fresh
   pass for later free-slot/cooldown changes or current tuning. Pending: relevant current
   hub/progression regression checks and human feedback on free-slot combinations and pace.
+- **Fire block fire (October 30):** all six Fire spells are drawn as 3D block fire
+  (`client/blockfire/`), ported from the approved `art/fire/blockfire/` browser study. The build
+  and `fire_blockfire_client_smoke` passed: every spell rendered in a native client, with
+  screenshots from first person, behind and the side. Pending: the user's Lunar review of
+  how it looks and performs in real fights. Also pending: multiplayer, where other players'
+  streams, leaps and blasts come from the new block-fire events.
 - **Wand-tip cast particles:** cast bursts, the fractured beam, the Flamethrower
   stream and projectile wakes now start at an estimated wand tip instead of the
   caster's face. The build passed; the tip placement (right/left hand,

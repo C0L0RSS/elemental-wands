@@ -4,6 +4,7 @@ import com.mojang.serialization.MapCodec;
 
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
+import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.util.math.BlockPos;
@@ -15,8 +16,8 @@ import net.minecraft.world.BlockView;
  *
  * <p>The block deliberately has no entity-collision callback: the authoritative
  * pyre front and the existing magma-backed runway remain the only gameplay
- * sources. The approved 0.075-block-high animated surface and tiny flame curls keep the runway readable
- * without adding collision or per-block particle spam.</p>
+ * sources. It renders nothing itself: the client draws its low block-fire carpet
+ * (BlockFireEffects), which can shrink away over its last half second.</p>
  */
 public final class PyreFlameBlock extends Block {
 
@@ -30,6 +31,11 @@ public final class PyreFlameBlock extends Block {
     @Override
     protected MapCodec<? extends Block> getCodec() {
         return CODEC;
+    }
+
+    @Override
+    protected BlockRenderType getRenderType(BlockState state) {
+        return BlockRenderType.INVISIBLE;
     }
 
     @Override

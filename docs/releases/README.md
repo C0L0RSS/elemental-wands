@@ -5,6 +5,7 @@ are not claims of public publication. Older entries describe what changed then;
 use [current guides](../README.md) for today’s behavior and [status](../STATUS.md)
 for outstanding verification. Detailed historical reports are optional background.
 
+- [2026-10-30 — Fire spells in block fire](2026-10-30-fire-block-fire.md)
 - [2026-10-27 — Storm Roc: the snatch](2026-10-27-storm-roc-intro.md)
 - [2026-10-27 — Storm Roc: the aerie](2026-10-27-storm-roc-aerie.md)
 - [2026-10-27 — /locate teleports land on the ground](2026-10-27-locate-heights.md)

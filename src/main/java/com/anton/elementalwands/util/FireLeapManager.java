@@ -59,9 +59,8 @@ public final class FireLeapManager {
         FireBuildManager.stop(p);p.fallDistance=0;
         var data=FireBuildManager.state(p);data.putLong("hop_ready",world.getTime()+FireBuildRules.HOP_COOLDOWN);p.setAttached(EWAttachments.FIRE_BUILD_STATE,data);
         WandLoadouts.markCombat(p);ModNetworking.syncFireBuild(p);
+        // Every viewer draws the take-off ring and comet tail from this packet.
         broadcast(p,new ModNetworking.FireLeapPayload(p.getId(),from,target,true));
-        world.spawnParticles(ModParticles.FIRE_EMBER,p.getX(),p.getY()+.15,p.getZ(),16,.35,.1,.35,.05);
-        world.spawnParticles(ModParticles.FIRE_FLAME_RIBBON,p.getX(),p.getY()+.1,p.getZ(),8,.25,.05,.25,.02);
         world.playSound(null,p.getBlockPos(),SoundEvents.ITEM_FIRECHARGE_USE,SoundCategory.PLAYERS,.9f,.8f);
         world.playSound(null,p.getBlockPos(),SoundEvents.ENTITY_BLAZE_SHOOT,SoundCategory.PLAYERS,.45f,.7f);
         return true;
@@ -73,7 +72,6 @@ public final class FireLeapManager {
                 || !com.anton.elementalwands.arena.GuardianArenaManager.canCast(p)
                 || FireLeapRules.offPath(leap.from,leap.to,p.getEntityPos())>STRAY || age>leap.duration+GRACE) { end(p);return; }
         p.fallDistance=0;
-        if(age<leap.duration) leap.world.spawnParticles(ModParticles.FIRE_EMBER,p.getX(),p.getY()+.4,p.getZ(),2,.18,.25,.18,.01);
         // onGround comes from the caster's movement packets and can flip a tick before the body arrives;
         // only a late touchdown with real footing counts.
         if(age>=leap.duration/2 && p.isOnGround() && FireLeapRules.supported(leap.world,p,p.getEntityPos(),.1)) {
@@ -96,8 +94,7 @@ public final class FireLeapManager {
             if(viewer!=p && ServerPlayNetworking.canSend(viewer,ModNetworking.FireLeapPayload.ID)) ServerPlayNetworking.send(viewer,payload);
     }
     private static void landed(ServerPlayerEntity p,ServerWorld world,Vec3d at) {
-        world.spawnParticles(ModParticles.FIRE_EMBER,at.x,at.y+.2,at.z,28,.7,.15,.7,.07);
-        world.spawnParticles(ModParticles.FIRE_FLAME_RIBBON,at.x,at.y+.15,at.z,14,.5,.05,.5,.04);
+        BlockFireEvents.send(world,96,BlockFireEvents.LEAP_LAND,p.getId(),at,Vec3d.ZERO,Vec3d.ZERO,0);
         world.playSound(null,BlockPos.ofFloored(at),SoundEvents.ENTITY_GENERIC_EXPLODE.value(),SoundCategory.PLAYERS,.85f,1.3f);
         WAVES.add(new Wave(p,world,at,world.getTime(),new HashSet<>()));
     }
@@ -121,14 +118,7 @@ public final class FireLeapManager {
             hits.add(target.getUuid());float damage=FireLeapRules.damage(distance);
             if(com.anton.elementalwands.util.SpellCombat.damage(target,world,p.getDamageSources().playerAttack(p),damage,p,com.anton.elementalwands.data.WizardAffinity.FIRE)) AbstractWandItem.onWandDamageDealt(p,damage,1,WizardAffinity.FIRE);
         }
-        // The moving crest uses the exact same surface and cover rules as damage.
-        int count=Math.max(16,(int)Math.ceil(outer*2*Math.PI/.4));
-        for(int i=0;i<count;i++) {
-            double angle=i*2*Math.PI/count;
-            var surface=GuardianWaveSurface.ground(world,p,origin,origin.x+Math.cos(angle)*outer,origin.z+Math.sin(angle)*outer);
-            if(surface!=null && GuardianWaveSurface.visible(world,p,origin,surface))
-                world.spawnParticles(ModParticles.FIRE_FLAME_RIBBON,surface.x,surface.y+.15,surface.z,1,.02,.02,.02,.01);
-        }
+        // Clients draw the moving crest from LEAP_LAND with these same surface and cover rules.
     }
     private FireLeapManager() {}
 }

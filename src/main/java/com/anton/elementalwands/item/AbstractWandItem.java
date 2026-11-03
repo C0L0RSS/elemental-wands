@@ -67,6 +67,14 @@ public abstract class AbstractWandItem extends Item {
         return DEFAULT_SECONDARY_COOLDOWN_TICKS;
     }
 
+    /** Wands keep cooldowns, ultimate charge and Waylay Dash recharge in their custom data, rewritten on every
+     * cast and every tick while a dash recharges. Vanilla replays the equip animation on each such change, which
+     * kept the held wand dipping out of view until the recharge finished. */
+    @Override
+    public boolean allowComponentsUpdateAnimation(PlayerEntity player, Hand hand, ItemStack oldStack, ItemStack newStack) {
+        return false;
+    }
+
     // -----------------------------------------------------------------------
     // Skill gate
     // -----------------------------------------------------------------------

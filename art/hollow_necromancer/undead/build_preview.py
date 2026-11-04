@@ -14,10 +14,10 @@ ROOT = HERE.parents[2]
 OUT = HERE / 'candidate'
 PREVIEW = ROOT / '.local-previews/undead'
 # Clips reworked in the latest session, highlighted in the preview (variant index, clip).
-TONIGHT = [(2, 'attack'), (0, 'attack'), (1, 'attack'), (0, 'rise'), (2, 'rise'), (1, 'rise'),
-           (0, 'death'), (2, 'death'), (1, 'death'), (2, 'idle'), (1, 'idle')]
-TONIGHT_NOTE = ('Night of 22 Oct: weight, anticipation and follow-through pass. Server hit and release '
-                'frames, clip lengths and the walks are unchanged. Use ½× or ¼× and Player eye to judge the blows.')
+TONIGHT = [(2, 'attack'), (2, 'attack_before')]
+TONIGHT_NOTE = ('4 Nov: the brute\'s strike becomes a charging slam: it strides in while heaving, then '
+                'bounds and slams as it lands. Compare it with the strike as the game plays it now (Before). '
+                'Player eye stands where the maul lands; ½× or ¼× to judge the bound.')
 
 
 def make_variant(index):

@@ -107,22 +107,25 @@ first. Bolts and drain need sight; hands and ambush do not.
    GeckoLib 5.3 alpha renderer has no outline support.) It is immune; hits flash the ward
    and a shield sound.
 2. Waves claw out of the floor 8–32 blocks from home and at least 6 from every player,
-   staggered over two seconds, each with a soul stream from the staff. Waves grow:
+   staggered over about two seconds (one every 3 ticks for a big horde), each with a soul
+   stream from the staff. Waves are hordes and grow:
 
    | Wave | Two players | One player |
    | --- | --- | --- |
-   | 1 | 6 crawlers | 4 crawlers |
-   | 2 | 5 crawlers, 2 archers | 4 crawlers, 1 archer |
-   | 3 | 5 crawlers, 2 archers, 1 brute | 4 crawlers, 1 archer, 1 brute |
-   | 4 | 6 crawlers, 2 archers, 2 brutes | 5 crawlers, 2 archers, 1 brute |
+   | 1 | 14 crawlers | 10 crawlers |
+   | 2 | 14 crawlers, 3 archers | 10 crawlers, 2 archers |
+   | 3 | 15 crawlers, 3 archers, 2 brutes | 11 crawlers, 2 archers, 1 brute |
+   | 4 | 17 crawlers, 4 archers, 3 brutes | 13 crawlers, 3 archers, 2 brutes |
 
-   Each player beyond two adds 40%, capped at 12 bodies per wave. While a wave still
-   stands, a reinforcement crawler claws out 8–14 blocks from a random player every
-   five seconds (two per wave solo, one more per extra player, at most five). A cleared
-   wave rests 1.5 seconds; a wave that survives 25 seconds is joined by the next.
-   Siege bodies are quickened by the caster's soul fire: crawlers move 30% faster (about
-   2.6 blocks a second, faster than a zombie), brutes 15% and archers 10%. Wild night
-   spawns keep their pace.
+   Each player beyond two adds 40% (at most 6 archers and 4 brutes), and no more than 32
+   bodies stand at once. While a wave still stands, a reinforcement crawler claws out
+   8–14 blocks from a random player every four seconds (four per wave solo, one more per
+   extra player, at most eight). A cleared wave rests 1.5 seconds; a wave that survives
+   30 seconds is joined by the next.
+   Siege bodies are quickened by the caster's soul fire (a speed attribute bonus; mob
+   speed grows with its square): crawlers +68%, about 4.4 blocks a second, so a walking
+   player (4.3) cannot leave them behind but a sprint (5.6) can; brutes +15% (about 2.2)
+   and archers +10% (about 2.3). Wild night spawns keep their pace.
 3. **Soul Fire Rain.** Three seconds after it perches, and then every four seconds (three
    in the second siege), it drives its staff down and lobs a volley of blue fireballs:
    one marker on every player plus one spare (two in the second siege) 3–6 blocks from a

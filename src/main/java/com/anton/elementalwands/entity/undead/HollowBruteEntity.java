@@ -17,20 +17,31 @@ import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
 /**
- * Rare hunched heavy: a long, readable windup with the spiked maul, then one crushing swing
- * that hits everything around the maul head on the impact frame.
+ * Rare hunched heavy with a charging slam: it stomps in while heaving the spiked maul overhead and
+ * turning to track its target, crouches and commits, then bounds forward and brings the maul down as
+ * it lands, hitting everything around the maul head on the impact frame. The server replays the
+ * clip's travel, stretching the airborne bound so the maul lands where the target stood at the commit.
  */
 public class HollowBruteEntity extends HollowUndeadEntity {
-    /** Gap to the target's body when the windup starts, and the maul head's reach on impact. */
-    static final double REACH = 2, MAUL_RADIUS = 1.3;
-    /** Tracks the target through the windup, then commits to the swing. */
-    static final int COMMIT_TICK = 30;
+    /** Gap to the target's body when the slam starts, and the maul head's reach on impact. */
+    static final double REACH = 4.5, MAUL_RADIUS = 1.3;
+    /** The bound covers at most this far, however far the target has got. */
+    static final double BOUND_MAX = 3;
+    /** The attack tick the bound lands on: the body stops there. */
+    static final int LAND = BRUTE_CARRY.length - 1;
     /** Stays planted through most of the recovery. */
-    private static final int BUSY = 70;
+    private static final int BUSY = 55;
+
+    /** Forward distance the strides may still cover before the maul head would pass the target. */
+    private double room;
+    /** Set at the commit: the locked direction and how much the clip's bound is stretched. */
+    private Vec3d bound;
+    private double boundScale;
 
     public HollowBruteEntity(EntityType<? extends HollowBruteEntity> type, World world) {
         super(type, world, "brute");
@@ -60,11 +71,55 @@ public class HollowBruteEntity extends HollowUndeadEntity {
 
     @Override
     protected void aim(LivingEntity target, int tick) {
-        if (tick < COMMIT_TICK) face(target, 0, 8);
+        if (tick < BRUTE_COMMIT) {
+            // Stomping in, it turns fast enough to come round from facing away.
+            face(target, 0, 18);
+            room = ahead(target, facing()) - BRUTE_SOCKET[2];
+            return;
+        }
+        if (bound != null || tick >= LAND) return;
+        // Commits: the bound carries the maul head to where the target stands now, so a late
+        // sidestep or a step back still beats it.
+        bound = facing();
+        double left = BRUTE_CARRY[LAND] - BRUTE_CARRY[tick];
+        boundScale = left > 0 ? MathHelper.clamp(ahead(target, bound) - BRUTE_SOCKET[2], 0, BOUND_MAX) / left : 0;
+    }
+
+    @Override
+    protected void drive(int clip) {
+        if (clip > LAND) return;
+        // The right foot lands: the body stops where the bound put it instead of sliding on.
+        if (clip == LAND) { setVelocity(0, getVelocity().y, 0); return; }
+        double step = BRUTE_CARRY[clip + 1] - BRUTE_CARRY[clip];
+        Vec3d way;
+        if (clip < BRUTE_COMMIT) {
+            // The strides follow the turning body but never carry the maul head past the target.
+            way = facing();
+            step = Math.min(step, Math.max(0, room));
+            room -= step;
+        } else {
+            // With no target to commit to, the bound keeps its own length.
+            if (bound == null) { bound = facing(); boundScale = 1; }
+            way = bound;
+            step *= boundScale;
+        }
+        setVelocity(way.x * step, getVelocity().y, way.z * step);
+    }
+
+    private Vec3d facing() {
+        double yaw = Math.toRadians(bodyYaw);
+        return new Vec3d(-Math.sin(yaw), 0, Math.cos(yaw));
+    }
+
+    private double ahead(LivingEntity target, Vec3d way) {
+        return (target.getX() - getX()) * way.x + (target.getZ() - getZ()) * way.z;
     }
 
     @Override
     protected void onBegin(ServerWorld world, LivingEntity target) {
+        room = Double.MAX_VALUE;
+        bound = null;
+        boundScale = 1;
         playSound(SoundEvents.ENTITY_WITHER_SKELETON_AMBIENT, 1.2f, .55f);
     }
 

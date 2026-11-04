@@ -85,8 +85,12 @@ function modelMesh(variant,time,clip,offset=0){
 function box(data,center,size){const cube={origin:center.map((v,i)=>v-size[i]/2),size};for(const f of Object.values(faces(cube)))putFace(data,f,[[0,0],[1,0],[1,1],[0,1]],p=>p,n=>n);}
 function submit(data,texture,tint=[1,1,1,1],emissive=false){gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),gl.DYNAMIC_DRAW);gl.bindTexture(gl.TEXTURE_2D,texture);gl.uniform4fv(uniforms.tint,tint);gl.uniform1i(uniforms.emissive,emissive);gl.drawArrays(gl.TRIANGLES,0,data.length/8);}
 function scene(time){
- const floor=[];box(floor,[0,-.015,0],[8,.03,8]);submit(floor,white,[.075,.10,.135,1]);
- const grid=[];for(let i=-8;i<=8;i++){box(grid,[i*.5,.004,0],[.012,.009,8]);box(grid,[0,.004,i*.5],[8,.009,.012]);}submit(grid,white,[.12,.17,.20,1]);
+ // Clips that travel (the brute's charging slam) get a longer floor reaching out ahead.
+ const travel=!state.compare&&noteFor(state.variant,state.clip)?.player!==undefined,cz=travel?-3:0,half=travel?6:4;
+ const floor=[];box(floor,[0,-.015,cz],[2*half,.03,2*half]);submit(floor,white,[.075,.10,.135,1]);
+ const grid=[];for(let i=-2*half;i<=2*half;i++){box(grid,[i*.5,.004,cz],[.012,.009,2*half]);box(grid,[0,.004,cz+i*.5],[2*half,.009,.012]);}submit(grid,white,[.12,.17,.20,1]);
+ // A stand-in for the player where the attack's target stands (hidden from the Player eye).
+ if(travel&&state.view!=='player'){const g=[];box(g,[PLAYER[state.variant].at[0],.9,noteFor(state.variant,state.clip).player],[.6,1.8,.6]);submit(g,white,[.28,.22,.34,1]);}
  for(const index of state.compare?[0,1,2]:[state.variant]){
  const v=variants[index],clip=state.compare?'idle':state.clip;
  const data=modelMesh(v,state.compare?time%4:time,clip,state.compare?[1.85,0,-1.85][index]:0);submit(data,v.texture);
@@ -103,7 +107,10 @@ function draw(){
  let at=[0,crawler?.5:state.compare?1.0:state.variant===2?1.1:1.0,(crawler?-.15:0)+follow];
  if(state.hands&&!state.compare){const mats=pose(variants[state.variant],state.time,state.clip);const a=transform(mats.left_hand,[0,0,0]),b=transform(mats.right_hand,[0,0,0]);at=a.map((v,i)=>(v+b[i])/32);}
  const d=(state.hands&&!state.compare?(state.variant===0?1.65:2.05):state.compare?7.2:state.distance*.5)/Math.min(1,w/h);let eye=[at[0]+Math.sin(state.yaw)*Math.cos(state.pitch)*d,at[1]+Math.sin(state.pitch)*d,at[2]-Math.cos(state.yaw)*Math.cos(state.pitch)*d],fov=38;
- if(state.view==='player'&&!state.compare&&!state.hands){const p=PLAYER[state.variant];at=[0,p.look,follow];eye=[p.at[0]*state.player,1.62,p.at[2]*state.player+follow];fov=60;}
+ if(state.view==='player'&&!state.compare&&!state.hands){const p=PLAYER[state.variant],stand=noteFor(state.variant,state.clip)?.player;at=[0,p.look,follow];
+  // A travelling attack comes at a player who stands still where it lands; scroll steps back or in.
+  if(stand!==undefined){const end=sample(rootMotion,1e9)[2]/16;eye=[p.at[0]*state.player,1.62,end+(stand-end)*state.player];}
+  else eye=[p.at[0]*state.player,1.62,p.at[2]*state.player+follow];fov=60;}
 
  gl.useProgram(pipeline);gl.bindVertexArray(vao);gl.uniformMatrix4fv(uniforms.vp,false,M.mul(M.perspective(rad(fov),w/h,.01,80),M.lookAt(eye,at)));gl.activeTexture(gl.TEXTURE0);gl.uniform1i(uniforms.tex,0);scene(state.time);gl.bindVertexArray(null);
  document.querySelector('#timeline').value=state.time;
@@ -133,11 +140,11 @@ function controls(){
 const descriptions=[
  {name:'Hollow Crawler',text:'The approved legless skeleton. Slender arms pull the rib cage forward while the pelvis trails along the ground.',silhouette:'Human skull, open ribs, and outward-bending elbows.',motion:'Idle breathing and a restless claw; the crawl pulls with staggered finger grips. Reworked: a desperate lunge that rakes and drags its claws, a scrabbling rise out of the ground, and death throes before it goes limp.'},
  {name:'Risen Archer',text:'A lean skeleton in the remnants of a burial hood. A worn wooden bow and a small quiver keep its ranged role readable.',silhouette:'Upright anatomy, exposed ribs, narrow limbs, and frayed olive-gray cloth.',motion:'A measured walk. Reworked: a hunter\'s draw from the quiver with a held follow-through, a rise that keeps the bow clear of the dirt, a puppet-like crumple on death, and a watchful idle.'},
- {name:'Hunched Brute',text:'A broad, stooped skeleton with an uneven spine, one heavier arm, a spiked maul, and a torn burial mantle.',silhouette:'Wider ribs and pelvis, a forward-set skull, old iron bindings, and a long spiked maul.',motion:'An uneven walk favors one leg. Reworked: a slow heave, a held overhead maul and a stepping blow that buries itself in the ground; a rise that shoulders the maul; a fall like a felled tree; a heavy, breathing idle.'}
+ {name:'Hunched Brute',text:'A broad, stooped skeleton with an uneven spine, one heavier arm, a spiked maul, and a torn burial mantle.',silhouette:'Wider ribs and pelvis, a forward-set skull, old iron bindings, and a long spiked maul.',motion:'An uneven walk favors one leg. New: a charging slam that strides in heaving the maul, bounds and buries it in the ground as it lands. Reworked: a rise that shoulders the maul; a fall like a felled tree; a heavy, breathing idle.'}
 ];
 function selectCreature(index,clip='idle'){state.variant=index;state.clip=clip;state.time=0;state.compare=false;state.hands=false;document.querySelector('#hands').classList.remove('active');state.distance=[5.8,8.4,9.5][index];state.motion=true;if(state.view!=='player')state.pitch=rad(index===0?28:14);sync();updatePanel();}
 function selectClip(clip){state.clip=clip;state.time=0;state.motion=true;sync();updatePanel();}
-const clipNames=[{attack:'Claw lunge',walk:'Crawl'},{attack:'Draw & fire'},{attack:'Club strike'}];
+const clipNames=[{attack:'Claw lunge',walk:'Crawl'},{attack:'Draw & fire'},{attack:'Charging slam',attack_before:'Before (game now)'}];
 const clipName=(variant,clip)=>clipNames[variant][clip]||clip[0].toUpperCase()+clip.slice(1);
 // Links such as #brute/attack/2.15/player open a clip paused at a moment, from a chosen camera.
 function openHash(){
@@ -148,15 +155,15 @@ function openHash(){
 }
 function buildTonight(){
  const bar=document.querySelector('#tonight');if(!tonight.length){bar.hidden=true;return;}
- bar.insertAdjacentHTML('beforeend','<strong>Reworked tonight</strong>');
+ bar.insertAdjacentHTML('beforeend','<strong>New today</strong>');
  for(const t of tonight){const b=document.createElement('button');b.dataset.tonight=t.variant+':'+t.clip;b.textContent=['Crawler','Archer','Brute'][t.variant]+' · '+clipName(t.variant,t.clip);b.onclick=()=>selectCreature(t.variant,t.clip);bar.append(b);}
  const s=document.createElement('small');s.textContent=payload.tonightNote||'';bar.append(s);
 }
 function renderRework(){
  const box=document.querySelector('#rework'),note=!state.compare&&noteFor(state.variant,state.clip);box.innerHTML='';
- if(!note){if(!state.compare){const p=document.createElement('p');p.className='unchanged';p.textContent=clipName(state.variant,state.clip)+': not reworked tonight (the approved study as before).';box.append(p);}return;}
+ if(!note){if(!state.compare){const p=document.createElement('p');p.className='unchanged';p.textContent=clipName(state.variant,state.clip)+': unchanged (the approved study as before).';box.append(p);}return;}
  const card=document.createElement('div');card.className='rework';
- card.innerHTML='<span class="label">Reworked tonight</span><h3></h3><p></p><ul class="beats"></ul>';
+ card.innerHTML='<span class="label">'+(tonight.some(t=>t.variant===state.variant&&t.clip===state.clip)?'New today':'Reworked')+'</span><h3></h3><p></p><ul class="beats"></ul>';
  card.querySelector('h3').textContent=clipName(state.variant,state.clip)+' · '+variants[state.variant].clips[state.clip].animation_length.toFixed(2)+' s';
  card.querySelector('p').textContent=note.summary;
  const list=card.querySelector('.beats');
@@ -170,8 +177,8 @@ function updatePanel(){
  document.querySelector('#silhouette').textContent=state.compare?'A low crawler, a lean upright archer, and a broader stooped brute.':d.silhouette;document.querySelector('#movement').textContent=state.compare?'Select a creature for Idle, Walk, Rise, its attack, and Death.':d.motion;
  document.querySelector('#timeline').max=variants[state.variant].clips[state.clip].animation_length;
  document.querySelectorAll('[data-creature]').forEach(b=>b.classList.toggle('active',+b.dataset.creature===state.variant&&!state.compare));
- document.querySelectorAll('[data-clip]').forEach(b=>{b.hidden=state.compare;b.classList.toggle('active',b.dataset.clip===state.clip);b.textContent=clipName(state.variant,b.dataset.clip);b.classList.toggle('new',!!noteFor(state.variant,b.dataset.clip));});
- document.querySelectorAll('[data-creature]').forEach(b=>{b.classList.toggle('has-new',!!notes[b.dataset.creature]);b.title=notes[b.dataset.creature]?'Has clips reworked tonight':'';});
+ document.querySelectorAll('[data-clip]').forEach(b=>{b.hidden=state.compare||!variants[state.variant].clips[b.dataset.clip];b.classList.toggle('active',b.dataset.clip===state.clip);b.textContent=clipName(state.variant,b.dataset.clip);b.classList.toggle('new',tonight.some(t=>t.variant===state.variant&&t.clip===b.dataset.clip));});
+ document.querySelectorAll('[data-creature]').forEach(b=>{const fresh=tonight.some(t=>t.variant===+b.dataset.creature);b.classList.toggle('has-new',fresh);b.title=fresh?'Has new clips':'';});
  document.querySelectorAll('[data-tonight]').forEach(b=>b.classList.toggle('active',!state.compare&&b.dataset.tonight===state.variant+':'+state.clip));
  renderRework();
  document.querySelector('#compare').classList.toggle('active',state.compare);

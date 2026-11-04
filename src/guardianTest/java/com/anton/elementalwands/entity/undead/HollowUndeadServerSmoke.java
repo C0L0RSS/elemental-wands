@@ -40,6 +40,7 @@ public final class HollowUndeadServerSmoke implements ModInitializer {
     private static final class Lane {
         final HollowUndeadEntity mob; final ServerPlayerEntity victim; final int hit; final Box area;
         int strike = -1, landed = -1; float health = 20;
+        Vec3d struckFrom, landedAt;
         Lane(HollowUndeadEntity mob, ServerPlayerEntity victim, int hit) {
             this.mob = mob; this.victim = victim; this.hit = hit;
             area = new Box(mob.getBlockPos()).expand(24, 6, 12);
@@ -65,9 +66,10 @@ public final class HollowUndeadServerSmoke implements ModInitializer {
             w.setTimeOfDay(18000);
             w.setWeather(24000, 0, false, false);
             w.getGameRules().get(net.minecraft.world.GameRules.DO_MOB_SPAWNING).set(false, server); // Only the fighters under test.
-            // The crawler must crawl to its victim first; the brute and archer can strike from where they rise.
+            // The crawler must crawl to its victim first; the brute and archer can strike from where they rise,
+            // the brute charging in from the edge of its reach.
             lane(server, w, ModEntities.HOLLOW_CRAWLER, 0, 5.5, HollowUndeadClips.CRAWLER_HIT);
-            lane(server, w, ModEntities.HOLLOW_BRUTE, 40, 2.3, HollowUndeadClips.BRUTE_HIT);
+            lane(server, w, ModEntities.HOLLOW_BRUTE, 40, 5.2, HollowUndeadClips.BRUTE_HIT);
             lane(server, w, ModEntities.HOLLOW_ARCHER, 80, 9, HollowUndeadClips.ARCHER_HIT);
             killer = player(server, "UndeadKiller", 40.5, 100, 118.5);
             var boss = new NecromancerEntity(ModEntities.HOLLOW_NECROMANCER, w);
@@ -93,6 +95,14 @@ public final class HollowUndeadServerSmoke implements ModInitializer {
             require(lane.strike >= 0 && lane.landed >= 0, name + " never landed an attack");
             int clip = lane.landed - lane.strike - HollowUndeadEntity.BLEND;
             require(clip == lane.hit, name + " landed " + clip + " ticks into its clip, not on frame " + lane.hit);
+        }
+        if (t == NOON - 1) {
+            // The brute's strides and bound carry the maul head onto where its victim stood when it committed.
+            Lane brute = lanes.get(1);
+            Vec3d toward = brute.victim.getEntityPos().subtract(brute.struckFrom).multiply(1, 0, 1);
+            double gap = toward.length(), charged = brute.landedAt.subtract(brute.struckFrom).dotProduct(toward.normalize());
+            require(charged > 3 && Math.abs(charged + HollowUndeadClips.BRUTE_SOCKET[2] - gap) < .5, "Brute did not charge into its slam: "
+                    + charged + " blocks from " + brute.struckFrom + " to " + brute.landedAt + ", victim at " + brute.victim.getEntityPos());
         }
         // Noon: wild bodies catch fire under the open sky, the Necromancer's does not.
         if (t == NOON) { w.setTimeOfDay(6000); for (Lane lane : lanes) { lane.mob.setHealth(lane.mob.getMaxHealth()); lane.victim.getAbilities().invulnerable = true; } }
@@ -121,7 +131,7 @@ public final class HollowUndeadServerSmoke implements ModInitializer {
         if (t == END) {
             Files.writeString(Path.of("UNDEAD_PASSED.txt"), "Hollow undead passed: all three rise on the floor, the crawler crawls to its victim, "
                     + "crawler, brute and archer land damage/arrows exactly on their clip hit frames after the blend (" + HollowUndeadClips.CRAWLER_HIT + ", "
-                    + HollowUndeadClips.BRUTE_HIT + ", " + HollowUndeadClips.ARCHER_HIT + " ticks), wild bodies burn at noon while a bound minion "
+                    + HollowUndeadClips.BRUTE_HIT + ", " + HollowUndeadClips.ARCHER_HIT + " ticks), the brute charges its maul onto its victim, wild bodies burn at noon while a bound minion "
                     + "does not, the brute drops bones and experience and its corpse stays for the death clip, and a bound minion drops nothing.\n");
             server.stop(false);
         }
@@ -139,7 +149,7 @@ public final class HollowUndeadServerSmoke implements ModInitializer {
     /** Records the first attack clip and the first damage/arrow; nothing may land while rising. */
     private void watch(ServerWorld w, Lane lane, int t) {
         if (lane.mob.isRemoved() || t >= NOON) return;
-        if (lane.strike < 0 && lane.mob.isStriking()) lane.strike = t;
+        if (lane.strike < 0 && lane.mob.isStriking()) { lane.strike = t; lane.struckFrom = lane.mob.getEntityPos(); }
         boolean landed;
         if (lane.mob instanceof HollowArcherEntity) {
             List<ArrowEntity> arrows = w.getEntitiesByClass(ArrowEntity.class, lane.area, a -> a.getOwner() == lane.mob);
@@ -152,6 +162,7 @@ public final class HollowUndeadServerSmoke implements ModInitializer {
         if (landed && lane.landed < 0) {
             require(lane.strike >= 0, lane.mob.getType().getUntranslatedName() + " hurt its victim outside an attack clip");
             lane.landed = t;
+            lane.landedAt = lane.mob.getEntityPos();
         }
         lane.health = lane.victim.getHealth();
         if (lane.landed >= 0 && t - lane.landed > 15) { lane.victim.setHealth(20); lane.health = 20; }

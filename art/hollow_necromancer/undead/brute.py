@@ -40,8 +40,9 @@ def free_curls(close, spread=0.):
     return [[-12-32*close+6*spread*(f-1.5), -15-46*close, -10-38*close] for f in range(4)]
 
 
-def attack(rig):
-    """Heave the maul overhead, hold it there while tracking, step in and bring it down."""
+def attack_planted(rig):
+    """The approved planted strike (22 Oct): heave the maul overhead, hold it there while tracking,
+    step in and bring it down. Kept for the preview's before/after comparison."""
     hy, length = rig.hip_y, 4.6
     sl = rig.shoulder_local(1)
 
@@ -188,6 +189,253 @@ def attack(rig):
                                      [pin_m[i][0] for i in range(3)], [pin_m[i][1] for i in range(3)])
     # Denser keys through the blow, so the fast whip of the maul interpolates cleanly.
     return Baker(rig, length, False, extra=[HIT]+[2.0+i/60 for i in range(16)]).bake(pose)
+
+
+# ---- The charging slam (4 Nov) ----
+# Server moments, in seconds of clip time (20 ticks/s): the aim locks at COMMIT, the body is airborne
+# from TAKEOFF (the trailing foot lifts) until the right foot lands at LAND, and the blow passes the
+# approved hit pose at SLAM_HIT. The blow and the recovery are the planted strike's, 0.75 s earlier.
+COMMIT, TAKEOFF, PUSH, LAND, SLAM_HIT = .75, .78, .06, 1.24, 1.40
+SHIFT = HIT-SLAM_HIT
+# How far (px) the body carries itself: two stomping steps through the heave, then the bound.
+STRIDE_IN, PUSH_IN, BOUND = 19.5, 2.5, 36
+CARRIED = STRIDE_IN+PUSH_IN+BOUND
+
+
+def carried(t):
+    """Distance (px) travelled: the steps ease to a stop in the crouch, the push-off gathers
+    speed and the bound keeps it until the right foot lands."""
+    if t <= TAKEOFF:
+        return STRIDE_IN*shaped(t, .06, TAKEOFF, 'ease')
+    if t <= TAKEOFF+PUSH:
+        return STRIDE_IN+PUSH_IN*((t-TAKEOFF)/PUSH)**2
+    return STRIDE_IN+PUSH_IN+BOUND*min(1, (t-TAKEOFF-PUSH)/(LAND-TAKEOFF-PUSH))
+
+
+def planted_foot(t, x, plants, swings):
+    """Root-space ankle of a foot that stays put in the world while planted. `plants` lists
+    (lands, lifts, world z); `swings[i]` = (lift, frame, trail) carries the foot from plant i to
+    plant i+1: a 'world' step eases across the ground, a 'body' tuck eases with the airborne body
+    (trailing `trail` px behind on the way). Returns the ankle, how far through a swing (or None),
+    and that swing's frame."""
+    for i, (lands, lifts, z) in enumerate(plants):
+        if i and t < lands:
+            _, off, z0 = plants[i-1]
+            lift, frame, trail = swings[i-1]
+            f = (t-off)/(lands-off)
+            if frame == 'world':
+                local = z0+(z-z0)*shaped(f, 0, 1)+carried(t)
+            else:
+                a, b = z0+carried(off), z+carried(lands)
+                local = a+(b-a)*shaped(f, 0, 1)+trail*math.sin(math.pi*f)
+            return [x, .7+lift*math.sin(math.pi*f)**.8, local], f, frame
+        if t <= lifts:
+            return [x, .7, z+carried(t)], None, None
+    return [x, .7, plants[-1][2]+carried(t)], None, None
+
+
+def foot_pitch(f, frame):
+    if f is None:
+        return [0, 0, 0]
+    if frame == 'world':      # toe-off, then the heel reaches for the ground
+        return [keys(f, [(0, 0), (.35, 14, 'out'), (.9, -4, 'in'), (1, 0)]), 0, 0]
+    return [keys(f, [(0, 0), (.3, 22, 'out'), (.8, 10), (1, 0, 'in')]), 0, 0]   # toes hang in the air
+
+
+def attack(rig):
+    """Storms in heaving the maul overhead, crouches, bounds forward with it cocked behind its
+    head and brings it down as it lands, burying the head in the ground."""
+    hy, length = rig.hip_y, 3.0
+    sl = rig.shoulder_local(1)
+
+    # ---- Feet: right then left stomp forward through the heave, the left leads the crouch and
+    # pushes off; the right lands first out of the bound, then steps back in the recovery ----
+    land_r = -CARRIED-4.6
+    right_plants = [(0, .08, 0), (.34, TAKEOFF, -13), (LAND, 2.17, land_r), (2.55, 99, -CARRIED)]
+    right_swings = [(2.2, 'world', 0), (5.5, 'body', 0), (2.2, 'world', 0)]
+    left_plants = [(0, .34, 0), (.60, TAKEOFF+PUSH, -23), (LAND+.04, 99, -CARRIED)]
+    left_swings = [(2.6, 'world', 0), (4.2, 'body', 6)]
+
+    # ---- Body: pelvis position (root space) and torso rotation through the beats ----
+    hit_body = [16, -14, -5]
+    hit_hips = rig.hips_for_shoulder(hit_body, 1, [6.6, 26.0, -5.6])
+    ground_hips = add(hit_hips, [.4, -2.4, -.8])
+    hips_keys = [
+        (0, [0, hy, 0]),
+        (.06, [.2, hy-1.2, .2]),                     # the knees give as it grips
+        (.34, [-.3, hy-2.0, .3], 'ease'),            # stomps in on bent knees, the weight back
+        (.60, [-.6, hy-2.2, .4], 'ease'),
+        (.76, [-.5, hy-3.8, -.2], 'ease'),           # sinks into the crouch over the lead foot
+        (TAKEOFF+.08, [-.3, hy-.6, -.8], 'out'),     # the legs drive it up and on
+        (1.03, [-.3, hy+3, -.6], 'out'),             # top of the bound
+        (LAND, [-.1, hy-1.4, -1.4], 'in'),           # drops onto the right foot
+        (SLAM_HIT, hit_hips, 'ease'),                # and on down through the blow
+        (HIT+.06-SHIFT, ground_hips, 'linear'),
+        (2.40-SHIFT, add(ground_hips, [0, .5, 0]), 'settle'),
+        (2.80-SHIFT, add(ground_hips, [0, .3, 0])),
+        (3.40-SHIFT, [0, hy, 0], 'slow'),
+    ]
+    body_keys = [
+        (0, [0, 0, 0]),
+        (.06, [6, -3, 0]),                           # leans in over the grip
+        (.34, [-2, 8, 3]),
+        (.62, [-10, 19, 6], 'slow'),                 # leans back under the rising maul
+        (.72, [-11, 21, 6], 'out'),
+        (.80, [-5, 22, 5], 'ease'),                  # the chest comes over the lead foot to jump
+        (1.03, [-15, 24, 5], 'ease'),                # arches back in the air: the last coil
+        (SLAM_HIT-.06, [12, -10, -4], 'ease'),       # hips and chest lead the blow
+        (SLAM_HIT, hit_body, 'linear'),
+        (HIT+.06-SHIFT, [22, -18, -7], 'linear'),
+        (2.40-SHIFT, [21, -17, -6], 'settle'),
+        (2.80-SHIFT, [19, -14, -5]),
+        (3.40-SHIFT, [0, 0, 0], 'slow'),
+    ]
+
+    def stomp(t):
+        """Each stride lifts the hips mid-step and sways the weight over the planted foot."""
+        if not .08 <= t <= .60:
+            return [0, 0, 0]
+        f = (t-.08)/.26     # 0-1 the right foot swings (weight on the left), 1-2 the left
+        return [-.45*math.sin(math.pi*f), .8*abs(math.sin(math.pi*f)), 0]
+
+    def base(t):
+        hips = add(keys(t, hips_keys), stomp(t)); body = keys(t, body_keys)
+        # A thud as it lands, then the maul bites the ground and the whole frame shudders.
+        jolt = shake(t, HIT+.06-SHIFT, .32, 7, 2.5)+.5*shake(t, LAND, .14, 9, 2)
+        hips = add(hips, [0, -.5*jolt, 0])
+        body = add(body, [1.5*jolt, 0, .8*jolt])
+        # Two heavy breaths hunched over the buried maul.
+        breath = math.sin(math.tau*(t-2.4+SHIFT)/.5)*envelope(t, 2.4-SHIFT, .1, .3, .1)*1.4
+        return hips, add(body, [-breath, 0, 0])
+
+    # ---- Maul arm: hand angle about the shoulder (0 down, 90 forward, 180 up) ----
+    # The hit key is solved so the approved hand position falls out of the arc exactly.
+    hit_at = rig.body({'hips': base(SLAM_HIT)[0], 'body': base(SLAM_HIT)[1]})[2]
+    local = apply(mat([0, -hit_body[1], 0]), sub(HIT_HAND, hit_at(sl)))
+    hit_phi = math.degrees(math.atan2(-local[2], -local[1]))
+    hit_reach, hit_wide = math.hypot(local[1], local[2]), local[0]
+    def after(k):           # a key of the planted strike's recovery, moved to this clip's time
+        return (k[0]-SHIFT,)+tuple(k[1:])
+    phi_keys = [
+        (0, 3), (.06, -4),                           # drags the head back to get under it
+        (.62, 204, 'slow'),                          # heaves it up and over as it stomps in
+        (.72, 214, 'out'), (.80, 211),               # its weight drops behind and settles
+        (1.03, 226, 'ease'),                         # cocked furthest back at the top of the bound
+        (1.12, 224),
+        (SLAM_HIT, hit_phi, 'in'), after((2.21, 18, 'linear')),   # the blow, then on into the ground
+        after((2.80, 17)), after((2.95, 26, 'ease')), after((3.40, 3, 'slow'))]
+    reach_keys = [(0, 15.6), (.06, 15.2), (.62, 11.4, 'slow'), (.72, 11.0), (1.03, 10.6), (1.12, 10.8),
+                  (SLAM_HIT, hit_reach, 'out'), after((2.21, 15.4)), after((2.80, 15.4)), after((3.40, 15.6, 'slow'))]
+    wide_keys = [(0, .3), (.62, 2.3, 'slow'), (.72, 2.5), (1.12, 2.6), (SLAM_HIT, hit_wide, 'in'),
+                 after((2.21, .9)), after((3.40, .3, 'slow'))]
+    tilt_keys = [(0, REST_TILT), (.06, 58), (.62, 120, 'slow'), (.72, 127, 'out'), (.80, 125),
+                 (1.03, 132, 'ease'), (LAND, 128, 'in'), (SLAM_HIT, 48, 'in'), after((2.21, 45, 'linear')),
+                 after((2.80, 46)), after((2.95, 70, 'ease')), after((3.40, REST_TILT, 'slow'))]
+    pin_m = mat(HIT_WRIST)
+
+    def pose(t, pinned=True):
+        hips, body = base(t)
+        P = {'hips': hips, 'body': body, 'root': [0, 0, -carried(t)]}
+        _, _, at = rig.body(P)
+        twist = body[1]; turn = mat([0, twist, 0])
+        phi = math.radians(keys(t, phi_keys)); reach = keys(t, reach_keys); wide = keys(t, wide_keys)
+        shoulder = at(sl)
+        hand = add(shoulder, apply(turn, [wide, -reach*math.cos(phi), -reach*math.sin(phi)]))
+        axis = apply(turn, [1, 0, 0])
+        pole = apply(turn, [.6, -math.sin(phi), math.cos(phi)])
+        elbow, _ = solve(shoulder, hand, rig.arm_lengths['right'], pole)
+        strain = tremor(t, 11, 1.3)*envelope(t, .62, .1, .2, .1)*1.2
+        club, fingers = club_frame(norm(sub(hand, elbow)), axis, keys(t, tilt_keys)+strain)
+        # Through the hit the fist turns onto the approved strike's exact grip.
+        k = bump(t, SLAM_HIT, .07, .07)
+        if pinned and k > 0:
+            club = rotate_about(club, pin_axis, pin_angle*k); fingers = rotate_about(fingers, pin_axis, pin_angle*k)
+        club, fingers = off_axis(club, fingers)
+        wrist = euler(club, mul(fingers, -1))
+        if pinned and abs(t-SLAM_HIT) < 1e-6:
+            wrist, hand = list(HIT_WRIST), list(HIT_HAND)
+        squeeze = keys(t, [(0, .35), (.06, 1), (.62, .8), (.80, 1), (2.4-SHIFT, .7), (3.4-SHIFT, .35, 'slow')])
+        r_ankle, rf, rframe = planted_foot(t, 3.4, right_plants, right_swings)
+        l_ankle, lf, lframe = planted_foot(t, -3.4, left_plants, left_swings)
+        P['right'] = {'hand': hand, 'pole': pole, 'wrist': wrist, 'curls': grip_curls(squeeze),
+                      'splay': [(1.5-f)*2*.8 for f in range(4)],
+                      'thumb': ([-45, -30, -35], [-55, 0, 0]),
+                      'ankle': r_ankle, 'knee': [.1, 0, -1], 'foot': foot_pitch(rf, rframe)}
+        # ---- Free arm: claws out at the prey as it storms in, flung up and wide for balance in
+        # the bound, thrown back by the blow, then braces on the left thigh and pushes off it ----
+        lshoulder = at(rig.shoulder_local(-1))
+        rest = add(lshoulder, [-.3, -13.3, -.8])
+        hip = at(rig.hip_local(-1))
+        knee, _ = solve(hip, within(hip, l_ankle, rig.leg_lengths, .995), rig.leg_lengths, [-.1, 0, -1])
+        hand_l = rest
+        for a, b, target, shape in ((.06, .60, at([-8.4, 20.5, -10]), 'ease'),
+                                    (.84, 1.03, at([-10.5, 24, -6]), 'ease'),
+                                    (1.17, SLAM_HIT+.04, add(lshoulder, [-2.4, -12.4, 5.2]), 'ease'),
+                                    (2.22-SHIFT, 2.42-SHIFT, add(lerp(hip, knee, .8), [-.9, .9, -1.2]), 'in'),
+                                    (3.0-SHIFT, 3.40-SHIFT, rest, 'slow')):
+            hand_l = lerp(hand_l, target, shaped(t, a, b, shape))
+        hand_l = add(hand_l, [0, .4*math.sin(math.tau*t*1.6)*envelope(t, .3, .1, .3, .2), 0])
+        hand_l = within(lshoulder, hand_l, rig.arm_lengths['left'])
+        close = keys(t, [(0, .4), (.06, .1), (.5, .25), (.78, .6), (.9, .05), (1.12, .25), (1.36, .4),
+                         (2.42-SHIFT, .85, 'out'), (3.05-SHIFT, .85), (3.4-SHIFT, .4, 'slow')])
+        lpole = lerp([-1, .15, 1], [-1, .4, .6], envelope(t, .06, .5, .6, .3))
+        P['left'] = {'hand': hand_l, 'pole': lpole, 'wrist_local': [0, 90, 0], 'wrist_fixed': [0, 90, 0],
+                     'curls': free_curls(close, 1-close), 'splay': [-(1.5-f)*6*.8 for f in range(4)],
+                     'thumb': ([-20-15*close, 30, 35], [-25-15*close, 0, 0]),
+                     'ankle': l_ankle, 'knee': [-.1, 0, -1], 'foot': foot_pitch(lf, lframe)}
+        # ---- Head: glares at the prey, counter-turned against the coil; drops with the blow,
+        # lags behind the jolt, then lifts to look at the player in the hold ----
+        look = keys(t, [(0, [0, 0, -3]), (.06, [8, 2, -3]), (.62, [-4, -17, -1], 'slow'),
+                        (.80, [2, -20, -1]), (1.03, [-2, -22, 0]), (SLAM_HIT, [16, 12, -4], 'in'),
+                        (2.30-SHIFT, [24, 16, -6], 'out'), (2.60-SHIFT, [-2, 10, -4], 'ease'),
+                        (2.80-SHIFT, [-4, 9, -4]), (3.40-SHIFT, [0, 0, -3], 'slow')])
+        lag = shake(t, 2.23-SHIFT, .4, 5, 2)*5
+        P['skull'] = add(look, [lag+tremor(t, 7)*envelope(t, .62, .1, .2, .1)*.8, 0, 0])
+        # Roars as it leaves the ground; the jaw snaps shut as the maul bites.
+        jaw = keys(t, [(0, 4), (.06, 8), (.5, 20, 'ease'), (.76, 22), (.9, 32, 'out'), (LAND, 30),
+                       (2.05-SHIFT, 31), (2.22-SHIFT, 3, 'snap'), (2.34-SHIFT, 14, 'out'), (2.6-SHIFT, 10),
+                       (3.4-SHIFT, 4, 'slow')])
+        P['jaw'] = [jaw+tremor(t, 13, 2)*envelope(t, .5, .1, .7, .1)*1.5, 0, 0]
+        P['w'] = envelope(t, .02, .3, 2.05, .25, 'ease', 'ease')
+        return P
+
+    mine = pose(SLAM_HIT, pinned=False)['right']   # the designed grip at the hit
+    mm = mat(mine['wrist'])
+    pin_axis, pin_angle = correction([mm[i][0] for i in range(3)], [mm[i][1] for i in range(3)],
+                                     [pin_m[i][0] for i in range(3)], [pin_m[i][1] for i in range(3)])
+    # Denser keys through the blow, so the fast whip of the maul interpolates cleanly.
+    baker = Baker(rig, length, False, extra=[SLAM_HIT]+[i/120 for i in range(1, 96)]+[1.25+i/60 for i in range(16)])
+    clip = baker.bake(pose)
+    attack.clamped = baker.clamped
+    return clip
+
+
+def before(rig):
+    """The swing as the game plays it before this clip: the planted strike with its heave and
+    hold hurried 2x into 0.75 s, and the server's lunge sliding the body 2.9 blocks forward over
+    the next 0.5 s while the feet stay in place. Preview only."""
+    old = attack_planted(rig)
+    lunge = 2.9*16
+
+    def at(channel, c):
+        pts = sorted((float(k), v) for k, v in channel.items())
+        if c <= pts[0][0]:
+            return pts[0][1]
+        for (a, av), (b, bv) in zip(pts, pts[1:]):
+            if c <= b:
+                return [x+(y-x)*(c-a)/(b-a) for x, y in zip(av, bv)]
+        return pts[-1][1]
+    clip = {'animation_length': 3.0, 'loop': False, 'bones': {}}
+    for frame in range(91):
+        t = frame/30
+        c = 2*t if t < .75 else 1.5+t-.75
+        for bone, channels in old['bones'].items():
+            for kind, keys_ in channels.items():
+                v = at(keys_, c)
+                if bone == 'root' and kind == 'position':
+                    v = [v[0], v[1], v[2]-lunge*min(1, max(0, (t-.75)/.5))]
+                clip['bones'].setdefault(bone, {}).setdefault(kind, {})[str(round(t, 4))] = [round(x, 4) for x in v]
+    return clip
 
 
 def rise(rig):
@@ -401,26 +649,45 @@ def idle(rig):
 
 
 REWORKED = {'attack': attack, 'rise': rise, 'death': death, 'idle': idle}
+# Shown in the preview only, never exported: the strike as the game plays it before this clip.
+PREVIEW_ONLY = {'attack_before': before}
 
 # Review notes shown in the preview (times in seconds of clip time).
 NOTES = {
     'attack': {
-        'summary': 'One huge, committed overhead blow. A slow heave puts the maul high behind its head, '
-                   'it holds there breathing while it tracks you, steps in, and the hips, chest, arm '
-                   'and maul uncoil in turn into a fast chop that buries the head in the ground. It '
-                   'stays hunched over the maul, braced on its thigh, before wrenching it free.',
+        'summary': 'A charging slam. It storms in on two stomping strides while it heaves the maul up and '
+                   'over, sinks into a crouch over its lead foot, then bounds forward with the maul cocked '
+                   'behind its head and brings it down as it lands, burying the head in the ground. The '
+                   'recovery is the approved one: hunched over the maul, braced on its thigh, then it '
+                   'wrenches it free. In game the strides carry it about 1.2 blocks and the bound up to 3, '
+                   'aimed at where you stood when it crouched.',
         'beats': [(0, 'Grips the haft, knees give, drags the head back'),
-                  (.30, 'Heaves the maul up and over in one long lift'),
-                  (1.20, 'Weight settles behind; holds it high, breathing'),
-                  (1.58, 'Lifts its right foot and steps in, loading further back'),
-                  (1.86, 'Hips and chest uncoil; arm and maul follow'),
-                  (2.15, 'The blow passes through you'),
-                  (2.22, 'Maul bites the ground; the frame shudders'),
-                  (2.30, 'Hunched over it, braced on its thigh, two heavy breaths'),
-                  (2.60, 'Lifts its skull to look at you'),
-                  (2.80, 'Wrenches the maul free and steps back'),
-                  (3.40, 'Back at rest')],
-        'server': [(1.50, 'stops turning to track (tick 30)'), (2.15, 'hit (tick 43)'), (3.50, 'busy ends (tick 70)')]},
+                  (.08, 'Stomps in on its right foot, heaving the maul up'),
+                  (.34, 'Left foot stomps in; the maul goes up and over'),
+                  (.62, 'Maul high behind its head; sinks into a crouch over the lead foot'),
+                  (.78, 'Pushes off with a roar'),
+                  (1.03, 'Top of the bound: arched back, maul cocked'),
+                  (1.24, 'Lands on its right foot; hips and chest uncoil'),
+                  (1.40, 'The blow passes through you'),
+                  (1.47, 'Maul bites the ground; the frame shudders'),
+                  (1.55, 'Hunched over it, braced on its thigh, two heavy breaths'),
+                  (1.85, 'Lifts its skull to look at you'),
+                  (2.05, 'Wrenches the maul free and steps back'),
+                  (2.65, 'Back at rest')],
+        'server': [(.75, 'aim locks (tick 15)'), (.78, 'airborne: the server carries the bound (ticks 16-25)'),
+                   (1.40, 'hit (tick 28)'), (2.75, 'busy ends (tick 55)')],
+        'player': -(CARRIED/16+3)},
+    'attack_before': {
+        'summary': 'For comparison, what the game does now on this branch: the approved planted strike '
+                   'with its heave and hold hurried 2x into 0.75 s, then the server slides the whole body '
+                   '2.9 blocks forward over half a second while the feet stay planted.',
+        'beats': [(0, 'Heaves the maul at double speed'),
+                  (.75, 'Aim locks; the body starts sliding forward'),
+                  (1.25, 'The slide stops'),
+                  (1.40, 'The blow passes through you'),
+                  (2.65, 'Back at rest')],
+        'server': [(.75, 'aim locks (tick 15)'), (1.40, 'hit (tick 28)'), (2.75, 'busy ends (tick 55)')],
+        'player': -(2.9+3)},
     'rise': {
         'summary': 'Claws its way out of the grave. The free hand punches up and grips, two slow heaves '
                    'haul the skull and ribs out while the maul head erupts from the soil and swings onto '

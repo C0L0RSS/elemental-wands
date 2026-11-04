@@ -103,12 +103,18 @@ the crawler's hop, rise and death lengths). The preview's yellow banner and pink
 "Reworked tonight" badges mark them; each has a note with its beats and the server
 moments in seconds. `TONIGHT` in `build_preview.py` lists them.
 
-- Brute attack (4.6 s): grips and sinks, then heaves the maul up and over in one long
-  lift (0.3–1.2 s) and holds it high, breathing, while it tracks (to 1.5 s). It steps in
-  on its right foot (1.58–1.95 s) as hips, chest, arm and maul uncoil in turn. The blow
-  passes the hit point at 2.15 s and buries the head in the ground at about 2.22 s with a
-  shudder. It stays hunched over the maul, braced on its thigh, looks up at 2.6 s, wrenches
-  it free at 2.8 s and is back at rest by 3.4 s (the server releases it at 3.5 s).
+- Brute attack, the charging slam (3.0 s, 4 November; replaced the planted strike, kept in
+  `brute.py` as `attack_planted`): grips and sinks, then stomps in on two strides while
+  heaving the maul up and over (0.06–0.62 s), sinks into a crouch over its lead foot and
+  commits at 0.75 s. It pushes off with a roar at 0.78 s, arches back at the top of the
+  bound with the maul cocked, lands on its right foot at 1.24 s and brings it down: the
+  blow passes the approved hit pose at 1.40 s and buries the head in the ground. The
+  recovery is the planted strike's, 0.75 s earlier: hunched and braced on its thigh, it
+  looks up at 1.85 s, wrenches the maul free at 2.05 s and is back at rest by 2.65 s (the
+  server releases it at 2.75 s). The clip's travel (19.5 px of strides, 38.5 px of bound)
+  is on the `root` bone; the runtime install strips it and exports it per tick. The
+  preview's "Before (game now)" clip shows the old strike as the game hurried it, for
+  comparison only.
 - Crawler attack (1.4 s): gathers (the left claw steps in), rears with the right claw
   cocked high (0.2–0.47 s), shoves off into the server's hop at 0.45 s and rakes down at
   0.58 s. It crashes at 0.64 s and drags both claws back through the dirt in step with

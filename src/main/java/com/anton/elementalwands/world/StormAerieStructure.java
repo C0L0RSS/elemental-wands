@@ -1,5 +1,6 @@
 package com.anton.elementalwands.world;
 
+import com.anton.elementalwands.summit.StormAerie;
 import com.anton.elementalwands.summit.StormAerieLayout;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -25,6 +26,7 @@ import net.minecraft.util.BlockRotation;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.HeightLimitView;
@@ -144,6 +146,13 @@ public final class StormAerieStructure extends Structure {
                 StructureLiquidSettings.APPLY_WATERLOGGING);
         BlockPos centre = new BlockPos(footprint.getCenter().getX(), best.floor(), footprint.getCenter().getZ());
         return Optional.of(new StructurePosition(centre, collector -> collector.addPiece(piece)));
+    }
+
+    /** Standing cell facing the gong, where the Roc also sets players back down. The template's gong faces south. */
+    public static BlockPos arrival(PoolStructurePiece piece) {
+        int[] g = StormAerieLayout.GONG;
+        BlockPos anchor = piece.getPos().add(new BlockPos(g[0], g[1], g[2]).rotate(piece.getRotation()));
+        return StormAerie.cell(new StormAerie.Gong(anchor, piece.getRotation().rotate(Direction.SOUTH)), StormAerieLayout.STAND);
     }
 
     /** The cone and the beard's usual 12 blocks, so every chunk the cone crosses builds its share. */

@@ -6,6 +6,7 @@ use [current guides](../README.md) for today’s behavior and [status](../STATUS
 for outstanding verification. Detailed historical reports are optional background.
 
 - [2026-11-03 — Space spells in void glass](2026-11-03-space-void-glass.md)
+- [2026-11-03 — /locate to a Storm Roc aerie lands on the summit](2026-11-03-locate-aerie.md)
 - [2026-11-01 — Wind spells in block wind](2026-11-01-wind-block-wind.md)
 - [2026-10-30 — Fire spells in block fire](2026-10-30-fire-block-fire.md)
 - [2026-10-27 — Storm Roc: the snatch](2026-10-27-storm-roc-intro.md)

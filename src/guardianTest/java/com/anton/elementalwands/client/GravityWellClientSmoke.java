@@ -77,8 +77,7 @@ public final class GravityWellClientSmoke implements ClientModInitializer {
             if(t==66)shot(c,"gravity-well-opening.png");
             if(t==75){var b=bomb(c);require(sawOrb&&b!=null&&b.isWell(),"Bomb/field missing on client");anchor=b.getEntityPos();
                 require(GravityWellManager.state(c.player).getBoolean("active",false),"Active HUD missing");
-                var renderer=c.getEntityRenderDispatcher().getRenderer(b);var state=renderer.getAndUpdateRenderState(b,0);
-                require(state instanceof com.anton.elementalwands.client.renderer.GravityBombRenderer.State,"Missing gravity render state");
+                require(com.anton.elementalwands.client.blockspace.BlockSpaceEffects.isDrawing(b.getId()),"Gravity Well is not drawn as void glass");
                 shot(c,"gravity-well-impact.png");
                 server.execute(()->{if(target.getEntityPos().squaredDistanceTo(targetStart)<.05)serverFailure="No visible enemy pull: start="+targetStart+" pos="+target.getEntityPos()+" velocity="+target.getVelocity();});
             }

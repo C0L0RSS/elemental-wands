@@ -98,6 +98,10 @@ cmp art/fire/blockfire/textures/blockfire.png src/main/resources/assets/elementa
 python3 art/wind/blockwind/textures/build_atlas.py --check
 node art/wind/blockwind/check.mjs
 cmp art/wind/blockwind/textures/blockwind.png src/main/resources/assets/elementalwands/textures/misc/blockwind.png
+python3 art/space/blockspace/textures/build_atlas.py --check
+python3 art/space/blockspace/textures/build_astral_glass.py --check
+node art/space/blockspace/check.mjs
+cmp art/space/blockspace/textures/blockspace.png src/main/resources/assets/elementalwands/textures/misc/blockspace.png
 python3 tools/prepare_guardian_assets.py --check
 python3 tools/prepare_guardian_throw_socket.py --check
 python3 tools/prepare_guardian_pedestal.py --check

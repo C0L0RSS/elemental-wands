@@ -47,6 +47,7 @@ public final class ModNetworking {
         PayloadTypeRegistry.playS2C().register(FireLeapPayload.ID, FireLeapPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(BlockFirePayload.ID, BlockFirePayload.CODEC);
         PayloadTypeRegistry.playS2C().register(BlockWindPayload.ID, BlockWindPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(BlockSpacePayload.ID, BlockSpacePayload.CODEC);
         // S2C
         PayloadTypeRegistry.playS2C().register(UpdraftLaunchPayload.ID, UpdraftLaunchPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncPlayerDataPayload.ID, SyncPlayerDataPayload.CODEC);
@@ -308,6 +309,16 @@ public final class ModNetworking {
                 PacketCodecs.VAR_INT,BlockWindPayload::kind,PacketCodecs.VAR_INT,BlockWindPayload::entity,
                 net.minecraft.util.math.Vec3d.PACKET_CODEC,BlockWindPayload::pos,net.minecraft.util.math.Vec3d.PACKET_CODEC,BlockWindPayload::dir,
                 PacketCodecs.FLOAT,BlockWindPayload::value,BlockWindPayload::new);
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
+    /** A one-off Space spell moment (a bolt hit, a teleport, a charge, a collapse) for the void-glass visuals; see BlockSpaceEvents. */
+    public record BlockSpacePayload(int kind, int entity, net.minecraft.util.math.Vec3d pos, net.minecraft.util.math.Vec3d dir,
+            float value) implements CustomPayload {
+        public static final Id<BlockSpacePayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"block_space"));
+        public static final PacketCodec<RegistryByteBuf,BlockSpacePayload> CODEC = PacketCodec.tuple(
+                PacketCodecs.VAR_INT,BlockSpacePayload::kind,PacketCodecs.VAR_INT,BlockSpacePayload::entity,
+                net.minecraft.util.math.Vec3d.PACKET_CODEC,BlockSpacePayload::pos,net.minecraft.util.math.Vec3d.PACKET_CODEC,BlockSpacePayload::dir,
+                PacketCodecs.FLOAT,BlockSpacePayload::value,BlockSpacePayload::new);
         @Override public Id<? extends CustomPayload> getId() { return ID; }
     }
     /** The Necromancer's intro cinematic for this watcher: its first frame's world time and the circle it plays around; active=false ends it. */

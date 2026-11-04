@@ -2,13 +2,15 @@ package com.anton.elementalwands.client.renderer;
 
 import com.anton.elementalwands.entity.AstralDoubleEntity;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.model.Dilation;
 import net.minecraft.client.model.TexturedModelData;
 import net.minecraft.client.render.command.OrderedRenderCommandQueue;
 import net.minecraft.client.render.entity.*;
+import net.minecraft.client.render.entity.feature.FeatureRenderer;
+import net.minecraft.client.render.entity.feature.FeatureRendererContext;
 import net.minecraft.client.render.entity.feature.HeldItemFeatureRenderer;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.LightmapTextureManager;
 import net.minecraft.client.render.entity.model.*;
 import net.minecraft.client.render.entity.state.*;
@@ -18,7 +20,11 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.player.PlayerSkinType;
 import net.minecraft.util.Identifier;
 
-/** Real owner skin (including slim arms and outer skin layers), with the Space wand. */
+/**
+ * Real owner skin (including slim arms and outer skin layers), with the Space wand, under a void-glass shell: the
+ * player model drawn again a little larger in see-through glass (art/space/blockspace). The shell is bright as the
+ * double forms and settles within a second; its orbiting plates and stars are BlockSpaceEffects'.
+ */
 public final class AstralDoubleRenderer extends EntityRenderer<AstralDoubleEntity,AstralDoubleRenderer.State> {
     /** PlayerEntityRenderState at the top level is rerouted to vanilla's player renderer. */
     public static final class State extends EntityRenderState {
@@ -36,12 +42,12 @@ public final class AstralDoubleRenderer extends EntityRenderer<AstralDoubleEntit
         skin.render(state.appearance,matrices,queue,camera);
     }
     private static final class SkinRenderer extends LivingEntityRenderer<AstralDoubleEntity,PlayerEntityRenderState,PlayerEntityModel> {
-        private static final Identifier SHIMMER=Identifier.ofVanilla("textures/block/white_concrete.png");
         private final PlayerEntityModel wide,slim;
         private SkinRenderer(EntityRendererFactory.Context c){
             super(c,new PlayerEntityModel(c.getPart(EntityModelLayers.PLAYER),false),.35f);
-            wide=model;slim=new PlayerEntityModel(TexturedModelData.of(PlayerEntityModel.getTexturedModelData(net.minecraft.client.model.Dilation.NONE,true),64,64).createModel(),true);
+            wide=model;slim=playerModel(Dilation.NONE,true);
             addFeature(new HeldItemFeatureRenderer<>(this));
+            addFeature(new GlassShell(this));
         }
         @Override public PlayerEntityRenderState createRenderState(){return new PlayerEntityRenderState();}
         @Override public void updateRenderState(AstralDoubleEntity e,PlayerEntityRenderState s,float delta){
@@ -61,36 +67,29 @@ public final class AstralDoubleRenderer extends EntityRenderer<AstralDoubleEntit
         @Override public void render(PlayerEntityRenderState s,MatrixStack m,OrderedRenderCommandQueue q,CameraRenderState camera){
             model=s.skinTextures.model()==PlayerSkinType.SLIM ? slim : wide;
             super.render(s,m,q,camera);
-            // Short curved wisps taper into separated pixel steps. They orbit and
-            // drift upward without cross/star silhouettes or covering the owner's skin.
-            q.submitCustom(m,RenderLayer.getEntityTranslucent(SHIMMER),(entry,out)->{
-                for(int i=0;i<10;i++) {
-                    double angle=s.age*.035+i*2.39996;
-                    float y=(float)((i/10.0+s.age*.007)%1)*1.9f;
-                    float radius=.48f+.035f*(float)Math.sin(angle*1.7);
-                    int alpha=100+(int)(65*(.5+.5*Math.sin(s.age*.13+i)));
-                    wisp(out,entry,angle,y,radius,alpha,i);
-                }
-            });
         }
-        private static void wisp(VertexConsumer out,MatrixStack.Entry m,double angle,float y,float radius,int alpha,int index) {
-            for(int step=0;step<5;step++) {
-                double a=angle-step*.085,b=a-.075;
-                float x=(float)Math.cos(a)*radius,z=(float)Math.sin(a)*radius;
-                float X=(float)Math.cos(b)*radius,Z=(float)Math.sin(b)*radius;
-                float h=.026f-step*.004f,Y=y-step*.018f;
-                // Alternating step sizes keep each tail asymmetric and faceted.
-                if((step+index)%3==0)h*=.72f;
-                int opacity=(int)(alpha*(1-step*.17));
-                int color=(opacity<<24)|(step==0?0xE2C3FF:0xB88AEF);
-                quad(out,m,color,new float[]{x,Y-h,z,X,Y-h-.014f,Z,X,Y+h-.014f,Z,x,Y+h,z},
-                        (float)Math.cos(a),0,(float)Math.sin(a));
-            }
-        }
-        private static void quad(VertexConsumer out,MatrixStack.Entry m,int color,float[] v,float nx,float ny,float nz) {
-            for(int i=0;i<4;i++)out.vertex(m,v[i*3],v[i*3+1],v[i*3+2]).color(color)
-                    .texture(i<2?0:1,i%3==0?0:1).overlay(OverlayTexture.DEFAULT_UV)
-                    .light(LightmapTextureManager.MAX_LIGHT_COORDINATE).normal(m,nx,ny,nz);
+    }
+    private static PlayerEntityModel playerModel(Dilation dilation,boolean slim) {
+        return new PlayerEntityModel(TexturedModelData.of(PlayerEntityModel.getTexturedModelData(dilation,slim),64,64).createModel(),slim);
+    }
+
+    /**
+     * The void-glass shell: the same pose on a slightly inflated player model, textured so every face of every limb is
+     * dark see-through glass with a bright frame (built by art/space/blockspace/textures/build_astral_glass.py). The
+     * outer skin-layer regions are transparent, so only one shell draws.
+     */
+    private static final class GlassShell extends FeatureRenderer<PlayerEntityRenderState,PlayerEntityModel> {
+        private static final Identifier WIDE=Identifier.of("elementalwands","textures/entity/astral_glass_wide.png");
+        private static final Identifier SLIM=Identifier.of("elementalwands","textures/entity/astral_glass_slim.png");
+        private final PlayerEntityModel wide=playerModel(new Dilation(.7f),false),slim=playerModel(new Dilation(.7f),true);
+        private GlassShell(FeatureRendererContext<PlayerEntityRenderState,PlayerEntityModel> context){super(context);}
+        @Override public void render(MatrixStack m,OrderedRenderCommandQueue q,int light,PlayerEntityRenderState s,float limbAngle,float limbDistance){
+            boolean thin=s.skinTextures.model()==PlayerSkinType.SLIM;
+            // Bright as the double forms, then settled so the owner's skin shows through.
+            double age=s.age/20.0,k=Math.clamp((age-.3)/.4,0,1);
+            int alpha=(int)Math.round(255*(1-.58*k*k*(3-2*k)));
+            q.getBatchingQueue(1).submitModel(thin?slim:wide,s,m,RenderLayer.getEntityTranslucent(thin?SLIM:WIDE),
+                    LightmapTextureManager.MAX_LIGHT_COORDINATE,OverlayTexture.DEFAULT_UV,(alpha<<24)|0xFFFFFF,null,s.outlineColor,null);
         }
     }
 }

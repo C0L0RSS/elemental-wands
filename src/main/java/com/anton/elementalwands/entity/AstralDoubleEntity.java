@@ -34,10 +34,7 @@ public final class AstralDoubleEntity extends PathAwareEntity {
     @Override public void tick(){
         setVelocity(Vec3d.ZERO);super.tick();setVelocity(Vec3d.ZERO);
         if(getEntityWorld() instanceof ServerWorld w){
-            var p=owner();if(p==null || AstralDoubleManager.active(p)!=this){AstralDoubleManager.destroyed(this);return;}
-            if(age%3==0){double a=age*.19;
-                w.spawnParticles(ModParticles.SPACE_MOTE,getX()+Math.cos(a)*.45,getY()+.2+(age%30)/20.,getZ()+Math.sin(a)*.45,1,.03,.03,.03,.004);
-            }
+            var p=owner();if(p==null || AstralDoubleManager.active(p)!=this){AstralDoubleManager.destroyed(this);}
         }
     }
     @Override public boolean damage(ServerWorld world,DamageSource source,float amount){

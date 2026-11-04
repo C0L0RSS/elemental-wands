@@ -5,7 +5,6 @@ import com.anton.elementalwands.party.WandAllies;
 import java.util.List;
 
 import com.anton.elementalwands.registry.ModEntities;
-import com.anton.elementalwands.registry.ModParticles;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -50,14 +49,9 @@ public class SingularityBoltEntity extends ProjectileEntity {
             net.minecraft.registry.RegistryKey.of(net.minecraft.registry.RegistryKeys.DAMAGE_TYPE, net.minecraft.util.Identifier.of("elementalwands","astral_bolt"));
     public void setAstralPair() { astralPair=true; }
     public void setEcho() { strength=ECHO_STRENGTH; }
-    public void useCastVisuals(LivingEntity caster) {
-        wake=com.anton.elementalwands.util.SpellCastVisuals.Wake.from(caster,startPos,launchDirection);
-    }
     public SingularityBoltEntity(ServerWorld world, LivingEntity owner, Vec3d origin, Vec3d direction) {
         this(world,owner);setPosition(origin);startPos=origin;launchDirection=direction;
         setVelocity(direction.multiply(PROJECTILE_SPEED));
-        // Echoes originate at the double, never at their attribution owner's wand.
-        wake=com.anton.elementalwands.util.SpellCastVisuals.Wake.NONE;
     }
     private DamageSource impactSource(ServerWorld world) {
         if(astralPair)return new DamageSource(world.getRegistryManager().getOrThrow(net.minecraft.registry.RegistryKeys.DAMAGE_TYPE).getOrThrow(ASTRAL_DAMAGE),this,getOwner());
@@ -65,7 +59,6 @@ public class SingularityBoltEntity extends ProjectileEntity {
     }
     private Vec3d startPos;
     private Vec3d launchDirection;
-    private com.anton.elementalwands.util.SpellCastVisuals.Wake wake = com.anton.elementalwands.util.SpellCastVisuals.Wake.NONE;
     private LivingEntity guidanceTarget;
     private boolean guidanceAttempted;
     private boolean guidanceFinished;
@@ -87,7 +80,6 @@ public class SingularityBoltEntity extends ProjectileEntity {
         Vec3d direction = owner.getRotationVec(1.0f).normalize();
         launchDirection = direction;
         setVelocity(direction.multiply(PROJECTILE_SPEED));
-        wake = com.anton.elementalwands.util.SpellCastVisuals.Wake.from(owner, spawnPos, direction);
     }
 
     private boolean protectsAlly(Entity target) {
@@ -121,13 +113,11 @@ public class SingularityBoltEntity extends ProjectileEntity {
         }
 
         if (getEntityPos().distanceTo(startPos) > MAX_TRAVEL_DISTANCE) {
-            spawnCollapsedMiss(serverWorld);
             discard();
             return;
         }
 
         applyCappedGuidance(serverWorld);
-        spawnTravelVisuals(serverWorld);
 
         HitResult hitResult = ProjectileUtil.getCollision(this, this::canHit);
         if (hitResult.getType() != HitResult.Type.MISS) {
@@ -185,27 +175,13 @@ public class SingularityBoltEntity extends ProjectileEntity {
                 boolean damaged = damageWithoutKnockback(world, living, splashSource, splashDamage);
                 if (damaged) {
                     com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(owner, splashDamage, com.anton.elementalwands.data.WizardAffinity.SPACE);
-                    world.spawnParticles(ModParticles.SPACE_PINPOINT,
-                            living.getX(), living.getBodyY(0.5), living.getZ(),
-                            1, 0.0, 0.0, 0.0, 0.0);
                 }
             }
         }
 
-        world.spawnParticles(ModParticles.SPACE_SINGULARITY,
-                impactPos.x, impactPos.y, impactPos.z, 1, 0.02, 0.02, 0.02, 0.0);
-        world.spawnParticles(ModParticles.SPACE_PINPOINT,
-                impactPos.x, impactPos.y, impactPos.z, 1, 0.0, 0.0, 0.0, 0.0);
-        world.spawnParticles(ModParticles.SPACE_EXPANSION_RING,
-                impactPos.x, impactPos.y, impactPos.z, 1, 0.0, 0.0, 0.0, 0.0);
-        for (int i = 0; i < 16; i++) {
-            double angle = i * (Math.PI * 2.0 / 16.0);
-            double vertical = ((i % 5) - 2) * 0.12;
-            Vec3d outward = new Vec3d(Math.cos(angle), vertical, Math.sin(angle)).normalize();
-            Vec3d point = impactPos.add(outward.multiply(0.18));
-            double speed = 0.18 + (i % 4) * 0.025;
-            spawnDirected(world, ModParticles.SPACE_MOTE, point, outward.multiply(speed));
-        }
+        // Clients draw the impact where the bolt struck; a bolt removed without one simply ran out of range.
+        com.anton.elementalwands.util.BlockSpaceEvents.send(world, com.anton.elementalwands.util.BlockSpaceEvents.BOLT_HIT, getId(), impactPos,
+                launchDirection != null ? launchDirection : getVelocity(), strength);
         world.playSound(null, net.minecraft.util.math.BlockPos.ofFloored(impactPos),
                 SoundEvents.BLOCK_RESPAWN_ANCHOR_DEPLETE.value(), SoundCategory.PLAYERS, 0.82f, 1.35f);
         world.playSound(null, net.minecraft.util.math.BlockPos.ofFloored(impactPos),
@@ -377,45 +353,6 @@ public class SingularityBoltEntity extends ProjectileEntity {
     private static double angleBetween(Vec3d first, Vec3d second) {
         double dot = first.normalize().dotProduct(second.normalize());
         return Math.acos(Math.max(-1.0, Math.min(1.0, dot)));
-    }
-
-    private void spawnTravelVisuals(ServerWorld world) {
-        Vec3d center = getEntityPos();
-        Vec3d direction = getVelocity().lengthSquared() > 0.0001
-                ? getVelocity().normalize()
-                : new Vec3d(0.0, 0.0, 1.0);
-
-        Vec3d velocity = getVelocity();
-        Vec3d shown = wake.at(center);
-        spawnDirected(world, ModParticles.SPACE_SINGULARITY, shown, velocity);
-        if (age % 2 == 0) {
-            spawnDirected(world, ModParticles.SPACE_BROKEN_ORBIT, shown, velocity);
-        }
-
-        for (int i = 0; i < 5; i++) {
-            double distance = 0.75 + i * 0.38;
-            double phase = age * 0.7 + i * 2.19;
-            Vec3d point = wake.at(center.subtract(direction.multiply(distance))
-                    .add(Math.cos(phase) * 0.20, Math.sin(phase * 1.3) * 0.20, Math.sin(phase) * 0.20));
-            Vec3d inward = shown.subtract(point).normalize().multiply(0.13 + i * 0.012);
-            spawnDirected(world, i % 2 == 0 ? ModParticles.SPACE_CONSUMPTION : ModParticles.SPACE_MOTE,
-                    point, inward);
-        }
-    }
-
-    private void spawnCollapsedMiss(ServerWorld world) {
-        Vec3d center = getEntityPos();
-        world.spawnParticles(ModParticles.SPACE_IMPLOSION_RING,
-                center.x, center.y, center.z, 1, 0.0, 0.0, 0.0, 0.0);
-        world.spawnParticles(ModParticles.SPACE_PINPOINT,
-                center.x, center.y, center.z, 1, 0.0, 0.0, 0.0, 0.0);
-    }
-
-    private static void spawnDirected(ServerWorld world, net.minecraft.particle.SimpleParticleType particle,
-            Vec3d position, Vec3d velocity) {
-        world.spawnParticles(particle,
-                position.x, position.y, position.z, 0,
-                velocity.x, velocity.y, velocity.z, 1.0);
     }
 
     @Override

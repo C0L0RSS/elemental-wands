@@ -52,6 +52,7 @@ inspect their assertions when behavior changes instead of trusting an old name.
 | Fire heat and movement | `fire_build_server_smoke.init.gradle`, `fire_tuning_server_smoke.init.gradle` | `fire_leap_client_smoke.init.gradle` |
 | Fire block-fire visuals | — | `fire_blockfire_client_smoke.init.gradle` (hidden, muted: casts all six Fire spells at frozen husks and a wall; first-person, behind and side screenshots) |
 | Wind block-wind visuals | — | `wind_blockwind_client_smoke.init.gradle` (hidden, muted: casts all five Wind spells, including a hit, a chained dash and a Zephyr landing; first-person and third-person screenshots) |
+| Space void-glass visuals | — | `space_blockspace_client_smoke.init.gradle` (hidden, muted: casts all five Space spells, including a bolt hit and miss, a blink, the Astral Double's echo and swap, a Gravity Well burst and Hollow Purple's charge, orb and collapse; first-person and side screenshots) |
 | Flashover | `flashover_server_smoke.init.gradle`, `sticky_flashover_server_smoke.init.gradle` | `fire_expansion_client_smoke.init.gradle`, `sticky_flashover_client_smoke.init.gradle` |
 | Nature Springbloom | `springbloom_server_smoke.init.gradle` | `springbloom_client_smoke.init.gradle` |
 | Nature Lash / Bloom / Overgrowth | `nature_expansion_server_smoke.init.gradle`, `overgrowth_throw_server_smoke.init.gradle` | `nature_expansion_client_smoke.init.gradle`, `nature_overgrowth_client_smoke.init.gradle` |

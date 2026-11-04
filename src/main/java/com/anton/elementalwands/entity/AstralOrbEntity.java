@@ -36,7 +36,6 @@ public final class AstralOrbEntity extends Entity {
             if(hit.getSide()==Direction.UP){AstralDoubleManager.land(owner,this,hit.getPos().add(0,.01,0));return;}
             setPosition(hit.getPos().add(Vec3d.of(hit.getSide().getVector()).multiply(.34)));setVelocity(0,-.16,0);
         } else {setPosition(to);setVelocity(getVelocity().multiply(.99).add(0,-.06,0));}
-        world.spawnParticles(ModParticles.SPACE_MOTE,getX(),getY(),getZ(),1,.025,.025,.025,.003);
     }
     @Override protected void readCustomData(ReadView view){owner=null;}
     @Override protected void writeCustomData(WriteView view){}

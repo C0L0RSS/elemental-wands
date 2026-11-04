@@ -300,6 +300,12 @@ It records known verification limits; it is not a fresh installation receipt.
   Sky Shear hit and miss, a chained dash and a Zephyr landing. The user approved it with
   Fire's in Lunar (November 2), keeping the original Gale Dagger model. Pending: multiplayer,
   where other players' dashes, launches and landings come from the new block-wind events.
+- **Space void glass (November 3):** all five Space spells are drawn as 3D void glass
+  (`client/blockspace/`), ported from the `art/space/blockspace/` browser study the user approved,
+  with a painted atlas; the Astral Double wears a void-glass shell over its owner's skin, and
+  Hollow Purple's wind-up is blue and red with a purple helix trail. The Space particles are now
+  unused. Pending: the user's look in Lunar, and multiplayer, where other players' hits, blinks,
+  charges and collapses come from the new block-space events.
 - **Wand-tip cast particles:** cast bursts, the fractured beam, the Flamethrower
   stream and projectile wakes now start at an estimated wand tip instead of the
   caster's face. The build passed; the tip placement (right/left hand,

@@ -77,9 +77,10 @@ public class ElementalWandsClient implements ClientModInitializer {
             net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry.BLOCK.register(
                     (state,world,pos,tint)->tint<0?-1:0xFF000000|tint,block);
 
-        EntityRendererRegistry.register(ModEntities.GRAVITY_BOMB,com.anton.elementalwands.client.renderer.GravityBombRenderer::new);
+        // Gravity Bombs, Astral orbs, Singularity Bolts and Hollow Purple orbs are drawn as void glass by BlockSpaceEffects.
+        EntityRendererRegistry.register(ModEntities.GRAVITY_BOMB,EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.ASTRAL_DOUBLE,com.anton.elementalwands.client.renderer.AstralDoubleRenderer::new);
-        EntityRendererRegistry.register(ModEntities.ASTRAL_ORB,com.anton.elementalwands.client.renderer.AstralOrbRenderer::new);
+        EntityRendererRegistry.register(ModEntities.ASTRAL_ORB,EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.GALE_DAGGER,com.anton.elementalwands.client.renderer.GaleDaggerRenderer::new);
         EntityRendererRegistry.register(ModEntities.SPRINGBLOOM,com.anton.elementalwands.client.renderer.SpringbloomRenderer::new);
         EntityRendererRegistry.register(ModEntities.OVERGROWTH_SEED,com.anton.elementalwands.client.renderer.OvergrowthSeedRenderer::new);
@@ -202,6 +203,7 @@ public class ElementalWandsClient implements ClientModInitializer {
         com.anton.elementalwands.client.NecromancerDrainEffects.register();
         com.anton.elementalwands.client.blockfire.BlockFireEffects.register();
         com.anton.elementalwands.client.blockwind.BlockWindEffects.register();
+        com.anton.elementalwands.client.blockspace.BlockSpaceEffects.register();
         com.anton.elementalwands.client.NaveShaftEffects.register();
         com.anton.elementalwands.client.SummitCloudEffects.register();
         ClientTickEvents.END_CLIENT_TICK.register(com.anton.elementalwands.client.SummitStormClient::tick);

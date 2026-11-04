@@ -6,7 +6,6 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.anton.elementalwands.entity.HollowPurpleOrbEntity;
-import com.anton.elementalwands.registry.ModParticles;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -94,11 +93,8 @@ public final class HollowPurpleChargeManager {
 
         world.playSound(null, caster.getBlockPos(), SoundEvents.BLOCK_RESPAWN_ANCHOR_CHARGE, SoundCategory.PLAYERS,
                 1.0f, 0.75f);
-        Vec3d openingCenter = caster.getEntityPos().add(0.0, 1.0, 0.0);
-        world.spawnParticles(ModParticles.SPACE_GRAVITY_LENS,
-                openingCenter.x, openingCenter.y, openingCenter.z, 1, 0.0, 0.0, 0.0, 0.0);
-        world.spawnParticles(ModParticles.SPACE_MOTE,
-                openingCenter.x, openingCenter.y, openingCenter.z, 24, 0.9, 1.2, 0.9, 0.035);
+        // Clients draw the whole charge (two stars closing in above the caster) from this one message.
+        BlockSpaceEvents.send(world, BlockSpaceEvents.CHARGE, caster.getId(), caster.getEntityPos());
         return true;
     }
 
@@ -110,6 +106,8 @@ public final class HollowPurpleChargeManager {
         releaseMovementLock(caster);
         if(removed) {
             caster.setVelocity(Vec3d.ZERO);caster.fallDistance=0;
+            if (caster.getEntityWorld() instanceof ServerWorld world)
+                BlockSpaceEvents.send(world, BlockSpaceEvents.CHARGE_END, caster.getId(), caster.getEntityPos());
         }
     }
 
@@ -136,9 +134,7 @@ public final class HollowPurpleChargeManager {
             if (caster == null || !caster.isAlive() || caster.isSpectator()) {
                 if (caster != null) {
                     releaseMovementLock(caster);
-                    Vec3d center = caster.getEntityPos().add(0.0, 1.0, 0.0);
-                    world.spawnParticles(ModParticles.SPACE_IMPLOSION_RING,
-                            center.x, center.y, center.z, 1, 0.0, 0.0, 0.0, 0.0);
+                    BlockSpaceEvents.send(world, BlockSpaceEvents.CHARGE_END, caster.getId(), caster.getEntityPos());
                 }
                 it.remove();
                 continue;
@@ -153,7 +149,6 @@ public final class HollowPurpleChargeManager {
             }
 
             applyChargeMovementLock(world, caster, state, age);
-            spawnChargeVisuals(world, caster, age);
 
             if (age > 0 && age < ASCENT_TICKS && age % 20 == 0) {
                 world.playSound(null, caster.getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME,
@@ -214,84 +209,6 @@ public final class HollowPurpleChargeManager {
         return new Vec3d(caster.getX(), caster.getY() + ORB_ANCHOR_OFFSET_Y, caster.getZ());
     }
 
-    private static void spawnChargeVisuals(ServerWorld world, PlayerEntity caster, int age) {
-        Vec3d anchor = orbAnchor(caster);
-        float progress = MathHelper.clamp(age / (float) ASCENT_TICKS, 0.0f, 1.0f);
-        boolean holdPhase = age >= ASCENT_TICKS;
-
-        Vec3d lookDir = caster.getRotationVec(1.0f);
-        Vec3d horizontalLook = new Vec3d(lookDir.x, 0.0, lookDir.z);
-        if (horizontalLook.lengthSquared() < 0.0001) {
-            horizontalLook = new Vec3d(0.0, 0.0, 1.0);
-        }
-        horizontalLook = horizontalLook.normalize();
-        Vec3d rightDir = horizontalLook.crossProduct(new Vec3d(0.0, 1.0, 0.0)).normalize();
-
-        float holdProgress = holdPhase
-                ? MathHelper.clamp((age - ASCENT_TICKS) / (float) HOLD_TICKS, 0.0f, 1.0f)
-                : 0.0f;
-        double spread = holdPhase
-                ? MathHelper.lerp(holdProgress, 2.15, 0.0)
-                : MathHelper.lerp(progress, 3.35, 2.15);
-        double orbitAngle = age * 0.12;
-        Vec3d orbitOffset = rightDir.multiply(Math.cos(orbitAngle) * spread)
-                .add(0.0, Math.sin(orbitAngle) * spread * 0.34, 0.0);
-
-        Vec3d cyanPos = anchor.add(orbitOffset);
-        Vec3d magentaPos = anchor.subtract(orbitOffset);
-        world.spawnParticles(ModParticles.SPACE_DYING_STAR_CYAN,
-                cyanPos.x, cyanPos.y, cyanPos.z, 1, 0.025, 0.025, 0.025, 0.0);
-        world.spawnParticles(ModParticles.SPACE_DYING_STAR_MAGENTA,
-                magentaPos.x, magentaPos.y, magentaPos.z, 1, 0.025, 0.025, 0.025, 0.0);
-
-        if (age % 2 == 0) {
-            spawnStarWake(world, cyanPos, anchor, 0.28 + progress * 0.26);
-            spawnStarWake(world, magentaPos, anchor, 0.28 + progress * 0.26);
-        }
-        if (age % 3 == 0) {
-            world.spawnParticles(ModParticles.SPACE_BROKEN_ORBIT,
-                    anchor.x, anchor.y, anchor.z, 1, 0.04, 0.04, 0.04, 0.0);
-        }
-
-        int driftingMotes = 2 + (int) (progress * 3.0f);
-        for (int i = 0; i < driftingMotes; i++) {
-            double angle = orbitAngle * 0.6 + i * (Math.PI * 2.0 / driftingMotes);
-            double radius = 1.2 + (i % 3) * 0.52 + (1.0 - progress) * 0.8;
-            Vec3d point = anchor.add(Math.cos(angle) * radius,
-                    Math.sin(angle * 1.6) * 0.9,
-                    Math.sin(angle) * radius);
-            Vec3d inward = anchor.subtract(point).normalize().multiply(0.045 + progress * 0.045);
-            spawnDirected(world, ModParticles.SPACE_MOTE, point, inward);
-        }
-
-        if (holdPhase && holdProgress >= 0.70f) {
-            world.spawnParticles(ModParticles.SPACE_PINPOINT,
-                    anchor.x, anchor.y, anchor.z, 1, 0.01, 0.01, 0.01, 0.0);
-            if (age == TOTAL_TICKS - 1) {
-                world.spawnParticles(ModParticles.SPACE_IMPLOSION_RING,
-                        anchor.x, anchor.y, anchor.z, 2, 0.02, 0.02, 0.02, 0.0);
-            }
-        }
-    }
-
-    private static void spawnStarWake(ServerWorld world, Vec3d starPos, Vec3d anchor, double radius) {
-        for (int i = 0; i < 4; i++) {
-            double angle = i * (Math.PI * 2.0 / 4.0) + starPos.y;
-            Vec3d point = starPos.add(Math.cos(angle) * radius,
-                    ((i & 1) == 0 ? radius : -radius) * 0.5,
-                    Math.sin(angle) * radius);
-            Vec3d inward = anchor.subtract(point).normalize().multiply(0.10);
-            spawnDirected(world, ModParticles.SPACE_CONSUMPTION, point, inward);
-        }
-    }
-
-    private static void spawnDirected(ServerWorld world, net.minecraft.particle.SimpleParticleType particle,
-            Vec3d position, Vec3d velocity) {
-        world.spawnParticles(particle,
-                position.x, position.y, position.z, 0,
-                velocity.x, velocity.y, velocity.z, 1.0);
-    }
-
     private static void launchOrb(ServerWorld world, PlayerEntity caster) {
         Vec3d anchor = orbAnchor(caster);
         Vec3d direction = caster.getRotationVec(1.0f);
@@ -305,15 +222,7 @@ public final class HollowPurpleChargeManager {
         caster.fallDistance = 0.0f;
         caster.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOW_FALLING, 80, 0, false, false, true));
 
-        world.spawnParticles(ModParticles.SPACE_PINPOINT,
-                anchor.x, anchor.y, anchor.z, 4, 0.08, 0.08, 0.08, 0.0);
-        world.spawnParticles(ModParticles.SPACE_GRAVITY_LENS,
-                anchor.x, anchor.y, anchor.z, 2, 0.04, 0.04, 0.04, 0.0);
-        world.spawnParticles(ModParticles.SPACE_ECLIPSE,
-                anchor.x, anchor.y, anchor.z, 1, 0.0, 0.0, 0.0, 0.0);
-        world.spawnParticles(ModParticles.SPACE_CONSUMPTION,
-                anchor.x, anchor.y, anchor.z, 36, 1.4, 1.4, 1.4, 0.14);
-
+        // The orb's renderer draws the launch flash when it first appears.
         world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_WARDEN_SONIC_BOOM, SoundCategory.PLAYERS, 1.5f,
                 0.75f);
         world.playSound(null, caster.getBlockPos(), SoundEvents.BLOCK_RESPAWN_ANCHOR_DEPLETE.value(),

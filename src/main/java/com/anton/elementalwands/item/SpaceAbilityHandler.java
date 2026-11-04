@@ -3,7 +3,6 @@ package com.anton.elementalwands.item;
 import java.util.Optional;
 
 import com.anton.elementalwands.entity.SingularityBoltEntity;
-import com.anton.elementalwands.registry.ModParticles;
 import com.anton.elementalwands.util.HollowPurpleChargeManager;
 
 import net.minecraft.entity.player.PlayerEntity;
@@ -48,14 +47,7 @@ public final class SpaceAbilityHandler {
                 && com.anton.elementalwands.util.AstralDoubleManager.mirror(p)) bolt.setAstralPair();
         world.spawnEntity(bolt);
 
-        Vec3d castCenter = com.anton.elementalwands.util.SpellCastVisuals.burstOrigin(caster);
-        world.spawnParticles(ModParticles.SPACE_SINGULARITY,
-                castCenter.x, castCenter.y, castCenter.z, 1, 0.0, 0.0, 0.0, 0.0);
-        world.spawnParticles(ModParticles.SPACE_BROKEN_ORBIT,
-                castCenter.x, castCenter.y, castCenter.z, 2, 0.08, 0.08, 0.08, 0.0);
-        world.spawnParticles(ModParticles.SPACE_MOTE,
-                castCenter.x, castCenter.y, castCenter.z, 8, 0.32, 0.32, 0.32, 0.03);
-
+        // Clients draw the cast bloom at the wand tip when they first see the bolt.
         world.playSound(null, caster.getBlockPos(), SoundEvents.BLOCK_RESPAWN_ANCHOR_SET_SPAWN, SoundCategory.PLAYERS,
                 0.8f, 1.4f);
         world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_ENDER_EYE_DEATH, SoundCategory.PLAYERS, 0.6f,
@@ -68,7 +60,7 @@ public final class SpaceAbilityHandler {
         }
         Optional<Vec3d> destination = findSafeBlinkDestination(world, caster, BLINK_RANGE);
         if (destination.isEmpty()) {
-            spawnFailedBlink(world, caster.getEntityPos());
+            spawnFailedBlink(world, caster);
             caster.sendMessage(Text.literal("No safe blink destination."), true);
             return;
         }
@@ -84,8 +76,7 @@ public final class SpaceAbilityHandler {
         caster.fallDistance = 0.0f;
         caster.velocityModified = true;
 
-        spawnBlinkFold(world, from, false);
-        spawnBlinkFold(world, to, true);
+        com.anton.elementalwands.util.BlockSpaceEvents.send(world, com.anton.elementalwands.util.BlockSpaceEvents.BLINK, caster.getId(), from, to, 0);
         world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 1.0f,
                 1.25f);
     }
@@ -101,33 +92,9 @@ public final class SpaceAbilityHandler {
         HollowPurpleChargeManager.startCharge(world, caster);
     }
 
-    private static void spawnBlinkFold(ServerWorld world, Vec3d feetPos, boolean unfolding) {
-        Vec3d center = feetPos.add(0.0, 1.0, 0.0);
-        world.spawnParticles(ModParticles.SPACE_RIFT,
-                center.x, center.y, center.z, 2, 0.04, 0.14, 0.04, 0.0);
-        world.spawnParticles(ModParticles.SPACE_IMPLOSION_RING,
-                center.x, center.y, center.z, 1, 0.0, 0.0, 0.0, 0.0);
-
-        for (int i = 0; i < 14; i++) {
-            double angle = (Math.PI * 2.0 * i / 14.0) + (unfolding ? 0.28 : 0.0);
-            double radius = 0.55 + (i % 3) * 0.16;
-            Vec3d point = center.add(Math.cos(angle) * radius,
-                    ((i % 5) - 2) * 0.22,
-                    Math.sin(angle) * radius);
-            Vec3d velocity = unfolding
-                    ? point.subtract(center).normalize().multiply(0.09)
-                    : center.subtract(point).normalize().multiply(0.11);
-            world.spawnParticles(ModParticles.SPACE_CONSUMPTION,
-                    point.x, point.y, point.z, 0, velocity.x, velocity.y, velocity.z, 1.0);
-        }
-    }
-
-    private static void spawnFailedBlink(ServerWorld world, Vec3d feetPos) {
-        Vec3d center = feetPos.add(0.0, 1.0, 0.0);
-        world.spawnParticles(ModParticles.SPACE_RIFT,
-                center.x, center.y, center.z, 1, 0.015, 0.06, 0.015, 0.0);
-        world.spawnParticles(ModParticles.SPACE_IMPLOSION_RING,
-                center.x, center.y, center.z, 2, 0.035, 0.035, 0.035, 0.0);
+    private static void spawnFailedBlink(ServerWorld world, PlayerEntity caster) {
+        Vec3d feetPos = caster.getEntityPos();
+        com.anton.elementalwands.util.BlockSpaceEvents.send(world, com.anton.elementalwands.util.BlockSpaceEvents.BLINK_FAIL, caster.getId(), feetPos, caster.getRotationVec(1.0f), 0);
         world.playSound(null, net.minecraft.util.math.BlockPos.ofFloored(feetPos),
                 SoundEvents.BLOCK_RESPAWN_ANCHOR_DEPLETE.value(), SoundCategory.PLAYERS, 0.55f, 0.42f);
     }

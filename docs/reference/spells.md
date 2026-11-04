@@ -348,7 +348,7 @@ Death, disconnect, affinity/loadout/world exit, encounter exclusion and server
 stop remove the effect without a damaging collapse. Rejoin clears stale active
 state and retains recovery; transient bombs are never saved. Putting away the
 wand does not cancel a valid well. No blocks are modified.
-Owners: `GravityWellManager`, `GravityBombEntity`, `GravityBombRenderer`.
+Owners: `GravityWellManager`, `GravityBombEntity`.
 
 Hollow Purple commits for its complete charge. The player can aim but cannot
 walk, blink, or use items; switching/dropping the wand does not cancel or refund
@@ -358,7 +358,20 @@ leaves the terrain intact (as do explosions there; see `HollowCryptRealm.keepsTe
 Owners: `SpaceAbilityHandler`, `SingularityBoltEntity`,
 `HollowPurpleChargeManager`. Keep arena containment in all teleport paths.
 
-Visual ownership is described in [art and assets](art-and-assets.md).
+All five Space spells are drawn client-side as "void glass": dark see-through glass pieces
+with a bright frame and stars inside, opaque void cores ringed by a corona that faces the
+viewer, and streams that fall inward, from one atlas (`textures/misc/blockspace.png`), ported
+from the approved browser study in `art/space/blockspace/`. Clients draw bolts, Hollow Purple
+orbs, Gravity Bombs and the Astral orb and double from the entities (the bomb's tracked phase
+clocks drive the field, buildup and burst); the server sends `BlockSpaceEvents` for bolt hits,
+both ends of a blink or swap, a failed blink, poofs, Hollow Purple's charge (and its early end)
+and its collapse. Visuals never decide a hit or a teleport. The server moves bolts and Hollow Purple orbs with
+`setPosition` once a tick and they have no interpolator, so clients glide the drawn head between
+updates (`Glide`) rather than drawing the raw, uneven positions. Stars and spilled shards follow the
+particle setting; near-lens pieces shrink in first person. The Astral Double keeps its owner's
+skin under a void-glass shell drawn by `AstralDoubleRenderer`. Visuals live in
+`client/blockspace/` (`BlockSpaceEffects`, `BlockSpaceKit`, one class per spell); asset ownership
+is described in [art and assets](art-and-assets.md).
 Targeted test runners are listed in [testing](testing.md).
 
 Bosses implement `WandBoss` (the Guardian and Hollow Necromancer). Wand spells

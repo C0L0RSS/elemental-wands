@@ -5,7 +5,6 @@ import com.anton.elementalwands.data.*;
 import com.anton.elementalwands.entity.*;
 import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.party.WandAllies;
-import com.anton.elementalwands.registry.ModParticles;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.*;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
@@ -100,7 +99,7 @@ public final class AstralDoubleManager {
             Vec3d from=p.getEntityPos();
             p.requestTeleport(destination.x,destination.y,destination.z);
             p.setVelocity(Vec3d.ZERO); p.fallDistance=0; p.velocityModified=true;
-            finish(c,COOLDOWN); poof(world,from.add(0,1,0));
+            finish(c,COOLDOWN); BlockSpaceEvents.send(world,BlockSpaceEvents.BLINK,p.getId(),from,destination,0);
             world.playSound(null,p.getBlockPos(),SoundEvents.ENTITY_ENDERMAN_TELEPORT,SoundCategory.PLAYERS,.9f,1.3f);
             WandLoadouts.markCombat(p); return true;
         }
@@ -125,7 +124,8 @@ public final class AstralDoubleManager {
         if (!c.world.spawnEntity(c.clone)) { finish(c,FAILED_COOLDOWN); return; }
         c.expires=c.world.getTime()+LIFETIME; c.orb.discard(); c.orb=null;
         var state=state(p).copy();state.putLong("expires",c.expires);p.setAttached(EWAttachments.ASTRAL_STATE,state);
-        poof(c.world,pos.add(0,1,0));
+        // Clients draw the double forming from its own entity; only the chime is the server's.
+        chime(c.world,pos.add(0,1,0));
     }
     public static void failed(ServerPlayerEntity p,AstralOrbEntity orb) {
         Cast c=CASTS.get(p.getUuid());if(c!=null && c.orb==orb)finish(c,FAILED_COOLDOWN);
@@ -171,12 +171,14 @@ public final class AstralDoubleManager {
         Vec3d origin=clone.getEntityPos().add(0,1.62,0),direction=end.subtract(origin).normalize();
         if(direction.lengthSquared()<.001)return false;
         clone.face(direction);clone.swingHand(net.minecraft.util.Hand.MAIN_HAND);
-        var bolt=new SingularityBoltEntity(p.getEntityWorld(),p,origin,direction);bolt.setAstralPair();bolt.setEcho();bolt.useCastVisuals(clone);
+        var bolt=new SingularityBoltEntity(p.getEntityWorld(),p,origin,direction);bolt.setAstralPair();bolt.setEcho();
         return p.getEntityWorld().spawnEntity(bolt);
     }
     public static void poof(ServerWorld w,Vec3d p) {
-        w.spawnParticles(ModParticles.SPACE_MOTE,p.x,p.y,p.z,20,.3,.6,.3,.045);
-        w.spawnParticles(ModParticles.SPACE_IMPLOSION_RING,p.x,p.y,p.z,1,0,0,0,0);
+        BlockSpaceEvents.send(w,BlockSpaceEvents.POOF,-1,p);
+        chime(w,p);
+    }
+    private static void chime(ServerWorld w,Vec3d p) {
         w.playSound(null,p.x,p.y,p.z,SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME,SoundCategory.PLAYERS,.5f,1.7f);
     }
     private AstralDoubleManager() {}

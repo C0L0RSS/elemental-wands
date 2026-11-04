@@ -20,7 +20,7 @@ preserve third-person opacity. Cover checks still apply to visual spawn offsets.
 | Wind | Cloud white/pearl/light gray; curling gusts, rounded cloud puffs and flowing wakes; restrained pale blue shading |
 | Stone | Natural gray with restrained mineral flecks; chipped slabs and worn plates |
 | Nature | Green foliage, bark, pink/violet flowers, golden pollen; angular living growth |
-| Space | Near-black, violet, magenta, cold cyan; stars, eclipse slits and warped rings |
+| Space | Near-black, violet, magenta, cold cyan; dark see-through void glass with stars inside, eclipse cores and slits; Hollow Purple's wind-up is blue and red |
 
 The [3D wand](wand-rendering.md) uses muted patterned cores in glass and coarse
 wood grain. The old neutral flat sprite is now a fallback/particle asset.
@@ -38,11 +38,12 @@ Runtime resources live under `src/main/resources/assets/elementalwands/`.
 | `art/fire/blockfire/` | Block-fire browser study, atlas source and builder for all six Fire spells |
 | `art/fire/workshop/`, `tools/prepare_fire_assets.py` | Earlier workshop 05 Fire frames and meshes (Fire particles still use them) |
 | `art/wind/blockwind/` | Block-wind browser study, painted atlas source and builder for all five Wind spells |
+| `art/space/blockspace/` | Void-glass browser study, painted atlas source and builder for all five Space spells, and the Astral Double's glass-shell textures (`build_astral_glass.py`) |
 | `art/wind/cloud-white/`, `tools/generate_wind_vfx_assets.py` | Cloud-white Wind atlas, native-grid frames, wing item icon and ability icons (the Wind particles and the worn-wing texture are unused now) |
 | `tools/generate_shared_vfx_assets.py` | Legacy neutral wand sprite and wooden HUD frame only |
 | `tools/generate_stone_vfx_assets.py` | Stone spell, block, equipment and HUD textures (41-image family) |
 | `tools/generate_nature_vfx_assets.py` | Nature particle, entity and HUD textures (44-image family); separate from model/layout exporters |
-| `tools/generate_space_vfx_assets.py` | Space particle, entity and HUD textures (81-image family) |
+| `tools/generate_space_vfx_assets.py` | Space particle, entity and HUD textures (81-image family; the Space particles are unused now) |
 | `tools/prepare_nature_models.mjs` | Approved Nature pod, flowers, roots, rafts and tree layout |
 | `art/nature/springbloom/model.js`, `tools/prepare_springbloom.mjs` | Approved Springbloom pad, wilt and pod meshes, with capped pieces for partial flowers; no PNGs |
 | `tools/prepare_nature_expansion.py` | Root-knot native model |
@@ -131,9 +132,15 @@ Nature uses a winged pod, native cuboid flowers, low roots/rafts, angular vines,
 and a block-built oak. Keep ordinary Minecraft logs/leaves dominant; do not restore
 the superseded smooth tree model. The root knot and throwable acorn extend this style.
 
-Space keeps distinct inward/outward motion: the bolt impact uses an outward ring,
-Blink Rift a standing eclipse slit, and Hollow Purple converging stars followed
-by the Devouring Eclipse. Visual terrain fragments do not authorize world edits.
+Space spells are void glass: pieces textured from `textures/misc/blockspace.png`
+(8 bands × 4 frames: void, glass, nebula, rim, amethyst, blue, red, starlight), built
+from a painted source by `art/space/blockspace/textures/build_atlas.py`; the runtime copy
+must match its output byte for byte. Glass and nebula carry their own alpha (frame and stars
+opaque, interior see-through); the other bands are solid. Space falls inward: streams
+accelerate into a core, stretch along the fall and shrink away; only bursts move outward.
+Cores are opaque void with a corona that faces the camera, and the Blink slit turns to face
+it too. Keep pieces few and large. The Singularity Bolt's hit and miss have no flat rings
+along the ground (the user removed them). Visual terrain fragments do not authorize world edits.
 
 ## Asset contracts and resource conventions
 
@@ -156,36 +163,18 @@ See [AGENT.md](../../AGENT.md) for the required validation commands and
 Astral Double uses the owner's native player skin (wide or slim arms and outer
 skin layers) through `AstralDoubleRenderer`, with the existing Space wand model. The top-level
 state wraps the player appearance so Minecraft does not route it to its vanilla
-player renderer and skip the clone effects.
-`AstralOrbRenderer` owns the small faceted throwable and reuses vanilla amethyst
-texture. Short, irregular violet wisps taper into pixel steps as they orbit and rise
-around the skin, using a code-native mesh
-with the vanilla white-concrete texture. Floating motes and disappearance reuse
-Space motes and implosion rings. The
-ability icon is a code-native pair of figures in `SpellIcons`. No existing Space
-texture family is regenerated for this spell.
+player renderer. A `GlassShell` feature draws the same pose again on a slightly inflated
+player model, textured by `textures/entity/astral_glass_{wide,slim}.png` so every limb face is
+void glass with a bright frame; it is bright as the double forms and settles within a second.
+The orb, the formation stream, the circling plates, the stars and the poof are void glass from
+`client/blockspace/`. The ability icon is a code-native pair of figures in `SpellIcons`.
 
-Gravity Well's throwable uses `GravityBombRenderer` for a compact six-plate
-crying-obsidian shell around a violet energy cube. The plates separate slightly
-with each pulse while the cube tumbles; three small satellites and a tapering
-wake carry its motion. The effect condenses close to the camera so its
-eye-height spawn cannot briefly fill the view. On impact, six shell fragments arc outward with a spark
-fan and a crystalline snap as the field unfurls over half a second. This opening
-animation does not delay the server's impact activation.
-
-The formed well keeps its faceted crying-obsidian core,
-broken tilted violet orbits and a readable segmented four-block boundary. A dark
-central disk, plum falloff and four layered spiral bands give the field a shallow
-vortex silhouette. Particles use deep plum and violet with sparse amethyst
-highlights, matching Space rather than pale lavender/white. A bounded
-set of 480 code-native billboard motes with fading tails follows four low spiral
-arms and continuously travels
-inward over approximately 2.3 seconds, reaching the orb rather than fading near
-the perimeter. Stable particle identities preserve their positions when collapse
-begins; they accelerate into the core over 0.4 seconds, then burst outward and
-fade for 0.6 seconds. The core swells during buildup and disappears on the burst.
-Synchronized server phase timestamps drive that sequence, including late tracking;
-no per-particle network traffic or new raster asset family is needed. The mesh
-boundary and stream remain visible with reduced vanilla particle settings.
-`SpellIcons` owns the code-native core-and-orbit glyph. The renderer reuses vanilla
-block textures and uses no cross-shaped glints.
+Gravity Well is void glass: the bomb is a void cube inside six glass plates that part with
+each pulse, with three rim satellites. On impact the plates blow open into the field: a
+hovering eclipse core with two broken orbits, a dark stepped floor disk, a segmented rim
+boundary at the four-block pull radius, and a floor vortex of large glass plates that spiral
+in from the boundary to the core in about 2.3 seconds. The buildup speeds the vortex, swells
+the core and tightens the boundary; the burst blows a rim ring and glass shards outward. The
+entity's tracked phase timestamps drive the sequence; no per-piece network traffic is needed.
+The boundary, vortex and core remain visible with reduced particle settings. `SpellIcons` owns
+the code-native core-and-orbit glyph.

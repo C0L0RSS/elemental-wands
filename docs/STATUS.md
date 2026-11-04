@@ -304,8 +304,10 @@ It records known verification limits; it is not a fresh installation receipt.
   (`client/blockspace/`), ported from the `art/space/blockspace/` browser study the user approved,
   with a painted atlas; the Astral Double wears a void-glass shell over its owner's skin, and
   Hollow Purple's wind-up is blue and red with a purple helix trail. The Space particles are now
-  unused. Pending: the user's look in Lunar, and multiplayer, where other players' hits, blinks,
-  charges and collapses come from the new block-space events.
+  unused. The build and `space_blockspace_client_smoke` passed (90 first-person and side
+  screenshots). The user approved it after trying it in Lunar (November 3), once bolts and orbs
+  glided smoothly between server updates. Pending: multiplayer, where other players' hits,
+  blinks, charges and collapses come from the new block-space events.
 - **Wand-tip cast particles:** cast bursts, the fractured beam, the Flamethrower
   stream and projectile wakes now start at an estimated wand tip instead of the
   caster's face. The build passed; the tip placement (right/left hand,

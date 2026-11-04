@@ -63,6 +63,7 @@ Runtime resources live under `src/main/resources/assets/elementalwands/`.
 | `art/storm_roc_texture_study/build_texture_v3.py`, `art/storm_roc_mod/build_mod.py` | Storm Roc bearded-vulture atlas, eye glow mask and 307-block model; rebuild texture, then model, then runtime (see that folder's README) |
 | `art/storm_roc/build_runtime.py` | Storm Roc GeckoLib model, atlas, twenty-one clips and server sockets; `--check` verifies, `validate_runtime.py` checks anatomy and hit timing |
 | `art/roc_effects/build_tornado_texture.py` | Roc tornado atlas; `--check` verifies |
+| `art/pyre_king/build_art.py` | Pyre King review model, texture, glow mask, standalone thrown sword, world-up blade-fire preview and the local workshop (port 8410). Review-only, not installed; `--check` verifies |
 
 Do not run generators with replacement options unless intentionally changing their
 owned families. A Fire/Wind pass must not regenerate Space/Arcane, Stone, Nature,

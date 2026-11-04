@@ -61,7 +61,7 @@ Pillars:
 | Stone | Fractured Guardian | Ruined churches, Shattered Nave | 0 | Built, rebalanced October 3; playtest pending |
 | Nature (life turned to death) | Hollow Necromancer | Graveyards, Hollow Crypt | 1 | Built, in tuning |
 | Wind | Storm Roc | Mountain peaks, a sky realm above the clouds | 2 | Built with its aerie and intro (Oct 27); phase cinematic and death to come; playtest pending |
-| Fire | New | The Nether | 3 | Open |
+| Fire | Pyre King | The Nether | 3 | Redesign started Nov 4: a swordsman with a chained sword; kit proposed, look next |
 | Space | New | The End or the deep dark | 4 | Open |
 | — | Final: the wizard who tried to hold all five | Opened by all five shards | 5 | Open |
 
@@ -456,6 +456,258 @@ These come from the Guardian and Necromancer playtests:
 - **Open:** whether Windcallers appear in the fight; the intro's exact shots and timings,
   and the details of each landing; fight length and the gear it is tuned against.
 
+### Fire: the Pyre King
+
+The redesign started on November 4. The first version (look and kit) was shelved, and
+only the concept carries over. The kit below went through seven reviewed drafts before
+the developer's direction made it melee first.
+
+#### Decisions
+
+- **Decided:** the Fire shardbearer is the Pyre King, the cursed old king of a fallen
+  Nether kingdom, held by a curse as an eternal fire thing. His weapon is a fire sword.
+- **Decided (Nov 4):** he is a swordsman first. Close-range sword strings are his main
+  attacks and his heaviest hits.
+- **Decided (Nov 4):** the sword is chained to his wrist. The chain is how he deals with
+  distance:
+  - He throws the sword at players who are far away, waits a moment, then pulls it back.
+  - He hooks players and drags them to him.
+  - He pulls himself to the sword when players run too far.
+
+  Every chain move exists to bring the fight back to sword range.
+- **Decided (Nov 4):** he is fast and aggressive, but a little slower than a sprinting
+  player. Playtests set the exact speed.
+- **Decided (Nov 4):** he reads how players move.
+- **Decided (Nov 4):** for now the fight is a pure duel, with no summoned waves.
+- **Decided (Nov 4):** armor and Protection reduce his damage normally. Working up to a
+  maxed Protection build is a fair way to make him easier, as in souls-likes.
+- **Decided (Nov 4):** he is human-sized, about 5 blocks tall: a scorched, armored king.
+  He is a suit of armor, not a skeleton; the Necromancer already has the bones.
+  At his size a realistic human face looks wrong, so he wears a scorched, cracked gold
+  death mask with ember eyes, above a long ash beard. The approved concept is
+  `art/pyre_king/concepts/direction-d-mask.png`. His armor is charred black with tarnished
+  gold trim, under a heavy gold crown with a red gem. The Fire shard glows in his chest,
+  and burned crimson mantle scraps hang from his shoulders. His curse chains carry glowing
+  padlocks, and his armored coat ends at the knee so his footwork reads.
+- **Proposed:** the mask cracks and falls away at the phase change, revealing a burned
+  slag face. The model keeps the mask as its own part so this stays possible.
+- **Built (Nov 4):** a review model in `art/pyre_king/`. It is not yet in the game.
+  - Upright he is 5 blocks; he leans into a two-handed plough guard with the burning blade
+    raised up and out.
+  - The cape covers both shoulders and his back; the head sits in a gorget, the fists are
+    full-size, and one curse chain carries the padlock beside the shard.
+  - The blade fire is drawn upright along the whole blade by the preview.
+  - Next: animation.
+- **Decided (Nov 4):** his sword is a large two-handed English longsword. He fights with
+  both hands on the grip, in readable longsword guards: high over the shoulder before an
+  overhead cut, point forward before the Thrust. To throw, he lets go with his left hand
+  and hurls the sword one-handed, paying out the chain from his right wrist to the
+  pommel. He catches it two-handed on the pull-back.
+- **Decided (Nov 4):** the sword is oversized for him, about 4.5 blocks overall with a
+  blade of about 3.5, so his sweeps reach down to players much smaller than he is.
+- **Decided (Nov 4):** fire covers the whole blade and always burns upward, whatever
+  angle the sword is at. It is drawn separately from the sword model each frame as block
+  fire along the blade, like the Fire spells, so it stays upright through swings and
+  leaves a brief trail. The sword model itself carries only a hot, glowing blade.
+- **Decided (Nov 4):** the first version's story stays for now, and can change once the
+  frame story is written (see [Lore](#lore)). Like Sardanapalus, he set his own palace
+  alight rather than surrender. Like Koschei, his death is caught in the Fire shard, which
+  was in that fire. He can't die while it holds him, and taking the shard lets him go.
+  - **Proposed:** the Storm Roc brought him the Fire piece to keep. It made his kingdom
+    grander than ever, and he came to think of it as his own.
+  - **Proposed:** when the piglins besieged his palace for it, he shut his court in the
+    throne hall, piled his treasure around the shard and set the hall alight. No one
+    cursed him: the curse is his own grip.
+  - **Proposed:** the Nether fortresses were his kingdom's roads. The piglins' love of
+    gold began with the gold they picked from his ashes.
+
+#### Core rules (proposed)
+
+- **One mistake, one hit.** A combo is a run of blows less than 1.2 s apart. Each player
+  takes at most one heavy hit per combo. A throw and its pull-back are separate tests,
+  because the wait between them is longer.
+- **Every read freezes visibly.**
+  - Throws lock their aim 0.4 s before release; the ember line along the aim turns solid
+    at that point, and a late turn beats it.
+  - The direction of a follow-up is fixed as soon as its tell starts.
+- **Two beats.** Every sweep and landing gives a warning (a chain snap or a ring of
+  embers), then lands on a clang 0.45 s later.
+  - The server judges a low sweep by the player's feet at the clang, with 2 ticks of
+    latency forgiveness. Take off between the snap and 0.1 s before the clang.
+  - For a high sweep, be crouching by the clang.
+- **Pace.**
+  - He runs at 4.5 blocks/s (5.2 in phase two).
+  - He walks at 3 blocks/s through tells, while the sword is out, and in recoveries.
+  - He runs at his target for 0.5 s before each pick.
+  - He is slower than a sprinting player (5.6) but faster than a player backing away while
+    facing him to shoot (about 4.3). Minecraft only sprints forward, so a player can shoot
+    him or outrun him, but not both.
+  - He never teleports.
+- **Damage tiers.** Raw damage on Normal:
+
+| Source | Damage |
+| --- | --- |
+| Sword in hand (sword strings, the Overhead Sentence, the landing cut after a Zip or Lunge) | 34 |
+| Chain and thrown sword (Scythe, throw, pull-back) | 24 |
+| Floor fire, on contact and then each second | 14 |
+| Unbound set piece | 30 |
+| Drag Down yank | 8 |
+| Hook tug | 6 |
+
+#### How he picks a string (proposed)
+
+He picks from his target's position once the 0.5 s run ends, using fixed thresholds and
+no random rolls.
+
+| Target is | He uses |
+| --- | --- |
+| Above the floor (see Drag Down) | Drag Down |
+| Within 6 blocks | A sword string |
+| 6–14 blocks | Chain Scythe, which ignores cover |
+| 14–26 blocks, or more than 14 blocks away behind cover | Cast |
+| Beyond 26 blocks with a clear line | Hook |
+
+**Repeats:** if he would pick the same string a third time in a row against the same
+target, he changes it. A sword string becomes a low Scythe; a chain move becomes a Lunge,
+which brings him to the player.
+
+#### Sword strings (proposed)
+
+| When | String | Tell | Answer |
+| --- | --- | --- | --- |
+| Default | **Royal Cut**: two cuts across a 150° arc in front of him. He tracks you until the snap, then freezes and steps up to 1.5 blocks; the reach is 4.5 from where he lands. The second cut has no step and turns up to 45° toward your dodge side | 0.9 s, then 0.45 s | Back out of reach. The closer you stand, the earlier you must go |
+| You backed straight away from his last sword string | **Kingsguard Thrust**: he steps 2 blocks and thrusts straight along the frozen aim, 8 blocks long and 1.5 wide | 0.8 s; aim freezes at the snap | Sidestep |
+| Someone has stood behind him for 1 s | **Turning Cut**: he spins and cuts the 180° behind him, with a reach of 5 | 0.7 s; snap, then clang | Step out of reach, or round to his front |
+
+- After every sword string he pauses for 1.2 s, standing still. This is the punish
+  window for close-range builds.
+- If you escape a sword string with a movement spell, his next string is a Cast aimed at
+  your landing spot.
+
+#### Chain moves (proposed)
+
+**Chain Scythe (6–14 blocks).** The sword whirls round him on 14 blocks of chain, with a
+0.9 s tell.
+- **Low:** sparks drag along the floor, and the hit zone is 0–0.6 blocks up. Jump.
+- **High:** the sword is raised and whistles, and the hit zone is 1.55–3.2 blocks up.
+  Crouch; a crouching player is 1.5 blocks tall.
+- He swings high if the target jumped in the last 2 s.
+- Being beyond 14 blocks is safe from both.
+
+**Cast (14–26 blocks).** This is throw, wait, pull back.
+1. **The throw:** an aimed throw with a 0.8 s tell. The sword sticks into the floor at
+   the aimed point, or into the pillar or Stone Wall in the way.
+2. **The wait:** 1.5 s. He can't attack, and he walks toward the target, paying out
+   chain.
+3. **Then one of two things:**
+   - **Reel (the usual case):** after a 0.7 s tell, he pulls the sword back along an
+     ember-marked arc that bows up to 6 blocks toward the target's dodge side. Every
+     second pull-back runs through a player's position instead. He then recovers for
+     1.4 s.
+   - **Zip:** if the target is more than 20 blocks from him, or the sword is stuck in
+     cover, he pulls himself to the sword instead. A 5-block ember ring marks the landing
+     1.4 s before his spinning cut lands. He then recovers for 1.8 s.
+
+**Hook (beyond 26 blocks).** He fires the sword like a harpoon, with a 1.0 s tell.
+- **A hit** drags you over 1 s to 4 blocks in front of him, into the Overhead Sentence.
+  The Sentence is a 2-wide, 8-long vertical cut with a 0.7 s tell; sidestep it.
+- **Breaking free:** casting any movement spell during the drag snaps the chain.
+  Springbloom counts when the pad is placed, Juggernaut when it starts.
+- **A pillar** crossed mid-drag snaps the chain and frees you. A pillar or Stone Wall also
+  blocks the Hook outright.
+- **A miss** plays out like a Cast, usually ending in a Zip.
+
+**Lunge (a third chain move in a row).** He throws the sword 2 blocks short of the frozen
+lead point and pulls himself after it.
+- It has its own windup: he drops low and wraps the chain round his forearm.
+- A 5-block ring appears at the aim freeze, 1.25 s before the cut lands.
+
+**Drag Down (players on pillar tops or hovering).** This triggers on a player standing
+more than 3 blocks up for 1.5 s, or hanging more than 5 blocks up, not falling, for 1 s.
+- It's an aimed upward chain strike with a 0.8 s tell.
+- **A hit** yanks the player to the floor in front of him, with no fall damage, and a
+  sword string follows.
+- **A miss** leaves the player free. Landing during the tell cancels it.
+
+#### Reading players (proposed)
+
+- **Lead aim:** his throws intercept based on the target's last 0.5 s of velocity,
+  covering both the windup and the flight, capped at 12 blocks. Teleports clear the
+  history.
+- **Reversal memory:** if you beat his last throw by reversing, his next throw aims where
+  a reversal would take you. The ember line shows which kind of throw it is.
+- **Dodge side** decides which way follow-ups and pull-back arcs bend.
+- **Jumping** decides the Scythe's height.
+- **Backing straight away** draws the Thrust.
+- **Standing behind him** draws the Turning Cut.
+
+#### Floor fire (proposed)
+
+- It arms 0.5 s after appearing.
+- Fire Resistance doesn't stop it, because it uses the curse's damage type.
+- A fire hit within 1 s of a weapon hit deals only its excess.
+
+| Fire | Height | Lasts |
+| --- | --- | --- |
+| End of a Cast | 1 block (jumpable) | 3 s |
+| Royal Cut's third blow (phase two) | 1 block | 3 s |
+| Phase-two pull-back paths and Zip lines | 2 blocks: detour, or use a movement spell | 4 s |
+| Unbound chain lines | 2 blocks | 4 s |
+
+#### Phase change: Unbound (proposed)
+
+At half health he drives the sword into the floor, and the chains of his curse tear loose
+from his body. This is the fight's one set piece.
+
+1. **The sweep:** the chains sweep the whole hall low, snap then clang. Jump. Pillars
+   shelter you.
+2. **The reel-in:** 1.0 s later, the six chains have hooked into the pillars. They reel
+   in to him along ember-marked lines. Step off the lines.
+3. **The walls:** the six lines are left as 2-block fire walls for 4 s, cutting the hall
+   into sectors.
+
+The set piece counts as one combo, and he can't be damaged for its 4 s.
+
+**Phase two:**
+- He runs at 5.2 blocks/s.
+- The wait after a throw is 1.2 s.
+- The Royal Cut gains a third blow for anyone who dodged the first two: an overhead cut
+  that leaves a 12-block fire line.
+- Every Cast becomes a **Double Cast**: a second throw follows the first one's pull-back,
+  aimed toward the side you dodged to.
+- Pull-back paths and Zip lines burn as 2-block walls.
+
+#### Arena, co-op and tuning (proposed)
+
+- **Arena:** a prepared Nether realm, his burned throne hall. It is about 80 blocks
+  across and flat, with six broken pillars about 20 blocks from the center.
+  - Pillars block Hooks, catch Casts (a Zip follows), shelter players from the low
+    Unbound sweep, and anchor the Unbound chains.
+  - Players can't place or break blocks.
+  - A Stone Wall counts as cover for one Cast or Hook.
+  - Titan Dome is a buff zone, not a barrier.
+- **Co-op:**
+  - He alternates targets, never picking the same player twice in a row. Each switch is
+    announced by a sword point, a sound, and a flame mark over the player.
+  - The Turning Cut covers players behind him.
+  - Every second pull-back runs through another player.
+  - In phase two the Double Cast's second throw goes to another player.
+  - The chain hits everyone it crosses, and each player keeps their own one-hit limit.
+  - Only one player can be hooked at a time.
+  - Pressure grows up to four players through shorter recoveries, with floors of 1.2 s
+    on the catch recovery and 1.4 s on the Zip landing recovery. Health grows with the
+    party; damage per hit doesn't.
+- **Fire:** he takes normal damage from Fire spells. His hits don't set players alight.
+- **Length:** a winning duo run takes about 6 minutes. Start at 2,600 health plus 1,700
+  per extra player, and tune it with Nature and Flamethrower runs to check the
+  close-range openings.
+- **Open:**
+  - his detailed look;
+  - the arena's details;
+  - a faction for later.
+- **Draft record:** the seven drafts and their reviews are on branch
+  `t3/pyre-king-council` in `council/`.
+
 ## Hub map page
 
 - **Decided:** boss locations appear on a map page in the H hub, not on a physical map
@@ -507,6 +759,9 @@ With infusion, a standout pairing can still become a hand-made signature spell l
 
 ## Lore
 
+- **Decided (Nov 4):** write the frame story first: one line through every boss to the
+  final boss. Side mobs, structures and items grow around it afterwards. For now the
+  bosses are the skeleton of the game.
 - **Decided:** lore is optional and never gates progression. Its depth, and possibly
   a lesson, rewards players who go looking.
 - **Proposed premise (draft):** the broken-ring emblem was once a whole ring that

@@ -48,6 +48,10 @@ the clip's hit frame, taken from `HollowUndeadClips`:
   after. It stays hunched over the maul, its opening, and can act again on tick 55.
   Everything near the maul head is hit. The clip's travel is stripped at install and
   exported per tick (`BRUTE_CARRY`), which the server replays, so the feet stay planted.
+  It only starts the slam with floor under the way (at most a one-block drop) and room
+  for its body (a normal step up); otherwise it keeps walking. A hit, push or spell that
+  moves it during the charge knocks it out of the charge, and the maul comes down
+  wherever it ends up.
 
 The death clip holds the corpse until it settles, instead of vanilla's one-second
 sideways tip: the crawler scrabbles and goes limp, the archer crumples and drops its bow,

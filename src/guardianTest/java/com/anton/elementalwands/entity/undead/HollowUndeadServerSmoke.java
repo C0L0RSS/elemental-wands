@@ -35,6 +35,13 @@ public final class HollowUndeadServerSmoke implements ModInitializer {
     private HollowUndeadEntity bound;
     private ServerPlayerEntity killer;
     private int tick, brutesDeath = -1, burned;
+    /** A brute whose victim stands on an island across a pit, and one shoved back mid-charge. */
+    private HollowBruteEntity ledge, shoved;
+    private ServerPlayerEntity ledgeVictim;
+    private double ledgeClosest = Double.MAX_VALUE;
+    private boolean ledgeStruck, ledgeFell;
+    private int shovedStrike = -1;
+    private Vec3d shovedFrom;
 
     /** One fighter and its victim, with the ticks its attack started and landed. */
     private static final class Lane {
@@ -71,6 +78,13 @@ public final class HollowUndeadServerSmoke implements ModInitializer {
             lane(server, w, ModEntities.HOLLOW_CRAWLER, 0, 5.5, HollowUndeadClips.CRAWLER_HIT);
             lane(server, w, ModEntities.HOLLOW_BRUTE, 40, 5.2, HollowUndeadClips.BRUTE_HIT);
             lane(server, w, ModEntities.HOLLOW_ARCHER, 80, 9, HollowUndeadClips.ARCHER_HIT);
+            // A three-block pit rings the ledge victim's island: the brute must not charge off the edge.
+            for (int x = 2; x <= 9; x++) for (int z = 17; z <= 24; z++)
+                if (x < 5 || x > 6 || z < 20 || z > 21) w.setBlockState(new BlockPos(x, 99, z), Blocks.AIR.getDefaultState());
+            ledge = brute(w, 21);
+            ledgeVictim = victim(server, "LedgeVictim", 6, 21);
+            shoved = brute(w, 60.5);
+            victim(server, "ShovedVictim", 5.7, 60.5);
             killer = player(server, "UndeadKiller", 40.5, 100, 118.5);
             var boss = new NecromancerEntity(ModEntities.HOLLOW_NECROMANCER, w);
             boss.refreshPositionAndAngles(30.5, 100, 110.5, 0, 0);
@@ -96,7 +110,21 @@ public final class HollowUndeadServerSmoke implements ModInitializer {
             int clip = lane.landed - lane.strike - HollowUndeadEntity.BLEND;
             require(clip == lane.hit, name + " landed " + clip + " ticks into its clip, not on frame " + lane.hit);
         }
+        if (t < NOON) {
+            ledgeStruck |= ledge.isStriking();
+            ledgeFell |= ledge.getY() < 99.5;
+            ledgeClosest = Math.min(ledgeClosest, ledge.reachTo(ledgeVictim));
+            // Shoved back in the middle of its bound, the brute leaves the charge to physics.
+            if (shovedStrike < 0 && shoved.isStriking()) { shovedStrike = t; shovedFrom = shoved.getEntityPos(); }
+            if (shovedStrike >= 0 && t == shovedStrike + HollowUndeadEntity.BLEND + 18) shoved.takeKnockback(2.5, 1, 0);
+            if (shovedStrike >= 0 && t == shovedStrike + HollowUndeadEntity.BLEND + 30)
+                require(shoved.getX() - shovedFrom.x < 2.2, "A brute shoved mid-charge kept charging: " + (shoved.getX() - shovedFrom.x) + " blocks");
+        }
         if (t == NOON - 1) {
+            require(ledgeClosest <= HollowBruteEntity.REACH, "Ledge brute never came within reach: " + ledgeClosest);
+            require(!ledgeStruck && !ledgeFell, "Ledge brute charged at a victim across a pit (struck " + ledgeStruck + ", fell " + ledgeFell + ")");
+            require(shovedStrike >= 0, "Shoved brute never attacked");
+            ledge.discard(); shoved.discard();
             // The brute's strides and bound carry the maul head onto where its victim stood when it committed.
             Lane brute = lanes.get(1);
             Vec3d toward = brute.victim.getEntityPos().subtract(brute.struckFrom).multiply(1, 0, 1);
@@ -131,10 +159,24 @@ public final class HollowUndeadServerSmoke implements ModInitializer {
         if (t == END) {
             Files.writeString(Path.of("UNDEAD_PASSED.txt"), "Hollow undead passed: all three rise on the floor, the crawler crawls to its victim, "
                     + "crawler, brute and archer land damage/arrows exactly on their clip hit frames after the blend (" + HollowUndeadClips.CRAWLER_HIT + ", "
-                    + HollowUndeadClips.BRUTE_HIT + ", " + HollowUndeadClips.ARCHER_HIT + " ticks), the brute charges its maul onto its victim, wild bodies burn at noon while a bound minion "
+                    + HollowUndeadClips.BRUTE_HIT + ", " + HollowUndeadClips.ARCHER_HIT + " ticks), the brute charges its maul onto its victim, will not charge across a pit and leaves "
+                    + "its charge when shoved, wild bodies burn at noon while a bound minion "
                     + "does not, the brute drops bones and experience and its corpse stays for the death clip, and a bound minion drops nothing.\n");
             server.stop(false);
         }
+    }
+
+    private static HollowBruteEntity brute(ServerWorld w, double z) {
+        HollowBruteEntity mob = ModEntities.HOLLOW_BRUTE.spawn(w, BlockPos.ofFloored(.5, 100, z), SpawnReason.COMMAND);
+        require(mob != null, "Could not spawn a brute");
+        mob.refreshPositionAndAngles(.5, 100, z, -90, 0);
+        return mob;
+    }
+
+    private static ServerPlayerEntity victim(MinecraftServer server, String name, double x, double z) throws Exception {
+        ServerPlayerEntity victim = player(server, name, x, 100, z);
+        victim.setLoaded(true); victim.onTeleportationDone(); victim.setNoGravity(true); victim.getHungerManager().setFoodLevel(10);
+        return victim;
     }
 
     private void lane(MinecraftServer server, ServerWorld w, EntityType<? extends HollowUndeadEntity> type, double z, double gap, int hit) throws Exception {

@@ -36,12 +36,17 @@ public class HollowBruteEntity extends HollowUndeadEntity {
     static final int LAND = BRUTE_CARRY.length - 1;
     /** Stays planted through most of the recovery. */
     private static final int BUSY = 55;
+    /** A change this big (blocks/tick, squared) in its velocity between its own moves came from outside. */
+    private static final double KNOCK = .01;
 
     /** Forward distance the strides may still cover before the maul head would pass the target. */
     private double room;
     /** Set at the commit: the locked direction and how much the clip's bound is stretched. */
     private Vec3d bound;
     private double boundScale;
+    /** Velocity as its own physics left it last tick, and whether something knocked it out of the charge. */
+    private Vec3d settled = Vec3d.ZERO;
+    private boolean knocked;
 
     public HollowBruteEntity(EntityType<? extends HollowBruteEntity> type, World world) {
         super(type, world, "brute");
@@ -66,7 +71,29 @@ public class HollowBruteEntity extends HollowUndeadEntity {
 
     @Override
     protected boolean canBegin(LivingEntity target, boolean seen) {
-        return reachTo(target) <= REACH && Math.abs(target.getY() - getY()) < 2;
+        return reachTo(target) <= REACH && Math.abs(target.getY() - getY()) < 2 && clearCharge(target);
+    }
+
+    /**
+     * Floor under the body (at most a block's drop) and room for it (a normal step up) every half
+     * block of the way the charge would carry it; otherwise it keeps walking instead of charging
+     * off a ledge or into a wall.
+     */
+    private boolean clearCharge(LivingEntity target) {
+        Vec3d to = new Vec3d(target.getX() - getX(), 0, target.getZ() - getZ());
+        double travel = Math.min(to.length() - BRUTE_SOCKET[2], BRUTE_CARRY[BRUTE_COMMIT] + BOUND_MAX);
+        if (travel <= 0) return true;
+        Vec3d way = to.normalize();
+        Box body = getBoundingBox();
+        World world = getEntityWorld();
+        for (double d = .5; d < travel + .5; d += .5) {
+            Vec3d at = way.multiply(Math.min(d, travel));
+            Box moved = body.offset(at.x, 0, at.z);
+            if (!world.isBlockSpaceEmpty(this, new Box(moved.minX, moved.minY + getStepHeight(), moved.minZ, moved.maxX, moved.maxY, moved.maxZ))
+                    || world.isBlockSpaceEmpty(this, new Box(moved.minX, moved.minY - 1.05, moved.minZ, moved.maxX, moved.minY, moved.maxZ)))
+                return false;
+        }
+        return true;
     }
 
     @Override
@@ -87,7 +114,10 @@ public class HollowBruteEntity extends HollowUndeadEntity {
 
     @Override
     protected void drive(int clip) {
-        if (clip > LAND) return;
+        if (clip > LAND || knocked) return;
+        // A hit, a push or a spell knocks it out of the charge: physics takes over and the maul
+        // comes down wherever it ends up.
+        if (getVelocity().subtract(settled).lengthSquared() > KNOCK) { knocked = true; return; }
         // The right foot lands: the body stops where the bound put it instead of sliding on.
         if (clip == LAND) { setVelocity(0, getVelocity().y, 0); return; }
         double step = BRUTE_CARRY[clip + 1] - BRUTE_CARRY[clip];
@@ -106,6 +136,12 @@ public class HollowBruteEntity extends HollowUndeadEntity {
         setVelocity(way.x * step, getVelocity().y, way.z * step);
     }
 
+    @Override
+    public void travel(Vec3d input) {
+        super.travel(input);
+        settled = getVelocity();
+    }
+
     private Vec3d facing() {
         double yaw = Math.toRadians(bodyYaw);
         return new Vec3d(-Math.sin(yaw), 0, Math.cos(yaw));
@@ -120,6 +156,7 @@ public class HollowBruteEntity extends HollowUndeadEntity {
         room = Double.MAX_VALUE;
         bound = null;
         boundScale = 1;
+        knocked = false;
         playSound(SoundEvents.ENTITY_WITHER_SKELETON_AMBIENT, 1.2f, .55f);
     }
 

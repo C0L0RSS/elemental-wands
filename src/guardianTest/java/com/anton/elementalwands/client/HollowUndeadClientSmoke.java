@@ -2,6 +2,7 @@ package com.anton.elementalwands.client;
 
 import com.anton.elementalwands.client.renderer.HollowUndeadRenderer;
 import com.anton.elementalwands.data.EWAttachments;
+import com.anton.elementalwands.entity.undead.HollowUndeadClips;
 import com.anton.elementalwands.entity.undead.HollowUndeadEntity;
 import com.anton.elementalwands.registry.ModEntities;
 import java.nio.file.Files;
@@ -39,8 +40,8 @@ import org.lwjgl.glfw.GLFW;
  */
 public final class HollowUndeadClientSmoke implements ClientModInitializer {
     private static final double[] LANES = {-3.5, .5, 4.5};
-    /** Screenshot offsets into each attack clip: crawler rake, archer full draw, brute windup and impact. */
-    private static final int[][] ATTACK_SHOTS = {{12}, {45}, {28, 43}};
+    /** Screenshot offsets into each attack clip: crawler rake, archer full draw, brute crouch, bound and impact. */
+    private static final int[][] ATTACK_SHOTS = {{12}, {45}, {HollowUndeadClips.BRUTE_COMMIT, 21, HollowUndeadClips.BRUTE_HIT}};
     private static final String[] NAMES = {"crawler", "archer", "brute"};
     private boolean started, arranged, done;
     private volatile boolean ready;

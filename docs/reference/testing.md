@@ -36,7 +36,8 @@ silently accept terms or point a fixture at the user's real world.
 
 The complete standard build/VFX command list lives in [AGENT.md](../../AGENT.md).
 Use `--offline` only when dependencies/assets are already cached. `./gradlew build`
-includes `checkGuardianBeam`, `checkNecromancer` and `checkParties`; neither is a live gameplay test.
+includes `checkGuardianBeam`, `checkNecromancer`, `checkParties` and `checkStormRocGaze` (the Roc's
+client gaze keeps its head upright); none is a live gameplay test.
 For church layout changes also run `python3 tools/build_guardian_church.py --check`.
 
 ## Selecting a fixture

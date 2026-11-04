@@ -342,7 +342,8 @@ Its gaze holds dead still, then snaps its head to the player it is striking at o
 (the server tracks that player), or else to you: fully while perched or between brawl attacks,
 intermittently at players below in flight, once it has settled from a landing (turning slowly,
 1.85 seconds in), never mid-attack, except that through the Thunder Bite's windup its head
-follows its prey smoothly, without snaps, until the aim locks. In flight it banks into its turns and pitches with its
+follows its prey smoothly, without snaps, until the aim locks. Every gaze turns the head round
+and then up or down, so it stays upright rather than twisting about its bill. In flight it banks into its turns and pitches with its
 climb, but not while it is still crouched on a spire. As a bird does in a banked turn, it holds
 its head near level against the bank and turns it into the turn, toward the spire.
 

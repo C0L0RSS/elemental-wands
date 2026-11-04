@@ -17,6 +17,9 @@ It records known verification limits; it is not a fresh installation receipt.
     - **Note:** in the approved `stuck` clip, the head shake after it rips free (about 5.4
       seconds) has keys that overlap in time by up to 0.04 seconds. A few of its tiny moves
       are skipped. Found while guarding key order; left as it is.
+    - **Fixed (Nov 3):** between spires its glance down at a player twisted its head about its
+      bill, up to upside down, for about a second. `checkStormRocGaze` guards the gaze; a Lunar
+      look at the spire hop is pending.
   - **Phase one:** repeated lightning, permanent drifting tornadoes, a marked dive and jumpable
     shockwave, the pinned-beak opening, seven grounded actions and health-driven takeoffs.
   - **Phase change:** at half health a short in-engine stand-in for the planned cinematic.

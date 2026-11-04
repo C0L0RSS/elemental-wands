@@ -283,7 +283,7 @@ public final class StormRocMotion {
      * clip's own head cocks and bobs still play. The math runs in the art study's frame; channels
      * store x as is and y and z negated.
      */
-    private static void gaze(Map<String, float[]> channels, String pose, float yaw, float pitch, float weight) {
+    static void gaze(Map<String, float[]> channels, String pose, float yaw, float pitch, float weight) {
         // The bite's and the stalk's clips already aim the head at their prey: turn from there to it.
         boolean flight = flying(pose);
         Vector3d rest = flight || pose.equals("land") || pose.equals("call") || pose.startsWith("bite") || pose.equals("pounce") || pose.startsWith("stampede") ? bill(channels) : NEUTRAL.computeIfAbsent(pose, StormRocMotion::rest);
@@ -292,8 +292,10 @@ public final class StormRocMotion {
         // reach, turns all the way from wherever the clip has the head.
         double turnYaw = (flight ? MathHelper.wrapDegrees(yaw - restYaw) : MathHelper.clamp(MathHelper.wrapDegrees(yaw - restYaw), -70, 70)) * weight;
         double turnPitch = (flight ? pitch - restPitch : MathHelper.clamp(pitch - restPitch, -40, 40)) * weight;
-        Vector3d goal = direction(restYaw + turnYaw, restPitch + turnPitch);
-        turnHead(channels, new Quaterniond().rotationTo(rest, goal));
+        // Round, then up or down, so the head stays upright as it turns. The shortest arc between
+        // the two directions would twist it about its bill: in flight, glancing from one side
+        // down to a player on the other turned its head upside down.
+        turnHead(channels, new Quaterniond().rotationY(Math.toRadians(-(restYaw + turnYaw))).rotateX(Math.toRadians(turnPitch)).rotateY(Math.toRadians(restYaw)));
     }
 
     /** Turns the head by turn in the model's space; the top of the neck takes its share of it. */
@@ -314,14 +316,16 @@ public final class StormRocMotion {
     private static Vector3d rest(String pose) { return bill(StormRocPose.pose(pose, 0)); }
 
     /** Where the bill points with these channels, in the model's space. */
-    static Vector3d bill(Map<String, float[]> channels) {
+    static Vector3d bill(Map<String, float[]> channels) { return head(channels).transform(new Vector3d(BILL)).normalize(); }
+
+    /** The head's turn with these channels, in the model's space. */
+    static Matrix3d head(Map<String, float[]> channels) {
         Matrix3d m = new Matrix3d();
         for (String bone : NECK) m.mul(rotation(channels.get(bone)));
-        m.mul(rotation(channels.get("neck_tip"))).mul(rotation(channels.get("head")));
-        return m.transform(new Vector3d(BILL)).normalize();
+        return m.mul(rotation(channels.get("neck_tip"))).mul(rotation(channels.get("head")));
     }
 
-    private static Vector3d direction(double yaw, double pitch) {
+    static Vector3d direction(double yaw, double pitch) {
         double y = Math.toRadians(yaw), p = Math.toRadians(pitch);
         return new Vector3d(Math.sin(y) * Math.cos(p), Math.sin(p), -Math.cos(y) * Math.cos(p));
     }

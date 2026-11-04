@@ -84,8 +84,8 @@ separate from the shipped mod. See the testing guide before launching a fixture.
 ./gradlew runClient
 ```
 
-Run `./gradlew build` after code changes. It includes Guardian and party contract
-checks; those do not launch a live gameplay session. For VFX changes, run:
+Run `./gradlew build` after code changes. It includes Guardian, Necromancer, party and
+Roc gaze contract checks; those do not launch a live gameplay session. For VFX changes, run:
 
 ```sh
 ./gradlew clean build

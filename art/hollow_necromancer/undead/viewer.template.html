@@ -12,7 +12,7 @@
   header{padding:18px 28px;border-bottom:1px solid #28303d;display:flex;justify-content:space-between;align-items:center;gap:12px}
   .eyebrow{color:#70cbd1;letter-spacing:.16em;font-size:11px;font-weight:700} h1{font:600 clamp(23px,3vw,35px)/1.1 Georgia,serif;margin:4px 0 0}
   .tag{color:#a5b0bd;font-size:12px;border:1px solid #384452;border-radius:20px;padding:5px 10px}
-  /* Tonight's reworked clips: deliberately loud so they cannot be missed. */
+  /* The latest session's clips: deliberately loud so they cannot be missed. */
   .tonight{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding:12px 28px;background:#ffd400;color:#14110a;border-bottom:3px solid #ff3d7f}
   .tonight strong{font-size:14px;letter-spacing:.06em;text-transform:uppercase;margin-right:6px}
   .tonight button{background:#14110a;color:#ffd400;border:2px solid #14110a;font-weight:700;padding:6px 12px}
@@ -20,7 +20,7 @@
   .tonight button.active{background:#ff3d7f;color:#fff;border-color:#fff}
   .tonight small{flex-basis:100%;font-size:12px;color:#3d3415}
   .new{border:2px solid #ffd400!important;box-shadow:0 0 0 2px #ff3d7f;padding-bottom:4px}
-  .new::after{content:"Reworked tonight";display:block;margin:3px -6px 0;background:#ff3d7f;color:#fff;font-size:9px;line-height:14px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:0 5px;border-radius:7px;white-space:nowrap;pointer-events:none}
+  .new::after{content:"New";display:block;margin:3px -6px 0;background:#ff3d7f;color:#fff;font-size:9px;line-height:14px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:0 5px;border-radius:7px;white-space:nowrap;pointer-events:none}
   .has-new{position:relative}
   .has-new::after{content:"★";position:absolute;top:-9px;right:-7px;width:18px;height:18px;line-height:18px;border-radius:50%;background:#ff3d7f;color:#ffd400;font-size:11px;pointer-events:none}
   main{display:grid;grid-template-columns:minmax(0,1fr) 340px;min-height:calc(100vh - 140px)}
@@ -56,7 +56,7 @@
 <div class="creature-controls" aria-label="Creature selection"><button data-creature="0">Crawler</button><button data-creature="1" class="active">Archer</button><button data-creature="2">Brute</button><button id="compare">Compare all</button></div>
 <div class="attack-controls">
 <button id="motion" class="active">Pause</button><button id="replay">Replay</button>
-<button data-clip="idle">Idle</button><button data-clip="walk">Walk</button><button data-clip="rise">Rise</button><button data-clip="attack">Draw & fire</button><button data-clip="death">Death</button>
+<button data-clip="idle">Idle</button><button data-clip="walk">Walk</button><button data-clip="rise">Rise</button><button data-clip="attack">Draw & fire</button><button data-clip="attack_before" hidden>Before</button><button data-clip="death">Death</button>
 <input id="timeline" type="range" min="0" max="5.5" step=".01" value="1.7" aria-label="Animation time"><span id="phase"></span>
 </div>
 <button data-speed="1" class="active">1×</button><button data-speed=".5">½×</button><button data-speed=".25">¼×</button>

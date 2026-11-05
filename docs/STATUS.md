@@ -166,6 +166,12 @@ It records known verification limits; it is not a fresh installation receipt.
   After a third (solo) playtest, Life Drain only starts within 10 blocks, with a 1.5-second
   windup, and breaks at 14 blocks. The soul split now happens once, and the blind body swings at
   random headings instead of fighting alongside the soul (30 soul damage solo). Pending a playtest.
+  Siege tuning (November 4) after the waves still felt easy: hordes of 10–18 bodies solo and
+  14–24 duo (32 standing at most), more reinforcements, siege crawlers at about 4.4 blocks a
+  second, and a new brute charging slam (strides in heaving the maul, then a bound of up to
+  3 blocks; wild brutes too). Server fixtures cover it; pending a solo and co-op Lunar
+  playtest, including how the 2.9x crawl and the slam look in game and frame rate with a
+  full horde.
   Space was too strong here: Astral Double tuning makes its echo bolt
   deal 70%, and each skull volley can add one skull for a currently visible double at least
   eight seconds old (server fixture covered). This does not measure continuous time in sight.

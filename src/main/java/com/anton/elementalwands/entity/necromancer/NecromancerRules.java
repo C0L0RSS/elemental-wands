@@ -96,14 +96,15 @@ public final class NecromancerRules {
         public int total() { return crawlers + archers + brutes; }
     }
 
-    private static final int[][] SOLO_WAVES = {{4, 0, 0}, {4, 1, 0}, {4, 1, 1}, {5, 2, 1}};
-    private static final int[][] DUO_WAVES = {{6, 0, 0}, {5, 2, 0}, {5, 2, 1}, {6, 2, 2}};
-    public static final int WAVE_ALIVE_CAP = 12;
+    /** Hordes: mostly crawlers, with archers and brutes joining as the sieges go on. */
+    private static final int[][] SOLO_WAVES = {{10, 0, 0}, {10, 2, 0}, {11, 2, 1}, {13, 3, 2}};
+    private static final int[][] DUO_WAVES = {{14, 0, 0}, {14, 3, 0}, {15, 3, 2}, {17, 4, 3}};
+    public static final int WAVE_ALIVE_CAP = 32, WAVE_MAX_ARCHERS = 6, WAVE_MAX_BRUTES = 4;
     /** Spawns spread over this long; a cleared wave rests, a stalled one is joined by the next. */
-    public static final int WAVE_STAGGER = 40, WAVE_BREATHER = 30, WAVE_TIMEOUT = 500;
+    public static final int WAVE_STAGGER = 40, WAVE_BREATHER = 30, WAVE_TIMEOUT = 600;
     public static final double WAVE_MIN = 8, WAVE_MAX = 32, WAVE_CLEAR = 6;
     /** While a wave lives, extra crawlers claw out near a player this often, up to {@link #reinforcements}. */
-    public static final int REINFORCE_EVERY = 100;
+    public static final int REINFORCE_EVERY = 80;
     public static final double REINFORCE_MIN = 8, REINFORCE_MAX = 14;
 
     /**
@@ -207,7 +208,7 @@ public final class NecromancerRules {
         if (players <= 1) return new Wave(SOLO_WAVES[index][0], SOLO_WAVES[index][1], SOLO_WAVES[index][2]);
         double scale = 1 + .4 * (players - 2);
         int[] duo = DUO_WAVES[index];
-        int archers = Math.min(4, (int)Math.round(duo[1] * scale)), brutes = Math.min(3, (int)Math.round(duo[2] * scale));
+        int archers = Math.min(WAVE_MAX_ARCHERS, (int)Math.round(duo[1] * scale)), brutes = Math.min(WAVE_MAX_BRUTES, (int)Math.round(duo[2] * scale));
         int crawlers = Math.min((int)Math.round(duo[0] * scale), WAVE_ALIVE_CAP - archers - brutes);
         return new Wave(crawlers, archers, brutes);
     }
@@ -217,12 +218,16 @@ public final class NecromancerRules {
     /** One marker per player plus one (two in the second siege) near a random player. */
     public static int rainMarkers(int players, Stage stage) { return Math.min(8, Math.max(1, players) + (stage == Stage.SIEGE_2 ? 2 : 1)); }
 
-    /** Extra crawlers per siege wave: two solo, one more per player after that, at most five. */
-    public static int reinforcements(int players) { return Math.min(5, Math.max(1, players) + 1); }
+    /** Extra crawlers per siege wave: four solo, one more per player after that, at most eight. */
+    public static int reinforcements(int players) { return Math.min(8, Math.max(1, players) + 3); }
 
-    /** Siege bodies are quickened by the caster's soul fire; wild night spawns keep their pace. */
+    /**
+     * Siege bodies are quickened by the caster's soul fire; wild night spawns keep their pace.
+     * Mob speed grows with the square of this attribute: siege crawlers run about 4.4 blocks a
+     * second (a walking player makes 4.3, a sprint 5.6), brutes about 2.2 and archers 2.3.
+     */
     public static double quickening(Undead kind) {
-        return switch (kind) { case CRAWLER -> .3; case ARCHER -> .1; case BRUTE -> .15; };
+        return switch (kind) { case CRAWLER -> .68; case ARCHER -> .1; case BRUTE -> .15; };
     }
 
     /** Souls per harvest: three solo, one more per extra player, at most six. */

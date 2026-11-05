@@ -56,6 +56,8 @@ public abstract class HollowUndeadEntity extends HostileEntity implements GeoEnt
      * delayed by this much so damage lands on the frame players see.
      */
     public static final int BLEND = 4;
+    /** Fastest walk playback; a quickened siege crawler runs its crawl at about 2.9x. */
+    public static final double MAX_WALK_PLAYBACK = 3;
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     private final State minion = new State();
@@ -87,6 +89,8 @@ public abstract class HollowUndeadEntity extends HostileEntity implements GeoEnt
     protected boolean wantsCloser(LivingEntity target, boolean seen) { return true; }
     /** Turns toward the target while the attack clip plays. */
     protected abstract void aim(LivingEntity target, int tick);
+    /** Every attack tick, with or without a target, for moves that must finish once begun. */
+    protected void drive(int clip) {}
     /** The clip's hit frame. */
     protected abstract void strike(ServerWorld world, LivingEntity target);
     protected void onBegin(ServerWorld world, LivingEntity target) {}
@@ -259,7 +263,7 @@ public abstract class HollowUndeadEntity extends HostileEntity implements GeoEnt
             if (!test.isMoving()) return test.setAndContinue(idle);
             // Limb speed is 4x blocks/tick moved. Walks are authored at chase speed, so playing them at
             // travel speed / authored speed keeps planted feet still from a wander (~0.65x) to a chase (1x).
-            test.setControllerSpeed((float)MathHelper.clamp(limbAnimator.getSpeed() * 5 / stride(), .2, 2));
+            test.setControllerSpeed((float)MathHelper.clamp(limbAnimator.getSpeed() * 5 / stride(), .2, MAX_WALK_PLAYBACK));
             return test.setAndContinue(walk);
         }));
     }
@@ -325,7 +329,7 @@ public abstract class HollowUndeadEntity extends HostileEntity implements GeoEnt
             if (tick >= 0) {
                 // Clip time as the client sees it, after the blend into the clip.
                 int clip = ++tick - BLEND;
-                if (clip >= 0 && valid(target)) aim(target, clip);
+                if (clip >= 0) { if (valid(target)) aim(target, clip); drive(clip); }
                 if (clip == hitTick) strike(world, valid(target) ? target : null);
                 if (clip >= busyTicks) { tick = -1; readyAge = age + cooldown; }
                 return;

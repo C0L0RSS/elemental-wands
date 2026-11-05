@@ -359,4 +359,7 @@ def build(source,out,brute=False):
     walk=m.clips['walk']['bones']
     rig.reference={bone:ch['rotation'][min(ch['rotation'],key=float)] for bone,ch in walk.items() if 'rotation' in ch}
     for kind in reworked:m.clips[kind]=reworked[kind](rig)
-    return m.export(out)
+    exported=m.export(out)
+    # Preview-only comparison clips (never written to the candidate files).
+    for kind,make in getattr(brute_clips if brute else archer_clips,'PREVIEW_ONLY',{}).items():exported['clips'][kind]=make(rig)
+    return exported

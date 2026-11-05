@@ -26,11 +26,11 @@ public final class NecromancerContractTest {
         require(Stage.SIEGE_1.siege() && Stage.SIEGE_2.siege() && !Stage.DUEL_A.siege() && !Stage.DUEL_B.siege() && !Stage.DONE.siege(), "Siege stages wrong");
         require(Stage.SIEGE_1.firstWave() == 1 && Stage.SIEGE_1.lastWave() == 2 && Stage.SIEGE_2.firstWave() == 3 && Stage.SIEGE_2.lastWave() == 4, "Siege waves wrong");
 
-        // Waves: the authored duo and solo tables, heavier each wave, scaled for bigger parties under the cap.
-        require(NecromancerRules.wave(1, 2).equals(new Wave(6, 0, 0)) && NecromancerRules.wave(2, 2).equals(new Wave(5, 2, 0))
-                && NecromancerRules.wave(3, 2).equals(new Wave(5, 2, 1)) && NecromancerRules.wave(4, 2).equals(new Wave(6, 2, 2)), "Duo waves moved");
-        require(NecromancerRules.wave(1, 1).equals(new Wave(4, 0, 0)) && NecromancerRules.wave(2, 1).equals(new Wave(4, 1, 0))
-                && NecromancerRules.wave(3, 1).equals(new Wave(4, 1, 1)) && NecromancerRules.wave(4, 1).equals(new Wave(5, 2, 1)), "Solo waves moved");
+        // Waves: the authored duo and solo hordes, heavier each wave, scaled for bigger parties under the cap.
+        require(NecromancerRules.wave(1, 2).equals(new Wave(14, 0, 0)) && NecromancerRules.wave(2, 2).equals(new Wave(14, 3, 0))
+                && NecromancerRules.wave(3, 2).equals(new Wave(15, 3, 2)) && NecromancerRules.wave(4, 2).equals(new Wave(17, 4, 3)), "Duo waves moved");
+        require(NecromancerRules.wave(1, 1).equals(new Wave(10, 0, 0)) && NecromancerRules.wave(2, 1).equals(new Wave(10, 2, 0))
+                && NecromancerRules.wave(3, 1).equals(new Wave(11, 2, 1)) && NecromancerRules.wave(4, 1).equals(new Wave(13, 3, 2)), "Solo waves moved");
         for (int players = 1; players <= 8; players++) {
             int previous = 0;
             for (int n = 1; n <= 4; n++) {
@@ -44,17 +44,18 @@ public final class NecromancerContractTest {
             }
         }
         require(NecromancerRules.wave(1, 2).brutes() == 0 && NecromancerRules.wave(2, 2).brutes() == 0 && NecromancerRules.wave(3, 2).brutes() > 0, "Brutes arrive before the second siege");
-        // Reinforcements: two solo, one more per player, capped; they arrive while a wave still stands.
-        require(NecromancerRules.reinforcements(1) == 2 && NecromancerRules.reinforcements(2) == 3 && NecromancerRules.reinforcements(8) == 5, "Reinforcements moved");
+        // Reinforcements: four solo, one more per player, capped; they arrive while a wave still stands.
+        require(NecromancerRules.reinforcements(1) == 4 && NecromancerRules.reinforcements(2) == 5 && NecromancerRules.reinforcements(8) == 8, "Reinforcements moved");
         require(NecromancerRules.REINFORCE_MIN > NecromancerRules.WAVE_CLEAR && NecromancerRules.WAVE_BREATHER <= 40 && NecromancerRules.WAVE_TIMEOUT <= 600,
                 "Waves rest too long or reinforcements claw out on top of players");
-        // Siege bodies are quickened, crawlers most; a quickened crawler's walk stays inside the 2x playback clamp.
+        // Siege bodies are quickened, crawlers most; a quickened crawler's walk stays inside the playback clamp.
         require(NecromancerRules.quickening(NecromancerRules.Undead.CRAWLER) > NecromancerRules.quickening(NecromancerRules.Undead.BRUTE)
                 && NecromancerRules.quickening(NecromancerRules.Undead.BRUTE) > NecromancerRules.quickening(NecromancerRules.Undead.ARCHER)
                 && NecromancerRules.quickening(NecromancerRules.Undead.ARCHER) > 0, "Siege quickening out of order");
         double crawler = 2.159 * Math.pow(.19 * (1 + NecromancerRules.quickening(NecromancerRules.Undead.CRAWLER)), 2) * 20;
-        require(crawler > 2.3 && crawler < 4.3 && crawler / com.anton.elementalwands.entity.undead.HollowUndeadClips.CRAWLER_STRIDE <= 2,
-                "Quickened crawlers are not faster than a zombie, outrun a walking player or overrun their walk clip: " + crawler);
+        require(crawler > 4.32 && crawler < 5.6 && crawler / com.anton.elementalwands.entity.undead.HollowUndeadClips.CRAWLER_STRIDE
+                <= com.anton.elementalwands.entity.undead.HollowUndeadEntity.MAX_WALK_PLAYBACK,
+                "Quickened crawlers can be walked away from, outrun a sprint or overrun their walk clip: " + crawler);
         // Soul Fire Rain: a marker on every player plus spares, faster in the second siege, escapable on foot, heavy.
         require(NecromancerRules.rainMarkers(1, Stage.SIEGE_1) == 2 && NecromancerRules.rainMarkers(1, Stage.SIEGE_2) == 3
                 && NecromancerRules.rainMarkers(2, Stage.SIEGE_1) == 3 && NecromancerRules.rainMarkers(12, Stage.SIEGE_2) == 8, "Rain markers moved");

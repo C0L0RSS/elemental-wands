@@ -13,9 +13,12 @@ public final class HollowUndeadClips {
     public static final double[] ARCHER_SOCKET = {-0.850, 1.562, 0.200};
 
     /** Brute: clip lengths in ticks, 1x walk speed in blocks/s, hit tick and socket (blocks: right, up, forward). */
-    public static final int BRUTE_RISE = 72, BRUTE_ATTACK = 92, BRUTE_DEATH = 34, BRUTE_HIT = 43;
+    public static final int BRUTE_RISE = 72, BRUTE_ATTACK = 60, BRUTE_DEATH = 34, BRUTE_HIT = 28;
     public static final double BRUTE_STRIDE = 1.6667;
     public static final double[] BRUTE_SOCKET = {0.630, 1.054, 1.843};
+    /** Brute: the aim locks on this attack tick; the clip carries the body forward this far (blocks) by each tick. */
+    public static final int BRUTE_COMMIT = 15;
+    public static final double[] BRUTE_CARRY = {0.0000, 0.0000, 0.0109, 0.0524, 0.1203, 0.2098, 0.3160, 0.4339, 0.5586, 0.6854, 0.8092, 0.9251, 1.0283, 1.1139, 1.1770, 1.2126, 1.2361, 1.4336, 1.7125, 1.9937, 2.2750, 2.5563, 2.8375, 3.1187, 3.4000, 3.6250};
 
     private HollowUndeadClips() {}
 }

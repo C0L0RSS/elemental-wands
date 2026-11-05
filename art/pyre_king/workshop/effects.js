@@ -8,8 +8,8 @@ function inverseRigid(m){const o=M.id();for(let r=0;r<3;r++)for(let c=0;c<3;c++)
 function frame(v){const y=norm(v),x=norm(cross(Math.abs(y[2])>.9?[1,0,0]:[0,0,1],y)),z=cross(x,y);return new Float32Array([...x,0,...y,0,...z,0,0,0,0,1]);}
 // A review rig exercise, not a proposed combat clip. The middle is exactly level.
 function sweep(t){const u=((t%4)+4)%4;return u<.8?0:u<1.8?smooth((u-.8)):u<2.2?1:1-smooth((u-2.2)/1.8);}
-function posed(model,manifest,t=0,motion=false,planted=false){
- const rest=poseBones(model,null,0).matrices,matrices=rest.slice(),si=model.bones.findIndex(b=>b.name==='sword');
+function posed(model,manifest,t=0,motion=false,planted=false,clip=null){
+ const rest=poseBones(model,clip,clip?Math.max(0,t):0).matrices,matrices=rest.slice(),si=model.bones.findIndex(b=>b.name==='sword');
  const king=model.id==='geometry.pyre_king',s=model.bones[si];
  if(motion){const g=norm(M.dir(rest[si],[0,1,0])),k=sweep(t),e0=Math.asin(Math.max(-1,Math.min(1,g[1]))),y0=Math.abs(g[0])+Math.abs(g[2])<1e-9?0:Math.atan2(g[2],g[0]);
   const elevation=e0*(1-k),yaw=y0-.35*k;
@@ -42,9 +42,28 @@ function block(center,size,frameIndex,alpha,trail=false,frames=8){
  const u=frameIndex/frames,v=0,du=1/frames,dv=1;
  return quads.map(q=>({pts:q.slice(0,4),n:q[4],uvs:[[u,v+dv],[u+du,v+dv],[u+du,v],[u,v]],bone:'world_fire',fire:true,alpha,trail}));
 }
-function scene(model,manifest,t=.65,motion=false,planted=false){
- const pose=posed(model,manifest,t,motion,planted);
+// While the sword is out on its chain, draw the chain from the wrist shackle to the pommel
+// ring: heavy links that sag a little, textured like the short tether they replace.
+function longChain(model,matrices,faces){
+ const at=name=>{const i=model.bones.findIndex(b=>b.name===name);return i<0?null:M.apply(matrices[i],model.bones[i].pivot);};
+ const a=at('right_wrist_shackle'),b=at('sword');if(!a||!b)return;
+ const length=Math.hypot(...sub(b,a));if(length<.8)return;
+ const source=faces.find(f=>f.bone==='hanging_wrist_chain');const uvs=source?source.uvs:[[0,0],[0,0],[0,0],[0,0]];
+ const n=Math.max(4,Math.round(length/.32)),sag=Math.min(.6,.04*length);
+ const point=u=>add(add(a,mul(sub(b,a),u)),[0,-sag*4*u*(1-u),0]);
+ for(let i=0;i<n;i++){
+  const p=point(i/n),q=point((i+1)/n),d=norm(sub(q,p)),side=norm(cross(d,Math.abs(d[1])>.9?[1,0,0]:[0,1,0])),up=cross(side,d);
+  const w=i%2?.05:.11,h=i%2?.11:.05,c=mul(add(p,q),.5),half=Math.hypot(...sub(q,p))*.62;
+  const corner=(s,x,y)=>add(add(add(c,mul(d,s*half)),mul(side,x*w)),mul(up,y*h));
+  const quads=[[[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1]],[[-1,-1,1],[-1,1,1],[1,1,1],[1,-1,1]],
+   [[-1,-1,-1],[-1,-1,1],[1,-1,1],[1,-1,-1]],[[-1,1,-1],[1,1,-1],[1,1,1],[-1,1,1]]];
+  for(const qd of quads){const pts=qd.map(([s,x,y])=>corner(s,x,y));faces.push({bone:'long_chain',pts,n:norm(cross(sub(pts[1],pts[0]),sub(pts[2],pts[0]))),uvs});}
+ }
+}
+function scene(model,manifest,t=.65,motion=false,planted=false,clip=null){
+ const pose=posed(model,manifest,t,motion,planted,clip);
  const faces=model.faces.filter(f=>!f.empty).map(f=>{const m=pose.matrices[f.bone];return {...f,bone:model.bones[f.bone].name,pts:f.pts.map(p=>M.apply(m,p)),n:norm(M.dir(m,f.n))};});
+ longChain(model,pose.matrices,faces);
  const flames=[];const noise=(t,i)=>.5+.27*Math.sin(t*7.3+i*2.71)+.23*Math.sin(t*11.9+i*7.13);
  const bf=manifest.blade_fire,peaks=new Map(bf.peak_sockets),frames=bf.atlas_grid[0];
  const hash=i=>{const x=Math.sin(i*127.1+311.7)*43758.5453;return x-Math.floor(x);};
@@ -68,9 +87,9 @@ function scene(model,manifest,t=.65,motion=false,planted=false){
  }
  const active=bf.active_socket_indices;
  active.forEach(i=>{tongue(pose.sockets[i],i);if(peaks.has(i))tongue(pose.sockets[i],i,0,peaks.get(i));});
- if(motion)for(const age of [.05,.10,.15]){
+ if(motion||clip)for(const age of [.05,.10,.15]){
   if(t<age)continue;
-  const past=posed(model,manifest,t-age,true,planted),older=posed(model,manifest,Math.max(0,t-age-.02),true,planted);
+  const past=posed(model,manifest,t-age,motion,planted,clip),older=posed(model,manifest,Math.max(0,t-age-.02),motion,planted,clip);
   active.forEach(i=>{const p=past.sockets[i];if(Math.hypot(...sub(p,older.sockets[i]))/.02>bf.trail_speed_threshold_blocks_per_second)tongue(p,i,age,0,past.sockets);});
  }
  return {faces,flames,sockets:pose.sockets};

@@ -1,5 +1,5 @@
 {
-  "revision": "Ninth sculpt / v9",
+  "revision": "Ninth sculpt / v9 \u00b7 first clips",
   "date": "2026-11-04",
   "summary": "Review only \u00b7 5-block masked duelist \u00b7 4.5-block longsword \u00b7 plough guard",
   "cubes": 272,
@@ -474,6 +474,28 @@
     "palette_source": "art/fire/blockfire/textures/blockfire.png",
     "trail_lifetime_seconds": 0.18,
     "trail_speed_threshold_blocks_per_second": 1.2
+  },
+  "clips": {
+    "idle": {
+      "length": 6.0,
+      "loop": true
+    },
+    "walk": {
+      "length": 0.8,
+      "loop": true
+    },
+    "run": {
+      "length": 0.62,
+      "loop": true
+    },
+    "royal_cut": {
+      "length": 3.8,
+      "loop": false
+    },
+    "cast_reel": {
+      "length": 4.7,
+      "loop": false
+    }
   },
   "preview_rendering": "Shared effects.js samples posed sockets: a low overlapping flame at every socket makes one continuous envelope, and five taller peaks break the silhouette. All upright in world space. No flame geometry in either sword export.",
   "measured_body_height_blocks": 4.91083,

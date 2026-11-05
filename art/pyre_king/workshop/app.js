@@ -2,8 +2,8 @@
 const {M,rad,norm,bakeModel,poseBones}=PyreCore;
 const $=s=>document.querySelector(s),canvas=$('#view');
 const gl=canvas.getContext('webgl2',{antialias:true,preserveDrawingBuffer:true});
-const state={model:'king',view:'hero',yaw:-32,pitch:12,distance:10.8,target:[.65,3.1,0],player:true,glow:true,fire:true,clay:false,light:'day',motion:false,time:.65,playing:true};
-let models,tex,mask,fireTex,manifest,ready=false;
+const state={clip:'',speed:1,model:'king',view:'hero',yaw:-32,pitch:12,distance:10.8,target:[.65,3.1,0],player:true,glow:true,fire:true,clay:false,light:'day',motion:false,time:.65,playing:true};
+let models,tex,mask,fireTex,manifest,clips={},ready=false;
 function shader(type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s;}
 const prog=gl.createProgram();
 gl.attachShader(prog,shader(gl.VERTEX_SHADER,`#version 300 es
@@ -33,7 +33,11 @@ function setView(view){state.view=view;state.target=state.model==='king'?[.65,3.
     [state.yaw,state.pitch]=angles[view]||[0,0];if(view==='head'){state.target=[0,4.1,-.18];state.distance=3.3;}
     document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));draw();
 }
-function scene(){return PyreEffects.scene(models[state.model==='king'?'king':'sword'],manifest,state.time,state.motion,state.model==='planted');}
+function clipTime(){const c=clips[state.clip];if(!c)return state.time;const L=c.animation_length;
+ // Looping clips wrap; one-shots hold their last frame for a beat, then replay.
+ return c.loop?state.time%L:Math.min(state.time%(L+.8),L);}
+function scene(){const c=state.model==='king'&&clips[state.clip]?clips[state.clip]:null;
+ return PyreEffects.scene(models[state.model==='king'?'king':'sword'],manifest,c?clipTime():state.time,c?false:state.motion,state.model==='planted',c);}
 function emitFaces(fs){const data=[];for(const f of fs)for(const k of [0,1,2,0,2,3])data.push(...f.pts[k],...f.n,...f.uvs[k],1,1,1,f.alpha??1);return data;}
 function box(data,o,s,color){
  const [x,y,z]=o,[X,Y,Z]=o.map((v,i)=>v+s[i]);
@@ -72,13 +76,16 @@ $('#notes').oninput=()=>{try{localStorage.setItem('pyre-king-review-notes',$('#n
 addEventListener('resize',draw);
 (async()=>{const json=async f=>{const r=await fetch('candidate/'+f);if(!r.ok)throw Error(f+': '+r.status);return r.json();};
     const [king,sword,im,gm,info,fi]=await Promise.all([json('pyre_king.geo.json'),json('pyre_king_sword.geo.json'),image('candidate/pyre_king.png'),image('candidate/pyre_king_glowmask.png'),json('manifest.json'),image('candidate/bladefire.png')]);
-    models={king:bakeModel(king),sword:bakeModel(sword)};manifest=info;tex=texture(im);mask=texture(gm);fireTex=texture(fi);$('#atlas').src=im.src;
+    models={king:bakeModel(king),sword:bakeModel(sword)};manifest=info;
+    try{const an=await json('pyre_king.animation.json');for(const [k,v] of Object.entries(an.animations)){const n=k.replace('animation.pyre_king.','');if(n==='guard')continue;clips[n]=v;const o=document.createElement('option');o.value=n;o.textContent=n.replace('_',' ');$('#clip').appendChild(o);}}catch(e){console.warn(e);}tex=texture(im);mask=texture(gm);fireTex=texture(fi);$('#atlas').src=im.src;
     $('#stats').textContent=`${info.cubes} cubes · ${info.bones} bones · 5.00 blocks to crown (${info.measured_held_silhouette_height_blocks.toFixed(2)} with raised sword). Sword: ${info.sword_cubes} cubes, 4.50 blocks overall / 3.50-block blade.`;
     $('#bones').textContent=models.king.bones.map(b=>b.name).join('\n');ready=true;const params=new URLSearchParams(location.search);if(params.has('model')){state.model=params.get('model');$('#model').value=state.model;}setView(params.get('view')||'hero');requestAnimationFrame(tick);
 })().catch(e=>{$('#stats').textContent='Could not load model: '+e.message;console.error(e);});
 let previousTime=null;
-function tick(now){const dt=previousTime===null?0:Math.min(.05,(now-previousTime)/1000);previousTime=now;if(state.playing)state.time+=dt;draw();requestAnimationFrame(tick);}
+function tick(now){const dt=previousTime===null?0:Math.min(.05,(now-previousTime)/1000);previousTime=now;if(state.playing)state.time+=dt*(clips[state.clip]?state.speed:1);const k=$('#clock');if(k)k.textContent=clips[state.clip]?clipTime().toFixed(2)+' s':'';draw();requestAnimationFrame(tick);}
 $('#motion').onchange=e=>{state.motion=e.target.checked;state.time=0;draw();};
+$('#clip').onchange=e=>{state.clip=e.target.value;state.time=0;state.playing=true;$('#pause').textContent='Pause';if(state.clip){state.motion=false;$('#motion').checked=false;}draw();};
+$('#speed').onchange=e=>{state.speed=+e.target.value;};
 $('#pause').onclick=()=>{state.playing=!state.playing;$('#pause').textContent=state.playing?'Pause':'Play';};
 $('#horizontal').onclick=()=>{state.motion=true;state.playing=false;state.time=1.8;$('#motion').checked=true;$('#pause').textContent='Play';draw();};
 $('#guard').onclick=()=>{state.motion=false;state.playing=true;state.time=.65;$('#motion').checked=false;$('#pause').textContent='Pause';draw();};

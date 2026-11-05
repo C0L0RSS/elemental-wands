@@ -61,7 +61,7 @@ Pillars:
 | Stone | Fractured Guardian | Ruined churches, Shattered Nave | 0 | Built, rebalanced October 3; playtest pending |
 | Nature (life turned to death) | Hollow Necromancer | Graveyards, Hollow Crypt | 1 | Built, in tuning |
 | Wind | Storm Roc | Mountain peaks, a sky realm above the clouds | 2 | Built with its aerie and intro (Oct 27); phase cinematic and death to come; playtest pending |
-| Fire | Pyre King | The Nether | 3 | Redesign started Nov 4: a swordsman with a chained sword; kit proposed, look next |
+| Fire | Pyre King | The Nether | 3 | Redesign started Nov 4: a swordsman with a chained sword; kit proposed, review model built, animation started |
 | Space | New | The End or the deep dark | 4 | Open |
 | — | Final: the wizard who tried to hold all five | Opened by all five shards | 5 | Open |
 
@@ -487,8 +487,9 @@ the developer's direction made it melee first.
   death mask with ember eyes, above a long ash beard. The approved concept is
   `art/pyre_king/concepts/direction-d-mask.png`. His armor is charred black with tarnished
   gold trim, under a heavy gold crown with a red gem. The Fire shard glows in his chest,
-  and burned crimson mantle scraps hang from his shoulders. His curse chains carry glowing
-  padlocks, and his armored coat ends at the knee so his footwork reads.
+  and a burned crimson cape covers his shoulders and back. One curse chain carries a
+  padlock (three chains were too noisy), and his armored coat ends at the knee so his
+  footwork reads.
 - **Proposed:** the mask cracks and falls away at the phase change, revealing a burned
   slag face. The model keeps the mask as its own part so this stays possible.
 - **Built (Nov 4):** a review model in `art/pyre_king/`. It is not yet in the game.
@@ -497,7 +498,12 @@ the developer's direction made it melee first.
   - The cape covers both shoulders and his back; the head sits in a gorget, the fists are
     full-size, and one curse chain carries the padlock beside the shard.
   - The blade fire is drawn upright along the whole blade by the preview.
-  - Next: animation.
+  - Animation has started: idle, walk, run, the Royal Cut string and throw → wait → pull
+    back, with both fists held on the grip by IK. The developer's feedback on how these
+    move comes first.
+  - Next: the rest of the kit's clips (Kingsguard Thrust, Turning Cut, the Chain Scythe
+    and its release, Zip, Hook and Overhead Sentence, Lunge, Drag Down, Unbound). After
+    that, the game model.
 - **Decided (Nov 4):** his sword is a large two-handed English longsword. He fights with
   both hands on the grip, in readable longsword guards: high over the shoulder before an
   overhead cut, point forward before the Thrust. To throw, he lets go with his left hand
@@ -702,11 +708,10 @@ The set piece counts as one combo, and he can't be damaged for its 4 s.
   per extra player, and tune it with Nature and Flamethrower runs to check the
   close-range openings.
 - **Open:**
-  - his detailed look;
+  - the model's remaining polish: the fire can read as rungs on a diagonal blade, the
+    grip is crowded, and the beard and crown read as blocky;
   - the arena's details;
   - a faction for later.
-- **Draft record:** the seven drafts and their reviews are on branch
-  `t3/pyre-king-council` in `council/`.
 
 ## Hub map page
 

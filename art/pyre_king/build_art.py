@@ -240,12 +240,16 @@ def build():
     def packed(o):return (json.dumps(o,indent=2)+'\n').encode()
     def png(im):b=io.BytesIO();im.save(b,format='PNG');return b.getvalue()
     # The exported guard stays static; effects.js owns the workshop-only sweep exercise.
+    from rig import bake
+    from clips import CLIPS
     anim={'format_version':'1.8.0','animations':{'animation.pyre_king.guard':{'loop':True,'animation_length':1,'bones':{}}}}
+    for name,(fn,length,loop) in CLIPS.items():
+        anim['animations']['animation.pyre_king.'+name]=bake(fn,length,loop)
     assets={
         'pyre_king.geo.json':packed(model),'pyre_king_sword.geo.json':packed(sword),
         'pyre_king.png':png(atlas),'pyre_king_glowmask.png':png(glow),'pyre_king.animation.json':packed(anim),
     }
-    manifest={'revision':'Ninth sculpt / v9','date':'2026-11-04','summary':'Review only · 5-block masked duelist · 4.5-block longsword · plough guard',
+    manifest={'revision':'Ninth sculpt / v9 · first clips','date':'2026-11-04','summary':'Review only · 5-block masked duelist · 4.5-block longsword · plough guard',
         'cubes':len(PARTS),'bones':len(BONES),'sword_cubes':sum(len(b['cubes']) for b in sword_bones()),
         'sword_bones':len(sword_bones()),'texture_size':list(atlas.size),
         'translucent_bones':[], 'material_by_cube':[m for c,m,b in PARTS],
@@ -257,6 +261,7 @@ def build():
             'active_socket_indices':list(range(17)), 'peak_sockets':[[2,.74],[4,.98],[10,1.18],[11,.8],[15,1.06]],
             'palette_source':'art/fire/blockfire/textures/blockfire.png',
             'trail_lifetime_seconds':.18,'trail_speed_threshold_blocks_per_second':1.2},
+        'clips':{name:{'length':length,'loop':loop} for name,(fn,length,loop) in CLIPS.items()},
         'preview_rendering':'Shared effects.js samples posed sockets: a low overlapping flame at every socket makes one continuous envelope, and five taller peaks break the silhouette. All upright in world space. No flame geometry in either sword export.'}
     # Measure the transformed corners with the same GeckoLib baker as the workshop.
     def baked(data):

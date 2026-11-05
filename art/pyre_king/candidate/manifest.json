@@ -1,8 +1,8 @@
 {
-  "revision": "Ninth sculpt / v9 \u00b7 first clips",
-  "date": "2026-11-04",
+  "revision": "Tenth sculpt / v10 \u00b7 polish \u00b7 first clips",
+  "date": "2026-11-05",
   "summary": "Review only \u00b7 5-block masked duelist \u00b7 4.5-block longsword \u00b7 plough guard",
-  "cubes": 272,
+  "cubes": 284,
   "bones": 44,
   "sword_cubes": 14,
   "sword_bones": 3,
@@ -126,7 +126,16 @@
     "ash",
     "ash",
     "ash",
+    "ash",
+    "ash",
+    "ash",
+    "ash",
+    "ash",
+    "ash",
+    "ash",
+    "ash",
     "char",
+    "gold",
     "gold",
     "gold",
     "gold",
@@ -196,6 +205,7 @@
     "armor",
     "trim",
     "gauntlet",
+    "gauntlet",
     "trim",
     "gauntlet",
     "trim",
@@ -218,6 +228,7 @@
     "joint",
     "armor",
     "trim",
+    "gauntlet",
     "gauntlet",
     "trim",
     "gauntlet",
@@ -262,6 +273,7 @@
     "steel",
     "steel",
     "fuller",
+    "dark_iron",
     "dark_iron",
     "dark_iron",
     "dark_iron",
@@ -407,6 +419,78 @@
         0
       ]
     ],
+    "socket_half_extents": [
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        2.5,
+        0.75
+      ],
+      [
+        2.5,
+        0.75
+      ],
+      [
+        2.5,
+        0.75
+      ],
+      [
+        1.6,
+        0.6
+      ],
+      [
+        0.65,
+        0.45
+      ]
+    ],
+    "root_edge_fraction": 1,
+    "root": "each flame roots root_edge_fraction of the way from its socket toward the uppermost edge of the blade cross-section, on the top face (half_extents: local X half width, local Z half thickness, model pixels)",
     "world_up": [
       0,
       1,
@@ -497,8 +581,8 @@
       "loop": false
     }
   },
-  "preview_rendering": "Shared effects.js samples posed sockets: a low overlapping flame at every socket makes one continuous envelope, and five taller peaks break the silhouette. All upright in world space. No flame geometry in either sword export.",
-  "measured_body_height_blocks": 4.91083,
+  "preview_rendering": "Shared effects.js samples posed sockets: a low overlapping flame roots on the blade's upper edge at every socket, making one continuous fringe, and five taller peaks break the silhouette. All upright in world space. No flame geometry in either sword export.",
+  "measured_body_height_blocks": 4.913642,
   "measured_held_silhouette_height_blocks": 5.045612,
   "measured_sword_length_blocks": 4.5
 }

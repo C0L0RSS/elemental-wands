@@ -32,6 +32,17 @@ for(const model of models){
  assert.notDeepEqual(a.flames,b.flames);
  assert.deepEqual(a.sockets,b.sockets);
 }
+// The test sweep keeps both fists on the grip with unstretched, rigid forearms.
+{const model=models[0],idx=n=>model.bones.findIndex(b=>b.name===n);
+ for(const time of [.8,1.3,1.8,2.6,3.4])for(const side of ['right','left']){
+  const {matrices}=posed(model,manifest,time,true),fi=idx(side+'_forearm'),hi=idx(side+'_hand'),h=model.bones[hi].pivot;
+  const gap=Math.hypot(...[0,1,2].map(k=>ctx.PyreCore.M.apply(matrices[fi],h)[k]-ctx.PyreCore.M.apply(matrices[hi],h)[k]));
+  assert(gap<.01,`${side} fist leaves the grip by ${gap} blocks at ${time} s`);
+  for(const c of [0,4,8])close(Math.hypot(matrices[fi][c],matrices[fi][c+1],matrices[fi][c+2]),1);
+ }}
+// Every flame roots on the blade's uppermost edge, not across its face.
+{const R=posed(models[0],manifest,.65).roots;assert.equal(R.length,17);
+ const S=posed(models[0],manifest,.65).sockets;assert(R.every((r,i)=>r[1]>=S[i][1]-1e-9),'roots sit on the upper edge');}
 // Held and thrown versions have identical local weapon geometry/UVs.
 const held=king['minecraft:geometry'][0].bones,thrown=sword['minecraft:geometry'][0].bones;
 const pivot=manifest.blade_fire.king_pivot;

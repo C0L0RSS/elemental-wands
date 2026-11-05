@@ -1,8 +1,9 @@
-# Pyre King — ninth review sculpt
+# Pyre King — tenth review sculpt
 
 Based on [the approved masked king](concepts/direction-d-mask.png). Passes 1–5 found the
 form; passes 6–9 reworked it after the developer's review and four rounds of independent
-grading. A final touch brought the cape over both shoulders.
+grading. A final touch brought the cape over both shoulders. Pass 10 polished the crown,
+beard, grip and blade fire.
 
 ## The design
 
@@ -10,10 +11,13 @@ grading. A final touch brought the cape over both shoulders.
   forward and the head is lowered 7°, which measures 4.91 blocks.
 - **Head:** the head sits in a stepped gorget under a lower crimson collar, so nothing
   floats. A full skull backs the gold death mask. The mask has angled brows, narrow amber
-  eye slits, one dominant crack and molten gold drips. Five tapered crown wedges rise from
-  the band; one is sheared off.
-- **Beard and shard:** a long ash beard of staggered, tapering locks rests on the
-  breastplate and ends above the Fire shard. The shard sits in a gold socket.
+  eye slits, one dominant crack and molten gold drips. Five openwork crown points rise from
+  the band: in each, two gold bars lean together over a solid foot, and a small diamond
+  finial caps the point. One point has sheared off, its two bars snapped at different
+  heights.
+- **Beard and shard:** a long ash beard of staggered locks rests on the breastplate and
+  ends above the Fire shard. Each lock narrows in three steps to a curled point, and its
+  texture runs in strands down the lock. The shard sits in a gold socket.
 - **Shoulders and cape:** sloped two-plate pauldrons, with a yoke filling the gap to the
   collar. The cape covers both shoulders: across the top, down their fronts, and down
   behind the pauldrons into seven unequal panels. Those hug the back, then flare over the
@@ -21,8 +25,10 @@ grading. A final touch brought the cape over both shoulders.
 - **Curse chain:** one rust-iron curse chain runs from the left shoulder to the right hip,
   hidden under the cape at the back. Its tarnished padlock hangs beside the shard.
 - **Guard and arms:** a plough guard with big gauntleted fists on the grip and the blade
-  raised up and out. The forearms taper toward the wrists. A five-link iron tether runs
-  from the right-wrist shackle to the pommel ring.
+  raised up and out. The forearms taper toward the wrists, and each gauntlet cuff flares
+  toward the elbow and slims at the wrist, so the fist reads as its own shape. A snug
+  shackle closes round the right wrist; from an eye under it, a five-link iron tether hangs
+  in a shallow loop behind the grip to the pommel ring.
 - **Lower body:** a flared, knee-length coat of six tasset bones. Each tier has a gold
   edge, and the bottom tier has an ember hem. A crimson tabard with a gold crown hangs
   from a gold clasp on the belt.
@@ -47,14 +53,17 @@ Open <http://127.0.0.1:8410/workshop/>. If already running, rebuild and reload.
 The loopback server serves only `.local-previews/pyre-king/` and disables caching.
 The workshop offers **Clip** (with speed), **Test sweep**, **Pause / Play**,
 **Freeze horizontal** and **High guard**. Flames flicker even in the static guard; Pause freezes both
-pose and effects. Fire can be toggled off to inspect the hot blade itself.
+pose and effects. Fire can be toggled off to inspect the hot blade itself. The test sweep
+turns the blade about the middle of the grip and keeps both fists on it with the same
+two-bone arm IK as the clips.
 
 `--check` rebuilds in memory, compares every generated candidate and workshop
 file byte for byte, validates hierarchy and UVs, and measures transformed
 geometry with the workshop's GeckoLib baker. `check_effects.cjs` also verifies
 that fire edges remain aligned to world axes across the swing, socket spacing
 stays fixed, the frozen sweep is level, the trail fades after motion stops,
-and held/thrown sword geometry and UVs match. It writes no files.
+the sweep keeps both fists on the grip with rigid forearms, flames root on the blade's
+upper edge, and held/thrown sword geometry and UVs match. It writes no files.
 
 Editable sources are `geometry.py`, `rig.py`, `clips.py`, `build_art.py`,
 `render_review.py`, `render_clips.py`, `export_scene.cjs`, `check_effects.cjs` and
@@ -63,14 +72,15 @@ remain in the ignored `.local-previews/pyre-king/` directory.
 
 ## Candidate and dimensions
 
-- `candidate/pyre_king.geo.json`: **272 cubes / 44 bones**, including the sword.
+- `candidate/pyre_king.geo.json`: **284 cubes / 44 bones**, including the sword.
 - `candidate/pyre_king_sword.geo.json`: **14 cubes / 3 bones**, derived from the
   held sword. The preserved `sword_fire` bone is empty in both exports.
 - `candidate/pyre_king.png` and `pyre_king_glowmask.png`: 1024 × 512 RGBA atlases.
   Blade edges retain hot color and emission without geometry flames.
 - `candidate/bladefire.png`: eight 16 × 32 cutout frames with colors sampled from the
   existing block-fire atlas. Frames 0–3 are tall tongues with white-hot roots; 4–7 are
-  low licks with no white core. Interiors are opaque; only the perimeter and tips fade.
+  low licks with no white core. Every frame's root is rounded, not flat. Interiors are
+  opaque; only the perimeter and tips fade.
 - `candidate/blockfire.png`: byte-identical copy of the existing Fire atlas;
   its source in `art/fire/blockfire/` is unchanged.
 - `candidate/pyre_king.animation.json`: the static guard, plus the clips baked from
@@ -78,7 +88,7 @@ remain in the ignored `.local-previews/pyre-king/` directory.
 - `candidate/manifest.json`: dimensions, materials and blade fire socket contract.
 
 Upright, ground to crown is **80 pixels / 5.00 blocks**. In the leaning guard the body
-measures **4.91083 blocks**, and with the raised sword, excluding
+measures **4.913642 blocks**, and with the raised sword, excluding
 fire, **5.045612 blocks**. The scale figure is exactly
 **1.80 blocks** tall. Source geometry uses 16 model pixels per block, with front −Z and
 anatomical right −X; the baker applies GeckoLib 5's X reflection.
@@ -151,6 +161,12 @@ root to Y=72 at the tip in 3.5-pixel steps.
 carries a narrow, upright lick of irregular height and width, nudged along the blade so the
 row has no rhythm. Licks use frames 4–7, which have no white core.
 
+**Roots:** every flame roots on the blade's uppermost edge at its socket, with its rounded
+base sunk just below the edge. On a slanted blade that is the upper edge, on a level blade
+the middle of the top face, and on an upright blade the axis. The fire therefore rises
+off the blade as one fringe instead of crossing its face in bands, which read as ladder
+rungs on a diagonal blade.
+
 **Peaks:** five taller tongues, in `peak_sockets`, sit at irregular positions with the
 tallest in the outer half. They use frames 0–3, which have white-hot roots, as do the two
 flames at the hilt.
@@ -165,9 +181,13 @@ also works on the standalone and upside-down planted sword.
 `manifest.blade_fire.sockets` contains positions **relative to the sword bone
 pivot, before rotation**, in model pixels. Add the king pivot (`manifest.blade_fire.king_pivot`)
 (or `[0,0,0]` for the standalone), reflect X, divide by 16, then apply the posed
-bone matrix used by this baker. A future game renderer should use its own
-corresponding model-to-world transform, then construct flame sheets along
-world `[0,1,0]`. Do not rotate the sheets with that matrix.
+bone matrix used by this baker. To find a flame's root, take the blade's local X and Z
+axes through the same matrix and move from the socket toward whichever side of each is
+higher in the world, by up to `manifest.blade_fire.socket_half_extents` (half width along
+X, half thickness along Z, model pixels). The X offset is scaled by `root_edge_fraction`,
+and each offset fades smoothly to zero as its axis turns level. A future game renderer
+should use its own corresponding model-to-world transform, then construct flame sheets
+along world `[0,1,0]`. Do not rotate the sheets with that matrix.
 
 The test motion reconstructs previous socket positions at 0.05, 0.10 and 0.15
 seconds ago. Only positions moving faster than 1.2 blocks/second emit the
@@ -182,22 +202,23 @@ front with alpha blending, depth testing and no depth writes.
 Each pass's renders are archived in `.local-previews/pyre-king/v1/` through `v9/`. The
 current `renders/` folder holds:
 - front, three-quarter, side and back;
-- the head close-up;
+- the head and grip close-ups;
 - the sword alone and the sword planted;
 - the player cameras at 8 and 16 blocks;
 - the frozen horizontal sweep and the fire close-ups;
 - the contact sheet.
 
-The `compare-v8-v9-*` images pair the last two passes, and the `compare-v5-v9-*` images
-pair the fifth pass with this one. The archives and comparisons exist only on the
-computer that made them.
+The `compare-v9-v10-*` images pair the ninth pass with this one. The archives and
+comparisons exist only on the computer that made them; render the ninth pass from an
+older commit to recreate `v9/`.
 
-**Still open:**
-- The fire's per-socket structure can read as rungs on a diagonal blade.
-- The fists, cuffs and tether crowd together at the grip.
-- The beard and the crown terraces read as blocky.
-- The workshop's test sweep still stretches the forearms. The clips don't: they use IK,
-  and the long chain replaces the tether while the sword is thrown.
+**Pass 10 resolved** the four problems the ninth pass left open:
+- the fire's ladder-rung look on a diagonal blade;
+- the crowding of fists, cuffs and tether at the grip;
+- the blocky beard and the stepped crown points;
+- the forearms stretching in the workshop's test sweep.
+
+**Still open:** the developer's review of this pass and of the first clips.
 
 These are workshop and offline observations, not in-game validation. Nothing here is in
 the game yet: no Java uses it, and nothing is installed.

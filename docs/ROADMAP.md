@@ -497,7 +497,11 @@ the developer's direction made it melee first.
     raised up and out.
   - The cape covers both shoulders and his back; the head sits in a gorget, the fists are
     full-size, and one curse chain carries the padlock beside the shard.
-  - The blade fire is drawn upright along the whole blade by the preview.
+  - The blade fire is drawn upright along the whole blade by the preview, rising off the
+    blade's upper edge.
+  - A polish pass (Nov 5) gave the crown openwork points, made the beard's locks taper in
+    strands, cleared the grip (slimmer cuffs, a snug shackle, a smaller tether), and ended
+    the fire's ladder-rung look on a slanted blade. The developer's review of it is pending.
   - Animation has started: idle, walk, run, the Royal Cut string and throw → wait → pull
     back, with both fists held on the grip by IK. The developer's feedback on how these
     move comes first.
@@ -708,8 +712,6 @@ The set piece counts as one combo, and he can't be damaged for its 4 s.
   per extra player, and tune it with Nature and Flamethrower runs to check the
   close-range openings.
 - **Open:**
-  - the model's remaining polish: the fire can read as rungs on a diagonal blade, the
-    grip is crowded, and the beard and crown read as blocky;
   - the arena's details;
   - a faction for later.
 

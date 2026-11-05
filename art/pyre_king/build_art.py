@@ -9,7 +9,7 @@ import math
 import subprocess
 from pathlib import Path
 from PIL import Image
-from geometry import BONES, PARTS, sword_bones, BLADE_SOCKETS, P, GUARD_DIRECTION
+from geometry import BONES, PARTS, sword_bones, BLADE_SOCKETS, BLADE_HALF_EXTENTS, P, GUARD_DIRECTION
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
@@ -104,11 +104,15 @@ def paint(w,h,mat,seed,face):
                 if x==crack+1 and y%4==0: v=1
                 if y==0: v=min(4,v+1)
             elif mat=='ash':
-                v=2+(1 if hashed(x//3,y//5,seed+7)>.7 else 0)
-                if y>h*.65:v=min(4,v+1)
-                if y<h*.28:v=max(0,v-2) if y<h*.14 else max(0,v-1)
-                if y>h*.85:v=max(1,v-1)
-                if hashed(x//2,y//3,seed)<.18:v=max(1,v-1)
+                # Hair grain: one-texel strands run down the lock, shadowed at the root and
+                # pale toward the tip, with a dark parting every few strands.
+                strand=hashed(x,0,seed+7)
+                v=2+(1 if strand>.6 else 0)-(1 if strand<.2 else 0)
+                if x%4==3 and w>5:v=1
+                if y<h*.22:v-=1
+                if y>h*.62:v+=1
+                if hashed(x,y//4,seed)<.07:v-=1
+                v=max(0,min(4,v))
                 if hashed(x,y,seed)>.998:
                     p[x,y]=(166,85,32,255);g[x,y]=(120,42,10,110);continue
             elif mat in ('crimson','burnt_cloth'):
@@ -179,11 +183,14 @@ def blade_fire_texture():
     """
     source=Image.open(HERE.parent/'fire/blockfire/textures/blockfire.png').convert('RGBA')
     result=Image.new('RGBA',(128,32))
+    # Every flame's root is rounded, not flat, so a row of them along a slanted blade
+    # cannot stack into horizontal bands.
+    def rounded(rise):return math.sqrt(min(1,(rise+.05)/.22))
     for frame in range(4):
         for y in range(32):
             rise=(31-y)/31
             center=7.5+round(2*rise*math.sin(rise*5+frame*math.pi/2))
-            radius=max(.5,7*(1-rise)**.65)
+            radius=max(.5,7*(1-rise)**.65*rounded(rise))
             for x in range(16):
                 edge=abs(x-center)/radius
                 if edge>1:continue
@@ -202,7 +209,7 @@ def blade_fire_texture():
         for y in range(32):
             rise=(31-y)/31
             center=7.5+1.6*rise*math.sin(rise*4+frame*math.pi/2)
-            radius=max(.5,7.6*(1-rise)**.5)
+            radius=max(.5,7.6*(1-rise)**.5*rounded(rise))
             for x in range(16):
                 edge=abs(x-center)/radius
                 if edge>1:continue
@@ -249,7 +256,7 @@ def build():
         'pyre_king.geo.json':packed(model),'pyre_king_sword.geo.json':packed(sword),
         'pyre_king.png':png(atlas),'pyre_king_glowmask.png':png(glow),'pyre_king.animation.json':packed(anim),
     }
-    manifest={'revision':'Ninth sculpt / v9 · first clips','date':'2026-11-04','summary':'Review only · 5-block masked duelist · 4.5-block longsword · plough guard',
+    manifest={'revision':'Tenth sculpt / v10 · polish · first clips','date':'2026-11-05','summary':'Review only · 5-block masked duelist · 4.5-block longsword · plough guard',
         'cubes':len(PARTS),'bones':len(BONES),'sword_cubes':sum(len(b['cubes']) for b in sword_bones()),
         'sword_bones':len(sword_bones()),'texture_size':list(atlas.size),
         'translucent_bones':[], 'material_by_cube':[m for c,m,b in PARTS],
@@ -257,12 +264,14 @@ def build():
         'sword_root_pivot':[0,0,0], 'sword_tip_axis':'+Y', 'source_front':'-Z', 'guard_direction':GUARD_DIRECTION,
         'blade_fire':{'bone':'sword','units':'model pixels','socket_space':'relative to sword pivot before bone rotation; reflect X and divide by 16 before applying baked bone matrix',
             'king_pivot':list(P),'sword_pivot':[0,0,0],'sockets':BLADE_SOCKETS,
+            'socket_half_extents':BLADE_HALF_EXTENTS,'root_edge_fraction':1,
+            'root':'each flame roots root_edge_fraction of the way from its socket toward the uppermost edge of the blade cross-section, on the top face (half_extents: local X half width, local Z half thickness, model pixels)',
             'world_up':[0,1,0],'atlas':'bladefire.png','atlas_grid':[8,1],'tongue_frames':[0,1,2,3],'lick_frames':[4,5,6,7],'atlas_fps':8,
             'active_socket_indices':list(range(17)), 'peak_sockets':[[2,.74],[4,.98],[10,1.18],[11,.8],[15,1.06]],
             'palette_source':'art/fire/blockfire/textures/blockfire.png',
             'trail_lifetime_seconds':.18,'trail_speed_threshold_blocks_per_second':1.2},
         'clips':{name:{'length':length,'loop':loop} for name,(fn,length,loop) in CLIPS.items()},
-        'preview_rendering':'Shared effects.js samples posed sockets: a low overlapping flame at every socket makes one continuous envelope, and five taller peaks break the silhouette. All upright in world space. No flame geometry in either sword export.'}
+        'preview_rendering':'Shared effects.js samples posed sockets: a low overlapping flame roots on the blade\'s upper edge at every socket, making one continuous fringe, and five taller peaks break the silhouette. All upright in world space. No flame geometry in either sword export.'}
     # Measure the transformed corners with the same GeckoLib baker as the workshop.
     def baked(data):
         return json.loads(subprocess.check_output(['node',str(HERE/'export_scene.cjs'),'-'],input=packed(data)))

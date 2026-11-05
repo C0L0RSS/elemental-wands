@@ -165,36 +165,54 @@ for x, low in [(-2.8, 65.3), (2.8, 64.3)]:
     cube('death_mask', (x-.4, low, -6.05), (.8, 67.45-low, .45), 'molten')
 
 bone('ash_beard', 'head', (0, 64, -5))
-# Locks rest on the gorget and breastplate and stop above the shard socket.
+# Locks rest on the gorget and breastplate and stop above the shard socket. Each lock
+# narrows in three steps to a curled point, so the beard reads as hair, not slabs.
 for x, y, w, h, ztop, zbottom, lean in [
     (-4.4, 56.8, 2.6, 6.6, -6, -7.4, -.5), (-1.6, 53.4, 3, 10.2, -6.1, -8.2, -.25),
     (1.4, 54.6, 2.8, 9, -6.1, -8, .3), (4.2, 57.6, 2.4, 5.8, -6, -7.3, .55),
     (-2.9, 54.8, 2.2, 4.7, -7.4, -8.4, -.4), (0, 50.6, 2.4, 7.4, -7.9, -8.7, 0),
     (2.6, 53.6, 2, 5.4, -7.4, -8.3, .4), (-.9, 52.2, 1.6, 3.3, -8.4, -8.8, -.3)]:
-    beam('ash_beard', (x+lean, y, zbottom), (x, y+h, ztop), w, 1.8, 'ash')
-    beam('ash_beard', (x+lean*1.6, y-1.6, zbottom-.15), (x+lean, y+.4, zbottom), w*.5, 1.4, 'ash')
+    curl = .55 if lean >= 0 else -.55
+    mid = (x+lean*.45, y+h*.5, (ztop+zbottom)/2)
+    beam('ash_beard', mid, (x, y+h, ztop), w, 1.8, 'ash')
+    beam('ash_beard', (x+lean, y+.2, zbottom), (mid[0], mid[1]+.4, mid[2]), w*.74, 1.55, 'ash')
+    beam('ash_beard', (x+lean*1.5+curl, y-1.9, zbottom-.2), (x+lean, y+.6, zbottom), w*.42, 1.2, 'ash')
 
-# Sharp openwork crown points around a band that hugs the skull. One point is snapped.
+# Five openwork points rise from the band. Two gold bars lean together into each point
+# over a solid foot, and a small diamond finial caps it. One point has sheared off.
 bone('crown', 'head', (0, 72, 0))
 cube('crown', (-5.9, 70.9, -5.35), (11.8, .6, 10.7), 'char')
 for o, s in [((-6, 71.4, -5.4), (12, 2, 1.4)), ((-6, 71.4, 4), (12, 2, 1.4)),
              ((-6, 71.4, -4), (1.3, 2, 8)), ((4.7, 71.4, -4), (1.3, 2, 8))]:
     cube('crown', o, s, 'gold')
-for x, z, width, top, side, broken in [(0, -4.7, 5.4, 80, False, False),
-                                       (-4.1, -4.4, 4.2, 77.4, False, False),
-                                       (4.1, -4.4, 4.2, 77.4, False, True),
-                                       (-5.3, 1.2, 4.4, 77, True, False),
-                                       (5.3, 1.2, 4.4, 77, True, False)]:
-    base = 73; h = top-base
-    tiers = [(base, h*.36, width, 1.7), (base+h*.36, h*.28, width*.62, 1.5),
-             (base+h*.64, h*.22, width*.34, 1.3), (base+h*.86, h*.14, min(1, width*.16), 1.1)]
+
+
+def crown_point(x, z, width, top, side, broken, base=73.1, t=1.25, d=1.5):
+    def at(u, y): return (x, y, z+u) if side else (x+u, y, z)
+
+    def bar(a, b): beam('crown', at(*a), at(*b), *((d, t) if side else (t, d)), 'gold')
+
+    def block(u0, y0, wu, hy, depth):
+        o = at(u0, y0)
+        if side: cube('crown', (o[0]-depth/2, o[1], o[2]), (depth, hy, wu), 'gold')
+        else: cube('crown', (o[0], o[1], o[2]-depth/2), (wu, hy, depth), 'gold')
+    half = width/2-t*.45; h = top-base
+    block(-width/2, base-.3, width, h*.24+.3, d+.2)          # the solid foot
     if broken:
-        # The tip has sheared off: an offset stub with a slanted break.
-        tiers = [(base, h*.36, width, 1.7), (base+h*.36, h*.2, width*.55, 1.5)]
-    for k, (y, th, w, d) in enumerate(tiers):
-        off = width*.24 if broken and k == 1 else 0
-        if side: cube('crown', (x-d/2, y, z-w/2+off), (d, th, w), 'gold')
-        else: cube('crown', (x-w/2+off, y, z-d/2), (w, th, d), 'gold')
+        # Both bars snapped at different heights; the finial is gone.
+        bar((-half, base), (-half*.42, base+h*.6))
+        bar((half, base), (half*.72, base+h*.27))
+        return
+    bar((-half, base), (0, top-1.05)); bar((half, base), (0, top-1.05))
+    s = 1.2; c = at(0, top-s/math.sqrt(2))
+    if side: cube('crown', (c[0]-d/2, c[1]-s/2, c[2]-s/2), (d, s, s), 'gold', [45, 0, 0], c)
+    else: cube('crown', (c[0]-s/2, c[1]-s/2, c[2]-d/2), (s, s, d), 'gold', [0, 0, 45], c)
+
+
+for args in [(0, -4.7, 5.4, 80, False, False), (-4.1, -4.4, 4.2, 77.4, False, False),
+             (4.1, -4.4, 4.2, 77.4, False, True), (-5.3, 1.2, 4.4, 77, True, False),
+             (5.3, 1.2, 4.4, 77, True, False)]:
+    crown_point(*args)
 cube('crown', (-2.4, 71.5, -6.8), (4.8, 4.5, 1.5), 'gold')
 cube('crown', (-1.5, 72.4, -7.2), (3, 2.8, .6), 'ruby')
 
@@ -262,14 +280,17 @@ for side, sgn, station, elbow in [('right', -1, 12.3, (-18.5, 41, -6.5)),
     beam(upper, (sgn*14.9, 48.2, -6.25), (sgn*14.6, 50.8, -6.2), 3.6, .9, 'burnt_cloth')
     lower = bone(side+'_forearm', upper, elbow)
     axis = unit([hand[i]-elbow[i] for i in range(3)])
-    wrist = add(hand, axis, -3.2); cuff = add(wrist, axis, -3.4)
+    wrist = add(hand, axis, -3.2); cuff = add(wrist, axis, -3.6)
     WRISTS[side] = (wrist, axis)
     fmid = add(elbow, axis, math.dist(elbow, wrist)*.5)
     beam(lower, fmid, elbow, 5.4, 5.6, 'joint'); beam(lower, wrist, fmid, 4.6, 4.8, 'joint')
     cube(lower, (elbow[0]-2.9, elbow[1]-2, elbow[2]-2.9), (5.8, 4, 5.8), 'armor')
     cube(lower, (elbow[0]-2.95, elbow[1]-.3, elbow[2]-2.95), (5.9, .6, 5.9), 'trim')
-    beam(lower, cuff, wrist, 5.8, 6, 'gauntlet')
-    beam(lower, add(wrist, axis, -.7), wrist, 6.2, 6.4, 'trim')
+    # The gauntlet cuff flares toward the elbow and slims at the wrist, so the fist reads
+    # as its own shape instead of running on from a cuff of the same thickness.
+    beam(lower, cuff, wrist, 5.0, 5.2, 'gauntlet')
+    beam(lower, add(cuff, axis, -.3), add(cuff, axis, 1.3), 6.3, 6.5, 'gauntlet')
+    beam(lower, add(cuff, axis, -.4), add(cuff, axis, .2), 6.6, 6.8, 'trim')
     n = bone(side+'_hand', lower, hand)
 
     # A real fist around the grip: knuckle shell, gold knuckle band and a thumb.
@@ -334,47 +355,52 @@ def weapon_cube(o, s, mat): return cube('sword', tuple(P[i]+o[i] for i in range(
 for y, w in [(1.3, 3), (1.9, 4.4), (2.5, 3)]: weapon_cube((-w/2, y, -1.3), (w, .6, 2.6), 'gold')
 weapon_cube((-1.1, 3, -1), (2.2, 11.6, 2), 'grip')
 weapon_cube((-8.5, 14.6, -1.5), (17, 1.4, 3), 'gold')
-weapon_cube((-3.5, 16, -.8), (7, 42, 1.6), 'steel')
-weapon_cube((-2.5, 58, -.75), (5, 8, 1.5), 'steel')
-weapon_cube((-1.6, 66, -.6), (3.2, 4, 1.2), 'steel')
-weapon_cube((-.65, 70, -.45), (1.3, 2, .9), 'steel')
+BLADE = [((-3.5, 16, -.8), (7, 42, 1.6)), ((-2.5, 58, -.75), (5, 8, 1.5)),
+         ((-1.6, 66, -.6), (3.2, 4, 1.2)), ((-.65, 70, -.45), (1.3, 2, .9))]
+for o, s in BLADE: weapon_cube(o, s, 'steel')
 weapon_cube((-.6, 16, -.95), (1.2, 46, .3), 'fuller')
 bone('pommel_ring', 'sword', P); ring('pommel_ring', (P[0], P[1]+1.3, P[2]), 2.7, 2.6, .55, 'dark_iron')
 # Rig compatibility only. Flames are world-space effects, never baked cubes.
 bone('sword_fire', 'sword', P)
 BLADE_SOCKETS = [[0, 16+i*3.5, 0] for i in range(17)]
+# The blade's half width and half thickness at each socket, in model pixels. Flames root
+# on whichever edge of this cross-section is uppermost in the world.
+BLADE_HALF_EXTENTS = [next([-o[0], -o[2]] for o, s in BLADE if o[1] <= y < o[1]+s[1] or (o, s) == BLADE[-1])
+                      for _, y, _ in BLADE_SOCKETS]
 GUARD_DIRECTION = [round(v, 6) for v in D]
 
-# The shackle closes round the right gauntlet cuff; three slack links hang below
-# the fists to the pommel ring.
+# The shackle closes snugly round the slim wrist of the right gauntlet; an eye under it
+# takes the tether, whose five small links hang in a shallow loop behind the grip to
+# the pommel ring.
 wrist, axis = WRISTS['right']
-shackle = add(wrist, axis, -1.5)
+shackle = add(wrist, axis, -1.3)
 bone('right_wrist_shackle', 'right_hand', shackle)
 up = unit(cross(axis, [1, 0, 0])); side_v = cross(axis, up)
-corners = [add(add(shackle, up, a*4.3), side_v, b*4.2) for a, b in [(-1, -1), (1, -1), (1, 1), (-1, 1)]]
-for j in range(4): beam('right_wrist_shackle', corners[j], corners[(j+1) % 4], 1.1, 1.1, 'dark_iron')
+corners = [add(add(shackle, up, a*3.1), side_v, b*3.1) for a, b in [(-1, -1), (1, -1), (1, 1), (-1, 1)]]
+for j in range(4): beam('right_wrist_shackle', corners[j], corners[(j+1) % 4], .95, .95, 'dark_iron')
+low = min(corners, key=lambda p: p[1])
+cube('right_wrist_shackle', (low[0]-.7, low[1]-1.2, low[2]-.7), (1.4, 1.2, 1.4), 'dark_iron')
 bone('hanging_wrist_chain', 'right_wrist_shackle', shackle)
 ringpos = sword_point(1.3)
-low = min(corners, key=lambda p: p[1])
-S = (low[0], low[1]-.5, low[2]); E = (ringpos[0], ringpos[1]-.9, ringpos[2])
-links = 5; sag = 3.6
+S = (low[0], low[1]-1.1, low[2]); E = (ringpos[0], ringpos[1]-.9, ringpos[2])
+links = 5; sag = 2.2
 
 
 def tether_point(u):
     k = 4*u*(1-u)
-    return [S[i]+(E[i]-S[i])*u+(0, -sag*k, -1.2*k)[i] for i in range(3)]
+    return [S[i]+(E[i]-S[i])*u+(0, -sag*k, 1.1*k)[i] for i in range(3)]
 
 
 for i in range(links):
     a, z = tether_point(i/links), tether_point((i+1)/links)
     tangent = unit([z[k]-a[k] for k in range(3)])
     mid = [(a[k]+z[k])/2 for k in range(3)]
-    length = math.dist(a, z)*1.3
+    length = math.dist(a, z)*1.25
     if i % 2 == 0:
         across = unit(cross(tangent, [0, 0, 1]))
-        open_link('hanging_wrist_chain', mid, tangent, across, length, 2.8, .95, 'iron')
+        open_link('hanging_wrist_chain', mid, tangent, across, length, 2.2, .8, 'iron')
     else:
-        beam('hanging_wrist_chain', add(mid, tangent, -length/2), add(mid, tangent, length/2), .95, .95, 'iron')
+        beam('hanging_wrist_chain', add(mid, tangent, -length/2), add(mid, tangent, length/2), .8, .8, 'iron')
 
 
 def sword_bones():

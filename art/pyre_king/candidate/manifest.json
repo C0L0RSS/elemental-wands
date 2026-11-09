@@ -596,27 +596,44 @@
     "idle": {
       "length": 6.0,
       "loop": true,
-      "ground_speed": 0
+      "ground_speed": 0,
+      "end_turn_degrees": 0
     },
     "walk": {
       "length": 1.0,
       "loop": true,
-      "ground_speed": 3.0
+      "ground_speed": 3.0,
+      "end_turn_degrees": 0
     },
     "run": {
       "length": 0.9,
       "loop": true,
-      "ground_speed": 4.5
+      "ground_speed": 4.5,
+      "end_turn_degrees": 0
     },
     "royal_cut": {
       "length": 3.8,
       "loop": false,
-      "ground_speed": 0
+      "ground_speed": 0,
+      "end_turn_degrees": 0
+    },
+    "kingsguard_thrust": {
+      "length": 2.9,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0
+    },
+    "turning_cut": {
+      "length": 2.6,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 180.0
     },
     "cast_reel": {
       "length": 4.7,
       "loop": false,
-      "ground_speed": 0
+      "ground_speed": 0,
+      "end_turn_degrees": 0
     }
   },
   "preview_rendering": "Shared effects.js samples posed sockets: a low overlapping flame roots on the blade's upper edge at every socket, making one continuous fringe, and five taller peaks break the silhouette. Still flames stand upright in world space. As the blade moves, it re-poses the clip at a few earlier moments (carried back by the body's own travel for a walk or run played in place): each flame lies back along the path its root just travelled, never shorter than it stands still and never hanging below the blade, and a fast blow leaves one sheet of fire across the arc the blade swept, faded in from the blade, tinted and glowing additively. Slow moves only lean the fire, everything settles upright within a fraction of a second after the blade stops, and a teleport or parent switch is never traced. No flame geometry in either sword export.",

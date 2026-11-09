@@ -10,6 +10,9 @@ Pass 11 answers the developer's review of those clips:
 - the fire streams behind a swung blade;
 - the workshop is laid out for phones.
 
+The developer approved pass 11 on November 9. Pass 12 adds two more sword strings, the
+Kingsguard Thrust and the Turning Cut; the sculpt is unchanged.
+
 ## The design
 
 - **Height:** upright, he is exactly 80 px (5 blocks). In the guard pose the torso leans 6°
@@ -105,7 +108,7 @@ pans. The page itself never scrolls or zooms.
 **Camera:**
 - Each preset fits what is on screen: the guard, the sweep, or a looping clip over its
   whole cycle.
-- Royal Cut and Cast reel use a follow camera that frames the pose and the next 0.3 s.
+- The one-shot clips (the attacks) use a follow camera that frames the pose and the next 0.3 s.
   It keeps the blade and the thrown sword in view. The king can shrink to 28% of the view
   height for this, or 22% while the sword is thrown.
 - Head and the Player cameras follow clips too. Changing clip keeps your angle but
@@ -178,8 +181,8 @@ directory.
   its source in `art/fire/blockfire/` is unchanged.
 - `candidate/pyre_king.animation.json`: the static guard, plus the clips baked from
   `clips.py`. The workshop's test sweep is preview code, not a clip.
-- `candidate/manifest.json`: dimensions, materials, the clips with their `ground_speed`,
-  and the blade fire contract.
+- `candidate/manifest.json`: dimensions, materials, the clips with their `ground_speed` and
+  `end_turn_degrees`, and the blade fire contract.
 
 Upright, ground to crown is **80 pixels / 5.00 blocks**. In the leaning guard the body
 measures **4.913642 blocks**, and with the raised sword, excluding fire, **5.045612 blocks**.
@@ -277,6 +280,40 @@ channels.
   - Release is at 0.87 s. The sword flies point-first along an arc and sticks about 11.5
     blocks out at 1.22 s.
   - The 1.5 s wait, the 0.7 s Reel tell, the pull-back and the two-handed catch follow.
+- `kingsguard_thrust`: a longsword thrust from the high guard by the head (Ochs), point
+  first. Nothing is swung, so no edge leads.
+  - 0–0.35 s: he coils hard to his right, chest turned about 56°, the right foot stepping
+    back. The fists come up beside his right shoulder, with the point on the face of a
+    player 7.5 blocks out. The aim freezes at the snap (0.35 s); he coils tighter until
+    0.8 s.
+  - 0.8–0.93 s: the left foot lunges in about a block, and the hips drive and the chest
+    unwinds. Both arms drive the point down onto a player's chest (`clips.THRUST_AIM`).
+    The arms ease through the drive while the body hits; that keeps both wrists
+    comfortable as the fists cross his body. The fists end low and inside, as in a real
+    two-handed thrust, because a blade held level out in front strains this grip. He
+    overshoots slightly and settles.
+  - 1.2–2.4 s: the pause, the point dropped ahead of him. Then he steps back to his guard.
+  - The clip covers about 0.8 blocks of the 2-block step; the game moves him the rest.
+- `turning_cut`: he spins left and cuts the half behind him.
+  - 0–0.25 s: he glances back over his left shoulder. The blade rises high on his right,
+    and his feet gather in under him. Snap at 0.25 s.
+  - 0.4–0.8 s: his hips spin him 185° in one smooth push, fastest at about 700°/s. His
+    head leads and the blade is carried high. His feet pivot on their balls about his
+    centre, each lifting a little in turn.
+  - 0.68–0.85 s: the edge leads as the cut whips flat and low through the half behind him.
+    The fists are below his belt, so the blade sweeps a player's body height at reach 5.
+    The follow-through rises away to his left.
+  - 1.2–2.2 s: the pause, in a low guard with the point on whoever was behind him. Then he
+    settles into his guard, facing back the way he came.
+  - The clip is authored in his own frame and turned by a root yaw about his origin. A
+    180° turn about the middle of his stance swaps his feet's places exactly. The manifest
+    gives the turn as `end_turn_degrees` (180, counterclockwise seen from above). The game
+    turns his body yaw by that much on the clip's last frame, as the next clip starts in
+    his own frame.
+- Both new clips were posed with searches for comfortable wrists.
+  - The planner now also charges an elbow for swinging more than 60° round its circle in
+    one sample; the Turning Cut's plan had swung one 150°.
+  - No earlier clip swings more than 40°, so their bakes are byte-identical to before.
 
 Walk and run are in-place loops. In the manifest, each clip's `ground_speed` (walk 3.0,
 run 4.5, the others 0) is the speed the game must move him at, or else it must scale
@@ -288,6 +325,9 @@ legs now equal it is 0.
 - royal-cut, royal-cut-edge (front and top at mid-blow), royal-cut-player-view and
   royal-cut-player-blows;
 - cast-reel, cast-reel-throw and cast-reel-release-catch, including in-between frames;
+- kingsguard-thrust (side and three-quarter) and kingsguard-thrust-player;
+- turning-cut (from behind and above) and turning-cut-player, from the eye of a player
+  4.5 blocks behind him;
 - walk-run, from the side and front.
 
 Frames off the 20 Hz grid are labelled "(in-between)". With arguments it renders any clip
@@ -295,7 +335,6 @@ at chosen times: `render_clips.py OUT CLIP t1 t2 … [--cam yaw,pitch,extent,x,y
 [--player]`. Walk and run pass their travel to the fire automatically.
 
 The rest of the kit is still to come:
-- Kingsguard Thrust and Turning Cut;
 - the Chain Scythe and its release;
 - Zip, Hook and Overhead Sentence, Lunge and Drag Down;
 - Unbound.
@@ -389,8 +428,21 @@ round. **Known limits:**
 - At a few fast attack frames the arm covers up to 0.56 px of a lower shoulder lame's gold
   edge, and over a run stride the right plate still turns about 5°.
 
-**Still open:** the developer's review of pass 11. The phone layout was tested only in
-desktop browser emulation, not on a real phone.
+**Pass 12 known limits:**
+- In the Turning Cut's downswing (0.60–0.65 s) the right elbow swings about 100° round its
+  circle while his body spins. At the one 60 fps frame at 0.633 s, the baked left fist
+  sits 0.013 blocks (0.2 px) off the grip, over the 0.01 limit (`check_edges` flags it).
+  Between frames, at 0.6375 s, it reaches 0.03. Keying finer than the bake's 0.005 s, or
+  a downswing that keeps the elbow on one side, would fix it.
+- The thrust's drive (0.82–0.9 s) and the Turning Cut's glance (0.15–0.23 s) bend or twist
+  a wrist up to 75–80°, under the 90° limit.
+- Neither new clip pushes cloth off the legs, and their cape and tabard clearances were
+  not measured.
+- The thrust ends about 6 blocks out in the clip; the game's step carries it the rest of
+  the 8-block line.
+
+**Still open:** the developer's review of the Kingsguard Thrust and the Turning Cut. The
+phone layout was tested only in desktop browser emulation, not on a real phone.
 
 These are workshop and offline observations, not in-game validation. Nothing here is in
 the game yet: no Java uses it, and nothing is installed.

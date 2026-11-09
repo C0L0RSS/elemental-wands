@@ -61,7 +61,7 @@ Pillars:
 | Stone | Fractured Guardian | Ruined churches, Shattered Nave | 0 | Built, rebalanced October 3; playtest pending |
 | Nature (life turned to death) | Hollow Necromancer | Graveyards, Hollow Crypt | 1 | Built, in tuning |
 | Wind | Storm Roc | Mountain peaks, a sky realm above the clouds | 2 | Built with its aerie and intro (Oct 27); phase cinematic and death to come; playtest pending |
-| Fire | Pyre King | The Nether | 3 | Redesign started Nov 4: a swordsman with a chained sword; kit proposed, review model built, first clips reworked after review |
+| Fire | Pyre King | The Nether | 3 | Redesign started Nov 4: a swordsman with a chained sword; kit proposed, review model built, all three sword strings animated |
 | Space | New | The End or the deep dark | 4 | Open |
 | — | Final: the wizard who tried to hold all five | Opened by all five shards | 5 | Open |
 
@@ -513,9 +513,14 @@ the developer's direction made it melee first.
     on its hip–ankle line, full thighs, bigger boots) and hung the pauldrons from the
     chest, so the sword arm no longer rocks them in the run. The developer approved the
     result on Nov 9.
-  - Next: the rest of the kit's clips (Kingsguard Thrust, Turning Cut, the Chain Scythe
-    and its release, Zip, Hook and Overhead Sentence, Lunge, Drag Down, Unbound). After
-    that, the game model.
+  - Pass 12 (Nov 9) added the other two sword strings, awaiting the developer's review:
+    - **Kingsguard Thrust:** he thrusts from a high guard beside his head, the point on
+      your face, then lunges and drives the point down onto your chest.
+    - **Turning Cut:** he glances back over his shoulder, spins left and cuts flat and low
+      through the half behind him. He ends facing back the way he came; the manifest tells
+      the game to turn him 180° when the clip ends.
+  - Next: the Chain Scythe and its release, then Zip, Hook and Overhead Sentence, Lunge,
+    Drag Down and Unbound. After that, the game model.
 - **Decided (Nov 4):** his sword is a large two-handed English longsword. He fights with
   both hands on the grip, in readable longsword guards: high over the shoulder before an
   overhead cut, point forward before the Thrust. To throw, he lets go with his left hand

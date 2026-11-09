@@ -599,9 +599,11 @@ def easy_wrists(length, rate=20):
                         cs = [opts[j][side][1][:, roll[j]]+1e8*(ELBOWS != 0)*(j in (0, last)) for j in run]
                         # Sudden turns of the wrist, the upper arm or the forearm cost the
                         # most: GeckoLib lerps them between samples, and a fast one throws
-                        # the fist off the grip in the in-between frames.
+                        # the fist off the grip in the in-between frames. So does an elbow
+                        # swinging more than 60 deg round its circle in one sample (none of
+                        # the clips needs one; the Turning Cut's planner took 150 deg).
                         limbs = [opts[j][side][2] for j in run]
-                        st = [2*g**2+40*np.maximum(0, g-40)**2+apart(ELBOWS)**2
+                        st = [2*g**2+40*np.maximum(0, g-40)**2+apart(ELBOWS)**2+50*np.maximum(0, apart(ELBOWS)-60)**2
                               + sum(a**2+20*np.maximum(0, a-45)**2 for a in (geodesic(u0, u1), geodesic(f0, f1)))
                               for g, (u0, f0), (u1, f1) in zip((geodesic(a, b) for a, b in zip(Qs, Qs[1:])), limbs, limbs[1:])]
                         for j, k in zip(run, viterbi(cs, st)): plan[(side, times[j])] = float(ELBOWS[k])
@@ -724,6 +726,185 @@ def royal_cut(t):
             'extra': cloth(t, swing=float(swing(t)))}
 
 
+# ---------------------------------------------------------------- Kingsguard Thrust
+# A longsword thrust from the high guard beside the head, the point on the opponent's face
+# (Ochs). He coils hard to his right with the fists beside his right shoulder and the point on
+# a player's face 7.5 blocks out; the thrust drives the fists down and across to his belly as
+# the chest unwinds, the point dropping onto a player's chest (THRUST_AIM). The poses were
+# searched for comfortable wrists: a blade held level out in front strains this grip, so the
+# fists end low and inside, as a two-handed thrust does. The game moves him the rest of the
+# 2-block step.
+THRUST_AIM = np.array([-.1, 1.3, -7.5])            # a player's chest, 7.5 blocks out
+CHAMBER_FIST = np.array([1., 3.3, -.6])             # right fist in the tell, by his right shoulder
+CHAMBER_D = unit(np.array([-.1, 2.0, -7.5])-CHAMBER_FIST)    # the point on a player's face
+THRUST_FIST = np.array([-.4, 2.4, -2.2])            # right fist at full extension
+THRUST_D = unit(THRUST_AIM-THRUST_FIST)
+REST_FIST = np.array([-.4, 2.0, -1.75])             # the pause: fists low, point dropped ahead
+REST_D = unit(np.array([.2, .8, -5.0])-REST_FIST)
+
+
+def _turned_n(d):
+    """The guard's flat, carried by the shortest turn that takes the guard's blade onto d."""
+    return rot_between(GUARD_D, unit(d))@GUARD_N
+
+
+@easy_wrists(2.9)
+def kingsguard_thrust(t):
+    """He coils into the high guard by his right shoulder with the point on your face (0.8 s
+    tell; the aim freezes at the snap, 0.35 s). Then the left foot lunges in, the hips drive and
+    the chest unwinds as both arms drive the point down onto you. He holds the extension, sags
+    into the 1.2 s pause with the point dropped, and steps back to his guard."""
+    home = GUARD_P+GRIP['right']*GUARD_D
+    fist = curve([(0, home),
+                  (.35, CHAMBER_FIST, 'out'), (.8, CHAMBER_FIST-.1*CHAMBER_D),        # draw, then coil tighter
+                  # The drive: the arms ease through it while the hips and chest hit, which
+                  # keeps both wrists comfortable as the fists cross his body.
+                  (.93, THRUST_FIST, 'ease'), (1.0, THRUST_FIST+.08*THRUST_D, 'out'),  # overshoot
+                  (1.2, THRUST_FIST, 'settle'),
+                  (1.6, REST_FIST), (2.4, REST_FIST+(0, .01, .03)),                 # the pause
+                  (2.9, home)])
+    D = ncurve([(0, GUARD_D), (.35, CHAMBER_D, 'out'), (.8, CHAMBER_D), (.93, THRUST_D, 'ease'), (1.2, THRUST_D),
+                (1.6, REST_D), (2.4, REST_D), (2.9, GUARD_D)])
+    torso = curve([(0, (0, 0, 0)), (.35, (-4, 38, 2), 'out'), (.8, (-5, 41, 2)),
+                   (.93, (12, 6, -2), 'hit'), (1.2, (13, 5, -2), 'settle'),
+                   (1.6, (15, 2, -1)), (2.4, (14, 2, -1)), (2.9, (0, 0, 0))])
+    pelvis = curve([(0, (0, 0, 0)), (.35, (0, 18, 0), 'out'), (.8, (0, 19, 0)), (.93, (6, -4, 0), 'hit'),
+                    (1.6, (5, 0, 0)), (2.4, (4, 0, 0)), (2.9, (0, 0, 0))])
+    shift = curve([(0, (0, 0, 0)), (.35, (.06, -.06, .18), 'out'), (.8, (.07, -.08, .2)),
+                   (.93, (-.04, -.22, -.8), 'ease'), (1.2, (-.04, -.21, -.78), 'settle'),
+                   (1.6, (-.02, -.14, -.7)), (2.4, (-.02, -.13, -.68)), (2.9, (0, 0, 0))])
+    # The gaze stays on you: the neck and head undo most of the chest's turn.
+    neck = curve([(0, (0, 0, 0)), (.35, (4, -20, 0), 'out'), (.8, (4, -21, 0)), (.93, (-4, 0, 0), 'hit'),
+                  (1.6, (-2, 0, 0)), (2.9, (0, 0, 0))])
+    head = curve([(0, (0, 0, 0)), (.35, (3, -34, -2), 'out'), (.8, (3, -37, -2)), (.93, (-6, -2, 0), 'hit'),
+                  (1.6, (-4, -2, 0)), (2.4, (-3, -2, 0)), (2.9, (0, 0, 0))])
+    # Feet: the right steps back to blade him in the tell; the left lunges in with the thrust;
+    # both come home at the end.
+    back = curve([(0, (0, 0, 0)), (.05, (0, 0, 0)), (.3, (.06, 0, .26)), (2.45, (.06, 0, .26)), (2.85, (0, 0, 0))])
+    back_lift = curve([(0, 0), (.05, 0), (.17, .12, 'out'), (.3, 0, 'in'), (2.45, 0), (2.62, .1, 'out'), (2.85, 0, 'in')])
+    lunge = curve([(0, (0, 0, 0)), (.78, (0, 0, -.12)), (.92, (-.05, 0, -1.05), 'hit'), (2.45, (-.05, 0, -1.05)),
+                   (2.85, (0, 0, 0))])
+    lunge_lift = curve([(0, 0), (.78, 0), (.84, .22, 'out'), (.92, 0, 'in'), (2.45, 0), (2.64, .14, 'out'), (2.85, 0, 'in')])
+    swing = curve([(0, 0), (.35, -.4), (.8, -.5), (.93, 1, 'hit'), (1.4, .3), (2.4, 0)])
+    # No edge leads a thrust, so easy_wrists rolls the blade freely for the wrists. It rolls
+    # from the guard's flat, carried smoothly onto each direction (a level blade would make
+    # the guard's own flat a poor reference: it nearly faces along the blade).
+    rest = ncurve([(0, GUARD_N), (.35, _turned_n(CHAMBER_D), 'out'), (.8, _turned_n(CHAMBER_D)),
+                   (.93, _turned_n(THRUST_D), 'ease'), (1.2, _turned_n(THRUST_D)),
+                   (1.6, _turned_n(REST_D)), (2.4, _turned_n(REST_D)), (2.9, GUARD_N)])
+    d = D(t); b = back(t); s = lunge(t)
+    return {'pelvis_pos': shift(t), 'pelvis_rot': pelvis(t), 'torso_rot': torso(t), 'neck_rot': neck(t),
+            'head_rot': head(t), 'sword_p': fist(t)-GRIP['right']*d, 'sword_d': d, 'sword_n': rest(t),
+            'feet': planted(dx=(b[0], float(back_lift(t)), b[2]), sx=(s[0], float(lunge_lift(t)), s[2])),
+            'extra': cloth(t, swing=float(swing(t)))}
+
+
+# ---------------------------------------------------------------- Turning Cut
+# He spins to his left and cuts the half behind him. The clip is authored in his own frame,
+# then the whole pose turns by the root yaw SPIN(t) (degrees, + turns him left) about his
+# centre, so he ends in his guard facing back the way he came: the game turns his body yaw by
+# TURN_END degrees on the clip's last frame. Through the turn his feet pivot on their balls
+# round his centre, each lifting a little in turn; a 180-degree turn about the midpoint of his
+# stance swaps the two feet's places exactly.
+TURN_END = 180.
+PELVIS_PIVOT = pivot_world(REST, 'pelvis')
+
+
+def _yaw(a): return ry(a*RAD)
+
+
+def _turn_spec(spec, psi):
+    """A pose authored in his own frame, turned psi degrees to his left about his centre."""
+    R = _yaw(psi); out = dict(spec)
+    out['pelvis_pos'] = R@(PELVIS_PIVOT+np.asarray(spec.get('pelvis_pos', (0, 0, 0)), float))-PELVIS_PIVOT
+    x, y, z = spec.get('pelvis_rot', (0, 0, 0)); assert abs(z) < 1e-9   # no list: the yaw must compose exactly
+    out['pelvis_rot'] = (x, y-psi, 0)
+    for k in ('sword_p', 'sword_d', 'sword_n'):
+        if k in spec: out[k] = R@np.asarray(spec[k], float)
+    return out
+
+
+def _spin():
+    # One smooth push, fastest (about 700 deg/s) just before the arms bring the blade down.
+    return curve([(0, 0), (.4, 0), (.8, 185, 'ease'), (.95, 188, 'ease'), (1.2, 182),
+                  (2.2, 180), (2.6, TURN_END)])
+
+
+@easy_wrists(2.6)
+def turning_cut(t):
+    """He glances back over his left shoulder and lays the blade back over his right shoulder,
+    the point on whoever stands behind him, gathering his feet (0.7 s tell; snap at 0.25 s).
+    Then the hips spin him left, the head leading and the blade carried high, and the cut
+    whips low through the half behind him (the clang at 0.75 s) as the chest catches up. He
+    ends facing back the way he came: a 1.2 s pause, and he settles into his guard."""
+    spin = _spin(); psi = float(spin(t))
+    # In his own frame: the blade raised high on his right, then a flat cut with the fists
+    # low (below his belt) and the blade just under level, so it sweeps a player's body
+    # height at reach 5. Searched for comfortable wrists with the edge leading.
+    P = curve([(0, GUARD_P), (.25, (.8, 2.95, .35), 'out'), (.52, (.82, 3.0, .3)),
+               (.645, (.3, 2.29, .03), 'in'),                                          # coming down past his right
+               (.7, (-.03, 1.65, -.33), 'linear'), (.75, (-.35, 1.6, -.3), 'linear'), (.8, (-.37, 1.65, -.05), 'linear'),
+               (.95, (-.53, 1.93, -.69), 'snap'),                                    # rising away to his left
+               (1.2, (-.46, 1.93, -.29)), (2.2, (-.44, 1.91, -.3)),                   # low guard, point on you
+               (2.6, GUARD_P)])
+    D = ncurve([(0, GUARD_D), (.25, (.6, .7, .38), 'out'), (.52, (.6, .72, .35)), (.645, (.85, .4, -.3), 'in'),
+                (.7, (.66, -.1, -.75), 'linear'), (.75, (0, -.1, -.99), 'linear'), (.8, (-.39, .03, -.92), 'linear'),
+                (.95, (-.85, .53, .04), 'snap'), (1.2, (.34, -.17, -.93)), (2.2, (.34, -.18, -.92)), (2.6, GUARD_D)])
+    torso = curve([(0, (0, 0, 0)), (.25, (-4, -15, 2), 'out'), (.45, (-5, -10, 2)), (.62, (-6, 22, 3), 'in'),
+                   (.75, (8, -30, -4), 'hit'), (.95, (9, -40, -5), 'snap'), (1.2, (6, -18, -2)), (2.2, (5, -14, -2)),
+                   (2.6, (0, 0, 0))])
+    pelvis = curve([(0, (0, 0, 0)), (.25, (0, -6, 0), 'out'), (.45, (2, -8, 0)), (.75, (6, -14, 0), 'hit'),
+                    (1.2, (4, -8, 0)), (2.2, (3, -6, 0)), (2.6, (0, 0, 0))])
+    shift = curve([(0, (0, 0, 0)), (.25, (0, -.1, 0), 'out'), (.45, (0, -.15, .02)), (.62, (0, -.14, 0)),
+                   (.75, (0, -.24, 0), 'hit'), (1.2, (0, -.17, 0)), (2.2, (0, -.15, 0)), (2.6, (0, 0, 0))])
+    # The gaze: a glance back over the left shoulder, leading the spin onto whoever was behind
+    # him (world yaw, + left), whatever the chest is doing; the neck takes 40% of the turn.
+    gaze = curve([(0, 0), (.25, 85, 'out'), (.45, 90), (.62, 165), (.75, 180), (2.6, 180)])
+    chest = psi-pelvis(t)[1]-torso(t)[1]
+    look = max(-80., min(80., float(gaze(t))-chest))
+    lean = curve([(0, 0), (.25, 6), (.62, 4), (.75, -6, 'hit'), (1.2, -3), (2.6, 0)])
+    # Feet: gathered under him in the tell, then on their balls about his centre, each lifting
+    # a little in turn; they land in his stance turned half round.
+    gather = curve([(0, 0), (.08, 0), (.25, 1, 'out'), (.62, 1), (.85, 0), (2.6, 0)])
+    feet, foot_r = {}, {}
+    for side, peak in (('right', .52), ('left', .64)):
+        home = ANKLE[side]; inner = home*np.array([.55, 1, .7])
+        g = float(gather(t)); local = home+(inner-home)*g
+        up = curve([(0, 0), (peak-.07, 0), (peak, .06, 'out'), (peak+.07, 0, 'in'), (2.6, 0)])
+        tip = curve([(0, 0), (.42, 0), (.5, 15, 'out'), (.78, 15), (.9, 0), (2.6, 0)])
+        y = float(up(t))
+        if side == 'right':
+            y += float(curve([(0, 0), (.08, 0), (.16, .1, 'out'), (.25, 0, 'in'), (2.6, 0)])(t))   # the gathering step
+        feet[side] = _yaw(psi)@(local+np.array([0, y, 0]))
+        # On the ball: heel up, rolling about the toe's edge.
+        sole, heel, toe = SOLE[side]; R = _yaw(psi)@rx(-float(tip(t))*RAD)
+        pivot = np.array([0, -sole, toe])
+        feet[side] = feet[side]+_yaw(psi)@pivot-R@pivot
+        foot_r[side] = R
+    swing = curve([(0, 0), (.45, -.2), (.62, .6), (.75, 1, 'hit'), (1.2, .2), (2.2, 0)])
+    lift = curve([(0, 0), (.45, 0), (.62, 1.2), (.8, 1.6), (1.1, .3), (1.6, 0)])
+    body = {'pelvis_pos': shift(t), 'pelvis_rot': pelvis(t), 'torso_rot': torso(t),
+            'neck_rot': (float(lean(t))*.4, -.4*look, 0), 'head_rot': (float(lean(t))*.6, -.6*look, 0),
+            'sword_p': P(t), 'sword_d': D(t)}
+    spec = _turn_spec(body, psi)
+
+    # The edge leads through the cut, judged on the blade's real (turning) motion.
+    def Pw(s): return _yaw(float(spin(s)))@P(s)
+    def Dw(s): return _yaw(float(spin(s)))@D(s)
+    if 'planes' not in _TURN_CACHE:
+        w0, w1 = planes(Pw, Dw, (.64, .8))
+        _TURN_CACHE['planes'] = [_yaw(-float(spin(s)))@w for s, w in ((.64, w0), (.8, w1))]
+    cut0, cut1 = _TURN_CACHE['planes']
+    rest_b = ncurve([(0, GUARD_N), (.25, cut0), (.62, cut0), (.8, cut1, 'hit'), (2.2, cut1), (2.6, GUARD_N)])
+    lead = curve([(0, 0), (.65, 0), (.68, 1, 'linear'), (.85, 1), (.92, 0)])
+    spec.update(edge_lead(Pw, Dw, lambda s: _yaw(float(spin(s)))@rest_b(s), lead, t))
+    spec.update({'feet': feet, 'foot_r': foot_r, 'extra': cloth(t, swing=float(swing(t)), lift=float(lift(t)))})
+    return spec
+
+
+_TURN_CACHE = {}
+
+
 # ---------------------------------------------------------------- Cast, wait, Reel
 LAND = np.array([.35, .55, -11.5])          # where the thrown sword drives into the floor
 LAND_D = unit((.05, -.75, -.66))
@@ -818,7 +999,10 @@ def cast_reel(t):
 
 
 # ---------------------------------------------------------------- re-verify the edge and wrists
-BLOWS = {'royal_cut': ((.9, 1.3), (1.75, 2.2)), 'cast_reel': ((.74, RELEASE),)}   # cut, backhand; the whip
+# The blows whose edge must lead: the Royal Cut's cut and backhand, the Turning Cut's sweep,
+# the throw's whip. A thrust has no edge to lead; its wrists, grip and bake are still checked.
+BLOWS = {'royal_cut': ((.9, 1.3), (1.75, 2.2)), 'turning_cut': ((.68, .85),), 'cast_reel': ((.74, RELEASE),)}
+ATTACKS = ('royal_cut', 'kingsguard_thrust', 'turning_cut', 'cast_reel')
 
 
 # What check_edges holds each clip to (summary key: limit; 'lowest' keys are minimums).
@@ -829,7 +1013,7 @@ LIMITS = {'max edge deg': 25, 'half-sample max edge deg': 25, 'baked max edge de
           'baked max arm error deg': 10, 'baked lowest held sword y': 0}
 
 
-def check_edges(names=('royal_cut', 'cast_reel'), clips=None, rate=20, table=True, baked=True, fps=60):
+def check_edges(names=ATTACKS, clips=None, rate=20, table=True, baked=True, fps=60):
     """Re-verify the edge lead, the wrists and the grip: on the bake's 20 Hz samples, half way
     between them, and as GeckoLib plays the baked keys. From art/pyre_king:
         py -3 -c "import clips; clips.check_edges()"
@@ -952,5 +1136,10 @@ CLIPS = {
     'walk': (walk, WALK['period'], True),
     'run': (run, RUN['period'], True),
     'royal_cut': (royal_cut, 3.8, False),
+    'kingsguard_thrust': (kingsguard_thrust, 2.9, False),
+    'turning_cut': (turning_cut, 2.6, False),
     'cast_reel': (cast_reel, 4.7, False),
 }
+# Clips that end with him turned: degrees to his left, about his origin. The game turns his
+# body yaw by this much on the clip's last frame, as the next clip starts in his own frame.
+END_TURN = {'turning_cut': TURN_END}

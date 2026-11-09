@@ -24,6 +24,10 @@ SIDE = (90, 4, 7, 0, 2.4, 0)
 FRONT = (0, 8, 7, 0, 2.6, 0)
 ABOVE = (20, 70, 7, 0, 2.6, -.5)
 THROW_SIDE = (90, 4, 8, 0, 2.9, -.6)
+THRUST_SIDE = (90, 4, 9, 0, 2.4, -1.8)
+THRUST_34 = (-35, 10, 9, 0, 2.6, -1.2)
+TURN_BEHIND = (150, 14, 11, 0, 2.4, 1)
+TURN_ABOVE = (20, 60, 12, 0, 1, 0)
 STRIPS = {
     # Tell, cock, the cut at mid-blow, follow-through, re-cock, the backhand at mid-blow, the pause.
     'royal-cut.png': [('royal_cut', [0, .5, .9, .95, 1.0, 1.3, 1.75, 1.85, 1.9, 2.8], None, False)],
@@ -48,6 +52,17 @@ STRIPS = {
                                     ('cast_reel', [3.733, 3.75, 3.767, 3.783, 3.8], None, False),
                                     ('cast_reel', [3.733, 3.75, 3.767, 3.783, 3.8], None, True),
                                     ('cast_reel', [3.833, 3.85, 3.867, 3.883, 3.9], None, False)],
+    # Kingsguard Thrust: guard, the high guard (snap), coiled, the drive, full reach, overshoot,
+    # settled, the pause, stepping back; from the side and three-quarter, then the player's eye.
+    'kingsguard-thrust.png': [('kingsguard_thrust', [0, .35, .8, .87, .93, 1.0, 1.2, 1.8, 2.6, 2.9], THRUST_SIDE, False),
+                              ('kingsguard_thrust', [0, .35, .8, .87, .93, 1.0, 1.2, 1.8, 2.6, 2.9], THRUST_34, False)],
+    'kingsguard-thrust-player.png': [('kingsguard_thrust', [.35, .8, .87, .93, 1.0], None, True)],
+    # Turning Cut: guard, the glance (snap), the spin, the sweep through the half behind him,
+    # the follow-through and the guard facing back; from behind him and from above, then the
+    # eye of a player standing 4.5 blocks behind him.
+    'turning-cut.png': [('turning_cut', [0, .25, .45, .6, .68, .72, .76, .8, .95, 2.6], TURN_BEHIND, False),
+                        ('turning_cut', [0, .25, .45, .6, .68, .72, .76, .8, .95, 2.6], TURN_ABOVE, False)],
+    'turning-cut-player.png': [('turning_cut', [.25, .6, .68, .72, .76], None, 'behind')],
     # Quarter steps of each loop (walk 1.0 s, run 0.9 s), on or next to the 20 Hz keys.
     'walk-run.png': [('walk', [0, .25, .5, .75], SIDE, False), ('run', [0, .25, .45, .7], SIDE, False),
                      ('walk', [0, .25, .5, .75], FRONT, False), ('run', [0, .25, .45, .7], FRONT, False)],
@@ -68,10 +83,10 @@ def strip(clip, times, cam=None, player=False):
                                                     '--effects', '--clip', clip, '--time', str(t)]+travel))
         at = np.array([ax, ay, az]); y, p = map(math.radians, (yaw, pitch))
         eye = at+[math.sin(y)*math.cos(p)*20, math.sin(p)*20, -math.cos(y)*math.cos(p)*20]
-        if player:
-            eye, at = np.array([0, 1.6, -8.]), np.array([0, 3.0, 0.])
+        if player:      # True: 8 blocks in front of him; 'behind': 4.5 blocks behind him
+            eye, at = (np.array([0, 1.6, 4.5]), np.array([0, 3.0, 0.])) if player == 'behind' else (np.array([0, 1.6, -8.]), np.array([0, 3.0, 0.]))
         title = f'{clip}  t={t:.2f}s' if abs(t*20-round(t*20)) < 1e-6 else f'{clip}  t={t:.3f}s (in-between)'
-        title += '  · player eye, 8 blocks' if player else ''
+        title += ('  · player eye, 4.5 blocks behind' if player == 'behind' else '  · player eye, 8 blocks') if player else ''
         frames.append(rr.render(scene['faces']+scene['flames'], tex, glow, eye, at, 520, 620, extent=extent,
                                 fov=58 if player else None, title=title, subtitle='', scale=not player,
                                 fire_texture=fire, revision='CLIP'))

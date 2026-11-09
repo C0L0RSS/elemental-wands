@@ -12,7 +12,9 @@ if(process.argv.includes('--effects')){
  const clipName=arg('--clip'),dir=path.dirname(process.argv[2]);
  const clip=clipName?JSON.parse(fs.readFileSync(path.join(dir,'pyre_king.animation.json'))).animations['animation.pyre_king.'+clipName]:null;
  const time=arg('--time')!==null?+arg('--time'):process.argv.includes('--sweep')?1.8:.65;
- result=ctx.PyreEffects.scene(model,manifest,time,process.argv.includes('--sweep'),process.argv.includes('--planted'),clip);
+ // --travel vx,vy,vz: the body's world velocity (blocks/s) for a clip played in place.
+ const travel=arg('--travel')?arg('--travel').split(',').map(Number):null;
+ result=ctx.PyreEffects.scene(model,manifest,time,process.argv.includes('--sweep'),process.argv.includes('--planted'),clip,travel?{travel}:null);
 }else{
  const pose=poseBones(model,null,0);
  result={faces:model.faces.filter(f=>!f.empty).map(f=>{const m=pose.matrices[f.bone];return {bone:model.bones[f.bone].name,pts:f.pts.map(p=>M.apply(m,p)),n:norm(M.dir(m,f.n)),uvs:f.uvs};})};

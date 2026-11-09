@@ -46,6 +46,20 @@ def ring(b, center, w, h, thickness, material='iron', plane='xy'):
         cube(b, (x-t/2, y-h/2+t, z+w/2-t), (t, h-2*t, t), material)
 
 
+def beam_frame(a, z):
+    """The beam's local X (width), Y (length) and Z (depth) axes in source space."""
+    d = [z[i]-a[i] for i in range(3)]; L = math.sqrt(sum(v*v for v in d)); h = math.hypot(d[0], d[1])
+    return ([d[1]/h, -d[0]/h, 0], [v/L for v in d], [-d[2]/L*d[0]/h, -d[2]/L*d[1]/h, h/L])
+
+
+def limb(b, a, z, t0, t1, width, depth, material='armor', out=0, back=0):
+    """A beam over the stretch t0..t1 of the axis a->z, shifted `out` along its width axis
+    and `back` along its depth axis, so plates can sit on a limb's faces."""
+    ex, _, ez = beam_frame(a, z)
+    def at(t): return [a[i]+(z[i]-a[i])*t+ex[i]*out+ez[i]*back for i in range(3)]
+    return beam(b, at(t0), at(t1), width, depth, material)
+
+
 def unit(v):
     length = math.sqrt(sum(x*x for x in v)); return [x/length for x in v]
 
@@ -103,43 +117,67 @@ for a, b in [((-3.3, 47.9, -5.85), (-7.2, 50.7, -5.85)), ((3.3, 47.9, -5.85), (7
              ((-7.2, 50.7, -5.85), (-8.4, 52.6, -6.85)), ((7.4, 50.9, -5.85), (8.6, 53.4, -6.85))]:
     beam('torso', a, b, .4, .25, 'ember')
 
-# Six separated tassets: narrow waist, modest flare and daylight between panels.
-for face in ['front', 'back']:
-    for side, sgn in [('right', -1), ('left', 1)]:
-        zsign = -1 if face == 'front' else 1
-        n = bone('coat_flap_'+face+'_'+side, 'pelvis', (sgn*4.8, 35, zsign*4.8))
-        for j in range(3):
-            y = 29-j*5
-            w = (9.4 if sgn < 0 else 6)+j*1.1
-            cx = (-2.1 if sgn < 0 else 5.4)+sgn*j*.55
-            z = zsign*(7.4+j*.65)
-            beam(n, (cx, y, z), (cx, y+7, z-zsign*1.2), w, 1.25, 'coat')
-            cube(n, (cx-w/2, y-.1, z-.7), (w, .95, 1.4), 'hem' if j == 2 else 'trim')
-for side, sgn in [('right', -1), ('left', 1)]:
-    n = bone('coat_flap_side_'+side, 'pelvis', (sgn*8.5, 35, 0))
-    for j in range(3):
-        y = 29-j*5; depth = 9.6+j*.9; x = sgn*(9.7+j*1.1)
-        beam(n, (x, y, 0), (x-sgn*1.6, y+7, 0), 1.25, depth, 'coat')
-        cube(n, (x-.7, y-.1, -depth/2), (1.4, .95, depth), 'hem' if j == 2 else 'trim')
+# No coat: a close fauld of two lames hugs the hips under the belt and stops where the
+# thighs begin, so the legs read in full. Each lame wraps the pelvis as one band; the upper
+# one sits on top of the wider lower one, so its gold edge shows above the step. The lower
+# lame is shallow, so more of the thigh shows, and broad enough to cover the top of the
+# full-width cuisses.
+FAULD = [  # half width, bottom, top, front z, back z
+    (10.4, 32.8, 35.9, -6.0, 5.5),
+    (14.2, 30.4, 32.8, -6.6, 6.1)]
+for i, (hw, y0, y1, zf, zb) in enumerate(FAULD):
+    cube('pelvis', (-hw, y0, zf), (2*hw, y1-y0, zb-zf))
+    cube('pelvis', (-hw-.1, y0-.05, zf-.1), (2*hw+.2, .7, zb-zf+.2), 'hem' if i else 'trim')
 
-# A crimson tabard hangs from a gold clasp on the belt, over the front tassets.
+# A crimson tabard hangs from a gold clasp on the belt, lies on the fauld's front and ends
+# at mid-thigh, well above the knees.
 bone('tabard', 'pelvis', (0, 36, -6))
 cube('tabard', (-4, 35, -8.6), (8, 1.7, 3.9), 'gold')
-beam('tabard', (0, 18.4, -10.5), (0, 35.4, -7.7), 7.4, .9, 'tabard')
-beam('tabard', (.35, 16.6, -10.75), (.1, 19, -10.45), 5.2, .9, 'burnt_cloth')
+beam('tabard', (0, 25, -8.0), (0, 35.4, -7.3), 6.6, .9, 'tabard')
+beam('tabard', (.3, 23.2, -8.15), (.1, 25.6, -8.0), 4.6, .9, 'burnt_cloth')
 
-# Bent knees and staggered, broad sabatons anchor the forward-loaded cuirass.
-for side, sgn, zoff in [('right', -1, -2.5), ('left', 1, 3)]:
-    hip = (sgn*6, 33, 1); knee = (sgn*11, 17, zoff-3); ankle = (sgn*13.5, 5, zoff+.5)
-    thigh = bone(side+'_thigh', 'pelvis', hip); beam(thigh, knee, hip, 7.4, 7.2)
-    shin = bone(side+'_shin', thigh, knee); beam(shin, ankle, knee, 7, 7)
-    cube(shin, (sgn*11-4.2, 15, zoff-7), (8.4, 5, 3), 'joint')
-    cube(shin, (sgn*11-4.2, 18.8, zoff-7.3), (8.4, .8, 3.3), 'trim')
+# Heavy plate legs stand as straight columns under the broad cuirass, and broad staggered
+# sabatons anchor them. Seen from the front, each knee sits on the line from hip to ankle,
+# so thigh and shin run on as one leg; the stance bends the knees only forward. The knees
+# are set so both legs are the same length, and the gaits need no pelvis hitch.
+for side, sgn, zoff, kz in [('right', -1, -2.5, -4.5), ('left', 1, 3, -1.47)]:
+    hip = (sgn*6, 33, 1); ankle = (sgn*13.5, 5, zoff+.5)
+    knee = (hip[0]+(ankle[0]-hip[0])*(hip[1]-17)/(hip[1]-ankle[1]), 17, kz)
+    thigh = bone(side+'_thigh', 'pelvis', hip)
+    # The cuisse is full width from the knee up under the fauld, its outer side running on
+    # in one line with the greave's, and its inner face where the gaits need it. Above the
+    # knee its front and back corners round off in steps toward the fauld, so a thigh lifted
+    # into a stride, or trailing, slides under the fauld's corners instead of cutting out
+    # through them, and its front clears the belt clasp at the top of a run stride. Its
+    # hidden top is narrower outside, so it stays under the fauld when a gait swings the
+    # slanted thigh upright.
+    def plate(t0, t1, inner, outer, front, back, material='armor'):
+        limb(thigh, knee, hip, t0, t1, outer-inner, front+back, material,
+             out=sgn*(outer+inner)/2, back=(back-front)/2)
+    plate(0, .24, -5.2, 5.6, 4.9, 4.9)           # a little narrower at the knee
+    plate(.2, .4, -5.7, 6.3, 5.2, 5.2)           # the heavy cuisse
+    plate(.36, .76, -5.7, 6.3, 1, 5.2)           # its full width, up under the fauld
+    plate(.72, .97, -5.4, 2.8, 3.4, 3.4)         # its hidden top
+    plate(.36, .9, -5.5, 4, 3.4, 0)              # the rounded front, in two steps,
+    plate(.36, .6, -2.6, 2.8, 5.2, 0)            # lower at the top
+    plate(.24, .5, -4.4, 2.4, 5.9, -5)           # its raised front plate
+    shin = bone(side+'_shin', thigh, knee)
+    # The greave tapers gently in steps to the ankle; the calf fills out behind it.
+    limb(shin, ankle, knee, 0, .32, 8.6, 8.6)                     # the ankle
+    limb(shin, ankle, knee, .28, .6, 9.6, 9.2)                    # lower greave
+    limb(shin, ankle, knee, .55, 1, 10.4, 9.8)                    # broad greave under the knee
+    limb(shin, ankle, knee, .38, .86, 10.4, 5, back=3.4)          # the calf behind
+    # The knee cop follows the shin: a broad plate with a boss on it, so it reads rounded,
+    # and a thin gold edge along its lower rim. It stays inside the leg's line, and no gold
+    # faces up when the shin swings back.
+    limb(shin, ankle, knee, .8, 1.16, 10.6, 3.4, 'joint', back=-4.8)    # knee cop
+    limb(shin, ankle, knee, .86, 1.1, 6.4, 1.2, 'joint', back=-6.9)     # its boss
+    limb(shin, ankle, knee, .795, .842, 10.8, 1, 'trim', back=-6.05)    # its gold lower edge
     foot = bone(side+'_foot', shin, ankle)
-    cube(foot, (sgn*13.5-4.7, 0, zoff-8), (9.4, 4, 13))
-    cube(foot, (sgn*13.5-4.2, 3, zoff-4), (8.4, 3.6, 8))
-    cube(foot, (sgn*13.5-4.7, 3.2, zoff-8.1), (9.4, .8, 3.2), 'trim')
-    cube(foot, (sgn*13.5-4, 5.2, zoff-3.6), (8, 1.2, 7.5), 'trim')
+    x = ankle[0]+sgn*.6          # the sabaton sits a little outward of the ankle
+    cube(foot, (x-5.6, 0, zoff-8), (11.2, 4.4, 13))
+    cube(foot, (x-5.2, 3.6, zoff-4.6), (10.4, 3.8, 9.2))
+    cube(foot, (x-5.7, 3.6, zoff-8.15), (11.4, .9, 1.5), 'trim')   # a thin gold toe edge
 
 # ---------------------------------------------------------------- head
 # A full skull fills the crown band and backs the mask; it sits in the gorget.
@@ -223,17 +261,23 @@ beam('mantle_collar', (0, 58.4, 5.6), (0, 66.2, 7), 12, 1.5, 'crimson')
 beam('mantle_collar', (0, 64.8, 6.9), (0, 66.8, 7.4), 13.6, 1.4, 'crimson')
 for sgn in [-1, 1]:
     beam('mantle_collar', (sgn*6.9, 58.4, 1.6), (sgn*7.3, 62.8, 2.8), 1.4, 6, 'crimson')
-# Seven unequal, overlapping cape panels hug the back, fold at staggered heights,
-# then fall over the back tassets to a ragged hem.
-for i, (x, w, fold, yb, zo) in enumerate([(-11.6, 3.8, 43, 23, 0), (-8.2, 6.6, 37.4, 19.5, .9),
-                                          (-3.6, 4.8, 44, 22, 0), (.6, 7.4, 38.6, 18.5, .9),
-                                          (5.2, 5, 42.6, 21.5, 0), (8.9, 6.2, 36.8, 20, .9),
-                                          (11.8, 3.6, 44.4, 24, 0)]):
+# Seven unequal, overlapping cape panels hug the back and fold at staggered heights. Below
+# the fold each falls a little behind plumb in the world (the torso leans 6 degrees, so in
+# its frame that is a backward slope), clear of the fauld and the thighs, and the burnt
+# hem ends low on the thigh, well above the knee, so the legs show from behind. The hem
+# rises toward the sides, and the outer panels draw in, so no cloth frames the hips from
+# the front. Each panel's pivot stays at the top of its shoulder (x).
+PLUMB = math.tan(math.radians(6))
+for i, (x, xb, w, fold, yb, zo) in enumerate([
+        (-11.6, -9.8, 3.6, 43, 29.6, 0), (-8.2, -7.5, 6.4, 37.4, 26.6, .9),
+        (-3.6, -3.6, 4.8, 44, 28, 0), (.6, .6, 7.4, 38.6, 25, .9),
+        (5.2, 5.2, 5, 42.6, 27.6, 0), (8.9, 8.1, 6.2, 36.8, 26.2, .9),
+        (11.8, 10, 3.4, 44.4, 30, 0)]):
     n = bone('mantle_scrap_%02d' % (i+1), 'torso', (x, 59.6, 5.5))
-    drift = x*.08
-    beam(n, (x*.95, fold, 5.75+zo), (x, 59.6, 5.45+zo), w, 1.1, 'crimson')
-    beam(n, (x+drift, yb, 9.8+zo), (x*.95, fold+.3, 5.75+zo), w, 1.1, 'crimson')
-    beam(n, (x+drift*1.2, yb-2.6, 10.1+zo), (x+drift, yb+.5, 9.75+zo), w*.62, 1.1, 'burnt_cloth')
+    xf = math.copysign(min(abs(x*.95), abs(xb)), x); zb = 5.75+PLUMB*(fold-yb)+.6+zo+2
+    beam(n, (xf, fold, 5.75+zo), (x, 59.6, 5.45+zo), w, 1.1, 'crimson')
+    beam(n, (xb, yb, zb), (xf, fold+.3, 5.75+zo), w, 1.1, 'crimson')
+    beam(n, (xb+x*.01, yb-2.6, zb+.3+PLUMB*2.6), (xb, yb+.5, zb-.05), w*.62, 1.1, 'burnt_cloth')
 for side, sgn in [('right', -1), ('left', 1)]:
     n = bone('mantle_scrap_front_'+side, 'torso', (sgn*6.5, 58.6, -5.8))
     beam(n, (sgn*8.6, 51.4, -7.3), (sgn*6.5, 58.6, -6.2), 2.6, 1, 'crimson')
@@ -264,33 +308,56 @@ for side, sgn, station, elbow in [('right', -1, 12.3, (-18.5, 41, -6.5)),
     hand = sword_point(station)
     upper = bone(side+'_upper_arm', 'torso', shoulder)
     mid = [shoulder[i]+(elbow[i]-shoulder[i])*.55 for i in range(3)]
-    beam(upper, mid, shoulder, 6.2, 6.4); beam(upper, elbow, mid, 5.2, 5.4)
-    # Three stepped lames wrap the shoulder cap; each lower one tilts further out.
-    for cx, y, w, h, d, tilt in [(sgn*13.6, 56.2, 9.6, 4.2, 10.6, 24), (sgn*15.2, 52.4, 7.6, 3.8, 9.6, 34)]:
-        rot = [0, 0, sgn*tilt]; pv = (cx, y+h/2, 0)
-        cube(upper, (cx-w/2, y, -d/2), (w, h, d), 'armor', rot, pv)
-        cube(upper, (cx-w/2-.05, y-.02, -d/2-.05), (w+.1, .6, d+.1), 'trim', rot, pv)
-    # The burned royal mantle lies over the shoulder cap and hangs down the arm.
-    # The cape comes over the whole shoulder: across the top, down the front, and down
-    # behind the pauldron, where it joins the cape panels on the back.
-    beam(upper, (sgn*18, 58.2, .3), (sgn*7.8, 62.5, .3), 1.1, 13.2, 'crimson')
-    beam(upper, (sgn*16.2, 44.5, 7.5), (sgn*13.4, 61.6, 6.6), 8.4, 1.1, 'crimson')
-    beam(upper, (sgn*16.6, 41.8, 7.7), (sgn*16.2, 45, 7.5), 5.2, 1.1, 'burnt_cloth')
-    beam(upper, (sgn*14.6, 50.4, -6.2), (sgn*12.6, 61.6, -6.1), 5.6, .9, 'crimson')
-    beam(upper, (sgn*14.9, 48.2, -6.25), (sgn*14.6, 50.8, -6.2), 3.6, .9, 'burnt_cloth')
+    # Heavy arms: a thick upper arm and a broad couter at the elbow. The upper arm starts a
+    # little below the shoulder joint, so its corners stay inside the shoulder plates.
+    beam(upper, mid, add(shoulder, unit([elbow[i]-shoulder[i] for i in range(3)]), 1.2), 7.6, 7.2)
+    beam(upper, elbow, mid, 7, 6.8)
+    # The shoulder plates hang on their own bone, from the chest at the shoulder joint, not
+    # on the arm: rig.Solver turns the plates only part of the way the upper arm turns (a
+    # little for the swings of a stride, so they stay steady with the chest; most of the way
+    # for a big raise, so the arm never leaves them). The mantle on them rides along.
+    plate = bone(side+'_pauldron', 'torso', shoulder)
+    # Two small stepped lames cap the shoulder; the lower one sits further forward, following
+    # the arm down to the elbow. Its lower outer corner reaches just past the arm, so the
+    # arm comes out from under it rather than through its end; it slopes about as gently
+    # as the upper one, so it adds almost nothing to the shoulders' width. The sword arm
+    # angles out from the body, so its lames sit a little further out. The arm moves a
+    # little under its plate, so the lower lame leaves it some room: its inner end runs into
+    # the chest, and its outer end, front and back stand a little clear of the arm.
+    (up_x, up_w), (lo_x, lo_w) = ((14.3, 9), (15.7, 8.6)) if sgn < 0 else ((14, 8.4), (14.5, 7.6))
+    LAMES = [(sgn*up_x, 56.8, up_w, 3.2, 9.2, -1.8, 16), (sgn*lo_x, 54.2, lo_w, 2.8, 10.6, -2.05, 14)]
+    for cx, y, w, h, d, zc, tilt in LAMES:
+        rot = [0, 0, sgn*tilt]; pv = (cx, y+h/2, zc)
+        cube(plate, (cx-w/2, y, zc-d/2), (w, h, d), 'armor', rot, pv)
+        cube(plate, (cx-w/2-.05, y-.02, zc-d/2-.05), (w+.1, .6, d+.1), 'trim', rot, pv)
+    # The burned royal mantle lies over the inner part of the shoulder, from the collar to
+    # the middle of the upper lame and from behind its front edge back to the cape, so the
+    # iron plate and its gold edge show on top and in front; then it hangs down behind the
+    # arm, where it joins the cape panels on the back.
+    cx, y, w, h, d, zc, tilt = LAMES[0]; a = math.radians(tilt)
+    top = (cx+sgn*math.sin(a)*h/2, y+h/2+math.cos(a)*h/2)
+    u = (sgn*math.cos(a), -math.sin(a)); nrm = (sgn*math.sin(a), math.cos(a))
+    s_in = (7.8-abs(top[0]))/math.cos(a)
+    def on_top(s, lift=.3): return (top[0]+u[0]*s+nrm[0]*lift, top[1]+u[1]*s+nrm[1]*lift)
+    outer, inner = on_top(1.0), on_top(s_in)
+    beam(plate, (outer[0], outer[1], 1.5), (inner[0], inner[1], 1.5), 1.1, 9.4, 'crimson')
+    beam(plate, (sgn*15, 45, 7.2), (sgn*14.4, inner[1]-1.6, 6.55), 5.6, 1.1, 'crimson')
+    beam(plate, (sgn*15.2, 42.4, 7.35), (sgn*15, 45.5, 7.2), 3.8, 1.1, 'burnt_cloth')
     lower = bone(side+'_forearm', upper, elbow)
     axis = unit([hand[i]-elbow[i] for i in range(3)])
     wrist = add(hand, axis, -3.2); cuff = add(wrist, axis, -3.6)
     WRISTS[side] = (wrist, axis)
     fmid = add(elbow, axis, math.dist(elbow, wrist)*.5)
-    beam(lower, fmid, elbow, 5.4, 5.6, 'joint'); beam(lower, wrist, fmid, 4.6, 4.8, 'joint')
-    cube(lower, (elbow[0]-2.9, elbow[1]-2, elbow[2]-2.9), (5.8, 4, 5.8), 'armor')
-    cube(lower, (elbow[0]-2.95, elbow[1]-.3, elbow[2]-2.95), (5.9, .6, 5.9), 'trim')
+    # Thick vambraces taper toward the gauntlet; they end inside its cuff, so the wrist
+    # itself stays slim.
+    beam(lower, fmid, elbow, 7, 7.2, 'joint'); beam(lower, add(cuff, axis, .2), fmid, 6.2, 6.4, 'joint')
+    cube(lower, (elbow[0]-3.7, elbow[1]-2.4, elbow[2]-3.7), (7.4, 4.8, 7.4), 'armor')
+    cube(lower, (elbow[0]-3.75, elbow[1]-.3, elbow[2]-3.75), (7.5, .6, 7.5), 'trim')
     # The gauntlet cuff flares toward the elbow and slims at the wrist, so the fist reads
     # as its own shape instead of running on from a cuff of the same thickness.
     beam(lower, cuff, wrist, 5.0, 5.2, 'gauntlet')
-    beam(lower, add(cuff, axis, -.3), add(cuff, axis, 1.3), 6.3, 6.5, 'gauntlet')
-    beam(lower, add(cuff, axis, -.4), add(cuff, axis, .2), 6.6, 6.8, 'trim')
+    beam(lower, add(cuff, axis, -.5), add(cuff, axis, 1.3), 6.8, 7, 'gauntlet')
+    beam(lower, add(cuff, axis, -.6), add(cuff, axis, 0), 7.1, 7.3, 'trim')
     n = bone(side+'_hand', lower, hand)
 
     # A real fist around the grip: knuckle shell, gold knuckle band and a thumb.
@@ -308,8 +375,9 @@ for side, sgn, station, elbow in [('right', -1, 12.3, (-18.5, 41, -6.5)),
 def body_extent(y):
     if y >= 51: return 12, -6.8, 5.2
     if y >= 43: return 9, -5.8, 5.2
-    if y >= 35.4: return 7.8, -5, 5.2
-    return 7.5, -4, 5
+    if y >= FAULD[0][2]: return 7.8, -5, 5.2
+    hw, _, _, zf, zb = FAULD[0]          # at the right hip it rides over the fauld
+    return hw, zf, zb
 
 
 def chain_loop(b, y0, slope, count, t=1.55, width=4.8):
@@ -340,7 +408,7 @@ def chain_loop(b, y0, slope, count, t=1.55, width=4.8):
 
 
 n = bone('curse_chain_chest', 'torso', (0, 40.5, 0))
-chain = chain_loop(n, 40.5, .85, 12)
+chain = chain_loop(n, 41.4, .68, 12)
 # The padlock hangs beside the shard: his death is locked in.
 front = min((p for p in chain if p[2] < 0), key=lambda p: abs(p[0]-6))
 lock(n, front[0], front[1]-1.7, front[2]-1.3)

@@ -2,7 +2,9 @@
 """Offline textured triangle renderer, adapted from storm_roc/render_review.py.
 Uses the workshop's GeckoLib 5 baker in Node, then NumPy rasterization. No browser.
 Transparent flame faces sort back to front, depth-test against opaque geometry,
-and do not write depth. Perspective-correct nearest-neighbor UV sampling.
+and do not write depth; faces with blend 'add' are drawn after the rest, additively,
+and per-vertex 'alphas' interpolate like the UVs. Perspective-correct
+nearest-neighbor UV sampling.
 """
 import argparse
 import json
@@ -59,7 +61,7 @@ def font(size):
     return ImageFont.load_default()
 
 
-def render(faces,texture,glow,eye,at,w,h,extent=6,fov=None,title='',subtitle='',scale=False,fire=True,fire_texture=None,revision='TENTH'):
+def render(faces,texture,glow,eye,at,w,h,extent=6,fov=None,title='',subtitle='',scale=False,fire=True,fire_texture=None,revision='ELEVENTH'):
     vp=camera(eye,np.array(at),w/h,fov,extent);eye=np.array(eye)
     bg=Image.new('RGB',(w,h),(175,176,171));draw=ImageDraw.Draw(bg)
     def project(p):
@@ -73,7 +75,9 @@ def render(faces,texture,glow,eye,at,w,h,extent=6,fov=None,title='',subtitle='',
             if p and q:draw.line([p,q],fill=(151,154,150),width=1)
     pixels=np.array(bg,dtype=float);depth=np.full((h,w),np.inf)
     fs=[f for f in faces if fire or f['bone'] not in ('sword_fire','world_fire')]+(player() if scale else [])
-    fs.sort(key=lambda f:(f['bone'] in ('sword_fire','world_fire'),-np.mean(np.sum((np.array(f['pts'])-eye)**2,axis=1)) if f['bone'] in ('sword_fire','world_fire') else 0))
+    # Opaque faces first, then normal flames back to front, then additive flames (blend 'add')
+    # back to front, as the workshop draws them.
+    fs.sort(key=lambda f:(f['bone'] in ('sword_fire','world_fire'),f.get('blend')=='add',-np.mean(np.sum((np.array(f['pts'])-eye)**2,axis=1)) if f['bone'] in ('sword_fire','world_fire') else 0))
     for face in fs:
         pts=np.array(face['pts']);clip=np.c_[pts,np.ones(4)]@vp.T;ww=clip[:,3];ndc=clip[:,:3]/ww[:,None]
         screen=np.c_[(ndc[:,0]+1)*w/2,(1-ndc[:,1])*h/2];uvs=np.array(face['uvs'])
@@ -99,11 +103,17 @@ def render(faces,texture,glow,eye,at,w,h,extent=6,fov=None,title='',subtitle='',
             coeff=np.stack([aa/ww[ids[0]],bb/ww[ids[1]],cc/ww[ids[2]]],axis=-1);coeff/=coeff.sum(axis=-1,keepdims=True)
             uv=coeff@uvs[ids];effect=face['bone']=='world_fire';skin=fire_texture if effect else texture;th,tw=skin.shape[:2]
             tx=np.clip((uv[:,:,0]*tw).astype(int),0,tw-1);ty=np.clip((uv[:,:,1]*th).astype(int),0,th-1)
-            tex=skin[ty,tx]/255;g=tex if effect else glow[ty,tx]/255;alpha=tex[:,:,3]*face.get('alpha',1)
-            inside&=alpha>.02
+            tex=skin[ty,tx]/255;g=tex if effect else glow[ty,tx]/255
+            # Per-vertex opacity ('alphas') interpolates perspective-correctly like the UVs and
+            # replaces the face's 'alpha' when present, as the workshop's opacity attribute does.
+            fade=coeff@np.array(face['alphas'],dtype=float)[ids] if 'alphas' in face else face.get('alpha',1)
+            alpha=tex[:,:,3]*fade
+            inside&=(tex[:,:,3]>=.02)&(alpha>1e-4)
             rgb=tex[:,:,:3]*shade;rgb=rgb*(1-g[:,:,3,None])+np.maximum(rgb,g[:,:,:3])*g[:,:,3,None]
             if effect:rgb=tex[:,:,:3]
-            if transparent:patch[inside]=(rgb*255*alpha[:,:,None]+patch*(1-alpha[:,:,None]))[inside]
+            # Additive flames (SRC_ALPHA, ONE) glow onto what is behind them; others blend over it.
+            if transparent and face.get('blend')=='add':patch[inside]=np.minimum(255,patch+rgb*255*alpha[:,:,None])[inside]
+            elif transparent:patch[inside]=(rgb*255*alpha[:,:,None]+patch*(1-alpha[:,:,None]))[inside]
             else:patch[inside]=rgb[inside]*255;dz[inside]=zz[inside]
     im=Image.fromarray(np.clip(pixels,0,255).astype('uint8'));d=ImageDraw.Draw(im)
     d.rectangle((0,0,w,88),fill=(30,32,33));d.text((26,19),title,fill=(233,215,179),font=font(25));d.text((27,54),subtitle,fill=(180,181,174),font=font(13))
@@ -141,7 +151,7 @@ def main():
     for d in (8,16):cases.append(dict(name=f'player-{d}-blocks',faces=king['faces']+king['flames'],eye=[0,1.6,-d],at=[0,3.3,0],fov=50,scale=True,title=f'Player view / {d} blocks',subtitle='Eye 1.60 blocks · look-at height 3.30 · vertical FOV 50° · matched workshop camera'))
     sweep=baked('pyre_king.geo.json','--effects','--sweep')
     at=[1.6,2.8,0]
-    cases.append(dict(name='horizontal-sweep',faces=sweep['faces']+sweep['flames'],eye=orbit(20,12,at),at=at,extent=8.4,scale=True,title='Horizontal sweep / frozen at 1.80 s',subtitle='Blade level · every flame rises in world Y · 0.18-second fading trail'))
+    cases.append(dict(name='horizontal-sweep',faces=sweep['faces']+sweep['flames'],eye=orbit(20,12,at),at=at,extent=8.4,scale=True,title='Horizontal sweep / frozen at 1.80 s',subtitle='Blade level · every flame rises in world Y · flames settle upright as the blade stops'))
     # Detail cameras frame only the flame-bearing blade with room above the tips.
     for name,scene_data,yaw,pitch in [('high-guard',king,18,7),('horizontal-sweep',sweep,20,12)]:
         pts=np.array([p for f in scene_data['flames'] for p in f['pts']])
@@ -155,25 +165,25 @@ def main():
         im=render(texture=texture,glow=glow,fire_texture=fire_texture,w=args.width,h=args.width,**opts);im.save(OUT/(c['name']+'.png'));print(c['name'],flush=True)
     if all((OUT/(c['name']+'.png')).exists() for c in cases):
         tw=600;sheet=Image.new('RGB',(tw*3,tw*math.ceil(len(cases)/3)+100),(24,26,28));d=ImageDraw.Draw(sheet)
-        d.text((28,20),'PYRE KING / 10',fill=(232,208,164),font=font(30));d.text((28,61),'5.00-block masked king  /  1.80-block scale player  /  4.50-block longsword  /  review only',fill=(180,180,174),font=font(17))
+        d.text((28,20),'PYRE KING / 11',fill=(232,208,164),font=font(30));d.text((28,61),'5.00-block masked king  /  1.80-block scale player  /  4.50-block longsword  /  review only',fill=(180,180,174),font=font(17))
         for i,c in enumerate(cases):
             im=Image.open(OUT/(c['name']+'.png'));im=im.resize((tw,tw),Image.Resampling.LANCZOS);sheet.paste(im,((i%3)*tw,100+(i//3)*tw))
         sheet.save(OUT/'contact-sheet.png')
-    # Exact v9 cameras are unchanged. Compare archived pixels, never rebake v9
+    # Exact v10 cameras are unchanged. Compare archived pixels, never rebake v10
     # with the new geometry or alter the preserved original review evidence.
     for name in ['three-quarter','front','side','back','head-close-up','grip-close-up','player-8-blocks',
                  'horizontal-sweep','fire-close-up-high-guard']:
         if args.only and name not in args.only:continue
-        saved=OUT.parent/'v9'/(name+'.png')
+        saved=OUT.parent/'v10'/(name+'.png')
         if not saved.exists():continue
         before=Image.open(saved).convert('RGB')
         after=Image.open(OUT/(name+'.png')).convert('RGB')
         if before.size!=after.size:
-            print(f'skipped compare-v9-v10-{name}: the archived v9 image is {before.size}, not {after.size}');continue
+            print(f'skipped compare-v10-v11-{name}: the archived v10 image is {before.size}, not {after.size}');continue
         w,h=after.size;pair=Image.new('RGB',(2*w,h+60),(24,26,28));d=ImageDraw.Draw(pair)
-        d.text((26,16),'V9 / NINTH SCULPT',fill=(232,208,164),font=font(25))
-        d.text((w+26,16),'V10 / TENTH SCULPT',fill=(232,208,164),font=font(25))
+        d.text((26,16),'V10 / TENTH SCULPT',fill=(232,208,164),font=font(25))
+        d.text((w+26,16),'V11 / ELEVENTH SCULPT',fill=(232,208,164),font=font(25))
         pair.paste(before,(0,60));pair.paste(after,(w,60))
-        pair.save(OUT/('compare-v9-v10-'+name+'.png'))
+        pair.save(OUT/('compare-v10-v11-'+name+'.png'))
     print(json.dumps(metrics,indent=2))
 if __name__=='__main__':main()

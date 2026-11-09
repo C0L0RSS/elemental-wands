@@ -61,7 +61,7 @@ Pillars:
 | Stone | Fractured Guardian | Ruined churches, Shattered Nave | 0 | Built, rebalanced October 3; playtest pending |
 | Nature (life turned to death) | Hollow Necromancer | Graveyards, Hollow Crypt | 1 | Built, in tuning |
 | Wind | Storm Roc | Mountain peaks, a sky realm above the clouds | 2 | Built with its aerie and intro (Oct 27); phase cinematic and death to come; playtest pending |
-| Fire | Pyre King | The Nether | 3 | Redesign started Nov 4: a swordsman with a chained sword; kit proposed, review model built, animation started |
+| Fire | Pyre King | The Nether | 3 | Redesign started Nov 4: a swordsman with a chained sword; kit proposed, review model built, first clips reworked after review |
 | Space | New | The End or the deep dark | 4 | Open |
 | — | Final: the wizard who tried to hold all five | Opened by all five shards | 5 | Open |
 
@@ -488,8 +488,9 @@ the developer's direction made it melee first.
   `art/pyre_king/concepts/direction-d-mask.png`. His armor is charred black with tarnished
   gold trim, under a heavy gold crown with a red gem. The Fire shard glows in his chest,
   and a burned crimson cape covers his shoulders and back. One curse chain carries a
-  padlock (three chains were too noisy), and his armored coat ends at the knee so his
-  footwork reads.
+  padlock (three chains were too noisy).
+- **Decided (Nov 6):** no knee-length coat. A close fauld hugs his hips so his legs and
+  footwork read, and the legs and arms are heavy and strong under small pauldrons.
 - **Proposed:** the mask cracks and falls away at the phase change, revealing a burned
   slag face. The model keeps the mask as its own part so this stays possible.
 - **Built (Nov 4):** a review model in `art/pyre_king/`. It is not yet in the game.
@@ -501,10 +502,17 @@ the developer's direction made it melee first.
     blade's upper edge.
   - A polish pass (Nov 5) gave the crown openwork points, made the beard's locks taper in
     strands, cleared the grip (slimmer cuffs, a snug shackle, a smaller tether), and ended
-    the fire's ladder-rung look on a slanted blade. The developer's review of it is pending.
+    the fire's ladder-rung look on a slanted blade.
   - Animation has started: idle, walk, run, the Royal Cut string and throw → wait → pull
-    back, with both fists held on the grip by IK. The developer's feedback on how these
-    move comes first.
+    back, with both fists held on the grip by IK.
+  - After the developer's review (Nov 6), pass 11 removed the coat, thickened the legs
+    and arms and shrank the pauldrons. It rebuilt the walk and run with the feet under
+    the hips and a working upper body, made the edge lead in the Royal Cut, and laid the
+    blade back over the shoulder in the throw's wind-up, like an overhand axe throw. The
+    fire now streams behind a swung blade. A follow-up straightened the legs (each knee
+    on its hip–ankle line, full thighs, bigger boots) and hung the pauldrons from the
+    chest, so the sword arm no longer rocks them in the run. The developer approved the
+    result on Nov 9.
   - Next: the rest of the kit's clips (Kingsguard Thrust, Turning Cut, the Chain Scythe
     and its release, Zip, Hook and Overhead Sentence, Lunge, Drag Down, Unbound). After
     that, the game model.
@@ -515,10 +523,11 @@ the developer's direction made it melee first.
   pommel. He catches it two-handed on the pull-back.
 - **Decided (Nov 4):** the sword is oversized for him, about 4.5 blocks overall with a
   blade of about 3.5, so his sweeps reach down to players much smaller than he is.
-- **Decided (Nov 4):** fire covers the whole blade and always burns upward, whatever
-  angle the sword is at. It is drawn separately from the sword model each frame as block
-  fire along the blade, like the Fire spells, so it stays upright through swings and
-  leaves a brief trail. The sword model itself carries only a hot, glowing blade.
+- **Decided (Nov 4):** fire covers the whole blade and burns upward, whatever angle the
+  sword is at. It is drawn separately from the sword model each frame as block fire along
+  the blade, like the Fire spells. The sword model itself carries only a hot, glowing blade.
+- **Decided (Nov 6):** when the blade is swung or thrown, its flames lie back and stream
+  behind it like a whipped torch, leaving a short fading wake, then settle upright again.
 - **Decided (Nov 4):** the first version's story stays for now, and can change once the
   frame story is written (see [Lore](#lore)). Like Sardanapalus, he set his own palace
   alight rather than surrender. Like Koschei, his death is caught in the Fire shard, which

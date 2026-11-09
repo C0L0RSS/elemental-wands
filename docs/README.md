@@ -17,6 +17,7 @@ current guide below; there is no requirement to read this whole folder.
 | Churches, rituals, arena returns and saved-world recovery | [Church and arena](reference/church-and-arena.md)                 |
 | The Storm Roc's summit realm and first combat phase       | [Storm Summit](reference/storm-summit.md)                         |
 | How automated Minecraft previews and checks work          | [Testing](reference/testing.md)                                   |
+| Viewing local review pages from another device (T3)       | [Remote preview](reference/remote-preview.md)                     |
 | Short summaries of player-facing changes                  | [Releases](releases/README.md)                                    |
 | Why an old decision was made or how a bug was verified    | [Historical archive](archive/README.md)                           |
 

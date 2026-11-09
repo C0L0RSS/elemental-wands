@@ -248,7 +248,7 @@ def build():
     def png(im):b=io.BytesIO();im.save(b,format='PNG');return b.getvalue()
     # The exported guard stays static; effects.js owns the workshop-only sweep exercise.
     from rig import bake
-    from clips import CLIPS
+    from clips import CLIPS, GROUND_SPEED
     anim={'format_version':'1.8.0','animations':{'animation.pyre_king.guard':{'loop':True,'animation_length':1,'bones':{}}}}
     for name,(fn,length,loop) in CLIPS.items():
         anim['animations']['animation.pyre_king.'+name]=bake(fn,length,loop)
@@ -256,7 +256,7 @@ def build():
         'pyre_king.geo.json':packed(model),'pyre_king_sword.geo.json':packed(sword),
         'pyre_king.png':png(atlas),'pyre_king_glowmask.png':png(glow),'pyre_king.animation.json':packed(anim),
     }
-    manifest={'revision':'Tenth sculpt / v10 · polish · first clips','date':'2026-11-05','summary':'Review only · 5-block masked duelist · 4.5-block longsword · plough guard',
+    manifest={'revision':'Eleventh sculpt / v11 · no coat, stronger limbs · reworked clips','date':'2026-11-06','summary':'Review only · 5-block masked duelist · 4.5-block longsword · plough guard',
         'cubes':len(PARTS),'bones':len(BONES),'sword_cubes':sum(len(b['cubes']) for b in sword_bones()),
         'sword_bones':len(sword_bones()),'texture_size':list(atlas.size),
         'translucent_bones':[], 'material_by_cube':[m for c,m,b in PARTS],
@@ -269,9 +269,21 @@ def build():
             'world_up':[0,1,0],'atlas':'bladefire.png','atlas_grid':[8,1],'tongue_frames':[0,1,2,3],'lick_frames':[4,5,6,7],'atlas_fps':8,
             'active_socket_indices':list(range(17)), 'peak_sockets':[[2,.74],[4,.98],[10,1.18],[11,.8],[15,1.06]],
             'palette_source':'art/fire/blockfire/textures/blockfire.png',
-            'trail_lifetime_seconds':.18,'trail_speed_threshold_blocks_per_second':1.2},
-        'clips':{name:{'length':length,'loop':loop} for name,(fn,length,loop) in CLIPS.items()},
-        'preview_rendering':'Shared effects.js samples posed sockets: a low overlapping flame roots on the blade\'s upper edge at every socket, making one continuous fringe, and five taller peaks break the silhouette. All upright in world space. No flame geometry in either sword export.'}
+            # The swing response: workshop/effects.js reads every number below from here.
+            # Units are blocks and seconds; "up" is world_up; x runs 0 at a flame's root to 1 at its tip.
+            'swing':{
+                'about':'Fire reacts to the blade\'s real motion and to the body\'s own travel. Burning gas leaves the steel and stays where the blade was, rising: a moving flame lies back along the path its root just travelled, never shorter than it stands still and never hanging below the blade, and a fast blow leaves one glowing sheet of fire across the arc the blade swept. Slow moves (walking, re-cocks) only lean the fire; at rest every flame stands upright exactly as in the still fire.',
+                'faces':'Every flame face: pts (4 world points), n, uvs into bladefire.png, alpha in (0,1], trail (true on the wake). Optional alphas [a0,a1,a2,a3]: per-vertex opacity used instead of alpha (alpha is then their largest). Optional blend \'add\': drawn after all other flame faces, back to front among themselves, additively (SRC_ALPHA, ONE) with depth test on and depth writes off; faces without blend use normal alpha blending. Cores (trail false) are opaque: alpha 1, no alphas, no blend.',
+                'history':'Each flame root\'s world position (after the upper-edge rooting) and the blade axis (first socket to last) at history_samples earlier moments history_step_seconds apart, plus now. The workshop re-poses the clip at those times (looping clips wrap; one-shots and the test sweep clamp at 0; only the sword and its ancestor bones are posed); a game should keep the actual recent positions. scene(...,opts) takes opts.travel, the body\'s own world velocity in blocks/s (the workshop passes [0,0,-ground_speed] for a walk or run played in place): the body moves through still air, so the sample at age a shifts by -travel*a. Jumps: one extra sample past the window is taken; the newest slice in which any socket moves faster than teleport_speed_blocks_per_second is a jump (a parent switch, a teleport, a loop seam); the cut also takes the next newer slice (a jump can end partway through it) and any newer ones beside it that still run faster than half that speed, and every older sample repeats the sample at the cut, so the fire never traces a jump. The speed test cannot tell a jump smeared over a 20 Hz key interval at under teleport_speed from a real blow; those are fixed in the bake. path(age) is a cubic Hermite curve through the samples with Catmull-Rom tangents (the newest and oldest samples take their own chord), each tangent limited to twice the shorter chord beside it so a sudden stop cannot throw a loop; it is sampled path_substeps times per slice to measure distance along it.',
+                'history_samples':8,'history_step_seconds':.015,'path_substeps':3,'speed_samples':16,'teleport_speed_blocks_per_second':400,
+                'speed':'Cut the window into speed_samples equal slices along the path. speed is the fastest slice, velocity (and now, its length) the newest. stream = the average of ramp(stream_speed, slice speed) weighted speed_samples..1 from newest to oldest, so it builds fast and eases off over the whole window after a stop. ramp([a,b],v) = smoothstep(ln(v/a)/ln(b/a)), 0 at or below a. lean_speed sets how far a flame follows its path, stream_speed how hard the air pulls it (rise lost, thinning, curl, flutter), wake_speed how brightly the swept sheet shows; walking (3 blocks/s) and the re-cocks between blows (5-26 blocks/s) stay below the wake.',
+                'lean_speed_blocks_per_second':[2,20],'stream_speed_blocks_per_second':[8,60],'wake_speed_blocks_per_second':[20,90],
+                'tongue':{'about':'Every lick (its root nudged 0..45% of the way to the next root) and peak; trail false, opaque. life = seconds*(0.75..1.25 per flame); travelled = the distance its root covered along the path within life; lean = ramp(lean_speed, travelled/life); reach = L*tanh(travelled/L) with L = height*stretch + reach_blocks. Points x = 0..1 (segments of them, or one quad when lean is 0): P(x) = root - up*sink + d(x) + up*rise*(x - bend*x*(1-x)) + flutter, where d(x) = lean*(path(the age at which the path has covered x*reach) - root) with its downward part scaled by sag, rise = height*(1 - stream*(1 - rise_kept)), bend = curl*stream, and flutter = flutter_blocks*stream*x*x waving along the current blade axis by sin(9.1t + phase + 3.3x) and up by 0.6*sin(13.7t + 1.7*phase + 4.1x), phase 2.3*socket (+1.1 on peaks). Then, in order: if the tip is closer to the root than height, the rise is topped up linearly along x until it is exactly height away; no joint turns more than max_turn_degrees (the rest of the strip rotates rigidly about that joint); the height floor once more. Width and depth scale by 1 - thinning*stream. The front, back and cross sheets keep their world X (width) and Z (depth) axes, carried at each point by the shortest rotation from up to the strip\'s direction; with lean 0 each sheet is one straight quad, the still fire exactly.',
+                    'segments':4,'seconds':.06,'stretch':1.3,'reach_blocks':.25,'thinning':.35,'rise_kept':.6,'curl':.5,'flutter_blocks':.1,'sag':.15,'max_turn_degrees':70},
+                'stream':{'about':'The wake (trail true): one sheet across the arc the blade swept. drawn = the tip root\'s path length over min(seconds, window); W = the age at which the tip\'s path covers max_length_blocks*tanh(drawn/max_length_blocks). Every plain root is sampled at ages W*k/rows (k = 0..rows, x = k/rows) and lifted by rise_blocks*x*x plus an upward flutter 0.6*flutter_blocks*stream*x*x*sin(13.7t + 1.7*phase + 4.1x), phase 1.9*socket + 0.7; quads join neighbouring roots at neighbouring ages. Per-vertex opacity = ramp(wake_speed, that root\'s speed at that age) * (1 - smoothstep(age/window)) * smoothstep(x/fade_in) * (1 - smoothstep((x - hold)/(1 - hold))) * (1 - smoothstep(drop/drop_fade_blocks)), drop being how far the vertex hangs below that root now: zero at the blade and at the old edge, and a rising blade\'s sheet fades out below it instead of hanging as a curtain. Every quad is emitted twice: a normally blended tint (opacity*tint) that turns what is behind it fire-coloured, then an additive glow (opacity*glow, blend add). Texture: one lick frame per columns_per_frame roots, using the middle frame_span of its width, v from v_start at the blade to v_end at the old edge, so the sheet is continuous near the blade and breaks into a few ragged tongues behind.',
+                    'rows':6,'seconds':.12,'max_length_blocks':2.4,'tint':.45,'glow':.5,'fade_in':.3,'hold':.45,'columns_per_frame':3,'frame_span':.6,'v_start':.85,'v_end':.15,'rise_blocks':.35,'flutter_blocks':.12,'drop_fade_blocks':1.2}}},
+        'clips':{name:{'length':length,'loop':loop,'ground_speed':GROUND_SPEED.get(name,0)} for name,(fn,length,loop) in CLIPS.items()},
+        'preview_rendering':'Shared effects.js samples posed sockets: a low overlapping flame roots on the blade\'s upper edge at every socket, making one continuous fringe, and five taller peaks break the silhouette. Still flames stand upright in world space. As the blade moves, it re-poses the clip at a few earlier moments (carried back by the body\'s own travel for a walk or run played in place): each flame lies back along the path its root just travelled, never shorter than it stands still and never hanging below the blade, and a fast blow leaves one sheet of fire across the arc the blade swept, faded in from the blade, tinted and glowing additively. Slow moves only lean the fire, everything settles upright within a fraction of a second after the blade stops, and a teleport or parent switch is never traced. No flame geometry in either sword export.'}
     # Measure the transformed corners with the same GeckoLib baker as the workshop.
     def baked(data):
         return json.loads(subprocess.check_output(['node',str(HERE/'export_scene.cjs'),'-'],input=packed(data)))
@@ -287,8 +299,28 @@ def build():
     assert len(next(b for b in BONES if b['name']=='sword_fire')['cubes'])==0
     assert sum(b['name'].startswith('curse_chain_') for b in BONES)==1
     assert all(n in [b['name'] for b in BONES] for n in ['death_mask','crown','ash_beard','chest_shard','right_wrist_shackle','hanging_wrist_chain','tabard','mantle_collar'])
-    assert sum(b['name'].startswith('coat_flap_') for b in BONES)==6
+    assert not any(b['name'].startswith('coat_flap_') for b in BONES)
     assert sum(b['name'].startswith('mantle_scrap_') for b in BONES)==9
+    # The cape's burnt hem and the tabard's tip end on the thigh, well clear of the knees,
+    # so the legs show; the knee cops' gold is a thin edge, never a lid that can face the
+    # camera when the shin swings back.
+    lowest=lambda pick:16*min(p[1] for f in body_scene['faces'] if pick(f['bone']) for p in f['pts'])
+    knee=max(b['pivot'][1] for b in BONES if b['name'].endswith('_shin'))
+    assert lowest(lambda n:n.startswith('mantle_scrap_0'))>=knee+5, lowest(lambda n:n.startswith('mantle_scrap_0'))
+    assert lowest(lambda n:n=='tabard')>=knee+5, lowest(lambda n:n=='tabard')
+    assert all(c['size'][2]<=1.2 for c,m,b in PARTS if b.endswith('_shin') and m=='trim')
+    # The legs stand as straight columns: seen from the front each knee lies on the line from
+    # hip to ankle, and the knee cop stays inside the leg's outline instead of standing out
+    # from it. Both legs are the same length, so the gaits need no pelvis hitch.
+    piv={b['name']:b['pivot'] for b in BONES}
+    for side in ('right','left'):
+        h,k,a=(piv[side+part] for part in ('_thigh','_shin','_foot'))
+        assert abs(k[0]-(h[0]+(a[0]-h[0])*(h[1]-k[1])/(h[1]-a[1])))<1e-6, (side,k)
+        line=lambda y:abs(h[0])+(abs(a[0])-abs(h[0]))*(h[1]-y)/(h[1]-a[1])
+        past=lambda part,lo,hi:max(16*abs(p[0])-line(16*p[1]) for f in body_scene['faces'] if f['bone']==side+part for p in f['pts'] if lo<=16*p[1]<=hi)
+        assert past('_shin',k[1]-3,k[1]+3)<=past('_thigh',k[1],h[1]), (side,past('_shin',k[1]-3,k[1]+3),past('_thigh',k[1],h[1]))
+    legs=[math.dist(piv[s+'_thigh'],piv[s+'_shin'])+math.dist(piv[s+'_shin'],piv[s+'_foot']) for s in ('right','left')]
+    assert abs(legs[0]-legs[1])<.05, legs
     assets['bladefire.png']=png(blade_fire_texture())
     assets['blockfire.png']=(HERE.parent/'fire/blockfire/textures/blockfire.png').read_bytes()
     subprocess.run(['node',str(HERE/'check_effects.cjs')],input=packed({'king':model,'sword':sword,'manifest':manifest}),check=True)

@@ -1,9 +1,14 @@
-# Pyre King — tenth review sculpt
+# Pyre King — eleventh review sculpt
 
 Based on [the approved masked king](concepts/direction-d-mask.png). Passes 1–5 found the
 form; passes 6–9 reworked it after the developer's review and four rounds of independent
-grading. A final touch brought the cape over both shoulders. Pass 10 polished the crown,
-beard, grip and blade fire.
+grading. Pass 10 polished the crown, beard, grip and blade fire and added the first clips.
+Pass 11 answers the developer's review of those clips:
+- the coat is gone, the legs and arms are heavier, and the pauldrons are smaller;
+- walk and run are rebuilt with power and no waddle;
+- the edge leads in the Royal Cut, and the throw's wind-up lays the blade back;
+- the fire streams behind a swung blade;
+- the workshop is laid out for phones.
 
 ## The design
 
@@ -18,24 +23,45 @@ beard, grip and blade fire.
 - **Beard and shard:** a long ash beard of staggered locks rests on the breastplate and
   ends above the Fire shard. Each lock narrows in three steps to a curled point, and its
   texture runs in strands down the lock. The shard sits in a gold socket.
-- **Shoulders and cape:** sloped two-plate pauldrons, with a yoke filling the gap to the
-  collar. The cape covers both shoulders: across the top, down their fronts, and down
-  behind the pauldrons into seven unequal panels. Those hug the back, then flare over the
-  back tassets to a burnt hem.
+- **Shoulders:** two small iron lames with gold lower edges, on their own `right_pauldron` /
+  `left_pauldron` bones. Each bone is a child of the torso at the shoulder joint, so the
+  plates sit on the chest, not on the arm. The upper lame slopes 16° and the lower 14°, and
+  the arm comes out from under the lower lame. The sword-arm (right) lames sit slightly
+  further out, because that arm angles away from the body. Front width at shoulder height
+  is about 2.42 blocks.
+- **Cape:** the crimson mantle lies on the inner part of each shoulder and runs into seven
+  unequal panels on the back. Their burnt hem ends on the lower thigh, at 23.5–27.5 px,
+  well above the knee, and rises toward the sides. The outer panels draw in, so no cloth
+  frames the hips from the front.
 - **Curse chain:** one rust-iron curse chain runs from the left shoulder to the right hip,
-  hidden under the cape at the back. Its tarnished padlock hangs beside the shard.
-- **Guard and arms:** a plough guard with big gauntleted fists on the grip and the blade
-  raised up and out. The forearms taper toward the wrists, and each gauntlet cuff flares
-  toward the elbow and slims at the wrist, so the fist reads as its own shape. A snug
-  shackle closes round the right wrist; from an eye under it, a five-link iron tether hangs
-  in a shallow loop behind the grip to the pommel ring.
-- **Lower body:** a flared, knee-length coat of six tasset bones. Each tier has a gold
-  edge, and the bottom tier has an ember hem. A crimson tabard with a gold crown hangs
-  from a gold clasp on the belt.
+  riding over the fauld at the hip and hidden under the cape at the back. Its tarnished
+  padlock hangs beside the shard.
+- **Arms and guard:** heavy upper arms (7.6 × 7.2 px) and vambraces (7.0 tapering to 6.2)
+  end in flared gauntlet cuffs that slim to the wrist, so each fist reads as its own shape.
+  He holds a plough guard, with both fists on the grip and the blade raised up and out. A
+  snug shackle closes round the right wrist; from an eye under it, a five-link iron tether
+  hangs in a shallow loop behind the grip to the pommel ring.
+- **Lower body:** there is no coat. A close fauld of two lames hugs the hips under the
+  belt: a gold-edged upper lame and an ember-hemmed lower lame, ending at the top of the
+  thighs. The crimson tabard with its gold crown hangs from the belt clasp to mid-thigh.
+- **Legs:** straight, heavy columns.
+  - Seen from the front, each knee sits on the line from hip to ankle, so thigh and shin
+    form one line. Both legs are the same length (1.883 blocks).
+  - The cuisse is 12 px wide and 10.4 px deep, full width right up under the fauld, with a
+    raised front plate. Above the lower thigh its front and back corners step in, so a
+    raised thigh slides under the fauld.
+  - The knee cop is 10.6 px wide, with a boss and a thin gold lower edge. It has no side
+    wing and stays within the leg's line.
+  - The greaves taper gently: 10.4 px under the knee, 9.6, then 8.6 at the ankle, with the
+    calf behind.
+  - The sabatons are 11.2 × 13 px and 7.4 px tall, with a thin gold toe edge.
+  - The lower fauld lame is 28.4 px wide and sits at 30.4–32.8 px, so it covers the thigh
+    tops.
 
 ## Build and review
 
-Requires Python 3, Pillow, NumPy, and Node.js. No package downloads are needed.
+Requires Python 3, Pillow, NumPy, and Node.js. No package downloads are needed. On the
+developer's Windows PC, `python3` is a broken Store alias, so use `py -3` there.
 
 ```sh
 python3 art/pyre_king/build_art.py
@@ -45,34 +71,101 @@ python3 art/pyre_king/render_clips.py
 python3 art/pyre_king/workshop/serve.py
 ```
 
-Previews are not in git. On a fresh checkout, run the build first, because the workshop
-is served from `.local-previews/pyre-king/`. Then run the two render scripts to regenerate
-the review images.
+Previews are not in git. On a fresh checkout, run the build first, because the workshop is
+served from `.local-previews/pyre-king/`. Then run the two render scripts to regenerate the
+review images. The build takes about 20 s.
 
-Open <http://127.0.0.1:8410/workshop/>. If already running, rebuild and reload.
-The loopback server serves only `.local-previews/pyre-king/` and disables caching.
-The workshop offers **Clip** (with speed), **Test sweep**, **Pause / Play**,
-**Freeze horizontal** and **High guard**. Flames flicker even in the static guard; Pause freezes both
-pose and effects. Fire can be toggled off to inspect the hot blade itself. The test sweep
-turns the blade about the middle of the grip and keeps both fists on it with the same
-two-bone arm IK as the clips.
+### The workshop
 
-`--check` rebuilds in memory, compares every generated candidate and workshop
-file byte for byte, validates hierarchy and UVs, and measures transformed
-geometry with the workshop's GeckoLib baker. `check_effects.cjs` also verifies
-that fire edges remain aligned to world axes across the swing, socket spacing
-stays fixed, the frozen sweep is level, the trail fades after motion stops,
-the sweep keeps both fists on the grip with rigid forearms, flames root on the blade's
-upper edge, and held/thrown sword geometry and UVs match. It writes no files.
+Open <http://127.0.0.1:8410/workshop/>. If it is already running, rebuild and reload. The
+loopback server serves only `.local-previews/pyre-king/` and disables caching.
+
+The workshop is a static page, so the built `workshop/` folder, with its `candidate/`
+files, can also be published as a private claude.ai artifact and opened on a phone. See
+[remote preview](../../docs/reference/remote-preview.md).
+
+**Layout:**
+- It is phone-first: the 3D view fills the screen, and no control covers it.
+- A bottom bar holds Clip, Play/Pause, Speed (1×, ½×, ¼×), a scrubber with the clip clock,
+  and a toggle for the sheet.
+- The sheet holds:
+  - camera presets (¾ view, Front, Side, Back, Head, Player · 8, Player · 16);
+  - the Player, Fire, Glow and Clay toggles;
+  - Test sweep, Freeze horizontal and High guard;
+  - Model and Light;
+  - a collapsed section with the texture atlas and rig notes.
+- On a portrait phone the sheet sits between the view and the bar, at most 40% of the
+  height. On landscape screens and desktop it is a side panel.
+- Links to `../renders/` appear only when the page is served locally.
+
+**Gestures:** one finger orbits, two fingers pinch-zoom and pan, and a double tap returns
+to the preset. With a mouse, drag orbits, the wheel zooms, and right-drag or Shift-drag
+pans. The page itself never scrolls or zooms.
+
+**Camera:**
+- Each preset fits what is on screen: the guard, the sweep, or a looping clip over its
+  whole cycle.
+- Royal Cut and Cast reel use a follow camera that frames the pose and the next 0.3 s.
+  It keeps the blade and the thrown sword in view. The king can shrink to 28% of the view
+  height for this, or 22% while the sword is thrown.
+- Head and the Player cameras follow clips too. Changing clip keeps your angle but
+  reframes.
+
+**Other behaviour:**
+- **Scale player:** the 1.8-block scale player stands beside the king, never between him
+  and the camera, and is hidden during clips.
+- **Floor:** walk and run play in place, so the floor scrolls at each clip's
+  `ground_speed` and planted feet stay on their tiles. The same speed reaches the fire as
+  travel.
+- **Links:** state lives in the `#fragment`, for example
+  `index.html#clip=royal_cut&t=1.05&view=side`. A fragment with `t` opens paused at that
+  time. A local `?query` also works.
+- **Drawing:** the page draws only while something plays or changes. The still guard's
+  flames flicker while playing, and Pause freezes pose and fire.
+
+### Checks
+
+`--check` rebuilds in memory and compares every generated candidate and workshop file byte
+for byte. It also validates the hierarchy and UVs, measures transformed geometry with the
+workshop's GeckoLib baker, and asserts the structural contract:
+- no coat flaps;
+- the cape's hem and the tabard's tip end at least 5 px above the knee;
+- no deep gold lids on the shins;
+- one curse chain;
+- an empty `sword_fire` bone.
+
+`check_effects.cjs` verifies the fire:
+- Still flames are upright and axis-aligned, with no wake.
+- Swung flames trail their travel. They are never shorter than when still, never point
+  down, never hang below the blade and never fold.
+- The outer blade streams more than the hilt, and the wake appears only when fast.
+- Teleports and spins are never traced, and travel leans the flames calmly.
+- Nothing pops, every face is well formed, and the output is deterministic.
+- The socket spacing, the frozen level sweep, the sweep's fist IK, upper-edge roots and
+  matching held/thrown sword geometry are also checked.
+
+The build writes no files when checking.
+
+`py -3 -c "import clips; clips.check_edges()"`, run from `art/pyre_king`, re-verifies the
+attack clips. It checks the 20 Hz samples, the half-samples and the baked clip played at
+60 fps:
+- the edge leads in each blow;
+- wrist twist and bend;
+- arm turn per sample;
+- the fists stay on the grip;
+- the in-between frames follow the solved pose;
+- the held sword stays above the floor.
+
+It returns a `problems` list.
 
 Editable sources are `geometry.py`, `rig.py`, `clips.py`, `build_art.py`,
 `render_review.py`, `render_clips.py`, `export_scene.cjs`, `check_effects.cjs` and
-`workshop/`. All generated previews
-remain in the ignored `.local-previews/pyre-king/` directory.
+`workshop/`. All generated previews remain in the ignored `.local-previews/pyre-king/`
+directory.
 
 ## Candidate and dimensions
 
-- `candidate/pyre_king.geo.json`: **284 cubes / 44 bones**, including the sword.
+- `candidate/pyre_king.geo.json`: **266 cubes / 40 bones**, including the sword.
 - `candidate/pyre_king_sword.geo.json`: **14 cubes / 3 bones**, derived from the
   held sword. The preserved `sword_fire` bone is empty in both exports.
 - `candidate/pyre_king.png` and `pyre_king_glowmask.png`: 1024 × 512 RGBA atlases.
@@ -84,14 +177,14 @@ remain in the ignored `.local-previews/pyre-king/` directory.
 - `candidate/blockfire.png`: byte-identical copy of the existing Fire atlas;
   its source in `art/fire/blockfire/` is unchanged.
 - `candidate/pyre_king.animation.json`: the static guard, plus the clips baked from
-  `clips.py` at 20 Hz. The workshop's test sweep is preview code, not a clip.
-- `candidate/manifest.json`: dimensions, materials and blade fire socket contract.
+  `clips.py`. The workshop's test sweep is preview code, not a clip.
+- `candidate/manifest.json`: dimensions, materials, the clips with their `ground_speed`,
+  and the blade fire contract.
 
 Upright, ground to crown is **80 pixels / 5.00 blocks**. In the leaning guard the body
-measures **4.913642 blocks**, and with the raised sword, excluding
-fire, **5.045612 blocks**. The scale figure is exactly
-**1.80 blocks** tall. Source geometry uses 16 model pixels per block, with front −Z and
-anatomical right −X; the baker applies GeckoLib 5's X reflection.
+measures **4.913642 blocks**, and with the raised sword, excluding fire, **5.045612 blocks**.
+The scale figure is exactly **1.80 blocks** tall. Source geometry uses 16 model pixels per
+block, with front −Z and anatomical right −X; the baker applies GeckoLib 5's X reflection.
 
 | Sword measurement | Model pixels | Blocks |
 | --- | ---: | ---: |
@@ -103,8 +196,9 @@ anatomical right −X; the baker applies GeckoLib 5's X reflection.
 | Cross-guard width | 17 | 1.0625 |
 
 Named bone groups:
-- six coat flaps;
 - nine mantle scraps (seven cape panels and two lapels);
+- two shoulder plates (`right_pauldron`, `left_pauldron`), carrying both lames, their trims,
+  the crimson shoulder cloth and the drape behind the arm;
 - the tabard and the mantle collar;
 - head, mask, crown and beard;
 - the chest shard;
@@ -112,38 +206,93 @@ Named bone groups:
 - limb segments;
 - the wrist shackle and the hanging tether.
 
- `sword` remains a child of
-`right_hand`; `pommel_ring` and the empty `sword_fire` remain its children.
-Standalone sword geometry has its pivot at the ring bottom and its tip along +Y.
+`sword` remains a child of `right_hand`; `pommel_ring` and the empty `sword_fire` remain
+its children. Standalone sword geometry has its pivot at the ring bottom and its tip
+along +Y.
 
-## Clips (first pass)
+Hips and ankles are as in pass 10. The knees sit on the hip–ankle line seen from the
+front (x ±10.29), at z −4.5 (right) and −1.47 (left), so both legs are 1.883 blocks long.
+Each cube's texture noise is seeded by its position in the cube list, so adding or removing
+cubes upstream of a part changes that part's texture.
+
+## Clips
 
 `clips.py` authors each clip as keyposes on a timeline, with named easing (`hit` for blows,
-`snap` for hard stops, `settle` for recoveries). `rig.py` solves each 20 Hz sample into
-GeckoLib channels.
+`snap` for hard stops, `settle` for recoveries). `rig.py` solves each sample into GeckoLib
+channels.
 
 **How a pose is solved:**
-- Forward kinematics match the workshop's GeckoLib baker exactly. The blade sockets agree
-  to four decimals.
-- Two-bone IK keeps both fists on the grip; the worst grip gap is 0.01 blocks.
-- The elbows bend the way the sculpt bends them, and the feet stay planted.
+- Forward kinematics match the workshop's GeckoLib baker exactly.
+- Two-bone IK keeps both fists on the grip. Played back at 60 fps, the worst gap is under
+  0.01 blocks.
+- The legs use IK. By default each knee bends the way the sculpted stance bends it, turned
+  with the pelvis, so planted legs stay straight columns. Gaits pass `knee_hint` and
+  `foot_r` (a foot rolling heel to toe).
+- Each shoulder plate takes a share k of its upper arm's turn against the chest, about the
+  same axis. k is the smallest share that keeps the arm within the plate's room (14° more
+  lift, 7° more outward swing, 47° more turn), smoothly clamped between 0.2 and 0.9
+  (`rig.PAULDRON_FOLLOW` / `PAULDRON_ROOM`). Strides stay inside that room, so the plates
+  stay steady with the chest; big raises carry them. The workshop's test sweep doesn't
+  drive the plates.
+- A free fist can keep a `wrist` turn instead of snapping straight to its forearm.
 - A thrown sword leaves the hand and flies free. Meanwhile the short tether is hidden, and
   `effects.js` draws the long chain from the wrist shackle to the pommel ring.
 
+**How a clip is baked:**
+- Keys are every 0.05 s.
+- Extra 0.01 s keys are added within 0.1 s of every grip change, and over any interval
+  whose in-between frames would miss the solved pose. Where 0.01 s still misses, 0.005 s
+  keys are used; those key names have three decimals.
+- Every rotation key is written as the Euler equivalent nearest the key before it, so no
+  in-between takes the long way round.
+- `rig.player(clip)` plays a baked clip exactly as the workshop does, for checks.
+
 **Clips:**
-- `idle`
-- `walk` and `run`
+- `idle`: a coiled guard with breathing and a drifting blade point.
+- `walk`: 3.0 blocks/s on a 1.0 s loop.
+  - The feet track under the hips and the knees drive straight ahead.
+  - Each step strikes the heel, rolls flat, and pushes off a nearly straight trailing leg.
+  - The pelvis drops into each footfall, with almost no side-to-side sway. The chest
+    counter-turns ±12° about its own spine, and the head holds its gaze.
+  - The blade is carried low and out to his right. It takes only 30% of the chest's turn,
+    so its fire stays off his face.
+- `run`: 4.5 blocks/s on a 0.9 s loop, the roadmap's phase-one pace.
+  - He spends about 0.17 s in the air per 2-block step, and the knee drives to about 53°.
+  - The lean is taken from the hips, the chest counter-turns ±14°, and the blade is cocked
+    high to his right.
 - `royal_cut`: a 0.9 s tell, the cut, a 0.45 s tell, the backhand, then the 1.2 s pause.
-- `cast_reel`: a 0.8 s throw tell, the sword sticks about 11 blocks out, a 1.5 s wait, a
-  0.7 s Reel tell, then the pull-back and the two-handed catch.
+  - An edge leads both blows: the cut with one edge, the backhand with the other.
+  - `easy_wrists` plans the blade's roll and both elbows over the whole clip. It keeps the
+    wrists comfortable and the arms out of the trunk, neck, head and beard. It also eases
+    each fist into and out of its grip over 0.15 s.
+- `cast_reel`: an overhand throw, then the wait and the Reel.
+  - Research found the historical sword throw is javelin-like (Fiore dei Liberi's
+    "throwing guard"). The wind-up follows an overhand knife or axe throw instead, which
+    reads better and lays the blade back.
+  - 0–0.55 s: he steps his right foot back, coils away, leans back, and lays the blade
+    back over his right shoulder with the point up, behind him and turned out. The left
+    fist reaches toward the target.
+  - From 0.68 s his hips open and the left foot strides in; from 0.74 s the arm whips
+    over the shoulder.
+  - Release is at 0.87 s. The sword flies point-first along an arc and sticks about 11.5
+    blocks out at 1.22 s.
+  - The 1.5 s wait, the 0.7 s Reel tell, the pull-back and the two-handed catch follow.
 
-The workshop's **Clip** menu plays them, with speed control. `render_clips.py` renders
-review strips, including a player-eye view of the Royal Cut, into
-`.local-previews/pyre-king/renders/clips/`. With arguments it renders any clip at chosen
-times: `render_clips.py OUT CLIP t1 t2 … [--cam yaw,pitch,extent,x,y,z] [--player]`.
+Walk and run are in-place loops. In the manifest, each clip's `ground_speed` (walk 3.0,
+run 4.5, the others 0) is the speed the game must move him at, or else it must scale
+playback by actual speed ÷ `ground_speed`. Phase two's 5.2 blocks/s run plays at about
+1.16×. `clips.HITCH` would compensate unequal leg lengths with a pelvis roll; with the
+legs now equal it is 0.
 
-**Next:** first, the developer's feedback on how these clips move (speed, stiffness, and
-whether the tells read). Then the rest of the kit.
+`render_clips.py` renders review strips into `.local-previews/pyre-king/renders/clips/`:
+- royal-cut, royal-cut-edge (front and top at mid-blow), royal-cut-player-view and
+  royal-cut-player-blows;
+- cast-reel, cast-reel-throw and cast-reel-release-catch, including in-between frames;
+- walk-run, from the side and front.
+
+Frames off the 20 Hz grid are labelled "(in-between)". With arguments it renders any clip
+at chosen times: `render_clips.py OUT CLIP t1 t2 … [--cam yaw,pitch,extent,x,y,z]
+[--player]`. Walk and run pass their travel to the fire automatically.
 
 The rest of the kit is still to come:
 - Kingsguard Thrust and Turning Cut;
@@ -151,55 +300,72 @@ The rest of the kit is still to come:
 - Zip, Hook and Overhead Sentence, Lunge and Drag Down;
 - Unbound.
 
-## World-up fire contract
+## Blade fire contract
 
-`workshop/effects.js` is shared by WebGL and by the Node scene exporter used by the
-offline rasterizer. Every frame it transforms **17 blade sockets**, from Y=16 at the blade
-root to Y=72 at the tip in 3.5-pixel steps.
+`workshop/effects.js` is shared by WebGL and by the Node scene exporter used by the offline
+rasterizer. Every frame it transforms **17 blade sockets**, from Y=16 at the blade root to
+Y=72 at the tip in 3.5-pixel steps.
 
-**Licks:** every socket burns, because the developer wants the whole blade on fire. Each
-carries a narrow, upright lick of irregular height and width, nudged along the blade so the
-row has no rhythm. Licks use frames 4–7, which have no white core.
+### Still fire
 
-**Roots:** every flame roots on the blade's uppermost edge at its socket, with its rounded
-base sunk just below the edge. On a slanted blade that is the upper edge, on a level blade
-the middle of the top face, and on an upright blade the axis. The fire therefore rises
-off the blade as one fringe instead of crossing its face in bands, which read as ladder
-rungs on a diagonal blade.
+When the blade is still or moving slowly, the fire is exactly the approved world-up fire:
+- **Licks:** every socket burns, because the developer wants the whole blade on fire. Each
+  carries a narrow, upright lick of irregular height and width, nudged along the blade so
+  the row has no rhythm. Licks use frames 4–7, which have no white core.
+- **Roots:** every flame roots on the blade's uppermost edge at its socket, with its
+  rounded base sunk just below the edge. The fire rises off the blade as one fringe
+  instead of crossing its face in bands.
+- **Peaks:** five taller tongues, in `peak_sockets`, sit at irregular positions with the
+  tallest in the outer half. They use frames 0–3, which have white-hot roots, as do the
+  two flames at the hilt.
+- **Shape and motion:** each flame is three upright cutout sheets. Length and width
+  flicker independently, and frames play at eight per second. The flames' axes stay in
+  world space and never inherit the sword's rotation.
 
-**Peaks:** five taller tongues, in `peak_sockets`, sit at irregular positions with the
-tallest in the outer half. They use frames 0–3, which have white-hot roots, as do the two
-flames at the hilt.
+### Swing response
 
-**Shape:** each flame is a shallow group of three upright cutout sheets. Front and back
-clear the blade's surface, and a central cross-sheet keeps it visible from the side.
+When the blade moves, the fire behaves like a burning blade whipped through the air.
+`manifest.blade_fire.swing` holds every number and formula, so an in-game renderer can
+reproduce it.
 
-**Motion:** length and width flicker independently, and frames play at eight per second.
-The flames' axes stay in world space and never inherit the sword's rotation. Upright fire
-also works on the standalone and upside-down planted sword.
+- **History:** the clip is re-posed at 8 earlier moments, 0.015 s apart. Only the sword's
+  ancestor bones are posed. `opts.travel` (the body's world velocity) shifts older
+  samples, so a walking or running king's fire leans slightly. A slice faster than 400
+  blocks/s counts as a jump, such as a parent switch, and is never traced.
+- **Flames:** each flame lies back along the path its root just travelled.
+  - It stretches toward `height*1.3 + 0.25` blocks, keeps 60% of its rise and curls up.
+  - It is never shorter than when still, never points down and never folds past 70°.
+  - Lean ramps over 2–20 blocks/s and stream over 8–60 blocks/s.
+- **Wake:** one swept sheet joins the roots across the arc the blade covered.
+  - It fades in from the blade, dims with age over about 0.12 s, and fades where it would
+    hang below the blade.
+  - It ramps in over 20–90 blocks/s, so only real blows draw it.
+  - Each quad is a normal tint plus an additive glow.
+- **Settling:** everything settles upright soon after the blade stops, without popping.
 
-`manifest.blade_fire.sockets` contains positions **relative to the sword bone
-pivot, before rotation**, in model pixels. Add the king pivot (`manifest.blade_fire.king_pivot`)
-(or `[0,0,0]` for the standalone), reflect X, divide by 16, then apply the posed
-bone matrix used by this baker. To find a flame's root, take the blade's local X and Z
-axes through the same matrix and move from the socket toward whichever side of each is
-higher in the world, by up to `manifest.blade_fire.socket_half_extents` (half width along
-X, half thickness along Z, model pixels). The X offset is scaled by `root_edge_fraction`,
-and each offset fades smoothly to zero as its axis turns level. A future game renderer
-should use its own corresponding model-to-world transform, then construct flame sheets
-along world `[0,1,0]`. Do not rotate the sheets with that matrix.
+**Face contract:** every flame face has `pts`, `n`, `uvs`, `alpha` in (0,1] and `trail`
+(true on the wake).
+- Optional `alphas` are per-vertex opacity used instead of `alpha`.
+- Faces with `blend: 'add'` are drawn after all other flames, back to front, additively,
+  with depth testing and no depth writes.
+- Draw opaque geometry first, then sort normal flame faces back to front with alpha
+  blending, depth testing and no depth writes.
+- `scene(model, manifest, t, motion, planted, clip, opts)` also returns per-flame `fire`
+  records for checks.
 
-The test motion reconstructs previous socket positions at 0.05, 0.10 and 0.15
-seconds ago. Only positions moving faster than 1.2 blocks/second emit the
-short trail. These prior world positions linger, rise slightly, and shrink and
-fade against a 0.18-second lifetime. Startup never samples negative time.
-For gameplay, retain actual recent posed socket positions instead of sampling
-the test motion. Draw opaque geometry first, then sort flame faces back to
-front with alpha blending, depth testing and no depth writes.
+**Socket space:** `manifest.blade_fire.sockets` contains positions **relative to the sword
+bone pivot, before rotation**, in model pixels. To place them:
+1. Add the king pivot (`manifest.blade_fire.king_pivot`), or `[0,0,0]` for the standalone.
+2. Reflect X and divide by 16.
+3. Apply the posed bone matrix.
+
+To find a flame's root, move from the socket toward whichever side of the blade's local X
+and Z is higher in the world, by up to `socket_half_extents`. For gameplay, record the real
+recent root positions and blade axis every render frame instead of re-posing the clip.
 
 ## Review images
 
-Each pass's renders are archived in `.local-previews/pyre-king/v1/` through `v9/`. The
+Each pass's renders are archived in `.local-previews/pyre-king/v1/` through `v10/`. The
 current `renders/` folder holds:
 - front, three-quarter, side and back;
 - the head and grip close-ups;
@@ -208,17 +374,23 @@ current `renders/` folder holds:
 - the frozen horizontal sweep and the fire close-ups;
 - the contact sheet.
 
-The `compare-v9-v10-*` images pair the ninth pass with this one. The archives and
-comparisons exist only on the computer that made them; render the ninth pass from an
-older commit to recreate `v9/`.
+The `compare-v10-v11-*` images pair the tenth pass with this one. The archives and
+comparisons exist only on the computer that made them.
 
-**Pass 10 resolved** the four problems the ninth pass left open:
-- the fire's ladder-rung look on a diagonal blade;
-- the crowding of fists, cuffs and tether at the grip;
-- the blocky beard and the stepped crown points;
-- the forearms stretching in the workshop's test sweep.
+**Pass 11** came out of the developer's review, one adversarial review round and a fix
+round. **Known limits:**
+- The right wrist bends about 94° at one fast sample of the cut and of the throw's whip
+  (`check_edges` flags it). Going lower needs the cocked and whip poses reworked.
+- During the attack tells, his chest turns 25–29° against his hips, and the cape grazes
+  the top of the left thigh. The tabard can pass through a thigh in the attack clips,
+  because those clips don't push cloth off the legs.
+- In the run, the tabard's belt band meets a raised thigh by about 0.1 px, and a raised
+  thigh shows up to about 1.8 px past the fauld's side.
+- At a few fast attack frames the arm covers up to 0.56 px of a lower shoulder lame's gold
+  edge, and over a run stride the right plate still turns about 5°.
 
-**Still open:** the developer's review of this pass and of the first clips.
+**Still open:** the developer's review of pass 11. The phone layout was tested only in
+desktop browser emulation, not on a real phone.
 
 These are workshop and offline observations, not in-game validation. Nothing here is in
 the game yet: no Java uses it, and nothing is installed.

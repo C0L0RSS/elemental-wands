@@ -16,7 +16,7 @@ current guide below; there is no requirement to read this whole folder.
 | Hollow undead night mobs and the Necromancer's army       | [Hollow undead](reference/hollow-undead.md)                       |
 | Churches, rituals, arena returns and saved-world recovery | [Church and arena](reference/church-and-arena.md)                 |
 | The Storm Roc's summit realm and first combat phase       | [Storm Summit](reference/storm-summit.md)                         |
-| The Pyre King's body, clips, fire and chains (no fight)   | [Pyre King](reference/pyre-king.md)                               |
+| The Pyre King's body, clips, fire, chains and hall (no fight) | [Pyre King](reference/pyre-king.md)                               |
 | How automated Minecraft previews and checks work          | [Testing](reference/testing.md)                                   |
 | Viewing local review pages from another device (T3)       | [Remote preview](reference/remote-preview.md)                     |
 | Short summaries of player-facing changes                  | [Releases](releases/README.md)                                    |

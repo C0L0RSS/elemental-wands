@@ -206,6 +206,7 @@ public class ElementalWandsClient implements ClientModInitializer {
         com.anton.elementalwands.client.blockwind.BlockWindEffects.register();
         com.anton.elementalwands.client.blockspace.BlockSpaceEffects.register();
         com.anton.elementalwands.client.NaveShaftEffects.register();
+        com.anton.elementalwands.client.PyreSeaHaze.register();
         com.anton.elementalwands.client.SummitCloudEffects.register();
         ClientTickEvents.END_CLIENT_TICK.register(com.anton.elementalwands.client.SummitStormClient::tick);
         ClientTickEvents.END_CLIENT_TICK.register(com.anton.elementalwands.client.StormRocMotion::tick);

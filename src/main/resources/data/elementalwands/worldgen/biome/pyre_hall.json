@@ -1,0 +1,30 @@
+{
+  "carvers": [],
+  "downfall": 0.0,
+  "effects": {
+    "additions_sound": {
+      "sound": "minecraft:ambient.basalt_deltas.additions",
+      "tick_chance": 0.0111
+    },
+    "ambient_sound": "minecraft:ambient.nether_wastes.loop",
+    "fog_color": 2756106,
+    "mood_sound": {
+      "block_search_extent": 8,
+      "offset": 2.0,
+      "sound": "minecraft:ambient.nether_wastes.mood",
+      "tick_delay": 6000
+    },
+    "particle": {
+      "options": {"type": "minecraft:ash"},
+      "probability": 0.008
+    },
+    "sky_color": 1705990,
+    "water_color": 4159204,
+    "water_fog_color": 329011
+  },
+  "features": [],
+  "has_precipitation": false,
+  "spawn_costs": {},
+  "spawners": {},
+  "temperature": 2.0
+}

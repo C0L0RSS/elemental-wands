@@ -1,0 +1,17 @@
+{
+  "type": "elementalwands:pyre_hall",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "elementalwands:pyre_hall",
+      "features": false,
+      "lakes": false,
+      "layers": [
+        {"block": "minecraft:bedrock", "height": 1},
+        {"block": "minecraft:netherrack", "height": 43},
+        {"block": "minecraft:lava", "height": 7}
+      ],
+      "structure_overrides": []
+    }
+  }
+}

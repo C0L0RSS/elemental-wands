@@ -41,7 +41,7 @@ relevant to the task; the docs archive is optional history, not required context
 | Hollow undead night mobs | [Hollow undead](docs/reference/hollow-undead.md) |
 | Church, arena, recovery, rewards | [Church and arena](docs/reference/church-and-arena.md) |
 | Storm Roc's summit realm and aerie | [Storm Summit](docs/reference/storm-summit.md) |
-| Pyre King's body, clips, fire and chains | [Pyre King](docs/reference/pyre-king.md) |
+| Pyre King's body, clips, fire, chains and hall | [Pyre King](docs/reference/pyre-king.md) |
 | Test runners and verification boundaries | [Testing](docs/reference/testing.md) |
 | What changed for players | [Release summaries](docs/releases/README.md) |
 
@@ -113,6 +113,7 @@ python3 tools/prepare_wand_hub_assets.py --check
 python3 tools/prepare_wand_assets.py --check
 python3 art/hollow_necromancer/v2/build_art.py --check
 python3 art/pyre_king/build_art.py --check
+python3 art/pyre_hall/build_layout.py --check
 python3 art/hollow_necromancer/soul_bolt/build_preview.py --check
 python3 art/hollow_necromancer/grasping_hands/build_preview.py --check
 python3 art/hollow_necromancer/life_drain/build_runtime.py --check

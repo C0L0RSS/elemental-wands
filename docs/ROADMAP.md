@@ -735,6 +735,11 @@ The set piece counts as one combo, and he can't be damaged for its 4 s.
 
 - **Arena:** a prepared Nether realm, his burned throne hall. It is about 80 blocks
   across and flat, with six broken pillars about 20 blocks from the center.
+  - A first pass was built on Nov 10 as an operator-only realm: a round hall on a crag in a
+    lava sea, with a south gate, a throne in a north apse and a burned-out roof. The
+    developer approved it from screenshots and the preview the same day, after asking for
+    no magma on the floor and for great braziers to light it. See
+    [Pyre King](reference/pyre-king.md#the-burned-throne-hall).
   - Pillars block Hooks, catch Casts (a Zip follows), shelter players from the low
     Unbound sweep, and anchor the Unbound chains.
   - Players can't place or break blocks.

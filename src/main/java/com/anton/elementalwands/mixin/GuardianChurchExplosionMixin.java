@@ -14,9 +14,9 @@ public abstract class GuardianChurchExplosionMixin {
     @Inject(method="getBlocksToDestroy",at=@At("RETURN"),cancellable=true)
     private void keepWard(CallbackInfoReturnable<List<BlockPos>> ci) {
         var world=((ExplosionImpl)(Object)this).getWorld();
-        // Explosion fire also lands only on this list, so an empty one keeps the crypt and the nave unburnt.
+        // Explosion fire also lands only on this list, so an empty one keeps the boss realms unburnt.
         if (HollowCryptRealm.keepsTerrain(world) || com.anton.elementalwands.arena.ShatteredNave.keepsTerrain(world)
-                || com.anton.elementalwands.summit.StormSummit.keepsTerrain(world)) {
+                || com.anton.elementalwands.summit.StormSummit.keepsTerrain(world) || com.anton.elementalwands.hall.PyreHall.keepsTerrain(world)) {
             ci.setReturnValue(new java.util.ArrayList<>());
             return;
         }

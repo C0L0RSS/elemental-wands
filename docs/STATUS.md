@@ -10,6 +10,16 @@ It records known verification limits; it is not a fresh installation receipt.
     baked, then photographs each clip.
   - **Pending:** the developer's look at him in Lunar; the Chain Scythe's bowed chain in
     the workshop; the fight itself.
+- **Burned Throne Hall (Nov 10):** the Pyre King's arena exists as an operator-only realm
+  (`/ew hall enter`, `summon`, `leave`). See
+  [Pyre King](reference/pyre-king.md#the-burned-throne-hall).
+  - **Verified:** `pyre_hall_client_smoke` enters, checks the floor, barrier, lava and the
+    summoned king, and photographs the hall.
+  - **Reviewed (Nov 10):** the developer liked the first pass from screenshots and the
+    preview, and kept the floor pattern. The sea's hard horizon and the unlit throne were
+    fixed afterwards. At the developer's request the floor's magma was removed and twelve
+    great braziers were added to light the hall; the developer then approved it.
+  - **Pending:** the developer's look at the hall in Lunar.
 - **Storm Roc (both phases):** the summit has a sealed, operator-started encounter.
   - **Opening (Oct 28):** on its home spire the Roc summons the first tornado. It screams a bolt
     into the clouds, the storm strikes the spot, and the funnel touches down over 2.5 seconds

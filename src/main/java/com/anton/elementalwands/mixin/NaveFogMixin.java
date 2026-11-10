@@ -1,6 +1,8 @@
 package com.anton.elementalwands.mixin;
 
 import com.anton.elementalwands.arena.ShatteredNave;
+import com.anton.elementalwands.client.PyreSeaHaze;
+import com.anton.elementalwands.hall.PyreHall;
 import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.client.render.fog.DimensionOrBossFogModifier;
 import net.minecraft.client.render.fog.FogData;
@@ -13,9 +15,11 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * The Shattered Nave borrows the Nether's thick fog so it has no sky, then sets the haze at a fixed
- * distance: the pillar ranks fade out before the authored hall ends, whatever the render distance,
- * so the hall reads as endless.
+ * The Shattered Nave and the Burned Throne Hall borrow the Nether's thick fog so they have no sky,
+ * then set the haze at a fixed distance, whatever the render distance. In the nave the pillar
+ * ranks fade out before the authored hall ends, so it reads as endless. In the throne hall the
+ * whole 81-block floor stays readable from the arrival and the lava sea fades into haze beyond it
+ * ({@link PyreSeaHaze} softens where the sea meets the fog's end).
  */
 @Mixin(DimensionOrBossFogModifier.class)
 public abstract class NaveFogMixin {
@@ -24,9 +28,11 @@ public abstract class NaveFogMixin {
     @Inject(method = "applyStartEndModifier", at = @At("TAIL"))
     private void elementalwands$naveHaze(FogData data, Entity entity, BlockPos pos, ClientWorld world, float viewDistance,
             RenderTickCounter tickCounter, CallbackInfo ci) {
-        if (world.getRegistryKey() != ShatteredNave.WORLD) return;
-        float end = Math.min(NAVE_FOG_END, viewDistance * .95f);
-        data.environmentalStart = Math.min(NAVE_FOG_START, end * .5f);
+        float start, end;
+        if (world.getRegistryKey() == ShatteredNave.WORLD) { start = NAVE_FOG_START; end = Math.min(NAVE_FOG_END, viewDistance * .95f); }
+        else if (world.getRegistryKey() == PyreHall.WORLD) { start = PyreSeaHaze.FOG_START; end = PyreSeaHaze.fogEnd(viewDistance); }
+        else return;
+        data.environmentalStart = Math.min(start, end * .5f);
         data.environmentalEnd = end;
         data.skyEnd = end;
         data.cloudEnd = end;

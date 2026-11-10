@@ -71,11 +71,15 @@ developer's Windows PC, `python3` is a broken Store alias, so use `py -3` there.
 
 ```sh
 python3 art/pyre_king/build_art.py
+python3 art/pyre_king/build_art.py --install
 python3 art/pyre_king/build_art.py --check
 python3 art/pyre_king/render_review.py
 python3 art/pyre_king/render_clips.py
 python3 art/pyre_king/workshop/serve.py
 ```
+
+`--install` also writes the game's copies under `src/main/resources` and
+`PyreKingClips.java`; `--check` verifies those too, so run `--install` after any change.
 
 Previews are not in git. On a fresh checkout, run the build first, because the workshop is
 served from `.local-previews/pyre-king/`. Then run the two render scripts to regenerate the
@@ -345,6 +349,10 @@ channels.
 
 **Chain moves and the overhead cut (pass 13).** Every chain move ends on the Reel's catch
 unless noted: the sword whips in, the right fist takes it, and the left follows 0.1 s later.
+- While the sword is swung on its chain, `effects.js` bows that chain too, with the same
+  springy filter as Unbound's chains but as an even arc of at most 12% of its length. The
+  Scythes' sword trails 25° behind the chain's line at full swing (`clips.SCYTHE_LAG`), so
+  it carries on from the bowed chain's end.
 - `chain_scythe_low`: the sword's point sweeps a 14-block circle at ankle height.
   - 0–0.45 s: he casts the sword out low to his right. It skids to full chain, and the
     chain snaps taut at 0.45 s.
@@ -576,5 +584,8 @@ round. **Known limits:**
 **Still open:** the phone layout was tested only in desktop browser emulation, not on a
 real phone.
 
-These are workshop and offline observations, not in-game validation. Nothing here is in
-the game yet: no Java uses it, and nothing is installed.
+These are workshop and offline observations, not in-game validation. Since November 10
+the candidate is also installed in the game as a summonable body with no fight; see
+[Pyre King](../../docs/reference/pyre-king.md). The game draws his fire and chains with
+its own copy of `effects.js` (`PyreKingEffectsLayer`), so a change to either must be made
+in both.

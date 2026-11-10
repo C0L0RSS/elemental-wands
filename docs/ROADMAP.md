@@ -61,7 +61,7 @@ Pillars:
 | Stone | Fractured Guardian | Ruined churches, Shattered Nave | 0 | Built, rebalanced October 3; playtest pending |
 | Nature (life turned to death) | Hollow Necromancer | Graveyards, Hollow Crypt | 1 | Built, in tuning |
 | Wind | Storm Roc | Mountain peaks, a sky realm above the clouds | 2 | Built with its aerie and intro (Oct 27); phase cinematic and death to come; playtest pending |
-| Fire | Pyre King | The Nether | 3 | Redesign started Nov 4: a swordsman with a chained sword; kit proposed, review model built, every move in the kit animated |
+| Fire | Pyre King | The Nether | 3 | Redesign started Nov 4: a swordsman with a chained sword; kit proposed, every move animated; in the game as a summonable body with no fight (Nov 10) |
 | Space | New | The End or the deep dark | 4 | Open |
 | — | Final: the wizard who tried to hold all five | Opened by all five shards | 5 | Open |
 
@@ -496,7 +496,7 @@ the developer's direction made it melee first.
   pillars.
 - **Proposed:** the mask cracks and falls away at the phase change, revealing a burned
   slag face. The model keeps the mask as its own part so this stays possible.
-- **Built (Nov 4):** a review model in `art/pyre_king/`. It is not yet in the game.
+- **Built (Nov 4):** a review model in `art/pyre_king/`.
   - Upright he is 5 blocks; he leans into a two-handed plough guard with the burning blade
     raised up and out.
   - The cape covers both shoulders and his back; the head sits in a gorget, the fists are
@@ -544,8 +544,13 @@ the developer's direction made it melee first.
       pinwheel, and spiral in as he hauls them. The proposed reel-in along straight ember
       lines no longer matches that.
     - Zip and Lunge move him inside the clip; the manifest tells the game where he ends up.
-  - Next: the game model. Not yet animated: a death, a hit reaction, and the mask
-    cracking away.
+  - The Chain Scythe's chain now bows with its swing as Unbound's chains do, awaiting
+    the developer's review.
+  - In the game (Nov 10): he can be summoned and made to play any clip, with his blade
+    fire, the sword's chain and Unbound's chains drawn by game code. He has no fight. See
+    [Pyre King](reference/pyre-king.md).
+  - Next: the fight. Not yet animated: a death, a hit reaction, and the mask cracking
+    away.
 - **Decided (Nov 4):** his sword is a large two-handed English longsword. He fights with
   both hands on the grip, in readable longsword guards: high over the shoulder before an
   overhead cut, point forward before the Thrust. To throw, he lets go with his left hand

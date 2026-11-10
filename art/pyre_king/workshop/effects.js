@@ -135,12 +135,12 @@ function strip(out,P,side,off,u,du,v0,alpha,trail){
 // (Unbound): every third link glows hot, each ends in a barbed hook, and scene() sets them
 // alight. Returns the loose chains that are drawn.
 const LOOSE_MIN=.6,HOOK=1.25;
-function longChain(model,matrices,faces,bows){
+function longChain(model,matrices,faces,bows,wristBow){
  const at=name=>{const i=model.bones.findIndex(b=>b.name===name);return i<0?null:M.apply(matrices[i],model.bones[i].pivot);};
  const face=name=>{const f=faces.find(f=>f.bone===name);return f?f.uvs:[[0,0],[0,0],[0,0],[0,0]];};
  const iron=face('hanging_wrist_chain'),hot=face('chest_shard');
  const a=at('right_wrist_shackle'),b=at('sword');
- if(a&&b&&Math.hypot(...sub(b,a))>=.8)chainBetween(a,b,faces,iron);
+ if(a&&b&&Math.hypot(...sub(b,a))>=.8)chainBetween(a,b,faces,iron,null,wristBow,true);
  const loose=looseEnds(model,matrices).filter(c=>dist(c.from,c.to)>=LOOSE_MIN);
  for(const c of loose){c.bow=bows&&bows[c.index]||[0,0,0];chainBetween(c.from,c.to,faces,iron,hot,c.bow);
   const h=hookPoints(c.from,c.to,c.bow);
@@ -157,8 +157,10 @@ function looseEnds(model,matrices){
 }
 // A chain's line from a to b, sagging a little: u runs 0 to 1. bow swings it out sideways by
 // that much two thirds of the way along (a chain being swung round: its far end trails).
-function chainLine(a,b,bow){const sag=Math.min(.6,.04*dist(a,b));
- return u=>{const p=add(add(a,mul(sub(b,a),u)),[0,-sag*4*u*(1-u),0]);return bow?add(p,mul(bow,6.75*u*u*(1-u))):p;};}
+// With arc, the bow is an even arc, largest half way (the sword's chain: the sword carries on
+// from the chain's end, so the end must not hook back).
+function chainLine(a,b,bow,arc){const sag=Math.min(.6,.04*dist(a,b));
+ return u=>{const p=add(add(a,mul(sub(b,a),u)),[0,-sag*4*u*(1-u),0]);return bow?add(p,mul(bow,arc?4*u*(1-u):6.75*u*u*(1-u))):p;};}
 // How far each loose chain bows as it is swung. A swung chain's far end trails behind the
 // rest, and the chain has weight: it takes a moment to bend when the swing starts, and when
 // the far end stops the rest swings on past it, bows the other way a little and settles. So
@@ -178,14 +180,33 @@ function endsAt(model,clip,time){
   rig={bones:model.bones.filter(b=>keep.has(b.name))};markerRigs.set(model,rig);}
  return looseEnds(rig,poseBones(rig,clip,Math.max(0,time)).matrices);
 }
+// past[k] is the chain {from,to} k*BOW_STEP seconds ago (past[0] now); share caps the bow.
+function bowOf(past,share){
+ let v=[0,0,0];const c=past[0];
+ for(let k=0;k<BOW_SAMPLES;k++)v=add(v,mul(sub(past[k].to,past[k+1].to),BOW_WEIGHTS[k]/BOW_STEP));
+ const d=norm(sub(c.to,c.from));v=sub(v,mul(d,dot(v,d)));v[1]=0;
+ const size=Math.hypot(...v)*BOW_SECONDS,cap=share*dist(c.from,c.to);
+ return size>1e-6&&cap>1e-6?mul(v,cap*Math.tanh(size/cap)/Math.hypot(...v)):[0,0,0];
+}
 function chainBows(model,clip,t,matrices){
  const now=looseEnds(model,matrices);if(!clip||!now.some(c=>dist(c.from,c.to)>=LOOSE_MIN))return null;
  const past=[now];for(let k=1;k<=BOW_SAMPLES;k++)past.push(endsAt(model,clip,t-k*BOW_STEP));
- return now.map((c,i)=>{let v=[0,0,0];
-  for(let k=0;k<BOW_SAMPLES;k++)v=add(v,mul(sub(past[k][i].to,past[k+1][i].to),BOW_WEIGHTS[k]/BOW_STEP));
-  const d=norm(sub(c.to,c.from));v=sub(v,mul(d,dot(v,d)));v[1]=0;
-  const size=Math.hypot(...v)*BOW_SECONDS,cap=BOW_SHARE*dist(c.from,c.to);
-  return size>1e-6&&cap>1e-6?mul(v,cap*Math.tanh(size/cap)/Math.hypot(...v)):[0,0,0];});
+ return now.map((c,i)=>bowOf(past.map(p=>p[i]),BOW_SHARE));
+}
+// The sword's own chain bows the same way while the sword is swung on it (the Chain Scythe),
+// by at most WRIST_BOW_SHARE of its length, as an even arc.
+const WRIST_BOW_SHARE=.12,wristRigs=new WeakMap();
+function wristBow(model,clip,t){
+ if(!clip)return null;
+ let rig=wristRigs.get(model);
+ if(!rig){const byName=new Map(model.bones.map(b=>[b.name,b])),keep=new Set();
+  for(const name of ['sword','right_wrist_shackle'])for(let q=byName.get(name);q;q=q.parent!=null?byName.get(q.parent):null)keep.add(q.name);
+  rig={bones:model.bones.filter(b=>keep.has(b.name))};wristRigs.set(model,rig);}
+ const at=time=>{const m=poseBones(rig,clip,Math.max(0,time)).matrices,pivot=name=>{const i=rig.bones.findIndex(b=>b.name===name);return i<0?null:M.apply(m[i],rig.bones[i].pivot);};
+  return {from:pivot('right_wrist_shackle'),to:pivot('sword')};};
+ const now=at(t);if(!now.from||!now.to||dist(now.from,now.to)<.8)return null;
+ const past=[now];for(let k=1;k<=BOW_SAMPLES;k++)past.push(at(t-k*BOW_STEP));
+ return bowOf(past,WRIST_BOW_SHARE);
 }
 // The hook on a loose chain's far end, lying flat: a shank carrying on along the chain, then a
 // curve round to the left (the way the chains sweep) and a barb pointing back toward him.
@@ -203,9 +224,9 @@ function beam(faces,p,q,w,uvs){
   if(dot(n,sub(mul(add(pts[0],pts[2]),.5),mul(add(p,q),.5)))<0){pts=[pts[1],pts[0],pts[3],pts[2]];n=mul(n,-1);}   // faces outward
   faces.push({bone:'long_chain',pts,n,uvs});}
 }
-function chainBetween(a,b,faces,uvs,hot,bow){
+function chainBetween(a,b,faces,uvs,hot,bow,arc){
  const length=Math.hypot(...sub(b,a));
- const n=Math.max(4,Math.round(length/.32)),point=chainLine(a,b,bow);
+ const n=Math.max(4,Math.round(length/.32)),point=chainLine(a,b,bow,arc);
  for(let i=0;i<n;i++){
   const p=point(i/n),q=point((i+1)/n),d=norm(sub(q,p)),side=norm(cross(d,Math.abs(d[1])>.9?[1,0,0]:[0,1,0])),up=cross(side,d);
   const w=i%2?.05:.11,h=i%2?.11:.05,c=mul(add(p,q),.5),half=Math.hypot(...sub(q,p))*.62;
@@ -220,7 +241,7 @@ function chainBetween(a,b,faces,uvs,hot,bow){
 function scene(model,manifest,t=.65,motion=false,planted=false,clip=null,opts=null){
  const pose=posed(model,manifest,t,motion,planted,clip);
  const faces=model.faces.filter(f=>!f.empty).map(f=>{const m=pose.matrices[f.bone];return {...f,bone:model.bones[f.bone].name,pts:f.pts.map(p=>M.apply(m,p)),n:norm(M.dir(m,f.n))};});
- const loose=longChain(model,pose.matrices,faces,chainBows(model,clip,t,pose.matrices));
+ const loose=longChain(model,pose.matrices,faces,chainBows(model,clip,t,pose.matrices),motion||planted?null:wristBow(model,clip,t));
  const flames=[],fire=[];const noise=(t,i)=>.5+.27*Math.sin(t*7.3+i*2.71)+.23*Math.sin(t*11.9+i*7.13);
  const bf=manifest.blade_fire,sw=bf.swing,peaks=new Map(bf.peak_sockets),frames=bf.atlas_grid[0],du=1/frames;
  const hash=i=>{const x=Math.sin(i*127.1+311.7)*43758.5453;return x-Math.floor(x);};

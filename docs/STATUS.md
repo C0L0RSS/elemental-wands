@@ -3,6 +3,13 @@
 Reviewed October 3, 2026. This page contains outstanding work, not release history.
 It records known verification limits; it is not a fresh installation receipt.
 
+- **Pyre King (Nov 10):** he is in the game as a summonable body with no fight. He plays
+  any of his 16 clips on an operator's command, with blade fire, the sword's chain and
+  Unbound's burning chains. See [Pyre King](reference/pyre-king.md).
+  - **Verified:** `pyre_king_client_smoke` checks his renderer and that every clip is
+    baked, then photographs each clip.
+  - **Pending:** the developer's look at him in Lunar; the Chain Scythe's bowed chain in
+    the workshop; the fight itself.
 - **Storm Roc (both phases):** the summit has a sealed, operator-started encounter.
   - **Opening (Oct 28):** on its home spire the Roc summons the first tornado. It screams a bolt
     into the clouds, the storm strikes the spot, and the funnel touches down over 2.5 seconds

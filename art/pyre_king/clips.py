@@ -1072,6 +1072,7 @@ def _hands(t, let_go, release, catch):
 # round at ankle height like a hammer thrower. High: he stands tall and whirls it over his
 # head like a lasso, the blade at a player's head height. Both then haul it in and catch it.
 SCYTHE_REACH = 14.
+SCYTHE_LAG = 25.         # deg the sword trails behind its chain's line at full swing, as the bowed chain's end does
 
 
 @easy_wrists(2.9)
@@ -1080,7 +1081,7 @@ def chain_scythe_low(t):
     sinks into a crouch and winds up against it. Then he spins once to his left, the blade
     flat on the floor at full chain (the clang at 0.9 s, mid-spin). He stops, hauls the chain,
     and the sword whips round his right side into his hand."""
-    tr, tc, R = .3, 1.5, SCYTHE_REACH-SWORD_TIP
+    tr, tc, R = .3, 1.5, SCYTHE_REACH-SWORD_TIP*math.cos(SCYTHE_LAG*RAD)
     spin = curve([(0, 0), (.3, 0), (.62, -28), (.72, 10, 'in'), (1.06, 320, 'linear'), (1.2, 362, 'out'), (1.4, 360)])
     psi = float(spin(t))
     home = GUARD_P+GRIP['right']*GUARD_D
@@ -1092,7 +1093,7 @@ def chain_scythe_low(t):
                 (1.2, -80), (tc, CATCH_AZ)])
     r = curve([(tr, float(np.hypot(P0[0], P0[2]))), (.45, R, 'linear'), (1.06, R), (tc, CATCH_R)])
     y = curve([(tr, P0[1]), (.4, .24, 'in'), (1.1, .24), (tc, CATCH_P[1])])
-    lag = curve([(tr, 0), (.45, 0), (.72, 12), (1.06, 12), (1.3, 0)])
+    lag = curve([(tr, 0), (.45, 0), (.72, SCYTHE_LAG), (1.06, SCYTHE_LAG), (1.3, 0)])
     tail_p = curve([(tc, CATCH_P), (tc+.24, SETTLE_P, 'snap'), (2.9, GUARD_P)])
     tail_d = dcurve([(tc, CATCH_D), (tc+.24, SETTLE_D, 'snap'), (2.9, GUARD_D)])
 
@@ -1152,6 +1153,7 @@ def chain_scythe_high(t):
     c = curve([(tr, (.75, 0, 0)), (1.1, (.75, 0, 0)), (tc, (0, 0, 0))])                # the whirl's axis
     az = curve([(tr, -147), (.45, -70, 'in'), (.7, 155, 'linear'), (1.1, 515, 'linear'), (tc, 720+CATCH_AZ, 'out')])
     level = 2.6                                          # the pommel at full chain; the point hangs lower
+    lag = curve([(tr, 10), (.45, 10), (.7, SCYTHE_LAG), (1.1, SCYTHE_LAG), (1.3, 10)])
     slope = math.atan2(top-level, 9.6); R = SCYTHE_REACH-SWORD_TIP*math.cos(slope)
     rho = curve([(tr, -.3), (.45, 2.5, 'in'), (.7, R, 'linear'), (1.1, R), (tc, CATCH_R)])
     y = curve([(tr, P0[1]), (.45, top+.15), (.7, level), (1.1, level), (1.3, 3.0), (tc, CATCH_P[1])])
@@ -1170,7 +1172,7 @@ def chain_scythe_high(t):
         if s <= tr: return held(s)
         if s >= tc: return tail_d(s)
         e = math.atan2(float(y(s))-top, max(float(rho(s)), 1.5))            # the chain's line, carried on
-        line = math.cos(e)*_az(float(az(s))-10)+math.sin(e)*UP
+        line = math.cos(e)*_az(float(az(s))-float(lag(s)))+math.sin(e)*UP
         return slerp(slerp(held(tr), line, _ramp(s, tr, .45)), CATCH_D, _ramp(s, tc-.2, tc))
 
     def N(s):

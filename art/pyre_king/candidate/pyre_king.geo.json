@@ -22020,6 +22020,66 @@
             }
           ],
           "parent": "right_wrist_shackle"
+        },
+        {
+          "name": "unbound_chain_1",
+          "pivot": [
+            0,
+            40.5,
+            0
+          ],
+          "cubes": [],
+          "parent": "torso"
+        },
+        {
+          "name": "unbound_chain_2",
+          "pivot": [
+            0,
+            40.5,
+            0
+          ],
+          "cubes": [],
+          "parent": "torso"
+        },
+        {
+          "name": "unbound_chain_3",
+          "pivot": [
+            0,
+            40.5,
+            0
+          ],
+          "cubes": [],
+          "parent": "torso"
+        },
+        {
+          "name": "unbound_chain_4",
+          "pivot": [
+            0,
+            40.5,
+            0
+          ],
+          "cubes": [],
+          "parent": "torso"
+        },
+        {
+          "name": "unbound_chain_5",
+          "pivot": [
+            0,
+            40.5,
+            0
+          ],
+          "cubes": [],
+          "parent": "torso"
+        },
+        {
+          "name": "unbound_chain_6",
+          "pivot": [
+            0,
+            40.5,
+            0
+          ],
+          "cubes": [],
+          "parent": "torso"
         }
       ]
     }

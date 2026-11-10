@@ -470,6 +470,12 @@ for i in range(links):
     else:
         beam('hanging_wrist_chain', add(mid, tangent, -length/2), add(mid, tangent, length/2), .8, .8, 'iron')
 
+# ---------------------------------------------------------------- the curse's loose chains
+# Six empty marker bones on his chest. A clip moves one to say where a chain's far end is;
+# at rest they sit on the chest chain and nothing is drawn. Only Unbound moves them.
+UNBOUND_CHAINS = ['unbound_chain_%d' % i for i in range(1, 7)]
+for name in UNBOUND_CHAINS: bone(name, 'torso', (0, 40.5, 0))
+
 
 def sword_bones():
     """Standalone projectile, tip +Y, pommel ring bottom at Y=0, identity root."""

@@ -61,7 +61,7 @@ Pillars:
 | Stone | Fractured Guardian | Ruined churches, Shattered Nave | 0 | Built, rebalanced October 3; playtest pending |
 | Nature (life turned to death) | Hollow Necromancer | Graveyards, Hollow Crypt | 1 | Built, in tuning |
 | Wind | Storm Roc | Mountain peaks, a sky realm above the clouds | 2 | Built with its aerie and intro (Oct 27); phase cinematic and death to come; playtest pending |
-| Fire | Pyre King | The Nether | 3 | Redesign started Nov 4: a swordsman with a chained sword; kit proposed, review model built, all three sword strings animated |
+| Fire | Pyre King | The Nether | 3 | Redesign started Nov 4: a swordsman with a chained sword; kit proposed, review model built, every move in the kit animated |
 | Space | New | The End or the deep dark | 4 | Open |
 | — | Final: the wizard who tried to hold all five | Opened by all five shards | 5 | Open |
 
@@ -491,6 +491,9 @@ the developer's direction made it melee first.
   padlock (three chains were too noisy).
 - **Decided (Nov 6):** no knee-length coat. A close fauld hugs his hips so his legs and
   footwork read, and the legs and arms are heavy and strong under small pauldrons.
+- **Decided (Nov 9):** the chains that tear loose in Unbound are on fire.
+- **Proposed:** each of those chains ends in a barbed hook, which is what catches on the
+  pillars.
 - **Proposed:** the mask cracks and falls away at the phase change, revealing a burned
   slag face. The model keeps the mask as its own part so this stays possible.
 - **Built (Nov 4):** a review model in `art/pyre_king/`. It is not yet in the game.
@@ -513,14 +516,36 @@ the developer's direction made it melee first.
     on its hip–ankle line, full thighs, bigger boots) and hung the pauldrons from the
     chest, so the sword arm no longer rocks them in the run. The developer approved the
     result on Nov 9.
-  - Pass 12 (Nov 9) added the other two sword strings, awaiting the developer's review:
+  - Pass 12 (Nov 9) added the other two sword strings, which the developer approved:
     - **Kingsguard Thrust:** he thrusts from a high guard beside his head, the point on
       your face, then lunges and drives the point down onto your chest.
     - **Turning Cut:** he glances back over his shoulder, spins left and cuts flat and low
       through the half behind him. He ends facing back the way he came; the manifest tells
       the game to turn him 180° when the clip ends.
-  - Next: the Chain Scythe and its release, then Zip, Hook and Overhead Sentence, Lunge,
-    Drag Down and Unbound. After that, the game model.
+  - Pass 13 (Nov 9) animated the rest of the kit. The developer approved it on Nov 10:
+    - **Chain Scythe, low:** he casts the sword out along the floor, crouches, and spins
+      once like a hammer thrower, dragging the blade round at ankle height.
+    - **Chain Scythe, high:** he whirls it over his head like a lasso, the blade at head
+      height.
+    - **Zip:** the chain hauls him off his feet to the stuck sword. He tears it free and
+      spins into one cut round the spot he landed on.
+    - **Lunge:** he drops low, winds the chain round his forearm, slings the sword short
+      and flies after it into the same spinning cut.
+    - **Hook:** he throws the sword like a javelin, then drags it back hand over hand.
+    - **Overhead Sentence:** he raises the sword over his head and brings it straight
+      down, lunging in. Phase two's third Royal Cut ends on the same cut.
+    - **Drag Down:** a rising sling sends the sword up at a player overhead, and he hauls
+      it down with both hands.
+    - **Unbound:** he drives the sword into the floor and lets go, and six chains burst
+      from his chest. They sweep low, hook on, and reel back in before he tears the sword
+      free. The model carries six marker bones that say where the chains' ends are.
+      After the developer's review, the chains burn along their whole length and end in
+      barbed hooks. They whirl round him for as long as they are out, curved like a
+      pinwheel, and spiral in as he hauls them. The proposed reel-in along straight ember
+      lines no longer matches that.
+    - Zip and Lunge move him inside the clip; the manifest tells the game where he ends up.
+  - Next: the game model. Not yet animated: a death, a hit reaction, and the mask
+    cracking away.
 - **Decided (Nov 4):** his sword is a large two-handed English longsword. He fights with
   both hands on the grip, in readable longsword guards: high over the shoulder before an
   overhead cut, point forward before the Thrust. To throw, he lets go with his left hand

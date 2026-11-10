@@ -10,8 +10,11 @@ Pass 11 answers the developer's review of those clips:
 - the fire streams behind a swung blade;
 - the workshop is laid out for phones.
 
-The developer approved pass 11 on November 9. Pass 12 adds two more sword strings, the
-Kingsguard Thrust and the Turning Cut; the sculpt is unchanged.
+The developer approved pass 11 on November 9. Pass 12 added two more sword strings, the
+Kingsguard Thrust and the Turning Cut, and the developer approved those the same day.
+Pass 13 adds the rest of the kit's clips: both Chain Scythes, Zip, Hook, Overhead Sentence,
+Lunge, Drag Down, phase two's third Royal Cut, and Unbound. The sculpt is unchanged, but
+the model gains six empty marker bones for Unbound's chains.
 
 ## The design
 
@@ -109,6 +112,7 @@ pans. The page itself never scrolls or zooms.
 - Each preset fits what is on screen: the guard, the sweep, or a looping clip over its
   whole cycle.
 - The one-shot clips (the attacks) use a follow camera that frames the pose and the next 0.3 s.
+  It also keeps Unbound's six chains in view.
   It keeps the blade and the thrown sword in view. The king can shrink to 28% of the view
   height for this, or 22% while the sword is thrown.
 - Head and the Player cameras follow clips too. Changing clip keeps your angle but
@@ -154,12 +158,12 @@ attack clips. It checks the 20 Hz samples, the half-samples and the baked clip p
 60 fps:
 - the edge leads in each blow;
 - wrist twist and bend;
-- arm turn per sample;
+- arm turn per sample (90° for a gripping arm, 150° for one swinging free);
 - the fists stay on the grip;
 - the in-between frames follow the solved pose;
 - the held sword stays above the floor.
 
-It returns a `problems` list.
+It returns a `problems` list. All thirteen attack clips are checked by default.
 
 Editable sources are `geometry.py`, `rig.py`, `clips.py`, `build_art.py`,
 `render_review.py`, `render_clips.py`, `export_scene.cjs`, `check_effects.cjs` and
@@ -168,7 +172,7 @@ directory.
 
 ## Candidate and dimensions
 
-- `candidate/pyre_king.geo.json`: **266 cubes / 40 bones**, including the sword.
+- `candidate/pyre_king.geo.json`: **266 cubes / 46 bones**, including the sword.
 - `candidate/pyre_king_sword.geo.json`: **14 cubes / 3 bones**, derived from the
   held sword. The preserved `sword_fire` bone is empty in both exports.
 - `candidate/pyre_king.png` and `pyre_king_glowmask.png`: 1024 × 512 RGBA atlases.
@@ -182,7 +186,7 @@ directory.
 - `candidate/pyre_king.animation.json`: the static guard, plus the clips baked from
   `clips.py`. The workshop's test sweep is preview code, not a clip.
 - `candidate/manifest.json`: dimensions, materials, the clips with their `ground_speed` and
-  `end_turn_degrees`, and the blade fire contract.
+  `end_turn_degrees` and `end_offset_blocks`, and the blade fire contract.
 
 Upright, ground to crown is **80 pixels / 5.00 blocks**. In the leaning guard the body
 measures **4.913642 blocks**, and with the raised sword, excluding fire, **5.045612 blocks**.
@@ -207,7 +211,23 @@ Named bone groups:
 - the chest shard;
 - one curse chain;
 - limb segments;
-- the wrist shackle and the hanging tether.
+- the wrist shackle and the hanging tether;
+- six empty markers on the chest, `unbound_chain_1` to `unbound_chain_6`. A clip moves a
+  marker to where a loose chain's far end is. At rest they sit on the chest chain, and
+  nothing is drawn. `effects.js` draws a burning chain from the chest to every marker that
+  is more than 0.6 blocks from its rest place:
+  - a chain that is being swung bows: its far end trails behind the rest, as on a
+    pinwheel. The chain has weight. It takes a moment to bend when a swing starts, and
+    when its far end stops, the rest swings on past, bows the other way a little and
+    settles. The bow is the far end's sideways velocity over the last second, passed
+    through a slightly springy filter (0.55 s period), times 0.09 s. It is largest two
+    thirds of the way along and reaches at most 22% of the chain's length;
+  - every third link glows hot, with the chest shard's texture;
+  - the far end carries a barbed hook 1.25 blocks long. It lies flat, curves to the left
+    (the way the chains sweep), and its barb points back toward him;
+  - a low flame burns every 0.6 blocks or so, with a tall one on the hook. A flame stands
+    upright where the chain is still. Where the chain moves, it lies back along the way it
+    came, by up to 1.1 blocks, and loses up to 45% of its rise.
 
 `sword` remains a child of `right_hand`; `pommel_ring` and the empty `sword_fire` remain
 its children. Standalone sword geometry has its pivot at the ring bottom and its tip
@@ -238,6 +258,14 @@ channels.
   stay steady with the chest; big raises carry them. The workshop's test sweep doesn't
   drive the plates.
 - A free fist can keep a `wrist` turn instead of snapping straight to its forearm.
+- A clip can pose its arms as hinges (`hinge: True`). Each arm bone's roll then follows the
+  plane the elbow bends in. The default takes the shortest turn from the sculpt, which
+  flips a bone's roll when an arm is flung up or folded tight. Both agree in the guard.
+  The chain moves use the hinge; the sword strings keep the default, so their bakes are
+  unchanged.
+- A clip can say where a free arm's elbow points (`free_elbow`). The chain moves point it
+  back and out. Near a grip change it blends into the planned elbow.
+- `chain_ends` sends marker bones to world points.
 - A thrown sword leaves the hand and flies free. Meanwhile the short tether is hidden, and
   `effects.js` draws the long chain from the wrist shackle to the pommel ring.
 
@@ -315,6 +343,88 @@ channels.
     one sample; the Turning Cut's plan had swung one 150°.
   - No earlier clip swings more than 40°, so their bakes are byte-identical to before.
 
+**Chain moves and the overhead cut (pass 13).** Every chain move ends on the Reel's catch
+unless noted: the sword whips in, the right fist takes it, and the left follows 0.1 s later.
+- `chain_scythe_low`: the sword's point sweeps a 14-block circle at ankle height.
+  - 0–0.45 s: he casts the sword out low to his right. It skids to full chain, and the
+    chain snaps taut at 0.45 s.
+  - 0.45–0.7 s: he sinks into a deep crouch and winds up against the chain.
+  - 0.7–1.2 s: he spins once to his left like a hammer thrower, dragging the blade flat on
+    the floor. The clang is at 0.9 s, mid-spin. He ends facing the way he started.
+  - 1.2–1.5 s: he hauls the chain, and the sword whips round his right side into his hand.
+- `chain_scythe_high`: the same reach at a player's head height.
+  - 0–0.3 s: he swings the sword up behind his right shoulder and lets it go.
+  - 0.3–0.7 s: it whirls over his head like a lasso as the chain runs out.
+  - 0.7–1.1 s: one turn at full chain, the clang at 0.9 s. The pommel rides 2.6 blocks up
+    and the point hangs to about 1.5.
+  - 1.1–1.5 s: he hauls it down and in, and catches it.
+- `zip`: starts from the throw's unarmed wait, with the sword stuck 11.5 blocks out.
+  - 0–0.62 s: he takes the chain in both hands, sinks back against it, and is hauled off
+    his feet.
+  - 0.62–1.03 s: he flies to the sword and lands 10.4 blocks from where he started.
+  - 1.03–1.2 s: a haul on the chain tears the sword out of the floor into his hand.
+  - 1.2–1.62 s: one spin to his left with the blade flat, an edge leading; the cut lands
+    at 1.4 s. He finishes across his front as the Turning Cut does, then holds a low guard
+    until 2.9 s.
+- `lunge`:
+  - 0–0.5 s: he drops low and winds the chain round his right forearm in two turns, his
+    left hand winding with it. The aim freezes at 0.45 s.
+  - 0.62 s: a low sling sends the sword short; it sticks 8 blocks out at 0.8 s.
+  - 0.9–1.33 s: the chain hauls him 6.9 blocks after it.
+  - 1.33–1.92 s: he tears the sword free and spins as in the Zip. The cut lands at 1.7 s,
+    1.25 s after the freeze.
+- `hook`:
+  - 0–1.0 s: he draws the sword back beside his head like a javelin, the point on the
+    target and his left hand marking the line, then hurls it flat. This is the historical
+    throw (Fiore's "throwing guard") that the Cast does not use.
+  - 1.0–1.3 s: it flies 27 blocks.
+  - 1.3–2.3 s: he drags it back hand over hand, in three hauls.
+  - 2.5 s: a last flick brings it up into his hand.
+- `overhead_sentence`: the cut that follows a Hook.
+  - 0–0.7 s: he raises the sword high over his head, the blade pointing up and back.
+  - 0.7–0.84 s: his left foot lunges in and the blade comes straight down the line in
+    front of him. The fists lead and the blade whips down last, an edge leading. The point
+    stops just above the floor about 5.3 blocks out.
+  - He holds it there until 2.2 s.
+- `royal_cut_three`: phase two's Royal Cut. It is the Royal Cut until 2.2 s. Then the blade
+  circles up over his right shoulder and comes down in the same overhead cut at 2.62–2.76 s.
+  The Royal Cut itself is unchanged.
+- `drag_down`:
+  - 0–0.6 s: he looks up, points at the target with his left hand, and swings the sword
+    back low behind his right hip.
+  - 0.6–0.8 s: a rising sidearm sling sends it up at a player 8.5 blocks up and 7.5 out.
+  - 1.0–1.3 s: he takes the chain in both hands and hauls down with his whole weight. The
+    sword drives into the floor about 4 blocks in front of him.
+  - 1.5 s: it whips back into his hand. He is back in his guard at 2.4 s, because a sword
+    string follows.
+- `unbound`: the phase change, 4.3 s.
+  - 0–0.64 s: he raises the sword and cuts down into the floor with the overhead cut.
+  - 0.64–0.95 s: he leans on the hilt and drives the blade in at an angle, kneeling behind
+    it, then lets go. His wrist chain still runs to the pommel.
+  - 1.2 s: he throws his arms and head back, and six burning chains burst from his chest,
+    each ending in a barbed hook. The chest chain is hidden while they are out.
+  - The chains whirl to his left for as long as they are out, about 330° in all
+    (`clips.UNBOUND_SWING` is their turning speed), so they are never straight for long.
+  - 1.2–1.5 s: they run out to 12 blocks along spirals.
+  - 1.65–1.9 s: they skim at ankle height, turning fastest (260°/s) at the clang, 1.75 s.
+  - 1.9–2.6 s: they keep swinging round him, slowing and rising to 1.5 blocks.
+  - About 2.7 s: the hooks catch, which checks the swing and yanks his chest round.
+  - 2.75–3.3 s: he hauls them in, hunching over the sword. They whip round faster as
+    they shorten.
+  - 3.4 s: he takes the hilt, tears the blade free and rises into his guard.
+
+**What the game must do for these clips:**
+- `zip` and `lunge` move him. The manifest's `end_offset_blocks` is where he stands at the
+  end, in the frame he started in: 10.4 and 6.9 blocks forward. The game moves him there on
+  the clip's last frame. The flight is authored for one distance, so the game will have to
+  stretch it to the real one.
+- The low Scythe, Zip and Lunge spin him a full turn, so their pelvis channel ends at 360°.
+  As with the Turning Cut, the next clip must start with no blend.
+- Throw distances and targets are fixed in the clips (27 blocks for the Hook, 8.5 up for
+  Drag Down). The game will have to aim the real sword.
+- Hit zones, ember rings and lines, floor sparks and fire walls are game effects. The
+  clips only show the body, the sword and the chains.
+
 Walk and run are in-place loops. In the manifest, each clip's `ground_speed` (walk 3.0,
 run 4.5, the others 0) is the speed the game must move him at, or else it must scale
 playback by actual speed ÷ `ground_speed`. Phase two's 5.2 blocks/s run plays at about
@@ -328,16 +438,17 @@ legs now equal it is 0.
 - kingsguard-thrust (side and three-quarter) and kingsguard-thrust-player;
 - turning-cut (from behind and above) and turning-cut-player, from the eye of a player
   4.5 blocks behind him;
+- chain-scythe-low and chain-scythe-high, each from far enough to see the chain, then close;
+- zip, lunge, hook, overhead-sentence (side and player's eye), royal-cut-three, drag-down;
+- unbound, wide and close;
 - walk-run, from the side and front.
 
 Frames off the 20 Hz grid are labelled "(in-between)". With arguments it renders any clip
 at chosen times: `render_clips.py OUT CLIP t1 t2 … [--cam yaw,pitch,extent,x,y,z]
 [--player]`. Walk and run pass their travel to the fire automatically.
 
-The rest of the kit is still to come:
-- the Chain Scythe and its release;
-- Zip, Hook and Overhead Sentence, Lunge and Drag Down;
-- Unbound.
+Every move in the proposed kit now has a clip. Not yet animated: a death, a hit reaction,
+phase two's Double Cast as its own clip, and the mask cracking away at the phase change.
 
 ## Blade fire contract
 
@@ -441,8 +552,29 @@ round. **Known limits:**
 - The thrust ends about 6 blocks out in the clip; the game's step carries it the rest of
   the 8-block line.
 
-**Still open:** the developer's review of the Kingsguard Thrust and the Turning Cut. The
-phone layout was tested only in desktop browser emulation, not on a real phone.
+**Pass 13 known limits:**
+- These nine clips were checked with `check_edges` and looked at as still frames. The
+  developer watched them in the workshop and approved them on November 10.
+- The Overhead Sentence's point stops 0.14 blocks above the floor instead of biting
+  it, and the third Royal Cut's does the same.
+- A stuck sword is buried to the hilt, as in the throw. So the Zip and the Lunge tear it
+  out with the chain instead of gripping it in the floor.
+- The rig's grip cannot be reversed, so Unbound drives the blade in at about 27° from the
+  floor instead of plunging it straight down.
+- The six chains, their fire and their hooks are drawn by the workshop from the marker
+  bones, like the blade fire; the game will have to draw them too. The chains are straight
+  links with a little sag and the swing's bow, and they pass through his arms and through
+  each other. Their
+  fire follows the chain's motion over the last 0.03 s only, so it has no wake.
+- Free arms swing fast in places: up to 136° in one 0.05 s sample (the high Scythe, the
+  Zip and the Lunge).
+- The third Royal Cut inherits the Royal Cut's wrist limit.
+- None of these clips pushes cloth off the legs.
+- Unbound's chains now spiral in as he hauls them. The proposed fight has them reel in
+  along straight ember lines that become fire walls, so one of the two will have to change.
+
+**Still open:** the phone layout was tested only in desktop browser emulation, not on a
+real phone.
 
 These are workshop and offline observations, not in-game validation. Nothing here is in
 the game yet: no Java uses it, and nothing is installed.

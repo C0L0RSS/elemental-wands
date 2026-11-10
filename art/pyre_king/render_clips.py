@@ -28,6 +28,8 @@ THRUST_SIDE = (90, 4, 9, 0, 2.4, -1.8)
 THRUST_34 = (-35, 10, 9, 0, 2.6, -1.2)
 TURN_BEHIND = (150, 14, 11, 0, 2.4, 1)
 TURN_ABOVE = (20, 60, 12, 0, 1, 0)
+WHIRL_WIDE, WHIRL_NEAR = (30, 22, 22, 0, 2, 0), (30, 12, 8, 0, 2.6, 0)
+UNBOUND_WIDE, UNBOUND_NEAR = (25, 24, 22, 0, 2, 0), (25, 10, 9, 0, 2.8, -.8)
 STRIPS = {
     # Tell, cock, the cut at mid-blow, follow-through, re-cock, the backhand at mid-blow, the pause.
     'royal-cut.png': [('royal_cut', [0, .5, .9, .95, 1.0, 1.3, 1.75, 1.85, 1.9, 2.8], None, False)],
@@ -63,6 +65,28 @@ STRIPS = {
     'turning-cut.png': [('turning_cut', [0, .25, .45, .6, .68, .72, .76, .8, .95, 2.6], TURN_BEHIND, False),
                         ('turning_cut', [0, .25, .45, .6, .68, .72, .76, .8, .95, 2.6], TURN_ABOVE, False)],
     'turning-cut-player.png': [('turning_cut', [.25, .6, .68, .72, .76], None, 'behind')],
+    # Chain Scythe, low then high: the cast or the raise, the chain snapping out, the turn at
+    # full chain, the haul and the catch; each from far enough to see the chain, then close.
+    'chain-scythe-low.png': [('chain_scythe_low', [.2, .45, .65, .8, .9, 1.0, 1.2, 1.45, 1.6, 2.9], WHIRL_WIDE, False),
+                             ('chain_scythe_low', [.2, .45, .65, .8, .9, 1.0, 1.2, 1.45, 1.6, 2.9], WHIRL_NEAR, False)],
+    'chain-scythe-high.png': [('chain_scythe_high', [.2, .3, .45, .7, .9, 1.0, 1.3, 1.45, 1.6, 2.9], WHIRL_WIDE, False),
+                              ('chain_scythe_high', [.2, .3, .45, .7, .9, 1.0, 1.3, 1.45, 1.6, 2.9], WHIRL_NEAR, False)],
+    # Zip and Lunge from the side: the haul or the wind-up, the flight, the landing, the spin.
+    'zip.png': [('zip', [.25, .5, .7, .95, 1.1, 1.25, 1.4, 1.6, 1.8, 3.2], (70, 10, 18, 0, 2.5, -5.5), False)],
+    'lunge.png': [('lunge', [.3, .45, .62, .8, 1.1, 1.4, 1.55, 1.7, 1.9, 3.4], (70, 10, 14, 0, 2.5, -3.8), False)],
+    # Hook: the javelin draw and throw close up, then the drag and the catch from further off.
+    'hook.png': [('hook', [.2, .35, .5, .85, 1.0], (60, 8, 10, 0, 2.8, -1), False),
+                 ('hook', [1.3, 1.62, 1.95, 2.3, 2.5], (75, 10, 24, 0, 2, -9), False)],
+    # The overhead cut: the raise, the blade high, three frames of the cut, the hold; from the
+    # side and from the player's eye. Then phase two's third Royal Cut ending on the same cut.
+    'overhead-sentence.png': [('overhead_sentence', [.3, .7, .75, .79, .82, .84, 1.4, 2.6], (90, 4, 10, 0, 3, -2), False),
+                              ('overhead_sentence', [.7, .79, .84], None, True)],
+    'royal-cut-three.png': [('royal_cut_three', [2.2, 2.42, 2.62, 2.71, 2.76, 3.3], (40, 8, 10, 0, 3, -2), False)],
+    'drag-down.png': [('drag_down', [.45, .68, .74, .8, .95, 1.08, 1.3, 1.5], (60, 8, 16, 0, 4.5, -3), False)],
+    # Unbound: the cut into the floor, the blade driven in, the burst, the chains running out,
+    # the sweep, hooked and taut, the reel-in, the hilt taken and the guard.
+    'unbound.png': [('unbound', [.5, .64, .9, 1.25, 1.5, 1.75, 1.9, 2.4, 3.0, 3.5], UNBOUND_WIDE, False),
+                    ('unbound', [.5, .64, .9, 1.25, 1.5, 1.75, 1.9, 2.4, 3.0, 3.5], UNBOUND_NEAR, False)],
     # Quarter steps of each loop (walk 1.0 s, run 0.9 s), on or next to the 20 Hz keys.
     'walk-run.png': [('walk', [0, .25, .5, .75], SIDE, False), ('run', [0, .25, .45, .7], SIDE, False),
                      ('walk', [0, .25, .5, .75], FRONT, False), ('run', [0, .25, .45, .7], FRONT, False)],

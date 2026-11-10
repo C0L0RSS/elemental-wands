@@ -131,20 +131,88 @@ function strip(out,P,side,off,u,du,v0,alpha,trail){
 }
 // While the sword is out on its chain, draw the chain from the wrist shackle to the pommel
 // ring: heavy links that sag a little, textured like the short tether they replace.
-function longChain(model,matrices,faces){
+// The curse's loose chains run from the chest to each marker bone a clip has moved off it
+// (Unbound): every third link glows hot, each ends in a barbed hook, and scene() sets them
+// alight. Returns the loose chains that are drawn.
+const LOOSE_MIN=.6,HOOK=1.25;
+function longChain(model,matrices,faces,bows){
  const at=name=>{const i=model.bones.findIndex(b=>b.name===name);return i<0?null:M.apply(matrices[i],model.bones[i].pivot);};
- const a=at('right_wrist_shackle'),b=at('sword');if(!a||!b)return;
- const length=Math.hypot(...sub(b,a));if(length<.8)return;
- const source=faces.find(f=>f.bone==='hanging_wrist_chain');const uvs=source?source.uvs:[[0,0],[0,0],[0,0],[0,0]];
- const n=Math.max(4,Math.round(length/.32)),sag=Math.min(.6,.04*length);
- const point=u=>add(add(a,mul(sub(b,a),u)),[0,-sag*4*u*(1-u),0]);
+ const face=name=>{const f=faces.find(f=>f.bone===name);return f?f.uvs:[[0,0],[0,0],[0,0],[0,0]];};
+ const iron=face('hanging_wrist_chain'),hot=face('chest_shard');
+ const a=at('right_wrist_shackle'),b=at('sword');
+ if(a&&b&&Math.hypot(...sub(b,a))>=.8)chainBetween(a,b,faces,iron);
+ const loose=looseEnds(model,matrices).filter(c=>dist(c.from,c.to)>=LOOSE_MIN);
+ for(const c of loose){c.bow=bows&&bows[c.index]||[0,0,0];chainBetween(c.from,c.to,faces,iron,hot,c.bow);
+  const h=hookPoints(c.from,c.to,c.bow);
+  for(let k=0;k+1<h.length;k++)beam(faces,h[k],h[k+1],.11-.012*k,k>=h.length-3?hot:iron);}
+ return loose;
+}
+// Every loose-chain marker: where its chain leaves the chest and where the marker is.
+function looseEnds(model,matrices){
+ const out=[];
+ model.bones.forEach((bone,i)=>{if(!bone.name.startsWith('unbound_chain_')||bone.parent==null)return;
+  const pi=model.bones.findIndex(q=>q.name===bone.parent);if(pi<0)return;
+  out.push({index:out.length,from:M.apply(matrices[pi],bone.pivot),to:M.apply(matrices[i],bone.pivot)});});
+ return out;
+}
+// A chain's line from a to b, sagging a little: u runs 0 to 1. bow swings it out sideways by
+// that much two thirds of the way along (a chain being swung round: its far end trails).
+function chainLine(a,b,bow){const sag=Math.min(.6,.04*dist(a,b));
+ return u=>{const p=add(add(a,mul(sub(b,a),u)),[0,-sag*4*u*(1-u),0]);return bow?add(p,mul(bow,6.75*u*u*(1-u))):p;};}
+// How far each loose chain bows as it is swung. A swung chain's far end trails behind the
+// rest, and the chain has weight: it takes a moment to bend when the swing starts, and when
+// the far end stops the rest swings on past it, bows the other way a little and settles. So
+// the bow is the far end's sideways velocity over the last second passed through a slightly
+// springy filter (a damped oscillator's response, BOW_PERIOD s and BOW_DAMPING), times
+// BOW_SECONDS, eased toward at most BOW_SHARE of the chain's length.
+const BOW_SECONDS=.09,BOW_SHARE=.22,BOW_PERIOD=.55,BOW_DAMPING=.45,BOW_STEP=.05,BOW_SAMPLES=20;
+const BOW_WEIGHTS=(()=>{const w0=2*Math.PI/BOW_PERIOD,wd=w0*Math.sqrt(1-BOW_DAMPING*BOW_DAMPING),w=[];
+ for(let k=0;k<BOW_SAMPLES;k++){const a=(k+.5)*BOW_STEP;w.push(Math.exp(-BOW_DAMPING*w0*a)*Math.sin(wd*a));}
+ const sum=w.reduce((x,y)=>x+y,0);return w.map(x=>x/sum);})();
+// The marker bones and their ancestors alone, for posing the chains' ends at other moments.
+const markerRigs=new WeakMap();
+function endsAt(model,clip,time){
+ let rig=markerRigs.get(model);
+ if(!rig){const byName=new Map(model.bones.map(b=>[b.name,b])),keep=new Set();
+  for(const b of model.bones)if(b.name.startsWith('unbound_chain_'))for(let q=b;q;q=q.parent!=null?byName.get(q.parent):null)keep.add(q.name);
+  rig={bones:model.bones.filter(b=>keep.has(b.name))};markerRigs.set(model,rig);}
+ return looseEnds(rig,poseBones(rig,clip,Math.max(0,time)).matrices);
+}
+function chainBows(model,clip,t,matrices){
+ const now=looseEnds(model,matrices);if(!clip||!now.some(c=>dist(c.from,c.to)>=LOOSE_MIN))return null;
+ const past=[now];for(let k=1;k<=BOW_SAMPLES;k++)past.push(endsAt(model,clip,t-k*BOW_STEP));
+ return now.map((c,i)=>{let v=[0,0,0];
+  for(let k=0;k<BOW_SAMPLES;k++)v=add(v,mul(sub(past[k][i].to,past[k+1][i].to),BOW_WEIGHTS[k]/BOW_STEP));
+  const d=norm(sub(c.to,c.from));v=sub(v,mul(d,dot(v,d)));v[1]=0;
+  const size=Math.hypot(...v)*BOW_SECONDS,cap=BOW_SHARE*dist(c.from,c.to);
+  return size>1e-6&&cap>1e-6?mul(v,cap*Math.tanh(size/cap)/Math.hypot(...v)):[0,0,0];});
+}
+// The hook on a loose chain's far end, lying flat: a shank carrying on along the chain, then a
+// curve round to the left (the way the chains sweep) and a barb pointing back toward him.
+function hookPoints(a,b,bow){
+ const line=chainLine(a,b,bow),d=norm(sub(b,line(.97))),flat=Math.hypot(d[0],d[2]);
+ const s=flat>1e-3?norm(cross([0,1,0],d)):[1,0,0],at=(x,y)=>add(b,add(mul(d,x*HOOK),mul(s,y*HOOK)));
+ return [b,at(.55,0),at(.82,.2),at(.86,.5),at(.66,.74),at(.34,.68)];
+}
+// A square bar from p to q, half-width w.
+function beam(faces,p,q,w,uvs){
+ const d=norm(sub(q,p)),side=norm(cross(d,Math.abs(d[1])>.9?[1,0,0]:[0,1,0])),up=cross(side,d);
+ const corner=(e,x,y)=>add(add(e,mul(side,x*w)),mul(up,y*w));
+ for(const [x0,y0,x1,y1] of [[-1,-1,1,-1],[1,-1,1,1],[1,1,-1,1],[-1,1,-1,-1]]){
+  let pts=[corner(p,x0,y0),corner(p,x1,y1),corner(q,x1,y1),corner(q,x0,y0)],n=norm(cross(sub(pts[1],pts[0]),sub(pts[3],pts[0])));
+  if(dot(n,sub(mul(add(pts[0],pts[2]),.5),mul(add(p,q),.5)))<0){pts=[pts[1],pts[0],pts[3],pts[2]];n=mul(n,-1);}   // faces outward
+  faces.push({bone:'long_chain',pts,n,uvs});}
+}
+function chainBetween(a,b,faces,uvs,hot,bow){
+ const length=Math.hypot(...sub(b,a));
+ const n=Math.max(4,Math.round(length/.32)),point=chainLine(a,b,bow);
  for(let i=0;i<n;i++){
   const p=point(i/n),q=point((i+1)/n),d=norm(sub(q,p)),side=norm(cross(d,Math.abs(d[1])>.9?[1,0,0]:[0,1,0])),up=cross(side,d);
   const w=i%2?.05:.11,h=i%2?.11:.05,c=mul(add(p,q),.5),half=Math.hypot(...sub(q,p))*.62;
   const corner=(s,x,y)=>add(add(add(c,mul(d,s*half)),mul(side,x*w)),mul(up,y*h));
   const quads=[[[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1]],[[-1,-1,1],[-1,1,1],[1,1,1],[1,-1,1]],
    [[-1,-1,-1],[-1,-1,1],[1,-1,1],[1,-1,-1]],[[-1,1,-1],[1,1,-1],[1,1,1],[-1,1,1]]];
-  for(const qd of quads){const pts=qd.map(([s,x,y])=>corner(s,x,y));faces.push({bone:'long_chain',pts,n:norm(cross(sub(pts[1],pts[0]),sub(pts[2],pts[0]))),uvs});}
+  for(const qd of quads){const pts=qd.map(([s,x,y])=>corner(s,x,y));faces.push({bone:'long_chain',pts,n:norm(cross(sub(pts[1],pts[0]),sub(pts[2],pts[0]))),uvs:hot&&i%3===1?hot:uvs});}
  }
 }
 // opts.travel is the body's own world velocity in blocks/s, for clips that play in place (a walk
@@ -152,7 +220,7 @@ function longChain(model,matrices,faces){
 function scene(model,manifest,t=.65,motion=false,planted=false,clip=null,opts=null){
  const pose=posed(model,manifest,t,motion,planted,clip);
  const faces=model.faces.filter(f=>!f.empty).map(f=>{const m=pose.matrices[f.bone];return {...f,bone:model.bones[f.bone].name,pts:f.pts.map(p=>M.apply(m,p)),n:norm(M.dir(m,f.n))};});
- longChain(model,pose.matrices,faces);
+ const loose=longChain(model,pose.matrices,faces,chainBows(model,clip,t,pose.matrices));
  const flames=[],fire=[];const noise=(t,i)=>.5+.27*Math.sin(t*7.3+i*2.71)+.23*Math.sin(t*11.9+i*7.13);
  const bf=manifest.blade_fire,sw=bf.swing,peaks=new Map(bf.peak_sockets),frames=bf.atlas_grid[0],du=1/frames;
  const hash=i=>{const x=Math.sin(i*127.1+311.7)*43758.5453;return x-Math.floor(x);};
@@ -282,6 +350,24 @@ function scene(model,manifest,t=.65,motion=false,planted=false,clip=null,opts=nu
  }
  active.forEach(i=>{tongue(i);if(peaks.has(i))tongue(i,peaks.get(i));});
  if(moving)wake();
+ // The loose chains burn along their whole length: a low flame every half block or so and a
+ // tall one on each hook. A flame stands upright where its chain is still; where the chain
+ // moves it lies back along the way it came (up to 1.1 blocks) and loses part of its rise.
+ if(loose.length&&clip){
+  const dt=.03,then=endsAt(model,clip,t-dt);
+  const flame=(root,prev,i,tall)=>{
+   const v=mul(sub(root,prev),1/dt),speed=Math.hypot(...v),k=Math.min(1,speed/30);
+   const h=(tall?.95:.34+.3*hash(i+41))*(.84+.28*noise(t,i+60)),w=(tall?.5:.3)*(.88+.18*noise(t+.3,i));
+   const tip=add(add(root,speed>1e-6?mul(v,-Math.min(.05,1.1/speed)):[0,0,0]),[0,h*(1-.45*k),0]),d=norm(sub(tip,root));
+   const pool=tall?bf.tongue_frames:bf.lick_frames,u=pool[((Math.floor(t*8)+i)%4+4)%4]/frames,P=[add(root,[0,-.05,0]),tip];
+   strip(flames,P,()=>mul(fromUp(d,[1,0,0]),w/2),()=>[0,0,0],u,du,1,1,false);
+   strip(flames,P,()=>mul(fromUp(d,[0,0,1]),w/2),()=>[0,0,0],u,du,1,1,false);};
+  for(const c of loose){const o=then[c.index],now=chainLine(c.from,c.to,c.bow),was=chainLine(o.from,o.to,c.bow);
+   const n=Math.max(2,Math.round(dist(c.from,c.to)/.6));
+   for(let j=0;j<n;j++){const id=c.index*40+j,u=(j+.5+.5*(hash(id+7)-.5))/n;flame(now(u),was(u),id,false);}
+   const h=hookPoints(c.from,c.to,c.bow),g=hookPoints(o.from,o.to,c.bow);
+   flame(h[2],g[2],c.index*40+38,true);flame(h[4],g[4],c.index*40+39,false);}
+ }
  return {faces,flames,sockets:pose.sockets,fire};
 }
 globalThis.PyreEffects={scene,posed,sweep,reach};

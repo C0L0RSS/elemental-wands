@@ -3,7 +3,7 @@
   "date": "2026-11-06",
   "summary": "Review only \u00b7 5-block masked duelist \u00b7 4.5-block longsword \u00b7 plough guard",
   "cubes": 266,
-  "bones": 40,
+  "bones": 46,
   "sword_cubes": 14,
   "sword_bones": 3,
   "texture_size": [
@@ -592,48 +592,200 @@
       }
     }
   },
+  "loose_chains": {
+    "markers": [
+      "unbound_chain_1",
+      "unbound_chain_2",
+      "unbound_chain_3",
+      "unbound_chain_4",
+      "unbound_chain_5",
+      "unbound_chain_6"
+    ],
+    "about": "Six empty marker bones on the torso. A clip (Unbound) moves a marker to where the far end of a loose chain is; at rest each sits on the chest chain. Whatever draws him draws a chain from the rest place of the marker on the torso to the marker when they are more than draw_beyond_blocks apart. The workshop (effects.js) draws heavy links with a little sag, bowed while the chain is swung so that its far end trails (the sideways velocity of its far end over the last second, passed through a damped oscillator of bow_period_seconds and bow_damping so the chain lags, overshoots and settles, times bow_seconds, at most bow_share of its length, largest two thirds of the way along), every third one hot, a barbed hook hook_blocks long on the far end, lying flat and curving to his left, and fire: a low flame about every flame_spacing_blocks and a tall one on the hook, upright where the chain is still and laid back along its travel where it moves.",
+    "draw_beyond_blocks": 0.6,
+    "hook_blocks": 1.25,
+    "flame_spacing_blocks": 0.6,
+    "bow_seconds": 0.09,
+    "bow_share": 0.22,
+    "bow_period_seconds": 0.55,
+    "bow_damping": 0.45
+  },
   "clips": {
     "idle": {
       "length": 6.0,
       "loop": true,
       "ground_speed": 0,
-      "end_turn_degrees": 0
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
     },
     "walk": {
       "length": 1.0,
       "loop": true,
       "ground_speed": 3.0,
-      "end_turn_degrees": 0
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
     },
     "run": {
       "length": 0.9,
       "loop": true,
       "ground_speed": 4.5,
-      "end_turn_degrees": 0
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
     },
     "royal_cut": {
       "length": 3.8,
       "loop": false,
       "ground_speed": 0,
-      "end_turn_degrees": 0
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
     },
     "kingsguard_thrust": {
       "length": 2.9,
       "loop": false,
       "ground_speed": 0,
-      "end_turn_degrees": 0
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
     },
     "turning_cut": {
       "length": 2.6,
       "loop": false,
       "ground_speed": 0,
-      "end_turn_degrees": 180.0
+      "end_turn_degrees": 180.0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
     },
     "cast_reel": {
       "length": 4.7,
       "loop": false,
       "ground_speed": 0,
-      "end_turn_degrees": 0
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "chain_scythe_low": {
+      "length": 2.9,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "chain_scythe_high": {
+      "length": 2.9,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "overhead_sentence": {
+      "length": 2.6,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "royal_cut_three": {
+      "length": 4.4,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "drag_down": {
+      "length": 2.4,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "hook": {
+      "length": 3.3,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "zip": {
+      "length": 3.2,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        -10.4
+      ]
+    },
+    "lunge": {
+      "length": 3.4,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        -6.9
+      ]
+    },
+    "unbound": {
+      "length": 4.3,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
     }
   },
   "preview_rendering": "Shared effects.js samples posed sockets: a low overlapping flame roots on the blade's upper edge at every socket, making one continuous fringe, and five taller peaks break the silhouette. Still flames stand upright in world space. As the blade moves, it re-poses the clip at a few earlier moments (carried back by the body's own travel for a walk or run played in place): each flame lies back along the path its root just travelled, never shorter than it stands still and never hanging below the blade, and a fast blow leaves one sheet of fire across the arc the blade swept, faded in from the blade, tinted and glowing additively. Slow moves only lean the fire, everything settles upright within a fraction of a second after the blade stops, and a teleport or parent switch is never traced. No flame geometry in either sword export.",

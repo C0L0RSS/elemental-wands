@@ -186,7 +186,9 @@ class Solver:
         sense: +x leans forward), sword_p (pommel, blocks), sword_d (direction), sword_n (flat),
         hands: 'both' | 'right' | 'none' (which fists grip), free_hands {side: point},
         wrist {side: 3x3} (a free fist's turn against its forearm; default straight),
-        elbow_hint {side: vec}, feet {side: ankle point}, extra {bone: (deg, px)}.
+        elbow_hint {side: vec}, hinge: True (pose the arms as hinges),
+        feet {side: ankle point}, extra {bone: (deg, px)},
+        chain_ends {marker bone: world point}.
         Optional leg controls (omit them for the guard stance's defaults): knee_hint {side: vec}
         replaces the forward-and-out knee direction, and foot_r {side: 3x3 world rotation}
         replaces the flat foot that follows the pelvis's heading (so a foot can roll heel to toe)."""
@@ -254,12 +256,17 @@ class Solver:
             Rt = W['torso'][:3, :3]
             E = self.two_bone(S, point, np.linalg.norm(e0-s0), np.linalg.norm(h0-e0), hint)
             Ru = rot_between(Rt@(e0-s0), E-S)@Rt
+            Rf = rot_between(Ru@(h0-e0), point-E)@Ru
+            # A clip may pose its arms as hinges instead (spec hinge: True): each bone's roll
+            # then follows the plane the arm bends in, so an arm flung up or folded tight never
+            # flips its roll the way a shortest turn from the sculpt does. A whole clip uses one
+            # or the other; both agree in the guard.
+            if spec.get('hinge'): Ru, Rf = self.hinged(S, E, point, hint, s0, e0, h0)
             put(up, *gecko_from(up, self.ang(up, Rt.T@Ru)))
             # The shoulder plate, on the torso at the same pivot, takes its share of that turn
             # (baked +X is his right, so outward is +X on the right, -X on the left).
             pd, outward = side+'_pauldron', np.array([1. if side == 'right' else -1., 0, 0])
             put(pd, *gecko_from(pd, self.ang(pd, pauldron_turn(Rt.T@Ru, unit(e0-s0), outward))))
-            Rf = rot_between(Ru@(h0-e0), point-E)@Ru
             put(fo, *gecko_from(fo, self.ang(fo, Ru.T@Rf)))
             if Rh is None: Rh = Rf@np.asarray(spec.get('wrist', {}).get(side, np.eye(3)), float)
             put(hand, *gecko_from(hand, self.ang(hand, Rf.T@Rh)))
@@ -276,7 +283,21 @@ class Solver:
             ang = self.ang('sword', Rl)
             pos = L[:3, 3]+Rl@pv-pv
             put('sword', *gecko_from('sword', ang, pos))
+        # Marker bones sent to world points (the loose chains' far ends).
+        for name, point in spec.get('chain_ends', {}).items():
+            L = np.linalg.inv(W[BY[name]['parent']])@np.r_[np.asarray(point, float), 1]
+            put(name, (0, 0, 0), gecko_from(name, REST_ANG[name], L[:3]-baked_point(BY[name]['pivot']))[1])
         return ch
+
+    @staticmethod
+    def hinged(S, E, point, hint, s0, e0, h0):
+        """World rotations of an upper arm and forearm as a hinge: each lies along its bone
+        and keeps the sculpt's bending plane on the plane this elbow bends in."""
+        line = unit(point-S); m = np.asarray(hint, float)-np.dot(hint, line)*line
+        m = unit(m) if np.linalg.norm(m) > 1e-6 else unit(np.cross(line, [0, 1, 0]))
+        n = unit(np.cross(m, line)); a0, b0 = unit(e0-s0), unit(h0-e0); n0 = unit(np.cross(a0, b0))
+        def frame(x, y): return np.column_stack([x, y, np.cross(x, y)])
+        return frame(unit(E-S), n)@frame(a0, n0).T, frame(unit(point-E), n)@frame(b0, n0).T
 
     @staticmethod
     def two_bone(root, target, l1, l2, hint):

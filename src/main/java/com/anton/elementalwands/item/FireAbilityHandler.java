@@ -12,12 +12,12 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 
 import com.anton.elementalwands.entity.InfernoWaveEntity;
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.util.BlockFireEvents;
 import com.anton.elementalwands.registry.ModSpellBlocks;
 import com.anton.elementalwands.util.TemporaryBlockManager;
@@ -98,8 +98,8 @@ public final class FireAbilityHandler {
         BlockFireEvents.send(world, BlockFireEvents.INFERNO_CAST, ignition, caster.getRotationVec(1.0f).normalize());
 
         // Sound effects
-        world.playSound(null, caster.getBlockPos(), SoundEvents.ITEM_FIRECHARGE_USE, SoundCategory.PLAYERS, 1.0f, 0.7f);
-        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_BLAZE_SHOOT, SoundCategory.PLAYERS, 0.8f, 0.9f);
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_FIRE_INFERNO_WAVE_CAST_IGNITE, SoundCategory.PLAYERS, 1.0f, 0.7f);
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_FIRE_INFERNO_WAVE_CAST_WHOOSH, SoundCategory.PLAYERS, 0.8f, 0.9f);
     }
 
     public static void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
@@ -121,7 +121,7 @@ public final class FireAbilityHandler {
         world.spawnEntity(scheduler);
         BlockFireEvents.send(world, 128, BlockFireEvents.PYRE_CAST, caster.getId(), origin, forward, Vec3d.ZERO, 0);
 
-        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_ENDER_DRAGON_SHOOT, SoundCategory.PLAYERS, 1.0f,
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_FIRE_DRAGONS_PYRE_CAST, SoundCategory.PLAYERS, 1.0f,
                 0.8f);
     }
 

@@ -8,6 +8,7 @@ import com.anton.elementalwands.registry.ModBlocks;
 import com.anton.elementalwands.registry.ModItems;
 import com.anton.elementalwands.registry.ModEntities;
 import com.anton.elementalwands.registry.ModParticles;
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.registry.ModSpellBlocks;
 import com.anton.elementalwands.util.SeedlingManager;
 import com.anton.elementalwands.util.EntangleTracker;
@@ -59,6 +60,7 @@ public class ElementalWandsMod implements ModInitializer {
     @Override
     public void onInitialize() {
         ModParticles.registerAll();
+        ModSounds.registerAll();
         ModSpellBlocks.registerAll();
         EWAttachments.init();
         com.anton.elementalwands.party.PartyManager.init();

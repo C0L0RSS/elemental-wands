@@ -5,6 +5,7 @@ import java.util.List;
 
 import com.anton.elementalwands.entity.SeedProjectileEntity;
 import com.anton.elementalwands.registry.ModParticles;
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.util.NatureVfx;
 import com.anton.elementalwands.util.SeedlingManager;
 import com.anton.elementalwands.util.TemporaryBlockManager;
@@ -18,7 +19,6 @@ import net.minecraft.fluid.Fluids;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
@@ -111,7 +111,7 @@ public final class NatureAbilityHandler {
         SeedProjectileEntity seed = new SeedProjectileEntity(world, caster);
         world.spawnEntity(seed);
 
-        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_EGG_THROW,
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_NATURE_SEED_CAST,
                 SoundCategory.PLAYERS, 0.7f, 0.9f);
     }
 
@@ -122,9 +122,9 @@ public final class NatureAbilityHandler {
                 com.anton.elementalwands.registry.ModEntities.THORN_LASH, world);
         lash.initialize(caster);
         world.spawnEntity(lash);
-        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_FISHING_BOBBER_THROW,
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_NATURE_THORNBITE_CAST_WHIP,
                 SoundCategory.PLAYERS, .55f, 1.45f);
-        world.playSound(null, caster.getBlockPos(), SoundEvents.BLOCK_AZALEA_LEAVES_BREAK,
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_NATURE_THORNBITE_CAST_RUSTLE,
                 SoundCategory.PLAYERS, .7f, .7f);
     }
 
@@ -147,7 +147,7 @@ public final class NatureAbilityHandler {
             }
             SeedlingManager.markSeedlingsForConsumption(world, caster.getUuid(), world.getServer().getTicks());
         }
-        world.playSound(null, caster.getBlockPos(), SoundEvents.BLOCK_GRASS_BREAK,
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_NATURE_TENDRIL_BLOOM_CAST,
                 SoundCategory.PLAYERS, .6f, 1);
     }
 
@@ -157,7 +157,7 @@ public final class NatureAbilityHandler {
                 com.anton.elementalwands.registry.ModEntities.OVERGROWTH_SEED, world);
         seed.launch(caster, stack);
         world.spawnEntity(seed);
-        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_EGG_THROW,
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_NATURE_OVERGROWTH_CAST,
                 SoundCategory.PLAYERS, .9f, .6f);
     }
 }

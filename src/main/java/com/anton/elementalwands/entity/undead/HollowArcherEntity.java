@@ -2,6 +2,8 @@ package com.anton.elementalwands.entity.undead;
 
 import static com.anton.elementalwands.entity.undead.HollowUndeadClips.*;
 
+import com.anton.elementalwands.registry.ModSounds;
+
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.EquipmentSlot;
@@ -17,7 +19,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
@@ -69,7 +70,7 @@ public class HollowArcherEntity extends HollowUndeadEntity {
 
     @Override
     protected void onBegin(ServerWorld world, LivingEntity target) {
-        playSound(SoundEvents.ITEM_CROSSBOW_LOADING_START.value(), .6f, .6f);
+        playSound(ModSounds.ENTITY_HOLLOW_ARCHER_SHOT_WINDUP, .6f, .6f);
     }
 
     @Override
@@ -83,11 +84,11 @@ public class HollowArcherEntity extends HollowUndeadEntity {
         double dx = target.getX() - from.x, dy = target.getBodyY(1 / 3d) - from.y, dz = target.getZ() - from.z;
         ProjectileEntity.spawnWithVelocity(arrow, world, ammo, dx, dy + Math.sqrt(dx * dx + dz * dz) * .2, dz,
                 1.6f, 14 - world.getDifficulty().getId() * 4);
-        playSound(SoundEvents.ENTITY_SKELETON_SHOOT, 1, 1 / (getRandom().nextFloat() * .4f + .8f));
+        playSound(ModSounds.ENTITY_HOLLOW_ARCHER_SHOT_LAUNCH, 1, 1 / (getRandom().nextFloat() * .4f + .8f));
     }
 
-    @Override protected SoundEvent getAmbientSound() { return SoundEvents.ENTITY_SKELETON_AMBIENT; }
-    @Override protected SoundEvent getHurtSound(DamageSource source) { return SoundEvents.ENTITY_SKELETON_HURT; }
-    @Override protected SoundEvent getDeathSound() { return SoundEvents.ENTITY_SKELETON_DEATH; }
-    @Override protected void playStepSound(BlockPos pos, BlockState state) { playSound(SoundEvents.ENTITY_SKELETON_STEP, .15f, 1); }
+    @Override protected SoundEvent getAmbientSound() { return ModSounds.ENTITY_HOLLOW_ARCHER_AMBIENT; }
+    @Override protected SoundEvent getHurtSound(DamageSource source) { return ModSounds.ENTITY_HOLLOW_ARCHER_HURT; }
+    @Override protected SoundEvent getDeathSound() { return ModSounds.ENTITY_HOLLOW_ARCHER_DEATH; }
+    @Override protected void playStepSound(BlockPos pos, BlockState state) { playSound(ModSounds.ENTITY_HOLLOW_ARCHER_STEP, .15f, 1); }
 }

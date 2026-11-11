@@ -11,6 +11,7 @@ current guide below; there is no requirement to read this whole folder.
 | What each element does and which code owns it             | [Spells](reference/spells.md)                                     |
 | The 3D wand and its animated elemental glass              | [Wand rendering](reference/wand-rendering.md)                     |
 | Visual style and which assets are safe to regenerate      | [Art and assets](reference/art-and-assets.md)                     |
+| Sound event names and how to replace audio                | [Sound](reference/sound.md)                                       |
 | Guardian combat and animation constraints                 | [Guardian combat](reference/guardian-combat.md)                   |
 | The Hollow Necromancer boss (in progress)                 | [Necromancer combat](reference/necromancer-combat.md)             |
 | Hollow undead night mobs and the Necromancer's army       | [Hollow undead](reference/hollow-undead.md)                       |

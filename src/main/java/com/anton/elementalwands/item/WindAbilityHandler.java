@@ -12,10 +12,10 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.Vec3d;
 
 import com.anton.elementalwands.entity.VacuumBladeEntity;
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.util.BlockWindEvents;
 import com.anton.elementalwands.util.ZephyrStrikeManager;
 
@@ -88,9 +88,9 @@ public final class WindAbilityHandler {
         }
 
         // Sound effects
-        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 0.9f,
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_WIND_SKY_SHEAR_CAST_SLASH, SoundCategory.PLAYERS, 0.9f,
                 1.3f);
-        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_BREEZE_WIND_BURST.value(), SoundCategory.PLAYERS,
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_WIND_SKY_SHEAR_CAST_GUST, SoundCategory.PLAYERS,
                 0.6f, 1.5f);
 
         // The cast bloom is drawn by each client's block-wind blades (client/blockwind/ShearFx).
@@ -191,7 +191,7 @@ public final class WindAbilityHandler {
 
         // Sound and particles (more intense with chains)
         float pitch = 1.0f + (chainCount * 0.1f);
-        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_BREEZE_WIND_BURST.value(), SoundCategory.PLAYERS,
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_WIND_WAYLAY_DASH_CAST, SoundCategory.PLAYERS,
                 1.0f, pitch);
         // Clients draw the launch ring and the cloud wake from the dasher's own movement (client/blockwind/DashFx).
         BlockWindEvents.send(world, BlockWindEvents.DASH, caster.getId(),
@@ -223,9 +223,9 @@ public final class WindAbilityHandler {
         caster.addVelocity(launchVel.x, launchVel.y, launchVel.z);
         caster.velocityModified = true;
 
-        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_ENDER_DRAGON_GROWL, SoundCategory.PLAYERS, 1.5f,
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_WIND_ZEPHYR_STRIKE_CAST_ROAR, SoundCategory.PLAYERS, 1.5f,
                 0.8f);
-        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_BREEZE_WIND_BURST.value(), SoundCategory.PLAYERS,
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_WIND_ZEPHYR_STRIKE_CAST_GUST, SoundCategory.PLAYERS,
                 2.0f, 0.6f);
         BlockWindEvents.send(world, BlockWindEvents.ZEPHYR_LAUNCH, caster.getId(), caster.getEntityPos(), look, 0);
     }

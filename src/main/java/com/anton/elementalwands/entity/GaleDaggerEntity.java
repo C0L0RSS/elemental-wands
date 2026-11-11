@@ -4,6 +4,7 @@ import com.anton.elementalwands.data.WizardAffinity;
 import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.party.WandAllies;
 import com.anton.elementalwands.registry.*;
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.util.*;
 import net.minecraft.entity.*;
 import net.minecraft.entity.data.*;
@@ -54,7 +55,7 @@ public final class GaleDaggerEntity extends ProjectileEntity {
         setPosition(origin);setVelocity(direction.multiply(GaleDaggers.SPEED));
         setYaw((float)Math.toDegrees(Math.atan2(-direction.x,direction.z)));
         setPitch((float)Math.toDegrees(-Math.asin(direction.y)));dataTracker.set(FIRED,true);velocityDirty=true;
-        p.getEntityWorld().playSound(null,getBlockPos(),SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP,SoundCategory.PLAYERS,.55f,1.7f);
+        p.getEntityWorld().playSound(null,getBlockPos(),ModSounds.SPELL_WIND_GALE_DAGGERS_LAUNCH,SoundCategory.PLAYERS,.55f,1.7f);
     }
     @Override public void tick(){
         super.tick();

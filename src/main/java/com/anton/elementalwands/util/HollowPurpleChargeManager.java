@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.anton.elementalwands.entity.HollowPurpleOrbEntity;
+import com.anton.elementalwands.registry.ModSounds;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -21,7 +22,6 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.ActionResult;
@@ -91,7 +91,7 @@ public final class HollowPurpleChargeManager {
         caster.fallDistance = 0.0f;
         caster.addStatusEffect(new StatusEffectInstance(StatusEffects.LEVITATION, 8, 0, false, false, false));
 
-        world.playSound(null, caster.getBlockPos(), SoundEvents.BLOCK_RESPAWN_ANCHOR_CHARGE, SoundCategory.PLAYERS,
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_SPACE_HOLLOW_PURPLE_CHARGE, SoundCategory.PLAYERS,
                 1.0f, 0.75f);
         // Clients draw the whole charge (two stars closing in above the caster) from this one message.
         BlockSpaceEvents.send(world, BlockSpaceEvents.CHARGE, caster.getId(), caster.getEntityPos());
@@ -151,11 +151,11 @@ public final class HollowPurpleChargeManager {
             applyChargeMovementLock(world, caster, state, age);
 
             if (age > 0 && age < ASCENT_TICKS && age % 20 == 0) {
-                world.playSound(null, caster.getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME,
+                world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_SPACE_HOLLOW_PURPLE_CHARGE_CHIME,
                         SoundCategory.PLAYERS, 0.32f, 0.72f + age * 0.006f);
             }
             if (age == ASCENT_TICKS) {
-                world.playSound(null, caster.getBlockPos(), SoundEvents.BLOCK_BEACON_ACTIVATE, SoundCategory.PLAYERS,
+                world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_SPACE_HOLLOW_PURPLE_CHARGE_PEAK, SoundCategory.PLAYERS,
                         0.48f, 1.75f);
             }
         }
@@ -223,9 +223,9 @@ public final class HollowPurpleChargeManager {
         caster.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOW_FALLING, 80, 0, false, false, true));
 
         // The orb's renderer draws the launch flash when it first appears.
-        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_WARDEN_SONIC_BOOM, SoundCategory.PLAYERS, 1.5f,
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_SPACE_HOLLOW_PURPLE_LAUNCH_BOOM, SoundCategory.PLAYERS, 1.5f,
                 0.75f);
-        world.playSound(null, caster.getBlockPos(), SoundEvents.BLOCK_RESPAWN_ANCHOR_DEPLETE.value(),
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_SPACE_HOLLOW_PURPLE_LAUNCH_RELEASE,
                 SoundCategory.PLAYERS, 1.3f, 0.7f);
     }
 }

@@ -1,5 +1,7 @@
 package com.anton.elementalwands.entity;
 
+import com.anton.elementalwands.registry.ModSounds;
+
 import java.util.UUID;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.EntityType;
@@ -16,7 +18,6 @@ import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import software.bernie.geckolib.animatable.GeoEntity;
@@ -193,7 +194,7 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
         int oldCracks = getCracks();
         updateCracks();
         if (getCracks() > oldCracks && isAlive()) {
-            world.playSound(null, getBlockPos(), SoundEvents.BLOCK_STONE_BREAK, SoundCategory.HOSTILE, 1.3f, .7f);
+            world.playSound(null, getBlockPos(), ModSounds.ENTITY_GUARDIAN_SHELL_CRACK, SoundCategory.HOSTILE, 1.3f, .7f);
             world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, net.minecraft.block.Blocks.STONE.getDefaultState()),
                     getX(), getY()+3.3, getZ(), 22, 1.2, 1.1, 1.2, .07);
         }
@@ -407,7 +408,7 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
                 stoneImpact(world);
             }
             if (rehearsal.equals("throw") && tick == 44) {
-                world.playSound(null, getX(), getY()+3, getZ(), SoundEvents.ENTITY_IRON_GOLEM_ATTACK,
+                world.playSound(null, getX(), getY()+3, getZ(), ModSounds.ENTITY_GUARDIAN_THROW_LAUNCH,
                         SoundCategory.HOSTILE, .8f, .65f);
             }
             int duration = switch (rehearsal) {
@@ -470,7 +471,7 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
 
     private void stoneImpact(ServerWorld world) {
         if (!isOnGround()) return;
-        world.playSound(null, getX(), getY(), getZ(), SoundEvents.BLOCK_STONE_BREAK,
+        world.playSound(null, getX(), getY(), getZ(), ModSounds.ENTITY_GUARDIAN_REHEARSAL_IMPACT,
                 SoundCategory.HOSTILE, 1.2f, .55f);
         // Sample actual support blocks; dust follows uneven ground without modifying it.
         for (int i = 0; i < 12; i++) {
@@ -488,7 +489,7 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
 
     @Override
     protected void playStepSound(BlockPos pos, BlockState state) {
-        playSound(SoundEvents.BLOCK_STONE_STEP, .65f, .6f);
+        playSound(ModSounds.ENTITY_GUARDIAN_STEP, .65f, .6f);
     }
 
     @Override

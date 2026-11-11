@@ -13,6 +13,7 @@ import com.anton.elementalwands.entity.AwakenedTreeEntity;
 import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.registry.ModEntities;
 import com.anton.elementalwands.registry.ModParticles;
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.util.TemporaryBlockManager.TemporaryPlacement;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -26,7 +27,6 @@ import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
@@ -145,9 +145,9 @@ public final class OvergrowthManager {
         applyRootCrush(world, caster, center, ROOT_CRUSH_DAMAGE);
         spawnRootAwakening(world, center, sources.size());
 
-        world.playSound(null, center, SoundEvents.BLOCK_AZALEA_PLACE,
+        world.playSound(null, center, ModSounds.SPELL_NATURE_OVERGROWTH_AWAKEN_SPROUT,
                 SoundCategory.PLAYERS, 1.4f, 0.55f);
-        world.playSound(null, center, SoundEvents.ENTITY_RAVAGER_ROAR,
+        world.playSound(null, center, ModSounds.SPELL_NATURE_OVERGROWTH_AWAKEN_ROAR,
                 SoundCategory.PLAYERS, 0.9f, 0.75f);
     }
 
@@ -178,7 +178,7 @@ public final class OvergrowthManager {
         world.spawnParticles(ModParticles.NATURE_HEART,
                 core.x, core.y, core.z,
                 healthRatio < 0.35f ? 3 : 1, 0.18, 0.2, 0.18, 0.0);
-        world.playSound(null, treeEntity.getBlockPos(), SoundEvents.BLOCK_WOOD_HIT,
+        world.playSound(null, treeEntity.getBlockPos(), ModSounds.SPELL_NATURE_OVERGROWTH_HURT,
                 SoundCategory.PLAYERS, 1.0f, healthRatio < 0.35f ? 0.62f : 0.75f);
     }
 
@@ -328,7 +328,7 @@ public final class OvergrowthManager {
                     heart.x, heart.y, heart.z, 9, 0.42, 0.5, 0.42, 0.035);
             world.spawnParticles(ModParticles.NATURE_POLLEN,
                     heart.x, heart.y, heart.z, 28, 0.7, 0.9, 0.7, 0.045);
-            world.playSound(null, tree.center, SoundEvents.BLOCK_RESPAWN_ANCHOR_CHARGE,
+            world.playSound(null, tree.center, ModSounds.SPELL_NATURE_OVERGROWTH_EMPOWER,
                     SoundCategory.PLAYERS, 0.72f, 1.62f);
         }
     }
@@ -423,8 +423,8 @@ public final class OvergrowthManager {
                     c.add(0.0, 6.8, 0.0), 3.8, 16, 0.0, Math.PI / 16.0);
         }
         world.playSound(null, center,
-                stage == 3 ? SoundEvents.BLOCK_AZALEA_LEAVES_BREAK
-                        : SoundEvents.BLOCK_AZALEA_PLACE,
+                stage == 3 ? ModSounds.SPELL_NATURE_OVERGROWTH_GROW_CANOPY
+                        : ModSounds.SPELL_NATURE_OVERGROWTH_GROW_STAGE,
                 SoundCategory.PLAYERS, 0.72f + stage * 0.14f, 0.72f + stage * 0.12f);
     }
 
@@ -471,7 +471,7 @@ public final class OvergrowthManager {
                     c.x, c.y + 3.0, c.z, 80, 1.9, 2.2, 1.9, 0.16);
             NatureVfx.ring(world, ModParticles.NATURE_BLOOM,
                     c, 5.6, 24, 0.05, 0.0);
-            world.playSound(null, tree.center, SoundEvents.BLOCK_WOOD_BREAK,
+            world.playSound(null, tree.center, ModSounds.SPELL_NATURE_OVERGROWTH_BREAK,
                     SoundCategory.PLAYERS, 1.25f, 0.66f);
         } else {
             // Natural expiry lifts the tree away as a calm helix of petals and pollen.
@@ -483,7 +483,7 @@ public final class OvergrowthManager {
             }
             world.spawnParticles(ModParticles.NATURE_HEART,
                     c.x, c.y + 6.8, c.z, 5, 0.32, 0.55, 0.32, 0.025);
-            world.playSound(null, tree.center, SoundEvents.BLOCK_GRASS_BREAK,
+            world.playSound(null, tree.center, ModSounds.SPELL_NATURE_OVERGROWTH_END,
                     SoundCategory.PLAYERS, 0.95f, 1.18f);
         }
 

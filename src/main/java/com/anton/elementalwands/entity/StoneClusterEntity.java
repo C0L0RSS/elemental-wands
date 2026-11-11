@@ -5,6 +5,7 @@ import com.anton.elementalwands.party.WandAllies;
 import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.registry.ModParticles;
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.util.StoneClusterRules;
 import com.anton.elementalwands.util.StoneStaggerAccess;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
@@ -19,7 +20,6 @@ import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.storage.ReadView;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.hit.BlockHitResult;
@@ -185,7 +185,7 @@ public final class StoneClusterEntity extends ProjectileEntity {
         }
         world.spawnParticles(ModParticles.STONE_SHARD,getX(),getY(),getZ(),mass()>0?30:9,.4,.4,.4,.13);
         world.spawnParticles(ModParticles.STONE_DUST,getX(),getY(),getZ(),mass()>0?24:5,.5,.3,.5,.05);
-        world.playSound(null,getBlockPos(),SoundEvents.BLOCK_DEEPSLATE_BREAK,SoundCategory.PLAYERS,1f,.65f);
+        world.playSound(null,getBlockPos(),ModSounds.SPELL_STONE_GATHERED_MASS_IMPACT,SoundCategory.PLAYERS,1f,.65f);
         discard();
     }
     private void stagger(ServerWorld world, LivingEntity target) {

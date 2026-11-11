@@ -11,6 +11,7 @@ import java.util.UUID;
 
 import com.anton.elementalwands.block.StoneWallBlock;
 import com.anton.elementalwands.registry.ModParticles;
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.registry.ModSpellBlocks;
 import com.anton.elementalwands.util.TemporaryBlockManager;
 import com.anton.elementalwands.util.TemporaryBlockManager.TemporaryPlacement;
@@ -31,7 +32,6 @@ import net.minecraft.particle.SimpleParticleType;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
@@ -183,9 +183,9 @@ public final class StoneAbilityHandler {
                     pos.getX() + 0.5, pos.getY() + 0.35, pos.getZ() + 0.5,
                     2, 0.28, 0.25, 0.28, 0.09);
         }
-        world.playSound(null, center, SoundEvents.BLOCK_DEEPSLATE_BRICKS_PLACE,
+        world.playSound(null, center, ModSounds.SPELL_STONE_STONE_WALL_CAST_RISE,
                 SoundCategory.PLAYERS, 1.25f, 0.64f);
-        world.playSound(null, center, SoundEvents.ENTITY_IRON_GOLEM_REPAIR,
+        world.playSound(null, center, ModSounds.SPELL_STONE_STONE_WALL_CAST_CLANG,
                 SoundCategory.PLAYERS, 0.55f, 0.52f);
     }
 
@@ -274,11 +274,11 @@ public final class StoneAbilityHandler {
                     1, 0.0, 0.0, 0.0, 0.0);
         }
 
-        world.playSound(null, wall.center, SoundEvents.BLOCK_DEEPSLATE_BRICKS_BREAK,
+        world.playSound(null, wall.center, ModSounds.SPELL_STONE_STONE_WALL_SHATTER_BREAK,
                 SoundCategory.PLAYERS, 1.45f, 0.58f);
-        world.playSound(null, wall.center, SoundEvents.ENTITY_RAVAGER_ROAR,
+        world.playSound(null, wall.center, ModSounds.SPELL_STONE_STONE_WALL_SHATTER_ROAR,
                 SoundCategory.PLAYERS, 0.95f, 0.55f);
-        world.playSound(null, wall.center, SoundEvents.ENTITY_GENERIC_EXPLODE.value(),
+        world.playSound(null, wall.center, ModSounds.SPELL_STONE_STONE_WALL_SHATTER_BOOM,
                 SoundCategory.PLAYERS, 0.9f, 0.78f);
     }
 
@@ -304,7 +304,7 @@ public final class StoneAbilityHandler {
                 world.spawnParticles(ModParticles.STONE_SHARD,point.x,point.y,point.z,5,.3,.35,.3,.1);
                 world.spawnParticles(ModParticles.STONE_DUST,point.x,point.y,point.z,3,.3,.3,.3,.05);
             }
-            world.playSound(null,contact,SoundEvents.BLOCK_DEEPSLATE_BRICKS_BREAK,SoundCategory.HOSTILE,1.4f,.65f);
+            world.playSound(null,contact,ModSounds.SPELL_STONE_STONE_WALL_BREAK_BY_GUARDIAN,SoundCategory.HOSTILE,1.4f,.65f);
             return standing;
         }
         return List.of();
@@ -340,7 +340,7 @@ public final class StoneAbilityHandler {
             if (!wall.settled && age >= WALL_SETTLE_TICKS) {
                 markWallSettled(world, wall);
                 wall.settled = true;
-                world.playSound(null, wall.center, SoundEvents.BLOCK_DEEPSLATE_BRICKS_PLACE,
+                world.playSound(null, wall.center, ModSounds.SPELL_STONE_STONE_WALL_SETTLE,
                         SoundCategory.PLAYERS, 0.8f, 0.62f);
             }
             if (wall.settled && now >= wall.nextStressFxTick) {
@@ -362,7 +362,7 @@ public final class StoneAbilityHandler {
             world.spawnParticles(ModParticles.STONE_DUST,
                     center.x, center.y - 0.35, center.z, urgent ? 3 : 1, 0.24, 0.08, 0.24, 0.025);
         }
-        world.playSound(null, wall.center, SoundEvents.BLOCK_DEEPSLATE_HIT,
+        world.playSound(null, wall.center, ModSounds.SPELL_STONE_STONE_WALL_STRESS,
                 SoundCategory.PLAYERS, urgent ? 0.65f : 0.38f, urgent ? 0.48f : 0.64f);
     }
 

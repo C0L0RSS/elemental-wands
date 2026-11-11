@@ -6,6 +6,7 @@ import java.util.*;
 import com.anton.elementalwands.data.*;
 import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.network.ModNetworking;
+import com.anton.elementalwands.registry.ModSounds;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
@@ -15,7 +16,6 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.RaycastContext;
@@ -77,11 +77,11 @@ public final class FireBuildManager {
             int sprayTicks=now-channel.started();
             if (now%2==0) BlockFireEvents.send(world,64,BlockFireEvents.FLAME,player.getId(),player.getEyePos(),player.getRotationVec(1),new Vec3d(sprayTicks,0,0),heat);
             if (sprayTicks%FireBuildRules.DAMAGE_INTERVAL==1) flameDamage(player,FireBuildRules.flameDamage(sprayTicks));
-            if (now%8==0) world.playSound(null,player.getBlockPos(),SoundEvents.BLOCK_FIRE_AMBIENT,SoundCategory.PLAYERS,0.45f,1.1f+heat/180);
+            if (now%8==0) world.playSound(null,player.getBlockPos(),ModSounds.SPELL_FIRE_FLAMETHROWER_LOOP,SoundCategory.PLAYERS,0.45f,1.1f+heat/180);
             if (heat>=100) {
                 locked=true;stop(player);
                 BlockFireEvents.send(world,64,BlockFireEvents.FLAME_OVERHEAT,player.getId(),player.getEyePos(),Vec3d.ZERO,Vec3d.ZERO,0);
-                world.playSound(null,player.getBlockPos(),SoundEvents.BLOCK_FIRE_EXTINGUISH,SoundCategory.PLAYERS,0.65f,1.2f);
+                world.playSound(null,player.getBlockPos(),ModSounds.SPELL_FIRE_FLAMETHROWER_OVERHEAT,SoundCategory.PLAYERS,0.65f,1.2f);
             }
         } else {
             heat=(float)Math.max(0,old-FireBuildRules.COOL_PER_TICK);

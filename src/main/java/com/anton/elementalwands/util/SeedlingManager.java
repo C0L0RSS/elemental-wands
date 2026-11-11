@@ -15,6 +15,7 @@ import java.util.UUID;
 
 import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.registry.ModParticles;
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.registry.ModSpellBlocks;
 import com.anton.elementalwands.block.NatureSeedlingBlock;
 
@@ -32,7 +33,6 @@ import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
@@ -142,7 +142,7 @@ public final class SeedlingManager {
         Vec3d at = Vec3d.ofCenter(seedling.anchorPos);
         world.spawnParticles(net.minecraft.particle.ParticleTypes.HEART, at.x, at.y + .3, at.z, Math.max(1, Math.round(amount / 2)), .3, .2, .3, .02);
         world.spawnParticles(net.minecraft.particle.ParticleTypes.HEART, breaker.getX(), breaker.getBodyY(.8), breaker.getZ(), 3, .3, .3, .3, .02);
-        world.playSound(null, seedling.anchorPos, SoundEvents.BLOCK_SWEET_BERRY_BUSH_PICK_BERRIES, SoundCategory.PLAYERS, 1f, 1.1f);
+        world.playSound(null, seedling.anchorPos, ModSounds.SPELL_NATURE_SEED_HARVEST, SoundCategory.PLAYERS, 1f, 1.1f);
     }
 
     public static boolean tryPlantSeedling(ServerWorld world, PlayerEntity caster, BlockHitResult hit) {
@@ -188,7 +188,7 @@ public final class SeedlingManager {
             spawnVerticalFlourish(world, hit.getPos(), floorPos);
         }
 
-        world.playSound(null, anchorPos, SoundEvents.BLOCK_AZALEA_PLACE, SoundCategory.PLAYERS, 0.7f, 1.1f);
+        world.playSound(null, anchorPos, ModSounds.SPELL_NATURE_SEED_PLANT, SoundCategory.PLAYERS, 0.7f, 1.1f);
         world.spawnParticles(ModParticles.NATURE_BLOOM,
                 anchorPos.getX() + 0.5, anchorPos.getY() + 0.82, anchorPos.getZ() + 0.5,
                 1, 0.0, 0.0, 0.0, 0.0);
@@ -419,7 +419,7 @@ public final class SeedlingManager {
     private static boolean dudAt(ServerWorld world, Vec3d pos) {
         world.spawnParticles(ModParticles.NATURE_POLLEN,
                 pos.x, pos.y, pos.z, 6, 0.1, 0.1, 0.1, 0.01);
-        world.playSound(null, BlockPos.ofFloored(pos), SoundEvents.ENTITY_EGG_THROW,
+        world.playSound(null, BlockPos.ofFloored(pos), ModSounds.SPELL_NATURE_SEED_FAIL,
                 SoundCategory.PLAYERS, 0.4f, 0.8f);
         return false;
     }
@@ -582,7 +582,7 @@ public final class SeedlingManager {
         NatureVfx.growthRing(world, seedling.floorPos, seedling.currentRadius, now);
         NatureVfx.seedlingPulse(world, seedling.anchorPos, seedling.currentRadius,
                 seedling.amplifiedByOvergrowth, now);
-        world.playSound(null, seedling.anchorPos, SoundEvents.ITEM_BONE_MEAL_USE,
+        world.playSound(null, seedling.anchorPos, ModSounds.SPELL_NATURE_SEED_GROW,
                 SoundCategory.PLAYERS, 0.32f,
                 1.1f + Math.min(0.35f, seedling.currentRadius * 0.05f));
         return true;
@@ -675,7 +675,7 @@ public final class SeedlingManager {
         world.spawnParticles(ModParticles.NATURE_POLLEN,
                 seedling.anchorPos.getX() + 0.5, seedling.anchorPos.getY() + 0.68, seedling.anchorPos.getZ() + 0.5,
                 10, 0.42, 0.42, 0.42, 0.025);
-        world.playSound(null, seedling.anchorPos, SoundEvents.BLOCK_GRASS_BREAK,
+        world.playSound(null, seedling.anchorPos, ModSounds.SPELL_NATURE_SEED_END,
                 SoundCategory.PLAYERS, 0.9f, 0.8f);
     }
 }

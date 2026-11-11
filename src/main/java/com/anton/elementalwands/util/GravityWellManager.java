@@ -4,6 +4,7 @@ import com.anton.elementalwands.arena.GuardianArenaManager;
 import com.anton.elementalwands.data.*;
 import com.anton.elementalwands.entity.GravityBombEntity;
 import com.anton.elementalwands.item.AbstractWandItem;
+import com.anton.elementalwands.registry.ModSounds;
 import java.util.*;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.*;
@@ -92,7 +93,7 @@ public final class GravityWellManager {
         var data = state(p).copy(); data.putBoolean("active", true); data.putBoolean("collapsing", false); data.putLong("expires", 0);
         p.setAttached(EWAttachments.GRAVITY_STATE, data);
         if (!w.spawnEntity(bomb)) { finish(c, false); return false; }
-        w.playSound(null, p.getBlockPos(), SoundEvents.ENTITY_ENDER_PEARL_THROW, SoundCategory.PLAYERS, .8f, .65f);
+        w.playSound(null, p.getBlockPos(), ModSounds.SPELL_SPACE_GRAVITY_WELL_CAST, SoundCategory.PLAYERS, .8f, .65f);
         WandLoadouts.markCombat(p); return true;
     }
     public static void impact(ServerPlayerEntity p, GravityBombEntity bomb) {

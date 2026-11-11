@@ -36,6 +36,7 @@ relevant to the task; the docs archive is optional history, not required context
 | Spell behavior and cross-element rules | [Spells](docs/reference/spells.md) |
 | Wand geometry, palettes, animation | [Wand rendering](docs/reference/wand-rendering.md) |
 | Pixel style, source assets, exporters | [Art and assets](docs/reference/art-and-assets.md) |
+| Sound events, naming, replacing audio | [Sound](docs/reference/sound.md) |
 | Guardian attacks and animation | [Guardian combat](docs/reference/guardian-combat.md) |
 | Hollow Necromancer boss | [Necromancer combat](docs/reference/necromancer-combat.md) |
 | Hollow undead night mobs | [Hollow undead](docs/reference/hollow-undead.md) |

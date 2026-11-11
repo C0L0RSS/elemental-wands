@@ -15,6 +15,7 @@ import java.util.UUID;
 import com.anton.elementalwands.registry.ModItems;
 import com.anton.elementalwands.data.EWAttachments;
 import com.anton.elementalwands.registry.ModParticles;
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.registry.ModSpellBlocks;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -46,7 +47,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
@@ -196,9 +196,9 @@ public final class TitanDomeManager {
 
         spawnOpeningFaultRing(world, center, RADIUS);
         spawnJuggernautAssembly(world, caster);
-        world.playSound(null, center, SoundEvents.BLOCK_DEEPSLATE_PLACE,
+        world.playSound(null, center, ModSounds.SPELL_STONE_TITAN_DOME_CAST_RUMBLE,
                 SoundCategory.PLAYERS, 1.35f, 0.54f);
-        world.playSound(null, center, SoundEvents.ENTITY_IRON_GOLEM_REPAIR,
+        world.playSound(null, center, ModSounds.SPELL_STONE_TITAN_DOME_CAST_CLANG,
                 SoundCategory.PLAYERS, 0.9f, 0.48f);
     }
 
@@ -338,7 +338,7 @@ public final class TitanDomeManager {
 
         if (placedThisTick > 0 && elapsed % 4 == 0) {
             float pitch = 0.48f + Math.min(0.3f, elapsed / (float) DOME_FORMATION_TICKS * 0.3f);
-            world.playSound(null, dome.center, SoundEvents.BLOCK_DEEPSLATE_PLACE,
+            world.playSound(null, dome.center, ModSounds.SPELL_STONE_TITAN_DOME_FORM,
                     SoundCategory.PLAYERS, ribBlocksThisTick > 0 ? 1.05f : 0.72f, pitch);
         }
 
@@ -354,9 +354,9 @@ public final class TitanDomeManager {
         if (elapsed >= DOME_FORMATION_TICKS) {
             dome.formationCompleted = true;
             dome.nextAmbientFxTick = now;
-            world.playSound(null, dome.center, SoundEvents.ENTITY_IRON_GOLEM_REPAIR,
+            world.playSound(null, dome.center, ModSounds.SPELL_STONE_TITAN_DOME_FORMED_CLANG,
                     SoundCategory.PLAYERS, 1.05f, 0.56f);
-            world.playSound(null, dome.center, SoundEvents.BLOCK_RESPAWN_ANCHOR_CHARGE,
+            world.playSound(null, dome.center, ModSounds.SPELL_STONE_TITAN_DOME_FORMED_HUM,
                     SoundCategory.PLAYERS, 0.7f, 0.62f);
         }
     }
@@ -456,7 +456,7 @@ public final class TitanDomeManager {
         }
 
         if (repaired > 0) {
-            world.playSound(null, dome.center, SoundEvents.ENTITY_IRON_GOLEM_REPAIR,
+            world.playSound(null, dome.center, ModSounds.SPELL_STONE_TITAN_DOME_REPAIR,
                     SoundCategory.PLAYERS, Math.min(1.2f, 0.45f + repaired * 0.025f), 0.64f);
         }
     }
@@ -558,9 +558,9 @@ public final class TitanDomeManager {
         world.spawnParticles(ModParticles.STONE_TITAN,
                 dome.center.getX() + 0.5, dome.center.getY() + 4.0, dome.center.getZ() + 0.5,
                 3, 0.45, 0.6, 0.45, 0.0);
-        world.playSound(null, dome.center, SoundEvents.BLOCK_DEEPSLATE_BREAK,
+        world.playSound(null, dome.center, ModSounds.SPELL_STONE_TITAN_DOME_COLLAPSE_CRACK,
                 SoundCategory.PLAYERS, 1.4f, 0.48f);
-        world.playSound(null, dome.center, SoundEvents.ENTITY_WARDEN_ROAR,
+        world.playSound(null, dome.center, ModSounds.SPELL_STONE_TITAN_DOME_COLLAPSE_ROAR,
                 SoundCategory.PLAYERS, 0.72f, 0.48f);
     }
 
@@ -676,7 +676,7 @@ public final class TitanDomeManager {
         world.spawnParticles(ModParticles.STONE_SHOCKWAVE,
                 dome.center.getX() + 0.5, dome.center.getY() + 0.28, dome.center.getZ() + 0.5,
                 8, 1.6, 0.1, 1.6, 0.0);
-        world.playSound(null, dome.center, SoundEvents.ENTITY_GENERIC_EXPLODE.value(),
+        world.playSound(null, dome.center, ModSounds.SPELL_STONE_TITAN_DOME_COLLAPSE_BOOM,
                 SoundCategory.PLAYERS, 1.15f, 0.62f);
         return true;
     }

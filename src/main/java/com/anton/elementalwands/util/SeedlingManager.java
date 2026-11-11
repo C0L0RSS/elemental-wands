@@ -142,7 +142,7 @@ public final class SeedlingManager {
         Vec3d at = Vec3d.ofCenter(seedling.anchorPos);
         world.spawnParticles(net.minecraft.particle.ParticleTypes.HEART, at.x, at.y + .3, at.z, Math.max(1, Math.round(amount / 2)), .3, .2, .3, .02);
         world.spawnParticles(net.minecraft.particle.ParticleTypes.HEART, breaker.getX(), breaker.getBodyY(.8), breaker.getZ(), 3, .3, .3, .3, .02);
-        world.playSound(null, seedling.anchorPos, ModSounds.SPELL_NATURE_SEED_HARVEST, SoundCategory.PLAYERS, 1f, 1.1f);
+        world.playSound(null, seedling.anchorPos, ModSounds.SPELL_NATURE_SEED_HARVEST, SoundCategory.PLAYERS, 1f, 1f);
     }
 
     public static boolean tryPlantSeedling(ServerWorld world, PlayerEntity caster, BlockHitResult hit) {
@@ -188,7 +188,7 @@ public final class SeedlingManager {
             spawnVerticalFlourish(world, hit.getPos(), floorPos);
         }
 
-        world.playSound(null, anchorPos, ModSounds.SPELL_NATURE_SEED_PLANT, SoundCategory.PLAYERS, 0.7f, 1.1f);
+        world.playSound(null, anchorPos, ModSounds.SPELL_NATURE_SEED_PLANT, SoundCategory.PLAYERS, 0.7f, 1f);
         world.spawnParticles(ModParticles.NATURE_BLOOM,
                 anchorPos.getX() + 0.5, anchorPos.getY() + 0.82, anchorPos.getZ() + 0.5,
                 1, 0.0, 0.0, 0.0, 0.0);
@@ -420,7 +420,7 @@ public final class SeedlingManager {
         world.spawnParticles(ModParticles.NATURE_POLLEN,
                 pos.x, pos.y, pos.z, 6, 0.1, 0.1, 0.1, 0.01);
         world.playSound(null, BlockPos.ofFloored(pos), ModSounds.SPELL_NATURE_SEED_FAIL,
-                SoundCategory.PLAYERS, 0.4f, 0.8f);
+                SoundCategory.PLAYERS, 0.4f, 1f);
         return false;
     }
 
@@ -584,7 +584,7 @@ public final class SeedlingManager {
                 seedling.amplifiedByOvergrowth, now);
         world.playSound(null, seedling.anchorPos, ModSounds.SPELL_NATURE_SEED_GROW,
                 SoundCategory.PLAYERS, 0.32f,
-                1.1f + Math.min(0.35f, seedling.currentRadius * 0.05f));
+                1.0f + Math.min(0.35f, seedling.currentRadius * 0.05f));
         return true;
     }
 
@@ -676,6 +676,6 @@ public final class SeedlingManager {
                 seedling.anchorPos.getX() + 0.5, seedling.anchorPos.getY() + 0.68, seedling.anchorPos.getZ() + 0.5,
                 10, 0.42, 0.42, 0.42, 0.025);
         world.playSound(null, seedling.anchorPos, ModSounds.SPELL_NATURE_SEED_END,
-                SoundCategory.PLAYERS, 0.9f, 0.8f);
+                SoundCategory.PLAYERS, 0.9f, 1f);
     }
 }

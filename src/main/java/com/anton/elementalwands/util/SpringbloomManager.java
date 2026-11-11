@@ -88,7 +88,7 @@ public final class SpringbloomManager {
         if(!AbstractWandItem.tryStartCooldown(world,p,stack,"springbloom",SpringbloomRules.COOLDOWN))return false;
         p.setAttached(EWAttachments.SPRINGBLOOM_READY,now+SpringbloomRules.COOLDOWN);
         var pod=new SpringbloomEntity(ModEntities.SPRINGBLOOM,world);pod.launch(p);world.spawnEntity(pod);
-        world.playSound(null,p.getBlockPos(),ModSounds.SPELL_NATURE_SPRINGBLOOM_CAST,SoundCategory.PLAYERS,.65f,1.15f);
+        world.playSound(null,p.getBlockPos(),ModSounds.SPELL_NATURE_SPRINGBLOOM_CAST,SoundCategory.PLAYERS,.65f,1.1f);
         return true;
     }
     private static boolean supported(ServerWorld world,BlockPos pos) {
@@ -159,7 +159,7 @@ public final class SpringbloomManager {
         }}
         var visual=new SpringbloomEntity(ModEntities.SPRINGBLOOM,world);visual.open(pos);world.spawnEntity(visual);
         PADS.add(new Pad(world,pos.toImmutable(),owner.getUuid(),world.getTime()+SpringbloomRules.LIFETIME,placement,visual,covered,upper));
-        world.playSound(null,pos,ModSounds.SPELL_NATURE_SPRINGBLOOM_LAND,SoundCategory.PLAYERS,.8f,.85f);
+        world.playSound(null,pos,ModSounds.SPELL_NATURE_SPRINGBLOOM_LAND,SoundCategory.PLAYERS,.8f,1f);
         return true;
     }
     public static boolean hasPad(ServerWorld world,BlockPos pos) {
@@ -205,7 +205,7 @@ public final class SpringbloomManager {
         p.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(p));
         FLIGHTS.put(p.getUuid(),new Flight(p,world,world.getTime()));
         pollen(world,p.getEntityPos(),false);
-        world.playSound(null,pad.pos,ModSounds.SPELL_NATURE_SPRINGBLOOM_LAUNCH,SoundCategory.PLAYERS,.85f,1.25f);
+        world.playSound(null,pad.pos,ModSounds.SPELL_NATURE_SPRINGBLOOM_LAUNCH,SoundCategory.PLAYERS,.85f,1f);
     }
     public static boolean catching(ServerPlayerEntity p) {
         return PADS.stream().anyMatch(pad -> pad.world==p.getEntityWorld() && pad.expires>pad.world.getTime()

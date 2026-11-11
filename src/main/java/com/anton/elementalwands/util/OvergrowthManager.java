@@ -145,10 +145,8 @@ public final class OvergrowthManager {
         applyRootCrush(world, caster, center, ROOT_CRUSH_DAMAGE);
         spawnRootAwakening(world, center, sources.size());
 
-        world.playSound(null, center, ModSounds.SPELL_NATURE_OVERGROWTH_AWAKEN_SPROUT,
-                SoundCategory.PLAYERS, 1.4f, 0.55f);
-        world.playSound(null, center, ModSounds.SPELL_NATURE_OVERGROWTH_AWAKEN_ROAR,
-                SoundCategory.PLAYERS, 0.9f, 0.75f);
+        world.playSound(null, center, ModSounds.SPELL_NATURE_OVERGROWTH_AWAKEN,
+                SoundCategory.PLAYERS, 1.4f, 1.0f);
     }
 
     public static boolean isInOvergrowth(ServerWorld world, BlockPos pos) {
@@ -179,7 +177,7 @@ public final class OvergrowthManager {
                 core.x, core.y, core.z,
                 healthRatio < 0.35f ? 3 : 1, 0.18, 0.2, 0.18, 0.0);
         world.playSound(null, treeEntity.getBlockPos(), ModSounds.SPELL_NATURE_OVERGROWTH_HURT,
-                SoundCategory.PLAYERS, 1.0f, healthRatio < 0.35f ? 0.62f : 0.75f);
+                SoundCategory.PLAYERS, 1.0f, healthRatio < 0.35f ? 0.85f : 1.0f);
     }
 
     public static void destroyTree(ServerWorld world, AwakenedTreeEntity treeEntity) {
@@ -329,7 +327,7 @@ public final class OvergrowthManager {
             world.spawnParticles(ModParticles.NATURE_POLLEN,
                     heart.x, heart.y, heart.z, 28, 0.7, 0.9, 0.7, 0.045);
             world.playSound(null, tree.center, ModSounds.SPELL_NATURE_OVERGROWTH_EMPOWER,
-                    SoundCategory.PLAYERS, 0.72f, 1.62f);
+                    SoundCategory.PLAYERS, 0.72f, 1.0f);
         }
     }
 
@@ -425,7 +423,7 @@ public final class OvergrowthManager {
         world.playSound(null, center,
                 stage == 3 ? ModSounds.SPELL_NATURE_OVERGROWTH_GROW_CANOPY
                         : ModSounds.SPELL_NATURE_OVERGROWTH_GROW_STAGE,
-                SoundCategory.PLAYERS, 0.72f + stage * 0.14f, 0.72f + stage * 0.12f);
+                SoundCategory.PLAYERS, 0.72f + stage * 0.14f, 0.9f + stage * 0.06f);
     }
 
     private static void spawnAmbientTreeParticles(ServerWorld world, AwakenedTree tree,
@@ -472,7 +470,7 @@ public final class OvergrowthManager {
             NatureVfx.ring(world, ModParticles.NATURE_BLOOM,
                     c, 5.6, 24, 0.05, 0.0);
             world.playSound(null, tree.center, ModSounds.SPELL_NATURE_OVERGROWTH_BREAK,
-                    SoundCategory.PLAYERS, 1.25f, 0.66f);
+                    SoundCategory.PLAYERS, 1.25f, 1.0f);
         } else {
             // Natural expiry lifts the tree away as a calm helix of petals and pollen.
             for (int layer = 0; layer < 8; layer++) {
@@ -484,7 +482,7 @@ public final class OvergrowthManager {
             world.spawnParticles(ModParticles.NATURE_HEART,
                     c.x, c.y + 6.8, c.z, 5, 0.32, 0.55, 0.32, 0.025);
             world.playSound(null, tree.center, ModSounds.SPELL_NATURE_OVERGROWTH_END,
-                    SoundCategory.PLAYERS, 0.95f, 1.18f);
+                    SoundCategory.PLAYERS, 0.95f, 1.0f);
         }
 
         if (entity != null && !entity.isRemoved()) {

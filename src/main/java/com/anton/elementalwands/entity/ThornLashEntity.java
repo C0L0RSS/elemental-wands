@@ -89,7 +89,7 @@ public final class ThornLashEntity extends Entity {
                 dataTracker.set(STOP, progress); // An invulnerable first target also consumes the bite.
                 Vec3d contact = getEntityPos().add(ThornLashRules.tip(getYaw(), getPitch(), progress));
                 if (victim != null) bite(world, caster, victim, contact);
-                world.playSound(null, contact.x, contact.y, contact.z, ModSounds.SPELL_NATURE_THORNBITE_HIT, SoundCategory.PLAYERS, .45f, 1.6f);
+                world.playSound(null, contact.x, contact.y, contact.z, ModSounds.SPELL_NATURE_THORNBITE_HIT, SoundCategory.PLAYERS, .45f, 1f);
                 return;
             }
         }

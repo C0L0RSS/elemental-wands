@@ -112,7 +112,7 @@ public final class NatureAbilityHandler {
         world.spawnEntity(seed);
 
         world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_NATURE_SEED_CAST,
-                SoundCategory.PLAYERS, 0.7f, 0.9f);
+                SoundCategory.PLAYERS, 0.7f, 1.0f);
     }
 
     public static void castThornLash(ServerWorld world, PlayerEntity caster, ItemStack stack) {
@@ -122,10 +122,8 @@ public final class NatureAbilityHandler {
                 com.anton.elementalwands.registry.ModEntities.THORN_LASH, world);
         lash.initialize(caster);
         world.spawnEntity(lash);
-        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_NATURE_THORNBITE_CAST_WHIP,
-                SoundCategory.PLAYERS, .55f, 1.45f);
-        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_NATURE_THORNBITE_CAST_RUSTLE,
-                SoundCategory.PLAYERS, .7f, .7f);
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_NATURE_THORNBITE_CAST,
+                SoundCategory.PLAYERS, .7f, 1f);
     }
 
     public static void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
@@ -158,6 +156,6 @@ public final class NatureAbilityHandler {
         seed.launch(caster, stack);
         world.spawnEntity(seed);
         world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_NATURE_OVERGROWTH_CAST,
-                SoundCategory.PLAYERS, .9f, .6f);
+                SoundCategory.PLAYERS, .9f, .75f);
     }
 }

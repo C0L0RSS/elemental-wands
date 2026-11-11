@@ -36,8 +36,7 @@ public final class ModSounds {
     public static final SoundEvent SPELL_FIRE_METEOR_IMPACT_BOOM = register("spell.fire.meteor.impact_boom");
 
     // spell.nature
-    public static final SoundEvent SPELL_NATURE_OVERGROWTH_AWAKEN_ROAR = register("spell.nature.overgrowth.awaken_roar");
-    public static final SoundEvent SPELL_NATURE_OVERGROWTH_AWAKEN_SPROUT = register("spell.nature.overgrowth.awaken_sprout");
+    public static final SoundEvent SPELL_NATURE_OVERGROWTH_AWAKEN = register("spell.nature.overgrowth.awaken");
     public static final SoundEvent SPELL_NATURE_OVERGROWTH_BREAK = register("spell.nature.overgrowth.break");
     public static final SoundEvent SPELL_NATURE_OVERGROWTH_CAST = register("spell.nature.overgrowth.cast");
     public static final SoundEvent SPELL_NATURE_OVERGROWTH_EMPOWER = register("spell.nature.overgrowth.empower");
@@ -59,8 +58,7 @@ public final class ModSounds {
     public static final SoundEvent SPELL_NATURE_TENDRIL_BLOOM_GROW = register("spell.nature.tendril_bloom.grow");
     public static final SoundEvent SPELL_NATURE_TENDRIL_BLOOM_KNOT_END = register("spell.nature.tendril_bloom.knot_end");
     public static final SoundEvent SPELL_NATURE_TENDRIL_BLOOM_LAUNCH = register("spell.nature.tendril_bloom.launch");
-    public static final SoundEvent SPELL_NATURE_THORNBITE_CAST_RUSTLE = register("spell.nature.thornbite.cast_rustle");
-    public static final SoundEvent SPELL_NATURE_THORNBITE_CAST_WHIP = register("spell.nature.thornbite.cast_whip");
+    public static final SoundEvent SPELL_NATURE_THORNBITE_CAST = register("spell.nature.thornbite.cast");
     public static final SoundEvent SPELL_NATURE_THORNBITE_HIT = register("spell.nature.thornbite.hit");
 
     // spell.space

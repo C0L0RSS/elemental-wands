@@ -134,7 +134,7 @@ public final class TendrilBloomManager {
                 10, 0.3, 0.26, 0.3, 0.018);
 
         world.playSound(null, BlockPos.ofFloored(seedlingAnchor), ModSounds.SPELL_NATURE_TENDRIL_BLOOM_LAUNCH,
-                SoundCategory.PLAYERS, 0.8f, 0.9f);
+                SoundCategory.PLAYERS, 0.8f, 1.0f);
     }
 
     private static void tickWorld(ServerWorld world) {
@@ -282,7 +282,7 @@ public final class TendrilBloomManager {
                 30, 0.8, 0.52, 0.8, 0.04);
         NatureVfx.growthRing(world, center, 1, now);
         world.playSound(null, center, ModSounds.SPELL_NATURE_TENDRIL_BLOOM_BLOOM,
-                SoundCategory.PLAYERS, 1.0f, 1.1f);
+                SoundCategory.PLAYERS, 1.0f, 1.0f);
     }
 
     private static boolean tickBloom(ServerWorld world, Bloom b, int now) {
@@ -311,7 +311,7 @@ public final class TendrilBloomManager {
 
             NatureVfx.growthRing(world, b.center, b.currentRadius, now);
             world.playSound(null, b.center, ModSounds.SPELL_NATURE_TENDRIL_BLOOM_GROW,
-                    SoundCategory.PLAYERS, 0.38f, 1.25f + b.currentRadius * 0.05f);
+                    SoundCategory.PLAYERS, 0.38f, 1.0f + b.currentRadius * 0.05f);
         }
 
         if ((now + b.center.getX() * 3 + b.center.getZ() * 5)
@@ -363,7 +363,7 @@ public final class TendrilBloomManager {
             TemporaryBlockManager.restoreTemporaryBlocks(world, source.knot);
             world.spawnParticles(ModParticles.NATURE_LEAF, source.anchor.getX()+.5, source.anchor.getY()+.5,
                     source.anchor.getZ()+.5, 20, .4, .3, .4, .04);
-            world.playSound(null, source.anchor, ModSounds.SPELL_NATURE_TENDRIL_BLOOM_KNOT_END, SoundCategory.PLAYERS, .8f, .7f);
+            world.playSound(null, source.anchor, ModSounds.SPELL_NATURE_TENDRIL_BLOOM_KNOT_END, SoundCategory.PLAYERS, .8f, .9f);
         }
     }
 

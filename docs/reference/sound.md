@@ -7,9 +7,35 @@ plays, so audio is replaced there without touching gameplay code.
 
 ## Current state
 
-All 342 events still redirect to the vanilla sound they used before, through
-`"type": "event"` entries, and keep that vanilla sound's subtitle. No custom
-audio ships yet. Volume, pitch, category and position stay at the call site.
+All five wand elements play generated audio from `sounds/spell/<element>/`.
+The developer has listened to every set outside the game and accepted all five
+for use; Wind is the one they want to revisit. None of it has been heard in
+game yet. Every boss, mob, cutscene and world event still redirects to the
+vanilla sound it used before, through a `"type": "event"` entry, and keeps that
+vanilla sound's subtitle. Volume, pitch, category and position stay at the call
+site.
+
+## Generated sounds
+
+Spell audio is synthesized, not sampled. `tools/sound/synth.py` holds the shared
+building blocks and one module per element (`tools/sound/fire.py`, `wind.py`,
+`stone.py`, `nature.py`, `space.py`) holds the recipes and the list of files they
+produce. Each module's opening comment describes that element's voice and what
+the developer has rejected. List a new module in `recipes()` in
+`tools/build_sounds.py`.
+
+```sh
+python3 tools/build_sounds.py meteor --wav /tmp/listen   # rebuild matching sounds, with WAV copies
+python3 tools/build_sounds.py --check                    # events, files and subtitles agree
+```
+
+Building needs `numpy` and `soundfile`. An Ogg file differs byte-for-byte on
+every encode, so rebuild only the sounds whose recipe changed. Recipes are
+written for pitch 1.0 at the call site. The exception is a sound passed to an
+explosion, which Minecraft plays near 0.7 pitch; pre-shift it with `repitch`.
+
+Keep sparse high clicks, such as sparks, inside the loud part of a sound. Once
+the body has faded they are heard as stray ticks on the tail.
 
 ## Event names
 

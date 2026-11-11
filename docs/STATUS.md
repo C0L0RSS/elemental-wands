@@ -309,6 +309,13 @@ It records known verification limits; it is not a fresh installation receipt.
   Sky Shear hit and miss, a chained dash and a Zephyr landing. The user approved it with
   Fire's in Lunar (November 2), keeping the original Gale Dagger model. Pending: multiplayer,
   where other players' dashes, launches and landings come from the new block-wind events.
+- **Wand sounds (November 11):** every spell plays generated audio through mod-owned sound
+  events ([sound reference](reference/sound.md)); bosses, mobs, cutscenes and world cues still
+  redirect to vanilla sounds. The build and `tools/build_sounds.py --check` passed. The user
+  accepted all five sets from clips played outside the game. Pending: hearing them in Lunar
+  (volume balance between spells, overlap in a fight, the retriggered Flamethrower and Hollow
+  Purple loops, and the two explosion sounds that Minecraft plays slower), and another pass on
+  Wind, which the user accepted as good enough for now.
 - **Space void glass (November 3):** all five Space spells are drawn as 3D void glass
   (`client/blockspace/`), ported from the `art/space/blockspace/` browser study the user approved,
   with a painted atlas; the Astral Double wears a void-glass shell over its owner's skin, and

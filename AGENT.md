@@ -41,7 +41,7 @@ relevant to the task; the docs archive is optional history, not required context
 | Hollow undead night mobs | [Hollow undead](docs/reference/hollow-undead.md) |
 | Church, arena, recovery, rewards | [Church and arena](docs/reference/church-and-arena.md) |
 | Storm Roc's summit realm and aerie | [Storm Summit](docs/reference/storm-summit.md) |
-| Pyre King's body, clips, fire, chains and hall | [Pyre King](docs/reference/pyre-king.md) |
+| Pyre King's fight, body, clips and hall | [Pyre King](docs/reference/pyre-king.md) |
 | Test runners and verification boundaries | [Testing](docs/reference/testing.md) |
 | What changed for players | [Release summaries](docs/releases/README.md) |
 
@@ -85,8 +85,8 @@ separate from the shipped mod. See the testing guide before launching a fixture.
 ./gradlew runClient
 ```
 
-Run `./gradlew build` after code changes. It includes Guardian, Necromancer, party and
-Roc gaze contract checks; those do not launch a live gameplay session. For VFX changes, run:
+Run `./gradlew build` after code changes. It includes Guardian, Necromancer, Pyre King, party
+and Roc gaze contract checks; those do not launch a live gameplay session. For VFX changes, run:
 
 ```sh
 ./gradlew clean build

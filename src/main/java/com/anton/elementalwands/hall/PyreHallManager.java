@@ -94,6 +94,8 @@ public final class PyreHallManager {
     private static final Map<Integer, Build> builds = new HashMap<>();
     /** Players who died here; the respawned copy gets their inventory and experience back. */
     private static final Set<UUID> kept = new HashSet<>();
+    /** Players sliding off a pillar: their fall is forgiven until they stand on the floor. */
+    private static final Set<UUID> slipping = new HashSet<>();
     private static boolean internalTeleport;
 
     public static void init() {
@@ -195,7 +197,8 @@ public final class PyreHallManager {
         king.setBodyYaw(PyreHall.KING_YAW);
         king.setHeadYaw(PyreHall.KING_YAW);
         realm.spawnEntity(king);
-        return "The Pyre King stands before his throne" + (old.isEmpty() ? "" : " (replaced " + old.size() + ")") + ". He has no fight yet.";
+        return "The Pyre King stands before his throne" + (old.isEmpty() ? "" : " (replaced " + old.size() + ")")
+                + ". He fights anyone in Survival or Adventure who comes near; /ew pyreking calm stops him.";
     }
 
     /** Clears the slot's entities (not players) and lays its tiles out again. */
@@ -331,6 +334,25 @@ public final class PyreHallManager {
             transfer(player, realm, PyreHall.arrival(centre), PyreHall.ARRIVAL_YAW, 0);
             player.extinguish();
             player.sendMessage(Text.literal("The hall will not let you go that way."), true);
+        }
+        // The pillars are scenery (the developer, Nov 11): nobody fights from the top of one. Whoever lands on a pillar
+        // slides off it, away from its middle, and the drop that follows does not hurt.
+        slipping.removeIf(id -> realm.getPlayerByUuid(id) == null);
+        for (ServerPlayerEntity player : realm.getPlayers()) {
+            if (player.isCreative() || player.isSpectator() || !player.isAlive()) { slipping.remove(player.getUuid()); continue; }
+            Vec3d at = player.getEntityPos();
+            boolean perched = PyreHall.perched(at);
+            if (perched && player.isOnGround()) {
+                Vec3d away = at.subtract(PyreHall.nearestPillar(PyreHall.nearestCentre(at), at)).multiply(1, 0, 1);
+                away = away.lengthSquared() < 1e-3 ? new Vec3d(1, 0, 0) : away.normalize();
+                player.setVelocity(away.x * .6, .34, away.z * .6);
+                player.velocityModified = true;
+                if (slipping.add(player.getUuid())) player.sendMessage(Text.literal("The broken stone gives way under you."), true);
+            }
+            if (slipping.contains(player.getUuid())) {
+                player.fallDistance = 0;
+                if (!perched && player.isOnGround()) slipping.remove(player.getUuid());
+            }
         }
     }
 

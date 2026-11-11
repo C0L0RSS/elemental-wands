@@ -78,6 +78,8 @@ final class PyreKingEffectsLayer extends GeoRenderLayer<PyreKingEntity, Void, Py
     private static final double TANGENT_LIMIT = 2;
 
     private final Map<Integer, Memory> memories = new HashMap<>();
+    /** For fixtures: the pommel and the blade's last flame root (its tip) as last drawn, in the world. */
+    public static volatile double[][] drawnBlade;
 
     PyreKingEffectsLayer(GeoRenderer<PyreKingEntity, Void, PyreKingRenderState> renderer) { super(renderer); }
 
@@ -127,6 +129,7 @@ final class PyreKingEffectsLayer extends GeoRenderLayer<PyreKingEntity, Void, Py
             roots[i] = add(p, add(mul(ux, EDGE * HALF[i][0] / 16 * Math.tanh(ux[1] * 8)), mul(uz, HALF[i][1] / 16 * Math.tanh(uz[1] * 8))));
         }
         double[] pommel = world(blade, eye, pivot[0], pivot[1], pivot[2]);
+        drawnBlade = new double[][]{pommel, roots[roots.length - 1]};
         GeoBone shackle = model.getBone(WRIST.get("wrist_bone").getAsString()).orElseThrow();
         double[] sp = pivot(shackle), wrist = world(new Matrix4f(base).mul(wristM), eye, sp[0], sp[1], sp[2]);
         double[][] chest = new double[MARKERS.length][], ends = new double[MARKERS.length][];

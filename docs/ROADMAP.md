@@ -61,7 +61,7 @@ Pillars:
 | Stone | Fractured Guardian | Ruined churches, Shattered Nave | 0 | Built, rebalanced October 3; playtest pending |
 | Nature (life turned to death) | Hollow Necromancer | Graveyards, Hollow Crypt | 1 | Built, in tuning |
 | Wind | Storm Roc | Mountain peaks, a sky realm above the clouds | 2 | Built with its aerie and intro (Oct 27); phase cinematic and death to come; playtest pending |
-| Fire | Pyre King | The Nether | 3 | Redesign started Nov 4: a swordsman with a chained sword; kit proposed, every move animated; in the game as a summonable body with no fight (Nov 10) |
+| Fire | Pyre King | The Nether | 3 | Redesign started Nov 4: a swordsman with a chained sword; every move animated; a first-pass fight and his hall are in the game for operators (Nov 10) |
 | Space | New | The End or the deep dark | 4 | Open |
 | — | Final: the wizard who tried to hold all five | Opened by all five shards | 5 | Open |
 
@@ -547,10 +547,10 @@ the developer's direction made it melee first.
   - The Chain Scythe's chain now bows with its swing as Unbound's chains do, awaiting
     the developer's review.
   - In the game (Nov 10): he can be summoned and made to play any clip, with his blade
-    fire, the sword's chain and Unbound's chains drawn by game code. He has no fight. See
-    [Pyre King](reference/pyre-king.md).
-  - Next: the fight. Not yet animated: a death, a hit reaction, and the mask cracking
-    away.
+    fire, the sword's chain and Unbound's chains drawn by game code.
+  - A first-pass fight was built the same day. See [Pyre King](reference/pyre-king.md)
+    for what it does; the sections below remain the plan it was built from.
+  - Not yet animated: a death, a hit reaction, and the mask cracking away.
 - **Decided (Nov 4):** his sword is a large two-handed English longsword. He fights with
   both hands on the grip, in readable longsword guards: high over the shoulder before an
   overhead cut, point forward before the Thrust. To throw, he lets go with his left hand
@@ -574,6 +574,27 @@ the developer's direction made it melee first.
     cursed him: the curse is his own grip.
   - **Proposed:** the Nether fortresses were his kingdom's roads. The piglins' love of
     gold began with the gold they picked from his ashes.
+
+#### Decided for the fight (Nov 10)
+
+The developer settled these before the first pass was built. Where they differ from the
+proposals below, they win.
+
+- **Weighted chance.** He is a rule system, like a souls-like boss: distance and what the
+  player just did decide which moves he weighs, and chance picks among them. The proposal
+  below used fixed thresholds and no rolls.
+- **Fire in both phases.** His attacks leave fire as proposed below. The hall's floor
+  itself never does damage.
+- **Healing is punished.** Eating or drinking in the open draws a throw or a Lunge.
+- **No stagger.** Nothing interrupts him; the openings are the ones he leaves.
+- **Tight openings.** He is free again less than a second after his last blow, not the
+  1.2 s pause proposed below.
+- **Gear (Nov 11).** The fight is balanced for plain diamond to netherite armor. The
+  damage table proposed below (34 for the sword) is replaced by the one on the
+  [Pyre King](reference/pyre-king.md#the-fight) page (21).
+- **Shields (Nov 11).** A shield stops one blow and is knocked aside for 5 s.
+- **Pillars (Nov 11).** The hall's pillars are scenery and cover on the floor only. Nobody
+  stands on one: a player who lands there slides off, unhurt.
 
 #### Core rules (proposed)
 

@@ -82,6 +82,21 @@ public final class PyreHall {
         return Math.hypot(pos.x - (centre.getX() + .5), pos.z - (centre.getZ() + .5));
     }
 
+    /** The six pillars stand this far from the centre, the first due east and the rest every 60 degrees round through south. */
+    static final int PILLAR_RING = 20, PILLARS = 6;
+    /** Feet this far above where players stand on the floor are on something: a pillar, since nothing else stands there. */
+    static final double PERCH = 1.2;
+
+    /** The middle of the pillar nearest a point, on the floor. */
+    public static Vec3d nearestPillar(BlockPos centre, Vec3d pos) {
+        double angle = Math.atan2(pos.z - (centre.getZ() + .5), pos.x - (centre.getX() + .5));
+        double nearest = Math.round(angle / (2 * Math.PI / PILLARS)) * (2 * Math.PI / PILLARS);
+        return new Vec3d(centre.getX() + .5 + PILLAR_RING * Math.cos(nearest), SURFACE_Y + 1, centre.getZ() + .5 + PILLAR_RING * Math.sin(nearest));
+    }
+
+    /** Above the floor's standing height by enough to be up on a pillar. */
+    public static boolean perched(Vec3d pos) { return pos.y > SURFACE_Y + 1 + PERCH; }
+
     /** A layout cell on the fight floor itself. */
     public static boolean floorCell(int x, int z) { return x * x + z * z <= (FLOOR_RADIUS + .5) * (FLOOR_RADIUS + .5); }
 

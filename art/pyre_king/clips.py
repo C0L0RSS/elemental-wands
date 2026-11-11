@@ -1436,6 +1436,10 @@ SPIN_P, SPIN_D = np.array([-.03, 1.65, -.33]), unit((.66, -.1, -.75))    # carri
 ZIP_OFFSET = np.array([0., 0., -10.4])
 LUNGE_LAND = np.array([.3, .55, -8.])
 LUNGE_OFFSET = np.array([0., 0., -6.9])
+# Where the chain has hauled him to at each moment, in the frame he started in. The game reads
+# these (through the tracks build_art.py writes) to stretch each flight to the real distance.
+TRAVEL = {'zip': curve([(0, (0, 0, 0)), (.62, (0, 0, 0)), (.98, ZIP_OFFSET+np.array([0, 0, .3]), 'linear'), (1.03, ZIP_OFFSET, 'out')]),
+          'lunge': curve([(0, (0, 0, 0)), (.9, (0, 0, 0)), (1.28, LUNGE_OFFSET+np.array([0, 0, .3]), 'linear'), (1.33, LUNGE_OFFSET, 'out')])}
 
 
 def _arrival(tl, hold, end, stuck):
@@ -1517,8 +1521,7 @@ def zip_in(t):
     lift = curve([(0, 0), (.62, 0), (.74, 1, 'out'), (tl-.1, 1), (tl-.02, 0, 'in')])
     pre['feet'] = lambda s: {side: (w[side] if s < .8 else ANKLE[side])*(1-float(lift(s)))+air[side]*float(lift(s))
                              for side in ('right', 'left')}
-    travel = curve([(0, (0, 0, 0)), (.62, (0, 0, 0)), (.98, ZIP_OFFSET+np.array([0, 0, .3]), 'linear'), (tl, ZIP_OFFSET, 'out')])
-    return _arrive(t, k, pre, travel, lambda s: LAND, lambda s: LAND_D, tl)
+    return _arrive(t, k, pre, TRAVEL['zip'], lambda s: LAND, lambda s: LAND_D, tl)
 
 
 @easy_wrists(3.4)
@@ -1563,8 +1566,7 @@ def lunge(t):
     air = {'right': np.array([.45, 1.0, 1.3]), 'left': np.array([-.45, 1.3, .9])}
     lift = curve([(0, 0), (.9, 0), (1.02, 1, 'out'), (tl-.1, 1), (tl-.02, 0, 'in')])
     pre['feet'] = lambda s: {side: ANKLE[side]*(1-float(lift(s)))+air[side]*float(lift(s)) for side in ('right', 'left')}
-    travel = curve([(0, (0, 0, 0)), (.9, (0, 0, 0)), (1.28, LUNGE_OFFSET+np.array([0, 0, .3]), 'linear'), (tl, LUNGE_OFFSET, 'out')])
-    return _arrive(t, k, pre, travel, stuck, stuck_d, tl)
+    return _arrive(t, k, pre, TRAVEL['lunge'], stuck, stuck_d, tl)
 
 
 # ---------------------------------------------------------------- Unbound

@@ -27,6 +27,8 @@ INSTALL = {
 }
 EFFECTS = ASSETS / 'pyre_king_effects.json'
 CLIPS_JAVA = ROOT / 'src/main/java/com/anton/elementalwands/entity/pyreking/PyreKingClips.java'
+TRACKS = ROOT / 'src/main/resources/data/elementalwands/pyre_king_tracks.json'
+TRACK_RATE = 120
 ATLAS_W = 1024
 PALETTES = {
     'armor': ['17191b','232529','303236','3b3d40','494a4b'],
@@ -362,6 +364,35 @@ def numbers(o):
     return o
 
 
+def tracks(animations):
+    """Where his weapon is at every moment of every attack clip, for the fight: the wrist shackle,
+    the pommel and the blade's tip, TRACK_RATE times a second, in the frame he started the clip
+    in (blocks: right, up, forward). Zip and Lunge add how far the chain has hauled him, and
+    Unbound adds its six chains' ends and where they leave his chest. The server sweeps these
+    for hits, so what is drawn is what strikes."""
+    import numpy as np
+    from rig import fk, player, pivot_world, SWORD_LENGTH
+    from clips import ATTACKS, CLIPS, TRAVEL, UNBOUND_CHAINS
+    def flat(points):return [round(float(v)+0.,3) for q in points for v in (q[0],q[1],-q[2])]
+    out={}
+    for name in ATTACKS:
+        at=player(animations['animation.pyre_king.'+name]);n=round(CLIPS[name][1]*TRACK_RATE)+1
+        wrist,pommel,tip,chest,ends=[],[],[],[],[[] for _ in UNBOUND_CHAINS]
+        for i in range(n):
+            W=fk(at(i/TRACK_RATE));p=pivot_world(W,'sword')
+            wrist.append(pivot_world(W,'right_wrist_shackle'));pommel.append(p)
+            tip.append(p+SWORD_LENGTH*(W['sword'][:3,:3]@np.array([0,1,0])))
+            if name=='unbound':
+                chest.append(pivot_world({UNBOUND_CHAINS[0]:W['torso']},UNBOUND_CHAINS[0]))   # where the markers rest
+                for j,marker in enumerate(UNBOUND_CHAINS):ends[j].append(pivot_world(W,marker))
+        clip={'samples':n,'wrist':flat(wrist),'pommel':flat(pommel),'tip':flat(tip)}
+        if name in TRAVEL:clip['travel']=[round(-float(TRAVEL[name](i/TRACK_RATE)[2])+0.,3) for i in range(n)]
+        if name=='unbound':clip['chest']=flat(chest);clip['chains']=[flat(e) for e in ends]
+        out[name]=clip
+    body=',\n'.join('    %s: %s'%(json.dumps(k),json.dumps(v,separators=(',',':'))) for k,v in out.items())
+    return ('{\n  "rate": %d,\n  "sword_blocks": %s,\n  "clips": {\n%s\n  }\n}\n'%(TRACK_RATE,SWORD_LENGTH,body)).encode()
+
+
 def runtime(assets,manifest,model,atlas):
     """The game's files: the candidate's model, clips and textures under their runtime names, the
     effect numbers the renderer reads (the same ones the workshop's effects.js reads from the
@@ -375,6 +406,7 @@ def runtime(assets,manifest,model,atlas):
              'chain':{'wrist_bone':'right_wrist_shackle','sword_bone':'sword','hidden_tether':'hanging_wrist_chain',
                       'draw_beyond_blocks':.8,'bow_share':.12,'iron_uv':rect('hanging_wrist_chain'),'hot_uv':rect('chest_shard')}}
     files[EFFECTS]=(json.dumps(effects,indent=2)+'\n').encode()
+    files[TRACKS]=tracks(json.loads(assets['pyre_king.animation.json'])['animations'])
     rows=',\n'.join('        new Clip("%s", %sf, %s, %sf, %sf, %sf, %sf)'%(name,c['length'],str(c['loop']).lower(),c['end_turn_degrees'],*c['end_offset_blocks'])
                     for name,c in manifest['clips'].items())
     files[CLIPS_JAVA]=('''package com.anton.elementalwands.entity.pyreking;

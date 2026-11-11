@@ -11,6 +11,11 @@ public class PyreKingRenderState extends LivingEntityRenderState implements GeoR
     private final Map<DataTicket<?>, Object> geckolibData = new HashMap<>();
     /** Which king this is: his fire and chains remember where they were from frame to frame. */
     public int id;
+    /** The clip the server has him in, and the thrown sword's real target less the clip's authored one (blocks: right, up, ahead). */
+    public String clip = "idle";
+    public float aimRight, aimUp, aimAhead;
+    /** For a clip that carries him: where the clip began less where he is drawn, in the clip's own axes (blocks). */
+    public float carryRight, carryUp, carryAhead;
 
     @Override
     public <D> void addGeckolibData(DataTicket<D> ticket, D data) {

@@ -3,13 +3,22 @@
 Reviewed October 3, 2026. This page contains outstanding work, not release history.
 It records known verification limits; it is not a fresh installation receipt.
 
-- **Pyre King (Nov 10):** he is in the game as a summonable body with no fight. He plays
-  any of his 16 clips on an operator's command, with blade fire, the sword's chain and
-  Unbound's burning chains. See [Pyre King](reference/pyre-king.md).
-  - **Verified:** `pyre_king_client_smoke` checks his renderer and that every clip is
-    baked, then photographs each clip.
-  - **Pending:** the developer's look at him in Lunar; the Chain Scythe's bowed chain in
-    the workshop; the fight itself.
+- **Pyre King (Nov 10):** he has a first-pass fight: thirteen moves chosen by weighted
+  rules, hits swept from his animations, aimed throws, fire, and a phase change at half
+  health. See [Pyre King](reference/pyre-king.md).
+  - **Verified:** `checkPyreKing`; `pyre_king_fight_smoke` (every move against a Survival
+    player, then a free fight to his death); `pyre_king_client_smoke` (every clip).
+  - **Reviewed (Nov 10):** three models read the design and the code. Their findings were
+    fixed: his drawn facing and steps lagging the server's blade, clips starting late for a
+    client that was looking away, a hand spinning in two blends, throws and hauls that
+    could pass a pillar, Drag Down pulling a player through one, shields, a cancelled
+    Unbound, fire's sum after a blow, and co-op baiting.
+  - **Pending:** the developer's review of the fight clips, then a look and a playtest in
+    Lunar. Damage is set for plain diamond to netherite armor (Nov 11); his health,
+    speeds and timings are first guesses.
+  - **Pending:** the Chain Scythe's bowed chain in the workshop.
+  - **Weak:** the warnings and fire are particles; he has no sounds of his own, no death
+    clip and no reward.
 - **Burned Throne Hall (Nov 10):** the Pyre King's arena exists as an operator-only realm
   (`/ew hall enter`, `summon`, `leave`). See
   [Pyre King](reference/pyre-king.md#the-burned-throne-hall).

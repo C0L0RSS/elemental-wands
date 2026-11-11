@@ -67,6 +67,7 @@ public final class PyreHallClientSmoke implements ClientModInitializer {
 
     private boolean started, done;
     private int ticks, scene, stage, sea, ready;
+    private volatile String pillarNote = "";
     private final java.util.List<String> seaNotes = new java.util.ArrayList<>();
     private volatile String serverFailure;
     private volatile boolean entered, checked, home;
@@ -188,7 +189,26 @@ public final class PyreHallClientSmoke implements ClientModInitializer {
                     c.player.setYaw(look[0]); c.player.setPitch(look[1]);
                     if (++scene == 55) { shot(c, "pyre-hall-" + (VIEWS.length + SEA.length + 1) + "-" + BRAZIER.name + ".png"); next(); }
                 }
-                case 6 -> {
+                case 6 -> { // nobody stays on a pillar: a Survival player set on the 24-block one slides off and lands unhurt
+                    if (++scene == 1) onServer(server, () -> {
+                        var p = player(server, uuid);
+                        BlockPos centre = PyreHall.nearestCentre(p.getEntityPos());
+                        p.changeGameMode(GameMode.SURVIVAL);
+                        p.setHealth(p.getMaxHealth());
+                        Vec3d pillar = PyreHall.nearestPillar(centre, new Vec3d(centre.getX() + .5 + 10, 0, centre.getZ() + .5 - 17.3));
+                        p.networkHandler.requestTeleport(pillar.x, PyreHall.SURFACE_Y + 27, pillar.z, 0, 0);
+                    });
+                    if (scene == 140) onServer(server, () -> {
+                        var p = player(server, uuid);
+                        double up = p.getY() - (PyreHall.SURFACE_Y + 1);
+                        require(p.getEntityWorld().getRegistryKey() == PyreHall.WORLD && up < .6 && p.isOnGround(), "A player set on a pillar should slide off to the floor; they are " + up + " above it");
+                        require(p.getHealth() == p.getMaxHealth(), "Sliding off a pillar should not hurt; the player has " + p.getHealth() + " health");
+                        p.changeGameMode(GameMode.CREATIVE);
+                        pillarNote = "a Survival player set on the 24-block pillar slid off and landed unhurt; ";
+                    });
+                    if (scene == 150) { require(!pillarNote.isEmpty(), "The pillar check did not run"); next(); }
+                }
+                case 7 -> {
                     if (++scene == 1) onServer(server, () -> run(server, player(server, uuid), "ew hall leave"));
                     if (scene > 200) throw new AssertionError("/ew hall leave did not take the player out of the hall");
                     if (inHall || scene < 20) return;
@@ -202,7 +222,7 @@ public final class PyreHallClientSmoke implements ClientModInitializer {
                     if (!home) return;
                     Files.writeString(Path.of("PYRE_HALL_CLIENT_PASSED.txt"), "Entered elementalwands:pyre_hall by /ew hall enter, slot laid out; "
                             + "solid floor under the arrival and the king, barrier ring and lid, lava sea at its contract height; "
-                            + "/ew hall summon stood one Pyre King on his mark facing south; " + lightNote + (VIEWS.length + SEA.length + 1)
+                            + "/ew hall summon stood one Pyre King on his mark facing south; " + pillarNote + lightNote + (VIEWS.length + SEA.length + 1)
                             + " screenshots in screenshots/ (" + SEA.length + " of them the sea again once built: " + String.join("; ", seaNotes)
                             + "; the last a brazier from the gallery); /ew hall leave returned to " + startDimension + " " + fmt(start) + ".\n");
                     done = true; c.scheduleStop();

@@ -433,6 +433,14 @@ unless noted: the sword whips in, the right fist takes it, and the left follows 
 - Hit zones, ember rings and lines, floor sparks and fire walls are game effects. The
   clips only show the body, the sword and the chains.
 
+**What the build gives the game for that.** `--install` also writes
+`data/elementalwands/pyre_king_tracks.json`: for every attack clip, where his wrist
+shackle, the sword's pommel and its tip are, 120 times a second, in the frame he started the
+clip in (blocks: right, up, forward). Zip and Lunge add how far the chain has hauled him
+(`clips.TRAVEL`), and Unbound adds its six chains' ends. The fight sweeps these for hits
+and aims thrown swords from them; see
+[Pyre King](../../docs/reference/pyre-king.md#the-fight).
+
 Walk and run are in-place loops. In the manifest, each clip's `ground_speed` (walk 3.0,
 run 4.5, the others 0) is the speed the game must move him at, or else it must scale
 playback by actual speed ÷ `ground_speed`. Phase two's 5.2 blocks/s run plays at about

@@ -595,6 +595,15 @@ proposals below, they win.
 - **Shields (Nov 11).** A shield stops one blow and is knocked aside for 5 s.
 - **Pillars (Nov 11).** The hall's pillars are scenery and cover on the floor only. Nobody
   stands on one: a player who lands there slides off, unhurt.
+- **Hiding (Nov 11).** The hall never helps him against a player behind a pillar ("the
+  equivalent of plot armor"), and nothing of his goes through the stone: the developer did
+  not want the Scythe to. He gets round it himself. The first try, a Cast past the pillar
+  and a Zip to it, was "a really good start" but so short that "it might honestly look
+  faster if he just walked it". The developer asked for a much faster pull to open ground
+  where the player is visible, then at once a thrown sword that drags them to him: the
+  Haul and the Snare. More than one answer is welcome; a Lunge round the pillar is the
+  second. The developer also approved the line a Haul flies along burning, as his own
+  doing, so that Hauls wall off the way round a pillar.
 
 #### Core rules (proposed)
 
@@ -638,7 +647,7 @@ no random rolls.
 | --- | --- |
 | Above the floor (see Drag Down) | Drag Down |
 | Within 6 blocks | A sword string |
-| 6–14 blocks | Chain Scythe, which ignores cover |
+| 6–14 blocks | Chain Scythe. (As proposed it ignored cover; since Nov 11 stone stops it, see Hiding above) |
 | 14–26 blocks, or more than 14 blocks away behind cover | Cast |
 | Beyond 26 blocks with a clear line | Hook |
 

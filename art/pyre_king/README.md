@@ -16,6 +16,9 @@ Pass 13 adds the rest of the kit's clips: both Chain Scythes, Zip, Hook, Overhea
 Lunge, Drag Down, phase two's third Royal Cut, and Unbound. The sculpt is unchanged, but
 the model gains six empty marker bones for Unbound's chains.
 
+Pass 14 (November 11) adds two clips for getting round a pillar, the Haul and the Snare.
+The developer asked for the move; they have not yet seen these two clips.
+
 ## The design
 
 - **Height:** upright, he is exactly 80 px (5 blocks). In the guard pose the torso leans 6°
@@ -381,6 +384,19 @@ unless noted: the sword whips in, the right fist takes it, and the left follows 
   - 0.9–1.33 s: the chain hauls him 6.9 blocks after it.
   - 1.33–1.92 s: he tears the sword free and spins as in the Zip. The cut lands at 1.7 s,
     1.25 s after the freeze.
+- `haul`: the Lunge with nothing wasted and nearly twice the reach. It has no blow.
+  - 0–0.3 s: he drops low with the blade back at his right hip, with no winding of the
+    chain, and slings it flat. The aim freezes at 0.2 s.
+  - 0.45 s: the sword sticks 14 blocks out.
+  - 0.5–0.8 s: the chain hauls him 12.9 blocks after it.
+  - 0.8–0.97 s: he lands in a crouch and tears the sword free into his right hand.
+  - Left alone he rises into his guard by 1.5 s. In the fight the Snare takes over at 1.0 s.
+- `snare`: the Hook made in a hurry, straight after a Haul.
+  - 0–0.4 s: no javelin draw. He drops the blade back to his right hip and slings it flat
+    and low, the Haul's own sling. The aim freezes at 0.25 s.
+  - 0.4–0.7 s: it flies 27 blocks.
+  - 0.7–1.7 s: the Hook's three hauls, hand over hand.
+  - 1.9 s: the last flick brings it up into his hand. He is in his guard at 2.7 s.
 - `hook`:
   - 0–1.0 s: he draws the sword back beside his head like a javelin, the point on the
     target and his left hand marking the line, then hurls it flat. This is the historical
@@ -422,22 +438,24 @@ unless noted: the sword whips in, the right fist takes it, and the left follows 
   - 3.4 s: he takes the hilt, tears the blade free and rises into his guard.
 
 **What the game must do for these clips:**
-- `zip` and `lunge` move him. The manifest's `end_offset_blocks` is where he stands at the
-  end, in the frame he started in: 10.4 and 6.9 blocks forward. The game moves him there on
+- `zip`, `lunge` and `haul` move him. The manifest's `end_offset_blocks` is where he stands
+  at the end, in the frame he started in: 10.4, 6.9 and 12.9 blocks forward. The game moves him there on
   the clip's last frame. The flight is authored for one distance, so the game will have to
   stretch it to the real one.
 - The low Scythe, Zip and Lunge spin him a full turn, so their pelvis channel ends at 360°.
   As with the Turning Cut, the next clip must start with no blend.
-- Throw distances and targets are fixed in the clips (27 blocks for the Hook, 8.5 up for
-  Drag Down). The game will have to aim the real sword.
+- Throw distances and targets are fixed in the clips (27 blocks for the Hook and the Snare,
+  8.5 up for Drag Down). The game will have to aim the real sword.
+- The Snare is thrown at a player who may be anywhere round him when the Haul lands. The
+  clip throws straight ahead; the game turns him as it plays.
 - Hit zones, ember rings and lines, floor sparks and fire walls are game effects. The
   clips only show the body, the sword and the chains.
 
 **What the build gives the game for that.** `--install` also writes
 `data/elementalwands/pyre_king_tracks.json`: for every attack clip, where his wrist
 shackle, the sword's pommel and its tip are, 120 times a second, in the frame he started the
-clip in (blocks: right, up, forward). Zip and Lunge add how far the chain has hauled him
-(`clips.TRAVEL`), and Unbound adds its six chains' ends. The fight sweeps these for hits
+clip in (blocks: right, up, forward). Zip, Lunge and Haul add how far the chain has hauled
+him (`clips.TRAVEL`), and Unbound adds its six chains' ends. The fight sweeps these for hits
 and aims thrown swords from them; see
 [Pyre King](../../docs/reference/pyre-king.md#the-fight).
 

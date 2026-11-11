@@ -52,6 +52,7 @@ public final class PyreKingClientSmoke implements ClientModInitializer {
             new Scene("cast_reel", "wide", 16, 26, 76), new Scene("chain_scythe_low", "wide", 12, 18, 21),
             new Scene("chain_scythe_high", "wide", 12, 18, 21), new Scene("drag_down", "wide", 15, 20, 26),
             new Scene("hook", "wide", 18, 24, 36), new Scene("zip", "wide", 10, 17, 28), new Scene("lunge", "wide", 9, 22, 34),
+            new Scene("haul", "wide", 5, 10, 14, 18), new Scene("snare", "wide", 5, 8, 12, 30),
             new Scene("unbound", "wide", 13, 26, 35, 46, 60), new Scene("unbound", "close", 26, 35));
 
     private boolean started, arranged, done;

@@ -25,8 +25,8 @@ He fights any Survival or Adventure player who comes within 34 blocks.
 | `/ew pyreking stop` | He returns to his guard. |
 
 The moves are `royal_cut`, `royal_cut_three`, `thrust`, `turning_cut`, `overhead`,
-`scythe_low`, `scythe_high`, `cast`, `zip`, `hook`, `lunge`, `drag_down` and `unbound`. The
-clips are `idle`, `walk`, `run` and one per move; the
+`scythe_low`, `scythe_high`, `cast`, `zip`, `hook`, `lunge`, `haul`, `snare`, `drag_down`
+and `unbound`. The clips are `idle`, `walk`, `run` and one per move; the
 [art README](../../art/pyre_king/README.md#clips) describes each.
 
 ## The fight
@@ -50,6 +50,9 @@ blow lands where and when it is drawn.
   at most one heavy hit (24 or more) per combo.
 - **Shields.** A raised shield stops one blow and is knocked aside for 5 s, as by an axe.
   The next blow of the string can still land. Fire on the floor ignores shields.
+- **Stone stops him** (the developer's choice, Nov 11). A pillar between him and a player
+  shelters them from his blade in hand, the Chain Scythe, the Cast's pull-back, the Hook
+  and the Snare. Unbound's chains and his lines of fire already stopped at stone.
 
 **Moves.** Times are seconds into the clip. "Free" is when he may act again.
 
@@ -66,6 +69,8 @@ blow lands where and when it is drawn.
 | Zip | ring | 1.22–1.64 | 2.55 | Follows a Cast: the chain hauls him to the sword and he spins into a cut |
 | Hook | 0.6 | 1.0–1.37 | 2.9 | Catches and drags; the Overhead follows a catch |
 | Lunge | 0.45 | 1.52–1.94 | 2.85 | He slings the sword short and flies after it into the spinning cut |
+| Haul | 0.05, ring | none | 0.85 | Only round a pillar. A low sling at 0.3 s; the chain sets him down at 0.8 s, 10 to 28 blocks away. The Snare follows |
+| Snare | 0.05 | 0.4–0.77 | 2.3 | Only after a Haul. The Hook with a 0.4 s tell: catches and drags; the Overhead follows a catch. A miss frees him at 1.2 |
 | Drag Down | 0.2 | 0.8–1.07 | 1.75 | For a player overhead. Aim freezes at 0.7 and leads a moving target; yanks them to the floor at his feet |
 | Unbound | 1.2 | 1.62–1.95 | 4.3 | The phase change |
 
@@ -76,7 +81,7 @@ blow lands where and when it is drawn.
     third kills. The chain costs 5.8 or 5.2, and a second in his fire about 2.
   - An unarmored player dies to one sword blow. The contract check holds the armored sums.
 - **Openings are tight** (the developer's choice, Nov 10): he is free 0.6 to 1 s after his
-  last blow. The contract check holds every move but the Cast and Hook to that.
+  last blow. The contract check holds every move but the Cast, Hook, Snare and Haul to that.
 - **No stagger** (the developer's choice, Nov 10): nothing interrupts him.
 
 **How he chooses.** While free he runs at his target (4.5 blocks/s, 5.2 in phase two),
@@ -90,7 +95,7 @@ always draw the same move.
 | Within 6.5 | Royal Cut (most), Overhead, Thrust, a rare low Scythe |
 | 6.5–14 | Low Scythe (most), high Scythe, Lunge, Thrust and Overhead where they reach |
 | 14–26 | Cast (most), Lunge, a rare Hook |
-| Beyond 26 | Hook if he can see them, else Cast; Lunge |
+| Beyond 26 | Hook (most), Cast, Lunge |
 
 What the target just did tilts the weights:
 
@@ -99,8 +104,33 @@ What the target just did tilts the weights:
 - **Jumped** in the last 2 s: the high Scythe instead of the low.
 - **Eating or drinking** more than 5 blocks away: he stops waiting out his gap, and the
   Cast and Lunge are weighted up (the developer's choice, Nov 10).
-- **Out of sight** behind a pillar: he does not Cast, Hook or Lunge. Mostly he keeps
-  running round it; the Scythe ignores cover.
+- **Out of sight** behind a pillar: he starts no move at them. He runs round it.
+- **Hiding** (out of his sight for 1.5 s): he flanks. He gets round the pillar himself; the
+  hall never helps him, and nothing of his passes through the stone (the developer's
+  choices, Nov 11). He picks one of two by chance, from those he has a clear flight for:
+  - **The Haul, then the Snare** (most often). He slings his sword out to open ground 8 to
+    16 blocks from his target and the chain sets him down there 0.8 s after he starts, a
+    flight of 10 blocks or more. Of the spots he can fly straight to, he takes the one
+    that leaves them furthest from cover. The line he flew burns for 4 s (the developer's
+    choice, Nov 11): past a pillar, that is a wall across the way round it. If he can see
+    them he whips round and throws the Snare 0.55 s after landing. A catch is dragged to
+    his feet under the Overhead.
+  - The Snare leads its target by what they did in the last 0.2 s, and its point goes 2.5
+    blocks past where they will be. Thrown only as far as them, it fell a block short of
+    a player running away from him, every time.
+  - **A Lunge round the pillar.** He lands 3 to 5.5 blocks from them with nothing between,
+    and spins into its cut. It is open to him only when they are near the pillar's edge.
+  - A Cast and a Zip were the first flank (Nov 11) and were dropped the same day: they
+    cost him 4 s, which a player circling the pillar outlasts. The Haul replaced them.
+  - A Haul or a Lunge is drawn from where it began, so he first turns onto the line of
+    his throw, up to 30° a tick.
+  - The Snare wastes no time on a target who is behind the stone again. If he loses
+    sight of them before the sword leaves his hand he keeps it, and is free 0.3 s later.
+    A throw that catches nobody is whipped straight back: he is free 1.2 s in, not 2.3.
+  - A target still unseen when a flank ends draws the next after 0.3 s, not 1.5.
+  - With no flight open he keeps running round and looks again every 0.5 s.
+- **Eating or drinking while hidden:** he flanks after 0.4 s, and the Lunge is the likely
+  one, because it lands a blow soonest.
 - He never uses a move three times running, and seldom twice. Drag Down is the exception:
   it is all he has for a player overhead.
 
@@ -123,7 +153,7 @@ The server's sweep and the client's drawn sword (`PyreKingModel`) read the same 
 
 - A Cast lands where a moving target will be, short of any pillar in the way.
 - A Lunge lands him about 3.6 blocks short of that point. Should something still stand in
-  his way, he stops against it.
+  his way, he stops against it. A Haul with nothing to get round does the same.
 - A hooked player comes in on the sword's hilt and stops 4 blocks in front of him. Moving
   3.5 blocks off the chain (a movement spell) or a pillar in the way snaps it. A pillar
   between him and the player stops the Hook outright.
@@ -132,7 +162,7 @@ The server's sweep and the client's drawn sword (`PyreKingModel`) read the same 
 - He stands still while the sword is out. The roadmap's walk during the Cast's wait is not
   built.
 
-**Zip, Lunge and the Turning Cut move or turn him inside the clip.** The server makes that
+**Zip, Lunge, Haul and the Turning Cut move or turn him inside the clip.** The server makes that
 real as it happens, so his hitbox is where he is. Clients draw those clips from where the
 clip began, so the two do not add up: `PyreKingRenderer` faces him as he faced then and
 hands the model's root the shift back to where he stood. His shadow stays under his real
@@ -157,6 +187,7 @@ A line of fire stops at a pillar.
 | Fire | Height | Lasts |
 | --- | --- | --- |
 | Where a Cast lands | 1 block | 3 s |
+| The line a Haul flew | 1 block, 2 in phase two | 4 s |
 | The third Royal Cut's line (phase two) | 1 block | 3 s |
 | A Cast's pull-back path and a Zip's line (phase two) | 2 blocks | 4 s |
 | Unbound's six lines | 2 blocks | 4 s |
@@ -200,7 +231,8 @@ Lunge and the Turning Cut leave him back where he stood when the clip ends.
 | Blade fire and chains | `client/renderer/PyreKingEffectsLayer` |
 
 The model, its 46 bones and its clips are the approved review candidate, installed
-unchanged. Do not edit the installed files, `PyreKingClips.java` or
+unchanged. The Haul and Snare clips (Nov 11) are the exception: the developer has not yet
+reviewed them. Do not edit the installed files, `PyreKingClips.java` or
 `pyre_king_tracks.json`; change the art sources and run
 `py -3 art/pyre_king/build_art.py --install`.
 
@@ -254,17 +286,30 @@ mesh later, in a deferred callback.
   and warns before it lands, the openings are tight, the thrown sword's aim, the chooser's
   reads, and the sweep's geometry.
 - `pyre_king_fight_smoke.init.gradle` runs a hidden, muted client against a Survival player.
-  - Twenty-two cases check each move: its damage, its reach, a sidestep after the aim
-    freezes, the jump, the crouch, a raised shield, where a thrown sword lands, both drags,
-    Unbound, and a pillar in the way of a Cast, a Hook, his run and Unbound's chains.
+  - Twenty-seven cases check each move: its damage, its reach, a sidestep after the aim
+    freezes, the jump, the crouch, a raised shield, where a thrown sword lands, the drags,
+    the Haul, Unbound, and a pillar in the way of a Cast, a Hook, the Scythe and Unbound's
+    chains.
+  - Three of them are for hiding, behind a round pillar 7 across like the hall's.
+    - A player standing behind it draws a flank within 3 s, is seen within 3 s more, and
+      is struck. In the last run he Hauled 17.5 blocks, then Snare, then Overhead.
+    - A player who sprints round it for 30 s, acting on where he was a quarter of a second
+      ago, and eats for the second half (which slows them to a crawl, as the game does),
+      must be flanked six times and struck twice, and never go unseen for 6 s. In the
+      last run: seven flanks, hooked once in the first 15 s, struck four times while
+      eating, burned once, 79 raw in all.
+    - A player who circles perfectly, with no reaction time, must be flanked three times
+      in 15 s. In the last run: three Hauls, two of them ending in a catch, and both
+      Overheads missed as they ran on, so 8 raw in all.
   - Four cases check that the drawn sword is where the server sweeps it (within 0.01 of
     the pommel). They measure a sword at rest; no case yet measures a blow in mid-swing.
   - A free fight then runs through Unbound to his death. The player stands, backs away,
     circles and jumps, runs far off, eats, climbs out of reach and gets behind him.
-  - `-PpyreFightRecord` also saves a frame of the free fight every other tick.
+  - `-PpyreFightRecord` also saves a frame of the free fight every other tick, and
+    `-PpyreFightRecordCase=<name>[,<name>]` a frame of those cases.
 - `pyre_king_client_smoke.init.gradle` runs a hidden, muted client. It checks that he uses
   his GeckoLib renderer and that every clip in `PyreKingClips` is in the baked animation
-  file. It then rehearses every clip and saves 48 screenshots to
+  file. It then rehearses every clip and saves 56 screenshots to
   `build/pyre-king-client-smoke/screenshots/`.
 - The screenshots show how he draws in the fixture. Nobody has yet looked at him, or
   fought him, in Lunar.
@@ -388,5 +433,12 @@ the floor's rim are faint: most of the hall's brightness is the ambient light.
   and Stone Wall as cover.
 - **Open to play:** a player who stays in the air (a hover, a string of launches) draws
   only Drag Down. Nobody can stand on a pillar in the hall.
+- **Open to play:** a player who only sprints round a pillar is now hooked off it on about
+  every second Haul, but in the fixture they run clear of the Overhead that follows, so it
+  costs them little health. Eating, hesitating or standing still costs far more. Nobody
+  has tried this in the hall or against a person.
+- **The Snare's turn and its recall are the game's, not the clips'.** He turns on his
+  target up to 36° a tick while the clip plays straight ahead, and a throw that catches
+  nobody is blended back to his guard in a quarter of a second.
 - **Around the fight:** a reward, an intro, a way into the hall for Survival players, and
   the hall's per-block floor protection.

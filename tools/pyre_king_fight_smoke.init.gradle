@@ -40,6 +40,8 @@ allprojects {
         loom.runs.client.runDir('build/pyre-king-fight-smoke')
         // -PpyreFightRecord: also save a frame of the free fight every other tick (screenshots/record-*.png), for a review clip.
         if (project.hasProperty('pyreFightRecord')) loom.runs.client.vmArg('-DpyreFightRecord=true')
+        // -PpyreFightRecordCase=name[,name]: save a frame of those cases every other tick (screenshots/case-name-*.png).
+        if (project.hasProperty('pyreFightRecordCase')) loom.runs.client.vmArg('-DpyreFightRecordCase='+project.property('pyreFightRecordCase'))
         loom.runs.client.vmArg('-Dfabric.addMods='+new File(smokeRoot,'pyre-king-fight-smoke.jar').absolutePath)
         tasks.named('runClient') {
             dependsOn pyreKingFightJar

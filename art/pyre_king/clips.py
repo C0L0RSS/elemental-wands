@@ -1469,15 +1469,16 @@ def _arrival(tl, hold, end, stuck):
             'flare': [(tl, .6), (tk+.2, 1.6), (tk+.5, 1.2), (tk+.9, 0)]}
 
 
-def _arrive(t, k, pre, offset, stuck_world, stuck_d, tfree):
+def _arrive(t, k, pre, offset, stuck_world, stuck_d, tfree, spin=True):
     """The spec for a clip that ends on _arrival's keys k. pre holds each channel's keys before
-    the landing; offset(t) is where he is; the sword stands at stuck_world until tfree."""
+    the landing; offset(t) is where he is; the sword stands at stuck_world until tfree. With
+    spin False the keys are _landed's: he takes the sword and rises, with no cut."""
     tk = k['tk']
     def ch(name, make=curve): return make(pre[name]+k[name])
     psi = float(ch('spin')(t)); off = offset(t); look = float(ch('look')(t))
     feet, foot_r = _pivot_feet(float(ch('gather')(t)), float(ch('tip')(t)), local=pre['feet'](t))
     P, D = ch('P'), ch('D', ncurve)
-    n = slerp(UP, _turned_n(D(t)), _ramp(t, tk+.44, tk+.82))
+    n = slerp(UP, _turned_n(D(t)), _ramp(t, tk+.44, tk+.82)) if spin else _turned_n(D(t))
     spec = _placed({'pelvis_pos': ch('shift')(t), 'pelvis_rot': ch('pelvis')(t), 'torso_rot': ch('torso')(t),
                     'neck_rot': (pre['head'](t)*.4)+np.array([0, -.4*look, 0]), 'head_rot': (pre['head'](t)*.6)+np.array([0, -.6*look, 0]),
                     'sword_p': P(t), 'sword_d': D(t), 'sword_n': n,
@@ -1488,7 +1489,7 @@ def _arrive(t, k, pre, offset, stuck_world, stuck_d, tfree):
     spec.update({'hands': pre['hands'](t) if t < tfree else 'none' if t < tk else 'right' if t < tk+.1 else 'both',
                  'extra': cloth(t, swing=float(pre['swing'](t)), lift=float(ch('flare')(t)))})
     spec['hinge'] = True
-    if tk+.04 <= t <= tk+.42: spec['edge_lock'] = 1.      # flat to the floor: an edge leads the whole spin
+    if spin and tk+.04 <= t <= tk+.42: spec['edge_lock'] = 1.      # flat to the floor: an edge leads the whole spin
     if pre['thrown'](t) and t < tk+.1: spec['hidden'] = ['hanging_wrist_chain']
     return spec
 
@@ -1567,6 +1568,131 @@ def lunge(t):
     lift = curve([(0, 0), (.9, 0), (1.02, 1, 'out'), (tl-.1, 1), (tl-.02, 0, 'in')])
     pre['feet'] = lambda s: {side: ANKLE[side]*(1-float(lift(s)))+air[side]*float(lift(s)) for side in ('right', 'left')}
     return _arrive(t, k, pre, TRAVEL['lunge'], stuck, stuck_d, tl)
+
+
+# ---------------------------------------------------------------- Haul and Snare
+# His own way round a pillar (the developer, Nov 11: the hall never helps him). The Haul is the
+# Lunge with nothing wasted and twice the reach: a short low sling sends the sword far out past
+# the pillar, and the chain hauls him to it at once. He lands in a crouch and tears it free,
+# and there is no cut, because the Snare follows: the Hook with the Haul's quick low sling in
+# place of its javelin draw, made as he turns on whoever was hiding.
+HAUL_LAND = np.array([.3, .55, -14.])
+HAUL_OFFSET = np.array([0., 0., -12.9])
+TRAVEL['haul'] = curve([(0, (0, 0, 0)), (.5, (0, 0, 0)), (.77, HAUL_OFFSET+np.array([0, 0, .3]), 'linear'), (.8, HAUL_OFFSET, 'out')])
+
+
+def _landed(tl, end, stuck):
+    """_arrival without the spin: the sword torn free and caught at tl+0.17, carried low at
+    his hip for a moment, and the guard at end."""
+    tk = tl+.17
+    return {'tk': tk,
+            'P': [(tl, stuck), (tl+.09, (.6, 1.5, -.9)), (tk, SPIN_P), (tk+.1, SPIN_P), (end, GUARD_P)],
+            'D': [(tl, LAND_D), (tl+.09, (.5, -.5, -.7)), (tk, SPIN_D), (tk+.1, SPIN_D), (end, GUARD_D)],
+            'torso': [(tl, (25, 0, 0)), (tk, (8, -5, -.7)), (end, (0, 0, 0))],
+            'pelvis': [(tl, (8, 0, 0)), (tk, (5, -8, 0)), (end, (0, 0, 0))],
+            'shift': [(tl, (0, -.45, 0)), (tk, (0, -.3, 0)), (end, (0, 0, 0))],
+            'spin': [(tl, 0)], 'tip': [(tl, 0)], 'gather': [(tl, 0)],
+            'right': [(tl+.05, (.5, 2.2, -.9)), (tk-.06, (.5, 1.7, -.8))],
+            'left': [(tl+.1, (-1.0, 1.9, -.7)), (tk+.1, (.19, 1.62, -.58))],
+            'look': [(tl, 0)], 'flare': [(tl, .6), (tk+.2, 1.), (end, 0)]}
+
+
+@easy_wrists(1.5)
+def haul(t):
+    """He drops low with the blade back at his right hip (the aim freezes at 0.2 s) and slings
+    it flat at 0.3 s. It sticks 14 blocks out at 0.45 s and the chain hauls him after it from
+    0.5 s: he lands 12.9 blocks away at 0.8 s, tears the sword free and has it in his hand at
+    0.97 s. Left alone he rises into his guard; in the fight the Snare takes over there."""
+    tr, ts, tl, end = .3, .45, .8, 1.5
+    k = _landed(tl, end, HAUL_LAND-HAUL_OFFSET)
+    home = GUARD_P+GRIP['right']*GUARD_D
+    fist = curve([(0, home), (.08, (.7, 2.2, -.7)), (.2, (.65, 1.35, -.15), 'out'), (tr, (.3, 1.4, -1.7), 'in')])
+    held = ncurve([(0, GUARD_D), (.08, (.6, .3, -.7)), (.2, (.43, -.12, -.89), 'out'), (tr, (.13, .1, -.98), 'in')])
+    P0 = fist(tr)-GRIP['right']*held(tr)
+
+    def stuck(s):                                # held, then flying low to where it sticks
+        if s <= tr: return fist(s)-GRIP['right']*held(s)
+        return P0+(HAUL_LAND-P0)*min(1., (s-tr)/(ts-tr))
+
+    def stuck_d(s):
+        return held(s) if s <= tr else slerp(held(tr), LAND_D, _ramp(s, tr, ts))
+    pre = {'P': [], 'D': [],
+           'torso': [(0, (0, 0, 0)), (.2, (25, 25, 0), 'out'), (tr, (30, -25, 0), 'hit'), (.5, (34, -10, 0)), (.6, (55, 0, 0))],
+           'pelvis': [(0, (0, 0, 0)), (.2, (8, 10, 0), 'out'), (tr, (8, -10, 0), 'hit'), (.5, (10, 0, 0)), (.6, (18, 0, 0))],
+           'shift': [(0, (0, 0, 0)), (.2, (0, -.6, 0), 'out'), (tr, (0, -.6, -.5), 'hit'), (.5, (0, -.5, -.7)), (.6, (0, -.1, 0), 'out')],
+           'spin': [(0, 0)], 'tip': [(0, 0), (.45, 0), (.55, 35), (tl-.08, 35)], 'gather': [(0, 0)],
+           'right': [(tr, fist(tr)), (.38, (.3, 1.9, -2.0), 'snap'), (.5, (.35, 2.1, -1.9)), (.76, (.4, 2.4, -1.5))],
+           'left': [(.08, stuck(.08)+GRIP['left']*stuck_d(.08)), (.2, (.45, 1.75, -.45)), (tr, (-1.4, 1.9, -.5), 'hit'),
+                    (.5, (-1.6, 2.2, -.3)), (.76, (-1.8, 2.4, -.2))],
+           'look': [(0, 0)], 'flare': [(0, 0), (.5, 0), (.62, 1.4)],
+           'head': curve([(0, (0, 0, 0)), (.2, (-14, -20, 0)), (tr, (-18, 14, 0)), (.6, (-30, 0, 0)), (tl, (-8, 0, 0)), (tl+.17, (3, 0, 0))]),
+           'swing': curve([(0, 0), (.2, -.3), (tr, .6, 'hit'), (.5, 0), (.6, 1, 'hit'), (tl, .6), (1.4, 0)]),
+           'hands': lambda s: _hands(s, .08, tr, 9.), 'thrown': lambda s: s >= tr, 'left_add': lambda s: 0.}
+    air = {'right': np.array([.45, 1.0, 1.3]), 'left': np.array([-.45, 1.3, .9])}
+    lift = curve([(0, 0), (.5, 0), (.58, 1, 'out'), (tl-.1, 1), (tl-.02, 0, 'in')])
+    pre['feet'] = lambda s: {side: ANKLE[side]*(1-float(lift(s)))+air[side]*float(lift(s)) for side in ('right', 'left')}
+    return _arrive(t, k, pre, TRAVEL['haul'], stuck, stuck_d, tl, spin=False)
+
+
+@easy_wrists(2.7)
+def snare(t):
+    """The Hook made in a hurry, straight after a Haul. No javelin draw: he drops the blade
+    back to his right hip (the aim freezes at 0.25 s) and slings it flat and low at 0.4 s, the
+    Haul's own sling. From there it is the Hook 0.6 s early: the strike 27 blocks out at
+    0.7 s, three hauls hand over hand, the catch at 1.9 s. The Overhead Sentence follows."""
+    tr, th, tc, end = .4, .7, 1.9, 2.7
+    home = GUARD_P+GRIP['right']*GUARD_D
+    fist = curve([(0, home), (.1, (.7, 2.2, -.7)), (.25, (.65, 1.35, -.15), 'out'), (tr, (.3, 1.4, -1.7), 'in')])
+    held = ncurve([(0, GUARD_D), (.1, (.6, .3, -.7)), (.25, (.43, -.12, -.89), 'out'), (tr, (.13, .1, -.98), 'in')])
+    P0 = fist(tr)-GRIP['right']*held(tr); aim = unit(HOOK_HIT-P0); hit = HOOK_HIT-SWORD_TIP*aim
+    drag = curve([(th, hit), (th+.12, hit+np.array([0, -.1, .2])), (th+.32, (0, 1.4, -15.)), (th+.42, (0, 1.4, -14.6)),
+                  (th+.65, (0, 1.3, -9.)), (th+.75, (0, 1.3, -8.7)), (th+1., (.1, 1.2, -3.5)), (tc, CATCH_P, 'in')])
+    drag_d = dcurve([(th, aim), (th+1., (0, -.03, -1)), (tc, CATCH_D, 'in')])
+    tail_p = curve([(tc, CATCH_P), (tc+.24, SETTLE_P, 'snap'), (end, GUARD_P)])
+    tail_d = dcurve([(tc, CATCH_D), (tc+.24, SETTLE_D, 'snap'), (end, GUARD_D)])
+
+    def P(s):
+        if s <= tr: return fist(s)-GRIP['right']*held(s)
+        if s <= th: return P0+(hit-P0)*(s-tr)/(th-tr)
+        return drag(s) if s < tc else tail_p(s)
+
+    def D(s):
+        if s <= tr: return held(s)
+        if s <= th: return slerp(held(tr), aim, _ramp(s, tr, tr+.06))
+        return drag_d(s) if s < tc else tail_d(s)
+
+    def N(s):
+        n = _turned_n(held(min(s, tr)))
+        return slerp(n, GUARD_N, _ramp(s, tc-.2, tc))
+    far, near = (.25, 2.9, -1.75), (.5, 2.45, -.45)            # a hand reaching down the chain, and hauled in
+    lfar, lnear = (-.15, 2.8, -1.7), (-.4, 2.4, -.5)
+    left = curve([(.1, P(.1)+GRIP['left']*D(.1)), (.25, (.45, 1.75, -.45)), (tr, (-1.2, 2.2, -.6), 'hit'),
+                  (th, (-.8, 2.7, -.7)), (th+.12, lnear), (th+.32, lfar), (th+.54, lnear, 'hit'), (th+.65, lfar), (th+.87, lnear, 'hit'),
+                  (th+1., lfar), (tc, (-.3, 2.6, -.9)), (tc+.1, (-.05, 2.55, -1.0))])
+    right = curve([(tr, fist(tr)), (tr+.1, (.3, 2.1, -2.0), 'snap'), (th, far), (th+.12, far), (th+.32, near, 'hit'), (th+.42, far),
+                   (th+.65, near, 'hit'), (th+.75, far), (th+1., near, 'hit'), (tc-.06, (.3, 2.45, -.95))])
+    pull = curve([(th, 0), (th+.12, 0), (th+.32, 1, 'hit'), (th+.42, .2), (th+.65, 1, 'hit'), (th+.75, .2), (th+1., 1, 'hit'), (tc, 0)])
+    torso = curve([(0, (0, 0, 0)), (.25, (22, 25, 0), 'out'), (tr, (26, -25, 0), 'hit'), (tr+.1, (20, -28, 0), 'snap'),
+                   (th, (10, -8, 0)), (tc, (6, -6, 0)), (tc+.24, (4, 0, 0)), (end, (0, 0, 0))])
+    pelvis = curve([(0, (0, 0, 0)), (.25, (8, 10, 0), 'out'), (tr, (8, -10, 0), 'hit'), (th, (0, -4, 0)), (tc, (0, 0, 0))])
+    shift = curve([(0, (0, 0, 0)), (.25, (0, -.5, 0), 'out'), (tr, (0, -.5, -.5), 'hit'), (th, (0, -.12, -.4)),
+                   (tc, (0, -.06, -.3)), (tc+.24, (0, -.05, -.26)), (end, (0, 0, 0))])
+    head = curve([(0, (0, 0, 0)), (.25, (-12, -18, 0)), (tr, (-14, 12, 0), 'hit'), (th, (0, 4, 0)), (tc, (0, 0, 0))])
+    back = curve([(0, 0), (.05, 0), (.25, 1), (end-.55, 1), (end-.2, 0)])
+    back_lift = curve([(0, 0), (.05, 0), (.15, .12, 'out'), (.25, 0, 'in'), (end-.55, 0), (end-.38, .1, 'out'), (end-.2, 0, 'in')])
+    stride = curve([(0, 0), (tr-.14, 0), (tr, 1, 'hit'), (end-.6, 1), (end-.25, 0)])
+    stride_lift = curve([(0, 0), (tr-.14, 0), (tr-.07, .2, 'out'), (tr, 0, 'in'), (end-.6, 0), (end-.42, .12, 'out'), (end-.25, 0, 'in')])
+    swing = curve([(0, 0), (.25, -.5), (tr, 1, 'hit'), (th, .2), (tc, .5, 'hit'), (end-.3, 0)])
+    b, f, pl = float(back(t)), float(stride(t)), float(pull(t))
+    spec = {'pelvis_pos': shift(t)+np.array([0, -.08*pl, .22*pl]), 'pelvis_rot': pelvis(t),
+            'torso_rot': torso(t)+np.array([-14*pl, 0, 0]), 'neck_rot': head(t)*.4, 'head_rot': head(t)*.6+np.array([8*pl, 0, 0]),
+            'sword_p': P(t), 'sword_d': D(t), 'sword_n': N(t), 'hands': _hands(t, .1, tr, tc),
+            'free_hands': {'left': left(t), 'right': right(t)}, 'free_elbow': {'left': (-.6, -.2, 1)},
+            'feet': planted(dx=(.06*b, float(back_lift(t)), .3*b), sx=(0, float(stride_lift(t)), -.6*f)),
+            'extra': cloth(t, swing=float(swing(t)))}
+    spec['hinge'] = True
+    if tr <= t < tc+.1: spec['hidden'] = ['hanging_wrist_chain']
+    return spec
 
 
 # ---------------------------------------------------------------- Unbound
@@ -1674,7 +1800,7 @@ BLOWS = {'royal_cut': ((.9, 1.3), (1.75, 2.2)), 'turning_cut': ((.68, .85),), 'c
          'overhead_sentence': ((.7, .88),), 'royal_cut_three': ((.9, 1.3), (1.75, 2.2), (2.62, 2.8)),
          'zip': ((1.24, 1.62),), 'lunge': ((1.54, 1.92),), 'unbound': ((.5, .66),)}
 ATTACKS = ('royal_cut', 'royal_cut_three', 'kingsguard_thrust', 'turning_cut', 'cast_reel', 'chain_scythe_low',
-           'chain_scythe_high', 'zip', 'hook', 'overhead_sentence', 'lunge', 'drag_down', 'unbound')
+           'chain_scythe_high', 'zip', 'hook', 'overhead_sentence', 'lunge', 'drag_down', 'unbound', 'haul', 'snare')
 # While a fist holds the sword it must stay above the floor, except where the clip means it
 # to be in the floor: Unbound drives it in and later tears it out.
 BURIED = {'unbound': ((.6, 3.8),)}
@@ -1827,6 +1953,8 @@ CLIPS = {
     'hook': (hook, 3.3, False),
     'zip': (zip_in, 3.2, False),
     'lunge': (lunge, 3.4, False),
+    'haul': (haul, 1.5, False),
+    'snare': (snare, 2.7, False),
     'unbound': (unbound, 4.3, False),
 }
 # Clips that end with him turned: degrees to his left, about his origin. The game turns his
@@ -1835,4 +1963,4 @@ END_TURN = {'turning_cut': TURN_END}
 # Clips that end with him somewhere else: his offset in blocks, in the frame he started in.
 # The game moves him there on the clip's last frame, and must stretch the flight to the real
 # distance to the sword.
-END_OFFSET = {'zip': ZIP_OFFSET, 'lunge': LUNGE_OFFSET}
+END_OFFSET = {'zip': ZIP_OFFSET, 'lunge': LUNGE_OFFSET, 'haul': HAUL_OFFSET}

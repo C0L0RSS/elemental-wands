@@ -53,7 +53,7 @@ public final class PyreKingRules {
     public static final double LANDING_RING = 5;
     /** Throws lead a moving target by its recent velocity, at most this far. */
     public static final double LEAD_MAX = 12;
-    /** A Lunge lands this far short of where its target will be; a Zip this far short of the sword. */
+    /** A Lunge, or a Haul with nothing to get round, lands this far short of where its target will be; a Zip this far short of the sword. */
     public static final double LUNGE_SHORT = 2, ZIP_SHORT = 1.1;
 
     public static float health(int players) { return 600 * (1 + .6f * (Math.max(1, players) - 1)); }
@@ -136,6 +136,14 @@ public final class PyreKingRules {
         /** He slings the sword short and flies after it into the same spinning cut. */
         LUNGE("lunge", .45, 2.85, new double[]{.45},
                 List.of(blade(1.52, 1.94, Band.SOLID, .45, SWORD, 0)), List.of(), List.of()),
+        /**
+         * His way round a pillar: a quick low sling sends the sword far out past it, and the chain hauls him there at
+         * once. It strikes nobody; the Snare follows it.
+         */
+        HAUL("haul", .2, .85, new double[]{.05}, List.of(), List.of(), List.of()),
+        /** The Hook made in a hurry, straight off a Haul: whoever it catches is dragged to his feet, under the overhead cut. */
+        SNARE("snare", .25, 2.3, new double[]{.05},
+                List.of(new Window(.4, .77, Part.BLADE, Band.TRUE, .65, TUG, 0)), List.of(), List.of()),
         /** A rising sling at a player overhead, hauled down to the floor in front of him. */
         DRAG_DOWN("drag_down", .7, 1.75, new double[]{.2},
                 List.of(new Window(.8, 1.07, Part.BLADE, Band.TRUE, .9, YANK, 0)), List.of(), List.of()),
@@ -160,9 +168,13 @@ public final class PyreKingRules {
         }
 
         public boolean swordString() { return this == ROYAL_CUT || this == ROYAL_CUT_THREE || this == THRUST || this == TURNING_CUT || this == OVERHEAD; }
-        public boolean chainMove() { return this == SCYTHE_LOW || this == SCYTHE_HIGH || this == CAST || this == HOOK || this == ZIP; }
-        /** The end of his last blow, which the opening is measured from. */
-        public double lastBlow() { return windows.get(windows.size() - 1).to(); }
+        public boolean chainMove() { return this == SCYTHE_LOW || this == SCYTHE_HIGH || this == CAST || this == HOOK || this == ZIP || this == HAUL || this == SNARE; }
+        /** The Hook and the Snare: a thrown sword that catches whoever it strikes and drags them in. */
+        public boolean hooks() { return this == HOOK || this == SNARE; }
+        /** How much sooner than the Hook this does everything from the throw on. */
+        public double hookLead() { return this == SNARE ? SNARE_LEAD : 0; }
+        /** The end of his last blow, which the opening is measured from. A move with no blow has none until it ends. */
+        public double lastBlow() { return windows.isEmpty() ? free : windows.get(windows.size() - 1).to(); }
     }
 
     private static Window blade(double from, double to, Band band, double radius, float damage, int group) {
@@ -175,6 +187,58 @@ public final class PyreKingRules {
     public static final double CAST_DECIDE = 2.75, CAST_ZIP_AT = 2.8;
     /** He Zips when his target is this far from him at the decision, or always after a missed Hook's wait. */
     public static final double ZIP_BEYOND = 16;
+    /**
+     * Hiding. His own answers to a target behind a pillar (the developer, Nov 11: he gets round it himself, the hall
+     * does not help him, and nothing of his passes through the stone). Out of his sight this many ticks, or this
+     * many while eating or drinking, and he flanks. One who is behind the stone again as a flank ends waits only
+     * FLANK_AGAIN more.
+     */
+    public static final int FLANK_AFTER = 30, FLANK_HEALING = 8, FLANK_AGAIN = 6;
+    /** A Haul or a Lunge is drawn from where it began, so he first turns onto the line of his throw: degrees a tick. */
+    public static final float FLANK_TURN = 30;
+    /** The Snare is thrown as he turns on his target from wherever the Haul set him down: degrees a tick, until its aim freezes. */
+    public static final float SNARE_TURN = 36;
+    /** The Snare is the Hook this many seconds early from the throw on. */
+    public static final double SNARE_LEAD = .6;
+    /**
+     * The Snare wastes no time on a target who got back behind the stone. Until the sword leaves his hand he keeps it
+     * if he loses sight of them, and is free this long after; a throw that caught nobody is whipped straight back,
+     * from SNARE_MISSED into the clip, and he is free this long after that.
+     */
+    public static final double SNARE_THROWN = .4, SNARE_KEPT = .3, SNARE_MISSED = .85, SNARE_RECALL = .35;
+    /** The Snare's point goes this far past where its target will be, so one running away from him is still on the blade. */
+    public static final double SNARE_PAST = 2.5;
+    /** How far a hiding target would have to go to be out of his sight again is measured out to these distances round them. */
+    private static final double[] COVER_RINGS = {1.5, 3, 4.5, 6};
+    public static final double COVER_NONE = 8;
+    public static double[] coverRings() { return COVER_RINGS.clone(); }
+
+    /**
+     * Where a flank may set him down: on one of these rings round his target, with his sword stuck between `near`
+     * and `far` blocks from him. A wide one wants open ground with a long view of them; the other wants the nearest
+     * spot beside them. (A Cast and a Zip were tried as a third and dropped: four seconds of him, which a player
+     * circling the pillar simply outlasts.)
+     */
+    public record FlankRule(double[] rings, double near, double far, boolean wide) {}
+
+    public static FlankRule flankRule(Move opener) {
+        return switch (opener) {
+            // Far out, where he can see them and they are a long way from cover: the Snare reaches from there.
+            case HAUL -> new FlankRule(new double[]{8, 10, 12, 14, 16}, 12, 30, true);
+            // Down beside them, into the spinning cut.
+            default -> new FlankRule(new double[]{3, 4.5, 5.5}, 4.5, 16, false);
+        };
+    }
+
+    /** The flanks open to him now, weighed: the Haul most, the Lunge most for a target who is healing, and seldom the same twice. */
+    public static Map<Move, Double> flankWeights(boolean haul, boolean lunge, boolean healing, Move last) {
+        Map<Move, Double> w = new EnumMap<>(Move.class);
+        if (haul) w.put(Move.HAUL, 6.0);
+        if (lunge) w.put(Move.LUNGE, healing ? 8.0 : 3.0);
+        if (last != null && w.size() > 1) w.computeIfPresent(last, (move, weight) -> weight * .45);
+        return w;
+    }
+
     /** Phase two throws again after the Reel: the Double Cast. */
     public static final double CAST_AGAIN_AT = 3.95;
     /** The Hook drags its catch until this moment, to this far in front of him, then the Overhead follows. */
@@ -194,6 +258,8 @@ public final class PyreKingRules {
     public static final double FIRE_LOW = 1, FIRE_TALL = 2;
     /** Half the width of a line of fire, and the radius of the fire where a Cast lands. */
     public static final double FIRE_HALF = .6, CAST_FIRE = 1.6;
+    /** The line a Haul flies along burns this long, in both phases: low in the first, tall in the second. */
+    public static final int HAUL_FIRE = 80;
     /** Phase two's third Royal Cut leaves a line of fire this long. */
     public static final double CUT_FIRE = 12;
 
@@ -224,6 +290,9 @@ public final class PyreKingRules {
             if (d <= DRAG_RANGE) w.put(Move.DRAG_DOWN, 1.0);
             return w;       // Out of reach: he closes in underneath first.
         }
+        // He swings at nothing he cannot see: a pillar shelters whoever is behind it from every blow of his. Getting
+        // round it is the flank's work.
+        if (!read.sight()) return w;
         Move cut = read.second() ? Move.ROYAL_CUT_THREE : Move.ROYAL_CUT;
         if (d <= 6.5) {
             w.put(cut, 5.0);
@@ -251,8 +320,6 @@ public final class PyreKingRules {
             w.put(Move.LUNGE, 2.0);
             w.put(Move.HOOK, 6.0);
         }
-        // He does not throw at, or fly after, what he cannot see: he runs round the pillar instead. The Scythe ignores cover.
-        if (!read.sight()) { w.remove(Move.CAST); w.remove(Move.HOOK); w.remove(Move.LUNGE); }
         // Never the same string three times running, and seldom twice.
         if (last != null && w.size() > 1) {
             if (last == before) w.remove(last);

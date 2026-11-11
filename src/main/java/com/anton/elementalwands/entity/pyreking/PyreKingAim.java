@@ -8,7 +8,7 @@ import java.util.Map;
  * 27 for the Hook, 8.5 up for Drag Down); the fight aims it at a real one. The difference between
  * the two is the aim offset, in the frame he started the clip in. This says how much of that
  * offset the sword and his own body take at each moment: none while the sword is in his hand, all
- * of it where the sword sticks, and for Zip and Lunge his body takes it as the chain hauls him.
+ * of it where the sword sticks, and for Zip, Lunge and Haul his body takes it as the chain hauls him.
  * The server (hits, his real travel) and the client (the drawn sword) both read it, so they agree.
  */
 public final class PyreKingAim {
@@ -81,6 +81,8 @@ public final class PyreKingAim {
         THROWS.put("cast_reel", new Throw("cast_reel", 1.3, 3.0, false));
         THROWS.put("zip", new Throw("zip", 0, 3.0, false));
         THROWS.put("lunge", new Throw("lunge", .85, 3.0, false));
+        THROWS.put("haul", new Throw("haul", .5, 3.0, false));
+        THROWS.put("snare", new Throw("snare", .75, 3.0, false));
         THROWS.put("hook", new Throw("hook", 1.35, 3.0, false));
         THROWS.put("drag_down", new Throw("drag_down", 1.0, 2.2, true));
     }

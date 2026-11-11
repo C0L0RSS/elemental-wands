@@ -29,6 +29,8 @@ public final class PyreKingClips {
         new Clip("hook", 3.3f, false, 0f, 0.0f, 0.0f, 0.0f),
         new Clip("zip", 3.2f, false, 0f, 0.0f, 0.0f, -10.4f),
         new Clip("lunge", 3.4f, false, 0f, 0.0f, 0.0f, -6.9f),
+        new Clip("haul", 1.5f, false, 0f, 0.0f, 0.0f, -12.9f),
+        new Clip("snare", 2.7f, false, 0f, 0.0f, 0.0f, 0.0f),
         new Clip("unbound", 4.3f, false, 0f, 0.0f, 0.0f, 0.0f));
 
     public static Clip get(String name) {

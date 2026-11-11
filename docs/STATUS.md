@@ -3,7 +3,7 @@
 Reviewed October 3, 2026. This page contains outstanding work, not release history.
 It records known verification limits; it is not a fresh installation receipt.
 
-- **Pyre King (Nov 10):** he has a first-pass fight: thirteen moves chosen by weighted
+- **Pyre King (Nov 10):** he has a first-pass fight: fifteen moves chosen by weighted
   rules, hits swept from his animations, aimed throws, fire, and a phase change at half
   health. See [Pyre King](reference/pyre-king.md).
   - **Verified:** `checkPyreKing`; `pyre_king_fight_smoke` (every move against a Survival
@@ -13,6 +13,10 @@ It records known verification limits; it is not a fresh installation receipt.
     client that was looking away, a hand spinning in two blends, throws and hauls that
     could pass a pillar, Drag Down pulling a player through one, shields, a cancelled
     Unbound, fire's sum after a blow, and co-op baiting.
+  - **Hiding (Nov 11):** stone stops his chain and blade, and he gets round a pillar
+    himself with the Haul and the Snare, or a Lunge. Their two clips are new and not yet
+    reviewed. The line a Haul flies burns. A player who only circles a pillar is hooked
+    off it but, in the fixture, runs clear of the Overhead that follows.
   - **Pending:** the developer's review of the fight clips, then a look and a playtest in
     Lunar. Damage is set for plain diamond to netherite armor (Nov 11); his health,
     speeds and timings are first guesses.

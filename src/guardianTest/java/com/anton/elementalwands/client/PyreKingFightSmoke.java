@@ -76,15 +76,28 @@ public final class PyreKingFightSmoke implements ClientModInitializer {
             new Case("hook", PyreKingRules.Move.HOOK, 0, 0, -30, false, false, 70, PyreKingRules.TUG, 16, 26, 36, 50),
             new Case("lunge", PyreKingRules.Move.LUNGE, 0, 0, -13, false, false, 76, SWORD, 12, 20, 28, 36, 40),
             new Case("drag-down", PyreKingRules.Move.DRAG_DOWN, 0, 8, -7.5, true, false, 56, PyreKingRules.YANK, 14, 22, 28),
-            // A pillar stands between them in the cases named for it (5 across, 8 to 12 blocks in front of him).
+            // The Haul with nothing to get round, and the Snare that follows it in the fight.
+            new Case("haul", PyreKingRules.Move.HAUL, 0, 0, -22, false, false, 40, 0, 4, 8, 12, 16, 20),
+            new Case("snare", PyreKingRules.Move.SNARE, 0, 0, -16, false, false, 60, PyreKingRules.TUG, 5, 9, 14, 24, 36),
+            // A pillar stands between them in the cases named for it (5 across, 8 to 12 blocks in front of him; for the
+            // hiding cases one like the hall's, round and 7 across).
             new Case("cast-at-a-pillar", PyreKingRules.Move.CAST, 0, 0, -20, false, false, 100, 0, 29, 50),
             new Case("hook-at-a-pillar", PyreKingRules.Move.HOOK, 0, 0, -30, false, false, 70, 0, 26),
-            new Case("rounds-a-pillar", null, 0, 0, -20, false, false, 240, -1, 40, 80, 120, 160, 200),
+            // The stone stops his chain: a player just behind the pillar, inside the Scythe's reach, is not struck.
+            new Case("scythe-behind-a-pillar", PyreKingRules.Move.SCYTHE_LOW, 0, 0, -13.5, false, false, 60, 0, 19),
+            new Case("flanks-a-pillar", null, 0, 0, -20, false, false, 240, -1, 40, 60, 80, 100, 120, 160, 200),
+            // A player who sprints round the pillar to keep it between them, a quarter of a second behind what he
+            // does, and from half way eats as they go, which slows them to a crawl. Then one who is never behind: no
+            // person is that quick.
+            new Case("circles-a-pillar", null, 0, 0, -15, false, false, 600, -1, 100, 200, 300, 400, 500),
+            new Case("circles-a-pillar-perfectly", null, 0, 0, -15, false, false, 300, -1, 100, 200),
             new Case("unbound", PyreKingRules.Move.UNBOUND, 0, 0, -8, false, false, 96, PyreKingRules.UNBOUND_SWEEP, 16, 28, 37, 44, 58, 70),
             new Case("unbound-behind-a-pillar", PyreKingRules.Move.UNBOUND, 0, 0, -10.5, false, false, 96, 0, 37));
     private static final int FIGHT_TICKS = 1240;
     /** -PpyreFightRecord: also save a frame of the free fight every other tick, for a review clip. */
     private static final boolean RECORD = Boolean.getBoolean("pyreFightRecord");
+    /** -PpyreFightRecordCase=name[,name]: save a frame of those cases every other tick (case-name-*.png). */
+    private static final String RECORD_CASE = System.getProperty("pyreFightRecordCase", "");
 
     private boolean started, arranged, done;
     private volatile boolean ready;
@@ -101,7 +114,20 @@ public final class PyreKingFightSmoke implements ClientModInitializer {
     private final Set<String> movesSeen = java.util.Collections.synchronizedSet(new LinkedHashSet<>());
     private volatile boolean sawSecondPhase, sawUnbound, kingGone;
     private volatile float fightDamage;
-    private volatile double nearest;
+    // The flank on a player who stands still: how it opened, how far it carried him, when he first saw them, and what landed.
+    private volatile double flankLanded, flankFlight;
+    private volatile int flankStart, flankSeen, flankHits;
+    private volatile String flankOpener = "", flankLast = "";
+    private volatile Vec3d flankFrom;
+    private final StringBuffer flankMoves = new StringBuffer();
+    private final java.util.ArrayDeque<Vec3d> circleKnown = new java.util.ArrayDeque<>();
+    private Vec3d circleSent;
+    private boolean circleChained, flankFlown;
+    // The circling player: how often he flanked and struck them, and how long they went unseen.
+    private volatile int circleFlanks, circleHits, circleBurns, circleHitsEating, circleHidden, circleLongest, circleRun;
+    private volatile float circleDamage;
+    private volatile String circleLast = "";
+    private final StringBuffer circleMoves = new StringBuffer();
     private final StringBuffer timeline = new StringBuffer();
     private String lastMove = "";
     private Vec3d focus;
@@ -167,8 +193,10 @@ public final class PyreKingFightSmoke implements ClientModInitializer {
                     else king(server).testMove(p, scene.move);
                 }));
             }
+            if (scene.name.equals("circles-a-pillar")) c.options.useKey.setPressed(t >= 300 && t < scene.ticks);
             during(server, uuid, scene, t);
             for (int shot : scene.shots) if (t == shot + 2) shot(c, "fight-" + scene.name + "-" + shot + ".png");
+            if (List.of(RECORD_CASE.split(",")).contains(scene.name) && t > 0 && t % 2 == 0) shot(c, String.format(Locale.ROOT, "case-%s-%05d.png", scene.name, t / 2));
         } catch (Throwable e) {
             e.printStackTrace();
             try { Files.writeString(Path.of("PYRE_KING_FIGHT_FAILED.txt"), e.toString()); } catch (Exception ignored) {}
@@ -199,12 +227,75 @@ public final class PyreKingFightSmoke implements ClientModInitializer {
                 if (t == 44) server.execute(() -> guard(() -> serverBlade = king(server).sweptBlade()));
                 if (t == 45) clientBlade = PyreKingRenderer.drawnBlade();
             }
-            // He closes on a player who never moves; his first blow would knock them away, so the fixture watches how near he got.
-            case "rounds-a-pillar" -> server.execute(() -> guard(() -> {
+            // A player who never moves from behind the pillar: he gets round it, by whichever flank he picks, and strikes.
+            case "flanks-a-pillar" -> server.execute(() -> guard(() -> {
                 ServerPlayerEntity p = server.getPlayerManager().getPlayer(uuid);
+                PyreKingEntity k = king(server);
                 Vec3d spot = home().add(0, 0, -20);
-                nearest = t <= 1 ? 99 : Math.min(nearest, king(server).getEntityPos().subtract(spot).multiply(1, 0, 1).length());
-                if (p.getHealth() < p.getMaxHealth()) p.setHealth(p.getMaxHealth());
+                if (t <= 1) { flankFlown = false; flankStart = flankSeen = -1; flankHits = 0; flankFlight = flankLanded = 0; flankOpener = flankLast = ""; flankFrom = null; flankMoves.setLength(0); }
+                String move = k.moveName();
+                if (!move.equals(flankLast)) { flankMoves.append(t).append(' ').append(move).append(", "); flankLast = move; }
+                if (flankStart < 0 && (move.equals("haul") || move.equals("lunge"))) { flankStart = t; flankOpener = move; flankFrom = k.getEntityPos(); }
+                if (flankFrom != null && !flankFlown && (move.equals("haul") || move.equals("lunge")))
+                    flankFlight = Math.max(flankFlight, k.getEntityPos().subtract(flankFrom).multiply(1, 0, 1).length());
+                else if (flankFrom != null) flankFlown = true;
+                boolean seen = server.getOverworld().raycast(new net.minecraft.world.RaycastContext(k.getEntityPos().add(0, 3.6, 0), p.getEyePos(),
+                        net.minecraft.world.RaycastContext.ShapeType.COLLIDER, net.minecraft.world.RaycastContext.FluidHandling.NONE, k))
+                        .getType() == net.minecraft.util.hit.HitResult.Type.MISS;
+                if (flankStart >= 0 && flankSeen < 0 && seen) { flankSeen = t; flankLanded = k.getEntityPos().subtract(p.getEntityPos()).multiply(1, 0, 1).length(); }
+                if (p.getHealth() < p.getMaxHealth()) { flankHits++; p.setHealth(p.getMaxHealth()); }
+            }));
+            case "circles-a-pillar", "circles-a-pillar-perfectly" -> server.execute(() -> guard(() -> {
+                ServerPlayerEntity p = server.getPlayerManager().getPlayer(uuid);
+                PyreKingEntity k = king(server);
+                boolean perfect = scene.name.endsWith("perfectly");
+                if (t <= 1) {
+                    circleFlanks = circleHits = circleBurns = circleHitsEating = circleHidden = circleLongest = circleRun = 0; circleDamage = 0; circleLast = ""; circleMoves.setLength(0);
+                    circleKnown.clear(); circleSent = null; circleChained = false;
+                    if (!perfect) p.setStackInHand(net.minecraft.util.Hand.MAIN_HAND, new net.minecraft.item.ItemStack(net.minecraft.item.Items.GOLDEN_APPLE, 64));
+                }
+                Vec3d centre = home().add(0, 0, -10), at = p.getEntityPos();
+                boolean seen = server.getOverworld().raycast(new net.minecraft.world.RaycastContext(k.getEntityPos().add(0, 3.6, 0), p.getEyePos(),
+                        net.minecraft.world.RaycastContext.ShapeType.COLLIDER, net.minecraft.world.RaycastContext.FluidHandling.NONE, k))
+                        .getType() == net.minecraft.util.hit.HitResult.Type.MISS;
+                if (seen) circleRun = 0; else { circleHidden++; circleLongest = Math.max(circleLongest, ++circleRun); }
+                String move = k.moveName();
+                if (!move.equals(circleLast)) {
+                    if (move.equals("haul") || move.equals("lunge")) circleFlanks++;
+                    circleMoves.append(t).append(' ').append(move).append(", ");
+                    circleLast = move;
+                }
+                p.removeStatusEffect(StatusEffects.ABSORPTION); p.setAbsorptionAmount(0);      // every blow shows on their health
+                if (p.getHealth() < p.getMaxHealth()) {
+                    // His fire has its own damage type; anything else is his sword or chain.
+                    var source = p.getRecentDamageSource();
+                    boolean fire = source != null && source.getTypeRegistryEntry().getKey().map(key -> key.getValue().getPath().equals("pyre_king_fire")).orElse(false);
+                    if (fire) circleBurns++;
+                    else { circleHits++; if (t >= 300) circleHitsEating++; }
+                    circleDamage += p.getMaxHealth() - p.getHealth();
+                    p.setHealth(p.getMaxHealth());
+                }
+                // Round the pillar toward the point opposite where they know him to be, no faster than a sprint. A person
+                // acts on what they saw a quarter of a second ago; the perfect one on where he is this tick.
+                circleKnown.addLast(k.getEntityPos());
+                while (circleKnown.size() > (perfect ? 1 : 6)) circleKnown.removeFirst();
+                Vec3d from = circleKnown.peekFirst();
+                Vec3d away = centre.subtract(from).multiply(1, 0, 1);
+                double wanted = Math.atan2(away.z, away.x), now = Math.atan2(at.z - centre.z, at.x - centre.x), radius = 5;
+                // Eating or drinking slows a player to a fifth of a walk, as the game does.
+                double pace = (p.isUsingItem() ? 4.3 * .2 : 5.6) / 20;
+                double turn = MathHelper.clamp(MathHelper.wrapDegrees(Math.toDegrees(wanted - now)), -Math.toDegrees(pace / radius), Math.toDegrees(pace / radius));
+                double angle = now + Math.toRadians(turn);
+                Vec3d next = new Vec3d(centre.x + Math.cos(angle) * radius, floor, centre.z + Math.sin(angle) * radius), look = from.subtract(next);
+                // A chain that has them hauls them: they do not run while it does. Thrown clear of the pillar, they run back.
+                if (!move.equals("snare")) circleChained = false;
+                else if (circleSent != null && at.squaredDistanceTo(circleSent) > .09) circleChained = true;
+                if (circleChained) { circleSent = at; return; }
+                Vec3d back = next.subtract(at);
+                if (back.length() > pace + .02) next = at.add(back.normalize().multiply(pace));
+                circleSent = next;
+                p.fallDistance = 0;
+                p.networkHandler.requestTeleport(next.x, next.y, next.z, (float) Math.toDegrees(Math.atan2(-look.x, look.z)), 5);
             }));
             case "zip" -> {
                 if (t == 31) server.execute(() -> guard(() -> place(server, uuid, 8, 0, -24, false)));
@@ -275,9 +366,32 @@ public final class PyreKingFightSmoke implements ClientModInitializer {
                     if (reached > 7.2) fail(scene, "the thrown sword should stop short of the pillar; it stuck " + round(reached) + " blocks out");
                 }
             }
-            case "rounds-a-pillar" -> {
-                notes.add("got within " + round(nearest) + " of the player");
-                if (nearest > 7) fail(scene, "he should run round the pillar to the player; he got no nearer than " + round(nearest));
+            case "haul" -> {
+                double left = at.subtract(from.x, at.y, from.z - 22).length(), flew = at.subtract(from).multiply(1, 0, 1).length();
+                notes.add("flew " + round(flew) + " blocks in under a second and landed " + round(left) + " from the player");
+                if (flew < 14 || left < 2 || left > 6.5) fail(scene, "the Haul should carry him most of the 22 blocks to the player; he flew " + round(flew) + " and is " + round(left) + " away");
+            }
+            case "snare" -> {
+                double left = player.subtract(at).multiply(1, 0, 1).length();
+                notes.add("dragged to " + round(left) + " from him");
+                if (left > 6.5) fail(scene, "the snared player should be dragged to his feet; they are " + round(left) + " away");
+            }
+            case "flanks-a-pillar" -> {
+                notes.add("opened with the " + flankOpener + " at tick " + flankStart + ", flew " + round(flankFlight) + " blocks, saw the player from tick " + flankSeen
+                        + " (" + round(flankLanded) + " away), struck them on " + flankHits + " ticks; moves: " + flankMoves);
+                if (flankStart < 0 || flankStart > 60) fail(scene, "he should start round the pillar within three seconds; he started at tick " + flankStart);
+                if (flankSeen < 0 || flankSeen - flankStart > 60) fail(scene, "a flank should bring the player into his sight within three seconds of starting; it did at tick " + flankSeen);
+                if (flankOpener.equals("haul") && flankFlight < 8) fail(scene, "the Haul should carry him far; it carried him " + round(flankFlight));
+                if (flankHits < 1) fail(scene, "a player who stands still behind a pillar should be struck once he is round it");
+            }
+            case "circles-a-pillar", "circles-a-pillar-perfectly" -> {
+                boolean perfect = scene.name.endsWith("perfectly");
+                notes.add("in " + scene.ticks / 20 + " s: " + circleFlanks + " flanks, struck " + circleHits + " times and burned " + circleBurns + " for " + circleDamage + " in all"
+                        + (perfect ? "" : " (" + circleHitsEating + " while eating, the second half)") + ", unseen "
+                        + circleHidden + " of " + scene.ticks + " ticks, " + circleLongest + " at the longest; moves: " + circleMoves);
+                if (circleFlanks < (perfect ? 3 : 6)) fail(scene, "a player circling a pillar should draw flank after flank; he flanked " + circleFlanks + " times");
+                if (!perfect && circleLongest > 120) fail(scene, "nobody should stay out of his sight for six seconds; they did for " + circleLongest + " ticks");
+                if (!perfect && circleHits < 2) fail(scene, "a player circling a pillar for 30 s, a quarter of a second behind him, should not come away unhurt");
             }
             case "unbound" -> {
                 if (!sawUnbound) fail(scene, "six walls of fire should burn after the hooks catch");
@@ -465,13 +579,23 @@ public final class PyreKingFightSmoke implements ClientModInitializer {
         ServerPlayerEntity p = server.getPlayerManager().getPlayer(uuid);
         p.setHealth(p.getMaxHealth());
         p.extinguish();
+        // A golden apple eaten in one case must not soften the blows of the next.
+        p.removeStatusEffect(StatusEffects.ABSORPTION); p.removeStatusEffect(StatusEffects.REGENERATION);
+        p.setAbsorptionAmount(0);
         boolean shield = !fight && CASES.get(next).name.contains("shielded");
         p.setStackInHand(net.minecraft.util.Hand.MAIN_HAND, net.minecraft.item.ItemStack.EMPTY);
         p.setStackInHand(net.minecraft.util.Hand.OFF_HAND, shield ? new net.minecraft.item.ItemStack(net.minecraft.item.Items.SHIELD) : net.minecraft.item.ItemStack.EMPTY);
         p.getItemCooldownManager().remove(net.minecraft.util.Identifier.ofVanilla("shield"));
-        pillar(server, !fight && CASES.get(next).name.contains("pillar"), !fight && CASES.get(next).name.startsWith("unbound") ? -8 : -12);
+        pillar(server, !fight && CASES.get(next).name.contains("pillar"), !fight && CASES.get(next).name.startsWith("unbound") ? -8 : -12,
+                !fight && (CASES.get(next).name.startsWith("flanks") || CASES.get(next).name.startsWith("circles")));
         if (fight) { place(server, uuid, 0, 0, -15, false); watch(server, 0, -15); }
-        else { Case scene = CASES.get(next); place(server, uuid, scene.x, scene.y, scene.z, scene.hover); watch(server, scene.x, scene.z); }
+        else {
+            Case scene = CASES.get(next);
+            place(server, uuid, scene.x, scene.y, scene.z, scene.hover);
+            watch(server, scene.x, scene.z);
+            // He goes round the pillar in these, to either side: seen from high above, where it hides nothing.
+            if (scene.name.equals("flanks-a-pillar") || scene.name.startsWith("circles-a-pillar")) overlook(server, home().add(0, 0, scene.name.startsWith("flanks") ? -13 : -10));
+        }
     }
 
     /** The camera is not the player, so the game does not draw them: an armor stand stands in, wherever they are. */
@@ -511,11 +635,25 @@ public final class PyreKingFightSmoke implements ClientModInitializer {
         stand.setHeadYaw(yaw); stand.setBodyYaw(yaw);
     }
 
-    /** A pillar 5 across and 8 tall in front of his mark, its far face at block z = far (8 to 12 blocks out, or 4 to 8 for Unbound); or none. */
-    private void pillar(MinecraftServer server, boolean stands, int far) {
+    /** Stands the camera high over a point, looking almost straight down on it. */
+    private void overlook(MinecraftServer server, Vec3d over) {
+        if (!(server.getOverworld().getEntity(camera) instanceof net.minecraft.entity.decoration.ArmorStandEntity stand)) return;
+        Vec3d eye = over.add(10, 40, 0), look = over.add(0, 1, 0).subtract(eye);
+        float yaw = (float) Math.toDegrees(Math.atan2(-look.x, look.z)), pitch = (float) -Math.toDegrees(Math.atan2(look.y, Math.hypot(look.x, look.z)));
+        stand.refreshPositionAndAngles(eye.x, eye.y - stand.getStandingEyeHeight(), eye.z, yaw, pitch);
+        stand.setHeadYaw(yaw); stand.setBodyYaw(yaw);
+    }
+
+    /**
+     * A pillar 8 tall in front of his mark, or none: 5 across with its far face at block z = far (8 to 12 blocks out,
+     * or 4 to 8 for Unbound), or round and 7 across like the hall's, centred 10 blocks out.
+     */
+    private void pillar(MinecraftServer server, boolean stands, int far, boolean round) {
         var w = server.getOverworld();
-        for (int x = -2; x <= 2; x++) for (int z = -12; z <= -4; z++) for (int y = 0; y < 8; y++)
-            w.setBlockState(new BlockPos(x, floor + y, z), (stands && z >= far && z < far + 5 ? Blocks.POLISHED_BLACKSTONE_BRICKS : Blocks.AIR).getDefaultState());
+        for (int x = -4; x <= 4; x++) for (int z = -14; z <= -4; z++) for (int y = 0; y < 8; y++) {
+            boolean stone = stands && (round ? x * x + (z + 10) * (z + 10) <= 3.6 * 3.6 : Math.abs(x) <= 2 && z >= far && z < far + 5);
+            w.setBlockState(new BlockPos(x, floor + y, z), (stone ? Blocks.POLISHED_BLACKSTONE_BRICKS : Blocks.AIR).getDefaultState());
+        }
     }
 
     /** Stands the player at an offset from his mark, facing him. */

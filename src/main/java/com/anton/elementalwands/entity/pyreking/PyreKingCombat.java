@@ -55,7 +55,7 @@ final class PyreKingCombat {
         final ArrayDeque<Vec3d> path = new ArrayDeque<>();     // newest first, one per tick
         long jumped = Long.MIN_VALUE / 2, struck = Long.MIN_VALUE / 2, burnAt;
         float struckFor;
-        int behind, aloft, combo = -1;
+        int behind, aloft, hidden, combo = -1;
         double ground;
     }
 
@@ -72,7 +72,15 @@ final class PyreKingCombat {
     private final List<Mark> marks = new ArrayList<>();
     private Vec3d home;
     private boolean engaged, reviewing, phasePending;
-    private long emptySince = -1, nextPick, lastDeflect, lastBlow = Long.MIN_VALUE / 2;
+    /** A way round a pillar: the move it opens with, and where that move's sword is thrown. */
+    private record Flank(Move opener, Vec3d sword) {}
+    /** The flank he has chosen and is turning onto the line of. */
+    private Flank pending;
+    private long pendingUntil;
+    /** He is on his way round a pillar: from a flank's first move until its last ends. */
+    private boolean flanking;
+    private Move lastFlank;
+    private long emptySince = -1, nextPick, flankRetry, lastDeflect, lastBlow = Long.MIN_VALUE / 2;
     private UUID target, lastTarget;
     private long targetSince, lastBegan;
     private int steerSide = 1;
@@ -88,6 +96,8 @@ final class PyreKingCombat {
     private double calledOff = -1;
     private double aimRight, aimUp, aimAhead;
     private Vec3d aimPoint, landing;
+    /** A flank: where this move's sword is thrown instead of at his target. */
+    private Vec3d flank;
     private final Map<UUID, Integer> groups = new HashMap<>();
     private UUID caught;
     private Vec3d caughtAt;
@@ -115,7 +125,7 @@ final class PyreKingCombat {
         release();
         // Unbound cut short (an operator's command, Peaceful) has still spent the half-health hold: he is in phase two.
         if (move == Move.UNBOUND) boss.setSecondPhase(true);
-        move = null; last = before = null; target = lastTarget = null;
+        move = null; last = before = lastFlank = null; target = lastTarget = null; flank = null; pending = null; flanking = false;
         engaged = reviewing = false; emptySince = -1; chained = 0;
         fires.clear(); marks.clear(); seen.clear(); groups.clear();
         phasePending = false;
@@ -230,9 +240,33 @@ final class PyreKingCombat {
         if (phasePending && !boss.unboundDone()) { begin(world, Move.UNBOUND, null, now, 3); return; }
         ServerPlayerEntity player = target(world, players);
         Read read = read(world, player, now);
-        if (now >= nextPick && !read.sight() && !read.elevated() && boss.getRandom().nextDouble() < .7) {
-            nextPick = now + 20;        // his target is behind a pillar: mostly he keeps coming round it rather than swing at stone
-        } else if (now >= nextPick || punishes(read) && now >= nextPick - 12) {
+        Seen watched = seen.get(player.getUuid());
+        boolean hiding = !read.sight() && !read.elevated();
+        if (pending != null && !hiding) pending = null;
+        if (pending != null) {
+            // A Haul or a Lunge is drawn from where it began: he turns onto the line of his throw, then goes.
+            halt();
+            settle();
+            face(pending.sword(), FLANK_TURN);
+            if (Math.abs(off(pending.sword())) <= 4) {
+                Flank go = pending;
+                pending = null;
+                begin(world, go.opener(), player, now, 2);
+                flank = go.sword();
+                flanking = true;
+                lastFlank = go.opener();
+            } else if (now >= pendingUntil) pending = null;
+            return;
+        }
+        // Hiding behind a pillar buys a moment, not a rest, and eating or drinking there buys less: he gets round it.
+        if (hiding && now >= flankRetry && watched != null && (read.healing()
+                ? watched.hidden >= FLANK_HEALING && now >= nextPick - 12
+                : watched.hidden >= FLANK_AFTER && now >= nextPick)) {
+            pending = flank(world, player, read);
+            if (pending != null) { pendingUntil = now + 10; halt(); return; }
+            flankRetry = now + 10;      // nowhere to throw it from here: he keeps coming round, and looks again shortly
+        }
+        if (now >= nextPick || punishes(read) && now >= nextPick - 12) {
             Move choice = choose(read, last, before, boss.getRandom()::nextDouble);
             if (choice != null && ready(choice, player)) { begin(world, choice, player, now, 3); return; }
         }
@@ -268,6 +302,7 @@ final class PyreKingCombat {
     // ── What he sees ─────────────────────────────────────────────────────────
 
     private void observe(List<ServerPlayerEntity> players, long now) {
+        ServerWorld world = (ServerWorld) boss.getEntityWorld();
         seen.keySet().removeIf(id -> players.stream().noneMatch(p -> p.getUuid().equals(id)));
         Vec3d forward = forward(boss.getBodyYaw());
         for (ServerPlayerEntity player : players) {
@@ -283,6 +318,7 @@ final class PyreKingCombat {
             boolean behind = distance <= 6.5 && distance > .2 && to.normalize().dotProduct(forward) < -.5;
             s.behind = behind ? s.behind + 1 : 0;
             s.aloft = at.y - boss.getY() > ELEVATED && (player.isOnGround() || player.getVelocity().y > -.3) ? s.aloft + 1 : 0;
+            s.hidden = sight(world, player) ? 0 : s.hidden + 1;
         }
     }
 
@@ -361,6 +397,80 @@ final class PyreKingCombat {
         return wish;
     }
 
+    /** One of the ways round the pillar that are open to him from where he stands; null when there is none. */
+    private Flank flank(ServerWorld world, ServerPlayerEntity player, Read read) {
+        Map<Move, Vec3d> spots = new java.util.EnumMap<>(Move.class);
+        for (Move opener : new Move[]{Move.HAUL, Move.LUNGE}) {
+            Vec3d spot = flankSpot(world, player, opener);
+            if (spot != null) spots.put(opener, spot);
+        }
+        Move opener = pick(flankWeights(spots.containsKey(Move.HAUL), spots.containsKey(Move.LUNGE), read.healing(), lastFlank), boss.getRandom()::nextDouble);
+        return opener == null ? null : new Flank(opener, spots.get(opener));
+    }
+
+    /**
+     * Where to throw his sword so that the chain sets him down in sight of a target who is hiding from him, by the
+     * opener's rule. He flies there in a straight line, his whole width clear of the stone. Null when there is no
+     * such spot.
+     */
+    private Vec3d flankSpot(ServerWorld world, ServerPlayerEntity player, Move opener) {
+        FlankRule rule = flankRule(opener);
+        Vec3d from = boss.getEntityPos(), target = player.getEntityPos(), eyes = player.getEyePos();
+        // He lands this far short of where the blade stands.
+        double shortOf = PyreKingAim.get(opener.clip).stick()[2] - PyreKingTracks.get(opener.clip).travelEnd();
+        double across = boss.getWidth() / 2 + .15;
+        Vec3d away = from.subtract(target).multiply(1, 0, 1);
+        Vec3d best = null;
+        double most = -Double.MAX_VALUE;
+        for (double ring : rule.rings()) {
+            for (int i = 0; i < 24; i++) {
+                double angle = i * Math.PI / 12;
+                Vec3d out = new Vec3d(Math.cos(angle), 0, Math.sin(angle));
+                Vec3d land = new Vec3d(target.x + out.x * ring, from.y, target.z + out.z * ring);
+                Vec3d to = land.subtract(from);
+                double run = to.length();
+                if (run + shortOf < rule.near() || run + shortOf > rule.far()) continue;
+                if (home != null && land.subtract(home).multiply(1, 0, 1).length() > LEASH) continue;
+                Vec3d heading = to.multiply(1 / run), side = new Vec3d(-heading.z, 0, heading.x).multiply(across);
+                Vec3d chest = from.add(0, 1.2, 0), sword = land.add(heading.multiply(shortOf));
+                // His whole width flies there, the sword a little further; he fits where he lands, and sees them from it.
+                if (!clear(world, chest, sword.add(0, 1.2, 0)) || !clear(world, chest.add(side), land.add(side).add(0, 1.2, 0))
+                        || !clear(world, chest.subtract(side), land.subtract(side).add(0, 1.2, 0))) continue;
+                if (!world.isSpaceEmpty(boss, boss.getBoundingBox().offset(to).contract(.02))) continue;
+                Vec3d head = land.add(0, 3.6, 0);
+                if (!clear(world, head, eyes)) continue;
+                double score;
+                if (rule.wide()) {
+                    // Where they would have the furthest to go to be out of his sight again; then as far round the
+                    // pillar from where he stands as he can fly, about a dozen blocks from them.
+                    double round = away.lengthSquared() < 1e-4 ? 0 : Math.toDegrees(Math.acos(Math.clamp(away.normalize().dotProduct(out), -1.0, 1.0)));
+                    score = cover(world, player, head) * 10 + round / 9 - Math.abs(ring - 12) * .5;
+                } else {
+                    // Beside them with nothing between, so the cut he lands in can reach; and the shortest flight there.
+                    if (!clear(world, land.add(0, 2.5, 0), target.add(0, player.getHeight() * .5, 0))) continue;
+                    score = -run;
+                }
+                if (score > most) { most = score; best = sword; }
+            }
+            if (best != null && !rule.wide()) return best;       // the nearest ring that works
+        }
+        return best;
+    }
+
+    /**
+     * How far his target would have to go, from where they stand, to be out of sight of a head at this point: the
+     * nearest of a few rings of spots round them that is hidden from it and has room to stand in.
+     */
+    private double cover(ServerWorld world, ServerPlayerEntity player, Vec3d head) {
+        Vec3d eyes = player.getEyePos();
+        for (double reach : coverRings()) for (int i = 0; i < 12; i++) {
+            double angle = i * Math.PI / 6;
+            Vec3d step = new Vec3d(Math.cos(angle) * reach, 0, Math.sin(angle) * reach);
+            if (!clear(world, head, eyes.add(step)) && world.isSpaceEmpty(player, player.getBoundingBox().offset(step).contract(.02))) return reach;
+        }
+        return COVER_NONE;
+    }
+
     private boolean passable(ServerWorld world, Vec3d heading) {
         Vec3d chest = boss.getEntityPos().add(0, 1.2, 0), across = new Vec3d(-heading.z, 0, heading.x).multiply(boss.getWidth() / 2 + .15);
         Vec3d ahead = heading.multiply(3.2);
@@ -393,7 +503,7 @@ final class PyreKingCombat {
         swept = 0; cue = 0; retracked = 0; calledOff = -1;
         aimFrozen = turned = branched = decided = zipNext = landed = blowLanded = false;
         aimRight = aimUp = aimAhead = 0;
-        aimPoint = landing = null;
+        aimPoint = landing = flank = null;
         groups.clear();
         if (next == Move.UNBOUND) {     // from here he cannot be hurt until it ends, and the half-health hold is spent
             boss.setUnboundDone(true);
@@ -408,7 +518,17 @@ final class PyreKingCombat {
         move = null;
         before = last; last = done;
         doubled = false;
+        boolean flanked = flanking;
+        flank = null;
+        flanking = false;
         if (reviewing) return;
+        if (flanked) {      // round the pillar: he presses at once, and whoever is behind the stone again already has earned only a short moment
+            Seen s = target == null ? null : seen.get(target);
+            if (s != null && s.hidden > 0) s.hidden = Math.max(s.hidden, FLANK_AFTER - FLANK_AGAIN);
+            chained = 0;
+            nextPick = now;
+            return;
+        }
         boolean second = boss.isSecondPhase();
         // Sometimes he goes straight into another string; otherwise he closes on his next target for a moment.
         if (done.swordString() && chained < chainLimit(second) - 1 && boss.getRandom().nextDouble() < chainChance(second)) {
@@ -434,10 +554,14 @@ final class PyreKingCombat {
         halt();
         if (calledOff >= 0) { if (t >= calledOff) finish(now); return; }
         // While clients blend into the clip he may still turn, unless the clip is one drawn from where it began.
-        if (t < 0) { if (player != null && move.aimUntil > 0 && !boss.clipCarriesHim()) face(player.getEntityPos(), AIM_TURN); return; }
+        // A flank's throw is aimed at its spot beside the pillar, not at the player behind it. The Snare is thrown as
+        // he whips round on them from wherever the Haul set him down.
+        Vec3d aimAt = flank != null ? flank : player == null ? null : player.getEntityPos();
+        float turn = move == Move.SNARE ? SNARE_TURN : AIM_TURN;
+        if (t < 0) { if (aimAt != null && move.aimUntil > 0 && !boss.clipCarriesHim()) face(aimAt, turn); return; }
 
         // Aim: he tracks until the snap, then the direction is fixed; a follow-up may turn a little toward the dodge.
-        if (player != null && !aimFrozen && t < move.aimUntil && !boss.clipCarriesHim()) face(player.getEntityPos(), AIM_TURN);
+        if (aimAt != null && !aimFrozen && t < move.aimUntil && !boss.clipCarriesHim()) face(aimAt, turn);
         if (!aimFrozen && t >= move.aimUntil) { aimFrozen = true; freeze(world, player, t); }
         if (player != null) for (Retrack retrack : move.retracks) if (t >= retrack.from() && t < retrack.to()) {
             float room = retrack.degrees() - retracked;
@@ -527,11 +651,17 @@ final class PyreKingCombat {
     private void hold(float yaw) { boss.setYaw(yaw); boss.setBodyYaw(yaw); boss.setHeadYaw(yaw); }
 
     /** Where a moving target will be in `ticks`: its recent velocity carried forward, never far. */
-    private Vec3d lead(ServerPlayerEntity player, double ticks) {
+    private Vec3d lead(ServerPlayerEntity player, double ticks) { return lead(player, ticks, HISTORY); }
+
+    /** The same, read from only the last `span` ticks of their path: what they are doing now, not what they were. */
+    private Vec3d lead(ServerPlayerEntity player, double ticks, int span) {
         Seen s = seen.get(player.getUuid());
         Vec3d at = player.getEntityPos();
-        if (s == null || s.path.size() < 6) return at;
-        Vec3d velocity = s.path.peekFirst().subtract(s.path.peekLast()).multiply(1.0 / (s.path.size() - 1)).multiply(1, 0, 1);
+        if (s == null || s.path.size() < Math.min(6, span)) return at;
+        Vec3d old = null;
+        int count = 0;
+        for (Vec3d point : s.path) { old = point; if (++count >= span) break; }
+        Vec3d velocity = s.path.peekFirst().subtract(old).multiply(1.0 / (count - 1)).multiply(1, 0, 1);
         Vec3d ahead = velocity.multiply(ticks);
         if (ahead.length() > LEAD_MAX) ahead = ahead.normalize().multiply(LEAD_MAX);
         return at.add(ahead);
@@ -573,30 +703,39 @@ final class PyreKingCombat {
         Vec3d point;
         switch (move) {
             case CAST -> point = reachable(world, lead(player, (1.26 - .47) * 20));
-            case LUNGE -> {
-                Vec3d wanted = lead(player, (1.7 - .45) * 20 * .5);
-                Vec3d back = boss.getEntityPos().subtract(wanted).multiply(1, 0, 1);
-                Vec3d spot = wanted.add(back.lengthSquared() < 1e-6 ? Vec3d.ZERO : back.normalize().multiply(Math.min(LUNGE_SHORT, back.length())));
-                point = reachable(world, spot);
+            case LUNGE, HAUL -> {
+                if (flank != null) point = flank;
+                else {
+                    Vec3d wanted = lead(player, move == Move.HAUL ? 6 : (1.7 - .45) * 20 * .5);
+                    Vec3d back = boss.getEntityPos().subtract(wanted).multiply(1, 0, 1);
+                    Vec3d spot = wanted.add(back.lengthSquared() < 1e-6 ? Vec3d.ZERO : back.normalize().multiply(Math.min(LUNGE_SHORT, back.length())));
+                    point = reachable(world, spot);
+                }
             }
             case HOOK -> point = lead(player, 8).add(0, player.getHeight() * .55, 0);
+            case SNARE -> {
+                // Thrown past them: a target running from him runs onto the blade, not out from under its point.
+                Vec3d at = lead(player, 8, 4), out = at.subtract(boss.getEntityPos()).multiply(1, 0, 1);
+                point = at.add(out.lengthSquared() < 1e-6 ? Vec3d.ZERO : out.normalize().multiply(SNARE_PAST)).add(0, player.getHeight() * .55, 0);
+            }
             case DRAG_DOWN -> point = lead(player, 6).add(0, player.getHeight() * .5, 0);
             default -> { return; }
         }
         double[] in = frame(point);
-        if (move == Move.CAST || move == Move.LUNGE) {
+        if (move == Move.CAST || move == Move.LUNGE || move == Move.HAUL) {
             // The sword goes at least a little way out, but never past a pillar he has backed his target behind.
             in[1] = 0;
             double least = move == Move.LUNGE ? 4.5 : 6;
             if (in[2] < least) in[2] = Math.max(1.7, Math.min(least, Math.max(in[2], open(world, least))));
         }
-        if (move == Move.HOOK) in[2] = Math.max(in[2], 8);
+        if (move.hooks()) in[2] = Math.max(in[2], 8);
         aimPoint = world(in);
         aimRight = in[0] - stick[0]; aimUp = in[1] - stick[1]; aimAhead = in[2] - stick[2];
         boss.setAim(aimRight, aimUp, aimAhead);
-        if (move == Move.CAST || move == Move.HOOK)        // the line the throw will fly along, solid from the freeze
-            marks.add(new Mark(boss.getEntityPos().add(0, .15, 0), new Vec3d(aimPoint.x, boss.getY() + .15, aimPoint.z), 0, started + (long) (1.2 * 20)));
+        if (move == Move.CAST || move.hooks())        // the line the throw will fly along, solid from the freeze
+            marks.add(new Mark(boss.getEntityPos().add(0, .15, 0), new Vec3d(aimPoint.x, boss.getY() + .15, aimPoint.z), 0, started + (long) ((1.2 - move.hookLead()) * 20)));
         if (move == Move.LUNGE) land(world, thrown, started + (long) (1.75 * 20));
+        if (move == Move.HAUL) land(world, thrown, started + (long) (.85 * 20));
     }
 
     /** Where the chain will set him down, ringed with embers until his cut lands there. */
@@ -606,7 +745,7 @@ final class PyreKingCombat {
         marks.add(new Mark(landing.add(0, .15, 0), landing.add(0, .15, 0), LANDING_RING, until));
     }
 
-    /** Zip, Lunge and the Turning Cut move or turn him inside the clip; this makes it real as the clip does it. */
+    /** Zip, Lunge, Haul and the Turning Cut move or turn him inside the clip; this makes it real as the clip does it. */
     private void carry(ServerWorld world, double t) {
         if (!boss.clipCarriesHim()) return;
         PyreKingTracks.Track track = PyreKingTracks.get(move.clip);
@@ -622,6 +761,9 @@ final class PyreKingCombat {
                 landed = true;
                 sound(world, at, SoundEvents.ENTITY_IRON_GOLEM_ATTACK, 2.4f, .5f);
                 ring(world, at.add(0, .1, 0), 2.2, ParticleTypes.LAVA, 14);
+                // The Haul scorches the line he flew: past a pillar, that is a wall across the way round it.
+                if (move == Move.HAUL && !reviewing)
+                    fire(world, boss.clipOrigin(), new Vec3d(at.x, boss.getY(), at.z), FIRE_HALF, boss.isSecondPhase() ? FIRE_TALL : FIRE_LOW, world.getTime(), HAUL_FIRE);
             }
         }
         PyreKingClips.Clip clip = PyreKingClips.get(move.clip);
@@ -674,8 +816,11 @@ final class PyreKingCombat {
             if (sweptDistanceSquared(at[0], at[2], a[i][0], a[i][2], a[i + 1][0], a[i + 1][2], b[i][0], b[i][2], b[i + 1][0], b[i + 1][2]) > reach * reach) continue;
             // Unbound's chains wrap round the pillars: whoever stands behind one is sheltered.
             if (window.part() == Part.CHAINS && !clear(world, world(a[0]), player.getEntityPos().add(0, .4, 0))) continue;
-            // A pillar stops the Hook outright.
-            if (move == Move.HOOK && !clear(world, boss.getEntityPos().add(0, 2.5, 0), player.getEntityPos().add(0, player.getHeight() * .5, 0))) continue;
+            // Nothing else of his passes through stone either: a pillar between him and a player shelters them from
+            // his blade in hand, from the chain and whatever swings on it, and from the Hook. (A sword thrown to stick
+            // is where it is: it was aimed short of the stone.)
+            if ((window.part() == Part.CHAIN || window.band() == Band.SOLID || move.hooks())
+                    && !clear(world, boss.getEntityPos().add(0, 2.5, 0), player.getEntityPos().add(0, player.getHeight() * .5, 0))) continue;
             return true;
         }
         return false;
@@ -692,7 +837,7 @@ final class PyreKingCombat {
         s.struck = now; s.struckFor = window.damage();
         blowLanded = true;
         Vec3d away = player.getEntityPos().subtract(boss.getEntityPos()).multiply(1, 0, 1);
-        if (move == Move.HOOK || move == Move.DRAG_DOWN) {
+        if (move.hooks() || move == Move.DRAG_DOWN) {
             caught = player.getUuid();
             caughtAt = player.getEntityPos();
             sound(world, player.getEntityPos(), SoundEvents.BLOCK_CHAIN_PLACE, 2f, .6f);
@@ -778,19 +923,40 @@ final class PyreKingCombat {
             case LUNGE -> {
                 if (crossed(t, .62)) sound(world, boss.getEntityPos(), SoundEvents.ITEM_TRIDENT_THROW.value(), 2.2f, .7f);
             }
-            case HOOK -> {
-                if (crossed(t, 1.0)) sound(world, boss.getEntityPos(), SoundEvents.ITEM_TRIDENT_THROW.value(), 2.6f, .4f);
+            case HAUL -> {
+                if (crossed(t, .3)) sound(world, boss.getEntityPos(), SoundEvents.ITEM_TRIDENT_THROW.value(), 2.4f, .8f);
+                // Set down where he can see them, he throws again at once: the Snare.
+                if (t >= move.free && !reviewing && player != null && player.getY() - boss.getY() <= ELEVATED && sight(world, player)) {
+                    Move done = move;
+                    begin(world, Move.SNARE, player, now, 2);
+                    before = last; last = done;
+                    return true;
+                }
+            }
+            case HOOK, SNARE -> {
+                double lead = move.hookLead();
+                if (move == Move.SNARE && !reviewing) {
+                    // Thrown only at what he can see: if they are behind the stone again before it leaves his hand, he keeps it.
+                    if (t >= move.aimUntil && t < SNARE_THROWN && (player == null || !sight(world, player))) {
+                        marks.removeIf(mark -> mark.radius() == 0);
+                        callOff(t + SNARE_KEPT);
+                        return true;
+                    }
+                    // And a throw that caught nobody is whipped straight back, not hauled in hand over hand.
+                    if (t >= SNARE_MISSED && caught == null) { callOff(t + SNARE_RECALL); return true; }
+                }
+                if (crossed(t, 1.0 - lead)) sound(world, boss.getEntityPos(), SoundEvents.ITEM_TRIDENT_THROW.value(), 2.6f, .4f);
                 if (caught != null) {
                     ServerPlayerEntity held = held(world, players);
                     if (held == null) caught = null;
-                    else if (t < HOOK_DRAG_UNTIL) {
+                    else if (t < HOOK_DRAG_UNTIL - lead) {
                         // They come in on the sword's hilt as he hauls it, and stop at his feet.
                         double[] pommel = shape(Part.BLADE, t, 0)[0];
                         Vec3d to = world(new double[]{pommel[0] * .3, 0, Math.max(pommel[2] + .6, HOOK_HOLD)});
                         drag(world, held, new Vec3d(to.x, boss.getY(), to.z), true);
                     }
                 }
-                if (t >= HOOK_FOLLOW_AT && caught != null && !reviewing) {
+                if (t >= HOOK_FOLLOW_AT - lead && caught != null && !reviewing) {
                     ServerPlayerEntity held = held(world, players);
                     release();
                     if (held != null) { begin(world, Move.OVERHEAD, held, now, 3); aimFrozen = true; return true; }
@@ -849,7 +1015,10 @@ final class PyreKingCombat {
     /** Whether the clip passed this moment during this tick. */
     private boolean crossed(double t, double moment) { return swept < moment && t >= moment; }
 
-    /** The Cast ends in a Zip instead of a Reel: the chain hauls him to his sword where it stands. */
+    /**
+     * The Cast ends in a Zip instead of a Reel: the chain hauls him to his sword where it stands. The Zip's clip opens
+     * on the Cast's wait, so it follows that with no blend.
+     */
     private void zip(ServerWorld world, long now) {
         double right = aimRight, up = aimUp, ahead = aimAhead;
         Vec3d point = aimPoint;
@@ -866,7 +1035,7 @@ final class PyreKingCombat {
         boss.setAim(right, up, ahead);
         before = last; last = done;
         marks.removeIf(mark -> mark.radius() == 0);
-        land(world, PyreKingAim.get(Move.ZIP.clip), now + (long) (1.5 * 20));
+        land(world, PyreKingAim.get(Move.ZIP.clip), started + (long) (1.5 * 20));
         sound(world, boss.getEntityPos(), SoundEvents.BLOCK_CHAIN_BREAK, 2.6f, .5f);
     }
 

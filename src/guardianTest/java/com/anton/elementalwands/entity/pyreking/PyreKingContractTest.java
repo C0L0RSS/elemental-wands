@@ -24,6 +24,29 @@ public final class PyreKingContractTest {
             require(fire >= 1.5 && fire <= 3, "A second in his fire should cost about a tenth of a player's health: " + fire);
         }
         require(PyreKingRules.YANK < PyreKingRules.CHAIN && PyreKingRules.TUG < PyreKingRules.CHAIN, "The drags' own damage is light: what follows them is the threat");
+        // Hiding: a pillar is answered in under two seconds, eating there sooner than a bite takes, and slipping back
+        // behind it as a flank ends sooner still.
+        require(PyreKingRules.FLANK_AFTER <= 40 && PyreKingRules.FLANK_HEALING < 32 && PyreKingRules.FLANK_HEALING < PyreKingRules.FLANK_AFTER
+                && PyreKingRules.FLANK_AGAIN < PyreKingRules.FLANK_AFTER, "A hiding player should draw a flank quickly, a healing one sooner, and one who hides again sooner still");
+        // A flank must beat running there (the developer, Nov 11: a short one "might look faster if he just walked it").
+        PyreKingRules.FlankRule haul = PyreKingRules.flankRule(Move.HAUL);
+        require(Move.HAUL.free <= 1.0 && (haul.near() - 1.5) / Move.HAUL.free > PyreKingRules.RUN_TWO * 1.5, "The Haul's shortest flight should be far quicker than his run");
+        require(haul.wide() && haul.rings()[0] >= 8 && haul.far() <= 30, "The Haul sets him down in the open, inside the Snare's reach of his target");
+        require(Move.HAUL.windows.isEmpty() && Move.SNARE.hooks() && Move.HOOK.hooks() && !Move.CAST.hooks(), "The Haul strikes nobody; the Snare is a Hook");
+        Window snare = Move.SNARE.windows.get(0), hook = Move.HOOK.windows.get(0);
+        require(near(snare.from(), hook.from() - PyreKingRules.SNARE_LEAD) && near(snare.to(), hook.to() - PyreKingRules.SNARE_LEAD)
+                && near(Move.SNARE.free, Move.HOOK.free - PyreKingRules.SNARE_LEAD) && snare.damage() == hook.damage(), "The Snare is the Hook, sooner");
+        require(Move.HAUL.free + snare.from() < 1.5, "From the start of a Haul to the Snare's throw should be under a second and a half");
+        require(near(PyreKingRules.SNARE_THROWN, snare.from()) && PyreKingRules.SNARE_MISSED > snare.to() && PyreKingRules.SNARE_MISSED + PyreKingRules.SNARE_RECALL < Move.SNARE.free - 1,
+                "A Snare that catches nobody should cost him far less than the Hook's haul");
+        require(PyreKingRules.SNARE_PAST > 1 && PyreKingRules.SNARE_PAST < PyreKingTracks.SWORD_BLOCKS - 1, "The Snare should overshoot its target by less than its blade, so they are on it");
+        Map<Move, Double> all = PyreKingRules.flankWeights(true, true, false, null);
+        require(all.get(Move.HAUL) > all.get(Move.LUNGE) && !all.containsKey(Move.CAST), "The Haul is his usual way round a pillar, and the slow Cast is none");
+        Map<Move, Double> healing = PyreKingRules.flankWeights(true, true, true, null);
+        require(healing.get(Move.LUNGE) > healing.get(Move.HAUL), "A target healing behind a pillar draws the flank that lands a blow soonest");
+        require(PyreKingRules.flankWeights(true, true, false, Move.HAUL).get(Move.HAUL) < all.get(Move.HAUL)
+                && PyreKingRules.flankWeights(true, false, false, Move.HAUL).get(Move.HAUL).equals(all.get(Move.HAUL))
+                && PyreKingRules.flankWeights(false, false, false, null).isEmpty(), "He varies his flanks when he has more than one");
         require(PyreKingRules.RUN < 5.6 && PyreKingRules.RUN > 4.3 && PyreKingRules.RUN_TWO < 5.6, "He must be slower than a sprint and faster than a player backing away");
 
         // Every move is a real clip with tracks, and everything it does happens inside that clip.
@@ -40,7 +63,7 @@ public final class PyreKingContractTest {
                 end = window.to();
             }
             // The opening after his last blow is tight, as the developer asked: under a second (Unbound is a set piece).
-            if (move != Move.UNBOUND && move != Move.CAST && move != Move.HOOK)
+            if (move != Move.UNBOUND && move != Move.CAST && !move.hooks() && move != Move.HAUL)
                 require(move.free - move.lastBlow() <= 1.0 + 1e-6 && move.free - move.lastBlow() >= .4, move + " should leave an opening of 0.4 to 1 s, not " + (move.free - move.lastBlow()));
             for (double cue : move.cues) require(cue >= 0 && cue < move.lastBlow(), move + " warns after its last blow");
             // A blow that needs a warning gets one at least 0.3 s before it can land.
@@ -48,7 +71,7 @@ public final class PyreKingContractTest {
                 require(move.cues.length > 0 && move.windows.get(0).from() - move.cues[0] >= .3, move + " lands without a warning");
         }
         // The thrown sword's aim: none in his hand, all of it where it sticks, and his body takes it over a haul.
-        for (String clip : new String[]{"cast_reel", "hook", "lunge", "drag_down"}) {
+        for (String clip : new String[]{"cast_reel", "hook", "lunge", "drag_down", "haul", "snare"}) {
             PyreKingAim.Throw thrown = PyreKingAim.get(clip);
             require(thrown != null && thrown.sword(0) == 0 && thrown.lift(0) == 0 && thrown.body(0) == 0, clip + " moves a sword that is still in his hand");
         }
@@ -57,6 +80,10 @@ public final class PyreKingContractTest {
         PyreKingAim.Throw zip = PyreKingAim.get("zip"), lunge = PyreKingAim.get("lunge");
         for (double t = 0; t < 3.2; t += .05) require(near(zip.sword(t), 1), "The sword a Zip hauls him to must not move, then must travel with him");
         require(zip.body(.5) == 0 && near(zip.body(1.1), 1) && lunge.body(.85) == 0 && near(lunge.body(1.4), 1), "Zip and Lunge must carry his body to the end of the haul");
+        PyreKingAim.Throw hauled = PyreKingAim.get("haul");
+        require(near(hauled.sword(.5), 1) && hauled.body(.45) == 0 && near(hauled.body(.85), 1) && near(PyreKingAim.get("snare").sword(.75), 1),
+                "The Haul must carry his body to its stuck sword, and the Snare's sword must take the whole aim");
+        require(PyreKingTracks.get("haul").travelEnd() > PyreKingTracks.get("lunge").travelEnd() * 1.5, "The Haul should go much further than the Lunge");
         require(near(PyreKingAim.get("drag_down").lift(1.3), 0), "Drag Down's sword must come down to the floor");
         require(PyreKingAim.get("royal_cut") == null && PyreKingAim.get("chain_scythe_low") == null, "Only throws are aimed");
         double[] stick = PyreKingAim.get("cast_reel").stick();
@@ -80,8 +107,9 @@ public final class PyreKingContractTest {
         require(share(retreat, Move.THRUST, random) > .4, "Backing straight away should draw the Thrust");
         require(share(far, Move.CAST, random) > .5 && share(distant, Move.HOOK, random) > .5, "Far targets draw the Cast, very far ones the Hook");
         require(PyreKingRules.choose(hidden, null, null, random::nextDouble) == null
-                && PyreKingRules.weights(new Read(10, false, false, false, false, false, false, false), null, null).containsKey(Move.SCYTHE_LOW),
-                "He does not throw at what he cannot see, but the Scythe ignores cover");
+                && PyreKingRules.weights(new Read(10, false, false, false, false, false, false, false), null, null).isEmpty()
+                && PyreKingRules.weights(new Read(4, false, true, false, false, true, false, true), null, null).isEmpty(),
+                "He swings at nothing he cannot see: stone shelters a player from every blow, the Scythe included");
         require(PyreKingRules.choose(aloft, null, null, random::nextDouble) == Move.DRAG_DOWN && PyreKingRules.choose(out, null, null, random::nextDouble) == null,
                 "A player overhead draws Drag Down once he is under them");
         // Eating in the open: he does not wait out his gap, and it is the sword that comes, thrown or flown after.

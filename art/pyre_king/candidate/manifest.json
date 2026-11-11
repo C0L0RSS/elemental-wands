@@ -776,6 +776,28 @@
         -6.9
       ]
     },
+    "haul": {
+      "length": 1.5,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        -12.9
+      ]
+    },
+    "snare": {
+      "length": 2.7,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
     "unbound": {
       "length": 4.3,
       "loop": false,

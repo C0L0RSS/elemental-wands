@@ -101,7 +101,7 @@ public final class AstralDoubleManager {
             p.requestTeleport(destination.x,destination.y,destination.z);
             p.setVelocity(Vec3d.ZERO); p.fallDistance=0; p.velocityModified=true;
             finish(c,COOLDOWN); BlockSpaceEvents.send(world,BlockSpaceEvents.BLINK,p.getId(),from,destination,0);
-            world.playSound(null,p.getBlockPos(),ModSounds.SPELL_SPACE_ASTRAL_DOUBLE_TELEPORT,SoundCategory.PLAYERS,.9f,1.3f);
+            world.playSound(null,p.getBlockPos(),ModSounds.SPELL_SPACE_ASTRAL_DOUBLE_TELEPORT,SoundCategory.PLAYERS,.9f,1.1f);
             WandLoadouts.markCombat(p); return true;
         }
         if (state(p).getBoolean("active",false)) recover(p,COOLDOWN);
@@ -115,7 +115,7 @@ public final class AstralDoubleManager {
         c=new Cast(p); c.orb=new AstralOrbEntity(world,p); CASTS.put(p.getUuid(),c);
         NbtCompound state=new NbtCompound();state.putBoolean("active",true);state.putLong("expires",0);p.setAttached(EWAttachments.ASTRAL_STATE,state);
         if (!world.spawnEntity(c.orb)) { finish(c,FAILED_COOLDOWN); return false; }
-        world.playSound(null,p.getBlockPos(),ModSounds.SPELL_SPACE_ASTRAL_DOUBLE_CAST,SoundCategory.PLAYERS,.7f,1.3f);
+        world.playSound(null,p.getBlockPos(),ModSounds.SPELL_SPACE_ASTRAL_DOUBLE_CAST,SoundCategory.PLAYERS,.7f,1f);
         WandLoadouts.markCombat(p); return true;
     }
     public static void land(ServerPlayerEntity p,AstralOrbEntity orb,Vec3d pos) {
@@ -180,7 +180,7 @@ public final class AstralDoubleManager {
         chime(w,p);
     }
     private static void chime(ServerWorld w,Vec3d p) {
-        w.playSound(null,p.x,p.y,p.z,ModSounds.SPELL_SPACE_ASTRAL_DOUBLE_CHIME,SoundCategory.PLAYERS,.5f,1.7f);
+        w.playSound(null,p.x,p.y,p.z,ModSounds.SPELL_SPACE_ASTRAL_DOUBLE_CHIME,SoundCategory.PLAYERS,.5f,1f);
     }
     private AstralDoubleManager() {}
 }

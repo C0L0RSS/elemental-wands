@@ -183,9 +183,7 @@ public class SingularityBoltEntity extends ProjectileEntity {
         com.anton.elementalwands.util.BlockSpaceEvents.send(world, com.anton.elementalwands.util.BlockSpaceEvents.BOLT_HIT, getId(), impactPos,
                 launchDirection != null ? launchDirection : getVelocity(), strength);
         world.playSound(null, net.minecraft.util.math.BlockPos.ofFloored(impactPos),
-                ModSounds.SPELL_SPACE_SINGULARITY_BOLT_IMPACT_BURST, SoundCategory.PLAYERS, 0.82f, 1.35f);
-        world.playSound(null, net.minecraft.util.math.BlockPos.ofFloored(impactPos),
-                ModSounds.SPELL_SPACE_SINGULARITY_BOLT_IMPACT_POP, SoundCategory.PLAYERS, 0.72f, 1.12f);
+                ModSounds.SPELL_SPACE_SINGULARITY_BOLT_IMPACT, SoundCategory.PLAYERS, 0.82f, 1.0f);
     }
 
     private static boolean damageWithoutKnockback(

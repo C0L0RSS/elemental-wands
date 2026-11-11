@@ -70,20 +70,16 @@ public final class ModSounds {
     public static final SoundEvent SPELL_SPACE_GRAVITY_WELL_CAST = register("spell.space.gravity_well.cast");
     public static final SoundEvent SPELL_SPACE_GRAVITY_WELL_COLLAPSE_BURST = register("spell.space.gravity_well.collapse_burst");
     public static final SoundEvent SPELL_SPACE_GRAVITY_WELL_COLLAPSE_CHARGE = register("spell.space.gravity_well.collapse_charge");
-    public static final SoundEvent SPELL_SPACE_GRAVITY_WELL_LAND_CRACK = register("spell.space.gravity_well.land_crack");
-    public static final SoundEvent SPELL_SPACE_GRAVITY_WELL_LAND_HUM = register("spell.space.gravity_well.land_hum");
+    public static final SoundEvent SPELL_SPACE_GRAVITY_WELL_LAND = register("spell.space.gravity_well.land");
     public static final SoundEvent SPELL_SPACE_HOLLOW_PURPLE_CHARGE = register("spell.space.hollow_purple.charge");
     public static final SoundEvent SPELL_SPACE_HOLLOW_PURPLE_CHARGE_CHIME = register("spell.space.hollow_purple.charge_chime");
     public static final SoundEvent SPELL_SPACE_HOLLOW_PURPLE_CHARGE_PEAK = register("spell.space.hollow_purple.charge_peak");
     public static final SoundEvent SPELL_SPACE_HOLLOW_PURPLE_COLLAPSE_BOOM = register("spell.space.hollow_purple.collapse_boom");
     public static final SoundEvent SPELL_SPACE_HOLLOW_PURPLE_COLLAPSE_IMPLODE = register("spell.space.hollow_purple.collapse_implode");
-    public static final SoundEvent SPELL_SPACE_HOLLOW_PURPLE_LAUNCH_BOOM = register("spell.space.hollow_purple.launch_boom");
-    public static final SoundEvent SPELL_SPACE_HOLLOW_PURPLE_LAUNCH_RELEASE = register("spell.space.hollow_purple.launch_release");
+    public static final SoundEvent SPELL_SPACE_HOLLOW_PURPLE_LAUNCH = register("spell.space.hollow_purple.launch");
     public static final SoundEvent SPELL_SPACE_HOLLOW_PURPLE_LOOP = register("spell.space.hollow_purple.loop");
-    public static final SoundEvent SPELL_SPACE_SINGULARITY_BOLT_CAST_HUM = register("spell.space.singularity_bolt.cast_hum");
-    public static final SoundEvent SPELL_SPACE_SINGULARITY_BOLT_CAST_SPARK = register("spell.space.singularity_bolt.cast_spark");
-    public static final SoundEvent SPELL_SPACE_SINGULARITY_BOLT_IMPACT_BURST = register("spell.space.singularity_bolt.impact_burst");
-    public static final SoundEvent SPELL_SPACE_SINGULARITY_BOLT_IMPACT_POP = register("spell.space.singularity_bolt.impact_pop");
+    public static final SoundEvent SPELL_SPACE_SINGULARITY_BOLT_CAST = register("spell.space.singularity_bolt.cast");
+    public static final SoundEvent SPELL_SPACE_SINGULARITY_BOLT_IMPACT = register("spell.space.singularity_bolt.impact");
 
     // spell.stone
     public static final SoundEvent SPELL_STONE_FAULTLINE_CAST = register("spell.stone.faultline.cast");

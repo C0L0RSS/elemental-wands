@@ -26,10 +26,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "sound"))
 def recipes() -> dict:
     import fire
     import nature
+    import space
     import stone
     import wind
 
-    return {**fire.SOUNDS, **nature.SOUNDS, **stone.SOUNDS, **wind.SOUNDS}
+    return {**fire.SOUNDS, **nature.SOUNDS, **space.SOUNDS, **stone.SOUNDS, **wind.SOUNDS}
 
 
 def outputs(name: str, variants: int) -> list[str]:

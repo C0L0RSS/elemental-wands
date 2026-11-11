@@ -93,7 +93,7 @@ public final class GravityWellManager {
         var data = state(p).copy(); data.putBoolean("active", true); data.putBoolean("collapsing", false); data.putLong("expires", 0);
         p.setAttached(EWAttachments.GRAVITY_STATE, data);
         if (!w.spawnEntity(bomb)) { finish(c, false); return false; }
-        w.playSound(null, p.getBlockPos(), ModSounds.SPELL_SPACE_GRAVITY_WELL_CAST, SoundCategory.PLAYERS, .8f, .65f);
+        w.playSound(null, p.getBlockPos(), ModSounds.SPELL_SPACE_GRAVITY_WELL_CAST, SoundCategory.PLAYERS, .8f, 1f);
         WandLoadouts.markCombat(p); return true;
     }
     public static void impact(ServerPlayerEntity p, GravityBombEntity bomb) {

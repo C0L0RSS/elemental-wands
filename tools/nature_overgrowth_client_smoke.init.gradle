@@ -1,4 +1,4 @@
-// Actual Fire Leap flight, preview and input checks in a disposable integrated world.
+// Actual Nature bite, seed mark, Sentry Bloom flower and Overgrowth input and visuals in a disposable integrated world.
 // ./gradlew -I tools/nature_overgrowth_client_smoke.init.gradle runClient
 allprojects {
     plugins.withId('fabric-loom') {
@@ -20,6 +20,10 @@ allprojects {
 }'''
                 new File(smokeRoot,'HUB_PASSED.txt').delete()
                 new File(smokeRoot,'HUB_FAILED.txt').delete()
+                // The disposable client starts silent with the narrator off, before any world loads.
+                def options=new File(smokeRoot,'options.txt')
+                def kept=options.exists() ? options.readLines().findAll { !(it.startsWith('soundCategory_master:') || it.startsWith('narrator:') || it.startsWith('onboardAccessibility:')) } : []
+                options.text=(kept+['soundCategory_master:0.0','narrator:0','onboardAccessibility:false']).join('\n')+'\n'
                 if (existingAssets) {
                     def assets=file(existingAssets)
                     if (!new File(assets,'indexes/27.json').exists()) throw new GradleException('Existing asset cache needs indexes/27.json')

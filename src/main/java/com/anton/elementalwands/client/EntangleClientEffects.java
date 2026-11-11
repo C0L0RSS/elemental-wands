@@ -25,11 +25,7 @@ public final class EntangleClientEffects {
             Vec3d camera=context.camera().getPos();
             boolean firstPerson=!context.camera().isThirdPerson();
             long time=context.world().getTime();
-            var visibleStates=new java.util.HashMap<>(ClientPlayerData.getEntangledEntities());
-            // Ultimate recovery may be earned without regular Entangle stacks.
-            for(var entity:context.world().getEntities())if(entity instanceof WandBoss boss
-                    && boss.natureOpening() && !visibleStates.containsKey(entity.getId()))
-                visibleStates.put(entity.getId(),new ClientPlayerData.EntangleState(5,time,0,time-10));
+            var visibleStates=ClientPlayerData.getEntangledEntities();
             for(var item:visibleStates.entrySet()){
                 var entity=context.world().getEntityById(item.getKey());
                 if(!(entity instanceof LivingEntity living) || !living.isAlive() || living.isInvisible()
@@ -45,8 +41,9 @@ public final class EntangleClientEffects {
                 float w=type.equals("boss")?3.2f:wide?1.4f:.6f,h=type.equals("boss")?5.2f:wide?.9f:1.8f;
                 float sx=(entity.getWidth()*.55f+.08f)/(w*.55f+.08f),sy=entity.getHeight()/h;
                 String mode="lingering";
+                // A boss wears five vines without being held by them.
                 if(stacks>=5){
-                    if(boss)mode=((WandBoss)entity).natureOpening()?"opening":"resisting";
+                    if(boss)mode="resisting";
                     else if(time<state.rootVisualUntilTick())mode="rooted";
                 }
                 Vec3d relative=entity.getLerpedPos(delta).subtract(camera);

@@ -13,6 +13,10 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
+/**
+ * Server-side anchor for an Overgrowth oak. It marks where the tree stands and when it ends;
+ * it cannot be hit, pushed, targeted or damaged, so the tree lasts exactly its duration.
+ */
 public class AwakenedTreeEntity extends HostileEntity {
 
     private UUID casterUuid;
@@ -42,7 +46,7 @@ public class AwakenedTreeEntity extends HostileEntity {
 
     @Override
     protected void initGoals() {
-        // Stationary damageable core; all behavior is managed by OvergrowthManager.
+        // Stationary anchor; all behavior is managed by OvergrowthManager.
     }
 
     @Override
@@ -74,8 +78,7 @@ public class AwakenedTreeEntity extends HostileEntity {
 
     @Override
     public boolean isInsideWall() {
-        // The damageable heart intentionally occupies the low-poly trunk volume.
-        // It must not interpret its own staged shell as suffocation damage.
+        // The anchor sits inside the trunk's blocks.
         return false;
     }
 
@@ -89,12 +92,18 @@ public class AwakenedTreeEntity extends HostileEntity {
 
     @Override
     public boolean damage(ServerWorld world, DamageSource source, float amount) {
-        boolean damaged = super.damage(world, source, amount);
-        if (damaged) {
-            OvergrowthManager.onTreeDamaged(world, this);
-        }
-        return damaged;
+        // Only /kill and the void remove it early; the manager then restores its blocks.
+        return source.isIn(net.minecraft.registry.tag.DamageTypeTags.BYPASSES_INVULNERABILITY)
+                && super.damage(world, source, amount);
     }
+
+    @Override public boolean canHit() { return false; }
+    @Override public boolean isAttackable() { return false; }
+    @Override public boolean canBeHitByProjectile() { return false; }
+    @Override public boolean isCollidable(net.minecraft.entity.Entity other) { return false; }
+    @Override public void pushAwayFrom(net.minecraft.entity.Entity entity) {}
+    @Override protected void pushAway(net.minecraft.entity.Entity entity) {}
+    @Override public boolean canTarget(net.minecraft.entity.LivingEntity target) { return false; }
 
     @Override
     public void onDeath(DamageSource damageSource) {

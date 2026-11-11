@@ -44,11 +44,6 @@ public class ElementalWandsClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        // Left-clicking one of your own flowers pops it on the server instead of mining it.
-        net.fabricmc.fabric.api.event.player.AttackBlockCallback.EVENT.register((player, world, hand, pos, direction) ->
-                world.isClient() && com.anton.elementalwands.client.ClientPlayerData.getNatureSeedlings().contains(pos)
-                        && world.getBlockState(pos).isOf(com.anton.elementalwands.registry.ModSpellBlocks.NATURE_SEEDLING)
-                        ? net.minecraft.util.ActionResult.SUCCESS : net.minecraft.util.ActionResult.PASS);
         com.anton.elementalwands.client.wand.WandItemModel.register();
         ModParticleFactories.registerAll();
         StoneParticleFactories.registerAll();
@@ -59,13 +54,20 @@ public class ElementalWandsClient implements ClientModInitializer {
         BlockRenderLayerMap.putBlock(ModSpellBlocks.STONE_SPIKE, BlockRenderLayer.CUTOUT);
         for (var relic : com.anton.elementalwands.registry.ModBlocks.SUMMIT_RELICS) BlockRenderLayerMap.putBlock(relic, BlockRenderLayer.CUTOUT);
         EntangleClientEffects.register();
+        com.anton.elementalwands.client.SeedMarkClientEffects.register();
         for (var block : new net.minecraft.block.Block[]{ModSpellBlocks.NATURE_SEEDLING,
-                ModSpellBlocks.NATURE_ROOT_KNOT,ModSpellBlocks.NATURE_ROOTS,ModSpellBlocks.NATURE_RAFT,
+                ModSpellBlocks.NATURE_ROOT_KNOT,ModSpellBlocks.NATURE_ROOTS,
                 ModSpellBlocks.NATURE_HEARTWOOD,ModSpellBlocks.NATURE_FLOWERING_LEAVES}) {
             BlockRenderLayerMap.putBlock(block,BlockRenderLayer.CUTOUT);
             net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry.BLOCK.register(
                     (state,world,pos,tint)->tint<0?-1:0xFF000000|tint,block);
         }
+        // The oak's plain leaves reuse the vanilla model, so they take the biome's foliage colour as it does.
+        BlockRenderLayerMap.putBlock(ModSpellBlocks.NATURE_OAK_LEAVES,BlockRenderLayer.CUTOUT);
+        net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry.BLOCK.register(
+                (state,world,pos,tint)->world!=null && pos!=null
+                        ? net.minecraft.client.color.world.BiomeColors.getFoliageColor(world,pos)
+                        : net.minecraft.world.biome.FoliageColors.DEFAULT,ModSpellBlocks.NATURE_OAK_LEAVES);
 
 
         com.anton.elementalwands.client.WandControls.init();
@@ -83,6 +85,7 @@ public class ElementalWandsClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.ASTRAL_ORB,EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.GALE_DAGGER,com.anton.elementalwands.client.renderer.GaleDaggerRenderer::new);
         EntityRendererRegistry.register(ModEntities.SPRINGBLOOM,com.anton.elementalwands.client.renderer.SpringbloomRenderer::new);
+        EntityRendererRegistry.register(ModEntities.SENTRY_BLOOM,com.anton.elementalwands.client.renderer.SentryBloomRenderer::new);
         EntityRendererRegistry.register(ModEntities.OVERGROWTH_SEED,com.anton.elementalwands.client.renderer.OvergrowthSeedRenderer::new);
         EntityRendererRegistry.register(ModEntities.FAULTLINE_SPIKE,com.anton.elementalwands.client.renderer.FaultlineSpikeRenderer::new);
         ClientPlayNetworking.registerGlobalReceiver(ModNetworking.UpdraftLaunchPayload.ID, (payload, context) -> {
@@ -161,8 +164,10 @@ public class ElementalWandsClient implements ClientModInitializer {
             if (payload.open()) context.client().setScreen(new com.anton.elementalwands.client.screen.WandHubScreen());
             if (context.client().currentScreen instanceof com.anton.elementalwands.client.screen.WandHubScreen hub) hub.feedback(payload.message());
         });
-        ClientPlayNetworking.registerGlobalReceiver(ModNetworking.SyncNatureSeedlingsPayload.ID,
-                (payload, context) -> ClientPlayerData.setNatureSeedlings(payload.positions()));
+        ClientPlayNetworking.registerGlobalReceiver(ModNetworking.SyncSeedMarkPayload.ID, (payload, context) -> {
+            if (context.client().world != null)
+                ClientPlayerData.setSeedMark(payload.entityId(), context.client().world.getTime() + payload.ticks());
+        });
         ClientPlayNetworking.registerGlobalReceiver(ModNetworking.SyncEntangleStacksPayload.ID,
                 (payload, context) -> {
                     long now = context.client().world != null ? context.client().world.getTime() : 0L;
@@ -191,7 +196,7 @@ public class ElementalWandsClient implements ClientModInitializer {
             com.anton.elementalwands.client.WandControls.clear();
             ClientPlayerData.clearStoneCluster();
             ClientPlayerData.clearEntangleStates();
-            ClientPlayerData.clearNatureSeedlings();
+            ClientPlayerData.setSeedMark(-1, 0);
         });
         ClientEntityEvents.ENTITY_UNLOAD.register((entity, world) ->
                 ClientPlayerData.clearEntangleState(entity.getId()));
@@ -204,6 +209,7 @@ public class ElementalWandsClient implements ClientModInitializer {
         com.anton.elementalwands.client.blockfire.BlockFireEffects.register();
         com.anton.elementalwands.client.blockwind.BlockWindEffects.register();
         com.anton.elementalwands.client.blockspace.BlockSpaceEffects.register();
+        com.anton.elementalwands.client.blocknature.BlockNatureEffects.register();
         com.anton.elementalwands.client.NaveShaftEffects.register();
         com.anton.elementalwands.client.SummitCloudEffects.register();
         ClientTickEvents.END_CLIENT_TICK.register(com.anton.elementalwands.client.SummitStormClient::tick);

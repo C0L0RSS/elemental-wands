@@ -45,60 +45,6 @@ public final class NatureVfx {
         }
     }
 
-    /** A paired ground-hugging vine, with flowers appearing along the wake. */
-    public static void pairedTendril(ServerWorld world, Vec3d from, Vec3d to, int age) {
-        Vec3d direction = to.subtract(from);
-        Vec3d horizontal = new Vec3d(direction.x, 0.0, direction.z);
-        Vec3d side = horizontal.lengthSquared() < 0.0001
-                ? new Vec3d(0.18, 0.0, 0.0)
-                : new Vec3d(-horizontal.z, 0.0, horizontal.x).normalize().multiply(0.18);
-        double sway = Math.sin(age * 0.85) * 0.08;
-        Vec3d swayOffset = side.normalize().multiply(sway);
-
-        // Vine sprites live long enough to bridge successive heads. Emitting one
-        // clustered knot per strand preserves the paired silhouette without a
-        // packet for every point along this tick's short segment.
-        Vec3d first = to.add(side).subtract(swayOffset).add(0.0, 0.08, 0.0);
-        Vec3d second = to.subtract(side).add(swayOffset).add(0.0, 0.1, 0.0);
-        world.spawnParticles(ModParticles.NATURE_VINE,
-                first.x, first.y, first.z, 1, 0.035, 0.025, 0.035, 0.0);
-        world.spawnParticles(ModParticles.NATURE_VINE,
-                second.x, second.y, second.z, 1, 0.035, 0.025, 0.035, 0.0);
-
-        world.spawnParticles(ModParticles.NATURE_LEAF,
-                to.x, to.y + 0.16, to.z, 1, 0.06, 0.03, 0.06, 0.0);
-    }
-
-    public static void seedlingPulse(ServerWorld world, BlockPos anchor, int stage, boolean amplified, int now) {
-        // Geometry supplies the flower. Pollen adds life without stacking giant flower sprites.
-        world.spawnParticles(ModParticles.NATURE_POLLEN, anchor.getX()+.5, anchor.getY()+1.35,
-                anchor.getZ()+.5, amplified ? 4 : 1, .24, .12, .24, .008);
-    }
-
-    public static void growthRing(ServerWorld world, BlockPos center, int radius, int now) {
-        Vec3d c = Vec3d.ofCenter(center);
-        int points = Math.max(12, radius * 8);
-        for (int i = 0; i < points; i++) {
-            double angle = TAU * i / points;
-            double scale = radius / Math.max(Math.abs(Math.cos(angle)), Math.abs(Math.sin(angle)));
-            double x = c.x + Math.cos(angle) * scale;
-            double z = c.z + Math.sin(angle) * scale;
-            ParticleEffect effect = i % 4 == 0 ? ModParticles.NATURE_LEAF : ModParticles.NATURE_VINE;
-            world.spawnParticles(effect, x, c.y + 0.08, z, 1, 0.04, 0.02, 0.04, 0.0);
-        }
-        world.spawnParticles(ModParticles.NATURE_POLLEN,
-                c.x, c.y + 0.35, c.z, 6 + radius * 2,
-                radius * 0.42, 0.18, radius * 0.42, 0.015);
-    }
-
-    public static void fairyRipple(ServerWorld world, Vec3d center, double radius, int now) {
-        ring(world, ModParticles.NATURE_LEAF, center, radius, 8, 0.04, now * 0.09);
-        ring(world, ModParticles.NATURE_POLLEN, center, radius * 0.72, 6,
-                0.16, now * -0.07);
-        world.spawnParticles(ModParticles.NATURE_BLOOM,
-                center.x, center.y + 0.08, center.z, 1, 0.0, 0.0, 0.0, 0.0);
-    }
-
     /** Ten luminous root spokes establish the ultimate's gameplay radius. */
     public static void rootSpokes(ServerWorld world, BlockPos center, double radius) {
         Vec3d c = Vec3d.ofCenter(center).add(0.0, 0.08, 0.0);
@@ -110,28 +56,6 @@ public final class NatureVfx {
                     tip.x, tip.y + 0.08, tip.z, 1, 0.0, 0.0, 0.0, 0.0);
         }
         ring(world, ModParticles.NATURE_BLOOM, c, radius, 20, 0.06, Math.PI / 20.0);
-    }
-
-    /** Moves one visible knot of seed energy toward the future heart each growth tick. */
-    public static void convergence(ServerWorld world, BlockPos source, Vec3d heart,
-            double previousProgress, double progress, int streamIndex) {
-        Vec3d start = Vec3d.ofCenter(source).add(0.0, 0.45, 0.0);
-        double easedPrevious = 1.0 - Math.pow(1.0 - previousProgress, 2.0);
-        double eased = 1.0 - Math.pow(1.0 - progress, 2.0);
-        Vec3d from = start.lerp(heart, easedPrevious);
-        Vec3d to = start.lerp(heart, eased);
-        double arc = Math.sin(progress * Math.PI) * (0.65 + (streamIndex % 3) * 0.18);
-        Vec3d arcOffset = new Vec3d(0.0, arc, 0.0);
-        Vec3d knot = from.lerp(to, 0.62).add(arcOffset);
-        world.spawnParticles(ModParticles.NATURE_POLLEN,
-                knot.x, knot.y, knot.z, 3, 0.08, 0.05, 0.08, 0.008);
-        int phase = (int) Math.round(progress * 12.0) + streamIndex;
-        if ((phase & 1) == 0) {
-            Vec3d destination = to.add(arcOffset);
-            world.spawnParticles(ModParticles.NATURE_HEART,
-                    destination.x, destination.y, destination.z,
-                    1, 0.02, 0.02, 0.02, 0.0);
-        }
     }
 
     public static void treeHeart(ServerWorld world, Vec3d heart, int now, float healthRatio) {

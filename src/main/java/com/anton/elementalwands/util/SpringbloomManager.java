@@ -44,7 +44,7 @@ public final class SpringbloomManager {
                         || !pad.world.getBlockState(pad.pos).isOf(ModSpellBlocks.SPRINGBLOOM)
                         || !supported(pad.world,pad.pos) || (cells&SpringbloomFootprint.CENTER)==0) {
                     restore(pad);
-                    pollen(pad.world,Vec3d.ofBottomCenter(pad.pos),true); iterator.remove();
+                    BlockNatureEvents.send(pad.world,BlockNatureEvents.SPRING_END,Vec3d.ofBottomCenter(pad.pos)); iterator.remove();
                 } else {
                     var state=pad.world.getBlockState(pad.pos);
                     if(state.get(SpringbloomBlock.OPEN_CELLS)!=cells)
@@ -64,8 +64,6 @@ public final class SpringbloomManager {
                         && f.world.raycast(new RaycastContext(p.getEntityPos(),p.getEntityPos().add(0,-.06,0),
                         RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.ANY,p)).getType()!=HitResult.Type.MISS)
                     f.landed=f.world.getTime();
-                if (!ended && f.world.getTime()%4==0) f.world.spawnParticles(ModParticles.NATURE_LEAF,
-                        p.getX(),p.getY()+.15,p.getZ(),2,.18,.08,.18,.015);
                 if(ended)p.setAttached(EWAttachments.SPRINGBLOOM_FLIGHT,false);
                 return ended;
             });
@@ -203,7 +201,8 @@ public final class SpringbloomManager {
         p.velocityModified=true;
         p.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(p));
         FLIGHTS.put(p.getUuid(),new Flight(p,world,world.getTime()));
-        pollen(world,p.getEntityPos(),false);
+        // Clients draw the launch burst and the rider's falling leaves until they land.
+        BlockNatureEvents.send(world,BlockNatureEvents.SPRING_LAUNCH,p.getId(),p.getEntityPos(),velocity,0);
         world.playSound(null,pad.pos,SoundEvents.BLOCK_SLIME_BLOCK_FALL,SoundCategory.PLAYERS,.85f,1.25f);
     }
     public static boolean catching(ServerPlayerEntity p) {
@@ -222,10 +221,6 @@ public final class SpringbloomManager {
                 RaycastContext.ShapeType.OUTLINE,RaycastContext.FluidHandling.NONE,p));
         return hit.getType()==HitResult.Type.BLOCK && p.getEntityWorld().getBlockState(hit.getBlockPos()).isOf(ModSpellBlocks.SPRINGBLOOM)
                 && p.getEntityWorld().breakBlock(hit.getBlockPos(),false,p);
-    }
-    private static void pollen(ServerWorld world,Vec3d pos,boolean broken) {
-        world.spawnParticles(broken?ModParticles.NATURE_LEAF:ModParticles.NATURE_POLLEN,pos.x,pos.y+.15,pos.z,
-                broken?14:22,.5,.14,.5,.055);
     }
     private SpringbloomManager() {}
 }

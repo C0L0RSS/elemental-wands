@@ -3,7 +3,6 @@ package com.anton.elementalwands.entity.roc;
 import com.anton.elementalwands.registry.ModEntities;
 import com.anton.elementalwands.util.SpellCombat;
 import com.anton.elementalwands.util.NatureCombat;
-import com.anton.elementalwands.util.SeedlingManager;
 import com.anton.elementalwands.util.TemporaryBlockManager;
 import com.anton.elementalwands.registry.ModSpellBlocks;
 import com.anton.elementalwands.util.WandProgression;
@@ -37,7 +36,6 @@ public final class StormRocServerSmoke implements ModInitializer {
     private ServerWorld world;
     private RocEffectEntity strike, tornado;
     private RocBodyPartEntity head;
-    private BlockPos flower;
     private double flowerXp;
     private float flowerHealth;
     private BlockPos fireCell;
@@ -430,11 +428,20 @@ public final class StormRocServerSmoke implements ModInitializer {
                 }
                 if(elapsed==13){
                     float health=boss.getHealth();double xp=WandProgression.get(target,WizardAffinity.NATURE).xp();
-                    float thorns=NatureCombat.thornContact(world,head,target.getUuid());
-                    require(thorns>0&&boss.getHealth()<health,"Anonymous owned Nature thorns could not damage canonical Roc part");
-                    require(Math.abs(WandProgression.get(target,WizardAffinity.NATURE).xp()-xp-(health-boss.getHealth()))<.01,"Nature part contact XP differed from canonical health loss");
-                    require(NatureCombat.thornContact(world,boss,target.getUuid())==0,"Same Nature contact counted again through body after part");
-                    checks.add("Owned anonymous Nature thorns damage canonical Roc and reward actual health XP");
+                    // A hit on a part marks the canonical boss, a flower's seed through a part damages
+                    // it, and that seed neither is swallowed by nor opens the caster's own hurt window.
+                    com.anton.elementalwands.util.FlowerTurretManager.mark(target,head);
+                    require(com.anton.elementalwands.util.FlowerTurretManager.marked(world,target.getUuid())==boss,"A mark through a Roc part did not land on the canonical boss");
+                    require(com.anton.elementalwands.util.FlowerTurretManager.hostile(head,target),"Flowers would not shoot the Roc unprompted");
+                    var flowerType=world.getRegistryManager().getOrThrow(net.minecraft.registry.RegistryKeys.DAMAGE_TYPE).getOrThrow(com.anton.elementalwands.util.FlowerTurretManager.DAMAGE_TYPE);
+                    require(SpellCombat.damage(head,world,new net.minecraft.entity.damage.DamageSource(flowerType,target,target),com.anton.elementalwands.util.FlowerTurretManager.DAMAGE,target,WizardAffinity.NATURE),"A flower's seed could not damage the Roc through a part");
+                    float flowerLoss=health-boss.getHealth();
+                    require(flowerLoss>0 && WandProgression.get(target,WizardAffinity.NATURE).xp()-xp>=flowerLoss-.01,"Flower seed XP fell short of canonical health loss");
+                    require(!boss.hasStatusEffect(net.minecraft.entity.effect.StatusEffects.SLOWNESS),"Nature slowed the Roc");
+                    float mid=boss.getHealth();
+                    require(SpellCombat.damage(boss,world,world.getDamageSources().playerAttack(target),com.anton.elementalwands.util.NatureCombat.SEED_DAMAGE,target,WizardAffinity.NATURE),"A Seed after a flower's hit was rejected");
+                    require(mid-boss.getHealth()>flowerLoss*1.5,"A flower's hit opened the caster's hurt window and shaved the next Seed: "+(mid-boss.getHealth())+" after "+flowerLoss);
+                    checks.add("A mark through a part lands on the canonical Roc; a flower seed through a part deals canonical damage and XP without slowing it and without opening the caster's hurt window");
                 }
                 if(elapsed==24){
                     SpellCombat.ignite(head,target,2);require(boss.isOnFire()&&SpellCombat.burnOwner(boss,world.getDamageSources().onFire())==target,"Igniting part did not attribute canonical boss burn");
@@ -458,21 +465,8 @@ public final class StormRocServerSmoke implements ModInitializer {
                 }
             }
             case 19 -> {
-                if(elapsed==1){
-                    Vec3d body=boss.socket("body");BlockPos floor=BlockPos.ofFloored(body.x,100,body.z);flower=floor.up();
-                    require(NatureCombat.standsIn(boss,Set.of(flower)),"Roc whole-body floor footprint did not overlap planted thicket cell");
-                    Box patch=new Box(floor.getX()-4,floor.getY()-.5,floor.getZ()-4,floor.getX()+5,floor.getY()+3.5,floor.getZ()+5);
-                    require(world.getEntitiesByClass(StormRocEntity.class,patch,e->e==boss).contains(boss),"Real Seedling ground query could not reach Roc body volume");
-                    flowerHealth=boss.getHealth();flowerXp=WandProgression.get(target,WizardAffinity.NATURE).xp();
-                    require(SeedlingManager.tryPlantSeedling(world,target,new net.minecraft.util.hit.BlockHitResult(Vec3d.ofCenter(floor).add(0,.5,0),Direction.UP,floor,false)),"Could not plant real fixture thicket beneath Roc body");
-                }
-                if(elapsed==5){
-                    require(boss.getHealth()<flowerHealth,"Real placed Seedling tick dealt no Roc thorn damage");
-                    require(Math.abs(WandProgression.get(target,WizardAffinity.NATURE).xp()-flowerXp-(flowerHealth-boss.getHealth()))<.01,"Real planted thicket did not credit canonical health XP");
-                    require(SeedlingManager.destroySeedlingAtAnchor(world,flower),"Real planted fixture thicket failed cleanup");
-                    checks.add("Actual planted Seedling ground query/footprint reaches Roc and ticked thorns reward canonical damage XP");
-                    boss.stopFight();boss.startFight(CENTRE,List.of(target,dodge));boss.testAction(target,SETUP);step=20;elapsed=0;
-                }
+                // Nature leaves nothing on the ground for a boss to stand in; this step only hands on.
+                if(elapsed==1){step=20;elapsed=0;}
             }
             case 20 -> {
                 if(elapsed==1)placeFootFire(target,false);

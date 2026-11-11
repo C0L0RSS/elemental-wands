@@ -15,10 +15,11 @@ public final class NatureTreeLayout {
         public BlockState state(){return switch(kind){
             case "heart" -> ModSpellBlocks.NATURE_HEARTWOOD.getDefaultState();
             case "bloom-leaves" -> ModSpellBlocks.NATURE_FLOWERING_LEAVES.getDefaultState();
-            case "leaves" -> Blocks.OAK_LEAVES.getDefaultState().with(LeavesBlock.PERSISTENT,true);
-            case "log-x" -> Blocks.OAK_LOG.getDefaultState().with(PillarBlock.AXIS,Direction.Axis.X);
-            case "log-z" -> Blocks.OAK_LOG.getDefaultState().with(PillarBlock.AXIS,Direction.Axis.Z);
-            default -> Blocks.OAK_LOG.getDefaultState();
+            // Look-alikes of the vanilla oak that nothing collides with.
+            case "leaves" -> ModSpellBlocks.NATURE_OAK_LEAVES.getDefaultState();
+            case "log-x" -> ModSpellBlocks.NATURE_OAK_LOG.getDefaultState().with(PillarBlock.AXIS,Direction.Axis.X);
+            case "log-z" -> ModSpellBlocks.NATURE_OAK_LOG.getDefaultState().with(PillarBlock.AXIS,Direction.Axis.Z);
+            default -> ModSpellBlocks.NATURE_OAK_LOG.getDefaultState();
         };}
     }
     private static final List<Cell> CELLS=load();

@@ -24,18 +24,21 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.world.World;
 
 /**
- * Tracks the Nature wand's "Entangle" debuff. Vines wrap a target with each application;
- * the more they stack, the more the prey is slowed, until at the cap they are fully rooted.
+ * Vines wound around a target ("Entangle" stacks) and the root the Overgrowth oak applies.
  *
- * <p>Stacks also linger on the <em>caster</em>: while entangled, a wizard's own spells recover
- * twice as slowly (see {@code AbstractWandItem} and {@code WandHudOverlay}).
+ * <p>No spell winds vines at present: Seed and Thornbite mark a target for the caster's flowers
+ * instead (see {@link FlowerTurretManager}). The stack rules stay here, with the caster penalty
+ * they carry (an entangled wizard's own spells recover twice as slowly; see
+ * {@code AbstractWandItem} and {@code WandHudOverlay}), until the flower kit has been playtested.
+ * The live user is {@code OvergrowthManager}: its roots slow an ordinary target and show the root
+ * wrap. A boss is never slowed or rooted, as with every other wand's crowd control.
  */
 public final class EntangleTracker {
 
     /** Stack count at which the target is fully rooted (cannot walk). */
     public static final int MAX_STACKS = 5;
 
-    private record EntangleData(int stacks, int lastHitTick) {
+    private record EntangleData(int stacks, int lastHitTick, int rootTick) {
     }
 
     private static final Map<RegistryKey<World>, Map<UUID, EntangleData>> ENTANGLED = new HashMap<>();
@@ -86,21 +89,23 @@ public final class EntangleTracker {
 
         EntangleData existing = map.get(target.getUuid());
         int currentStacks = 0;
+        int rootTick = Integer.MIN_VALUE / 2;
 
         if (existing != null) {
             // If we are within the clear window, keep stacks, otherwise reset
             if (now - existing.lastHitTick < CLEAR_DELAY) {
                 currentStacks = existing.stacks;
+                rootTick = existing.rootTick;
             }
         }
 
         int newStacks = Math.min(currentStacks + 1, MAX_STACKS);
-        map.put(target.getUuid(), new EntangleData(newStacks, now));
+        // The root belongs to the fifth vine landing. Later hits keep the vines but cannot hold it.
+        boolean rooted = newStacks >= MAX_STACKS && currentStacks < MAX_STACKS;
+        if (rooted) rootTick = now;
+        map.put(target.getUuid(), new EntangleData(newStacks, now, rootTick));
 
-        applyEffects(target, newStacks);
-        if (target instanceof com.anton.elementalwands.entity.WandBoss boss) {
-            boss.onNatureEntangle(newStacks);
-        }
+        applyEffects(target, newStacks, rooted);
         if (newStacks > currentStacks) {
             spawnVineParticles(world, target, newStacks);
         }
@@ -133,7 +138,7 @@ public final class EntangleTracker {
 
         int now=serverWorld.getServer().getTicks();
         var data=ENTANGLED.getOrDefault(serverWorld.getRegistryKey(),Map.of()).get(entity.getUuid());
-        int stackRoot=data!=null && data.stacks>=MAX_STACKS ? ROOT_DURATION_TICKS-(now-data.lastHitTick) : 0;
+        int stackRoot=data!=null && data.stacks>=MAX_STACKS ? ROOT_DURATION_TICKS-(now-data.rootTick) : 0;
         int ultimateRoot=ULTIMATE_ROOT_UNTIL.getOrDefault(entity.getUuid(),now)-now;
         var slow=entity.getStatusEffect(StatusEffects.SLOWNESS);
         return slow!=null && slow.getAmplifier()>=6
@@ -167,27 +172,18 @@ public final class EntangleTracker {
                 getRootVisualTicksRemaining(player));
     }
 
+    /** Bosses are never slowed, by this or by any other wand. */
     public static void applyNatureSlow(LivingEntity target, int ticks, int amplifier) {
-        if (target instanceof AwakenedTreeEntity) return;
-        int capped = target instanceof com.anton.elementalwands.entity.WandBoss ? 0 : amplifier;
-        target.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, ticks, capped, false, false, true));
+        if (target instanceof AwakenedTreeEntity || target instanceof com.anton.elementalwands.entity.WandBoss) return;
+        target.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, ticks, amplifier, false, false, true));
     }
 
-    private static void applyEffects(LivingEntity target, int stacks) {
-        if (target instanceof com.anton.elementalwands.entity.WandBoss) {
-            applyNatureSlow(target, 60, 0);
-            return;
-        }
-        // Stacks 1-4 ramp Slowness I..IV (amplifier = stacks - 1). At the cap the vines pin
-        // the target in place: Slowness VII (amplifier 6) reduces movement speed to zero.
-        if (stacks >= MAX_STACKS) {
-            // Refresh on a shorter window so the root holds only while vines keep biting.
-            target.addStatusEffect(new StatusEffectInstance(
-                    StatusEffects.SLOWNESS, ROOT_DURATION_TICKS, 6, false, false, true));
-        } else {
-            target.addStatusEffect(new StatusEffectInstance(
-                    StatusEffects.SLOWNESS, 60, stacks - 1, false, false, true));
-        }
+    private static void applyEffects(LivingEntity target, int stacks, boolean rooted) {
+        // Vines 1-4 ramp Slowness I..IV (amplifier = stacks - 1). The fifth pins the target in
+        // place: Slowness VII (amplifier 6) reduces movement speed to zero. Hits on a target
+        // already carrying five keep it at Slowness IV without renewing the root.
+        if (rooted) applyNatureSlow(target, ROOT_DURATION_TICKS, 6);
+        else applyNatureSlow(target, 60, Math.min(stacks, MAX_STACKS - 1) - 1);
     }
 
     private static void spawnVineParticles(ServerWorld world, LivingEntity target, int stacks) {

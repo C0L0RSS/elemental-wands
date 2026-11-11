@@ -14,7 +14,7 @@ public final class NatureClientChecks {
     public static void check(MinecraftClient client){
         int models=0;
         for(var block:new net.minecraft.block.Block[]{ModSpellBlocks.NATURE_SEEDLING,ModSpellBlocks.NATURE_ROOTS,
-                ModSpellBlocks.NATURE_RAFT,ModSpellBlocks.NATURE_HEARTWOOD,ModSpellBlocks.NATURE_FLOWERING_LEAVES}){
+                ModSpellBlocks.NATURE_HEARTWOOD,ModSpellBlocks.NATURE_FLOWERING_LEAVES}){
             for(var state:block.getStateManager().getStates()){
                 var model=client.getBlockRenderManager().getModel(state);
                 require(!model.particleSprite().getContents().getId().getPath().contains("missing"),"Missing Nature block model "+state);

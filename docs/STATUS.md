@@ -182,12 +182,55 @@ It records known verification limits; it is not a fresh installation receipt.
   playtest with `/ew necromancer log on` to tune health, wave sizes, rain damage, dive and
   split timing (the Hands→ambush and Hands→bite combos cost an iron-armored player about
   three quarters of their health).
-- **Nature support pass (September 29):** Nature is the support element. Seed and Thornbite
-  deal 4, Thornbite heals 75%, thorns deal ×1.5 to bosses and test the whole body footprint,
-  and flowers bank up to 8 stolen health that their owner collects by left-clicking the
-  flower or popping it with their own Seed. Springbloom launches on a run into its side, lasts 8
-  seconds with a 6-second cooldown and flies flatter and farther. Pending: a Lunar playtest
-  of Nature against the Necromancer, the new launch arc's feel and whether banking feels worth it.
+- **Nature rework (November 10):** Nature no longer leaves anything in the way in a fight and
+  no boss has behaviour written for it.
+  - Sentry Bloom replaces Tendril Bloom: it plants a flower (three at a time, 24 seconds
+    each, 6-second cooldown) whose head turns to face the target the caster's Seed or
+    Thornbite last hit, or else the nearest monster, and spits a 2.5-damage seed at it every
+    two seconds. Each seed that lands heals the owner a fifth of the damage it dealt. The
+    head kicks back on a shot and hangs for the flower's last two seconds.
+  - Verdant Step, the walk-on-water passive, is removed with its raft block (November 11).
+  - Block nature (November 11): every live Nature spell effect is now drawn as opaque 3D
+    petals, leaves and pollen (`client/blocknature/`), matching Fire, Wind and Space, ported
+    from the `art/nature/blocknature/` browser study the developer approved, with a stronger
+    heal cue (made about a fifth smaller after review; the developer liked it in
+    the browser preview) and a chunkier seed trail. The Nature client fixture ran it in a native client
+    (bite, heal, seed trail, petal wave and wilting petals in its screenshots). Pending: a
+    Lunar look, and multiplayer, where other players' events arrive over `BlockNatureEvents`;
+    Springbloom's launch and flight leaves were not in a client fixture.
+  - Full Bloom replaces Overgrowth as the ultimate: a harmless petal wave to ten blocks that
+    leaves grass and wild flowers on grass; Regeneration II and two
+    hearts of absorption for the caster and allies in reach, for twelve seconds; and for those
+    twelve seconds a quicker Seed and Sentry Bloom, a stronger Thornbite heal, and every flower
+    grown (bigger base, a second, smaller head on a branch) to fire in turn at two targets.
+  - Vines, the bramble carpet, root knots, thorn ticks and banked flower health are gone, with
+    the Guardian's flower-clearing slams and extra recovery; Seed and Thornbite no longer
+    slow or root.
+  The build and its contract checks pass. On November 10 these passed on a Windows machine
+  as server fixtures hosted in a singleplayer world (`integrated_fixture_host.init.gradle`;
+  that machine has no dedicated-server EULA on file): Full Bloom, Nature balance, Nature
+  expansion, Guardian Nature, Guardian cover, the retired oak's throw fixture and audit.
+  Necromancer and Storm Roc passed earlier the same day, before the turning head, healing
+  and Full Bloom were added. Both Nature native client fixtures passed, with screenshots of
+  the head aimed, recoiling and wilting, the petal wave, the lawn it leaves and a grown
+  two-headed flower. The party fixture's first run reached its restart point without a
+  failure; its restart half was not run. No fixture has run on a dedicated server since the
+  rework. Pending:
+  - A Lunar playtest against each boss: flower damage and pace, the 16-block range, how many
+    flowers and for how long, the size of the heals, ultimate charge rate, how the heads read
+    while they turn, and whether Full Bloom's twelve seconds and its buffs are too much or
+    too little.
+  - Looks to approve in play: the grown two-headed flower, the petal wave, the seed marker,
+    and the recoil and wilt poses.
+  - The Thornbite heal buff in Full Bloom has no fixture.
+  - Clean-up once the kit is approved. The Overgrowth oak (manager, acorn, anchor entity,
+    tree layout, oak blocks, their fixtures) is archived at the developer's request: unreachable
+    in play, but kept for possible later use, so it is not part of the clean-up.
+    `EntangleTracker`'s vine stacks, the wrap art, the entangled HUD
+    buds and the halved-recovery penalty for an entangled caster have no source either (only
+    that retired oak's root uses the tracker). Remove them, or give them a use.
+  Springbloom's September 29 changes (run-in launch, 8-second pad, 6-second cooldown,
+  flatter arc) are unchanged and still await their own playtest.
 - **Hollow undead:** the crawler, archer and brute form the Necromancer's siege waves
   (quickened there) and spawn at night. The GeckoLib files are proven to match the approved
   preview and the server fixture covers their combat rules. The walks were re-authored

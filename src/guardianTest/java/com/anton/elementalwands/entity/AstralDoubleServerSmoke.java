@@ -75,7 +75,7 @@ public final class AstralDoubleServerSmoke implements ModInitializer {
             guardian=new FracturedGuardianEntity(ModEntities.FRACTURED_GUARDIAN,w);guardian.setPosition(.5,100,.5);guardian.stopReview();guardian.setAiDisabled(true);guardian.setNoGravity(true);w.spawnEntity(guardian);
             var field=FracturedGuardianEntity.class.getDeclaredField("combat");field.setAccessible(true);combat=(GuardianBossCombat)field.get(guardian);
             combat.emitWave(w,guardian.getEntityPos(),Set.of());}
-        if(t==250){require(clone.isRemoved(),"Guardian wave failed to destroy clone");guardian.stopReview();reset();clone=place(new Vec3d(2.5,100,.5));combat.crushGrowth(w,guardian.getEntityPos(),4.5,false,6);require(clone.isRemoved(),"Guardian slam failed");}
+        if(t==250){require(clone.isRemoved(),"Guardian wave failed to destroy clone");guardian.stopReview();reset();clone=place(new Vec3d(2.5,100,.5));combat.breakDoubles(w,guardian.getEntityPos(),4.5);require(clone.isRemoved(),"Guardian slam failed");}
         if(t==260){reset();clone=place(new Vec3d(.5,100,10.5));var rock=new GuardianRockEntity(ModEntities.GUARDIAN_ROCK,w);rock.setOwner(guardian);rock.setPosition(.5,101,5);rock.releaseShard(new Vec3d(0,0,1),new HashSet<>(),new GuardianWallImpact());w.spawnEntity(rock);}
         if(t==266){require(clone.isRemoved(),"Guardian shard failed");reset();
             // The shard flies on past the destroyed double; clear it before the caster steps into its path.

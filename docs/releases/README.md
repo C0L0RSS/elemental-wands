@@ -5,6 +5,7 @@ are not claims of public publication. Older entries describe what changed then;
 use [current guides](../README.md) for today’s behavior and [status](../STATUS.md)
 for outstanding verification. Detailed historical reports are optional background.
 
+- [2026-11-10 — Nature: flowers that fight beside you, nothing in the way](2026-11-10-nature-rework.md)
 - [2026-11-04 — Necromancer sieges: hordes and a harder-hitting brute](2026-11-04-necromancer-hordes.md)
 - [2026-11-03 — Space spells in void glass](2026-11-03-space-void-glass.md)
 - [2026-11-03 — /locate to a Storm Roc aerie lands on the summit](2026-11-03-locate-aerie.md)

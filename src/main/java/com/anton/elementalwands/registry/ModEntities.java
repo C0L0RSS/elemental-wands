@@ -120,7 +120,8 @@ public final class ModEntities {
                         Identifier.of(ElementalWandsMod.MOD_ID, "awakened_tree"),
                         FabricEntityTypeBuilder
                                         .<AwakenedTreeEntity>create(SpawnGroup.MISC, AwakenedTreeEntity::new)
-                                        .dimensions(EntityDimensions.fixed(3.5f, 6.0f))
+                                        // A point anchor: wide area effects must not mistake it for a body.
+                                        .dimensions(EntityDimensions.fixed(0.25f, 0.25f))
                                         .trackRangeBlocks(96)
                                         .trackedUpdateRate(3)
                                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
@@ -197,6 +198,14 @@ public final class ModEntities {
                         com.anton.elementalwands.entity.SpringbloomEntity::new)
                         .dimensions(EntityDimensions.fixed(2.5f,1)).trackRangeBlocks(96).trackedUpdateRate(1).disableSaving()
                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"springbloom"))));
+
+        // The turning head of a Sentry Bloom flower. Visual only: the flower's rules live in FlowerTurretManager.
+        public static final EntityType<com.anton.elementalwands.entity.SentryBloomEntity> SENTRY_BLOOM = Registry.register(
+                Registries.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"sentry_bloom"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.SentryBloomEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.SentryBloomEntity::new)
+                        .dimensions(EntityDimensions.fixed(2.6f,2.2f)).trackRangeBlocks(96).trackedUpdateRate(2).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"sentry_bloom"))));
 
         public static final EntityType<com.anton.elementalwands.entity.GaleDaggerEntity> GALE_DAGGER = Registry.register(
                 Registries.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"gale_dagger"),

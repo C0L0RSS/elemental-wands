@@ -56,7 +56,7 @@ inspect their assertions when behavior changes instead of trusting an old name.
 | Space void-glass visuals | — | `space_blockspace_client_smoke.init.gradle` (hidden, muted: casts all five Space spells, including a bolt hit and miss, a blink, the Astral Double's echo and swap, a Gravity Well burst and Hollow Purple's charge, orb and collapse; first-person and side screenshots) |
 | Flashover | `flashover_server_smoke.init.gradle`, `sticky_flashover_server_smoke.init.gradle` | `fire_expansion_client_smoke.init.gradle`, `sticky_flashover_client_smoke.init.gradle` |
 | Nature Springbloom | `springbloom_server_smoke.init.gradle` | `springbloom_client_smoke.init.gradle` |
-| Nature Lash / Bloom / Overgrowth | `nature_expansion_server_smoke.init.gradle`, `overgrowth_throw_server_smoke.init.gradle` | `nature_expansion_client_smoke.init.gradle`, `nature_overgrowth_client_smoke.init.gradle` |
+| Nature Thornbite / seed mark / Sentry Bloom flowers / Full Bloom / retired Overgrowth | `nature_expansion_server_smoke.init.gradle`, `full_bloom_server_smoke.init.gradle`, `overgrowth_throw_server_smoke.init.gradle` (the retired oak, through its kept entry point) | `nature_expansion_client_smoke.init.gradle`, `nature_overgrowth_client_smoke.init.gradle` (muted; also requires the block-nature bite, heal, seed-trail and Full Bloom effects to run) |
 | Stone | `stone_cluster_smoke.init.gradle`, `stone_technique_smoke.init.gradle` | `stone_technique_client_smoke.init.gradle`; Guardian floor client includes Stone cluster mesh checks |
 | Space Gravity Well | `gravity_well_server_smoke.init.gradle` | `gravity_well_client_smoke.init.gradle` |
 | Space Astral Double | `astral_double_server_smoke.init.gradle` | `astral_double_client_smoke.init.gradle` |
@@ -64,12 +64,12 @@ inspect their assertions when behavior changes instead of trusting an old name.
 | Wind daggers | `gale_daggers_server_smoke.init.gradle` | `gale_daggers_client_smoke.init.gradle` |
 | Wind | `wind_pressure_smoke.init.gradle` | `wind_visual_client_smoke.init.gradle` (guided visual review; leaves disposable world open) |
 | Guardian combat | `guardian_combat_smoke.init.gradle`, `guardian_shell_smoke.init.gradle` (party health, back volley, half-health gate, break immunity and burst, core pulse blast, meteors), `guardian_phase_smoke.init.gradle` | `guardian_floor_client_smoke.init.gradle` |
-| Guardian cover / Nature / walls | `guardian_cover_smoke.init.gradle`, `guardian_nature_smoke.init.gradle`, `guardian_wall_smoke.init.gradle` | Relevant native visual fixture |
+| Guardian cover / Nature / walls | `guardian_cover_smoke.init.gradle`, `guardian_nature_smoke.init.gradle` (add `-PnatureBalance` for the Nature damage, seed mark, flower and pass-through oak fixture on a flat world), `guardian_wall_smoke.init.gradle` | Relevant native visual fixture |
 | Hollow Necromancer | `necromancer_server_smoke.init.gradle` (spells, a watcher killed mid-intro let go and told the scene is over, Hands→ambush, waves and their quickening, a Soul Fire Rain volley, blink/shift, the full two-siege fight flow with rain into the transformation, soul light on bolts, fireballs and markers and its cleanup), `necromancer_phase_smoke.init.gradle` (phase two; starts past the sieges: the transformation cinematic holding both players unhurt, its ghosts coming and going and its release, then grab, swipe, the random-windup rush, Grave Dive hit and dodge, Soul Harvest, the soul split and collapse, soul light on the souls and its cleanup) | `necromancer_client_smoke.init.gradle` (screenshots; `-PnecroRecord` for hidden recording; `-PnecroMechanics` for the Soul Fire Rain fireball, charge windup, Grave Dive, soul split and Soul Harvest against a scripted player, then soul light under a night rain and skull volley); siege perch views, and the transformation cinematic recorded in the crypt (`-PtransformVideo`), are in `crypt_client_smoke` |
 | Hollow undead | `hollow_undead_server_smoke.init.gradle` (rise, chase, hit-frame damage and arrow timing, the brute's charge onto its victim, no charge across a pit, shoved out of a charge, daylight burning, loot, held death clip, bound-minion rules) | `hollow_undead_client_smoke.init.gradle` (hidden window; rise, idle front/side, walk, attack key frames, death screenshots) |
 | Hollow Crypt realm | — | `crypt_client_smoke.init.gradle` (realm build, enter, summon, a siege on an exported bough perch with near and far-rim screenshots, wall, reset, leave, `/locate`, withered woods around the yard, the unbreakable mausoleum and its door hint, the walk-in veil ritual, wipe with kept items and a return to the court, victory rewards and spell book; screenshots) |
 | Church / Shattered Nave | `guardian_church_smoke.init.gradle` (ritual into the nave, wipe/retry, victory, restoration, loot), `guardian_nave_smoke.init.gradle` (layout, arrival, the Guardian's intro played in full then skipped, its zombie gone after both, a watcher killed mid-intro let go and told the scene is over, casting/damage gates, floor and hall protection, containment, spectating with kept items, victory, wipe, restart) | `nave_client_smoke.init.gradle` (screenshots of the hall from six viewpoints; stills of the intro's shots and its hand-back into the fight; `-PintroVideo` saves every tick for a review video); Guardian floor client with visual options |
-| Storm Roc | `roc_server_smoke.init.gradle` (diamond damage, repeated strikes, dodges, melee, the opening summon (no tornado before its call, then one that forms harmlessly, and the second only after it), the spire call, dive/ring, tornado catch, whirl, throw and winds, health gates, planted thorns/owned fire contact, stacking after armor in both orders; the phase change, phase-two strikes, live ground, chain-smash timing and hop limits, strikes during the brawl and the defeat; encounter lifecycle including a lethal tornado throw) | `roc_client_smoke.init.gradle` (hidden authored-summit rehearsal, synchronized poses/effects including `spire_flight`, the charge's `flight`, spire landing and call, the client storm level, 32 individual native screenshots of both phases, including the opening summon's scream and its tornado forming and formed, the spire hop just after push-off and flight looking down from ground cameras, a spire landing, the call bolt, bolts from the cap cloud and a textured tornado close-up) |
+| Storm Roc | `roc_server_smoke.init.gradle` (diamond damage, repeated strikes, dodges, melee, the opening summon (no tornado before its call, then one that forms harmlessly, and the second only after it), the spire call, dive/ring, tornado catch, whirl, throw and winds, health gates, a Nature mark and a flower seed through a body part, owned fire contact, stacking after armor in both orders; the phase change, phase-two strikes, live ground, chain-smash timing and hop limits, strikes during the brawl and the defeat; encounter lifecycle including a lethal tornado throw) | `roc_client_smoke.init.gradle` (hidden authored-summit rehearsal, synchronized poses/effects including `spire_flight`, the charge's `flight`, spire landing and call, the client storm level, 32 individual native screenshots of both phases, including the opening summon's scream and its tornado forming and formed, the spire hop just after push-off and flight looking down from ground cameras, a spire landing, the call bolt, bolts from the cap cloud and a textured tornado close-up) |
 | Storm Summit realm | — | `summit_client_smoke.init.gradle` (enter, screenshots from seven viewpoints, the remains placed, survival players can't break the rock, a fall off the rim set back on the summit, leave) |
 | Storm aerie | `aerie_server_smoke.init.gradle` (template in four rotations, the gong's confirm and held clicks through its anchor and parts, part shapes matching the plate in every rotation, the alternating strike clips, who goes, the call, the intro with simulated clients (held at the gong, carried up only after the cloud, the fight as everyone lands, a client that never reaches the cloud and a scene that never lands), fight start with the called roster, a loss home, wins with chests, homecoming and one Ultimate book per victor per aerie, refusals, a broken chest put back, busy slots, deaths and crash recovery) | `aerie_client_smoke.init.gradle` (hidden, muted screenshots of natural aeries on snowy and stony peaks and of all four rotations, at rest, mid-swing and restruck mid-swing (asserts the clip restarts): `-PaerieSeed`, `-PaerieGongs="label@x,y,z;…"`); `roc_intro_client_smoke.init.gradle` (hidden, muted: strikes a natural aerie's gong as a survival player and watches the intro take the camera, move into the summit realm with no loading screen, hold in the cloud until the summit is built, hand back and start the fight; beat stills, `-ProcIntroVideo` for a frame every `-ProcIntroEvery` ticks, on through the fight's opening summon, `-ProcIntroGong=x,y,z`, `-ProcIntroViewDistance`) |
 | Worldgen / locate | `guardian_church_worldgen_smoke.init.gradle`, `guardian_church_locate_smoke.init.gradle` (incremental church search, then the church, graveyard and Storm Roc aerie `/locate` heights checked as clear standing cells in the generated terrain, and each result's own teleport link moving a villager that must stand there unhurt three seconds later; the aerie's must be its built gong's stand point), `aerie_worldgen_smoke.init.gradle` (natural aeries on `-PaerieSeed`: floor, levelled-box flatness, the biome's surface, support, earthwork) | Human terrain review |
@@ -83,7 +83,9 @@ Examples from the repository root:
 ./gradlew -I tools/guardian_floor_client_smoke.init.gradle runClient   -PfloorClientAssets="$HOME/.lunarclient/shared/assets" -PguardianPedestalVisual --offline
 ```
 
-Client runners using `hubClientAssets` can reuse the local Lunar asset cache.
+Client runners using `hubClientAssets` can reuse the local Lunar asset cache; add
+`-x downloadAssets` so Loom does not also fetch its own copy. The first client or server
+run on a machine needs one online run to fetch Loom's launcher libraries.
 A fresh run directory's first-launch accessibility screen turns the narrator on; set
 `narrator:0` in that runner's `options.txt` (the crypt runner switches it off itself).
 The floor runner uses `floorClientAssets` instead; supported visual switches
@@ -110,6 +112,25 @@ the intro skip it with `GuardianIntro.skip` for each watcher. Simulated players 
 no channels; `GuardianNaveSmokeMod.listen` declares one as a client would and records the payloads sent on it. Casts aim with the head, so set the
 head yaw as well as the yaw before an aimed cast. Fixtures that need realm entities to
 tick force-load the slot's chunks, as they do in the Overworld.
+
+### Server fixtures on a machine with no accepted EULA
+
+A dedicated-server runner refuses to start without `run/eula.txt`. Where none is on file,
+`integrated_fixture_host.init.gradle` loads the same fixture class beside a singleplayer world
+instead, started muted, with the real player parked far away as a spectator:
+
+```sh
+./gradlew -I tools/integrated_fixture_host.init.gradle runClient -x downloadAssets \
+  -PfixtureMain=com.anton.elementalwands.entity.NatureBalanceSmokeMod -PfixtureReceipt=NATURE \
+  -PhubClientAssets="$HOME/.lunarclient/shared/assets"
+```
+
+`fixtureReceipt` is the prefix of the fixture's `*_PASSED.txt`; receipts land in
+`build/integrated-fixture-host/`. It creates a new ordinary world each run, in Survival, and
+clears the air around y=100 where flat-world fixtures stage their scenes. It cannot serve a
+restart pair or a fixture that depends on dedicated-server settings, and a pass is reported as
+a hosted run, not a dedicated-server run. A fixture hosted this way must not query the world
+for entities in the same tick it force-loads their chunk.
 
 ## Test and recording handoff
 

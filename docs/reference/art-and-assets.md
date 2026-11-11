@@ -38,13 +38,14 @@ Runtime resources live under `src/main/resources/assets/elementalwands/`.
 | `art/fire/blockfire/` | Block-fire browser study, atlas source and builder for all six Fire spells |
 | `art/fire/workshop/`, `tools/prepare_fire_assets.py` | Earlier workshop 05 Fire frames and meshes (Fire particles still use them) |
 | `art/wind/blockwind/` | Block-wind browser study, painted atlas source and builder for all five Wind spells |
+| `art/nature/blocknature/` | Block-nature browser study and painted atlas source for the Nature spell effects |
 | `art/space/blockspace/` | Void-glass browser study, painted atlas source and builder for all five Space spells, and the Astral Double's glass-shell textures (`build_astral_glass.py`) |
 | `art/wind/cloud-white/`, `tools/generate_wind_vfx_assets.py` | Cloud-white Wind atlas, native-grid frames, wing item icon and ability icons (the Wind particles and the worn-wing texture are unused now) |
 | `tools/generate_shared_vfx_assets.py` | Legacy neutral wand sprite and wooden HUD frame only |
 | `tools/generate_stone_vfx_assets.py` | Stone spell, block, equipment and HUD textures (41-image family) |
 | `tools/generate_nature_vfx_assets.py` | Nature particle, entity and HUD textures (44-image family); separate from model/layout exporters |
 | `tools/generate_space_vfx_assets.py` | Space particle, entity and HUD textures (81-image family; the Space particles are unused now) |
-| `tools/prepare_nature_models.mjs` | Approved Nature pod, flowers, roots, rafts and tree layout |
+| `art/nature/workshop/`, `tools/prepare_nature_models.mjs` | Nature pod, the Sentry Bloom flower (`sentryBloom.js`), roots and tree layout |
 | `art/nature/springbloom/model.js`, `tools/prepare_springbloom.mjs` | Approved Springbloom pad, wilt and pod meshes, with capped pieces for partial flowers; no PNGs |
 | `tools/prepare_nature_expansion.py` | Root-knot native model |
 | `art/wand/design.json`, `tools/prepare_wand_assets.py` | Dynamic wand meshes and textures |
@@ -128,9 +129,50 @@ Stone's approved material sources are `art/stone/natural-gray/` and the subseque
 `art/stone/weathered-detail/` revision. Gathered Mass replaced the old ground-spike
 primary. Keep the chipped wall/dome/equipment materials and gray ability art.
 
-Nature uses a winged pod, native cuboid flowers, low roots/rafts, angular vines,
-and a block-built oak. Keep ordinary Minecraft logs/leaves dominant; do not restore
-the superseded smooth tree model. The root knot and throwable acorn extend this style.
+Nature uses a winged pod, a staged flower that spits seeds and a
+block-built oak (retired from play with the Overgrowth ultimate, art kept). The oak's logs and leaves are look-alike blocks that reuse the vanilla
+oak models and textures (their own blockstates; solid trunk, walk-through leaves); keep that ordinary
+Minecraft look dominant and do not restore the superseded smooth tree model. The
+throwable acorn extends this style. The Sentry Bloom flower is cut in two so its head
+can turn (`art/nature/workshop/sentryBloom.js`). The base is the four-stage
+`nature_seedling` block model: root crown, braced leaves and a stem that rises to 0.6875
+blocks. The head is three render meshes in `nature/meshes.json` (`sentry_head`,
+`sentry_head_fired`, `sentry_head_wilt`), authored mouth-up with the pivot at the origin: a
+stem-coloured knuckle, a slim tapered green calyx and eight broad pink petals cupped
+around a thin violet throat, with one small loaded gold seed at its centre 0.53125 blocks
+along the axis, where the game fires from. Face-on it must read as a flower: the petals
+take up far more of the view than the centre (the first head, a fat studded seed sac with
+a large seed and four small petals, was rejected as too pod-like).
+It clears its own leaves at any yaw up to 105 degrees from upright, the limit the game
+keeps to. Upright it stands about 1.44 blocks tall. It has no face. While its owner's Full
+Bloom lasts the base is `nature_seedling_grown` (block state `grown=true`), shaped like a
+plant rather than a fork: a leaf rosette 2 blocks across (the normal one is a block), so a
+boosted flower reads at a glance; one tall main stem that bends away from the branch to the
+full-size head at (0.3125, 1.5, 0) from the bottom centre; and a thinner side branch that splits off 0.5625
+blocks up (37.5% of the main stem) and rises outward to a three-quarter-size head at
+(-0.6875, 1.125, 0.125). `SentryBloomEntity.MAIN_STEM_TOP`/`BRANCH_TOP` and their scales
+must match the art. The base is 61 cuboids, 2 blocks wide and 1.5 tall (model bounds
+(-8, 0, -8) to (24, 24, 24)); with upright heads the flower is about 2.14 blocks tall, and
+its leaves reach half a block into neighbouring cells. In a 5-degree yaw/tilt sweep through
+0-105 degrees two heads aimed the same way never touch, and neither sinks into a stem at
+level aim; the small head's petals clip its own branch slightly at tilts of 95-105 degrees.
+GPT Astra designed it on November 10 after the developer found the earlier symmetric fork
+too unlike a flower, then raised the branch and widened the rosette at the developer's
+request; the main stem's bend, which balances the two heads, was added afterwards on the same
+request. The developer approved the stem-and-branch direction from previews and client
+fixture screenshots; this final revision has been seen only in those, not in Lunar. The target-wrap vines, bramble carpet and root-knot models
+are retired from play but kept, with their exporters, for possible reuse.
+
+Nature's spell effects are block nature: opaque pieces textured from
+`textures/misc/blocknature.png` (8 bands × 4 frames: leaf, dark leaf, pink, violet, gold, bark,
+sap, cream), copied from `art/nature/blocknature/textures/blocknature.png`
+(`build_atlas.py --check` verifies the source). Three shapes only: a petal of two stepped slabs, a
+leaf of three boxes (blade, tip, raised vein) and a pollen kernel. Nothing is see-through or faces
+the camera, and nothing glows like a card: pieces take the world's light, gold and sap a little
+less so. Keep them chunky and few, and let them leave by shrinking, never by fading. Unlike Fire,
+Wind and Space it is not cube-like by design: the developer asked for the same 3D style, not
+pure cubes. GPT Astra built the study on November 11; Claude strengthened the heal cue and the
+seed trail before the port.
 
 Space spells are void glass: pieces textured from `textures/misc/blockspace.png`
 (8 bands × 4 frames: void, glass, nebula, rim, amethyst, blue, red, starlight), built

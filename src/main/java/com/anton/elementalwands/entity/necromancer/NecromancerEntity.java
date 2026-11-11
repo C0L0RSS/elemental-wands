@@ -234,7 +234,8 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
         float before = getHealth();
         boolean accepted = super.damage(world, source, amount);
         if (accepted) {
-            hurtWindows.put(key, new HurtWindow(previous == null ? now + 10 : previous.until(), lastDamageTaken));
+            if (!source.isIn(com.anton.elementalwands.util.SpellCombat.NO_HURT_WINDOW))
+                hurtWindows.put(key, new HurtWindow(previous == null ? now + 10 : previous.until(), lastDamageTaken));
             combat.damaged(attacker, before - getHealth(), soulHitting);
         }
         return accepted;

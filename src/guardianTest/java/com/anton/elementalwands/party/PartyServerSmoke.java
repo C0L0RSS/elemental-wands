@@ -73,9 +73,16 @@ public final class PartyServerSmoke implements ModInitializer {
             var tree=new AwakenedTreeEntity(ModEntities.AWAKENED_TREE,world);tree.initialize(B);
             require(WandAllies.protectedFrom(a,tree),"Ally tree not protected");
             for(int x=-12;x<=12;x++)for(int z=-12;z<=12;z++)world.setBlockState(new BlockPos(x,99,z),Blocks.STONE.getDefaultState());
-            for(ServerPlayerEntity target:List.of(b,c,d))NatureCombat.thornContact(world,target,A);
-            require(b.getHealth()==200 && d.getHealth()==200 && EntangleTracker.getStacks(b)==0 && EntangleTracker.getStacks(d)==0,"Allied thorns/entangle");
-            require(c.getHealth()<200 && EntangleTracker.getStacks(c)>0,"Enemy thorns suppressed");
+            // Flowers: never an ally, their pet or their tree, marked or not; a marked enemy player is shot.
+            BlockPos bloom=a.getBlockPos();
+            require(!FlowerTurretManager.hostile(b,a) && !FlowerTurretManager.hostile(d,a) && !FlowerTurretManager.hostile(pet,a)
+                    && !FlowerTurretManager.hostile(tree,a) && !FlowerTurretManager.hostile(c,a),"Flowers would shoot a player, pet or tree unprompted");
+            FlowerTurretManager.mark(a,b);
+            require(FlowerTurretManager.targetFrom(world,a,bloom)!=b,"A flower obeyed a mark on a party ally");
+            FlowerTurretManager.mark(a,d);
+            require(FlowerTurretManager.targetFrom(world,a,bloom)!=d,"A flower obeyed a mark on a vanilla teammate");
+            FlowerTurretManager.mark(a,c);
+            require(FlowerTurretManager.targetFrom(world,a,bloom)==c,"A flower ignored a mark on an enemy player");
             server.getGameRules().get(net.minecraft.world.GameRules.PVP).set(false,server);
             require(WandAllies.protectedFrom(a,c),"PvP-disabled server allowed harmful effects");
             server.getGameRules().get(net.minecraft.world.GameRules.PVP).set(true,server);
@@ -86,14 +93,8 @@ public final class PartyServerSmoke implements ModInitializer {
             map.remove(A);server.getPlayerManager().getPlayerList().remove(a);
             require(WandAllies.protectedFrom(world,A,b) && WandAllies.protectedFrom(world,A,d),"Offline caster lost protections");
             map.put(A,a);server.getPlayerManager().getPlayerList().add(a);
-            // Start real ticking Nature flowers with all three recipients in the growth.
-            reset();a.setPosition(0,100,-5);b.setPosition(-1,100,0);c.setPosition(0,100,0);d.setPosition(1,100,0);
-            require(SeedlingManager.tryPlantSeedling(world,a,new BlockHitResult(new Vec3d(.5,100,.5),Direction.UP,new BlockPos(0,99,0),false)),"Could not plant fixture seedling");
         }
         if(tick==70) {
-            require(b.getHealth()==200 && d.getHealth()==200 && !b.hasStatusEffect(StatusEffects.SLOWNESS) && !d.hasStatusEffect(StatusEffects.SLOWNESS),"Allied Nature zone damage/slow");
-            require(c.getHealth()<200 && c.hasStatusEffect(StatusEffects.SLOWNESS),"Enemy Nature zone failed");
-            SeedlingManager.consumeAllSeedlingsForCaster(world,A);
             command(a,"party transfer PartyAlly");require(PartyManager.get(server).party(A).leader().equals(B),"Transfer failed");
             require(command(a,"party kick PartyAlly")==0,"Old leader retained permissions");
             command(b,"party transfer PartyCaster");

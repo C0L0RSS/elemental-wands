@@ -48,6 +48,7 @@ public final class ModNetworking {
         PayloadTypeRegistry.playS2C().register(BlockFirePayload.ID, BlockFirePayload.CODEC);
         PayloadTypeRegistry.playS2C().register(BlockWindPayload.ID, BlockWindPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(BlockSpacePayload.ID, BlockSpacePayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(BlockNaturePayload.ID, BlockNaturePayload.CODEC);
         // S2C
         PayloadTypeRegistry.playS2C().register(UpdraftLaunchPayload.ID, UpdraftLaunchPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncPlayerDataPayload.ID, SyncPlayerDataPayload.CODEC);
@@ -55,8 +56,8 @@ public final class ModNetworking {
         PayloadTypeRegistry.playS2C().register(WelcomePayload.ID, WelcomePayload.CODEC);
         PayloadTypeRegistry.playS2C().register(FireBuildPayload.ID, FireBuildPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(FireLeapCommitPayload.ID, FireLeapCommitPayload.CODEC);
-        PayloadTypeRegistry.playS2C().register(SyncNatureSeedlingsPayload.ID, SyncNatureSeedlingsPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncEntangleStacksPayload.ID, SyncEntangleStacksPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(SyncSeedMarkPayload.ID, SyncSeedMarkPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncStoneClusterPayload.ID, SyncStoneClusterPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(StoneStaggerPayload.ID, StoneStaggerPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(NecromancerIntroPayload.ID, NecromancerIntroPayload.CODEC);
@@ -155,8 +156,9 @@ public final class ModNetworking {
         ServerPlayNetworking.send(player, new HubFeedbackPayload(false, message));
     }
 
-    public static void syncNatureSeedlings(ServerPlayerEntity player, List<BlockPos> positions) {
-        ServerPlayNetworking.send(player, new SyncNatureSeedlingsPayload(List.copyOf(positions)));
+    /** Tells one Nature caster which enemy their flowers are now aiming at, and for how long. */
+    public static void syncSeedMark(ServerPlayerEntity owner, int entityId, int ticks) {
+        ServerPlayNetworking.send(owner, new SyncSeedMarkPayload(entityId, ticks));
     }
 
     public static void syncEntangleStacks(ServerPlayerEntity player, LivingEntity target, int stacks,
@@ -311,6 +313,16 @@ public final class ModNetworking {
                 PacketCodecs.FLOAT,BlockWindPayload::value,BlockWindPayload::new);
         @Override public Id<? extends CustomPayload> getId() { return ID; }
     }
+    /** A one-off Nature spell moment (a planting, a shot, a heal, a bloom) for the block-nature visuals; see BlockNatureEvents. */
+    public record BlockNaturePayload(int kind, int entity, net.minecraft.util.math.Vec3d pos, net.minecraft.util.math.Vec3d dir,
+            float value) implements CustomPayload {
+        public static final Id<BlockNaturePayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"block_nature"));
+        public static final PacketCodec<RegistryByteBuf,BlockNaturePayload> CODEC = PacketCodec.tuple(
+                PacketCodecs.VAR_INT,BlockNaturePayload::kind,PacketCodecs.VAR_INT,BlockNaturePayload::entity,
+                net.minecraft.util.math.Vec3d.PACKET_CODEC,BlockNaturePayload::pos,net.minecraft.util.math.Vec3d.PACKET_CODEC,BlockNaturePayload::dir,
+                PacketCodecs.FLOAT,BlockNaturePayload::value,BlockNaturePayload::new);
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
     /** A one-off Space spell moment (a bolt hit, a teleport, a charge, a collapse) for the void-glass visuals; see BlockSpaceEvents. */
     public record BlockSpacePayload(int kind, int entity, net.minecraft.util.math.Vec3d pos, net.minecraft.util.math.Vec3d dir,
             float value) implements CustomPayload {
@@ -448,17 +460,13 @@ public final class ModNetworking {
         @Override public Id<? extends CustomPayload> getId() { return ID; }
     }
 
-    /** S2C packet carrying the caster's current active Nature seedling anchors. */
-    public record SyncNatureSeedlingsPayload(List<BlockPos> positions) implements CustomPayload {
-        public static final Id<SyncNatureSeedlingsPayload> ID = new Id<>(
-                Identifier.of(ElementalWandsMod.MOD_ID, "sync_nature_seedlings"));
-        public static final PacketCodec<RegistryByteBuf, SyncNatureSeedlingsPayload> CODEC =
-                BlockPos.PACKET_CODEC.<RegistryByteBuf>cast()
-                        .collect(PacketCodecs.toList(32))
-                        .xmap(SyncNatureSeedlingsPayload::new, SyncNatureSeedlingsPayload::positions);
-
-        @Override
-        public Id<? extends CustomPayload> getId() { return ID; }
+    /** S2C packet naming the enemy the receiving player's flowers aim at for the next {@code ticks}. */
+    public record SyncSeedMarkPayload(int entityId, int ticks) implements CustomPayload {
+        public static final Id<SyncSeedMarkPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID, "sync_seed_mark"));
+        public static final PacketCodec<RegistryByteBuf, SyncSeedMarkPayload> CODEC = PacketCodec.tuple(
+                PacketCodecs.INTEGER, SyncSeedMarkPayload::entityId, PacketCodecs.INTEGER, SyncSeedMarkPayload::ticks,
+                SyncSeedMarkPayload::new);
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
     }
 
     /** S2C packet carrying one visible entity's current Entangle stack count. */

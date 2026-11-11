@@ -31,8 +31,8 @@ is full leaf blocks rather than individual modeled leaves. A player beside the
 tree provides scale. The custom block faces are preview geometry, not installed
 Minecraft block definitions. No Nature runtime changes are authorized until review.
 
-Five interactive scenes: winged seed and sprouting plant; land roots and water
-rafts; traveling paired vines that climb a target, with no destination flower; staged block-built oak awakening;
+Five interactive scenes: winged seed and sprouting plant; land roots (the water
+rafts were removed with Verdant Step); traveling paired vines that climb a target, with no destination flower; staged block-built oak awakening;
 entangle on player/spider/Guardian references, 0–5 stacks, active root, lingering
 stacks, Guardian opening and resistance. Drag to orbit, scroll to zoom, use the
 animation scrubber, pause/play/restart, speed, daylight/dusk and reset controls.

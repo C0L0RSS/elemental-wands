@@ -1,0 +1,6 @@
+<!doctype html><html><body style="margin:0"><canvas id="view" style="width:100vw;height:100vh"></canvas><script type="module">
+const q=new URLSearchParams(location.search),e=q.get('element')||'fire',base=`/${e}/block${e}/`;
+const {loadTextures,createRenderer}=await import(base+'engine.js'),{TEXTURES,cameraFor,buildMesh}=await import(base+'stage.js'),{scenes}=await import(base+'scenes/index.js');
+const scene=scenes.find(s=>s.id===q.get('scene'))||scenes[0],t=Number(q.get('t')||1);let c=structuredClone(cameraFor(scene,'orbit',t));if(q.has('dist'))c.distance=Number(q.get('dist'));const r=createRenderer(document.getElementById('view'),await loadTextures(Object.fromEntries(Object.entries(TEXTURES).map(([k,v])=>[k,Array.isArray(v)?v.map(x=>base+x):base+v]))));
+r.draw(buildMesh(scene,t,c,{cam:'orbit',embers:true}),c,false);document.body.dataset.ready='true';
+</script></body></html>

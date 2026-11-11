@@ -6,7 +6,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 
-/** Low brambles and floating leaves share the old carpet/pad's one-pixel walking surface. */
+/** The retired Overgrowth oak's root carpet: a one-pixel layer of roots and leaves. */
 public final class NatureGrowthBlock extends Block {
     public static final MapCodec<NatureGrowthBlock> CODEC=createCodec(NatureGrowthBlock::new);
     private static final VoxelShape SHAPE=Block.createCuboidShape(0,0,0,16,1,16);

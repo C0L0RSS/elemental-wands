@@ -52,7 +52,7 @@ public final class SpringbloomEntity extends Entity {
             else if(world.getFluidState(hit.getBlockPos()).isEmpty()){
                 setPosition(hit.getPos().add(Vec3d.of(hit.getSide().getVector()).multiply(.04)));setVelocity(0,-.2,0);return;
             }
-            world.spawnParticles(ModParticles.NATURE_LEAF,hit.getPos().x,hit.getPos().y+.1,hit.getPos().z,6,.1,.1,.1,.01);
+            com.anton.elementalwands.util.BlockNatureEvents.send(world,com.anton.elementalwands.util.BlockNatureEvents.POD_HIT,hit.getPos());
             discard();return;
         }
         setPosition(to);setVelocity(getVelocity().multiply(.99).add(0,-.09,0));

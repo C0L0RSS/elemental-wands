@@ -74,7 +74,7 @@ public final class WandLoadouts {
         var stack = player.getMainHandStack();
         if (!(stack.getItem() instanceof AbstractWandItem wand)) return;
         if(slot==0 && GaleDaggers.active(player)) { if(deliberate)GaleDaggers.fire(player); return; }
-        if(slot==0 && (SpringbloomManager.tryBreakAimed(player) || FlashoverManager.tryDisarmAimed(player) || TendrilBloomManager.tryBreakKnotAimed(player)))return;
+        if(slot==0 && (SpringbloomManager.tryBreakAimed(player) || FlashoverManager.tryDisarmAimed(player)))return;
         var ids = get(player);
         if (slot < 0 || slot >= ids.size()) return;
         var spell = WandSpells.find(ids.get(slot));

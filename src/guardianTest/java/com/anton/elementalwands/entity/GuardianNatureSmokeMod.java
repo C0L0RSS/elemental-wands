@@ -14,13 +14,15 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.*;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.Direction;
 import net.minecraft.world.Heightmap;
 import java.nio.file.*;
 import java.util.*;
 
-/** Actual nave floor/spell writes and attacks; isolated from player saves by the optional init script. */
+/**
+ * Actual nave floor/spell writes and attacks; isolated from player saves by the optional init script.
+ * Nature must treat the Guardian as every wand does: same damage, no hold, and nothing of its own
+ * in the Guardian's behaviour.
+ */
 public final class GuardianNatureSmokeMod implements ModInitializer {
     private int tick, phase, started, floor;
     private long attackStarted;
@@ -28,11 +30,12 @@ public final class GuardianNatureSmokeMod implements ModInitializer {
     private FracturedGuardianEntity guardian;
     private GuardianBossCombat combat;
     private ItemStack wand;
-    private BlockPos seed, remote, distant, coals;
+    private BlockPos seed, coals;
     private net.minecraft.block.BlockState coalsFloor;
     private AwakenedTreeEntity tree;
-    private float treeHealth;
-    private boolean sawClearing;
+    private float treeHealth, flowerHealth;
+    private BlockPos bloom;
+    private double guardianY;
     private static void require(boolean ok,String why) { if(!ok) throw new AssertionError(why); }
     public void onInitialize() {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
@@ -52,8 +55,6 @@ public final class GuardianNatureSmokeMod implements ModInitializer {
             player=(ServerPlayerEntity)factory.invoke(null,server,UUID.randomUUID(),"NatureTester",8.5,(double)ground,.5);
             player.onTeleportationDone(); player.setOnGround(true);
             wand=new ItemStack(ModItems.FRACTURED_WAND);player.equipStack(EquipmentSlot.MAINHAND,wand);
-            // Water growth needs ordinary Overworld water, so it runs before the party enters the nave.
-            testWaterGrowth(world);
             // Slot 0 of a fresh nave is centred on x=0, z=0, like the fixture's authored positions.
             GuardianArenaManager.enter(player,0); phase=10;
         }
@@ -82,9 +83,6 @@ public final class GuardianNatureSmokeMod implements ModInitializer {
             FireAbilityHandler.castSecondary(world,player,wand);
             require(!world.getEntitiesByClass(FireAbilityHandler.PyreSchedulerEntity.class,player.getBoundingBox().expand(4),e->true).isEmpty(),
                     "Fire secondary did not start its Pyre in the nave");
-            seed=new BlockPos(10,floor+1,10);remote=new BlockPos(20,floor+1,10);
-            distant=new BlockPos(50,floor+1,10);
-            plant(world,seed);plant(world,remote);plant(world,distant);
             var original=world.getBlockState(new BlockPos(25,floor,25));
             var placement=TemporaryBlockManager.placeTrackedTemporaryBlocks(world,List.of(new BlockPos(25,floor,25)),ModSpellBlocks.PYRE_COALS.getDefaultState(),20,s->true);
             require(placement.placedCount()==1,"Tracked floor surface rejected");
@@ -110,45 +108,63 @@ public final class GuardianNatureSmokeMod implements ModInitializer {
         if(phase==8 && tick-started==30) {
             require(player.getHealth()>10,"Pyre shows Regeneration but never heals");
             player.getHungerManager().setFoodLevel(20);
-            require(world.getBlockState(seed).isOf(ModSpellBlocks.NATURE_SEEDLING),"Seedling uprooted on artificial floor");
-            require(world.getBlockState(seed.east()).isOf(ModSpellBlocks.NATURE_ROOTS),"Seedling failed to grow arena thorns");
             guardian.setPosition(10.5,floor+1,7.5);guardian.setOnGround(true);
             player.setPosition(10.5,floor+1,18.5);
-            var source = SeedlingManager.getActiveSeedlingsForCaster(world,player.getUuid()).stream().filter(s -> s.anchorPos().equals(remote)).findFirst().orElseThrow();
             player.setAttached(com.anton.elementalwands.data.EWAttachments.AFFINITY,"NATURE");
-            // Tendril sources end unless the caster has the purchasable secondary equipped.
             WandProgression.grant(player,3);
-            require(WandLoadouts.get(player).contains("tendril_bloom"),"Fixture could not equip Tendril Bloom");
-            TendrilBloomManager.startTendril(world,player,source.seedlingId(),Vec3d.ofCenter(remote),guardian);
+            require(WandLoadouts.get(player).contains("tendril_bloom"),"Fixture could not equip Sentry Bloom");
             guardian.testAttack(player,GuardianCombatRules.Attack.SHOCKWAVE);attackStarted=world.getTime();
-            for(int i=0;i<5;i++)EntangleTracker.addStack(world,guardian);
-            require(guardian.getStatusEffect(StatusEffects.SLOWNESS).getAmplifier()==0,"Guardian got a full root");
+            // A Seed damages and marks the Guardian like anything else; a flower's seed lands inside
+            // the Seed's own hurt window; nothing slows or holds it.
+            float health=guardian.getHealth();
+            new SeedProjectileEntity(world,player).onEntityHit(new net.minecraft.util.hit.EntityHitResult(guardian));
+            require(guardian.getHealth()<health && FlowerTurretManager.marked(world,player.getUuid())==guardian,"A Seed did not damage and mark the Guardian");
+            require(FlowerTurretManager.hostile(guardian,player),"Flowers would not shoot the Guardian unprompted");
+            health=guardian.getHealth();
+            new SeedProjectileEntity(world,player,guardian.getEntityPos().add(0,8,0),new Vec3d(0,-1,0),guardian)
+                    .onEntityHit(new net.minecraft.util.hit.EntityHitResult(guardian));
+            require(guardian.getHealth()<health,"The Seed's hurt window swallowed a flower's seed on the Guardian");
+            require(!guardian.hasStatusEffect(StatusEffects.SLOWNESS) && EntangleTracker.getStacks(guardian)==0,"Nature slowed the Guardian or wound vines on it");
+            // A flower planted on the fight floor through the real cast.
+            player.setPitch(45);
+            com.anton.elementalwands.item.NatureAbilityHandler.castSecondary(world,player,wand);
+            require(FlowerTurretManager.count(world,player.getUuid())==1,"Sentry Bloom could not plant on the fight floor");
+            bloom=FlowerTurretManager.positions(world,player.getUuid()).getFirst();
+            flowerHealth=guardian.getHealth();
             started=tick;phase=3;
         }
-        if(phase==3 && tick-started==22) {
-            var blooms=TendrilBloomManager.class.getDeclaredField("BLOOMS");blooms.setAccessible(true);
-            require(!((Map<?,?>)blooms.get(null)).isEmpty(),"Nature secondary failed to produce a bloom against the tall boss");
-        }
         if(phase==3 && tick-started==60) {
-            require(!SeedlingManager.isSeedlingAlive(world,SeedlingManager.getActiveSeedlingsForCaster(world,player.getUuid()).stream().filter(s->s.anchorPos().equals(seed)).map(s->s.seedlingId()).findFirst().orElse(new UUID(0,0))),"Slam left its seedling active");
-            require(world.getBlockState(seed).isAir()&&world.getBlockState(seed.east()).isAir(),"Slam did not clear seedling and owned thorns");
-            require(world.getBlockState(remote).isAir(),"Traveling wave left the in-range plant intact");
-            require(world.getBlockState(distant).isOf(ModSpellBlocks.NATURE_SEEDLING),"Wave erased plants outside its range");
+            require(FlowerTurretManager.count(world,player.getUuid())==1 && world.getBlockState(bloom).isOf(ModSpellBlocks.NATURE_SEEDLING),
+                    "The flower did not outlast the Guardian's attack: block "+world.getBlockState(bloom)+" at "+bloom+", owner "+world.getPlayerByUuid(player.getUuid())
+                            +", alive "+player.isAlive()+", spectator "+player.isSpectator()+", loaded "+world.isChunkLoaded(bloom));
+            require(guardian.getHealth()<flowerHealth,"The flower did not shoot the Guardian");
             var next=GuardianBossCombat.class.getDeclaredField("nextAction");next.setAccessible(true);
-            require(next.getLong(combat)==attackStarted+GuardianCombatRules.Attack.SHOCKWAVE.duration+GuardianCombatRules.RECOVERY_GAP+20,"Attack timing/recovery extension is wrong");
+            require(next.getLong(combat)==attackStarted+GuardianCombatRules.Attack.SHOCKWAVE.duration+GuardianCombatRules.RECOVERY_GAP,
+                    "Nature changed the Guardian's attack timing or recovery");
             guardian.stopReview();
-            OvergrowthManager.startOvergrowth(world,player,seed,1);
+            // The oak grows right where the Guardian stands. It must not lift, push or block it.
+            guardian.setPosition(10.5,floor+1,10.5);guardian.setVelocity(Vec3d.ZERO);guardian.setOnGround(true);
+            seed=guardian.getBlockPos();guardianY=guardian.getY();
+            float health=guardian.getHealth();
+            OvergrowthManager.startOvergrowth(world,player,seed);
+            require(guardian.getHealth()<health,"Root crush did not damage the Guardian");
+            require(!guardian.hasStatusEffect(StatusEffects.SLOWNESS) && EntangleTracker.getStacks(guardian)==0,
+                    "Root crush held the Guardian or wound vines on it");
             tree=world.getEntitiesByClass(AwakenedTreeEntity.class,new Box(seed).expand(10),e->e.isAlive()).getFirst();
-            testTreeRejectsEntangle(world);
+            testTreeIsUntouchable(world);
             treeHealth=tree.getHealth();started=tick;phase=4;
         }
         if(phase==4 && tick-started==50) {
-            require(world.getBlockState(seed.up(2)).isOf(ModSpellBlocks.NATURE_HEARTWOOD),"Tree lost its custom heart");
-            require(world.getBlockState(seed.west(4).up(4)).isOf(Blocks.OAK_LOG),"Tree lost the approved outstretched branch");
-            require(world.getBlockState(seed.up(8)).isOf(Blocks.OAK_LEAVES),"Tree is not nine blocks tall");
+            require(world.getBlockState(seed.west(4).up(4)).isOf(ModSpellBlocks.NATURE_OAK_LOG),"Tree lost the approved outstretched branch");
+            // Every solid piece inside the Guardian's body is missing, the heartwood included.
+            for(BlockPos cell:BlockPos.iterate(BlockPos.ofFloored(guardian.getBoundingBox().getMinPos()),BlockPos.ofFloored(guardian.getBoundingBox().getMaxPos().subtract(.001,.001,.001))))
+                require(world.getBlockState(cell).getCollisionShape(world,cell).isEmpty(),"The oak grew a solid block inside the Guardian at "+cell+": "+world.getBlockState(cell));
+            require(world.getBlockState(seed.up(8)).isOf(ModSpellBlocks.NATURE_OAK_LEAVES),"Tree is not nine blocks tall");
             require(com.anton.elementalwands.util.NatureTreeLayout.cells().size()==169,"Approved tree layout changed");
-            combat.crushGrowth(world,guardian.getEntityPos(),6,false,6);
-            require(tree.isAlive() && tree.getHealth()<treeHealth,"Guardian impact cannot damage tree through its own shell, or instantly deletes it");
+            // The trunk is solid, so it never grows through the Guardian: nothing lifts or traps it.
+            require(Math.abs(guardian.getY()-guardianY)<.01,"The oak lifted the Guardian: "+guardian.getY()+" from "+guardianY);
+            require(!guardian.isInsideWall(),"The Guardian is suffocating inside the oak");
+            require(!tree.damage(world,world.getDamageSources().mobAttack(guardian),10) && tree.getHealth()==treeHealth,"The Guardian can damage the oak");
             OvergrowthManager.destroyTree(world,tree);
             require(world.getBlockState(seed.up(2)).isAir() && world.getBlockState(seed.west(4).up(4)).isAir(),"Tree custom heart/branches did not restore");
             guardian.stopReview();guardian.setPosition(-30.5,floor+1,-10.5);guardian.setVelocity(Vec3d.ZERO);guardian.setOnGround(true);
@@ -159,28 +175,19 @@ public final class GuardianNatureSmokeMod implements ModInitializer {
             var crush=OvergrowthManager.class.getDeclaredMethod("applyRootCrush",ServerWorld.class,net.minecraft.entity.player.PlayerEntity.class,BlockPos.class,float.class);crush.setAccessible(true);
             var before=guardian.getVelocity();crush.invoke(null,world,player,guardian.getBlockPos(),1f);
             require(guardian.getVelocity().equals(before),"Nature ultimate changed committed leap velocity");
-            for(int i=0;i<5;i++)EntangleTracker.addStack(world,guardian);
+            new SeedProjectileEntity(world,player).onEntityHit(new net.minecraft.util.hit.EntityHitResult(guardian));
+            new SeedProjectileEntity(world,player,guardian.getEntityPos().add(0,8,0),new Vec3d(0,-1,0),guardian)
+                    .onEntityHit(new net.minecraft.util.hit.EntityHitResult(guardian));
+            require(guardian.getVelocity().equals(before),"A Seed or a flower's seed changed committed leap velocity");
         }
         if(phase==5 && tick-started==110) {
-            require(guardian.getZ()>0 && !guardian.hasNoGravity(),"Entangled leap did not finish: "+guardian.leapStatus());
-            guardian.stopReview();guardian.setPosition(30.5,floor+1,30.5);guardian.setVelocity(Vec3d.ZERO);
-            player.setPosition(30.5,floor+1,.5);
-            plant(world,new BlockPos(30,floor+1,32));
-            guardian.startFight();started=tick;phase=7;
-        }
-        if(phase==7) {
-            var active=GuardianBossCombat.class.getDeclaredField("active");active.setAccessible(true);
-            if(active.get(combat)==GuardianCombatRules.Attack.SHOCKWAVE) sawClearing=true;
-            if(tick-started==180) {
-                require(sawClearing,"Sustained real thorns did not make the Guardian clear while players were distant");
-                require(world.getBlockState(new BlockPos(30,floor+1,32)).isAir(),"Automatic clearing left seedling intact");
-                guardian.stopReview();GuardianArenaManager.leave(player);phase=6;
-            }
+            require(guardian.getZ()>0 && !guardian.hasNoGravity(),"Leap under Nature fire did not finish: "+guardian.leapStatus());
+            guardian.stopReview();GuardianArenaManager.leave(player);phase=6;
         }
         // The Pyre's coals expire on their own; the nave floor comes back exactly as it was.
         if(phase==6 && !GuardianArenaManager.status().contains("fight:")
                 && server.getWorld(com.anton.elementalwands.arena.ShatteredNave.WORLD).getBlockState(coals).equals(coalsFloor)) {
-            Files.writeString(Path.of("NATURE_PASSED.txt"),"Real nave floor: Fire coals/flames/buffs; protected tracked floor restoration; Nature planting/growth/survival; local slam destruction and distant preservation; exact extended recovery; damageable ultimate tree; uninterrupted rooted leap; floor restored after the fight.\n");
+            Files.writeString(Path.of("NATURE_PASSED.txt"),"Real nave floor: Fire coals/flames/buffs; protected tracked floor restoration; a Seed damages and marks the Guardian without slowing it; a flower's seed lands inside the Seed's hurt window; a flower planted on the fight floor by the real cast shoots the Guardian and outlasts its attack; attack timing and recovery unchanged by Nature; root crush damages without holding; the oak's solid trunk never grows through the Guardian, so it is neither lifted nor trapped, and the oak cannot be damaged; a leap uninterrupted by Seeds, flower seeds or root crush; floor restored after the fight.\n");
             System.out.println("GUARDIAN NATURE ARENA CHECK PASSED");server.stop(false);
         }
     }
@@ -194,36 +201,16 @@ public final class GuardianNatureSmokeMod implements ModInitializer {
         EntangleTracker.clearStacks(world,player);player.removeStatusEffect(StatusEffects.SLOWNESS);
         require((int)remaining.invoke(null,player)==0,"Root-only state did not clear");
     }
-    private void testTreeRejectsEntangle(ServerWorld world) throws Exception {
+    private void testTreeIsUntouchable(ServerWorld world) throws Exception {
         float health=tree.getHealth();
         for(int i=0;i<5;i++)EntangleTracker.addStack(world,tree);
         EntangleTracker.applyNatureSlow(tree,40,6);
         EntangleTracker.syncUltimateRoot(world,tree,30);
-        var thorns=SeedlingManager.class.getDeclaredMethod("applyThorns",ServerWorld.class,net.minecraft.entity.LivingEntity.class,UUID.class);
-        thorns.setAccessible(true);thorns.invoke(null,world,tree,player.getUuid());
+        require(!tree.damage(world,world.getDamageSources().playerAttack(player),10),"A player can damage the oak");
         require(EntangleTracker.getStacks(tree)==0,"Ultimate tree received Entangle stacks");
         require(!tree.hasStatusEffect(StatusEffects.SLOWNESS),"Ultimate tree received Nature Slowness");
-        require(tree.getHealth()==health,"Nature thorns damaged the ultimate tree");
+        require(tree.getHealth()==health,"The ultimate tree took damage");
         var roots=EntangleTracker.class.getDeclaredField("ULTIMATE_ROOT_UNTIL");roots.setAccessible(true);
         require(!((Map<?,?>)roots.get(null)).containsKey(tree.getUuid()),"Ultimate tree received root visual tracking");
-    }
-    private void testWaterGrowth(ServerWorld world) {
-        BlockPos water=new BlockPos(200,-61,0),pad=water.up();world.getChunk(water);
-        var oldWater=world.getBlockState(water);var oldPad=world.getBlockState(pad);
-        world.setBlockState(water,Blocks.WATER.getDefaultState(),3);world.setBlockState(pad,Blocks.AIR.getDefaultState(),3);
-        var growth=SeedlingManager.placeVerdantGrowth(world,List.of(water),java.util.Set.of(),20);
-        require(growth.placed().contains(pad) && world.getBlockState(pad).isOf(ModSpellBlocks.NATURE_RAFT),"Water growth did not use custom raft");
-        require(!world.getBlockState(pad).getCollisionShape(world,pad).isEmpty(),"Water raft is not walkable");
-        SeedlingManager.restoreBlocks(world,growth.placements());
-        require(world.getBlockState(pad).isAir() && world.getBlockState(water).isOf(Blocks.WATER),"Raft cleanup damaged water");
-        Vec3d before=player.getEntityPos();player.setPosition(200.5,-60,.5);
-        com.anton.elementalwands.item.NatureAbilityHandler.inventoryTick(wand,world,player,EquipmentSlot.MAINHAND);
-        require(world.getBlockState(pad).isOf(ModSpellBlocks.NATURE_RAFT),"Verdant Step still uses vanilla pads");
-        world.setBlockState(pad,Blocks.AIR.getDefaultState(),3);
-        TemporaryBlockManager.forgetNaturePosition(world,pad);
-        player.setPosition(before);world.setBlockState(water,oldWater,3);world.setBlockState(pad,oldPad,3);
-    }
-    private void plant(ServerWorld world,BlockPos pos) {
-        require(SeedlingManager.tryPlantSeedling(world,player,new BlockHitResult(Vec3d.ofCenter(pos.down()).add(0,.5,0),Direction.UP,pos.down(),false)),"Arena rejected Nature seedling");
     }
 }

@@ -33,12 +33,10 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
 /**
- * Nature ultimate manager. Seed energy converges into a staged Fairy Heart Tree whose roots
- * establish the ten-block arena, whose flowering canopy broadcasts health, and whose ending
- * clearly distinguishes peaceful expiry from combat destruction.
- *
- * <p>The public name is retained because seedling amplification asks whether a position is
- * inside the active Nature ultimate.
+ * Nature ultimate manager. A thrown acorn grows a staged Fairy Heart Tree whose roots crush the
+ * ten-block circle once and whose flowering canopy heals the caster's side until it expires.
+ * The tree is scenery: its blocks have no collision and its heart cannot be attacked, so it never
+ * blocks movement, shots or a boss, and nothing in an encounter needs a rule for it.
  */
 public final class OvergrowthManager {
 
@@ -51,7 +49,7 @@ public final class OvergrowthManager {
     private static final int ROOT_CRUSH_SLOW_TICKS = 30;
     private static final int ROOT_CRUSH_SLOW_AMPLIFIER = 6;
 
-    private static final int ENERGY_CONVERGENCE_TICKS = 12;
+    private static final int HEART_WAKE_TICK = 12;
     private static final int TRUNK_STAGE_TICK = 7;
     private static final int HEART_STAGE_TICK = 14;
     private static final int CANOPY_STAGE_TICK = 22;
@@ -63,18 +61,15 @@ public final class OvergrowthManager {
         final BlockPos center;
         final int startTick;
         final int expiryTick;
-        final List<BlockPos> seedSources;
         final List<TemporaryPlacement> blockPlacements = new ArrayList<>();
         int builtStage = -1;
 
-        AwakenedTree(int entityId, UUID casterUuid, BlockPos center, int startTick, int expiryTick,
-                List<BlockPos> seedSources) {
+        AwakenedTree(int entityId, UUID casterUuid, BlockPos center, int startTick, int expiryTick) {
             this.entityId = entityId;
             this.casterUuid = casterUuid;
             this.center = center;
             this.startTick = startTick;
             this.expiryTick = expiryTick;
-            this.seedSources = List.copyOf(seedSources);
         }
     }
 
@@ -88,35 +83,14 @@ public final class OvergrowthManager {
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> ACTIVE.clear());
     }
 
-    /**
-     * Legacy entry point retained for compatibility with commands or tests that only have a count.
-     * New Nature casts use the snapshot overload so every consumed seed can stream into the heart.
-     */
-    public static void startOvergrowth(ServerWorld world, PlayerEntity caster, BlockPos seedlingPos,
-            int consumedSeedlings) {
-        startOvergrowthInternal(world, caster, seedlingPos,
-                List.of(seedlingPos.toImmutable()), TREE_DURATION_TICKS);
-    }
-
-    public static void startOvergrowth(ServerWorld world, PlayerEntity caster, BlockPos seedlingPos,
-            List<SeedlingManager.SeedlingSnapshot> consumedSeedlings) {
-        List<BlockPos> sources = consumedSeedlings.stream()
-                .map(snapshot -> snapshot.anchorPos().toImmutable())
-                .toList();
-        startOvergrowthInternal(world, caster, seedlingPos, sources, TREE_DURATION_TICKS);
+    /** Grows a tree at a known anchor; commands and fixtures use this instead of the throw. */
+    public static void startOvergrowth(ServerWorld world, PlayerEntity caster, BlockPos anchor) {
+        startOvergrowthInternal(world, caster, anchor, TREE_DURATION_TICKS);
     }
 
     public static boolean startThrownOvergrowth(ServerWorld world, PlayerEntity caster, BlockPos anchor) {
         if (!OvergrowthThrowRules.validGround(world, anchor)) return false;
-        // Do not overwrite another wizard's flower when landing directly on it.
-        if (world.getBlockState(anchor).isOf(com.anton.elementalwands.registry.ModSpellBlocks.NATURE_SEEDLING)
-                && SeedlingManager.getActiveSeedlingsForCaster(world, caster.getUuid()).stream()
-                    .noneMatch(s -> s.anchorPos().equals(anchor))) return false;
-        var flower = SeedlingManager.consumeNearestForOvergrowth(world, caster.getUuid(), anchor, OvergrowthThrowRules.FLOWER_RADIUS);
-        List<BlockPos> sources = flower.map(s -> List.of(s.anchorPos())).orElse(List.of());
-        int duration = TREE_DURATION_TICKS + (flower.isPresent() ? OvergrowthThrowRules.BONUS_TICKS : 0);
-        // The optional flower changes duration only: burst damage stays at the base value.
-        startOvergrowthInternal(world, caster, anchor, sources, duration);
+        startOvergrowthInternal(world, caster, anchor, TREE_DURATION_TICKS);
         return true;
     }
 
@@ -127,9 +101,9 @@ public final class OvergrowthManager {
     }
 
     private static void startOvergrowthInternal(ServerWorld world, PlayerEntity caster,
-            BlockPos seedlingPos, List<BlockPos> sources, int duration) {
+            BlockPos anchor, int duration) {
         int now = world.getServer().getTicks();
-        BlockPos center = seedlingPos.toImmutable();
+        BlockPos center = anchor.toImmutable();
 
         AwakenedTreeEntity treeEntity = new AwakenedTreeEntity(ModEntities.AWAKENED_TREE, world);
         treeEntity.initialize(caster.getUuid());
@@ -138,48 +112,17 @@ public final class OvergrowthManager {
         world.spawnEntity(treeEntity);
 
         AwakenedTree tree = new AwakenedTree(treeEntity.getId(), caster.getUuid(), center,
-                now, now + duration, sources);
+                now, now + duration);
         ACTIVE.computeIfAbsent(world.getRegistryKey(), _key -> new ArrayList<>()).add(tree);
 
         advanceTreeGrowth(world, tree, 0, now);
         applyRootCrush(world, caster, center, ROOT_CRUSH_DAMAGE);
-        spawnRootAwakening(world, center, sources.size());
+        spawnRootAwakening(world, center);
 
         world.playSound(null, center, SoundEvents.BLOCK_AZALEA_PLACE,
                 SoundCategory.PLAYERS, 1.4f, 0.55f);
         world.playSound(null, center, SoundEvents.ENTITY_RAVAGER_ROAR,
                 SoundCategory.PLAYERS, 0.9f, 0.75f);
-    }
-
-    public static boolean isInOvergrowth(ServerWorld world, BlockPos pos) {
-        List<AwakenedTree> trees = ACTIVE.get(world.getRegistryKey());
-        if (trees == null || trees.isEmpty()) return false;
-
-        for (AwakenedTree tree : trees) {
-            if (containsPos(tree, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public static void onTreeDamaged(ServerWorld world, AwakenedTreeEntity treeEntity) {
-        Vec3d core = treeEntity.getEntityPos().add(0.0, 2.5, 0.0);
-        float healthRatio = treeEntity.getHealth() / treeEntity.getMaxHealth();
-        world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK,
-                        Blocks.OAK_LOG.getDefaultState()),
-                core.x, core.y - 1.0, core.z, 14, 0.82, 1.0, 0.82, 0.075);
-        world.spawnParticles(ModParticles.NATURE_LEAF,
-                core.x, core.y + 1.35, core.z,
-                healthRatio < 0.35f ? 18 : 10, 1.65, 1.1, 1.65, 0.035);
-        world.spawnParticles(ModParticles.NATURE_PETAL,
-                core.x, core.y + 1.65, core.z,
-                healthRatio < 0.35f ? 14 : 7, 1.8, 1.0, 1.8, 0.028);
-        world.spawnParticles(ModParticles.NATURE_HEART,
-                core.x, core.y, core.z,
-                healthRatio < 0.35f ? 3 : 1, 0.18, 0.2, 0.18, 0.0);
-        world.playSound(null, treeEntity.getBlockPos(), SoundEvents.BLOCK_WOOD_HIT,
-                SoundCategory.PLAYERS, 1.0f, healthRatio < 0.35f ? 0.62f : 0.75f);
     }
 
     public static void destroyTree(ServerWorld world, AwakenedTreeEntity treeEntity) {
@@ -225,9 +168,7 @@ public final class OvergrowthManager {
             }
 
             int age = now - tree.startTick;
-            if (age <= ENERGY_CONVERGENCE_TICKS) {
-                tickSeedConvergence(world, tree, age);
-            }
+            if (age == HEART_WAKE_TICK) wakeHeart(world, tree);
 
             int targetStage = age >= CANOPY_STAGE_TICK ? 3
                     : age >= HEART_STAGE_TICK ? 2
@@ -275,10 +216,9 @@ public final class OvergrowthManager {
                 AbstractWandItem.onWandDamageDealt(caster, damage, 0, com.anton.elementalwands.data.WizardAffinity.NATURE);
             }
 
+            // The roots pin ordinary enemies for a moment. A boss takes the same damage and is not held.
             EntangleTracker.applyNatureSlow(target, ROOT_CRUSH_SLOW_TICKS, ROOT_CRUSH_SLOW_AMPLIFIER);
-            if (target instanceof com.anton.elementalwands.entity.WandBoss boss) {
-                boss.onNatureEntangle(EntangleTracker.MAX_STACKS);
-            } else {
+            if (!(target instanceof com.anton.elementalwands.entity.WandBoss)) {
                 EntangleTracker.syncUltimateRoot(world,target,ROOT_CRUSH_SLOW_TICKS);
                 target.addVelocity(0.0, -0.65, 0.0);
                 target.velocityModified = true;
@@ -316,21 +256,14 @@ public final class OvergrowthManager {
         }
     }
 
-    private static void tickSeedConvergence(ServerWorld world, AwakenedTree tree, int age) {
-        double progress = Math.min(1.0, age / (double) ENERGY_CONVERGENCE_TICKS);
-        double previous = Math.max(0.0, (age - 1) / (double) ENERGY_CONVERGENCE_TICKS);
+    private static void wakeHeart(ServerWorld world, AwakenedTree tree) {
         Vec3d heart = Vec3d.ofCenter(tree.center).add(0.0, 2.0, 0.0);
-        for (int i = 0; i < tree.seedSources.size(); i++) {
-            NatureVfx.convergence(world, tree.seedSources.get(i), heart, previous, progress, i);
-        }
-        if (age == ENERGY_CONVERGENCE_TICKS) {
-            world.spawnParticles(ModParticles.NATURE_HEART,
-                    heart.x, heart.y, heart.z, 9, 0.42, 0.5, 0.42, 0.035);
-            world.spawnParticles(ModParticles.NATURE_POLLEN,
-                    heart.x, heart.y, heart.z, 28, 0.7, 0.9, 0.7, 0.045);
-            world.playSound(null, tree.center, SoundEvents.BLOCK_RESPAWN_ANCHOR_CHARGE,
-                    SoundCategory.PLAYERS, 0.72f, 1.62f);
-        }
+        world.spawnParticles(ModParticles.NATURE_HEART,
+                heart.x, heart.y, heart.z, 9, 0.42, 0.5, 0.42, 0.035);
+        world.spawnParticles(ModParticles.NATURE_POLLEN,
+                heart.x, heart.y, heart.z, 28, 0.7, 0.9, 0.7, 0.045);
+        world.playSound(null, tree.center, SoundEvents.BLOCK_RESPAWN_ANCHOR_CHARGE,
+                SoundCategory.PLAYERS, 0.72f, 1.62f);
     }
 
     private static void advanceTreeGrowth(ServerWorld world, AwakenedTree tree,
@@ -351,10 +284,12 @@ public final class OvergrowthManager {
         for (NatureTreeLayout.Cell cell : NatureTreeLayout.cells()) {
             if (cell.growthStage() != stage) continue;
             BlockPos pos = center.add(cell.x(),cell.y(),cell.z());
-            // Never generate a solid block through an occupant or outside the loaded world.
             if (!world.isInBuildLimit(pos) || !world.getWorldBorder().contains(pos) || !world.isChunkLoaded(pos)) continue;
-            if (!world.getEntitiesByClass(LivingEntity.class,new Box(pos), e -> e.isAlive()
-                    && !(e instanceof AwakenedTreeEntity) && !e.isSpectator()).isEmpty()) continue;
+            // The trunk is solid: never grow it through someone standing there (it would lift or
+            // trap them). That piece of trunk is simply missing. Leaves have no collision.
+            if (!cell.state().getCollisionShape(world, pos).isEmpty()
+                    && !world.getEntitiesByClass(net.minecraft.entity.LivingEntity.class, new net.minecraft.util.math.Box(pos),
+                            e -> e.isAlive() && !(e instanceof AwakenedTreeEntity) && !e.isSpectator()).isEmpty()) continue;
             groups.computeIfAbsent(cell.state(), ignored -> new ArrayList<>()).add(pos);
         }
         for (var group : groups.entrySet()) addPlacement(placements,
@@ -377,15 +312,14 @@ public final class OvergrowthManager {
                 || com.anton.elementalwands.registry.ModSpellBlocks.isNatureGrowth(state);
     }
 
-    private static void spawnRootAwakening(ServerWorld world, BlockPos center,
-            int sourceCount) {
+    private static void spawnRootAwakening(ServerWorld world, BlockPos center) {
         Vec3d c = Vec3d.ofCenter(center);
         NatureVfx.rootSpokes(world, center, TREE_RADIUS);
         world.spawnParticles(ModParticles.NATURE_LEAF,
                 c.x, c.y + 0.45, c.z, 36, 1.8, 0.55, 1.8, 0.055);
         world.spawnParticles(ModParticles.NATURE_POLLEN,
                 c.x, c.y + 0.72, c.z,
-                30 + sourceCount * 5, 2.2, 0.9, 2.2, 0.05);
+                30, 2.2, 0.9, 2.2, 0.05);
         world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK,
                         Blocks.OAK_LOG.getDefaultState()),
                 c.x, c.y + 0.2, c.z, 48, 1.6, 0.28, 1.6, 0.16);

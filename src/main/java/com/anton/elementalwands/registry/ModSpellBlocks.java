@@ -32,26 +32,41 @@ public final class ModSpellBlocks {
     public static final Block SPRINGBLOOM=register("springbloom",
             com.anton.elementalwands.block.SpringbloomBlock::new,natureSettings());
     public static final Block NATURE_SEEDLING=register("nature_seedling",
-            com.anton.elementalwands.block.NatureSeedlingBlock::new,natureSettings());
+            com.anton.elementalwands.block.NatureSeedlingBlock::new,natureSettings().noCollision());
     public static final Block NATURE_ROOT_KNOT=register("nature_root_knot",
             com.anton.elementalwands.block.NatureRootKnotBlock::new,
             natureSettings().strength(.15f).noCollision().luminance(s->7));
     public static final Block NATURE_ROOTS=register("nature_roots",
             com.anton.elementalwands.block.NatureGrowthBlock::new,natureSettings().replaceable());
-    public static final Block NATURE_RAFT=register("nature_raft",
-            com.anton.elementalwands.block.NatureGrowthBlock::new,natureSettings().replaceable());
-    public static final Block NATURE_HEARTWOOD=register("nature_heartwood",Block::new,
-            AbstractBlock.Settings.create().mapColor(MapColor.OAK_TAN).strength(2,3).luminance(s->7)
-                    .sounds(BlockSoundGroup.WOOD).dropsNothing().pistonBehavior(PistonBehavior.BLOCK));
-    public static final Block NATURE_FLOWERING_LEAVES=register("nature_flowering_leaves",Block::new,
-            natureSettings().strength(.2f).allowsSpawning((s,w,p,e)->false));
+    // The Overgrowth oak: a solid trunk (cover, like any tree) under a walk-through canopy.
+    public static final Block NATURE_HEARTWOOD=register("nature_heartwood",
+            com.anton.elementalwands.block.NatureOakTrunkBlock::new,trunkSettings().luminance(s->7));
+    public static final Block NATURE_FLOWERING_LEAVES=register("nature_flowering_leaves",
+            com.anton.elementalwands.block.NatureOakBlock::new,oakSettings(MapColor.GREEN,BlockSoundGroup.AZALEA));
+    public static final Block NATURE_OAK_LEAVES=register("nature_oak_leaves",
+            com.anton.elementalwands.block.NatureOakBlock::new,oakSettings(MapColor.DARK_GREEN,BlockSoundGroup.GRASS));
+    public static final Block NATURE_OAK_LOG=register("nature_oak_log",
+            com.anton.elementalwands.block.NatureOakLogBlock::new,trunkSettings());
+
+    /** Solid and unbreakable for the tree's fifteen seconds; standing inside one never suffocates. */
+    private static AbstractBlock.Settings trunkSettings(){
+        return AbstractBlock.Settings.create().mapColor(MapColor.OAK_TAN).strength(-1,3600000)
+                .suffocates((s,w,p)->false).blockVision((s,w,p)->false).allowsSpawning((s,w,p,e)->false)
+                .sounds(BlockSoundGroup.WOOD).dropsNothing().pistonBehavior(PistonBehavior.BLOCK);
+    }
+
+    private static AbstractBlock.Settings oakSettings(MapColor color,BlockSoundGroup sounds){
+        return AbstractBlock.Settings.create().mapColor(color).noCollision().nonOpaque().strength(2,3)
+                .suffocates((s,w,p)->false).blockVision((s,w,p)->false).allowsSpawning((s,w,p,e)->false)
+                .sounds(sounds).dropsNothing().pistonBehavior(PistonBehavior.DESTROY);
+    }
 
     private static AbstractBlock.Settings natureSettings(){
         return AbstractBlock.Settings.create().mapColor(MapColor.GREEN).nonOpaque().breakInstantly()
                 .sounds(BlockSoundGroup.AZALEA).dropsNothing().pistonBehavior(PistonBehavior.DESTROY);
     }
     public static boolean isNatureGrowth(net.minecraft.block.BlockState state){
-        return state.isOf(NATURE_ROOT_KNOT)||state.isOf(NATURE_SEEDLING)||state.isOf(NATURE_ROOTS)||state.isOf(NATURE_RAFT);
+        return state.isOf(NATURE_ROOT_KNOT)||state.isOf(NATURE_SEEDLING)||state.isOf(NATURE_ROOTS);
     }
 
     public static final Block INFERNO_FLAME = register("inferno_flame", InfernoFlameBlock::new,

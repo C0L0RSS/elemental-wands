@@ -105,8 +105,9 @@ and takes priority over everything except a due beam.
 3. At tick 50 it detonates: 16 damage and heavy knockback within 6 blocks, blocked by cover.
 
 The standing slam remains a full circular wave by explicit design choice.
-Waves follow terrain and can be jumped. Small Nature growth does not provide
-cover, while Stone Wall and Nature ultimate trees do. A wall absorbs the current
+Waves follow terrain and can be jumped. Stone Wall and ordinary terrain provide
+cover. (So would the trunk of Nature's retired Overgrowth oak; no spell grows it now.) The Guardian
+has no behaviour written for one element. A wall absorbs the current
 hit before breaking; preserve same-attack protection for delayed volley contacts.
 Server damage and client surfaces use shared cover rules. Astral Doubles are
 one-hit summons: local slams, traveling waves, beams, rocks and shards destroy

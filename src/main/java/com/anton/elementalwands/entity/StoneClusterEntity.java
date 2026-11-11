@@ -185,7 +185,7 @@ public final class StoneClusterEntity extends ProjectileEntity {
         }
         world.spawnParticles(ModParticles.STONE_SHARD,getX(),getY(),getZ(),mass()>0?30:9,.4,.4,.4,.13);
         world.spawnParticles(ModParticles.STONE_DUST,getX(),getY(),getZ(),mass()>0?24:5,.5,.3,.5,.05);
-        world.playSound(null,getBlockPos(),ModSounds.SPELL_STONE_GATHERED_MASS_IMPACT,SoundCategory.PLAYERS,1f,.65f);
+        world.playSound(null,getBlockPos(),ModSounds.SPELL_STONE_GATHERED_MASS_IMPACT,SoundCategory.PLAYERS,1f,1f);
         discard();
     }
     private void stagger(ServerWorld world, LivingEntity target) {

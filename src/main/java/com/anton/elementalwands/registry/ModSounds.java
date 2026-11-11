@@ -98,21 +98,15 @@ public final class ModSounds {
     public static final SoundEvent SPELL_STONE_JUGGERNAUT_IMPACT = register("spell.stone.juggernaut.impact");
     public static final SoundEvent SPELL_STONE_JUGGERNAUT_STEP = register("spell.stone.juggernaut.step");
     public static final SoundEvent SPELL_STONE_STONE_WALL_BREAK_BY_GUARDIAN = register("spell.stone.stone_wall.break_by_guardian");
-    public static final SoundEvent SPELL_STONE_STONE_WALL_CAST_CLANG = register("spell.stone.stone_wall.cast_clang");
-    public static final SoundEvent SPELL_STONE_STONE_WALL_CAST_RISE = register("spell.stone.stone_wall.cast_rise");
+    public static final SoundEvent SPELL_STONE_STONE_WALL_CAST = register("spell.stone.stone_wall.cast");
     public static final SoundEvent SPELL_STONE_STONE_WALL_SETTLE = register("spell.stone.stone_wall.settle");
-    public static final SoundEvent SPELL_STONE_STONE_WALL_SHATTER_BOOM = register("spell.stone.stone_wall.shatter_boom");
-    public static final SoundEvent SPELL_STONE_STONE_WALL_SHATTER_BREAK = register("spell.stone.stone_wall.shatter_break");
-    public static final SoundEvent SPELL_STONE_STONE_WALL_SHATTER_ROAR = register("spell.stone.stone_wall.shatter_roar");
+    public static final SoundEvent SPELL_STONE_STONE_WALL_SHATTER = register("spell.stone.stone_wall.shatter");
     public static final SoundEvent SPELL_STONE_STONE_WALL_STRESS = register("spell.stone.stone_wall.stress");
-    public static final SoundEvent SPELL_STONE_TITAN_DOME_CAST_CLANG = register("spell.stone.titan_dome.cast_clang");
-    public static final SoundEvent SPELL_STONE_TITAN_DOME_CAST_RUMBLE = register("spell.stone.titan_dome.cast_rumble");
+    public static final SoundEvent SPELL_STONE_TITAN_DOME_CAST = register("spell.stone.titan_dome.cast");
     public static final SoundEvent SPELL_STONE_TITAN_DOME_COLLAPSE_BOOM = register("spell.stone.titan_dome.collapse_boom");
     public static final SoundEvent SPELL_STONE_TITAN_DOME_COLLAPSE_CRACK = register("spell.stone.titan_dome.collapse_crack");
-    public static final SoundEvent SPELL_STONE_TITAN_DOME_COLLAPSE_ROAR = register("spell.stone.titan_dome.collapse_roar");
     public static final SoundEvent SPELL_STONE_TITAN_DOME_FORM = register("spell.stone.titan_dome.form");
-    public static final SoundEvent SPELL_STONE_TITAN_DOME_FORMED_CLANG = register("spell.stone.titan_dome.formed_clang");
-    public static final SoundEvent SPELL_STONE_TITAN_DOME_FORMED_HUM = register("spell.stone.titan_dome.formed_hum");
+    public static final SoundEvent SPELL_STONE_TITAN_DOME_FORMED = register("spell.stone.titan_dome.formed");
     public static final SoundEvent SPELL_STONE_TITAN_DOME_REPAIR = register("spell.stone.titan_dome.repair");
 
     // spell.wind

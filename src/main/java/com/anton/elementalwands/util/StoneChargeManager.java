@@ -66,7 +66,7 @@ public final class StoneChargeManager {
         if (!AbstractWandItem.tryStartCooldown(p.getEntityWorld(),p,p.getMainHandStack(),StoneTechniqueRules.CHARGE,
                 StoneTechniqueRules.CHARGE_COOLDOWN)) return;
         Run run=new Run(p);RUNS.put(p.getUuid(),run);sync(run,1);
-        p.getEntityWorld().playSound(null,p.getBlockPos(),ModSounds.SPELL_STONE_JUGGERNAUT_CAST,SoundCategory.PLAYERS,1,.7f);
+        p.getEntityWorld().playSound(null,p.getBlockPos(),ModSounds.SPELL_STONE_JUGGERNAUT_CAST,SoundCategory.PLAYERS,1,1f);
     }
     public static void stop(ServerPlayerEntity p, boolean slide) {
         Run run=RUNS.get(p.getUuid());if(run==null)return;
@@ -166,10 +166,10 @@ public final class StoneChargeManager {
             if(power>.3)world.spawnParticles(ModParticles.STONE_SHARD,p.getX(),p.getY()+1.1,p.getZ(),2,.4,.25,.4,.015);
         }
         if(r.age%8==0 && p.isOnGround())world.playSound(null,p.getBlockPos(),ModSounds.SPELL_STONE_JUGGERNAUT_STEP,
-                SoundCategory.PLAYERS,.6f+(float)r.progress/100,.8f);
+                SoundCategory.PLAYERS,.6f+(float)r.progress/100,1f);
         if(r.progress>=StoneTechniqueRules.RAMP && !r.announced) {
             r.announced=true;
-            world.playSound(null,p.getBlockPos(),ModSounds.SPELL_STONE_JUGGERNAUT_FULL_SPEED,SoundCategory.PLAYERS,.25f,1.5f);
+            world.playSound(null,p.getBlockPos(),ModSounds.SPELL_STONE_JUGGERNAUT_FULL_SPEED,SoundCategory.PLAYERS,.6f,1f);
         }
     }
     private record Contact(Vec3d point, boolean ceiling) {}
@@ -219,7 +219,7 @@ public final class StoneChargeManager {
             Vec3d point=origin.add(direction.multiply(distance)).add(-direction.z*side,world.random.nextDouble()-.5,direction.x*side);
             world.spawnParticles(ModParticles.STONE_SHARD,point.x,point.y,point.z,1,.1,.1,.1,.07);
         }
-        world.playSound(null,BlockPos.ofFloored(feet),ModSounds.SPELL_STONE_JUGGERNAUT_IMPACT,SoundCategory.PLAYERS,.6f+power,.75f);
+        world.playSound(null,BlockPos.ofFloored(feet),ModSounds.SPELL_STONE_JUGGERNAUT_IMPACT,SoundCategory.PLAYERS,.6f+power,1f);
         p.setVelocity(0,p.getVelocity().y,0);p.velocityModified=true;
     }
     /** Explicit material tiers intentionally exclude ores, machinery, containers and magical blocks. */

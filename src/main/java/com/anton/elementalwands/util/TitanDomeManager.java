@@ -196,10 +196,8 @@ public final class TitanDomeManager {
 
         spawnOpeningFaultRing(world, center, RADIUS);
         spawnJuggernautAssembly(world, caster);
-        world.playSound(null, center, ModSounds.SPELL_STONE_TITAN_DOME_CAST_RUMBLE,
-                SoundCategory.PLAYERS, 1.35f, 0.54f);
-        world.playSound(null, center, ModSounds.SPELL_STONE_TITAN_DOME_CAST_CLANG,
-                SoundCategory.PLAYERS, 0.9f, 0.48f);
+        world.playSound(null, center, ModSounds.SPELL_STONE_TITAN_DOME_CAST,
+                SoundCategory.PLAYERS, 1.35f, 1.0f);
     }
 
     public static boolean hasActiveDome(PlayerEntity player) {
@@ -337,7 +335,7 @@ public final class TitanDomeManager {
         }
 
         if (placedThisTick > 0 && elapsed % 4 == 0) {
-            float pitch = 0.48f + Math.min(0.3f, elapsed / (float) DOME_FORMATION_TICKS * 0.3f);
+            float pitch = 0.85f + Math.min(0.3f, elapsed / (float) DOME_FORMATION_TICKS * 0.3f);
             world.playSound(null, dome.center, ModSounds.SPELL_STONE_TITAN_DOME_FORM,
                     SoundCategory.PLAYERS, ribBlocksThisTick > 0 ? 1.05f : 0.72f, pitch);
         }
@@ -354,10 +352,8 @@ public final class TitanDomeManager {
         if (elapsed >= DOME_FORMATION_TICKS) {
             dome.formationCompleted = true;
             dome.nextAmbientFxTick = now;
-            world.playSound(null, dome.center, ModSounds.SPELL_STONE_TITAN_DOME_FORMED_CLANG,
-                    SoundCategory.PLAYERS, 1.05f, 0.56f);
-            world.playSound(null, dome.center, ModSounds.SPELL_STONE_TITAN_DOME_FORMED_HUM,
-                    SoundCategory.PLAYERS, 0.7f, 0.62f);
+            world.playSound(null, dome.center, ModSounds.SPELL_STONE_TITAN_DOME_FORMED,
+                    SoundCategory.PLAYERS, 1.05f, 1.0f);
         }
     }
 
@@ -457,7 +453,7 @@ public final class TitanDomeManager {
 
         if (repaired > 0) {
             world.playSound(null, dome.center, ModSounds.SPELL_STONE_TITAN_DOME_REPAIR,
-                    SoundCategory.PLAYERS, Math.min(1.2f, 0.45f + repaired * 0.025f), 0.64f);
+                    SoundCategory.PLAYERS, Math.min(1.2f, 0.45f + repaired * 0.025f), 1.0f);
         }
     }
 
@@ -559,9 +555,7 @@ public final class TitanDomeManager {
                 dome.center.getX() + 0.5, dome.center.getY() + 4.0, dome.center.getZ() + 0.5,
                 3, 0.45, 0.6, 0.45, 0.0);
         world.playSound(null, dome.center, ModSounds.SPELL_STONE_TITAN_DOME_COLLAPSE_CRACK,
-                SoundCategory.PLAYERS, 1.4f, 0.48f);
-        world.playSound(null, dome.center, ModSounds.SPELL_STONE_TITAN_DOME_COLLAPSE_ROAR,
-                SoundCategory.PLAYERS, 0.72f, 0.48f);
+                SoundCategory.PLAYERS, 1.4f, 1.0f);
     }
 
     /** Restores transient gear before vanilla death inventory handling runs. */
@@ -677,7 +671,7 @@ public final class TitanDomeManager {
                 dome.center.getX() + 0.5, dome.center.getY() + 0.28, dome.center.getZ() + 0.5,
                 8, 1.6, 0.1, 1.6, 0.0);
         world.playSound(null, dome.center, ModSounds.SPELL_STONE_TITAN_DOME_COLLAPSE_BOOM,
-                SoundCategory.PLAYERS, 1.15f, 0.62f);
+                SoundCategory.PLAYERS, 1.15f, 1.0f);
         return true;
     }
 

@@ -78,7 +78,7 @@ public final class UpdraftManager {
         // Clients draw the floor puffs, the coil and the speed lines from the launch point (client/blockwind/UpdraftFx).
         // Midair casts use the same ring at the caster's feet.
         BlockWindEvents.send(world, BlockWindEvents.UPDRAFT, p.getId(), p.getEntityPos(), Vec3d.ZERO, 0);
-        world.playSound(null, p.getBlockPos(), ModSounds.SPELL_WIND_UPDRAFT_CAST, SoundCategory.PLAYERS, .8f, 1.25f);
+        world.playSound(null, p.getBlockPos(), ModSounds.SPELL_WIND_UPDRAFT_CAST, SoundCategory.PLAYERS, .8f, 1f);
         return true;
     }
 

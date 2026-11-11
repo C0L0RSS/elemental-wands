@@ -25,8 +25,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "sound"))
 
 def recipes() -> dict:
     import fire
+    import wind
 
-    return {**fire.SOUNDS}
+    return {**fire.SOUNDS, **wind.SOUNDS}
 
 
 def outputs(name: str, variants: int) -> list[str]:

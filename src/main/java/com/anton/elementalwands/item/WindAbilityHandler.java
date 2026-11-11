@@ -88,10 +88,8 @@ public final class WindAbilityHandler {
         }
 
         // Sound effects
-        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_WIND_SKY_SHEAR_CAST_SLASH, SoundCategory.PLAYERS, 0.9f,
-                1.3f);
-        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_WIND_SKY_SHEAR_CAST_GUST, SoundCategory.PLAYERS,
-                0.6f, 1.5f);
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_WIND_SKY_SHEAR_CAST, SoundCategory.PLAYERS, 0.9f,
+                1.0f);
 
         // The cast bloom is drawn by each client's block-wind blades (client/blockwind/ShearFx).
     }
@@ -223,10 +221,8 @@ public final class WindAbilityHandler {
         caster.addVelocity(launchVel.x, launchVel.y, launchVel.z);
         caster.velocityModified = true;
 
-        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_WIND_ZEPHYR_STRIKE_CAST_ROAR, SoundCategory.PLAYERS, 1.5f,
-                0.8f);
-        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_WIND_ZEPHYR_STRIKE_CAST_GUST, SoundCategory.PLAYERS,
-                2.0f, 0.6f);
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_WIND_ZEPHYR_STRIKE_CAST, SoundCategory.PLAYERS, 2.0f,
+                1.0f);
         BlockWindEvents.send(world, BlockWindEvents.ZEPHYR_LAUNCH, caster.getId(), caster.getEntityPos(), look, 0);
     }
 

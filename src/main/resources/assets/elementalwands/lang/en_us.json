@@ -128,5 +128,13 @@
   "subtitles.elementalwands.spell.fire.inferno_wave.cast": "Inferno Wave ignites",
   "subtitles.elementalwands.spell.fire.inferno_wave.hit": "Inferno Wave scorches",
   "subtitles.elementalwands.spell.fire.meteor.cast": "Meteor falls",
-  "subtitles.elementalwands.spell.fire.meteor.impact": "Meteor explodes"
+  "subtitles.elementalwands.spell.fire.meteor.impact": "Meteor explodes",
+  "subtitles.elementalwands.spell.wind.gale_daggers.launch": "Gale Dagger flies",
+  "subtitles.elementalwands.spell.wind.gale_daggers.prepare": "Gale Daggers form",
+  "subtitles.elementalwands.spell.wind.sky_shear.cast": "Sky Shear slashes",
+  "subtitles.elementalwands.spell.wind.sky_shear.hit": "Sky Shear cuts",
+  "subtitles.elementalwands.spell.wind.updraft.cast": "Updraft launches",
+  "subtitles.elementalwands.spell.wind.waylay_dash.cast": "Waylay Dash rushes",
+  "subtitles.elementalwands.spell.wind.zephyr_strike.cast": "Zephyr Strike takes flight",
+  "subtitles.elementalwands.spell.wind.zephyr_strike.land": "Zephyr Strike lands"
 }

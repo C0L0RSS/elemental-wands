@@ -117,13 +117,12 @@ public final class ModSounds {
 
     // spell.wind
     public static final SoundEvent SPELL_WIND_GALE_DAGGERS_LAUNCH = register("spell.wind.gale_daggers.launch");
-    public static final SoundEvent SPELL_WIND_SKY_SHEAR_CAST_GUST = register("spell.wind.sky_shear.cast_gust");
-    public static final SoundEvent SPELL_WIND_SKY_SHEAR_CAST_SLASH = register("spell.wind.sky_shear.cast_slash");
+    public static final SoundEvent SPELL_WIND_GALE_DAGGERS_PREPARE = register("spell.wind.gale_daggers.prepare");
+    public static final SoundEvent SPELL_WIND_SKY_SHEAR_CAST = register("spell.wind.sky_shear.cast");
     public static final SoundEvent SPELL_WIND_SKY_SHEAR_HIT = register("spell.wind.sky_shear.hit");
     public static final SoundEvent SPELL_WIND_UPDRAFT_CAST = register("spell.wind.updraft.cast");
     public static final SoundEvent SPELL_WIND_WAYLAY_DASH_CAST = register("spell.wind.waylay_dash.cast");
-    public static final SoundEvent SPELL_WIND_ZEPHYR_STRIKE_CAST_GUST = register("spell.wind.zephyr_strike.cast_gust");
-    public static final SoundEvent SPELL_WIND_ZEPHYR_STRIKE_CAST_ROAR = register("spell.wind.zephyr_strike.cast_roar");
+    public static final SoundEvent SPELL_WIND_ZEPHYR_STRIKE_CAST = register("spell.wind.zephyr_strike.cast");
     public static final SoundEvent SPELL_WIND_ZEPHYR_STRIKE_LAND = register("spell.wind.zephyr_strike.land");
 
     // entity.guardian

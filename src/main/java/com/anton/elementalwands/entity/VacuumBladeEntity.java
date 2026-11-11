@@ -120,7 +120,7 @@ public class VacuumBladeEntity extends ProjectileEntity {
                 target.getBlockPos(),
                 ModSounds.SPELL_WIND_SKY_SHEAR_HIT,
                 SoundCategory.PLAYERS,
-                0.5f, 1.5f);
+                0.5f, 1.0f);
 
         // Despawn after hitting entity (doesn't pierce)
         discard();

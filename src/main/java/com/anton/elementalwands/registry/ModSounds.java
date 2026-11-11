@@ -24,17 +24,14 @@ public final class ModSounds {
     // spell.fire
     public static final SoundEvent SPELL_FIRE_DRAGONS_PYRE_CAST = register("spell.fire.dragons_pyre.cast");
     public static final SoundEvent SPELL_FIRE_FIRE_LEAP_LAND = register("spell.fire.fire_leap.land");
-    public static final SoundEvent SPELL_FIRE_FIRE_LEAP_LAUNCH_IGNITE = register("spell.fire.fire_leap.launch_ignite");
-    public static final SoundEvent SPELL_FIRE_FIRE_LEAP_LAUNCH_WHOOSH = register("spell.fire.fire_leap.launch_whoosh");
+    public static final SoundEvent SPELL_FIRE_FIRE_LEAP_LAUNCH = register("spell.fire.fire_leap.launch");
     public static final SoundEvent SPELL_FIRE_FLAMETHROWER_LOOP = register("spell.fire.flamethrower.loop");
     public static final SoundEvent SPELL_FIRE_FLAMETHROWER_OVERHEAT = register("spell.fire.flamethrower.overheat");
     public static final SoundEvent SPELL_FIRE_FLASHOVER_BLAST = register("spell.fire.flashover.blast");
     public static final SoundEvent SPELL_FIRE_FLASHOVER_CAST = register("spell.fire.flashover.cast");
-    public static final SoundEvent SPELL_FIRE_INFERNO_WAVE_CAST_IGNITE = register("spell.fire.inferno_wave.cast_ignite");
-    public static final SoundEvent SPELL_FIRE_INFERNO_WAVE_CAST_WHOOSH = register("spell.fire.inferno_wave.cast_whoosh");
+    public static final SoundEvent SPELL_FIRE_INFERNO_WAVE_CAST = register("spell.fire.inferno_wave.cast");
     public static final SoundEvent SPELL_FIRE_INFERNO_WAVE_HIT = register("spell.fire.inferno_wave.hit");
-    public static final SoundEvent SPELL_FIRE_METEOR_CAST_OMEN = register("spell.fire.meteor.cast_omen");
-    public static final SoundEvent SPELL_FIRE_METEOR_CAST_WHOOSH = register("spell.fire.meteor.cast_whoosh");
+    public static final SoundEvent SPELL_FIRE_METEOR_CAST = register("spell.fire.meteor.cast");
     public static final SoundEvent SPELL_FIRE_METEOR_IMPACT_BLAST = register("spell.fire.meteor.impact_blast");
     public static final SoundEvent SPELL_FIRE_METEOR_IMPACT_BOOM = register("spell.fire.meteor.impact_boom");
 

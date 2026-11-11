@@ -151,7 +151,7 @@ public class InfernoWaveEntity extends ProjectileEntity {
                 target.getBlockPos(),
                 ModSounds.SPELL_FIRE_INFERNO_WAVE_HIT,
                 SoundCategory.PLAYERS,
-                0.5f, 1.2f);
+                0.5f, 1.0f);
 
         // DON'T discard - we pierce through enemies
     }

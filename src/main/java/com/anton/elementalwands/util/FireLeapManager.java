@@ -62,8 +62,7 @@ public final class FireLeapManager {
         WandLoadouts.markCombat(p);ModNetworking.syncFireBuild(p);
         // Every viewer draws the take-off ring and comet tail from this packet.
         broadcast(p,new ModNetworking.FireLeapPayload(p.getId(),from,target,true));
-        world.playSound(null,p.getBlockPos(),ModSounds.SPELL_FIRE_FIRE_LEAP_LAUNCH_IGNITE,SoundCategory.PLAYERS,.9f,.8f);
-        world.playSound(null,p.getBlockPos(),ModSounds.SPELL_FIRE_FIRE_LEAP_LAUNCH_WHOOSH,SoundCategory.PLAYERS,.45f,.7f);
+        world.playSound(null,p.getBlockPos(),ModSounds.SPELL_FIRE_FIRE_LEAP_LAUNCH,SoundCategory.PLAYERS,.9f,1f);
         return true;
     }
     private static void tick(Leap leap) {
@@ -96,7 +95,7 @@ public final class FireLeapManager {
     }
     private static void landed(ServerPlayerEntity p,ServerWorld world,Vec3d at) {
         BlockFireEvents.send(world,96,BlockFireEvents.LEAP_LAND,p.getId(),at,Vec3d.ZERO,Vec3d.ZERO,0);
-        world.playSound(null,BlockPos.ofFloored(at),ModSounds.SPELL_FIRE_FIRE_LEAP_LAND,SoundCategory.PLAYERS,.85f,1.3f);
+        world.playSound(null,BlockPos.ofFloored(at),ModSounds.SPELL_FIRE_FIRE_LEAP_LAND,SoundCategory.PLAYERS,.85f,1f);
         WAVES.add(new Wave(p,world,at,world.getTime(),new HashSet<>()));
     }
     /** Advances one landing wave; true when it has finished. */

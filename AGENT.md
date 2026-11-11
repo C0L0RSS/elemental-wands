@@ -130,6 +130,8 @@ python3 art/storm_roc/intro/build_intro.py --check
 unzip -t build/libs/elementalwands-2.2.0.jar
 ```
 
+For sound changes, run `python3 tools/build_sounds.py --check`.
+
 Run the relevant server/client fixture when changing behavior it covers. Do not
 claim a fixture passed from an old report. Documentation-only changes need link,
 reference, and whitespace checks; they do not require a gameplay build.

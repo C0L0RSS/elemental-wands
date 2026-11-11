@@ -117,5 +117,16 @@
   "entity.elementalwands.roc_body_part": "Storm Roc",
   "entity.elementalwands.roc_effect": "Storm",
   "death.attack.roc_storm": "%1$s was caught in the Storm Roc’s fury",
-  "death.attack.roc_storm.player": "%1$s was caught in the Storm Roc’s fury while fighting %2$s"
+  "death.attack.roc_storm.player": "%1$s was caught in the Storm Roc’s fury while fighting %2$s",
+  "subtitles.elementalwands.spell.fire.dragons_pyre.cast": "Dragon's Pyre roars",
+  "subtitles.elementalwands.spell.fire.fire_leap.land": "Fire Leap lands",
+  "subtitles.elementalwands.spell.fire.fire_leap.launch": "Fire Leap launches",
+  "subtitles.elementalwands.spell.fire.flamethrower.loop": "Flamethrower burns",
+  "subtitles.elementalwands.spell.fire.flamethrower.overheat": "Flamethrower overheats",
+  "subtitles.elementalwands.spell.fire.flashover.blast": "Ember bursts",
+  "subtitles.elementalwands.spell.fire.flashover.cast": "Ember thrown",
+  "subtitles.elementalwands.spell.fire.inferno_wave.cast": "Inferno Wave ignites",
+  "subtitles.elementalwands.spell.fire.inferno_wave.hit": "Inferno Wave scorches",
+  "subtitles.elementalwands.spell.fire.meteor.cast": "Meteor falls",
+  "subtitles.elementalwands.spell.fire.meteor.impact": "Meteor explodes"
 }

@@ -98,8 +98,7 @@ public final class FireAbilityHandler {
         BlockFireEvents.send(world, BlockFireEvents.INFERNO_CAST, ignition, caster.getRotationVec(1.0f).normalize());
 
         // Sound effects
-        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_FIRE_INFERNO_WAVE_CAST_IGNITE, SoundCategory.PLAYERS, 1.0f, 0.7f);
-        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_FIRE_INFERNO_WAVE_CAST_WHOOSH, SoundCategory.PLAYERS, 0.8f, 0.9f);
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_FIRE_INFERNO_WAVE_CAST, SoundCategory.PLAYERS, 1.0f, 1.0f);
     }
 
     public static void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
@@ -122,7 +121,7 @@ public final class FireAbilityHandler {
         BlockFireEvents.send(world, 128, BlockFireEvents.PYRE_CAST, caster.getId(), origin, forward, Vec3d.ZERO, 0);
 
         world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_FIRE_DRAGONS_PYRE_CAST, SoundCategory.PLAYERS, 1.0f,
-                0.8f);
+                1.0f);
     }
 
     public static void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {

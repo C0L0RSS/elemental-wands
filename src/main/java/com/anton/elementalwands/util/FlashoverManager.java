@@ -148,7 +148,7 @@ public final class FlashoverManager {
         embers(p).add(ember);data.putString("flash_slot_"+slot+"_entity",ember.getUuidAsString());
         data.putLong("flash_cast",p.getEntityWorld().getTime());data.putInt("flash_duration",FlashoverRules.THROW_COOLDOWN);
         p.setAttached(EWAttachments.FIRE_BUILD_STATE,data);WandLoadouts.markCombat(p);sync(p);
-        p.getEntityWorld().playSound(null,p.getBlockPos(),ModSounds.SPELL_FIRE_FLASHOVER_CAST,SoundCategory.PLAYERS,.45f,1.5f);return true;
+        p.getEntityWorld().playSound(null,p.getBlockPos(),ModSounds.SPELL_FIRE_FLASHOVER_CAST,SoundCategory.PLAYERS,.45f,1f);return true;
     }
     public static boolean detonate(ServerPlayerEntity p) {
         if(!canUse(p) || SEQUENCES.containsKey(p.getUuid()))return false;
@@ -190,7 +190,7 @@ public final class FlashoverManager {
             if(accepted)AbstractWandItem.onWandDamageDealt(p,damage,1,WizardAffinity.FIRE);
         }
         BlockFireEvents.send(world,112,BlockFireEvents.FLASHOVER_POP,ember.getId(),at,Vec3d.ZERO,ember.stuckFace(),contacts.size());
-        world.playSound(null,ember.getBlockPos(),ModSounds.SPELL_FIRE_FLASHOVER_BLAST,SoundCategory.PLAYERS,.65f,1.3f);
+        world.playSound(null,ember.getBlockPos(),ModSounds.SPELL_FIRE_FLASHOVER_BLAST,SoundCategory.PLAYERS,.65f,1f);
         ember.finishExplosion();
     }
     public static void clear(ServerPlayerEntity p) { SEQUENCES.remove(p.getUuid());var list=EMBERS.remove(p.getUuid());if(list!=null)list.forEach(FlashoverEmberEntity::discard); }

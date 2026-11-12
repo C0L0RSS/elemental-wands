@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Burned Throne Hall</title>
+<style>
+  :root { --bg: #0b0605; --panel: rgba(20, 11, 9, .82); --ink: #ecdcd2; --muted: #a58d80; --accent: #ffb36b; --line: #3a231c; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 13px/1.3 system-ui, sans-serif; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 100vh; touch-action: none; }
+  #bar { position: fixed; top: 8px; left: 8px; right: 8px; display: flex; align-items: flex-start; gap: 6px; pointer-events: none; }
+  #bar > * { pointer-events: auto; }
+  #controls { display: flex; flex-direction: column; gap: 5px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 8px; padding: 6px; max-width: min(760px, calc(100vw - 80px)); backdrop-filter: blur(4px); }
+  #bar.collapsed #controls { display: none; }
+  .row { display: flex; flex-wrap: wrap; gap: 4px; }
+  button { background: #2a1712; color: var(--ink); border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px;
+    cursor: pointer; font: inherit; white-space: nowrap; }
+  button.on { border-color: var(--accent); color: var(--accent); }
+  #toggle { background: var(--panel); min-width: 44px; min-height: 34px; }
+  body.bare #bar { display: none; }
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="bar">
+  <button id="toggle" aria-label="Show or hide controls">Views</button>
+  <div id="controls">
+    <div class="row" id="views"></div>
+    <div class="row" id="looks"><button id="barrier">Invisible wall</button></div>
+  </div>
+</div>
+<script src="viewer.js"></script>
+</body>
+</html>

@@ -1,0 +1,137 @@
+/* Phone-first layout: the 3D view owns its own grid cell, so no control ever covers the model.
+   Portrait: view / sheet (when open) / playback bar.  Landscape and desktop: the sheet is a side panel. */
+:root{
+  color-scheme:dark;
+  --bg:#16181b;--panel:#1b1d21;--bar:#121417;--line:#33353a;--field:#24262b;--edge:#46433d;
+  --text:#ece3d3;--muted:#aaa497;--label:#c8aa78;--gold:#d5a357;--gold-hi:#edc48a;
+  --tap:44px;--radius:10px;
+  font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--text);background:var(--bg);
+  -webkit-text-size-adjust:100%;text-size-adjust:100%;-webkit-tap-highlight-color:transparent;
+}
+@media (pointer:fine){:root{--tap:40px}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;background:var(--bg)}
+/* No page zoom anywhere: a pinch on the bar or the sheet would blow the page up with the view
+   filling the zoomed screen and nothing left to pinch back out on. (app.js also stops iOS Safari's
+   gesture events, since Safari ignores the viewport's zoom limits.) Panning stays allowed. */
+html,body,.sheet,.chips{touch-action:pan-x pan-y}
+.sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+.app{
+  display:grid;width:100%;height:100vh;height:100dvh;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto auto;
+  grid-template-areas:"stage" "sheet" "bar";
+}
+
+/* ---------- 3D view ---------- */
+.stage{grid-area:stage;position:relative;min-width:0;min-height:0;overflow:hidden;background:#737574}
+canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab;outline:none;
+  user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+canvas:active{cursor:grabbing}
+.status{position:absolute;left:16px;right:16px;top:50%;transform:translateY(-50%);margin:0;text-align:center;
+  color:#23252a;font-size:15px;pointer-events:none}
+
+/* ---------- Playback bar ---------- */
+.bar{grid-area:bar;container:bar/inline-size;display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;touch-action:none;
+  padding:4px 10px calc(6px + env(safe-area-inset-bottom));background:var(--bar);border-top:1px solid var(--line)}
+.pick{display:block;min-width:0}
+.clip-pick{order:1;flex:1 1 100px;max-width:280px}
+#pause{order:2}
+.speed-pick{order:3;flex:0 0 74px}
+.scrub{order:4;flex:1 1 160px;display:flex;align-items:center;gap:10px;min-width:0}
+#more{order:5;margin-left:auto}
+/* On a narrow bar the scrubber takes its own row above the buttons. */
+@container bar (max-width:480px){.scrub{order:0;flex-basis:100%}.clip-pick{max-width:none}}
+/* The still guard has no timeline: its scrubber row folds away and the view takes the room. */
+.no-timeline .scrub{display:none}
+.no-timeline .bar{padding-top:6px}
+
+/* ---------- Shared controls ---------- */
+button,select{font:inherit;color:var(--text);background:var(--field);border:1px solid var(--edge);border-radius:var(--radius);
+  min-height:var(--tap);margin:0}
+button{padding:0 14px;cursor:pointer}
+button.active,button[aria-pressed="true"]{background:var(--gold);color:#211c15;border-color:var(--gold)}
+@media (hover:hover){button:hover{border-color:var(--gold-hi)}}
+.icon{width:var(--tap);padding:0;display:inline-grid;place-items:center;flex:none}
+.icon svg{width:22px;height:22px}
+.icon.ghost{background:transparent;border-color:transparent}
+select{appearance:none;-webkit-appearance:none;width:100%;font-size:16px;padding:0 30px 0 12px;cursor:pointer;
+  text-overflow:ellipsis;white-space:nowrap;overflow:hidden;
+  background:var(--field) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23d5a357' stroke-width='1.7'/%3E%3C/svg%3E") no-repeat right 11px center/12px 8px}
+input{accent-color:var(--gold)}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+input[type=range]{-webkit-appearance:none;appearance:none;flex:1;min-width:0;height:40px;margin:0;background:transparent;
+  touch-action:none;cursor:pointer;--p:0%}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:linear-gradient(90deg,var(--gold) var(--p),#3d3f45 var(--p))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;margin-top:-9px;border-radius:50%;
+  background:var(--gold);border:4px solid var(--bar)}
+input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:#3d3f45}
+input[type=range]::-moz-range-progress{height:4px;border-radius:2px;background:var(--gold)}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--gold);border:4px solid var(--bar)}
+input[type=range]:disabled{opacity:.35;cursor:default}
+input[type=range]:disabled::-webkit-slider-thumb{visibility:hidden}
+input[type=range]:disabled::-moz-range-thumb{visibility:hidden}
+#clock{flex:none;min-width:92px;text-align:right;font-size:12px;font-variant-numeric:tabular-nums;color:var(--muted)}
+
+/* ---------- Sheet ---------- */
+.sheet{grid-area:sheet;container:sheet/inline-size;min-width:0;min-height:0;max-height:40vh;max-height:40dvh;overflow-y:auto;overscroll-behavior:contain;
+  display:flex;flex-direction:column;gap:12px;padding:10px 12px 14px;background:var(--panel);border-top:1px solid var(--line)}
+.sheet>*{flex:none}
+.sheet section{margin:0}
+.sheet h2{margin:0 0 5px;font-size:11px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;color:var(--label)}
+.sheet-head{display:none;align-items:center;gap:10px}
+.sheet-head small{display:block;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+.sheet-head h1{margin:2px 0 0;font-size:20px;font-weight:600}
+.sheet-head>div{flex:1;min-width:0}
+
+/* Camera presets: one horizontally scrollable row on phones. */
+.chips{display:flex;gap:6px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;margin:0 -12px;padding:0 12px;
+  scroll-padding:0 12px;scroll-snap-type:x proximity}
+.chips::-webkit-scrollbar{display:none}
+.chips::after{content:"";flex:0 0 6px}
+.chips button{flex:none;scroll-snap-align:start;white-space:nowrap}
+.hint{margin:5px 0 0;font-size:12px;line-height:1.45;color:var(--muted)}
+
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pair label{display:flex;flex-direction:column;gap:6px;min-width:0;font-size:11px;font-weight:600;letter-spacing:1.4px;
+  text-transform:uppercase;color:var(--label)}
+.pair select{text-transform:none;letter-spacing:0;font-weight:400;color:var(--text)}
+
+/* Show and sword-test switches: pills in one row, like the camera chips. */
+.toggle{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:var(--tap);min-width:0;padding:0 12px;
+  border:1px solid var(--edge);border-radius:var(--radius);background:var(--field);cursor:pointer;user-select:none;-webkit-user-select:none;white-space:nowrap}
+.toggle input{width:17px;height:17px;margin:0;flex:none}
+.toggle:has(input:checked){border-color:#8a6a43;background:#2c2721}
+.toggles .toggle{flex:none;scroll-snap-align:start}
+
+details{border-top:1px solid var(--line);padding-top:2px}
+summary{min-height:var(--tap);display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--label);font-size:13px;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"";width:7px;height:7px;border:solid currentColor;border-width:0 2px 2px 0;transform:rotate(-45deg);transition:transform .15s}
+details[open] summary::before{transform:rotate(45deg)}
+details p{margin:8px 0;font-size:12px;line-height:1.6;color:#b9b5ac}
+.tabs{display:flex;gap:6px;margin-top:6px}
+.atlas{margin:10px 0 14px;height:180px;overflow:auto;background:repeating-conic-gradient(#262728 0% 25%,#333436 0% 50%) 0/12px 12px}
+.atlas img{width:1024px;image-rendering:pixelated;display:block}
+pre{margin:0;font-size:10px;line-height:1.6;color:#a9a198;white-space:pre-wrap}
+.links{display:flex;flex-direction:column}
+.links a{display:flex;align-items:center;min-height:var(--tap);color:var(--gold);font-size:13px}
+
+/* ---------- Landscape phones, tablets and desktop: the sheet becomes a side panel ---------- */
+@media (min-aspect-ratio:1/1),(min-width:900px){
+  .app{grid-template-columns:minmax(0,1fr) auto;grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"stage sheet" "bar sheet"}
+  .sheet{width:clamp(280px,34vw,340px);max-height:none;border-top:0;border-left:1px solid var(--line);
+    padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+  .sheet-head{display:flex}
+  /* The side panel scrolls on its own, so the switches wrap and all stay in sight. */
+  .toggles{flex-wrap:wrap;overflow:visible;margin:0;padding:0}
+  .toggles::after{display:none}
+}
+/* Room to spare: let the camera presets wrap instead of scrolling. */
+@media (min-width:900px) and (min-height:600px){
+  .chips{flex-wrap:wrap;overflow:visible;margin:0;padding:0}
+  .chips::after{display:none}
+}

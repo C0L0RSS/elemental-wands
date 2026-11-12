@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#121417">
+<title>Pyre King · review workshop</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app" id="app">
+  <section class="stage" aria-label="3D view">
+    <canvas id="view" aria-label="Interactive Pyre King 3D model. Drag to orbit, pinch or scroll to zoom, double-tap to reset the view."></canvas>
+    <p id="status" class="status" role="status">Loading the Pyre King…</p>
+  </section>
+
+  <nav class="bar" aria-label="Playback">
+    <div class="scrub">
+      <input id="scrub" type="range" min="0" max="1" step="0.01" value="0" aria-label="Clip time" disabled>
+      <output id="clock" for="scrub">–</output>
+    </div>
+    <label class="pick clip-pick"><span class="sr-only">Clip</span><select id="clip"><option value="">Static guard</option></select></label>
+    <button id="pause" class="icon" type="button" aria-label="Pause" title="Pause"></button>
+    <label class="pick speed-pick"><span class="sr-only">Speed</span><select id="speed"><option value="1">1×</option><option value="0.5">½×</option><option value="0.25">¼×</option></select></label>
+    <button id="more" class="icon" type="button" aria-controls="sheet" aria-expanded="false" aria-label="More controls" title="More controls"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button>
+  </nav>
+
+  <aside id="sheet" class="sheet" aria-label="View controls" hidden>
+    <header class="sheet-head">
+      <div><small>Art workshop · review only</small><h1>Pyre King</h1></div>
+      <button id="close" class="icon ghost" type="button" aria-label="Close controls" title="Close controls"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </header>
+
+    <section>
+      <h2>Camera</h2>
+      <div id="cameras" class="chips" role="group" aria-label="Camera presets">
+        <button type="button" data-view="hero" title="Three-quarter view">¾ view</button>
+        <button type="button" data-view="front">Front</button>
+        <button type="button" data-view="side">Side</button>
+        <button type="button" data-view="back">Back</button>
+        <button type="button" data-view="head">Head</button>
+        <button type="button" data-view="player8" title="A player's eye, 8 blocks away">Player · 8</button>
+        <button type="button" data-view="player16" title="A player's eye, 16 blocks away">Player · 16</button>
+      </div>
+      <p id="camera-info" class="hint"></p>
+    </section>
+
+    <section>
+      <h2>Show</h2>
+      <div class="chips toggles" role="group" aria-label="Show and sword test">
+        <label class="toggle" title="1.8-block scale player, beside the still guard"><input id="player" type="checkbox" checked><span>Player</span></label>
+        <label class="toggle"><input id="fire" type="checkbox" checked><span>Fire</span></label>
+        <label class="toggle"><input id="glow" type="checkbox" checked><span>Glow</span></label>
+        <label class="toggle"><input id="clay" type="checkbox"><span>Clay</span></label>
+        <label class="toggle" title="Turn the blade about the grip (a rig exercise)"><input id="motion" type="checkbox"><span>Test sweep</span></label>
+        <button id="horizontal" type="button">Freeze horizontal</button>
+        <button id="guard" type="button">High guard</button>
+      </div>
+    </section>
+
+    <section class="pair">
+      <label>Model<select id="model"><option value="king">King · plough guard</option><option value="sword">Sword alone</option><option value="planted">Sword · planted</option></select></label>
+      <label>Light<select id="light"><option value="day">Studio day</option><option value="night">Night / glow check</option></select></label>
+    </section>
+
+    <details id="rig-notes">
+      <summary>Texture atlas and rig notes</summary>
+      <p id="stats"></p>
+      <div class="tabs" role="group" aria-label="Atlas"><button type="button" data-atlas="texture" class="active">Colour</button><button type="button" data-atlas="glow">Glowmask</button></div>
+      <div class="atlas"><img id="atlas" alt="Pixel texture atlas"></div>
+      <p>Geometry uses GeckoLib 5 transforms and UVs; 16 model pixels make one block. The sword is a child of the right hand and also has a standalone export. Blade fire is a separate blended pass: flames stand upright at rest and trail the blade's path when it moves. The test sweep turns the blade about the grip with the same two-bone arm IK as the clips; it is a rig exercise, not a combat clip.</p>
+      <pre id="bones"></pre>
+    </details>
+
+    <nav id="local-links" class="links" aria-label="Offline renders" hidden>
+      <a href="../renders/" target="_blank">All offline renders ↗</a>
+      <a href="../renders/contact-sheet.png" target="_blank">Contact sheet ↗</a>
+      <a href="../renders/clips/" target="_blank">Clip strips ↗</a>
+      <a href="../renders/fire-close-up-high-guard.png" target="_blank">Fire · high guard ↗</a>
+      <a href="../renders/fire-close-up-horizontal-sweep.png" target="_blank">Fire · horizontal sweep ↗</a>
+    </nav>
+  </aside>
+</div>
+<script src="core.js"></script><script src="effects.js"></script><script src="app.js"></script>
+</body>
+</html>

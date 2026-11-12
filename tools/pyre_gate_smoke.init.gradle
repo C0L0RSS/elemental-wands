@@ -1,0 +1,54 @@
+// The Burned Gate in a fresh normal world: the nearest one in the Nether found as /locate does, its road walked, pictures taken; then a Survival player touches the seal, wins and is sent back, touches it again, falls and wakes before the gate. Hidden, muted window.
+// ./gradlew -I tools/pyre_gate_smoke.init.gradle runClient -PhubClientAssets="$HOME/.lunarclient/shared/assets"
+allprojects {
+    plugins.withId('fabric-loom') {
+        def smokeRoot=layout.buildDirectory.dir('pyre-gate-smoke').get().asFile
+        // Optional existing cache for offline verification (for example Lunar shared/assets).
+        def existingAssets=project.findProperty('hubClientAssets')
+        if (existingAssets) {
+            loom.runs.client.vmArg('-Dfabric.dli.config='+new File(smokeRoot,'launch.cfg').absolutePath)
+        }
+        tasks.register('pyreGateMetadata') {
+            if (existingAssets) dependsOn generateDLIConfig
+            doLast {
+                def metadata=new File(smokeRoot,'metadata')
+                metadata.mkdirs()
+                new File(metadata,'fabric.mod.json').text='''{
+  "schemaVersion": 1, "id": "pyre_gate_smoke", "version": "1.0.0", "environment": "client",
+  "entrypoints": {"client": ["com.anton.elementalwands.client.PyreGateSmoke"]},
+  "depends": {"elementalwands": "*"}
+}'''
+                // Muted from the first frame: the fixture also sets master volume to zero before it loads a world.
+                def options=new File(smokeRoot,'options.txt')
+                def lines=options.exists() ? options.readLines().findAll { !it.startsWith('soundCategory_master:') && !it.startsWith('narrator:') } : []
+                options.text=(lines+['soundCategory_master:0.0','narrator:0']).join('\n')+'\n'
+                new File(smokeRoot,'PYRE_GATE_PASSED.txt').delete()
+                new File(smokeRoot,'PYRE_GATE_FAILED.txt').delete()
+                if (existingAssets) {
+                    def assets=file(existingAssets)
+                    if (!new File(assets,'indexes/27.json').exists()) throw new GradleException('Existing asset cache needs indexes/27.json')
+                    def launch=file('.gradle/loom-cache/launch.cfg').text
+                    launch=launch.replaceAll(/(?m)(\t--assetIndex\r?\n)\t[^\r\n]+/, { match, prefix -> prefix+'\t27' })
+                    launch=launch.replaceAll(/(?m)(\t--assetsDir\r?\n)\t[^\r\n]+/, { match, prefix -> prefix+'\t'+assets.absolutePath })
+                    new File(smokeRoot,'launch.cfg').text=launch
+                }
+            }
+        }
+        tasks.register('pyreGateJar',Jar) {
+            dependsOn guardianTestClasses, pyreGateMetadata
+            archiveFileName='pyre-gate-smoke.jar'
+            destinationDirectory=smokeRoot
+            from sourceSets.guardianTest.output
+            from new File(smokeRoot,'metadata')
+        }
+        loom.runs.client.runDir('build/pyre-gate-smoke')
+        loom.runs.client.vmArg('-Dfabric.addMods='+new File(smokeRoot,'pyre-gate-smoke.jar').absolutePath)
+        tasks.named('runClient') {
+            dependsOn pyreGateJar
+            doLast {
+                if (!new File(smokeRoot,'PYRE_GATE_PASSED.txt').exists() || new File(smokeRoot,'PYRE_GATE_FAILED.txt').exists())
+                    throw new GradleException('Pyre Gate check failed; inspect build/pyre-gate-smoke/logs/latest.log')
+            }
+        }
+    }
+}

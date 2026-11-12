@@ -1,0 +1,319 @@
+{
+  "blade_fire": {
+    "bone": "sword",
+    "king_pivot": [
+      -2,
+      32,
+      -13
+    ],
+    "sword_pivot": [
+      0,
+      0,
+      0
+    ],
+    "sockets": [
+      [
+        0,
+        16.0,
+        0
+      ],
+      [
+        0,
+        19.5,
+        0
+      ],
+      [
+        0,
+        23.0,
+        0
+      ],
+      [
+        0,
+        26.5,
+        0
+      ],
+      [
+        0,
+        30.0,
+        0
+      ],
+      [
+        0,
+        33.5,
+        0
+      ],
+      [
+        0,
+        37.0,
+        0
+      ],
+      [
+        0,
+        40.5,
+        0
+      ],
+      [
+        0,
+        44.0,
+        0
+      ],
+      [
+        0,
+        47.5,
+        0
+      ],
+      [
+        0,
+        51.0,
+        0
+      ],
+      [
+        0,
+        54.5,
+        0
+      ],
+      [
+        0,
+        58.0,
+        0
+      ],
+      [
+        0,
+        61.5,
+        0
+      ],
+      [
+        0,
+        65.0,
+        0
+      ],
+      [
+        0,
+        68.5,
+        0
+      ],
+      [
+        0,
+        72.0,
+        0
+      ]
+    ],
+    "socket_half_extents": [
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        2.5,
+        0.75
+      ],
+      [
+        2.5,
+        0.75
+      ],
+      [
+        2.5,
+        0.75
+      ],
+      [
+        1.6,
+        0.6
+      ],
+      [
+        0.65,
+        0.45
+      ]
+    ],
+    "root_edge_fraction": 1,
+    "world_up": [
+      0,
+      1,
+      0
+    ],
+    "atlas_grid": [
+      8,
+      1
+    ],
+    "tongue_frames": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "lick_frames": [
+      4,
+      5,
+      6,
+      7
+    ],
+    "atlas_fps": 8,
+    "active_socket_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+    ],
+    "peak_sockets": [
+      [
+        2,
+        0.74
+      ],
+      [
+        4,
+        0.98
+      ],
+      [
+        10,
+        1.18
+      ],
+      [
+        11,
+        0.8
+      ],
+      [
+        15,
+        1.06
+      ]
+    ],
+    "swing": {
+      "history_samples": 8,
+      "history_step_seconds": 0.015,
+      "path_substeps": 3,
+      "speed_samples": 16,
+      "teleport_speed_blocks_per_second": 400,
+      "lean_speed_blocks_per_second": [
+        2,
+        20
+      ],
+      "stream_speed_blocks_per_second": [
+        8,
+        60
+      ],
+      "wake_speed_blocks_per_second": [
+        20,
+        90
+      ],
+      "tongue": {
+        "segments": 4,
+        "seconds": 0.06,
+        "stretch": 1.3,
+        "reach_blocks": 0.25,
+        "thinning": 0.35,
+        "rise_kept": 0.6,
+        "curl": 0.5,
+        "flutter_blocks": 0.1,
+        "sag": 0.15,
+        "max_turn_degrees": 70
+      },
+      "stream": {
+        "rows": 6,
+        "seconds": 0.12,
+        "max_length_blocks": 2.4,
+        "tint": 0.45,
+        "glow": 0.5,
+        "fade_in": 0.3,
+        "hold": 0.45,
+        "columns_per_frame": 3,
+        "frame_span": 0.6,
+        "v_start": 0.85,
+        "v_end": 0.15,
+        "rise_blocks": 0.35,
+        "flutter_blocks": 0.12,
+        "drop_fade_blocks": 1.2
+      }
+    }
+  },
+  "loose_chains": {
+    "markers": [
+      "unbound_chain_1",
+      "unbound_chain_2",
+      "unbound_chain_3",
+      "unbound_chain_4",
+      "unbound_chain_5",
+      "unbound_chain_6"
+    ],
+    "draw_beyond_blocks": 0.6,
+    "hook_blocks": 1.25,
+    "flame_spacing_blocks": 0.6,
+    "bow_seconds": 0.09,
+    "bow_share": 0.22,
+    "bow_period_seconds": 0.55,
+    "bow_damping": 0.45
+  },
+  "chain": {
+    "wrist_bone": "right_wrist_shackle",
+    "sword_bone": "sword",
+    "hidden_tether": "hanging_wrist_chain",
+    "draw_beyond_blocks": 0.8,
+    "bow_share": 0.12,
+    "iron_uv": [
+      0.326171875,
+      0.43359375,
+      0.328125,
+      0.451171875
+    ],
+    "hot_uv": [
+      0.7275390625,
+      0.353515625,
+      0.7392578125,
+      0.376953125
+    ]
+  }
+}

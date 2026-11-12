@@ -1,0 +1,110 @@
+{
+  "textures": {
+    "seal": "elementalwands:block/pyre_seal_lit",
+    "particle": "elementalwands:block/pyre_seal_lit"
+  },
+  "elements": [
+    {
+      "from": [
+        4,
+        1,
+        6.5
+      ],
+      "to": [
+        12,
+        15,
+        9.5
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "texture": "#seal"
+        },
+        "south": {
+          "texture": "#seal"
+        },
+        "east": {
+          "texture": "#seal"
+        },
+        "west": {
+          "texture": "#seal"
+        },
+        "up": {
+          "texture": "#seal"
+        },
+        "down": {
+          "texture": "#seal"
+        }
+      },
+      "light_emission": 15
+    },
+    {
+      "from": [
+        1,
+        4,
+        6.5
+      ],
+      "to": [
+        15,
+        12,
+        9.5
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "texture": "#seal"
+        },
+        "south": {
+          "texture": "#seal"
+        },
+        "east": {
+          "texture": "#seal"
+        },
+        "west": {
+          "texture": "#seal"
+        },
+        "up": {
+          "texture": "#seal"
+        },
+        "down": {
+          "texture": "#seal"
+        }
+      },
+      "light_emission": 15
+    },
+    {
+      "from": [
+        2,
+        2,
+        6.5
+      ],
+      "to": [
+        14,
+        14,
+        9.5
+      ],
+      "shade": false,
+      "faces": {
+        "north": {
+          "texture": "#seal"
+        },
+        "south": {
+          "texture": "#seal"
+        },
+        "east": {
+          "texture": "#seal"
+        },
+        "west": {
+          "texture": "#seal"
+        },
+        "up": {
+          "texture": "#seal"
+        },
+        "down": {
+          "texture": "#seal"
+        }
+      },
+      "light_emission": 15
+    }
+  ]
+}

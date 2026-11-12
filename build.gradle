@@ -85,6 +85,13 @@ tasks.register('checkNecromancer', JavaExec) {
 }
 check.dependsOn checkNecromancer
 
+tasks.register('checkPyreKing', JavaExec) {
+    dependsOn guardianTestClasses
+    classpath = sourceSets.guardianTest.runtimeClasspath
+    mainClass = 'com.anton.elementalwands.entity.pyreking.PyreKingContractTest'
+}
+check.dependsOn checkPyreKing
+
 tasks.register('checkParties', JavaExec) {
     dependsOn guardianTestClasses
     classpath = sourceSets.guardianTest.runtimeClasspath

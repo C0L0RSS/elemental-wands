@@ -252,6 +252,14 @@ public final class ModEntities {
                         .dimensions(EntityDimensions.fixed(1.1f, 1.3f)).trackRangeBlocks(64).trackedUpdateRate(1).disableSaving()
                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,Identifier.of(ElementalWandsMod.MOD_ID,"faultline_spike"))));
 
+        // The Fire shardbearer's body and clips, summon-only: he has no fight yet.
+        public static final EntityType<com.anton.elementalwands.entity.pyreking.PyreKingEntity> PYRE_KING = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "pyre_king"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.pyreking.PyreKingEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.pyreking.PyreKingEntity::new)
+                        .dimensions(EntityDimensions.fixed(1.6f, 5f)).trackRangeBlocks(128).trackedUpdateRate(1)
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "pyre_king"))));
+
         // Small stooped caster; summon-only until its crypt exists.
         public static final EntityType<com.anton.elementalwands.entity.necromancer.NecromancerEntity> HOLLOW_NECROMANCER = Registry.register(
                 Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "hollow_necromancer"),

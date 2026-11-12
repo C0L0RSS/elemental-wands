@@ -1,0 +1,2104 @@
+{
+ "variants": {
+  "facing=south,lit=false,piece=0": {
+   "model": "elementalwands:block/pyre_gate_veil/0"
+  },
+  "facing=south,lit=false,piece=1": {
+   "model": "elementalwands:block/pyre_gate_veil/1"
+  },
+  "facing=south,lit=false,piece=2": {
+   "model": "elementalwands:block/pyre_gate_veil/2"
+  },
+  "facing=south,lit=false,piece=3": {
+   "model": "elementalwands:block/pyre_gate_veil/3"
+  },
+  "facing=south,lit=false,piece=4": {
+   "model": "elementalwands:block/pyre_gate_veil/4"
+  },
+  "facing=south,lit=false,piece=5": {
+   "model": "elementalwands:block/pyre_gate_veil/5"
+  },
+  "facing=south,lit=false,piece=6": {
+   "model": "elementalwands:block/pyre_gate_veil/6"
+  },
+  "facing=south,lit=false,piece=7": {
+   "model": "elementalwands:block/pyre_gate_veil/7"
+  },
+  "facing=south,lit=false,piece=8": {
+   "model": "elementalwands:block/pyre_gate_veil/8"
+  },
+  "facing=south,lit=false,piece=9": {
+   "model": "elementalwands:block/pyre_gate_veil/9"
+  },
+  "facing=south,lit=false,piece=10": {
+   "model": "elementalwands:block/pyre_gate_veil/10"
+  },
+  "facing=south,lit=false,piece=11": {
+   "model": "elementalwands:block/pyre_gate_veil/11"
+  },
+  "facing=south,lit=false,piece=12": {
+   "model": "elementalwands:block/pyre_gate_veil/12"
+  },
+  "facing=south,lit=false,piece=13": {
+   "model": "elementalwands:block/pyre_gate_veil/13"
+  },
+  "facing=south,lit=false,piece=14": {
+   "model": "elementalwands:block/pyre_gate_veil/14"
+  },
+  "facing=south,lit=false,piece=15": {
+   "model": "elementalwands:block/pyre_gate_veil/15"
+  },
+  "facing=south,lit=false,piece=16": {
+   "model": "elementalwands:block/pyre_gate_veil/16"
+  },
+  "facing=south,lit=false,piece=17": {
+   "model": "elementalwands:block/pyre_gate_veil/17"
+  },
+  "facing=south,lit=false,piece=18": {
+   "model": "elementalwands:block/pyre_gate_veil/18"
+  },
+  "facing=south,lit=false,piece=19": {
+   "model": "elementalwands:block/pyre_gate_veil/19"
+  },
+  "facing=south,lit=false,piece=20": {
+   "model": "elementalwands:block/pyre_gate_veil/20"
+  },
+  "facing=south,lit=false,piece=21": {
+   "model": "elementalwands:block/pyre_gate_veil/21"
+  },
+  "facing=south,lit=false,piece=22": {
+   "model": "elementalwands:block/pyre_gate_veil/22"
+  },
+  "facing=south,lit=false,piece=23": {
+   "model": "elementalwands:block/pyre_gate_veil/23"
+  },
+  "facing=south,lit=false,piece=24": {
+   "model": "elementalwands:block/pyre_gate_veil/24"
+  },
+  "facing=south,lit=false,piece=25": {
+   "model": "elementalwands:block/pyre_gate_veil/25"
+  },
+  "facing=south,lit=false,piece=26": {
+   "model": "elementalwands:block/pyre_gate_veil/26"
+  },
+  "facing=south,lit=false,piece=27": {
+   "model": "elementalwands:block/pyre_gate_veil/27"
+  },
+  "facing=south,lit=false,piece=28": {
+   "model": "elementalwands:block/pyre_gate_veil/28"
+  },
+  "facing=south,lit=false,piece=29": {
+   "model": "elementalwands:block/pyre_gate_veil/29"
+  },
+  "facing=south,lit=false,piece=30": {
+   "model": "elementalwands:block/pyre_gate_veil/30"
+  },
+  "facing=south,lit=false,piece=31": {
+   "model": "elementalwands:block/pyre_gate_veil/31"
+  },
+  "facing=south,lit=false,piece=32": {
+   "model": "elementalwands:block/pyre_gate_veil/32"
+  },
+  "facing=south,lit=false,piece=33": {
+   "model": "elementalwands:block/pyre_gate_veil/33"
+  },
+  "facing=south,lit=false,piece=34": {
+   "model": "elementalwands:block/pyre_gate_veil/34"
+  },
+  "facing=south,lit=false,piece=35": {
+   "model": "elementalwands:block/pyre_gate_veil/35"
+  },
+  "facing=south,lit=false,piece=36": {
+   "model": "elementalwands:block/pyre_gate_veil/36"
+  },
+  "facing=south,lit=false,piece=37": {
+   "model": "elementalwands:block/pyre_gate_veil/37"
+  },
+  "facing=south,lit=false,piece=38": {
+   "model": "elementalwands:block/pyre_gate_veil/38"
+  },
+  "facing=south,lit=false,piece=39": {
+   "model": "elementalwands:block/pyre_gate_veil/39"
+  },
+  "facing=south,lit=false,piece=40": {
+   "model": "elementalwands:block/pyre_gate_veil/40"
+  },
+  "facing=south,lit=false,piece=41": {
+   "model": "elementalwands:block/pyre_gate_veil/41"
+  },
+  "facing=south,lit=false,piece=42": {
+   "model": "elementalwands:block/pyre_gate_veil/42"
+  },
+  "facing=south,lit=false,piece=43": {
+   "model": "elementalwands:block/pyre_gate_veil/43"
+  },
+  "facing=south,lit=false,piece=44": {
+   "model": "elementalwands:block/pyre_gate_veil/44"
+  },
+  "facing=south,lit=false,piece=45": {
+   "model": "elementalwands:block/pyre_gate_veil/45"
+  },
+  "facing=south,lit=false,piece=46": {
+   "model": "elementalwands:block/pyre_gate_veil/46"
+  },
+  "facing=south,lit=false,piece=47": {
+   "model": "elementalwands:block/pyre_gate_veil/47"
+  },
+  "facing=south,lit=false,piece=48": {
+   "model": "elementalwands:block/pyre_gate_veil/48"
+  },
+  "facing=south,lit=false,piece=49": {
+   "model": "elementalwands:block/pyre_gate_veil/49"
+  },
+  "facing=south,lit=false,piece=50": {
+   "model": "elementalwands:block/pyre_gate_veil/50"
+  },
+  "facing=south,lit=false,piece=51": {
+   "model": "elementalwands:block/pyre_gate_veil/51"
+  },
+  "facing=south,lit=false,piece=52": {
+   "model": "elementalwands:block/pyre_gate_veil/52"
+  },
+  "facing=south,lit=false,piece=53": {
+   "model": "elementalwands:block/pyre_gate_veil/53"
+  },
+  "facing=south,lit=false,piece=54": {
+   "model": "elementalwands:block/pyre_gate_veil/54"
+  },
+  "facing=south,lit=false,piece=55": {
+   "model": "elementalwands:block/pyre_gate_veil/55"
+  },
+  "facing=south,lit=false,piece=56": {
+   "model": "elementalwands:block/pyre_gate_veil/0"
+  },
+  "facing=south,lit=false,piece=57": {
+   "model": "elementalwands:block/pyre_gate_veil/57"
+  },
+  "facing=south,lit=false,piece=58": {
+   "model": "elementalwands:block/pyre_gate_veil/58"
+  },
+  "facing=south,lit=false,piece=59": {
+   "model": "elementalwands:block/pyre_gate_veil/59"
+  },
+  "facing=south,lit=false,piece=60": {
+   "model": "elementalwands:block/pyre_gate_veil/60"
+  },
+  "facing=south,lit=false,piece=61": {
+   "model": "elementalwands:block/pyre_gate_veil/61"
+  },
+  "facing=south,lit=false,piece=62": {
+   "model": "elementalwands:block/pyre_gate_veil/0"
+  },
+  "facing=south,lit=false,piece=63": {
+   "model": "elementalwands:block/pyre_gate_veil/0"
+  },
+  "facing=south,lit=false,piece=64": {
+   "model": "elementalwands:block/pyre_gate_veil/0"
+  },
+  "facing=south,lit=false,piece=65": {
+   "model": "elementalwands:block/pyre_gate_veil/65"
+  },
+  "facing=south,lit=false,piece=66": {
+   "model": "elementalwands:block/pyre_gate_veil/66"
+  },
+  "facing=south,lit=false,piece=67": {
+   "model": "elementalwands:block/pyre_gate_veil/67"
+  },
+  "facing=south,lit=false,piece=68": {
+   "model": "elementalwands:block/pyre_gate_veil/0"
+  },
+  "facing=south,lit=false,piece=69": {
+   "model": "elementalwands:block/pyre_gate_veil/0"
+  },
+  "facing=south,lit=true,piece=0": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0"
+  },
+  "facing=south,lit=true,piece=1": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/1"
+  },
+  "facing=south,lit=true,piece=2": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/2"
+  },
+  "facing=south,lit=true,piece=3": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/3"
+  },
+  "facing=south,lit=true,piece=4": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/4"
+  },
+  "facing=south,lit=true,piece=5": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/5"
+  },
+  "facing=south,lit=true,piece=6": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/6"
+  },
+  "facing=south,lit=true,piece=7": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/7"
+  },
+  "facing=south,lit=true,piece=8": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/8"
+  },
+  "facing=south,lit=true,piece=9": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/9"
+  },
+  "facing=south,lit=true,piece=10": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/10"
+  },
+  "facing=south,lit=true,piece=11": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/11"
+  },
+  "facing=south,lit=true,piece=12": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/12"
+  },
+  "facing=south,lit=true,piece=13": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/13"
+  },
+  "facing=south,lit=true,piece=14": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/14"
+  },
+  "facing=south,lit=true,piece=15": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/15"
+  },
+  "facing=south,lit=true,piece=16": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/16"
+  },
+  "facing=south,lit=true,piece=17": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/17"
+  },
+  "facing=south,lit=true,piece=18": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/18"
+  },
+  "facing=south,lit=true,piece=19": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/19"
+  },
+  "facing=south,lit=true,piece=20": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/20"
+  },
+  "facing=south,lit=true,piece=21": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/21"
+  },
+  "facing=south,lit=true,piece=22": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/22"
+  },
+  "facing=south,lit=true,piece=23": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/23"
+  },
+  "facing=south,lit=true,piece=24": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/24"
+  },
+  "facing=south,lit=true,piece=25": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/25"
+  },
+  "facing=south,lit=true,piece=26": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/26"
+  },
+  "facing=south,lit=true,piece=27": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/27"
+  },
+  "facing=south,lit=true,piece=28": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/28"
+  },
+  "facing=south,lit=true,piece=29": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/29"
+  },
+  "facing=south,lit=true,piece=30": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/30"
+  },
+  "facing=south,lit=true,piece=31": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/31"
+  },
+  "facing=south,lit=true,piece=32": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/32"
+  },
+  "facing=south,lit=true,piece=33": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/33"
+  },
+  "facing=south,lit=true,piece=34": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/34"
+  },
+  "facing=south,lit=true,piece=35": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/35"
+  },
+  "facing=south,lit=true,piece=36": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/36"
+  },
+  "facing=south,lit=true,piece=37": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/37"
+  },
+  "facing=south,lit=true,piece=38": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/38"
+  },
+  "facing=south,lit=true,piece=39": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/39"
+  },
+  "facing=south,lit=true,piece=40": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/40"
+  },
+  "facing=south,lit=true,piece=41": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/41"
+  },
+  "facing=south,lit=true,piece=42": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/42"
+  },
+  "facing=south,lit=true,piece=43": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/43"
+  },
+  "facing=south,lit=true,piece=44": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/44"
+  },
+  "facing=south,lit=true,piece=45": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/45"
+  },
+  "facing=south,lit=true,piece=46": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/46"
+  },
+  "facing=south,lit=true,piece=47": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/47"
+  },
+  "facing=south,lit=true,piece=48": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/48"
+  },
+  "facing=south,lit=true,piece=49": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/49"
+  },
+  "facing=south,lit=true,piece=50": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/50"
+  },
+  "facing=south,lit=true,piece=51": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/51"
+  },
+  "facing=south,lit=true,piece=52": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/52"
+  },
+  "facing=south,lit=true,piece=53": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/53"
+  },
+  "facing=south,lit=true,piece=54": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/54"
+  },
+  "facing=south,lit=true,piece=55": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/55"
+  },
+  "facing=south,lit=true,piece=56": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0"
+  },
+  "facing=south,lit=true,piece=57": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/57"
+  },
+  "facing=south,lit=true,piece=58": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/58"
+  },
+  "facing=south,lit=true,piece=59": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/59"
+  },
+  "facing=south,lit=true,piece=60": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/60"
+  },
+  "facing=south,lit=true,piece=61": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/61"
+  },
+  "facing=south,lit=true,piece=62": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0"
+  },
+  "facing=south,lit=true,piece=63": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0"
+  },
+  "facing=south,lit=true,piece=64": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0"
+  },
+  "facing=south,lit=true,piece=65": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/65"
+  },
+  "facing=south,lit=true,piece=66": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/66"
+  },
+  "facing=south,lit=true,piece=67": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/67"
+  },
+  "facing=south,lit=true,piece=68": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0"
+  },
+  "facing=south,lit=true,piece=69": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0"
+  },
+  "facing=west,lit=false,piece=0": {
+   "model": "elementalwands:block/pyre_gate_veil/0",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=1": {
+   "model": "elementalwands:block/pyre_gate_veil/1",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=2": {
+   "model": "elementalwands:block/pyre_gate_veil/2",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=3": {
+   "model": "elementalwands:block/pyre_gate_veil/3",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=4": {
+   "model": "elementalwands:block/pyre_gate_veil/4",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=5": {
+   "model": "elementalwands:block/pyre_gate_veil/5",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=6": {
+   "model": "elementalwands:block/pyre_gate_veil/6",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=7": {
+   "model": "elementalwands:block/pyre_gate_veil/7",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=8": {
+   "model": "elementalwands:block/pyre_gate_veil/8",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=9": {
+   "model": "elementalwands:block/pyre_gate_veil/9",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=10": {
+   "model": "elementalwands:block/pyre_gate_veil/10",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=11": {
+   "model": "elementalwands:block/pyre_gate_veil/11",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=12": {
+   "model": "elementalwands:block/pyre_gate_veil/12",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=13": {
+   "model": "elementalwands:block/pyre_gate_veil/13",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=14": {
+   "model": "elementalwands:block/pyre_gate_veil/14",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=15": {
+   "model": "elementalwands:block/pyre_gate_veil/15",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=16": {
+   "model": "elementalwands:block/pyre_gate_veil/16",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=17": {
+   "model": "elementalwands:block/pyre_gate_veil/17",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=18": {
+   "model": "elementalwands:block/pyre_gate_veil/18",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=19": {
+   "model": "elementalwands:block/pyre_gate_veil/19",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=20": {
+   "model": "elementalwands:block/pyre_gate_veil/20",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=21": {
+   "model": "elementalwands:block/pyre_gate_veil/21",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=22": {
+   "model": "elementalwands:block/pyre_gate_veil/22",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=23": {
+   "model": "elementalwands:block/pyre_gate_veil/23",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=24": {
+   "model": "elementalwands:block/pyre_gate_veil/24",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=25": {
+   "model": "elementalwands:block/pyre_gate_veil/25",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=26": {
+   "model": "elementalwands:block/pyre_gate_veil/26",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=27": {
+   "model": "elementalwands:block/pyre_gate_veil/27",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=28": {
+   "model": "elementalwands:block/pyre_gate_veil/28",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=29": {
+   "model": "elementalwands:block/pyre_gate_veil/29",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=30": {
+   "model": "elementalwands:block/pyre_gate_veil/30",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=31": {
+   "model": "elementalwands:block/pyre_gate_veil/31",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=32": {
+   "model": "elementalwands:block/pyre_gate_veil/32",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=33": {
+   "model": "elementalwands:block/pyre_gate_veil/33",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=34": {
+   "model": "elementalwands:block/pyre_gate_veil/34",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=35": {
+   "model": "elementalwands:block/pyre_gate_veil/35",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=36": {
+   "model": "elementalwands:block/pyre_gate_veil/36",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=37": {
+   "model": "elementalwands:block/pyre_gate_veil/37",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=38": {
+   "model": "elementalwands:block/pyre_gate_veil/38",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=39": {
+   "model": "elementalwands:block/pyre_gate_veil/39",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=40": {
+   "model": "elementalwands:block/pyre_gate_veil/40",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=41": {
+   "model": "elementalwands:block/pyre_gate_veil/41",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=42": {
+   "model": "elementalwands:block/pyre_gate_veil/42",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=43": {
+   "model": "elementalwands:block/pyre_gate_veil/43",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=44": {
+   "model": "elementalwands:block/pyre_gate_veil/44",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=45": {
+   "model": "elementalwands:block/pyre_gate_veil/45",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=46": {
+   "model": "elementalwands:block/pyre_gate_veil/46",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=47": {
+   "model": "elementalwands:block/pyre_gate_veil/47",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=48": {
+   "model": "elementalwands:block/pyre_gate_veil/48",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=49": {
+   "model": "elementalwands:block/pyre_gate_veil/49",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=50": {
+   "model": "elementalwands:block/pyre_gate_veil/50",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=51": {
+   "model": "elementalwands:block/pyre_gate_veil/51",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=52": {
+   "model": "elementalwands:block/pyre_gate_veil/52",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=53": {
+   "model": "elementalwands:block/pyre_gate_veil/53",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=54": {
+   "model": "elementalwands:block/pyre_gate_veil/54",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=55": {
+   "model": "elementalwands:block/pyre_gate_veil/55",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=56": {
+   "model": "elementalwands:block/pyre_gate_veil/0",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=57": {
+   "model": "elementalwands:block/pyre_gate_veil/57",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=58": {
+   "model": "elementalwands:block/pyre_gate_veil/58",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=59": {
+   "model": "elementalwands:block/pyre_gate_veil/59",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=60": {
+   "model": "elementalwands:block/pyre_gate_veil/60",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=61": {
+   "model": "elementalwands:block/pyre_gate_veil/61",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=62": {
+   "model": "elementalwands:block/pyre_gate_veil/0",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=63": {
+   "model": "elementalwands:block/pyre_gate_veil/0",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=64": {
+   "model": "elementalwands:block/pyre_gate_veil/0",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=65": {
+   "model": "elementalwands:block/pyre_gate_veil/65",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=66": {
+   "model": "elementalwands:block/pyre_gate_veil/66",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=67": {
+   "model": "elementalwands:block/pyre_gate_veil/67",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=68": {
+   "model": "elementalwands:block/pyre_gate_veil/0",
+   "y": 90
+  },
+  "facing=west,lit=false,piece=69": {
+   "model": "elementalwands:block/pyre_gate_veil/0",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=0": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=1": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/1",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=2": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/2",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=3": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/3",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=4": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/4",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=5": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/5",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=6": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/6",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=7": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/7",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=8": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/8",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=9": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/9",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=10": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/10",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=11": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/11",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=12": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/12",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=13": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/13",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=14": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/14",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=15": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/15",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=16": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/16",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=17": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/17",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=18": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/18",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=19": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/19",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=20": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/20",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=21": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/21",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=22": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/22",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=23": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/23",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=24": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/24",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=25": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/25",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=26": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/26",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=27": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/27",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=28": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/28",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=29": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/29",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=30": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/30",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=31": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/31",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=32": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/32",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=33": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/33",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=34": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/34",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=35": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/35",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=36": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/36",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=37": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/37",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=38": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/38",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=39": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/39",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=40": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/40",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=41": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/41",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=42": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/42",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=43": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/43",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=44": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/44",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=45": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/45",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=46": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/46",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=47": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/47",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=48": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/48",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=49": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/49",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=50": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/50",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=51": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/51",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=52": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/52",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=53": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/53",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=54": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/54",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=55": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/55",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=56": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=57": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/57",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=58": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/58",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=59": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/59",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=60": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/60",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=61": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/61",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=62": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=63": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=64": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=65": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/65",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=66": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/66",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=67": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/67",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=68": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0",
+   "y": 90
+  },
+  "facing=west,lit=true,piece=69": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0",
+   "y": 90
+  },
+  "facing=north,lit=false,piece=0": {
+   "model": "elementalwands:block/pyre_gate_veil/0",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=1": {
+   "model": "elementalwands:block/pyre_gate_veil/1",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=2": {
+   "model": "elementalwands:block/pyre_gate_veil/2",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=3": {
+   "model": "elementalwands:block/pyre_gate_veil/3",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=4": {
+   "model": "elementalwands:block/pyre_gate_veil/4",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=5": {
+   "model": "elementalwands:block/pyre_gate_veil/5",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=6": {
+   "model": "elementalwands:block/pyre_gate_veil/6",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=7": {
+   "model": "elementalwands:block/pyre_gate_veil/7",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=8": {
+   "model": "elementalwands:block/pyre_gate_veil/8",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=9": {
+   "model": "elementalwands:block/pyre_gate_veil/9",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=10": {
+   "model": "elementalwands:block/pyre_gate_veil/10",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=11": {
+   "model": "elementalwands:block/pyre_gate_veil/11",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=12": {
+   "model": "elementalwands:block/pyre_gate_veil/12",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=13": {
+   "model": "elementalwands:block/pyre_gate_veil/13",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=14": {
+   "model": "elementalwands:block/pyre_gate_veil/14",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=15": {
+   "model": "elementalwands:block/pyre_gate_veil/15",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=16": {
+   "model": "elementalwands:block/pyre_gate_veil/16",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=17": {
+   "model": "elementalwands:block/pyre_gate_veil/17",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=18": {
+   "model": "elementalwands:block/pyre_gate_veil/18",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=19": {
+   "model": "elementalwands:block/pyre_gate_veil/19",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=20": {
+   "model": "elementalwands:block/pyre_gate_veil/20",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=21": {
+   "model": "elementalwands:block/pyre_gate_veil/21",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=22": {
+   "model": "elementalwands:block/pyre_gate_veil/22",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=23": {
+   "model": "elementalwands:block/pyre_gate_veil/23",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=24": {
+   "model": "elementalwands:block/pyre_gate_veil/24",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=25": {
+   "model": "elementalwands:block/pyre_gate_veil/25",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=26": {
+   "model": "elementalwands:block/pyre_gate_veil/26",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=27": {
+   "model": "elementalwands:block/pyre_gate_veil/27",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=28": {
+   "model": "elementalwands:block/pyre_gate_veil/28",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=29": {
+   "model": "elementalwands:block/pyre_gate_veil/29",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=30": {
+   "model": "elementalwands:block/pyre_gate_veil/30",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=31": {
+   "model": "elementalwands:block/pyre_gate_veil/31",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=32": {
+   "model": "elementalwands:block/pyre_gate_veil/32",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=33": {
+   "model": "elementalwands:block/pyre_gate_veil/33",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=34": {
+   "model": "elementalwands:block/pyre_gate_veil/34",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=35": {
+   "model": "elementalwands:block/pyre_gate_veil/35",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=36": {
+   "model": "elementalwands:block/pyre_gate_veil/36",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=37": {
+   "model": "elementalwands:block/pyre_gate_veil/37",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=38": {
+   "model": "elementalwands:block/pyre_gate_veil/38",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=39": {
+   "model": "elementalwands:block/pyre_gate_veil/39",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=40": {
+   "model": "elementalwands:block/pyre_gate_veil/40",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=41": {
+   "model": "elementalwands:block/pyre_gate_veil/41",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=42": {
+   "model": "elementalwands:block/pyre_gate_veil/42",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=43": {
+   "model": "elementalwands:block/pyre_gate_veil/43",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=44": {
+   "model": "elementalwands:block/pyre_gate_veil/44",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=45": {
+   "model": "elementalwands:block/pyre_gate_veil/45",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=46": {
+   "model": "elementalwands:block/pyre_gate_veil/46",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=47": {
+   "model": "elementalwands:block/pyre_gate_veil/47",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=48": {
+   "model": "elementalwands:block/pyre_gate_veil/48",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=49": {
+   "model": "elementalwands:block/pyre_gate_veil/49",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=50": {
+   "model": "elementalwands:block/pyre_gate_veil/50",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=51": {
+   "model": "elementalwands:block/pyre_gate_veil/51",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=52": {
+   "model": "elementalwands:block/pyre_gate_veil/52",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=53": {
+   "model": "elementalwands:block/pyre_gate_veil/53",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=54": {
+   "model": "elementalwands:block/pyre_gate_veil/54",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=55": {
+   "model": "elementalwands:block/pyre_gate_veil/55",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=56": {
+   "model": "elementalwands:block/pyre_gate_veil/0",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=57": {
+   "model": "elementalwands:block/pyre_gate_veil/57",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=58": {
+   "model": "elementalwands:block/pyre_gate_veil/58",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=59": {
+   "model": "elementalwands:block/pyre_gate_veil/59",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=60": {
+   "model": "elementalwands:block/pyre_gate_veil/60",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=61": {
+   "model": "elementalwands:block/pyre_gate_veil/61",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=62": {
+   "model": "elementalwands:block/pyre_gate_veil/0",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=63": {
+   "model": "elementalwands:block/pyre_gate_veil/0",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=64": {
+   "model": "elementalwands:block/pyre_gate_veil/0",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=65": {
+   "model": "elementalwands:block/pyre_gate_veil/65",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=66": {
+   "model": "elementalwands:block/pyre_gate_veil/66",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=67": {
+   "model": "elementalwands:block/pyre_gate_veil/67",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=68": {
+   "model": "elementalwands:block/pyre_gate_veil/0",
+   "y": 180
+  },
+  "facing=north,lit=false,piece=69": {
+   "model": "elementalwands:block/pyre_gate_veil/0",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=0": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=1": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/1",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=2": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/2",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=3": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/3",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=4": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/4",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=5": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/5",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=6": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/6",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=7": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/7",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=8": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/8",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=9": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/9",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=10": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/10",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=11": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/11",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=12": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/12",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=13": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/13",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=14": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/14",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=15": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/15",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=16": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/16",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=17": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/17",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=18": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/18",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=19": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/19",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=20": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/20",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=21": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/21",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=22": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/22",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=23": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/23",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=24": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/24",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=25": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/25",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=26": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/26",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=27": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/27",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=28": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/28",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=29": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/29",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=30": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/30",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=31": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/31",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=32": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/32",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=33": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/33",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=34": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/34",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=35": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/35",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=36": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/36",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=37": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/37",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=38": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/38",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=39": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/39",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=40": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/40",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=41": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/41",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=42": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/42",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=43": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/43",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=44": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/44",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=45": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/45",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=46": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/46",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=47": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/47",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=48": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/48",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=49": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/49",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=50": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/50",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=51": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/51",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=52": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/52",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=53": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/53",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=54": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/54",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=55": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/55",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=56": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=57": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/57",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=58": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/58",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=59": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/59",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=60": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/60",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=61": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/61",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=62": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=63": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=64": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=65": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/65",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=66": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/66",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=67": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/67",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=68": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0",
+   "y": 180
+  },
+  "facing=north,lit=true,piece=69": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0",
+   "y": 180
+  },
+  "facing=east,lit=false,piece=0": {
+   "model": "elementalwands:block/pyre_gate_veil/0",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=1": {
+   "model": "elementalwands:block/pyre_gate_veil/1",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=2": {
+   "model": "elementalwands:block/pyre_gate_veil/2",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=3": {
+   "model": "elementalwands:block/pyre_gate_veil/3",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=4": {
+   "model": "elementalwands:block/pyre_gate_veil/4",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=5": {
+   "model": "elementalwands:block/pyre_gate_veil/5",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=6": {
+   "model": "elementalwands:block/pyre_gate_veil/6",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=7": {
+   "model": "elementalwands:block/pyre_gate_veil/7",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=8": {
+   "model": "elementalwands:block/pyre_gate_veil/8",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=9": {
+   "model": "elementalwands:block/pyre_gate_veil/9",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=10": {
+   "model": "elementalwands:block/pyre_gate_veil/10",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=11": {
+   "model": "elementalwands:block/pyre_gate_veil/11",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=12": {
+   "model": "elementalwands:block/pyre_gate_veil/12",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=13": {
+   "model": "elementalwands:block/pyre_gate_veil/13",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=14": {
+   "model": "elementalwands:block/pyre_gate_veil/14",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=15": {
+   "model": "elementalwands:block/pyre_gate_veil/15",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=16": {
+   "model": "elementalwands:block/pyre_gate_veil/16",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=17": {
+   "model": "elementalwands:block/pyre_gate_veil/17",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=18": {
+   "model": "elementalwands:block/pyre_gate_veil/18",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=19": {
+   "model": "elementalwands:block/pyre_gate_veil/19",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=20": {
+   "model": "elementalwands:block/pyre_gate_veil/20",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=21": {
+   "model": "elementalwands:block/pyre_gate_veil/21",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=22": {
+   "model": "elementalwands:block/pyre_gate_veil/22",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=23": {
+   "model": "elementalwands:block/pyre_gate_veil/23",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=24": {
+   "model": "elementalwands:block/pyre_gate_veil/24",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=25": {
+   "model": "elementalwands:block/pyre_gate_veil/25",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=26": {
+   "model": "elementalwands:block/pyre_gate_veil/26",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=27": {
+   "model": "elementalwands:block/pyre_gate_veil/27",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=28": {
+   "model": "elementalwands:block/pyre_gate_veil/28",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=29": {
+   "model": "elementalwands:block/pyre_gate_veil/29",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=30": {
+   "model": "elementalwands:block/pyre_gate_veil/30",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=31": {
+   "model": "elementalwands:block/pyre_gate_veil/31",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=32": {
+   "model": "elementalwands:block/pyre_gate_veil/32",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=33": {
+   "model": "elementalwands:block/pyre_gate_veil/33",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=34": {
+   "model": "elementalwands:block/pyre_gate_veil/34",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=35": {
+   "model": "elementalwands:block/pyre_gate_veil/35",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=36": {
+   "model": "elementalwands:block/pyre_gate_veil/36",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=37": {
+   "model": "elementalwands:block/pyre_gate_veil/37",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=38": {
+   "model": "elementalwands:block/pyre_gate_veil/38",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=39": {
+   "model": "elementalwands:block/pyre_gate_veil/39",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=40": {
+   "model": "elementalwands:block/pyre_gate_veil/40",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=41": {
+   "model": "elementalwands:block/pyre_gate_veil/41",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=42": {
+   "model": "elementalwands:block/pyre_gate_veil/42",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=43": {
+   "model": "elementalwands:block/pyre_gate_veil/43",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=44": {
+   "model": "elementalwands:block/pyre_gate_veil/44",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=45": {
+   "model": "elementalwands:block/pyre_gate_veil/45",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=46": {
+   "model": "elementalwands:block/pyre_gate_veil/46",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=47": {
+   "model": "elementalwands:block/pyre_gate_veil/47",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=48": {
+   "model": "elementalwands:block/pyre_gate_veil/48",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=49": {
+   "model": "elementalwands:block/pyre_gate_veil/49",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=50": {
+   "model": "elementalwands:block/pyre_gate_veil/50",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=51": {
+   "model": "elementalwands:block/pyre_gate_veil/51",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=52": {
+   "model": "elementalwands:block/pyre_gate_veil/52",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=53": {
+   "model": "elementalwands:block/pyre_gate_veil/53",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=54": {
+   "model": "elementalwands:block/pyre_gate_veil/54",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=55": {
+   "model": "elementalwands:block/pyre_gate_veil/55",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=56": {
+   "model": "elementalwands:block/pyre_gate_veil/0",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=57": {
+   "model": "elementalwands:block/pyre_gate_veil/57",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=58": {
+   "model": "elementalwands:block/pyre_gate_veil/58",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=59": {
+   "model": "elementalwands:block/pyre_gate_veil/59",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=60": {
+   "model": "elementalwands:block/pyre_gate_veil/60",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=61": {
+   "model": "elementalwands:block/pyre_gate_veil/61",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=62": {
+   "model": "elementalwands:block/pyre_gate_veil/0",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=63": {
+   "model": "elementalwands:block/pyre_gate_veil/0",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=64": {
+   "model": "elementalwands:block/pyre_gate_veil/0",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=65": {
+   "model": "elementalwands:block/pyre_gate_veil/65",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=66": {
+   "model": "elementalwands:block/pyre_gate_veil/66",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=67": {
+   "model": "elementalwands:block/pyre_gate_veil/67",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=68": {
+   "model": "elementalwands:block/pyre_gate_veil/0",
+   "y": 270
+  },
+  "facing=east,lit=false,piece=69": {
+   "model": "elementalwands:block/pyre_gate_veil/0",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=0": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=1": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/1",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=2": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/2",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=3": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/3",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=4": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/4",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=5": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/5",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=6": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/6",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=7": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/7",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=8": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/8",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=9": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/9",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=10": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/10",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=11": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/11",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=12": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/12",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=13": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/13",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=14": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/14",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=15": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/15",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=16": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/16",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=17": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/17",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=18": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/18",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=19": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/19",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=20": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/20",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=21": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/21",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=22": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/22",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=23": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/23",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=24": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/24",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=25": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/25",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=26": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/26",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=27": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/27",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=28": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/28",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=29": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/29",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=30": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/30",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=31": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/31",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=32": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/32",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=33": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/33",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=34": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/34",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=35": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/35",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=36": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/36",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=37": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/37",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=38": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/38",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=39": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/39",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=40": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/40",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=41": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/41",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=42": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/42",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=43": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/43",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=44": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/44",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=45": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/45",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=46": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/46",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=47": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/47",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=48": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/48",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=49": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/49",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=50": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/50",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=51": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/51",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=52": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/52",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=53": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/53",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=54": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/54",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=55": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/55",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=56": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=57": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/57",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=58": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/58",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=59": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/59",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=60": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/60",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=61": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/61",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=62": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=63": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=64": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=65": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/65",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=66": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/66",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=67": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/67",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=68": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0",
+   "y": 270
+  },
+  "facing=east,lit=true,piece=69": {
+   "model": "elementalwands:block/pyre_gate_veil_lit/0",
+   "y": 270
+  }
+ }
+}

@@ -3,6 +3,53 @@
 Reviewed October 3, 2026. This page contains outstanding work, not release history.
 It records known verification limits; it is not a fresh installation receipt.
 
+- **Pyre King (Nov 10):** he has a first-pass fight: fifteen moves chosen by weighted
+  rules, hits swept from his animations, aimed throws, fire, and a phase change at half
+  health. See [Pyre King](reference/pyre-king.md).
+  - **Verified:** `checkPyreKing`; `pyre_king_fight_smoke` (every move against a Survival
+    player, then a free fight to his death); `pyre_king_client_smoke` (every clip).
+  - **Reviewed (Nov 10):** three models read the design and the code. Their findings were
+    fixed: his drawn facing and steps lagging the server's blade, clips starting late for a
+    client that was looking away, a hand spinning in two blends, throws and hauls that
+    could pass a pillar, Drag Down pulling a player through one, shields, a cancelled
+    Unbound, fire's sum after a blow, and co-op baiting.
+  - **Hiding (Nov 11):** stone stops his chain and blade, and he gets round a pillar
+    himself with the Haul and the Snare, or a Lunge. Their two clips are new and not yet
+    reviewed. The line a Haul flies burns. A player who only circles a pillar is hooked
+    off it but, in the fixture, runs clear of the Overhead that follows.
+  - **Intro (Nov 11):** a 58 s cinematic from the developer's idea (the statue on his throne,
+    the web of chains, the falling sword) plays when the Burned Gate opens, or by
+    `/ew pyreking intro`.
+  - **The Burned Gate (Nov 11):** the way in, from the developer's idea: a bridge to nowhere
+    over a Nether lava lake, ending at a lone gate whose arch is filled with fire and bound
+    with chains. Touching the king's seal on them twice takes everyone nearby to the hall;
+    a win or a death brings them back before the gate.
+  - **First playtest (Nov 11):** the developer beat him on the second try with a level 1
+    Space wand: "pretty clean, but really easy", slow between attacks, all throws at range,
+    the spinning cut easy to leave. Answered the same day and not yet played: every clip has
+    a tempo (`PyreKingRules.tempo`), gaps are shorter, strings chain more, the Lunge and
+    Hook come more often at range, and his fire is blocks that look like vanilla fire (their
+    choice). Health and damage are unchanged.
+  - **Second playtest (Nov 11):** "really good". Answered the same day, not yet played: the
+    Chain Scythe strikes only from 5 blocks out and is not used close in; a win sends everyone
+    home after ten seconds; mining the hall never starts.
+  - **Third playtest (Nov 11):** the developer played the whole way through in Lunar, from the
+    gate through the intro and the fight: "really good". Merged to main the same day.
+  - **Pending:** a co-op playtest. Damage is set for plain diamond to netherite armor (Nov 11);
+    his health is a first guess.
+  - **Pending:** the Chain Scythe's bowed chain in the workshop.
+  - **Weak:** the warnings and fire are particles; he has no sounds of his own, no death
+    clip and no reward.
+- **Burned Throne Hall (Nov 10):** the Pyre King's arena exists as an operator-only realm
+  (`/ew hall enter`, `summon`, `leave`). See
+  [Pyre King](reference/pyre-king.md#the-burned-throne-hall).
+  - **Verified:** `pyre_hall_client_smoke` enters, checks the floor, barrier, lava and the
+    summoned king, and photographs the hall.
+  - **Reviewed (Nov 10):** the developer liked the first pass from screenshots and the
+    preview, and kept the floor pattern. The sea's hard horizon and the unlit throne were
+    fixed afterwards. At the developer's request the floor's magma was removed and twelve
+    great braziers were added to light the hall; the developer then approved it.
+  - **Pending:** the developer's look at the hall in Lunar.
 - **Storm Roc (both phases):** the summit has a sealed, operator-started encounter.
   - **Opening (Oct 28):** on its home spire the Roc summons the first tornado. It screams a bolt
     into the clouds, the storm strikes the spot, and the funnel touches down over 2.5 seconds

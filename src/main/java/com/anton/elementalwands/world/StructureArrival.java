@@ -12,7 +12,7 @@ import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.gen.structure.Structure;
 
 /**
- * Where a /locate teleport link puts the player at a church, graveyard or Storm Roc aerie. Vanilla
+ * Where a /locate teleport link puts the player at a church, graveyard, Storm Roc aerie or Burned Gate. Vanilla
  * links keep the player's own height ("~"), which buries them or drops them from the sky. Each
  * structure names a clear cell of its own template instead, so the link carries the floor's real
  * height even before the terrain there has generated.
@@ -23,7 +23,7 @@ public final class StructureArrival {
     /** Arrival for the structure starting in the located chunk, or null for other structures. Loads that chunk's starts. */
     public static BlockPos find(ServerWorld world, RegistryEntry<Structure> structure, BlockPos located) {
         if (!(structure.value() instanceof HollowGraveyardStructure) && !(structure.value() instanceof StormAerieStructure)
-                && !structure.matchesId(GuardianChurchLocator.ID)) return null;
+                && !(structure.value() instanceof PyreGateStructure) && !structure.matchesId(GuardianChurchLocator.ID)) return null;
         var chunk = world.getChunk(located.getX() >> 4, located.getZ() >> 4, ChunkStatus.STRUCTURE_STARTS, true);
         return of(world, structure, chunk.getStructureStart(structure.value()));
     }
@@ -31,6 +31,8 @@ public final class StructureArrival {
     public static BlockPos of(ServerWorld world, RegistryEntry<Structure> structure, StructureStart start) {
         if (start == null || !start.hasChildren() || !(start.getChildren().getFirst() instanceof PoolStructurePiece piece)) return null;
         BlockPos spot;
+        // Under the Nether's roof a heightmap says nothing: the gate's own stand point is the place.
+        if (structure.value() instanceof PyreGateStructure) return PyreGateStructure.arrival(piece);
         if (structure.value() instanceof HollowGraveyardStructure graveyard) spot = graveyard.arrival(piece);
         else if (structure.value() instanceof StormAerieStructure) spot = StormAerieStructure.arrival(piece);
         else if (structure.matchesId(GuardianChurchLocator.ID)) spot = ChurchLayout.arrival(piece);

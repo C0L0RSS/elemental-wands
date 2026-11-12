@@ -1,0 +1,839 @@
+{
+  "revision": "Eleventh sculpt / v11 \u00b7 no coat, stronger limbs \u00b7 reworked clips",
+  "date": "2026-11-06",
+  "summary": "Review only \u00b7 5-block masked duelist \u00b7 4.5-block longsword \u00b7 plough guard",
+  "cubes": 266,
+  "bones": 46,
+  "sword_cubes": 14,
+  "sword_bones": 3,
+  "texture_size": [
+    1024,
+    512
+  ],
+  "translucent_bones": [],
+  "material_by_cube": [
+    "leather",
+    "leather",
+    "trim",
+    "armor",
+    "armor",
+    "armor",
+    "trim",
+    "armor",
+    "armor",
+    "armor",
+    "trim",
+    "armor",
+    "trim",
+    "armor",
+    "armor",
+    "gold",
+    "shard",
+    "hot",
+    "ember",
+    "ember",
+    "ember",
+    "ember",
+    "ember",
+    "ember",
+    "armor",
+    "trim",
+    "armor",
+    "hem",
+    "gold",
+    "tabard",
+    "burnt_cloth",
+    "armor",
+    "armor",
+    "armor",
+    "armor",
+    "armor",
+    "armor",
+    "armor",
+    "armor",
+    "armor",
+    "armor",
+    "armor",
+    "joint",
+    "joint",
+    "trim",
+    "armor",
+    "armor",
+    "trim",
+    "armor",
+    "armor",
+    "armor",
+    "armor",
+    "armor",
+    "armor",
+    "armor",
+    "armor",
+    "armor",
+    "armor",
+    "armor",
+    "joint",
+    "joint",
+    "trim",
+    "armor",
+    "armor",
+    "trim",
+    "char",
+    "char",
+    "char",
+    "char",
+    "mask",
+    "mask",
+    "mask",
+    "mask",
+    "mask",
+    "eye",
+    "mask",
+    "mask",
+    "mask",
+    "eye",
+    "mask",
+    "mask",
+    "mask",
+    "molten",
+    "molten",
+    "ash",
+    "ash",
+    "ash",
+    "ash",
+    "ash",
+    "ash",
+    "ash",
+    "ash",
+    "ash",
+    "ash",
+    "ash",
+    "ash",
+    "ash",
+    "ash",
+    "ash",
+    "ash",
+    "ash",
+    "ash",
+    "ash",
+    "ash",
+    "ash",
+    "ash",
+    "ash",
+    "ash",
+    "char",
+    "gold",
+    "gold",
+    "gold",
+    "gold",
+    "gold",
+    "gold",
+    "gold",
+    "gold",
+    "gold",
+    "gold",
+    "gold",
+    "gold",
+    "gold",
+    "gold",
+    "gold",
+    "gold",
+    "gold",
+    "gold",
+    "gold",
+    "gold",
+    "gold",
+    "gold",
+    "gold",
+    "gold",
+    "ruby",
+    "crimson",
+    "crimson",
+    "crimson",
+    "crimson",
+    "crimson",
+    "crimson",
+    "burnt_cloth",
+    "crimson",
+    "crimson",
+    "burnt_cloth",
+    "crimson",
+    "crimson",
+    "burnt_cloth",
+    "crimson",
+    "crimson",
+    "burnt_cloth",
+    "crimson",
+    "crimson",
+    "burnt_cloth",
+    "crimson",
+    "crimson",
+    "burnt_cloth",
+    "crimson",
+    "crimson",
+    "burnt_cloth",
+    "crimson",
+    "burnt_cloth",
+    "crimson",
+    "burnt_cloth",
+    "armor",
+    "armor",
+    "armor",
+    "trim",
+    "armor",
+    "trim",
+    "crimson",
+    "crimson",
+    "burnt_cloth",
+    "joint",
+    "joint",
+    "armor",
+    "trim",
+    "gauntlet",
+    "gauntlet",
+    "trim",
+    "gauntlet",
+    "trim",
+    "gauntlet",
+    "gauntlet",
+    "gauntlet",
+    "gauntlet",
+    "armor",
+    "armor",
+    "armor",
+    "trim",
+    "armor",
+    "trim",
+    "crimson",
+    "crimson",
+    "burnt_cloth",
+    "joint",
+    "joint",
+    "armor",
+    "trim",
+    "gauntlet",
+    "gauntlet",
+    "trim",
+    "gauntlet",
+    "trim",
+    "gauntlet",
+    "gauntlet",
+    "gauntlet",
+    "gauntlet",
+    "curse",
+    "curse",
+    "curse",
+    "curse",
+    "curse",
+    "curse",
+    "curse",
+    "curse",
+    "curse",
+    "curse",
+    "curse",
+    "curse",
+    "curse",
+    "curse",
+    "curse",
+    "curse",
+    "curse",
+    "curse",
+    "curse",
+    "curse",
+    "lock_iron",
+    "lock_iron",
+    "lock_iron",
+    "lock_iron",
+    "lock_iron",
+    "hot",
+    "gold",
+    "gold",
+    "gold",
+    "grip",
+    "gold",
+    "steel",
+    "steel",
+    "steel",
+    "steel",
+    "fuller",
+    "dark_iron",
+    "dark_iron",
+    "dark_iron",
+    "dark_iron",
+    "dark_iron",
+    "dark_iron",
+    "dark_iron",
+    "dark_iron",
+    "dark_iron",
+    "iron",
+    "iron",
+    "iron",
+    "iron",
+    "iron",
+    "iron",
+    "iron",
+    "iron",
+    "iron",
+    "iron",
+    "iron",
+    "iron",
+    "iron",
+    "iron"
+  ],
+  "measurement_targets": {
+    "body_height": 80,
+    "sword_length": 72,
+    "blade_length": 56,
+    "blade_width": 7,
+    "grip_length": 11.6,
+    "player_height": 28.8,
+    "player_eye": 25.6
+  },
+  "sword_root_pivot": [
+    0,
+    0,
+    0
+  ],
+  "sword_tip_axis": "+Y",
+  "source_front": "-Z",
+  "guard_direction": [
+    -0.639712,
+    0.719676,
+    -0.269879
+  ],
+  "blade_fire": {
+    "bone": "sword",
+    "units": "model pixels",
+    "socket_space": "relative to sword pivot before bone rotation; reflect X and divide by 16 before applying baked bone matrix",
+    "king_pivot": [
+      -2,
+      32,
+      -13
+    ],
+    "sword_pivot": [
+      0,
+      0,
+      0
+    ],
+    "sockets": [
+      [
+        0,
+        16.0,
+        0
+      ],
+      [
+        0,
+        19.5,
+        0
+      ],
+      [
+        0,
+        23.0,
+        0
+      ],
+      [
+        0,
+        26.5,
+        0
+      ],
+      [
+        0,
+        30.0,
+        0
+      ],
+      [
+        0,
+        33.5,
+        0
+      ],
+      [
+        0,
+        37.0,
+        0
+      ],
+      [
+        0,
+        40.5,
+        0
+      ],
+      [
+        0,
+        44.0,
+        0
+      ],
+      [
+        0,
+        47.5,
+        0
+      ],
+      [
+        0,
+        51.0,
+        0
+      ],
+      [
+        0,
+        54.5,
+        0
+      ],
+      [
+        0,
+        58.0,
+        0
+      ],
+      [
+        0,
+        61.5,
+        0
+      ],
+      [
+        0,
+        65.0,
+        0
+      ],
+      [
+        0,
+        68.5,
+        0
+      ],
+      [
+        0,
+        72.0,
+        0
+      ]
+    ],
+    "socket_half_extents": [
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        3.5,
+        0.8
+      ],
+      [
+        2.5,
+        0.75
+      ],
+      [
+        2.5,
+        0.75
+      ],
+      [
+        2.5,
+        0.75
+      ],
+      [
+        1.6,
+        0.6
+      ],
+      [
+        0.65,
+        0.45
+      ]
+    ],
+    "root_edge_fraction": 1,
+    "root": "each flame roots root_edge_fraction of the way from its socket toward the uppermost edge of the blade cross-section, on the top face (half_extents: local X half width, local Z half thickness, model pixels)",
+    "world_up": [
+      0,
+      1,
+      0
+    ],
+    "atlas": "bladefire.png",
+    "atlas_grid": [
+      8,
+      1
+    ],
+    "tongue_frames": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "lick_frames": [
+      4,
+      5,
+      6,
+      7
+    ],
+    "atlas_fps": 8,
+    "active_socket_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+    ],
+    "peak_sockets": [
+      [
+        2,
+        0.74
+      ],
+      [
+        4,
+        0.98
+      ],
+      [
+        10,
+        1.18
+      ],
+      [
+        11,
+        0.8
+      ],
+      [
+        15,
+        1.06
+      ]
+    ],
+    "palette_source": "art/fire/blockfire/textures/blockfire.png",
+    "swing": {
+      "about": "Fire reacts to the blade's real motion and to the body's own travel. Burning gas leaves the steel and stays where the blade was, rising: a moving flame lies back along the path its root just travelled, never shorter than it stands still and never hanging below the blade, and a fast blow leaves one glowing sheet of fire across the arc the blade swept. Slow moves (walking, re-cocks) only lean the fire; at rest every flame stands upright exactly as in the still fire.",
+      "faces": "Every flame face: pts (4 world points), n, uvs into bladefire.png, alpha in (0,1], trail (true on the wake). Optional alphas [a0,a1,a2,a3]: per-vertex opacity used instead of alpha (alpha is then their largest). Optional blend 'add': drawn after all other flame faces, back to front among themselves, additively (SRC_ALPHA, ONE) with depth test on and depth writes off; faces without blend use normal alpha blending. Cores (trail false) are opaque: alpha 1, no alphas, no blend.",
+      "history": "Each flame root's world position (after the upper-edge rooting) and the blade axis (first socket to last) at history_samples earlier moments history_step_seconds apart, plus now. The workshop re-poses the clip at those times (looping clips wrap; one-shots and the test sweep clamp at 0; only the sword and its ancestor bones are posed); a game should keep the actual recent positions. scene(...,opts) takes opts.travel, the body's own world velocity in blocks/s (the workshop passes [0,0,-ground_speed] for a walk or run played in place): the body moves through still air, so the sample at age a shifts by -travel*a. Jumps: one extra sample past the window is taken; the newest slice in which any socket moves faster than teleport_speed_blocks_per_second is a jump (a parent switch, a teleport, a loop seam); the cut also takes the next newer slice (a jump can end partway through it) and any newer ones beside it that still run faster than half that speed, and every older sample repeats the sample at the cut, so the fire never traces a jump. The speed test cannot tell a jump smeared over a 20 Hz key interval at under teleport_speed from a real blow; those are fixed in the bake. path(age) is a cubic Hermite curve through the samples with Catmull-Rom tangents (the newest and oldest samples take their own chord), each tangent limited to twice the shorter chord beside it so a sudden stop cannot throw a loop; it is sampled path_substeps times per slice to measure distance along it.",
+      "history_samples": 8,
+      "history_step_seconds": 0.015,
+      "path_substeps": 3,
+      "speed_samples": 16,
+      "teleport_speed_blocks_per_second": 400,
+      "speed": "Cut the window into speed_samples equal slices along the path. speed is the fastest slice, velocity (and now, its length) the newest. stream = the average of ramp(stream_speed, slice speed) weighted speed_samples..1 from newest to oldest, so it builds fast and eases off over the whole window after a stop. ramp([a,b],v) = smoothstep(ln(v/a)/ln(b/a)), 0 at or below a. lean_speed sets how far a flame follows its path, stream_speed how hard the air pulls it (rise lost, thinning, curl, flutter), wake_speed how brightly the swept sheet shows; walking (3 blocks/s) and the re-cocks between blows (5-26 blocks/s) stay below the wake.",
+      "lean_speed_blocks_per_second": [
+        2,
+        20
+      ],
+      "stream_speed_blocks_per_second": [
+        8,
+        60
+      ],
+      "wake_speed_blocks_per_second": [
+        20,
+        90
+      ],
+      "tongue": {
+        "about": "Every lick (its root nudged 0..45% of the way to the next root) and peak; trail false, opaque. life = seconds*(0.75..1.25 per flame); travelled = the distance its root covered along the path within life; lean = ramp(lean_speed, travelled/life); reach = L*tanh(travelled/L) with L = height*stretch + reach_blocks. Points x = 0..1 (segments of them, or one quad when lean is 0): P(x) = root - up*sink + d(x) + up*rise*(x - bend*x*(1-x)) + flutter, where d(x) = lean*(path(the age at which the path has covered x*reach) - root) with its downward part scaled by sag, rise = height*(1 - stream*(1 - rise_kept)), bend = curl*stream, and flutter = flutter_blocks*stream*x*x waving along the current blade axis by sin(9.1t + phase + 3.3x) and up by 0.6*sin(13.7t + 1.7*phase + 4.1x), phase 2.3*socket (+1.1 on peaks). Then, in order: if the tip is closer to the root than height, the rise is topped up linearly along x until it is exactly height away; no joint turns more than max_turn_degrees (the rest of the strip rotates rigidly about that joint); the height floor once more. Width and depth scale by 1 - thinning*stream. The front, back and cross sheets keep their world X (width) and Z (depth) axes, carried at each point by the shortest rotation from up to the strip's direction; with lean 0 each sheet is one straight quad, the still fire exactly.",
+        "segments": 4,
+        "seconds": 0.06,
+        "stretch": 1.3,
+        "reach_blocks": 0.25,
+        "thinning": 0.35,
+        "rise_kept": 0.6,
+        "curl": 0.5,
+        "flutter_blocks": 0.1,
+        "sag": 0.15,
+        "max_turn_degrees": 70
+      },
+      "stream": {
+        "about": "The wake (trail true): one sheet across the arc the blade swept. drawn = the tip root's path length over min(seconds, window); W = the age at which the tip's path covers max_length_blocks*tanh(drawn/max_length_blocks). Every plain root is sampled at ages W*k/rows (k = 0..rows, x = k/rows) and lifted by rise_blocks*x*x plus an upward flutter 0.6*flutter_blocks*stream*x*x*sin(13.7t + 1.7*phase + 4.1x), phase 1.9*socket + 0.7; quads join neighbouring roots at neighbouring ages. Per-vertex opacity = ramp(wake_speed, that root's speed at that age) * (1 - smoothstep(age/window)) * smoothstep(x/fade_in) * (1 - smoothstep((x - hold)/(1 - hold))) * (1 - smoothstep(drop/drop_fade_blocks)), drop being how far the vertex hangs below that root now: zero at the blade and at the old edge, and a rising blade's sheet fades out below it instead of hanging as a curtain. Every quad is emitted twice: a normally blended tint (opacity*tint) that turns what is behind it fire-coloured, then an additive glow (opacity*glow, blend add). Texture: one lick frame per columns_per_frame roots, using the middle frame_span of its width, v from v_start at the blade to v_end at the old edge, so the sheet is continuous near the blade and breaks into a few ragged tongues behind.",
+        "rows": 6,
+        "seconds": 0.12,
+        "max_length_blocks": 2.4,
+        "tint": 0.45,
+        "glow": 0.5,
+        "fade_in": 0.3,
+        "hold": 0.45,
+        "columns_per_frame": 3,
+        "frame_span": 0.6,
+        "v_start": 0.85,
+        "v_end": 0.15,
+        "rise_blocks": 0.35,
+        "flutter_blocks": 0.12,
+        "drop_fade_blocks": 1.2
+      }
+    }
+  },
+  "loose_chains": {
+    "markers": [
+      "unbound_chain_1",
+      "unbound_chain_2",
+      "unbound_chain_3",
+      "unbound_chain_4",
+      "unbound_chain_5",
+      "unbound_chain_6"
+    ],
+    "about": "Six empty marker bones on the torso. A clip (Unbound) moves a marker to where the far end of a loose chain is; at rest each sits on the chest chain. Whatever draws him draws a chain from the rest place of the marker on the torso to the marker when they are more than draw_beyond_blocks apart. The workshop (effects.js) draws heavy links with a little sag, bowed while the chain is swung so that its far end trails (the sideways velocity of its far end over the last second, passed through a damped oscillator of bow_period_seconds and bow_damping so the chain lags, overshoots and settles, times bow_seconds, at most bow_share of its length, largest two thirds of the way along), every third one hot, a barbed hook hook_blocks long on the far end, lying flat and curving to his left, and fire: a low flame about every flame_spacing_blocks and a tall one on the hook, upright where the chain is still and laid back along its travel where it moves.",
+    "draw_beyond_blocks": 0.6,
+    "hook_blocks": 1.25,
+    "flame_spacing_blocks": 0.6,
+    "bow_seconds": 0.09,
+    "bow_share": 0.22,
+    "bow_period_seconds": 0.55,
+    "bow_damping": 0.45
+  },
+  "clips": {
+    "idle": {
+      "length": 6.0,
+      "loop": true,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "walk": {
+      "length": 1.0,
+      "loop": true,
+      "ground_speed": 3.0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "run": {
+      "length": 0.9,
+      "loop": true,
+      "ground_speed": 4.5,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "royal_cut": {
+      "length": 3.8,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "kingsguard_thrust": {
+      "length": 2.9,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "turning_cut": {
+      "length": 2.6,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 180.0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "cast_reel": {
+      "length": 4.7,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "chain_scythe_low": {
+      "length": 2.9,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "chain_scythe_high": {
+      "length": 2.9,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "overhead_sentence": {
+      "length": 2.6,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "royal_cut_three": {
+      "length": 4.4,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "drag_down": {
+      "length": 2.4,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "hook": {
+      "length": 3.3,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "zip": {
+      "length": 3.2,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        -10.4
+      ]
+    },
+    "lunge": {
+      "length": 3.4,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        -6.9
+      ]
+    },
+    "haul": {
+      "length": 1.5,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        -12.9
+      ]
+    },
+    "snare": {
+      "length": 2.7,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "unbound": {
+      "length": 4.3,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "throned": {
+      "length": 10.0,
+      "loop": true,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "awaken": {
+      "length": 23.5,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "preview_rendering": "Shared effects.js samples posed sockets: a low overlapping flame roots on the blade's upper edge at every socket, making one continuous fringe, and five taller peaks break the silhouette. Still flames stand upright in world space. As the blade moves, it re-poses the clip at a few earlier moments (carried back by the body's own travel for a walk or run played in place): each flame lies back along the path its root just travelled, never shorter than it stands still and never hanging below the blade, and a fast blow leaves one sheet of fire across the arc the blade swept, faded in from the blade, tinted and glowing additively. Slow moves only lean the fire, everything settles upright within a fraction of a second after the blade stops, and a teleport or parent switch is never traced. No flame geometry in either sword export.",
+  "measured_body_height_blocks": 4.913642,
+  "measured_held_silhouette_height_blocks": 5.045612,
+  "measured_sword_length_blocks": 4.5
+}

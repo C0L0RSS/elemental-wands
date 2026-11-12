@@ -1,0 +1,54 @@
+// The Pyre King's fight in a disposable integrated world: each move against a standing player (hits, dodges, drags, fire), then a free fight through the phase change to his death; hidden, muted window.
+// ./gradlew -I tools/pyre_king_fight_smoke.init.gradle runClient -PhubClientAssets="$HOME/.lunarclient/shared/assets" [-PpyreFightRecord]
+allprojects {
+    plugins.withId('fabric-loom') {
+        def smokeRoot=layout.buildDirectory.dir('pyre-king-fight-smoke').get().asFile
+        // Optional existing cache for offline verification (for example Lunar shared/assets).
+        def existingAssets=project.findProperty('hubClientAssets')
+        if (existingAssets) {
+            loom.runs.client.vmArg('-Dfabric.dli.config='+new File(smokeRoot,'launch.cfg').absolutePath)
+        }
+        tasks.register('pyreKingFightMetadata') {
+            if (existingAssets) dependsOn generateDLIConfig
+            doLast {
+                def metadata=new File(smokeRoot,'metadata')
+                metadata.mkdirs()
+                new File(metadata,'fabric.mod.json').text='''{
+  "schemaVersion": 1, "id": "pyre_king_fight_smoke", "version": "1.0.0", "environment": "client",
+  "entrypoints": {"client": ["com.anton.elementalwands.client.PyreKingFightSmoke"]},
+  "depends": {"elementalwands": "*"}
+}'''
+                new File(smokeRoot,'PYRE_KING_FIGHT_PASSED.txt').delete()
+                new File(smokeRoot,'PYRE_KING_FIGHT_FAILED.txt').delete()
+                if (existingAssets) {
+                    def assets=file(existingAssets)
+                    if (!new File(assets,'indexes/27.json').exists()) throw new GradleException('Existing asset cache needs indexes/27.json')
+                    def launch=file('.gradle/loom-cache/launch.cfg').text
+                    launch=launch.replaceAll(/(?m)(\t--assetIndex\r?\n)\t[^\r\n]+/, { match, prefix -> prefix+'\t27' })
+                    launch=launch.replaceAll(/(?m)(\t--assetsDir\r?\n)\t[^\r\n]+/, { match, prefix -> prefix+'\t'+assets.absolutePath })
+                    new File(smokeRoot,'launch.cfg').text=launch
+                }
+            }
+        }
+        tasks.register('pyreKingFightJar',Jar) {
+            dependsOn guardianTestClasses, pyreKingFightMetadata
+            archiveFileName='pyre-king-fight-smoke.jar'
+            destinationDirectory=smokeRoot
+            from sourceSets.guardianTest.output
+            from new File(smokeRoot,'metadata')
+        }
+        loom.runs.client.runDir('build/pyre-king-fight-smoke')
+        // -PpyreFightRecord: also save a frame of the free fight every other tick (screenshots/record-*.png), for a review clip.
+        if (project.hasProperty('pyreFightRecord')) loom.runs.client.vmArg('-DpyreFightRecord=true')
+        // -PpyreFightRecordCase=name[,name]: save a frame of those cases every other tick (screenshots/case-name-*.png).
+        if (project.hasProperty('pyreFightRecordCase')) loom.runs.client.vmArg('-DpyreFightRecordCase='+project.property('pyreFightRecordCase'))
+        loom.runs.client.vmArg('-Dfabric.addMods='+new File(smokeRoot,'pyre-king-fight-smoke.jar').absolutePath)
+        tasks.named('runClient') {
+            dependsOn pyreKingFightJar
+            doLast {
+                if (!new File(smokeRoot,'PYRE_KING_FIGHT_PASSED.txt').exists() || new File(smokeRoot,'PYRE_KING_FIGHT_FAILED.txt').exists())
+                    throw new GradleException('Pyre King fight check failed; inspect build/pyre-king-fight-smoke/logs/latest.log')
+            }
+        }
+    }
+}

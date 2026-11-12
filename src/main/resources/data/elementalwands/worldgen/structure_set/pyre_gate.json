@@ -1,0 +1,14 @@
+{
+  "structures": [
+    {
+      "structure": "elementalwands:pyre_gate",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 24,
+    "separation": 10,
+    "salt": 73310655
+  }
+}

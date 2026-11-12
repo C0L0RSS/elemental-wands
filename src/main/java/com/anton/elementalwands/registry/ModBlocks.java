@@ -107,6 +107,26 @@ public class ModBlocks {
                         .pistonBehavior(net.minecraft.block.piston.PistonBehavior.BLOCK)));
     }
 
+    // The Burned Gate: the king's seal on its chains, and the fire that fills its arch. art/pyre_gate writes their
+    // block states, models and textures.
+    public static final net.minecraft.block.Block PYRE_SEAL=pyreGate("pyre_seal",com.anton.elementalwands.hall.PyreSealBlock::new,
+            settings -> settings.mapColor(net.minecraft.block.MapColor.GOLD).sounds(net.minecraft.sound.BlockSoundGroup.CHAIN)
+                    .luminance(s -> s.get(com.anton.elementalwands.hall.PyreSealBlock.LIT)?12:3));
+    public static final net.minecraft.block.Block PYRE_GATE_VEIL=pyreGate("pyre_gate_veil",com.anton.elementalwands.hall.PyreGateVeilBlock::new,
+            settings -> settings.mapColor(net.minecraft.block.MapColor.ORANGE).sounds(net.minecraft.sound.BlockSoundGroup.INTENTIONALLY_EMPTY)
+                    .luminance(s -> s.get(com.anton.elementalwands.hall.PyreGateVeilBlock.LIT)?15:7));
+    private static net.minecraft.block.Block pyreGate(String name,
+            java.util.function.Function<net.minecraft.block.AbstractBlock.Settings,net.minecraft.block.Block> factory,
+            java.util.function.UnaryOperator<net.minecraft.block.AbstractBlock.Settings> more) {
+        var id=net.minecraft.util.Identifier.of("elementalwands",name);
+        var key=net.minecraft.registry.RegistryKey.of(net.minecraft.registry.RegistryKeys.BLOCK,id);
+        return net.minecraft.registry.Registry.register(net.minecraft.registry.Registries.BLOCK,id,
+                factory.apply(more.apply(net.minecraft.block.AbstractBlock.Settings.create().registryKey(key)
+                        .strength(-1,3600000).noCollision().nonOpaque().dropsNothing().allowsSpawning((state,world,pos,type) -> false)
+                        .suffocates((state,world,pos) -> false).blockVision((state,world,pos) -> false)
+                        .pistonBehavior(net.minecraft.block.piston.PistonBehavior.BLOCK))));
+    }
+
     public static void registerAll() {
         // Internal encounter blocks; no items or recipes. Crystal ores remain removed.
     }

@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * Nothing drops in the Hollow Crypt, the Shattered Nave or the Storm Summit; the realm hands inventory and experience
+ * Nothing drops in the Hollow Crypt, the Shattered Nave, the Storm Summit or the Burned Throne Hall; the realm hands inventory and experience
  * to the respawned player.
  */
 @Mixin(PlayerEntity.class)
@@ -29,6 +29,7 @@ public abstract class BossRealmDeathMixin {
     private boolean elementalwands$keepsBelongings() {
         PlayerEntity player = (PlayerEntity) (Object) this;
         return HollowCryptManager.keepsBelongings(player) || GuardianArenaManager.keepsBelongings(player)
-                || com.anton.elementalwands.summit.StormSummitManager.keepsBelongings(player);
+                || com.anton.elementalwands.summit.StormSummitManager.keepsBelongings(player)
+                || com.anton.elementalwands.hall.PyreHallManager.keepsBelongings(player);
     }
 }

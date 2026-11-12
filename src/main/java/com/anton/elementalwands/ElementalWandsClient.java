@@ -51,6 +51,9 @@ public class ElementalWandsClient implements ClientModInitializer {
         SpaceParticleFactories.registerAll();
         BlockRenderLayerMap.putBlock(ModSpellBlocks.INFERNO_FLAME, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModSpellBlocks.PYRE_FLAME, BlockRenderLayer.CUTOUT);
+        BlockRenderLayerMap.putBlock(ModSpellBlocks.PYRE_KING_FIRE, BlockRenderLayer.CUTOUT);
+        BlockRenderLayerMap.putBlock(com.anton.elementalwands.registry.ModBlocks.PYRE_SEAL, BlockRenderLayer.CUTOUT);
+        BlockRenderLayerMap.putBlock(com.anton.elementalwands.registry.ModBlocks.PYRE_GATE_VEIL, BlockRenderLayer.TRANSLUCENT);
         BlockRenderLayerMap.putBlock(ModSpellBlocks.STONE_SPIKE, BlockRenderLayer.CUTOUT);
         for (var relic : com.anton.elementalwands.registry.ModBlocks.SUMMIT_RELICS) BlockRenderLayerMap.putBlock(relic, BlockRenderLayer.CUTOUT);
         EntangleClientEffects.register();
@@ -120,6 +123,7 @@ public class ElementalWandsClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.ROC_EFFECT, com.anton.elementalwands.client.renderer.RocEffectRenderer::new);
         EntityRendererRegistry.register(ModEntities.ROC_BODY_PART, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.HOLLOW_NECROMANCER, com.anton.elementalwands.client.renderer.NecromancerRenderer::new);
+        EntityRendererRegistry.register(ModEntities.PYRE_KING, com.anton.elementalwands.client.renderer.PyreKingRenderer::new);
         EntityRendererRegistry.register(ModEntities.SOUL_BOLT, com.anton.elementalwands.client.renderer.SoulBoltRenderer::new);
         EntityRendererRegistry.register(ModEntities.GRASPING_HAND, com.anton.elementalwands.client.renderer.GraspingHandRenderer::new);
         EntityRendererRegistry.register(ModEntities.SOUL_FIREBALL, com.anton.elementalwands.client.renderer.SoulFireballRenderer::new);
@@ -133,6 +137,7 @@ public class ElementalWandsClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.GUARDIAN_INTRO_ZOMBIE, com.anton.elementalwands.client.renderer.GuardianIntroZombieRenderer::new);
         com.anton.elementalwands.client.GuardianIntroClient.init();
         com.anton.elementalwands.client.StormRocIntroClient.init();
+        com.anton.elementalwands.client.PyreKingIntroClient.init();
         com.anton.elementalwands.client.GuardianPullClient.init();
         EntityRendererRegistry.register(ModEntities.HOLLOW_CRAWLER, context -> new com.anton.elementalwands.client.renderer.HollowUndeadRenderer<>(context, "hollow_crawler", .6f));
         EntityRendererRegistry.register(ModEntities.HOLLOW_ARCHER, context -> new com.anton.elementalwands.client.renderer.HollowUndeadRenderer<>(context, "hollow_archer", .4f));
@@ -212,6 +217,7 @@ public class ElementalWandsClient implements ClientModInitializer {
         com.anton.elementalwands.client.blockspace.BlockSpaceEffects.register();
         com.anton.elementalwands.client.blocknature.BlockNatureEffects.register();
         com.anton.elementalwands.client.NaveShaftEffects.register();
+        com.anton.elementalwands.client.PyreSeaHaze.register();
         com.anton.elementalwands.client.SummitCloudEffects.register();
         ClientTickEvents.END_CLIENT_TICK.register(com.anton.elementalwands.client.SummitStormClient::tick);
         ClientTickEvents.END_CLIENT_TICK.register(com.anton.elementalwands.client.StormRocMotion::tick);

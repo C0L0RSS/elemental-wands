@@ -93,6 +93,22 @@ public final class ModSpellBlocks {
                     .pistonBehavior(PistonBehavior.DESTROY)
                     .dropsNothing());
 
+    /** The Pyre King's fire on the floor: vanilla fire to look at, burned by his own rules. No item; it clears itself. */
+    public static final Block PYRE_KING_FIRE = register("pyre_king_fire", com.anton.elementalwands.block.PyreKingFireBlock::new,
+            AbstractBlock.Settings.create()
+                    .mapColor(MapColor.BRIGHT_RED)
+                    .noCollision()
+                    .nonOpaque()
+                    .replaceable()
+                    .strength(-1.0f, 3600000.0f)
+                    .luminance(state -> 15)
+                    .suffocates((state, world, pos) -> false)
+                    .blockVision((state, world, pos) -> false)
+                    .allowsSpawning((state, world, pos, type) -> false)
+                    .sounds(BlockSoundGroup.INTENTIONALLY_EMPTY)
+                    .pistonBehavior(PistonBehavior.DESTROY)
+                    .dropsNothing());
+
     public static final Block PYRE_COALS = register("pyre_coals", com.anton.elementalwands.block.PyreCoalsBlock::new,
             AbstractBlock.Settings.create()
                     .mapColor(MapColor.DARK_RED)

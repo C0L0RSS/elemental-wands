@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Build the Pyre King's GeckoLib art and local workshop.
 A plain run writes the review candidate and the workshop. --install also writes the game's
-copies (INSTALL) and the generated Java clip table. --check compares all of them without writing.
+copies (INSTALL) and the generated Java clip table. --check compares all of them without writing;
+the workshop is an ignored local preview, so it is compared only where it has been built.
 Requires Pillow and NumPy.
 """
 import argparse
@@ -259,7 +260,14 @@ def build():
         'identifier':'geometry.'+identifier,'texture_width':ATLAS_W,'texture_height':height,
         'visible_bounds_width':9,'visible_bounds_height':9,'visible_bounds_offset':[0,3,0]},'bones':bones}]}
     model=geo(BONES,'pyre_king'); sword=geo(sword_bones(),'pyre_king_sword')
-    def packed(o):return (json.dumps(o,indent=2)+'\n').encode()
+    def stable(o):
+        """Numbers as every machine writes them: maths libraries disagree in the last digits
+        and in the sign of a rounded zero, which must not make the files differ."""
+        if isinstance(o,float):return round(o,9)+0.
+        if isinstance(o,dict):return {k:stable(v) for k,v in o.items()}
+        if isinstance(o,(list,tuple)):return [stable(v) for v in o]
+        return o
+    def packed(o):return (json.dumps(stable(o),indent=2)+'\n').encode()
     def png(im):b=io.BytesIO();im.save(b,format='PNG');return b.getvalue()
     # The exported guard stays static; effects.js owns the workshop-only sweep exercise.
     from rig import bake
@@ -442,6 +450,9 @@ def main():
     if args.check and args.install:p.error('--check never writes; run --install alone')
     files,manifest,installed=build();bad=[]
     if args.check or args.install:files={**files,**installed}
+    if args.check and not (OUT/'workshop').exists():
+        files={path:data for path,data in files.items() if OUT not in path.parents}
+        print('The workshop has not been built here; checking the tracked files only.')
     for path,data in files.items():
         if args.check:
             if not path.exists() or path.read_bytes()!=data:bad.append(str(path.relative_to(ROOT)))

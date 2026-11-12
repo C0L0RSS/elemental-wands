@@ -151,8 +151,8 @@ The installable build is `build/libs/elementalwands-2.2.0.jar`.
 Dependency and release versions are maintained in `gradle.properties` and
 `build.gradle`.
 
-Start with [AGENT.md](AGENT.md) for repository working rules, required checks, and
-local installation guidance. The [documentation index](docs/README.md) links to
+Start with [AGENTS.md](AGENTS.md) for repository working rules, required checks, and
+local installation guidance. It links to the [feature index](docs/INDEX.md), the
 current system references, [outstanding work](docs/STATUS.md), and
 [release summaries](docs/releases/README.md). Historical reports live in the
 [archive](docs/archive/README.md).

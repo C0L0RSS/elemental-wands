@@ -15,7 +15,7 @@ simulation; damage and terrain collision still require Minecraft playtesting.
 Regenerate with `python3 art/fractured_guardian/v5-leap/build_leap.py`, then run
 `python3 art/fractured_guardian/v5-leap/preview_leap.py` for pose renders and floor
 checks. Package with `python3 tools/prepare_guardian_assets.py`. Run the repository
-build and asset checks in AGENT.md before installation.
+build and asset checks in AGENTS.md before installation.
 
 ## Session checkpoint
 

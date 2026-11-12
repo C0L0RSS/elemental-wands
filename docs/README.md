@@ -1,38 +1,42 @@
 # Elemental Wands documentation
 
-Start with [AGENT.md](../AGENT.md) for repository working rules. Read the relevant
-current guide below; there is no requirement to read this whole folder.
+Start with [AGENTS.md](../AGENTS.md). Its ["Where to read next"](../AGENTS.md#where-to-read-next)
+table is the one list of these documents; this page only says what each kind of document
+is for and how to keep it useful. There is no requirement to read the whole folder.
 
-| I want to understand…                                     | Current reference                                                 |
-| --------------------------------------------------------- | ----------------------------------------------------------------- |
-| What still needs attention                                | [Current status](STATUS.md)                                       |
-| Where the mod is headed and what is planned               | [Roadmap](ROADMAP.md)                                             |
-| Slots, controls, store, levels, spell books, parties      | [Progression and controls](reference/progression-and-controls.md) |
-| What each element does and which code owns it             | [Spells](reference/spells.md)                                     |
-| The 3D wand and its animated elemental glass              | [Wand rendering](reference/wand-rendering.md)                     |
-| Visual style and which assets are safe to regenerate      | [Art and assets](reference/art-and-assets.md)                     |
-| Sound event names and how to replace audio                | [Sound](reference/sound.md)                                       |
-| Guardian combat and animation constraints                 | [Guardian combat](reference/guardian-combat.md)                   |
-| The Hollow Necromancer boss (in progress)                 | [Necromancer combat](reference/necromancer-combat.md)             |
-| Hollow undead night mobs and the Necromancer's army       | [Hollow undead](reference/hollow-undead.md)                       |
-| Churches, rituals, arena returns and saved-world recovery | [Church and arena](reference/church-and-arena.md)                 |
-| The Storm Roc's summit realm and first combat phase       | [Storm Summit](reference/storm-summit.md)                         |
-| The Pyre King's fight, body, clips and hall                   | [Pyre King](reference/pyre-king.md)                               |
-| How automated Minecraft previews and checks work          | [Testing](reference/testing.md)                                   |
-| Viewing local review pages from another device (T3)       | [Remote preview](reference/remote-preview.md)                     |
-| Short summaries of player-facing changes                  | [Releases](releases/README.md)                                    |
-| Why an old decision was made or how a bug was verified    | [Historical archive](archive/README.md)                           |
+## What each page is for
 
-## Keeping this useful
+| Page | Holds | Does not hold |
+| --- | --- | --- |
+| [Feature index](INDEX.md) | One row per feature: owning files and the reference to read | Behavior, tuning, history |
+| [reference/](reference/) | How a system behaves today and the constraints that are hard to infer from code | Dated corrections, playtest diaries, values that the code states exactly |
+| [design/](design/) | Why a built boss is the way it is: decisions, reasons, the developer's playtest feedback | Current behavior (that is the reference) |
+| [Status](STATUS.md) | Open work: one bullet per thing awaiting a review, playtest, check or fix | Anything resolved, test receipts, change history |
+| [Roadmap](ROADMAP.md) | What is still ahead, marked decided, proposed or open | Design logs for things already being built |
+| [releases/](releases/README.md) | A few player-facing bullets per change | Class inventories, mesh counts, hashes, copied test output |
+| [archive/](archive/README.md) | History: old reports, evidence, retired designs | Current instructions |
 
-Current references describe present behavior and the constraints that are hard to
-infer from code. Exact implementation details and tuning belong in code; each
-reference points to the relevant owners. Update these guides in place rather than
-stacking dated corrections above obsolete descriptions.
+## Rules
 
-Release summaries are a few player-facing bullets per date. Avoid class inventories,
-mesh counts, hashes, and copied test output. Mention a verification limitation only
-when it matters to understanding that release.
+- **One current explanation per topic.** Update a reference in place when behavior
+  changes; do not stack a dated correction above an obsolete description.
+- **Code owns exact values.** A reference explains intent and names the owner. Point to
+  the class for tuning numbers that change often.
+- **Keep the index true.** When you add, rename, move or retire a feature, change its row
+  in [INDEX.md](INDEX.md) in the same task. Use backticks there only for files, folders and
+  classes: `./gradlew checkDocs` fails on any that does not exist.
+- **Status shrinks as well as grows.** Add a bullet when something is left open; delete it
+  when it is settled. Put the item in the section that says who can clear it (a review, a
+  solo session, a co-op session, an automated check).
+- **Playtest feedback has a home.** What the developer said and what was decided goes in
+  the boss's design notes or the system's reference, not in status or the roadmap.
+- **A plan leaves the roadmap when building starts.** Move a boss's section to `design/`
+  and keep its row in the roster.
+- **Fixture descriptions live in the fixture.** The testing guide lists which runner covers
+  which area and its flags; it does not restate assertions.
+- **Check before finishing.** Run `./gradlew checkDocs` and `git diff --check` after editing
+  documents. It verifies the index, `package/Class` names and every relative link and
+  heading anchor outside the archive.
 
 The archive records history, not current instructions. Consult it selectively.
 Old reports may intentionally describe superseded mechanics; their dates and

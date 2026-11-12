@@ -1,13 +1,15 @@
 # Pyre King
 
 The Fire shardbearer: a swordsman with a chained sword. His design and the reasons behind
-it are in the [roadmap](../ROADMAP.md#fire-the-pyre-king). This page covers what is in the
+it are in his [design notes](../design/pyre-king.md). This page covers what is in the
 game: his fight, his body, and his arena, the
 [Burned Throne Hall](#the-burned-throne-hall).
 
 Since November 10, 2026 he has a first-pass fight. It has been tested by fixtures and read
-by three reviewing models, whose findings were fixed the same day. Nobody has fought him in
-Lunar. Its damage is set for diamond to netherite armor; the rest is untuned.
+by three reviewing models, whose findings were fixed the same day. The developer fought
+him three times in Lunar on November 11; what they said is in his
+[design notes](../design/pyre-king.md). Its damage is set for diamond to netherite armor;
+his health and timings are first guesses.
 
 ## Commands
 
@@ -187,8 +189,8 @@ The server's sweep and the client's drawn sword (`PyreKingModel`) read the same 
   between him and the player stops the Hook outright.
 - Drag Down pulls its catch off a pillar's top sideways, then down: round stone, never
   through it.
-- He stands still while the sword is out. The roadmap's walk during the Cast's wait is not
-  built.
+- He stands still while the sword is out. The walk during the Cast's wait, planned in his
+  design notes, is not built.
 
 **Zip, Lunge, Haul and the Turning Cut move or turn him inside the clip.** The server makes that
 real as it happens, so his hitbox is where he is. Clients draw those clips from where the
@@ -421,8 +423,7 @@ mesh later, in a deferred callback.
   his GeckoLib renderer and that every clip in `PyreKingClips` is in the baked animation
   file. It then rehearses every clip and saves 56 screenshots to
   `build/pyre-king-client-smoke/screenshots/`.
-- The screenshots show how he draws in the fixture. Nobody has yet looked at him, or
-  fought him, in Lunar.
+- The screenshots show how he draws in the fixture; they are not a Lunar look.
 
 ## The Burned Gate
 
@@ -602,9 +603,9 @@ the floor's rim are faint: most of the hall's brightness is the ambient light.
   speeds and every timing are first guesses, untested against real players.
 - **Art:** a death, a hit reaction, the mask cracking away, and the Double Cast as its own
   clip. Phase two's run plays the 4.5 blocks/s clip at 5.2.
-- **Effects:** the warnings and the fire are server particles and vanilla sounds. He has no
-  sounds of his own.
-- **From the roadmap's plan:** walking during the Cast's wait, a sword that sticks in a
+- **Effects:** the warnings are server particles with vanilla sounds; his fire on the floor
+  is blocks (`block/PyreKingFireBlock`). He has no sounds of his own.
+- **From the plan in his [design notes](../design/pyre-king.md):** walking during the Cast's wait, a sword that sticks in a
   pillar (he does not throw at a target behind one), pull-backs that bow toward the dodge
   or run through a player, the memory of a reversal, a Cast answering a movement spell,
   and Stone Wall as cover.

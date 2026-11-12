@@ -183,7 +183,7 @@ notes below are historical. The church architecture and loot are unchanged.
 
 
 Updated September 8, 2026, at the user's requested stopping point. Read
-[AGENT.md](../../../AGENT.md) for authoritative architecture, build, and deployment rules;
+[AGENTS.md](../../../AGENTS.md) for authoritative architecture, build, and deployment rules;
 [the Guardian guide](../reports/fractured-guardian.md) has combat details and draft lore.
 This replaces the obsolete crystal/Ice/per-element-wand handoff.
 

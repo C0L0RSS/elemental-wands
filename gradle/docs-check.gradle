@@ -1,0 +1,206 @@
+// Keeps the agent-facing documentation true. Run with `./gradlew checkDocs`; it is also
+// part of `./gradlew build`. It reads files only and needs nothing beyond Gradle.
+//
+// 1. Every name in backticks in docs/INDEX.md must be a real file, folder or class. A
+//    `package/ClassName` must be in that package. A bare `ClassName` must be in the
+//    package named earlier in the same table cell, or anywhere if the cell names none.
+// 2. Every source package, nested ones included, must appear in the index's Packages table.
+// 3. In the other current docs, a `package/ClassName` reference must be in that package.
+// 4. In the current docs, every relative link and its #anchor must resolve, with the
+//    file name's exact capitalisation (so a link that works on a Mac also works on Linux).
+//
+// Links are checked in the forms [text](path), [text](path "title"), [text](<path>) and
+// [label]: path. The archive under docs/archive/ is history and is not checked.
+
+def docsRoot = projectDir
+def javaMain = new File(docsRoot, 'src/main/java/com/anton/elementalwands')
+def javaTest = new File(docsRoot, 'src/guardianTest/java/com/anton/elementalwands')
+
+tasks.register('checkDocs') {
+    group = 'verification'
+    description = 'Checks that the feature index and the documentation links point at things that exist.'
+
+    doLast {
+        def problems = []
+        def slashes = { String s -> s.replace('\\', '/') }
+
+        // Exists, and is spelled with the capitalisation the file really has.
+        def rootAbs = docsRoot.toPath().toAbsolutePath().normalize().toString()
+        def rootCanon = docsRoot.canonicalPath
+        def existsExact = { File f ->
+            if (!f.exists()) return false
+            def abs = f.toPath().toAbsolutePath().normalize().toString()
+            def canon = f.canonicalPath
+            if (!abs.startsWith(rootAbs) || !canon.startsWith(rootCanon)) return true
+            abs.substring(rootAbs.length()) == canon.substring(rootCanon.length())
+        }
+
+        // Every class, record, interface and enum in the sources, nested ones included,
+        // with the package folders that declare it ('' is the root package).
+        def declaredIn = [:].withDefault { new HashSet<String>() }
+        def sourcePackages = new TreeSet<String>()
+        def typePattern = ~/\b(?:class|record|interface|enum)\s+([A-Z][A-Za-z0-9_]*)/
+        [javaMain, javaTest].each { File root ->
+            if (!root.isDirectory()) return
+            root.eachFileRecurse { File f ->
+                if (!f.name.endsWith('.java')) return
+                def pkg = slashes(root.toPath().relativize(f.parentFile.toPath()).toString())
+                if (root == javaMain && pkg) sourcePackages << pkg
+                declaredIn[f.name[0..-6]] << pkg
+                def m = typePattern.matcher(f.getText('UTF-8'))
+                while (m.find()) declaredIn[m.group(1)] << pkg
+            }
+        }
+        def topPackages = sourcePackages.collect { it.split('/')[0] } as Set
+        def inPackage = { String pkg, String name -> declaredIn.containsKey(name) && declaredIn[name].contains(pkg) }
+
+        def bases = [
+            docsRoot, javaMain, javaTest,
+            new File(docsRoot, 'src/main/resources'),
+            new File(docsRoot, 'src/main/resources/assets/elementalwands'),
+            new File(docsRoot, 'src/main/resources/data/elementalwands'),
+        ]
+        def existsAnywhere = { String path -> bases.any { existsExact(new File(it, path)) } }
+        def isCamel = { String s -> s ==~ /[A-Z][A-Za-z0-9_]*/ }
+        def backticks = { String text -> (text =~ /`([^`\n]+)`/).collect { it[1].trim() } }
+        // Commands, flags, globs and placeholders are not files.
+        def notAFile = { String t ->
+            t.contains(' ') || t.startsWith('/') || t.startsWith('-') || t.contains('*') ||
+                t.contains('<') || t.contains('…')
+        }
+
+        // 1 and 2: the index.
+        def index = new File(docsRoot, 'docs/INDEX.md')
+        if (!index.isFile()) {
+            problems << 'docs/INDEX.md is missing'
+        } else {
+            def lines = index.readLines('UTF-8')
+            lines.eachWithIndex { String line, int number ->
+                def cells = line.startsWith('|') ? line.split(/\|/).toList() : [line]
+                cells.each { String cell ->
+                    String context = null   // the package most recently named in this cell
+                    backticks(cell).each { String token ->
+                        if (notAFile(token)) return
+                        def path = token.endsWith('/') ? token[0..-2] : token
+                        def where = "docs/INDEX.md:${number + 1}"
+                        if (path.contains('/')) {
+                            def name = path.substring(path.lastIndexOf('/') + 1).split(/\./)[0]
+                            def dir = path.substring(0, path.lastIndexOf('/'))
+                            if (isCamel(name) && topPackages.contains(dir.split('/')[0])) {
+                                context = dir
+                                if (!inPackage(dir, name)) problems << "${where} names `${token}`, but no ${name} is in ${dir}/"
+                            } else {
+                                if (!existsAnywhere(path)) problems << "${where} names `${token}`, which does not exist"
+                                else if (sourcePackages.contains(path)) context = path
+                            }
+                        } else if (isCamel(path.split(/\./)[0])) {
+                            def name = path.split(/\./)[0]
+                            if (!declaredIn.containsKey(name)) {
+                                problems << "${where} names `${token}`, which does not exist"
+                            } else if (context != null && !inPackage(context, name)) {
+                                problems << "${where} names `${token}` after ${context}/, but it is in " +
+                                    "${declaredIn[name].collect { it ? it + '/' : 'the root package' }.join(' and ')}; write the package"
+                            }
+                        } else if (!existsAnywhere(path)) {
+                            problems << "${where} names `${token}`, which does not exist"
+                        }
+                    }
+                }
+            }
+            def text = lines.join('\n')
+            def start = text.indexOf('\n## Packages')
+            def end = start < 0 ? -1 : text.indexOf('\n## ', start + 1)
+            def table = start < 0 ? '' : text.substring(start, end < 0 ? text.length() : end)
+            def listed = backticks(table) as Set
+            if (start < 0) problems << 'docs/INDEX.md has no "## Packages" section'
+            sourcePackages.each { String pkg ->
+                if (!listed.contains(pkg + '/')) problems << "docs/INDEX.md's Packages table does not list `${pkg}/`"
+            }
+        }
+
+        // The current docs: the entry guides, and docs/ outside the archive.
+        def current = [new File(docsRoot, 'AGENTS.md'), new File(docsRoot, 'CLAUDE.md'), new File(docsRoot, 'README.md')]
+        new File(docsRoot, 'docs').eachFileRecurse { File f ->
+            if (f.name.endsWith('.md') && !slashes(f.path).contains('/docs/archive/')) current << f
+        }
+        current = current.findAll { it.isFile() }
+
+        // Heading anchors as GitHub makes them, plus explicit <a id> and <a name> anchors.
+        def slugOf = { String title ->
+            title.replaceAll(/\[([^\]]*)\]\([^)]*\)/, '$1').replaceAll(/[`*]/, '')
+                .toLowerCase().replaceAll(/[^\p{L}\p{N} _-]/, '').replace(' ', '-')
+        }
+        def anchorCache = [:]
+        def anchorsOf = { File f ->
+            anchorCache.computeIfAbsent(f.canonicalPath) {
+                def seen = [:]
+                def out = new HashSet<String>()
+                def add = { String slug ->
+                    def n = seen.get(slug, 0)
+                    seen[slug] = n + 1
+                    out << (n == 0 ? slug : "${slug}-${n}".toString())
+                }
+                boolean fenced = false
+                String previous = ''
+                f.readLines('UTF-8').each { String line ->
+                    if (line.startsWith('```')) { fenced = !fenced; previous = ''; return }
+                    if (fenced) return
+                    def atx = (line =~ /^#{1,6}\s+(.*?)\s*#*\s*$/)
+                    if (atx) add(slugOf(atx[0][1]))
+                    else if (line ==~ /^(=+|-+)\s*$/ && previous.trim() && !previous.startsWith('|')) add(slugOf(previous.trim()))
+                    (line =~ /<a\s+[^>]*(?:id|name)\s*=\s*["']([^"']+)["']/).each { out << it[1].toLowerCase() }
+                    previous = line
+                }
+                out
+            }
+        }
+
+        current.each { File doc ->
+            def rel = slashes(docsRoot.toPath().relativize(doc.toPath()).toString())
+            def text = doc.getText('UTF-8')
+
+            // 3: package/ClassName references outside the index.
+            if (rel != 'docs/INDEX.md') {
+                backticks(text).unique(false).each { String token ->
+                    if (notAFile(token)) return
+                    def path = token.replaceAll(/[.#(].*$/, '')
+                    if (!path.contains('/')) return
+                    def name = path.substring(path.lastIndexOf('/') + 1)
+                    def dir = path.substring(0, path.lastIndexOf('/'))
+                    if (!isCamel(name) || !topPackages.contains(dir.split('/')[0])) return
+                    if (!inPackage(dir, name)) problems << "${rel} names `${token}`, but no ${name} is in ${dir}/"
+                }
+            }
+
+            // 4: links. Code blocks and inline code are not links.
+            def prose = text.replaceAll(/(?s)```.*?```/, '').replaceAll(/`[^`\n]*`/, '')
+            def links = (prose =~ /\]\(\s*<?([^)\s>]+)>?(?:\s+(?:"[^"]*"|'[^']*'))?\s*\)/).collect { it[1] }
+            links += (prose =~ /(?m)^\s{0,3}\[[^\]]+\]:\s*<?(\S+?)>?(?:\s|$)/).collect { it[1] }
+            links.unique(false).each { String link ->
+                if (link ==~ /^[a-z][a-z0-9+.-]*:.*/) return   // http:, mailto:, …
+                def hash = link.indexOf('#')
+                def file = hash >= 0 ? link.substring(0, hash) : link
+                def anchor = hash >= 0 ? link.substring(hash + 1) : ''
+                try { file = URLDecoder.decode(file.replace('+', '%2B'), 'UTF-8') } catch (IllegalArgumentException ignored) { }
+                def target = file.isEmpty() ? doc : new File(doc.parentFile, file)
+                if (!target.exists()) {
+                    problems << "${rel} links to ${link}, but that file does not exist"
+                } else if (!existsExact(target)) {
+                    problems << "${rel} links to ${link}, but the file's name is capitalised differently"
+                } else if (anchor && target.isFile() && target.name.endsWith('.md') &&
+                        !anchorsOf(target).contains(anchor.toLowerCase())) {
+                    problems << "${rel} links to ${link}, but that page has no heading for #${anchor}"
+                }
+            }
+        }
+
+        if (problems) {
+            throw new GradleException("Documentation check failed (${problems.size()}):\n  - " +
+                problems.join('\n  - ') +
+                '\nFix the name or link, or update docs/INDEX.md to match the code.')
+        }
+        println "checkDocs: index and ${current.size()} documents are consistent."
+    }
+}
+
+tasks.named('check') { dependsOn 'checkDocs' }

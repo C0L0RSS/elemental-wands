@@ -75,6 +75,18 @@ Inspect a generator’s output map and replacement behavior before regeneration.
 Prefer available `--check` modes for validation; not every generator supports
 that flag, so check its arguments before running it.
 
+A `--check` compares bytes, and the project is built on both Windows and macOS, so a
+generator must write the same bytes on each. Three things have broken that before:
+
+- **Compressed files.** Python's gzip header carries an operating-system byte that varies by
+  version and platform. Structure files go through `gzip_stable` in
+  `art/hollow_crypt/build_layout.py`, which fixes it.
+- **Unrounded decimals.** Trigonometry differs in the last digits between machines, and a
+  rounded tiny negative becomes `-0.0`. Round before writing and add `0.` to the result, as
+  `stable` does in `art/pyre_king/build_art.py`.
+- **Ignored folders.** A check must not require files under `.local-previews/`, which exist
+  only where they were built.
+
 ## Element-specific constraints
 
 Fire spells are block fire: cubes textured from `textures/misc/blockfire.png`
@@ -201,7 +213,7 @@ GeckoLib 5.3-alpha-3 uses `geckolib/models/*.geo.json` and
 Minecraft 1.21.10 items need both `items/*.json` and `models/item/*.json`.
 Spawn eggs use `settings.spawnEgg(entityType)`.
 
-See [AGENT.md](../../AGENT.md) for the required validation commands and
+See [AGENTS.md](../../AGENTS.md#build-and-required-checks) for the required validation commands and
 [Guardian combat](guardian-combat.md) for the multi-source animation pipeline.
 
 Astral Double uses the owner's native player skin (wide or slim arms and outer

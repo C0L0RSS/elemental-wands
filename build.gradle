@@ -105,3 +105,6 @@ tasks.register('checkStormRocGaze', JavaExec) {
     mainClass = 'com.anton.elementalwands.client.StormRocGazeContractTest'
 }
 check.dependsOn checkStormRocGaze
+
+// The feature index and documentation links must point at things that exist.
+apply from: 'gradle/docs-check.gradle'

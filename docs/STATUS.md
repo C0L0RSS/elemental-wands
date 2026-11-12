@@ -1,472 +1,233 @@
 # Current status
 
-Reviewed October 3, 2026. This page contains outstanding work, not release history.
-It records known verification limits; it is not a fresh installation receipt.
+Open work only: what is waiting on a review, a playtest, a check or a fix. Last full
+review: November 12, 2026.
 
-- **Pyre King (Nov 10):** he has a first-pass fight: fifteen moves chosen by weighted
-  rules, hits swept from his animations, aimed throws, fire, and a phase change at half
-  health. See [Pyre King](reference/pyre-king.md).
-  - **Verified:** `checkPyreKing`; `pyre_king_fight_smoke` (every move against a Survival
-    player, then a free fight to his death); `pyre_king_client_smoke` (every clip).
-  - **Reviewed (Nov 10):** three models read the design and the code. Their findings were
-    fixed: his drawn facing and steps lagging the server's blade, clips starting late for a
-    client that was looking away, a hand spinning in two blends, throws and hauls that
-    could pass a pillar, Drag Down pulling a player through one, shields, a cancelled
-    Unbound, fire's sum after a blow, and co-op baiting.
-  - **Hiding (Nov 11):** stone stops his chain and blade, and he gets round a pillar
-    himself with the Haul and the Snare, or a Lunge. Their two clips are new and not yet
-    reviewed. The line a Haul flies burns. A player who only circles a pillar is hooked
-    off it but, in the fixture, runs clear of the Overhead that follows.
-  - **Intro (Nov 11):** a 58 s cinematic from the developer's idea (the statue on his throne,
-    the web of chains, the falling sword) plays when the Burned Gate opens, or by
-    `/ew pyreking intro`.
-  - **The Burned Gate (Nov 11):** the way in, from the developer's idea: a bridge to nowhere
-    over a Nether lava lake, ending at a lone gate whose arch is filled with fire and bound
-    with chains. Touching the king's seal on them twice takes everyone nearby to the hall;
-    a win or a death brings them back before the gate.
-  - **First playtest (Nov 11):** the developer beat him on the second try with a level 1
-    Space wand: "pretty clean, but really easy", slow between attacks, all throws at range,
-    the spinning cut easy to leave. Answered the same day and not yet played: every clip has
-    a tempo (`PyreKingRules.tempo`), gaps are shorter, strings chain more, the Lunge and
-    Hook come more often at range, and his fire is blocks that look like vanilla fire (their
-    choice). Health and damage are unchanged.
-  - **Second playtest (Nov 11):** "really good". Answered the same day, not yet played: the
-    Chain Scythe strikes only from 5 blocks out and is not used close in; a win sends everyone
-    home after ten seconds; mining the hall never starts.
-  - **Third playtest (Nov 11):** the developer played the whole way through in Lunar, from the
-    gate through the intro and the fight: "really good". Merged to main the same day.
-  - **Pending:** a co-op playtest. Damage is set for plain diamond to netherite armor (Nov 11);
-    his health is a first guess.
-  - **Pending:** the Chain Scythe's bowed chain in the workshop.
-  - **Weak:** the warnings and fire are particles; he has no sounds of his own, no death
-    clip and no reward.
-- **Burned Throne Hall (Nov 10):** the Pyre King's arena exists as an operator-only realm
-  (`/ew hall enter`, `summon`, `leave`). See
-  [Pyre King](reference/pyre-king.md#the-burned-throne-hall).
-  - **Verified:** `pyre_hall_client_smoke` enters, checks the floor, barrier, lava and the
-    summoned king, and photographs the hall.
-  - **Reviewed (Nov 10):** the developer liked the first pass from screenshots and the
-    preview, and kept the floor pattern. The sea's hard horizon and the unlit throne were
-    fixed afterwards. At the developer's request the floor's magma was removed and twelve
-    great braziers were added to light the hall; the developer then approved it.
-  - **Pending:** the developer's look at the hall in Lunar.
-- **Storm Roc (both phases):** the summit has a sealed, operator-started encounter.
-  - **Opening (Oct 28):** on its home spire the Roc summons the first tornado. It screams a bolt
-    into the clouds, the storm strikes the spot, and the funnel touches down over 2.5 seconds
-    as it beats the wind at it, under a wall cloud it hangs from. Every new tornado now forms
-    this way, harmless until formed.
-    - **Verified:**
-      - `roc_server_smoke` checks that no tornado appears before the call, that one forms
-        harmlessly with a player at its core, and that the second comes only after the summon.
-      - `roc_client_smoke` photographs the scream, the forming funnel and the formed tornado.
-      - `roc_intro_client_smoke`'s video runs on through the summon.
-    - **Pending:** the user's review of the video, then a Lunar look and a playtest.
-    - **Note:** in the approved `stuck` clip, the head shake after it rips free (about 5.4
-      seconds) has keys that overlap in time by up to 0.04 seconds. A few of its tiny moves
-      are skipped. Found while guarding key order; left as it is.
-    - **Fixed (Nov 3):** between spires its glance down at a player twisted its head about its
-      bill, up to upside down, for about a second. `checkStormRocGaze` guards the gaze; a Lunar
-      look at the spire hop is pending.
-  - **Phase one:** repeated lightning, permanent drifting tornadoes, a marked dive and jumpable
-    shockwave, the pinned-beak opening, seven grounded actions and health-driven takeoffs.
-  - **Phase change:** at half health a short in-engine stand-in for the planned cinematic.
-  - **Phase two (Oct 14):** a client-side thunderstorm with storm clouds, rain and flashes;
-    larger, harder strikes with live ground after the large ones; strikes during the brawl;
-    swollen tornadoes plus a third; and the chain smash in place of the dive.
-  - **Defeat:** it vanishes, with no death yet. Falls, death and disconnect eliminate a
-    challenger; a wipe or reset releases the group for retry.
-  - **Aerie (Oct 27):** survival players reach the fight from an abandoned Windcaller gong on
-    Overworld peaks: a GeckoLib gong in a small dark oak frame on a summit that worldgen levels,
-    surfaced by the biome. Striking it twice takes the striker's nearby party up, and a loss sends
-    them back. A win fills a reward chest at its foot, and each victor claims one Ultimate spell
-    book per aerie. It replaced a first bell-shrine design the user turned down.
-    - **Verified:**
-      - `aerie_server_smoke` passed 34 steps in all four rotations, including strikes through
-        the part blocks, part shapes matching the round plate, and the swing reaching nearby
-        players. The client fixture confirms a strike mid-swing restarts the swing.
-      - On seed 12345 the worldgen fixture checked six aeries: two frozen, two jagged and two
-        stony. In every one, all 195 columns of the box sit at the floor, the build makes no
-        snow (stony ones are bare stone), the remains rest on the ground, and no bare wall
-        nearby is taller than 10 blocks.
-      - The native client photographed snowy and stony aeries, all four rotations, at rest
-        and mid-swing.
-      - The Roc and summit regressions still pass.
-    - **Pending:**
-      - a Lunar look and a solo and co-op playtest of the bell, the call and the rewards;
-      - how the levelled summit reads on more peaks in Lunar, and that stony peaks never get
-        snow from the build;
-      - how findable aeries are without the hub map page;
-      - whether an Ultimate book per aerie is the right pace.
-    - **Known gaps:**
-      - an operator `/ew summit start` on a slot a call has reserved takes the called players
-        into an operator fight with no rewards;
-      - a broken reward chest only comes back after the next win there.
-      - the gong model's swing and lighting in Lunar.
-      - on jagged peaks an aerie can sit on a shoulder below taller spires that are too narrow
-        to level.
-  - **Intro (Oct 27):** a first version of the snatch, about 30 seconds plus however long the
-    summit takes to load. It plays in place of the loading screen: the server moves each called
-    player into the realm only once their client's storm cloud covers the screen, and the
-    cloud holds until the summit has loaded and drawn. The fight starts once everyone has
-    landed or skipped (held Sneak).
-    - **Verified:**
-      - `aerie_server_smoke` passed 38 steps with simulated clients:
-        - players are held at the gong's stand, unhurt, unmoving and unable to attack or use
-          items, and carried up only after their cloud;
-        - the fight starts as they land;
-        - a disconnect at the gong, and a death on the summit, end that player's scene;
-        - a client that never reports the cloud is left at the gong at its deadline, and can't
-          be called again at once;
-        - a scene that never lands is sent home after its length and grace, and the fight
-          starts without it.
-      - `roc_intro_client_smoke` played it in a real client on seed 12345:
-        - no loading screen;
-        - 33 ticks in the cloud after the move;
-        - the camera handed back and the fight started.
-      - The same test skipped it twice, each time with no loading screen and with the fight
-        starting:
-        - from the grip, in the aerie: the cloud covered the screen and cleared on the player's
-          own view;
-        - from the struggle: it cut straight back.
-      - The frames were turned into a review video.
-    - **Pending:** the user's in-game review of the video, then a Lunar look and a solo and
-      co-op playtest.
-    - **Known gaps:**
-      - sounds are vanilla stand-ins;
-      - the wand isn't drawn in the puppet's hand;
-      - lightning bolts in chunks the client hasn't loaded don't draw;
-      - the struggle opens about 200 blocks from the summit, so at short view distances the
-        landing shot may build its terrain in the first moments after the cut.
-  - **Not yet built:** the phase-change cinematic and a death.
-  - **October 14 fixes:**
-    - First pass: client hurtboxes, the safe spot under the neck, stampede targeting,
-      permanent threat, stacking, shields, the pounce aim and the stuck pose.
-    - Second pass:
-      - a crash when a tornado throw kills a player;
-      - spires were safe during the brawl;
-      - hit stacking was compared before armor;
-      - air chip could skip the last landing;
-      - ground sampling repeated every frame;
-      - the scream's and the rings' hit volumes went beyond what they draw.
-    - The tornado was rebuilt from blocky cloud cubes and the bolts thickened.
-  - **First playtest (Oct 15):** the user played phase one. These changes followed:
-    - it is drawn at half the size;
-    - its eyes face forward like an eagle's under heavy brows;
-    - every clip was revamped, and there are new spire landing and lightning-call clips;
-    - its gaze snaps to players and it banks in flight;
-    - each spire visit ends in a call that brings the large volley down;
-    - tornadoes are textured, catch from further out, drag players in, whirl them up and
-      throw them, and creep toward players in the air stretch;
-    - a cap cloud over the summit is what phase one's lightning falls from.
-  - **New look (Oct 16–19):** a chunky block model with a bearded-vulture texture, the Demon
-    face (glowing red slit eyes in sockets, brow spikes), an animated crest, thick legs with
-    big sickle talons, and a tail that lifts off the rock while the feet are down. The
-    server fixture passed with the new poses and the client fixture with the final model.
-  - **Verified:** the server fixture covers both phases and the spire call (44 checks), and
-    the native client fixture has 29 reviewed screenshots, including the spire hop's push-off
-    and landing, the call bolt, bolts from the cap cloud, the textured tornado, the charge,
-    the storm, the chain smash and live ground.
-  - **Pending:**
-    - human Lunar/co-op balance and appearance: the half-size reach, the hunting tornadoes,
-      phase two's density (three big tornadoes, strikes during the brawl, chain-smash damage)
-      and the storm's darkness;
-    - weaker-machine performance with the model, cloud sea, cap and storm sheets and the
-      textured tornadoes;
-    - the phase-two "fewer perches";
-    - the new look in Lunar, including how far the talons bite into the rock (about a third
-      of a block standing, up to a block while it scrabbles when stuck);
-    - the reworked animations in Lunar: the spire hop and its banked turn onto the spire (and
-      whether the 1.4 s longer spire visits make the air stretch drag), landing and call (its
-      crackles and command glare), the slower takeoff (5.6 s, climbing out past its spire and
-      banking round onto it), and the dive
-      chain (the dive's crouch, stoop and flare warning, the stuck opening's heaves and its rip
-      free at 5 seconds, the chain hop); the dive that waits for a landing to settle; and whether
-      the slams' last-tick drop reads as a hit or a pop.
-  - See the [summit reference](reference/storm-summit.md) and [testing guide](reference/testing.md)
-    for commands and verification boundaries.
-- **Heavier animation pass (October 22):** 15 of the Guardian's 18 clips (all but its throws
-  and intro), 20 Necromancer clips and 11 hollow undead clips were reworked for weight and
-  readable windups, keeping every clip length and server timing. The Guardian's chest now stays
-  shut after the shell break. Approved in the browser previews on October 23; pending in Lunar.
-  Ideas that need gameplay changes: the Guardian throws (their held-rock pose is server-sampled
-  through tick 44), the archer's 83° snap turn before it shoots, the Necromancer's walk
-  playback speed, an earlier `perch_cast` trigger, its drain arm (needs the drain socket
-  regenerated) and the colossus bolt origin.
-- **Hollow Necromancer (in progress):** reworked after the first co-op playtest (duels and
-  sieges, heavier telegraphed hits) and again after a solo playtest where phase two felt
-  easier than phase one and the siege waves were easy. Sieges now bring larger waves,
-  reinforcement crawlers, quickened undead and Soul Fire Rain from the perch. The colossus
-  charge tells only through body language with a random windup, and phase two adds Grave
-  Dive, Soul Harvest and the soul split at a quarter health. Server fixtures cover the
-  full two-siege flow with rain, and every phase-two mechanic. A skippable intro cinematic
-  now opens each crypt fight: a zombie's soul is torn out and a pan reveals the Necromancer
-  hauling it into his staff, then his slam lights the rim braziers. The final slower intro
-  and camera sequence were approved September 29; native verification and Lunar installation
-  were recorded for that version. Separate workshop/model approvals remain below.
-  Phase two now opens with a 34.6-second transformation cinematic in which he grows into
-  the colossus. Its browser animatic and its native crypt recording were approved October 6,
-  and server fixtures cover it. It was installed into Lunar that day, built together with the
-  Guardian rebalance. Pending: a playtest of its length and
-  skip in co-op.
-  Necromancer spells now cast soul light (real block light plus a blue ground pool);
-  FPS on weaker machines is untested.
-  After a third (solo) playtest, Life Drain only starts within 10 blocks, with a 1.5-second
-  windup, and breaks at 14 blocks. The soul split now happens once, and the blind body swings at
-  random headings instead of fighting alongside the soul (30 soul damage solo). Pending a playtest.
-  Siege tuning (November 4) after the waves still felt easy: hordes of 10–18 bodies solo and
-  14–24 duo (32 standing at most), more reinforcements, siege crawlers at about 4.4 blocks a
-  second, and a new brute charging slam (strides in heaving the maul, then a bound of up to
-  3 blocks; wild brutes too). Server fixtures cover it; pending a solo and co-op Lunar
-  playtest, including how the 2.9x crawl and the slam look in game and frame rate with a
-  full horde.
-  Space was too strong here: Astral Double tuning makes its echo bolt
-  deal 70%, and each skull volley can add one skull for a currently visible double at least
-  eight seconds old (server fixture covered). This does not measure continuous time in sight.
-  Pending: installation/client checks of that tuning and a playtest of double survival and
-  Space's pace; separate approval of the remaining workshop clips, including the standalone
-  dragged-soul clip, and fireball/soul models (`/.local-previews/soul-fire/`), followed by
-  their installation/client checks; a solo and co-op Lunar
-  playtest with `/ew necromancer log on` to tune health, wave sizes, rain damage, dive and
-  split timing (the Hands→ambush and Hands→bite combos cost an iron-armored player about
-  three quarters of their health).
-- **Nature rework (November 10):** Nature no longer leaves anything in the way in a fight and
-  no boss has behaviour written for it.
-  - Sentry Bloom replaces Tendril Bloom: it plants a flower (three at a time, 24 seconds
-    each, 6-second cooldown) whose head turns to face the target the caster's Seed or
-    Thornbite last hit, or else the nearest monster, and spits a 2.5-damage seed at it every
-    two seconds. The head kicks back on a shot and hangs for the flower's last two seconds.
-  - Flower changes the developer asked for after trying the rework (November 11): the flower
-    is thrown as a lobbed bud, like Gravity Well's bomb, and takes root where it lands, not
-    placed at the aim; it banks a fifth of the health its seeds take (up to 8, shown as
-    hearts) in place of healing on every hit, and its owner collects by right-clicking it
-    from within three blocks, which uses the flower up; any player can break a flower with
-    one close hit; and the caster's Seed no longer leaves a trail (a flower's small seed
-    still does).
-  - Verdant Step, the walk-on-water passive, is removed with its raft block (November 11).
-  - Block nature (November 11): every live Nature spell effect is now drawn as opaque 3D
-    petals, leaves and pollen (`client/blocknature/`), matching Fire, Wind and Space, ported
-    from the `art/nature/blocknature/` browser study the developer approved, with a stronger
-    heal cue (made about a fifth smaller after review; the developer liked it in
-    the browser preview) and a chunkier seed trail. The Nature client fixture ran it in a native client
-    (bite, heal, seed trail, petal wave and wilting petals in its screenshots). Pending: a
-    Lunar look, and multiplayer, where other players' events arrive over `BlockNatureEvents`;
-    Springbloom's launch and flight leaves were not in a client fixture.
-  - Full Bloom replaces Overgrowth as the ultimate: a harmless petal wave to ten blocks that
-    leaves grass and wild flowers on grass; Regeneration II and two
-    hearts of absorption for the caster and allies in reach, for twelve seconds; and for those
-    twelve seconds a quicker Seed and Sentry Bloom, a stronger Thornbite heal, and every flower
-    grown (bigger base, a second, smaller head on a branch) to fire in turn at two targets.
-  - Vines, the bramble carpet, root knots and thorn ticks are gone, with
-    the Guardian's flower-clearing slams and extra recovery; Seed and Thornbite no longer
-    slow or root.
-  The build and its contract checks pass. On November 10 these passed on a Windows machine
-  as server fixtures hosted in a singleplayer world (`integrated_fixture_host.init.gradle`;
-  that machine has no dedicated-server EULA on file): Full Bloom, Nature balance, Nature
-  expansion, Guardian Nature, Guardian cover, the retired oak's throw fixture and audit.
-  Necromancer and Storm Roc passed earlier the same day, before the turning head, healing
-  and Full Bloom were added. Both Nature native client fixtures passed, with screenshots of
-  the head aimed, recoiling and wilting, the petal wave, the lawn it leaves and a grown
-  two-headed flower. The party fixture's first run reached its restart point without a
-  failure; its restart half was not run. No fixture has run on a dedicated server since the
-  rework. The November 11 flower changes (thrown bud, banked health, collecting, breaking,
-  no Seed trail) build and pass the contract checks. The Nature balance, Nature expansion,
-  Full Bloom and Guardian Nature fixtures were rewritten for them and passed that day, hosted
-  in a singleplayer world on the same Windows machine, as did both Nature native client
-  fixtures (the real slot-2 press throws the bud, the flower appears where it lands and
-  shows its outline when aimed at). The client fixtures do not press collect or break; the
-  server fixtures cover those through the real slot cast path. Pending:
-  - A Lunar look at the flower changes: the bud's arc and reach,
-    the bud itself (the flower's head at half size, tumbling), the vanilla hearts over a
-    flower that holds health, whether a fifth of the damage up to 8 is worth walking over for,
-    the three-block click reach, and whether a caster breaks their own flower by accident
-    when firing past it up close. The throw has its own sound event but plays Seed's cast
-    audio; collecting has no sound of its own beyond the flower's wilt.
-  - A Lunar playtest against each boss: flower damage and pace, the 16-block range, how many
-    flowers and for how long, the size of the heals, ultimate charge rate, how the heads read
-    while they turn, and whether Full Bloom's twelve seconds and its buffs are too much or
-    too little.
-  - Looks to approve in play: the grown two-headed flower, the petal wave, the seed marker,
-    and the recoil and wilt poses.
-  - The Thornbite heal buff in Full Bloom has no fixture.
-  - Clean-up once the kit is approved. The Overgrowth oak (manager, acorn, anchor entity,
-    tree layout, oak blocks, their fixtures) is archived at the developer's request: unreachable
-    in play, but kept for possible later use, so it is not part of the clean-up.
-    `EntangleTracker`'s vine stacks, the wrap art, the entangled HUD
-    buds and the halved-recovery penalty for an entangled caster have no source either (only
-    that retired oak's root uses the tracker). Remove them, or give them a use.
-  Springbloom's September 29 changes (run-in launch, 8-second pad, 6-second cooldown,
-  flatter arc) are unchanged and still await their own playtest.
-- **Hollow undead:** the crawler, archer and brute form the Necromancer's siege waves
-  (quickened there) and spawn at night. The GeckoLib files are proven to match the approved
-  preview and the server fixture covers their combat rules. The walks were re-authored
-  at chase speed with long strides and play at travel speed, fixing the foot sliding.
-  Pending: human Lunar review of how they look and move in game, spawn frequency and balance.
-- **Hollow Crypt realm:** the dimension, the dead-forest clearing, the naturally
-  generated graveyard and the full fight flow are in place. That covers free walk-in veil entry,
-  a sealed party, spectating after death, kept belongings, the wipe reset, victory chests and
-  one spell book per graveyard. The native client fixture passed all of these for a solo player,
-  plus the operator commands, containment and protection. Pending: multi-player spectating
-  (not automatable in the solo fixture), human Lunar review of brightness (ambient light 0.2,
-  lifted fog and seven clearing soul lanterns), the Necromancer's body glow, the Life Drain glow,
-  fog density and whether non-explosive fire spells burn the clearing's logs. The graveyard's
-  level-ground placement was checked on a dedicated server (seed 12345). The mausoleum
-  (unbreakable, pale marble doorway, vortex veil, void windows, door hint, motes, court return)
-  and the withered woods around the yard passed `crypt_client_smoke` on the nearest natural
-  graveyard, including no leaves within 14 blocks of the door and no second fight while
-  standing in the veil. Pending: a fresh-world Lunar look at the mausoleum by day and night,
-  beside hills and in a forest; whether the motes are noticeable but quiet enough; the veil and
-  void animation speed; and how far the dead woods should reach (18 bare, fading out to 34
-  blocks). A fight's end now releases everyone the crypt brought into the slot, not only the
-  sealed party; the co-op victory release needs a human multi-player check, as does a second
-  party member walking into the veil while the slot is laid out (the fixture covers one player
-  standing in it). Known gaps: graveyards generated before the mausoleum keep the old headstone,
-  whose rewards are keyed by the skull's coordinates, so moving that altar and winning again
-  yields fresh chests and another spell book (the mausoleum can't be moved). A graveyard only
-  partly generated before this update may finish its missing chunks with the new, larger
-  layout. `/place structure` now needs the chunks about 40 blocks around the yard loaded. And
-  graveyards have no exclusion from villages (the structure set's one exclusion zone is the
-  Guardian church), so a village can overlap one.
-- **Blink Rift nerf (October 6):** Blink no longer leaves a return rift and its
-  cooldown rose from 6 to 10 seconds. Astral Double and Gravity Well server
-  fixtures cover the cooldown and chaining. Pending: a Lunar playtest of Space's
-  escape options.
-- **Gravity Well:** Space has five learnable spells; every current elemental
-  catalog now meets the five-spell minimum. Dedicated-server checks passed the
-  12.25-block level throw, immediate floor/wall/entity impact, pull, early/automatic
-  collapse, damage/XP, cover/allies/double protection, Guardian resistance,
-  Blink chaining, impact recovery and covered cleanup cases. Native client checks
-  passed bound input, visible mob pull, both collapse modes, HUD and hub text.
-  The continuous inward stream, 0.4-second accelerated buildup and outward burst
-  were verified with fresh native client footage; server checks passed delayed
-  single-hit damage and cosmetic cleanup.
-  The native gameplay recording was visually reviewed. Human Lunar/multiplayer
-  balance and feel remain pending; this is not an installation receipt.
-- **Astral Double:** Space now has five spells with Gravity Well.
-  Dedicated-server checks passed the short toss, mirrored/simultaneous damage,
-  Blink chaining, one-use return, delayed recovery, invalid placement,
-  ally protection, Guardian attack destruction and covered lifecycle cases.
-  Native client checks passed for bound input, the owner skin and wand, mirrored
-  fire, teleport chaining and HUD synchronization. Human Lunar/multiplayer feel
-  remains pending. This status is not an installation receipt.
-- **Updraft:** Wind now has five spells, with no cap on future additions. Native
-  client checks measured a 10.00-block rise and passed normal horizontal control,
-  midair activation, safe landing, and prepared-dagger/Waylay Dash combos. The
-  launch emits an expanding floor ring of white smoke puffs. The optional
-  hidden-window fixture records gameplay for MP4 previews. Waylay Dash's base
-  and chained boosts are now 75% of their previous strength. Human Lunar balance
-  feedback remains pending. Server checks passed for the exact eight-second
-  cooldown, collision, safe landing, movement combos, and lifecycle cleanup.
-- **Gale Daggers:** Server checks passed for the
-  three-shot burst, fresh aim, damage, deferred/player-owned cooldown, cover,
-  allies and cleanup. Native client checks passed for prepared models, real
-  key/mouse input, held-click suppression and cooldown/HUD synchronization.
-  Daggers now leave a trail of small cloud-white rings. Human Lunar/multiplayer
-  feel and balance remain pending.
-- **Wind artwork:** bright cloud-white gusts, impact puffs, wings and ability icons
-  replace the dark fractured textures. Native client inspection passed for blade
-  synchronization and target damage, equipped Zephyr wings and landing completion,
-  with screenshots of the HUD, casts, dash trails and landing burst. Human Lunar
-  appearance feedback remains pending. The Wind pressure server fixture now passes with the
-  seven-block primary range, including ordinary-target hits and Guardian checks.
-  Its simulated player now sets head direction explicitly for aimed casts.
-- **Springbloom:** Nature now has five spells. The dedicated-server fixture covers
-  purchases, cooldown, hostile/rim catches, collision, destruction and cleanup,
-  plus planting through forest-floor foliage and restoring covered plants. Partial
-  flowers beside obstacles share a synchronized visual/collision footprint.
-  Earlier native client checks passed for the approved model, real mouse casting,
-  a last-second pod catch and protected landing. Their flight measurements predate
-  the September 29 flatter arc and run-in launch. The current server fixture checks
-  roughly a 15-block apex and 21-block travel; these are simulated server measurements.
-  Fresh native-client measurement of the revised arc and human Lunar/co-op feedback
-  on placement, timing and coordinated chaining remain pending.
-- **Thornbite:** Thorn Lash is now a committed single-target flytrap bite. The
-  Nature server fixture passed for combat. The revised visual launches and returns
-  at the wand tip along the hand side; its native client fixture passed with
-  right/left hands, third person, wide FOV and turning during return. Human
-  Lunar/co-op feedback on attack feel, silhouette and balance remains pending.
-- **Stone techniques:** Faultline now reaches 20 blocks at four times its initial
-  speed, with a stronger upward launch and a 0.6-second movement interruption.
-  Dedicated-server mechanics and native client movement/render checks cover the
-  initial implementation. Human Lunar/co-op feedback is still needed for steering,
-  interruption feel, spike appearance, varied terrain and destruction balance.
-  Faultline also shoves targets about 1.5 blocks along the wave. The server fixture
-  covers the launch and shove on a zombie, a chasing Hollow crawler and a Hollow
-  brute; the launch was reported as not noticeable on Hollow undead in Lunar, so how
-  the launch and shove read on screen, and the shove on a struck player, need a playtest.
-- **3D wand:** native client previews and model checks passed in the redesign
-  session. The larger held pose and cropped hotbar icon still need the user's
-  Lunar feedback. Actual two-client affinity appearance remains unverified;
-  a simulated remote holder check is not equivalent.
-- **Five free spell slots:** five unrestricted slots, per-spell cooldowns and shared
-  Basic recovery are implemented, alongside element levels, tiered spell-book credits
-  and personal rewards. Preserved September 17 server/native receipts cover the earlier
-  progression, persistence, credits and UI implementation. They do not establish a fresh
-  pass for later free-slot/cooldown changes or current tuning. Pending: relevant current
-  hub/progression regression checks and human feedback on free-slot combinations and pace.
-- **Fire block fire (October 30):** all six Fire spells are drawn as 3D block fire
-  (`client/blockfire/`), ported from the approved `art/fire/blockfire/` browser study. The build
-  and `fire_blockfire_client_smoke` passed: every spell rendered in a native client, with
-  screenshots from first person, behind and the side. The user approved it after trying it
-  in Lunar (November 2). Pending: multiplayer, where other players' streams, leaps and blasts
-  come from the new block-fire events.
-- **Wind block wind (November 1):** all five Wind spells are drawn as 3D block wind
-  (`client/blockwind/`), ported from the approved `art/wind/blockwind/` browser study, with a
-  painted atlas. Zephyr Strike wears 3D feathered wings in place of the flat
-  Elytra model. The build, VFX checks and `wind_blockwind_client_smoke` passed: every spell
-  drew its effect in a native client (72 first- and third-person screenshots), including a
-  Sky Shear hit and miss, a chained dash and a Zephyr landing. The user approved it with
-  Fire's in Lunar (November 2), keeping the original Gale Dagger model. Pending: multiplayer,
-  where other players' dashes, launches and landings come from the new block-wind events.
-- **Wand sounds (November 11):** every spell plays generated audio through mod-owned sound
-  events ([sound reference](reference/sound.md)); bosses, mobs, cutscenes and world cues still
-  redirect to vanilla sounds. The build and `tools/build_sounds.py --check` passed. The user
-  accepted all five sets from clips played outside the game; the Seed block hit, Sentry Bloom and
-  Full Bloom sounds were made afterwards from the same Nature recipes and nobody has heard them.
-  Pending: hearing them in Lunar (volume balance between spells, overlap in a fight, the
-  retriggered Flamethrower and Hollow Purple loops, and the two explosion sounds that Minecraft
-  plays slower), and another pass on Wind, which the user accepted as good enough for now.
-- **Space void glass (November 3):** all five Space spells are drawn as 3D void glass
-  (`client/blockspace/`), ported from the `art/space/blockspace/` browser study the user approved,
-  with a painted atlas; the Astral Double wears a void-glass shell over its owner's skin, and
-  Hollow Purple's wind-up is blue and red with a purple helix trail. The Space particles are now
-  unused. The build and `space_blockspace_client_smoke` passed (90 first-person and side
-  screenshots). The user approved it after trying it in Lunar (November 3), once bolts and orbs
-  glided smoothly between server updates. Pending: multiplayer, where other players' hits,
-  blinks, charges and collapses come from the new block-space events.
-- **Wand-tip cast particles:** cast bursts, the fractured beam, the Flamethrower
-  stream and projectile wakes now start at an estimated wand tip instead of the
-  caster's face. The build passed; the tip placement (right/left hand,
-  first/third person, wide FOV) has not been checked in a native client or Lunar.
-- **Human playtesting:** free-slot combinations, progression pace, recent Fire
-  Leap/Flashover and Nature changes, and multiplayer timing remain balance/feel
-  work. Automated mechanics checks do not settle these questions.
-- **Guardian difficulty (October 3):** the Guardian was rebalanced to be about a ten-try boss for a
-  new duo in full iron on Normal, with a winning run of about four minutes. Its hits were raised so
-  heavy ones take about 45% through iron. Slams sometimes hold before smashing and now hit with the
-  fists. The repeating guard break is gone: at half health the shell bursts open as the phase
-  change, and phase two adds a pull-then-blast core pulse. In co-op, pressure grows up to four
-  players (shorter rests, faster cooldowns, back volleys at the players it isn't attacking, and
-  threat-based targeting). World difficulty sets the intensity. Health is now 1,400 plus 1,000 per
-  extra player, a starting estimate. Contract checks and the shell, phase, combat, cover,
-  Nature, wall, Wind and Space server fixtures cover the mechanics. Pending: a solo and co-op
-  Lunar playtest with `/ew guardian log on` to tune health and fight length. Also pending: an
-  in-game look at the core pulse clip, the held slams, the pull's feel and the ring's readability. The pull is applied by each
-  client, so a fixture with fake players cannot show it; it needs a real client.
-- **Guardian/church:** the fight moved from the sky floor into its own dimension, the
-  Shattered Nave, on September 29; the user approved the hall in the browser preview. The
-  nave, church (with its restart pass), cover and Nature server fixtures passed, and the
-  native client tour photographed the hall. On September 30 the "effigy wakes" intro was
-  replaced at the user's request: the Guardian now smashes a zombie, tears it in two and throws it
-  over the players (approved in the browser animatic, then retimed slower on request). Pending: the
-  user's look at the in-game intro video and a Lunar playtest of realm and intro together,
-  including the fog distance, brightness (ambient light 0.3) and light shafts, which read fainter
-  in the client screenshots than in the preview; whether the Guardian reads in the dark vaults
-  during the zombie's-eye shot; and a co-op check that every watcher's camera stays in step, that
-  the zombie stays in the Guardian's fists on a remote server, and that a partial skip waits for
-  the rest. Earlier: user
-  approval of the overall two-phase fight is recorded; later attack pressure, party combat,
-  pedestal discovery and varied-seed terrain integration still need broader human feedback.
+Rules for this page:
 
-Do not infer the installed Lunar version from this page or archived release hashes.
-Verify source/installed files when deployment status matters. Remove resolved items
-rather than accumulating a permanent checklist of every past playtest.
+- One bullet per open item, saying what to look at or decide. Delete the bullet when it is
+  settled; do not mark it done.
+- No test receipts. Which fixture covers what is in [testing](reference/testing.md) and
+  the fixture itself.
+- No playtest diaries or change history. Feedback and the decisions it led to go in the
+  feature's reference or its design notes; player-facing changes go in
+  [releases](releases/README.md).
+- Nothing here says which build is installed in Lunar. Compare file hashes when that matters.
+
+Most items wait on the developer playing in Lunar. Agents can clear
+[checks still owed](#checks-still-owed) and [known gaps](#known-gaps) without a playtest.
+
+## Review outside the game
+
+Videos, browser previews and workshop clips waiting for the developer's approval.
+
+- **Storm Roc opening summon:** the `roc_intro_client_smoke` video, which runs on through
+  the summon.
+- **Storm Roc intro (the snatch):** the in-game video.
+- **Guardian intro (the zombie):** the in-game video of the retimed intro.
+- **Pyre King:** the Haul and Snare clips, the intro's `throned` and `awaken` clips, and the
+  Chain Scythe's bowed chain in the workshop.
+- **Necromancer:** the remaining workshop clips, including the standalone dragged-soul
+  clip, and the fireball and soul models (`.local-previews/soul-fire/`). Once approved they
+  need installing and a client check.
+
+## Solo Lunar session
+
+Looks and balance that only a person playing can judge.
+
+### Pyre King
+
+- His health is a first guess; damage is set for plain diamond to netherite armor.
+
+### Storm Roc
+
+- The opening summon and the first tornado forming.
+- The spire hop, now that its gaze no longer flips its head (fixed November 3).
+- Balance and appearance of both phases: its reach at half size, the hunting tornadoes,
+  phase two's density (three big tornadoes, strikes during the brawl, chain-smash damage)
+  and the storm's darkness.
+- The new look, including how far the talons bite into the rock (about a third of a block
+  standing, up to a block while it scrabbles when stuck).
+- The reworked animations: the spire hop and its banked turn (do the 1.4 s longer spire
+  visits make the air stretch drag?), the landing and call, the slower 5.6 s takeoff, the
+  dive chain (crouch, stoop, flare warning, the stuck heaves and the rip free at 5 s, the
+  chain hop), the dive that waits for a landing to settle, and whether the slams' last-tick
+  drop reads as a hit or a pop.
+- The phase-two "fewer perches" idea.
+- The aerie: the gong, the call and the rewards; the gong's swing and lighting; how the
+  levelled summit reads on more peaks; that stony peaks get no snow from the build; how
+  findable aeries are without the hub map page; whether one Ultimate book per aerie is the
+  right pace.
+- The intro in play, start to landing.
+
+### Hollow Necromancer and the crypt
+
+- A full fight with `/ew necromancer log on` to tune health, wave sizes, rain damage, and
+  the dive and split timing. The Hands→ambush and Hands→bite combos cost an iron-armored
+  player about three quarters of their health.
+- The November 4 siege tuning: horde sizes, how the faster crawl and the brute's charging
+  slam look, and frame rate with a full horde.
+- Life Drain (starts within 10 blocks, 1.5 s windup, breaks at 14), the single soul split
+  and the blind body.
+- The transformation cinematic's length.
+- Astral Double against him: the 70% echo bolt and the extra skull per visible double. Is
+  the double surviving too long, and is Space's pace right?
+- Crypt brightness (ambient light 0.2, lifted fog, seven soul lanterns), his body glow, the
+  Life Drain glow and fog density. Do non-explosive fire spells burn the clearing's logs?
+- The mausoleum in a fresh world: by day and night, beside hills and in a forest; whether
+  the motes are noticeable but quiet; the veil and void animation speed; how far the dead
+  woods should reach (18 blocks bare, fading out to 34).
+
+### Hollow undead
+
+- How they look and move in game, how often they spawn at night, and their balance.
+
+### Fractured Guardian and the nave
+
+- A full fight with `/ew guardian log on` to tune health (1,400 plus 1,000 per extra player
+  is a starting estimate) and fight length, aiming at about ten tries and four minutes.
+- The core pulse clip, the held slams, the pull's feel and the ring's readability. The pull
+  is applied by each client, so only a real client shows it.
+- The nave and intro together: fog distance, brightness (ambient light 0.3), the light
+  shafts (fainter in client screenshots than in the preview), and whether the Guardian
+  reads in the dark vaults during the zombie's-eye shot.
+- Broader feedback on later attack pressure, pedestal discovery and how churches sit in
+  varied terrain.
+
+### Heavier animation pass (October 22)
+
+- The reworked Guardian, Necromancer and undead clips were approved in the browser and
+  have not been judged in Lunar.
+
+### Spells
+
+- **Nature flowers:** the bud's arc, reach and look; the vanilla hearts over a flower
+  holding health; whether a fifth of the damage, up to 8, is worth walking over for; the
+  three-block collect reach; whether a caster breaks their own flower by accident when
+  firing past it.
+- **Nature against each boss:** flower damage and pace, the 16-block range, how many
+  flowers and for how long, heal sizes, ultimate charge rate, how the heads read while they
+  turn, and whether Full Bloom's twelve seconds and buffs are too much or too little.
+- **Nature looks:** the grown two-headed flower, the petal wave, the seed marker, the
+  recoil and wilt poses, and the block-nature effects.
+- **Springbloom:** the September 29 run-in launch, 8-second pad, 6-second cooldown and
+  flatter arc.
+- **Thornbite:** attack feel, silhouette and balance.
+- **Space:** escape options after the Blink nerf; Gravity Well and Astral Double balance
+  and feel.
+- **Wind:** Updraft and Gale Daggers balance and feel, with Waylay Dash at 75% strength.
+  Confirm the wand no longer dips while a dash recharges (fixed November 3).
+- **Stone:** Faultline's steering, interruption feel, spike appearance, behavior on varied
+  terrain and destruction balance. Its launch was reported as not noticeable on Hollow
+  undead; check how the launch and the 1.5-block shove read, including on a struck player.
+- **Fire:** recent Fire Leap and Flashover changes. Open looks from the block-fire study:
+  the Pyre carpet reads like lava; Meteor's warning ring is 5.4 blocks against a 10-block
+  danger; the Fireball's head size; the Leap's wall burns longer than it hurts; the
+  Flamethrower thins in first person.
+- **Loadouts:** free-slot combinations and progression pace.
+- **Locate links:** the teleport link from `/locate` to a church, a graveyard, an aerie
+  and a Burned Gate should each land on clear ground.
+- **Wand-tip cast particles:** whether casts leave the wand tip convincingly in either
+  hand, in first and third person.
+- **3D wand:** the larger held pose and the cropped hotbar icon.
+- **Wand sounds:** volume balance between spells, overlap in a fight, the retriggered
+  Flamethrower and Hollow Purple loops, and the two explosion sounds Minecraft plays slower.
+  Nobody has heard the Seed block hit, Sentry Bloom or Full Bloom sounds. Wind was accepted
+  as good enough for now and wants another pass.
+
+## Co-op or two-client session
+
+Things one player cannot show.
+
+- **Other players' spell effects:** Fire, Wind, Space and Nature effects cast by someone
+  else arrive over the block-fire, block-wind, block-space and block-nature events. None has
+  been seen from a second client.
+- **3D wand:** another player's affinity colors on their wand.
+- **Pyre King:** a co-op fight.
+- **Spells with a second player:** how Gravity Well, Astral Double, Gale Daggers and
+  Thornbite feel in multiplayer, and chaining Springbloom launches between players.
+- **Storm Roc:** a co-op fight, the aerie call with a party, and the intro with several
+  watchers.
+- **Necromancer:** a co-op fight with `/ew necromancer log on`, including the November 4
+  siege hordes at duo size; the transformation cinematic's skip with several watchers; spectating
+  after death; the victory release for everyone the crypt brought in; a second party member
+  walking into the veil while the slot is being laid out.
+- **Guardian:** co-op pressure up to four players; every watcher's intro camera staying in
+  step; the zombie staying in the Guardian's fists on a remote server; a partial skip
+  waiting for the rest.
+- **Parties:** allied protection and party combat in real fights, and multiplayer timing in
+  general.
+
+## Weaker-machine performance
+
+- Storm Roc: the model, cloud sea, cap cloud, storm sheets and textured tornadoes.
+- Necromancer: soul light (real block light), and a full siege horde.
+
+## Checks still owed
+
+Automated work an agent can do without the developer.
+
+- No fixture has run on a dedicated server since the Nature rework; the November 10–11 runs
+  were hosted in a singleplayer world on the Windows machine.
+- The party fixture's restart half was not run after the Nature rework.
+- The Necromancer and Storm Roc fixtures last passed before the flowers' turning head,
+  banked healing and Full Bloom were added; rerun them.
+- The Thornbite heal buff inside Full Bloom has no fixture.
+- Springbloom's launch and flight leaves are in no client fixture, and its revised arc has
+  no fresh native-client measurement (the server fixture checks about a 15-block apex and
+  21-block travel).
+- The client fixtures do not press collect or break on a flower.
+- The hub and progression regression checks have not been rerun since the free-slot and
+  cooldown changes.
+- Wand-tip cast particles have had no native-client check (right and left hand, first and
+  third person, wide FOV).
+- The Astral Double tuning against the Necromancer has had no client check.
+- `tools/check_assets.py` has not had a full run on the Windows machine since the
+  structure files and the Pyre King's model were made to come out the same on every
+  machine (November 12). Run it there once; a failure means a generator still depends on
+  the machine.
+
+## Known gaps
+
+Accepted for now; fix when the feature is next touched.
+
+- **Pyre King:** a player who only circles a pillar is hooked off it but can run clear of
+  the Overhead that follows.
+- **Storm aerie:** an operator `/ew summit start` on a slot a gong call has reserved takes
+  the called players into an operator fight with no rewards. A broken reward chest only
+  comes back after the next win there. On jagged peaks an aerie can sit on a shoulder below
+  taller spires that are too narrow to level.
+- **Storm Roc intro:** sounds are vanilla stand-ins; the wand is not drawn in the puppet's
+  hand; lightning bolts in chunks the client has not loaded do not draw; at short view
+  distances the landing shot may build its terrain just after the cut.
+- **Storm Roc `stuck` clip:** the head shake after it rips free (about 5.4 s) has keys that
+  overlap by up to 0.04 s, so a few tiny moves are skipped. Left as it is.
+- **Graveyards:** ones generated before the mausoleum keep the old headstone, whose rewards
+  are keyed by the skull's position, so moving that altar and winning again yields fresh
+  chests and another spell book. A graveyard only partly generated before the mausoleum
+  update may finish with the new, larger layout. `/place structure` needs the chunks about
+  40 blocks around the yard loaded. Nothing keeps graveyards away from villages.
+- **Astral Double against the Necromancer:** the extra skull counts a double that is visible
+  and at least eight seconds old; it does not measure continuous time in sight.
+- **Nature sounds:** the flower throw plays Seed's cast audio, and collecting a flower has
+  no sound of its own.
+- **Sounds elsewhere:** bosses, mobs, cutscenes and world cues still use vanilla sounds.
+
+## Not built yet
+
+- **Pyre King:** a death clip, a hit reaction, a reward, spectating for a fallen player and
+  his own sounds; his warnings are particles. The full list, with the planned moves that
+  were left out, is in [Pyre King](reference/pyre-king.md#not-built-yet).
+- **Storm Roc:** the phase-change cinematic (a short in-engine stand-in plays) and a death
+  (it vanishes).
+
+## Parked ideas and clean-up
+
+- **Animation ideas that need gameplay changes:** the Guardian's throws (their held-rock
+  pose is sampled by the server through tick 44), the archer's 83° snap turn before it
+  shoots, the Necromancer's walk playback speed, an earlier `perch_cast` trigger, his drain
+  arm (needs the drain socket regenerated) and the colossus bolt origin.
+- **Nature clean-up, once the kit is approved:** `EntangleTracker`'s vine stacks, the wrap
+  art, the entangled HUD buds and the halved-recovery penalty have no source in play. Remove
+  them or give them a use. The Overgrowth oak is kept on purpose and is not part of this.
+- **Space particles** are unused since the void-glass redesign.

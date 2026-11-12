@@ -5,6 +5,7 @@ are not claims of public publication. Older entries describe what changed then;
 use [current guides](../README.md) for today’s behavior and [status](../STATUS.md)
 for outstanding verification. Detailed historical reports are optional background.
 
+- [2026-11-11 — The Pyre King](2026-11-11-pyre-king.md)
 - [2026-11-11 — Nature: thrown flowers that store health](2026-11-11-nature-flowers.md)
 - [2026-11-11 — Every wand has its own sounds](2026-11-11-wand-sounds.md)
 - [2026-11-10 — Nature: flowers that fight beside you, nothing in the way](2026-11-10-nature-rework.md)

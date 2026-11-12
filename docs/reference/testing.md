@@ -14,86 +14,97 @@ Report which checks actually ran and which remain pending. Archived passing logs
 only establish results for that historical run. Screenshots and browser prototypes
 must be labeled according to where they were produced.
 
-## How the preview helpers work
+## How the fixtures work
 
 The project has one production mod and separate test helper entrypoints under
-`src/guardianTest/java/`. A matching `tools/*_smoke.init.gradle` packages test
-metadata and loads the helper beside the production mod in a development run.
-The helper can create a disposable world, equip players, move the camera, exercise
-inputs, capture native screenshots, write a pass/fail receipt, and exit.
+`src/guardianTest/java/`. A matching runner, `tools/<name>.init.gradle`, packages test
+metadata and loads the helper beside the production mod in a development run. The helper
+can create a disposable world, equip players, move the camera, exercise inputs, capture
+native screenshots, write a pass/fail receipt, and exit. Helpers share the test source
+set and never enter the released JAR.
 
-Repeated runs of a feature reuse that feature's helper. Different features have
-different entrypoints. They share the test source set rather than being separate
-production projects. The helper metadata/classes must not enter the released JAR.
+Each runner defines its own directory under `build/` and clears its previous receipts
+during setup. Fresh runs create or preserve previous disposable worlds; recovery options
+deliberately reuse the prior fixture state. Read the runner's setup before launching.
+Server fixtures bind localhost on an ephemeral port and require existing EULA acceptance
+in `run/eula.txt`; do not silently accept terms or point a fixture at the user's real world.
 
-Each runner defines its own directory under `build/`. Fresh runs create or preserve
-previous disposable worlds; recovery options deliberately reuse the prior fixture
-state. Read its setup before launching. Server fixtures generally bind localhost
-on an ephemeral port and require existing EULA acceptance in `run/eula.txt`; do not
-silently accept terms or point a fixture at the user's real world.
+**What a fixture asserts is written in its helper class, not here.** The runner names the
+class (`fixtureMain` or the entrypoint it packages). Read it when behavior changes instead
+of trusting a name or an old description.
 
 ## Required checks
 
-The complete standard build/VFX command list lives in [AGENT.md](../../AGENT.md).
-Use `--offline` only when dependencies/assets are already cached. `./gradlew build`
-includes `checkGuardianBeam`, `checkNecromancer`, `checkParties` and `checkStormRocGaze` (the Roc's
-client gaze keeps its head upright); none is a live gameplay test.
-For church layout changes also run `python3 tools/build_guardian_church.py --check`.
+The standard build and asset commands are in [AGENTS.md](../../AGENTS.md#build-and-required-checks).
+`./gradlew build` includes `checkGuardianBeam`, `checkNecromancer`, `checkPyreKing`,
+`checkParties`, `checkStormRocGaze` and `checkDocs`; none is a live gameplay test.
+Use `--offline` only when dependencies and assets are already cached.
 
 ## Selecting a fixture
 
-Paths below are relative to `tools/`. Run only suites relevant to the change;
-inspect their assertions when behavior changes instead of trusting an old name.
+Each name below is a runner: `tools/<name>.init.gradle`. Server runners use `runServer`,
+client runners use `runClient`. Run only the suites relevant to the change.
 
-| Area | Server runner | Client runner |
-| --- | --- | --- |
-| Wand mesh / affinities / GUI | — | `wand_model_client_smoke.init.gradle` |
-| Hub / loadouts | `wand_hub_server_smoke.init.gradle` | `wand_hub_client_smoke.init.gradle` |
-| Purchases / progression | `progression_server_smoke.init.gradle` | `progression_client_smoke.init.gradle`, `progression_input_client_smoke.init.gradle` |
-| Fire heat and movement | `fire_build_server_smoke.init.gradle`, `fire_tuning_server_smoke.init.gradle` | `fire_leap_client_smoke.init.gradle` |
-| Fire block-fire visuals | — | `fire_blockfire_client_smoke.init.gradle` (hidden, muted: casts all six Fire spells at frozen husks and a wall; first-person, behind and side screenshots) |
-| Wind block-wind visuals | — | `wind_blockwind_client_smoke.init.gradle` (hidden, muted: casts all five Wind spells, including a hit, a chained dash and a Zephyr landing; first-person and third-person screenshots) |
-| Space void-glass visuals | — | `space_blockspace_client_smoke.init.gradle` (hidden, muted: casts all five Space spells, including a bolt hit and miss, a blink, the Astral Double's echo and swap, a Gravity Well burst and Hollow Purple's charge, orb and collapse; first-person and side screenshots) |
-| Flashover | `flashover_server_smoke.init.gradle`, `sticky_flashover_server_smoke.init.gradle` | `fire_expansion_client_smoke.init.gradle`, `sticky_flashover_client_smoke.init.gradle` |
-| Nature Springbloom | `springbloom_server_smoke.init.gradle` | `springbloom_client_smoke.init.gradle` |
-| Nature Thornbite / seed mark / Sentry Bloom flowers / Full Bloom / retired Overgrowth | `nature_expansion_server_smoke.init.gradle`, `full_bloom_server_smoke.init.gradle`, `overgrowth_throw_server_smoke.init.gradle` (the retired oak, through its kept entry point) | `nature_expansion_client_smoke.init.gradle`, `nature_overgrowth_client_smoke.init.gradle` (muted; also requires the block-nature bite, heal, seed-trail and Full Bloom effects to run) |
-| Stone | `stone_cluster_smoke.init.gradle`, `stone_technique_smoke.init.gradle` | `stone_technique_client_smoke.init.gradle`; Guardian floor client includes Stone cluster mesh checks |
-| Space Gravity Well | `gravity_well_server_smoke.init.gradle` | `gravity_well_client_smoke.init.gradle` |
-| Space Astral Double | `astral_double_server_smoke.init.gradle` | `astral_double_client_smoke.init.gradle` |
-| Wind Updraft / dash combos | `updraft_server_smoke.init.gradle` | `updraft_client_smoke.init.gradle` |
-| Wind daggers | `gale_daggers_server_smoke.init.gradle` | `gale_daggers_client_smoke.init.gradle` |
-| Wind | `wind_pressure_smoke.init.gradle` | `wind_visual_client_smoke.init.gradle` (guided visual review; leaves disposable world open) |
-| Guardian combat | `guardian_combat_smoke.init.gradle`, `guardian_shell_smoke.init.gradle` (party health, back volley, half-health gate, break immunity and burst, core pulse blast, meteors), `guardian_phase_smoke.init.gradle` | `guardian_floor_client_smoke.init.gradle` |
-| Guardian cover / Nature / walls | `guardian_cover_smoke.init.gradle`, `guardian_nature_smoke.init.gradle` (add `-PnatureBalance` for the Nature damage, seed mark, flower and pass-through oak fixture on a flat world), `guardian_wall_smoke.init.gradle` | Relevant native visual fixture |
-| Hollow Necromancer | `necromancer_server_smoke.init.gradle` (spells, a watcher killed mid-intro let go and told the scene is over, Hands→ambush, waves and their quickening, a Soul Fire Rain volley, blink/shift, the full two-siege fight flow with rain into the transformation, soul light on bolts, fireballs and markers and its cleanup), `necromancer_phase_smoke.init.gradle` (phase two; starts past the sieges: the transformation cinematic holding both players unhurt, its ghosts coming and going and its release, then grab, swipe, the random-windup rush, Grave Dive hit and dodge, Soul Harvest, the soul split and collapse, soul light on the souls and its cleanup) | `necromancer_client_smoke.init.gradle` (screenshots; `-PnecroRecord` for hidden recording; `-PnecroMechanics` for the Soul Fire Rain fireball, charge windup, Grave Dive, soul split and Soul Harvest against a scripted player, then soul light under a night rain and skull volley); siege perch views, and the transformation cinematic recorded in the crypt (`-PtransformVideo`), are in `crypt_client_smoke` |
-| Hollow undead | `hollow_undead_server_smoke.init.gradle` (rise, chase, hit-frame damage and arrow timing, the brute's charge onto its victim, no charge across a pit, shoved out of a charge, daylight burning, loot, held death clip, bound-minion rules) | `hollow_undead_client_smoke.init.gradle` (hidden window; rise, idle front/side, walk, attack key frames, death screenshots) |
-| Pyre King | `checkPyreKing` in `./gradlew build` (moves fit their clips and warn before they land, tight openings, thrown-sword aim, the chooser, sweep geometry) | `pyre_king_client_smoke.init.gradle` (hidden, muted: his GeckoLib renderer, every clip baked, then each clip rehearsed with 56 screenshots of his guard, blade fire, the sword's chain and Unbound's burning chains); `pyre_gate_smoke.init.gradle` (hidden, muted, a fresh normal world: the nearest Burned Gate in the Nether found as `/locate` does, its road walked from shore to seal, screenshots, then a Survival player touches the seal twice, wins and is sent back before the gate, touches it again, falls in the hall and wakes before the gate with their belongings); `pyre_king_intro_smoke.init.gradle` (hidden, muted: his 58 s intro through its own camera, the hall dark then lit, the fight following, and a skip; `-PpyreIntroVideo` saves frames); `pyre_king_fight_smoke.init.gradle` (hidden, muted, against a Survival player: twenty-seven cases for each move's damage, reach, sidestep, jump, crouch, shield, thrown-sword landing, drags, pillars (stone stops his chain and blade), and his flanks on a player hiding behind one, standing or circling, the drawn sword against the swept one, then a free fight through Unbound to his death; `-PpyreFightRecord` saves frames) |
-| Burned Throne Hall | — | `pyre_hall_client_smoke.init.gradle` (hidden, muted: enter by command, the slot laid out, solid floor under the arrival and the king, barrier ring and lid, lava at its height, a summoned Pyre King on his mark, a Survival player sliding off a pillar unhurt, burning braziers and no magma inside the wall, fifteen screenshots of the hall and of the sea at three render distances, leave and return) |
-| Hollow Crypt realm | — | `crypt_client_smoke.init.gradle` (realm build, enter, summon, a siege on an exported bough perch with near and far-rim screenshots, wall, reset, leave, `/locate`, withered woods around the yard, the unbreakable mausoleum and its door hint, the walk-in veil ritual, wipe with kept items and a return to the court, victory rewards and spell book; screenshots) |
-| Church / Shattered Nave | `guardian_church_smoke.init.gradle` (ritual into the nave, wipe/retry, victory, restoration, loot), `guardian_nave_smoke.init.gradle` (layout, arrival, the Guardian's intro played in full then skipped, its zombie gone after both, a watcher killed mid-intro let go and told the scene is over, casting/damage gates, floor and hall protection, containment, spectating with kept items, victory, wipe, restart) | `nave_client_smoke.init.gradle` (screenshots of the hall from six viewpoints; stills of the intro's shots and its hand-back into the fight; `-PintroVideo` saves every tick for a review video); Guardian floor client with visual options |
-| Storm Roc | `roc_server_smoke.init.gradle` (diamond damage, repeated strikes, dodges, melee, the opening summon (no tornado before its call, then one that forms harmlessly, and the second only after it), the spire call, dive/ring, tornado catch, whirl, throw and winds, health gates, a Nature mark and a flower seed through a body part, owned fire contact, stacking after armor in both orders; the phase change, phase-two strikes, live ground, chain-smash timing and hop limits, strikes during the brawl and the defeat; encounter lifecycle including a lethal tornado throw) | `roc_client_smoke.init.gradle` (hidden authored-summit rehearsal, synchronized poses/effects including `spire_flight`, the charge's `flight`, spire landing and call, the client storm level, 32 individual native screenshots of both phases, including the opening summon's scream and its tornado forming and formed, the spire hop just after push-off and flight looking down from ground cameras, a spire landing, the call bolt, bolts from the cap cloud and a textured tornado close-up) |
-| Storm Summit realm | — | `summit_client_smoke.init.gradle` (enter, screenshots from seven viewpoints, the remains placed, survival players can't break the rock, a fall off the rim set back on the summit, leave) |
-| Storm aerie | `aerie_server_smoke.init.gradle` (template in four rotations, the gong's confirm and held clicks through its anchor and parts, part shapes matching the plate in every rotation, the alternating strike clips, who goes, the call, the intro with simulated clients (held at the gong, carried up only after the cloud, the fight as everyone lands, a client that never reaches the cloud and a scene that never lands), fight start with the called roster, a loss home, wins with chests, homecoming and one Ultimate book per victor per aerie, refusals, a broken chest put back, busy slots, deaths and crash recovery) | `aerie_client_smoke.init.gradle` (hidden, muted screenshots of natural aeries on snowy and stony peaks and of all four rotations, at rest, mid-swing and restruck mid-swing (asserts the clip restarts): `-PaerieSeed`, `-PaerieGongs="label@x,y,z;…"`); `roc_intro_client_smoke.init.gradle` (hidden, muted: strikes a natural aerie's gong as a survival player and watches the intro take the camera, move into the summit realm with no loading screen, hold in the cloud until the summit is built, hand back and start the fight; beat stills, `-ProcIntroVideo` for a frame every `-ProcIntroEvery` ticks, on through the fight's opening summon, `-ProcIntroGong=x,y,z`, `-ProcIntroViewDistance`) |
-| Worldgen / locate | `guardian_church_worldgen_smoke.init.gradle`, `guardian_church_locate_smoke.init.gradle` (incremental church search, then the church, graveyard and Storm Roc aerie `/locate` heights checked as clear standing cells in the generated terrain, and each result's own teleport link moving a villager that must stand there unhurt three seconds later; the aerie's must be its built gong's stand point), `aerie_worldgen_smoke.init.gradle` (natural aeries on `-PaerieSeed`: floor, levelled-box flatness, the biome's surface, support, earthwork) | Human terrain review |
-| Parties / audit regressions | `party_server_smoke.init.gradle`, `audit_fixes_smoke.init.gradle` | Human co-op review |
+| Area | Server runner | Client runner | Flags and notes |
+| --- | --- | --- | --- |
+| Wand mesh, affinities, GUI | — | `wand_model_client_smoke` | |
+| Hub, loadouts | `wand_hub_server_smoke` | `wand_hub_client_smoke` | |
+| Purchases, progression | `progression_server_smoke` | `progression_client_smoke`, `progression_input_client_smoke` | |
+| Fire heat and movement | `fire_build_server_smoke`, `fire_tuning_server_smoke` | `fire_leap_client_smoke` | |
+| Fire block-fire visuals | — | `fire_blockfire_client_smoke` | |
+| Flashover | `flashover_server_smoke`, `sticky_flashover_server_smoke` | `fire_expansion_client_smoke`, `sticky_flashover_client_smoke` | |
+| Wind | `wind_pressure_smoke` | `wind_visual_client_smoke` | The client runner is a guided visual review and leaves its disposable world open |
+| Wind block-wind visuals | — | `wind_blockwind_client_smoke` | |
+| Wind Updraft, dash combos | `updraft_server_smoke` | `updraft_client_smoke` | `-PupdraftRecord` |
+| Wind Gale Daggers | `gale_daggers_server_smoke` | `gale_daggers_client_smoke` | |
+| Stone | `stone_cluster_smoke`, `stone_technique_smoke` | `stone_technique_client_smoke` | The Guardian floor client also checks the Stone cluster mesh |
+| Nature Springbloom | `springbloom_server_smoke` | `springbloom_client_smoke` | |
+| Nature Seed, Thornbite, Sentry Bloom, Full Bloom | `nature_expansion_server_smoke`, `full_bloom_server_smoke` | `nature_expansion_client_smoke`, `nature_overgrowth_client_smoke` | `nature_overgrowth_client_smoke` also covers the block-nature effects |
+| Retired Overgrowth oak | `overgrowth_throw_server_smoke` | — | Runs the oak through its kept entry point |
+| Space void-glass visuals | — | `space_blockspace_client_smoke` | |
+| Space Gravity Well | `gravity_well_server_smoke` | `gravity_well_client_smoke` | `-PgravityRecord` |
+| Space Astral Double | `astral_double_server_smoke` | `astral_double_client_smoke` | `-PastralRecord` |
+| Guardian combat | `guardian_combat_smoke`, `guardian_shell_smoke`, `guardian_phase_smoke` | `guardian_floor_client_smoke` | The floor client takes `-PfloorClientAssets` and the visual switches `-PguardianPedestalVisual`, `-PguardianBurnVisual`, `-PnatureVisual` |
+| Guardian cover, Nature, walls | `guardian_cover_smoke`, `guardian_nature_smoke`, `guardian_wall_smoke` | — | `guardian_nature_smoke -PnatureBalance` runs the Nature damage, mark and flower fixture on a flat world |
+| Church, Shattered Nave | `guardian_church_smoke`, `guardian_nave_smoke` | `nave_client_smoke` | Recovery pairs: `-PchurchRecovery`, `-PnaveRecovery`. `-PintroVideo` records the Guardian intro |
+| Hollow Necromancer | `necromancer_server_smoke` (robed fight, sieges), `necromancer_phase_smoke` (phase two) | `necromancer_client_smoke` | All flags are for the client runner: `-PnecroMechanics` for the phase-two mechanics against a scripted player; recording flags `-PnecroRecord`, `-PrushRecord`, `-PdrainRecord`, `-PsoulBoltRecord` |
+| Hollow undead | `hollow_undead_server_smoke` | `hollow_undead_client_smoke` | |
+| Hollow Crypt realm | — | `crypt_client_smoke` | Also photographs the siege perch views. `-PintroVideo` records his intro; `-PtransformVideo` records the transformation and skips the other crypt checks |
+| Storm Roc | `roc_server_smoke` | `roc_client_smoke` | Run the server fixture first. The client saves screenshots, not video |
+| Storm Summit realm | — | `summit_client_smoke` | |
+| Storm aerie and intro | `aerie_server_smoke` | `aerie_client_smoke`, `roc_intro_client_smoke` | `-PaerieSeed` (default 12345), `-PaerieGongs="label@x,y,z;…"`; for the intro `-ProcIntroGong=x,y,z`, `-ProcIntroVideo`, `-ProcIntroEvery`, `-ProcIntroViewDistance`, `-ProcIntroSkipAt=<beat>` |
+| Pyre King | `checkPyreKing` (in the build) | `pyre_king_client_smoke`, `pyre_king_fight_smoke`, `pyre_king_intro_smoke` | `-PpyreFightRecord`, `-PpyreFightRecordCase=<name>[,<name>]`, `-PpyreIntroVideo`. See [Pyre King](pyre-king.md#verification) |
+| Burned Gate | — | `pyre_gate_smoke` | Uses a fresh normal world |
+| Burned Throne Hall | — | `pyre_hall_client_smoke` | |
+| Worldgen, locate | `guardian_church_worldgen_smoke`, `guardian_church_locate_smoke`, `aerie_worldgen_smoke` | — | `guardian_church_locate_smoke` also checks where the locate teleport links land at a church, a graveyard and an aerie. `-PaerieSeed` for the aerie runner. Terrain fit still needs a human look |
+| Parties, audit regressions | `party_server_smoke`, `audit_fixes_smoke` | — | Restart pair: `-PpartyResume` |
+
+Not every client fixture hides its window or mutes itself: about half of the helpers
+set the volume. Before launching one, read its runner and helper, and make sure the test
+client is muted as [AGENTS.md](../../AGENTS.md#working-rules) requires. Any new fixture must
+mute its client before loading a world.
+
+### Running them
 
 Examples from the repository root:
 
 ```sh
 ./gradlew -I tools/progression_server_smoke.init.gradle runServer --args nogui
-./gradlew -I tools/wand_model_client_smoke.init.gradle runClient   -PhubClientAssets="$HOME/.lunarclient/shared/assets" --offline
-./gradlew -I tools/guardian_floor_client_smoke.init.gradle runClient   -PfloorClientAssets="$HOME/.lunarclient/shared/assets" -PguardianPedestalVisual --offline
+./gradlew -I tools/wand_model_client_smoke.init.gradle runClient -PhubClientAssets="$HOME/.lunarclient/shared/assets" --offline
+./gradlew -I tools/guardian_floor_client_smoke.init.gradle runClient -PfloorClientAssets="$HOME/.lunarclient/shared/assets" -PguardianPedestalVisual --offline
 ```
 
-Client runners using `hubClientAssets` can reuse the local Lunar asset cache; add
-`-x downloadAssets` so Loom does not also fetch its own copy. The first client or server
-run on a machine needs one online run to fetch Loom's launcher libraries.
-A fresh run directory's first-launch accessibility screen turns the narrator on; set
-`narrator:0` in that runner's `options.txt` (the crypt runner switches it off itself).
-The floor runner uses `floorClientAssets` instead; supported visual switches
-include `guardianPedestalVisual`, `guardianBurnVisual`, and `natureVisual`.
-Check the runner for the required asset index and completion marker. A process
-exiting successfully is insufficient if the fixture did not produce its receipt.
+- Client runners take `-PhubClientAssets` to reuse the local Lunar asset cache; add
+  `-x downloadAssets` so Loom does not also fetch its own copy. The floor runner uses
+  `-PfloorClientAssets` instead.
+- The first client or server run on a machine needs one online run to fetch Loom's
+  launcher libraries.
+- A fresh run directory's first-launch accessibility screen turns the narrator on; set
+  `narrator:0` in that runner's `options.txt` (the crypt runner switches it off itself).
+- Each runner writes a `*_PASSED.txt` or `*_FAILED.txt` receipt under its `build/`
+  directory. A process exiting successfully is not a pass: require a fresh passed receipt
+  and no failed one. The runner file names its receipt, its `build/` directory and the
+  asset index it needs.
 
 Recovery pairs must run in sequence against their intended saved fixture:
 
@@ -106,20 +117,25 @@ Recovery pairs must run in sequence against their intended saved fixture:
 ./gradlew -I tools/party_server_smoke.init.gradle -PpartyResume runServer --args nogui
 ```
 
-Simulated players moved into a realm (the crypt or the nave) must call
-`onTeleportationDone()` afterwards, as a client's confirmation would: until then they
-cannot be hurt, which silently passes damage checks. A boss intro teleports its watchers too
-(to face the boss and to hold them), so confirm again once it ends. Fixtures that are not about
-the intro skip it with `GuardianIntro.skip` for each watcher. Simulated players drop every packet and declare
-no channels; `GuardianNaveSmokeMod.listen` declares one as a client would and records the payloads sent on it. Casts aim with the head, so set the
-head yaw as well as the yaw before an aimed cast. Fixtures that need realm entities to
-tick force-load the slot's chunks, as they do in the Overworld.
+### Writing fixtures: traps that pass silently
+
+- Simulated players moved into a realm (the crypt or the nave) must call
+  `onTeleportationDone()` afterwards, as a client's confirmation would. Until then they
+  cannot be hurt, which silently passes damage checks.
+- A boss intro teleports its watchers too, so confirm again once it ends. Fixtures that
+  are not about the intro skip it with `GuardianIntro.skip` for each watcher.
+- Simulated players drop every packet and declare no channels.
+  `GuardianNaveSmokeMod.listen` declares one as a client would and records the payloads
+  sent on it.
+- Casts aim with the head, so set the head yaw as well as the yaw before an aimed cast.
+- Fixtures that need realm entities to tick force-load the slot's chunks, as they do in
+  the Overworld.
 
 ### Server fixtures on a machine with no accepted EULA
 
 A dedicated-server runner refuses to start without `run/eula.txt`. Where none is on file,
-`integrated_fixture_host.init.gradle` loads the same fixture class beside a singleplayer world
-instead, started muted, with the real player parked far away as a spectator:
+`integrated_fixture_host.init.gradle` loads the same fixture class beside a singleplayer
+world instead, started muted, with the real player parked far away as a spectator:
 
 ```sh
 ./gradlew -I tools/integrated_fixture_host.init.gradle runClient -x downloadAssets \
@@ -128,16 +144,16 @@ instead, started muted, with the real player parked far away as a spectator:
 ```
 
 `fixtureReceipt` is the prefix of the fixture's `*_PASSED.txt`; receipts land in
-`build/integrated-fixture-host/`. It creates a new ordinary world each run, in Survival, and
-clears the air around y=100 where flat-world fixtures stage their scenes. It cannot serve a
-restart pair or a fixture that depends on dedicated-server settings, and a pass is reported as
-a hosted run, not a dedicated-server run. A fixture hosted this way must not query the world
-for entities in the same tick it force-loads their chunk.
+`build/integrated-fixture-host/`. It creates a new ordinary world each run, in Survival,
+and clears the air around y=100 where flat-world fixtures stage their scenes. It cannot
+serve a restart pair or a fixture that depends on dedicated-server settings, and a pass is
+reported as a hosted run, not a dedicated-server run. A fixture hosted this way must not
+query the world for entities in the same tick it force-loads their chunk.
 
 ## Test and recording handoff
 
 The delegation policy and standing user preference live in
-[AGENT.md](../../AGENT.md#delegating-tests-and-gameplay-recordings). Use one worker
+[AGENTS.md](../../AGENTS.md#delegating-tests-and-gameplay-recordings). Use one worker
 for the whole established test/record/export sequence, with the main agent doing
 independent review or documentation work. Model selection alone does not guarantee
 lower total usage: keep the handoff short and avoid duplicating the worker's work.
@@ -155,7 +171,7 @@ when supported). Supply the following information rather than the full history:
 
 ```text
 Run the established tests and gameplay recording for [feature] in [absolute
-checkout path]. Read AGENT.md and docs/reference/testing.md first. The current
+checkout path]. Read AGENTS.md and docs/reference/testing.md first. The current
 uncommitted implementation is the test target; preserve it.
 
 Expected behavior: [short description and acceptance criteria].
@@ -177,22 +193,18 @@ metadata without rerunning passing suites unless new changes justify it. Deliver
 the local MP4 inline or as an absolute-path link, distinguish scripted native
 tests from human Lunar playtests, and state the actual installation status.
 
-### Existing Updraft recording recipe
+## Recording gameplay
 
-This is an implemented example, not a universal recording flag for every spell.
-For another feature, select its existing fixture and have the main agent add or
-adapt a recording mode if needed before delegating routine runs. No new agent or
-extra confirmation is needed just to execute this recipe locally.
+Recording modes capture the actual game framebuffer in a hidden window and send scripted
+cast packets, so they need no keyboard or mouse focus; the ordinary fixture mode is what
+verifies real input. Not every feature has one: for a new feature, the main agent adds or
+adapts a recording mode to its fixture before delegating routine runs.
 
-The Updraft client runner accepts `-PupdraftRecord` to capture a silent sequence
-of the actual game framebuffer at 20 frames per second. Recording hides the test
-window and sends scripted cast packets so it does not require keyboard/mouse
-focus; the ordinary non-recording fixture verifies actual key/mouse input.
-Prefer hidden-window recording to repeated attempts to steal desktop focus.
-Recording helpers remain in the test source set and never enter the released mod.
+### The recipe
 
-Run from the repository root, after the required build/checks for the change.
-Use `--offline` and this asset path only if the existing cache is available:
+Shown for Updraft. Other modes follow the same steps with the values from the table
+below: the frame file pattern, the frame count and the rate differ. Run from the
+repository root, after the build and checks for the change:
 
 ```sh
 ./gradlew -I tools/updraft_server_smoke.init.gradle runServer --args nogui --offline
@@ -200,16 +212,9 @@ Use `--offline` and this asset path only if the existing cache is available:
   -PhubClientAssets="$HOME/.lunarclient/shared/assets" --offline
 ```
 
-Require fresh `build/updraft-smoke-run/PRESSURE_PASSED.txt` and
-`build/updraft-client-smoke/HUB_PASSED.txt` receipts with no corresponding
-`*_FAILED.txt` files. Both runners clear their prior receipts during setup.
-Check the actual assertions/results; a video by itself is not a passing test.
-
-`build/updraft-client-smoke/RECORDING_DIR.txt` names the current recording's
-directory. The fixture captures 200 consecutive frames (`frame-0000.png` through
-`frame-0199.png`) for ten seconds at 20 fps. Verify all frames exist, then encode
-at that rate. This uses the installed `ffmpeg`/`ffprobe`; do not rely on a prior
-session's temporary encoding script:
+Require fresh passed receipts from both runs and no failed ones; a video by itself is not
+a passing test. Verify every frame exists, then encode with the installed `ffmpeg` and
+`ffprobe`:
 
 ```sh
 recording_frames="$(cat build/updraft-client-smoke/RECORDING_DIR.txt)"
@@ -225,73 +230,66 @@ ffprobe -v error -show_entries \
 ffmpeg -v error -i "$recording_output" -f null -
 ```
 
-Run each step only after the preceding one succeeds. Confirm H.264, 1280×720,
-20 fps, 200 frames, ten seconds, and successful decoding. Inspect frames near
-launch, apex, combo, and landing for missing content, pause menus, or unwanted
-desktop capture. Preserve the final MP4 and concise receipts under ignored
-`.local-previews/` before any later `clean` build. Preserve useful existing clips
-when choosing an output filename; generated raw frames need not be retained once
-the exported video is verified.
+For another mode, change three things in the `ffmpeg` line:
 
-### Astral Double recording
+- `-i`: the frame files from the table. If the first frame is not numbered 0, add
+  `-start_number <n>` before `-i` (the Guardian intro starts at 001).
+- `-framerate`: 20 for a frame every tick. Modes that save a frame every other tick play
+  at real speed at 10; at 20 the video runs double speed.
+- `-frames:v`: the frame count, or leave it out to encode every frame present.
 
-`astral_double_client_smoke.init.gradle` accepts `-PastralRecord` and the same
-`hubClientAssets` option. It records 300 consecutive frames at 20 fps (15 seconds)
-from the game framebuffer into the directory named by
-`build/astral-double-client-smoke/RECORDING_DIR.txt`. Use the encoding recipe above
-with 300 frames and `.local-previews/astral-double/astral-double-gameplay.mp4`.
-The ordinary mode exercises bound inputs; recording sends scripted cast packets.
-Require fresh `build/astral-double-smoke-run/PRESSURE_PASSED.txt` and
-`build/astral-double-client-smoke/HUB_PASSED.txt`, with no failure markers.
-Scenes cover the orb toss, skin and wand, mirrored fire, consuming teleport,
-Blink chaining and destruction poof. A dev player's supplied skin is used;
-this does not verify the user's authenticated Lunar skin or multiplayer feel.
+Run each step only after the preceding one succeeds. Confirm H.264, 1280×720, the frame
+rate, the frame count, the duration and successful decoding. Inspect frames near each key
+moment for missing content, pause menus or unwanted desktop capture. Save the MP4 under
+ignored `.local-previews/<feature>/` before any later `clean`; do not overwrite a useful
+earlier clip. Raw frames need not be kept once the video is verified.
+
+### Recording modes
+
+| Client runner and flag | Frames, rate | Frame files | Passed receipt |
+| --- | --- | --- | --- |
+| `updraft_client_smoke -PupdraftRecord` | 200 at 20 fps (10 s) | `frame-%04d.png` in the directory named by `build/updraft-client-smoke/RECORDING_DIR.txt` | `build/updraft-client-smoke/HUB_PASSED.txt`, server `build/updraft-smoke-run/PRESSURE_PASSED.txt` |
+| `astral_double_client_smoke -PastralRecord` | 300 at 20 fps (15 s) | `frame-%04d.png` in `build/astral-double-client-smoke/RECORDING_DIR.txt`'s directory | `build/astral-double-client-smoke/HUB_PASSED.txt`, server `build/astral-double-smoke-run/PRESSURE_PASSED.txt` |
+| `gravity_well_client_smoke -PgravityRecord` | 240 at 20 fps (12 s) | `frame-%04d.png` in `build/gravity-well-client-smoke/RECORDING_DIR.txt`'s directory | `build/gravity-well-client-smoke/HUB_PASSED.txt`, server `build/gravity-well-smoke-run/PRESSURE_PASSED.txt` |
+| `necromancer_client_smoke -PnecroRecord` (colossus, swipe, casting, rush, walking) | 450 at 20 fps (22.5 s) | the directory named by `build/necromancer-client-smoke/RECORDING_DIR.txt` | `build/necromancer-client-smoke/NECRO_PASSED.txt` |
+| `necromancer_client_smoke -PrushRecord` (rush and Grasping Hands) | 300 at 20 fps (15 s) | same | same |
+| `necromancer_client_smoke -PdrainRecord` (Life Drain) | 300 at 20 fps (15 s) | same | same |
+| `necromancer_client_smoke -PsoulBoltRecord` (one slowed skull) | 160 at 20 fps (8 s) | same | same |
+| `nave_client_smoke -PintroVideo` (Guardian intro) | 482 at 20 fps (24.1 s) | `build/nave-client-smoke/screenshots/nave-intro-video-%03d.png`, from 001 | `build/nave-client-smoke/NAVE_CLIENT_PASSED.txt` |
+| `crypt_client_smoke -PintroVideo` (Necromancer intro) | 383 at 20 fps (19.15 s) | `build/crypt-client-smoke/screenshots/intro-video-%03d.png`, from 000 | `build/crypt-client-smoke/CRYPT_PASSED.txt` |
+| `crypt_client_smoke -PtransformVideo` (transformation) | about 692 at 20 fps; the receipt gives the count | `build/crypt-client-smoke/screenshots/transform-video-%03d.png`, from 000 | `build/crypt-client-smoke/CRYPT_PASSED.txt` |
+| `roc_intro_client_smoke -ProcIntroVideo` (Roc intro and opening summon) | one frame every `-ProcIntroEvery` ticks (default 2, so 10 fps) | `build/roc-intro-client-smoke/screenshots/roc-intro-video-%04d.png` | `build/roc-intro-client-smoke/ROC_INTRO_CLIENT_PASSED.txt` |
+| `pyre_king_intro_smoke -PpyreIntroVideo` | one frame every other tick (10 fps) | `build/pyre-king-intro-smoke/screenshots/intro-%05d.png`; check the first number | `build/pyre-king-intro-smoke/PYRE_KING_INTRO_PASSED.txt` |
+| `pyre_king_fight_smoke -PpyreFightRecord` | one frame every other tick of the free fight (10 fps) | `build/pyre-king-fight-smoke/screenshots/record-%05d.png`; check the first number | `build/pyre-king-fight-smoke/PYRE_KING_FIGHT_PASSED.txt` |
+| `pyre_king_fight_smoke -PpyreFightRecordCase=<name>[,<name>]` | one frame every other tick of those cases (10 fps) | `build/pyre-king-fight-smoke/screenshots/case-<name>-%05d.png` | same |
+
+Output names used so far, to keep clips findable: `.local-previews/updraft/updraft-gameplay.mp4`,
+`.local-previews/astral-double/astral-double-gameplay.mp4`,
+`.local-previews/gravity-well/gravity-well-gameplay.mp4`,
+`.local-previews/grasping-hands/necromancer-rush-gameplay.mp4`,
+`.local-previews/life-drain/life-drain-gameplay.mp4`.
+
+Limits that apply to every recording: the player is scripted, so nothing here verifies
+human input, multiplayer latency, balance or what is installed in Lunar. The Necromancer
+recordings show appearance only; run the Necromancer server fixtures for real damage,
+healing caps and cover rules. The rush recording's victim has iron-armor points so the
+combo is survivable, and the soul-bolt recording slows the projectile on purpose.
+
+### Storm Roc screenshots
+
+Run `roc_server_smoke`, then `roc_client_smoke` with `-PhubClientAssets`. Require
+`build/roc-smoke-run/ROC_SERVER_PASSED.txt` and `build/roc-client-smoke/ROC_CLIENT_PASSED.txt`.
+The client runs a scripted rehearsal in the authored summit and saves individual
+screenshots under `build/roc-client-smoke/screenshots/`; it records no video. Inspect the
+perch, spire hop and landing for rock contact, then lightning, the dive warning and
+impact, the stuck opening, every ground move and the takeoff, then phase two: the charge
+bolt, the storm from the sky and the ground, the tornadoes, the chain smash and live
+ground. The camera and challenger are scripted.
 
 ## Evidence retention
 
-The Nave client runner accepts `-PintroVideo` with `hubClientAssets` to record the
-Guardian intro in a hidden native window. It captures 482 consecutive frames,
-`build/nave-client-smoke/screenshots/nave-intro-video-001.png` through
-`nave-intro-video-482.png`; encode at 20 fps for 24.1 seconds. Stills cover each shot:
-the zombie's walk and look up, its view of the drop, the smash, the tear, the throw
-over the players and the point with the title. Require a fresh
-`build/nave-client-smoke/NAVE_CLIENT_PASSED.txt` and no `NAVE_CLIENT_FAILED.txt`.
-
-The Crypt client runner accepts `-PintroVideo` with `hubClientAssets` to record the
-Necromancer intro in a hidden native window. It captures 383 consecutive frames,
-`build/crypt-client-smoke/screenshots/intro-video-000.png` through `intro-video-382.png`;
-encode at 20 fps for 19.15 seconds. It checks the dark opening, restored lighting
-at the end of the fire wave, and rendered facing during the staff slam. Require a
-fresh `build/crypt-client-smoke/CRYPT_PASSED.txt` and no `CRYPT_FAILED.txt`.
-
-With `-PtransformVideo` instead, the same runner plays the intro, then the
-transformation cinematic in the crypt, and stops after it. It saves one frame per client
-tick while it plays, `build/crypt-client-smoke/screenshots/transform-video-000.png` onward
-(about 692; the receipt gives the count); encode them at 20 fps. It checks that
-the cinematic takes the camera, hides his hood in his point of view, puts the braziers out
-and darkens the crypt, flies at least 20 ghosts, and hands back to the colossus with the
-braziers relit, no ghost left and the player released. Its `CRYPT_PASSED.txt` names the
-transformation recording; it does not run the rest of the crypt checks.
-
-The Necromancer client runner accepts `-PnecroRecord` with `hubClientAssets`.
-It captures 450 framebuffer frames at 20 fps (22.5 seconds), covering the
-transformation taking the camera (skipped there; the crypt runner records it), the
-colossus, swipe, casting, rush and walking.
-`build/necromancer-client-smoke/RECORDING_DIR.txt` identifies the frame directory;
-require a fresh `NECRO_PASSED.txt` and no `NECRO_FAILED.txt`. Screenshots also cover
-the mage and transformation stages. This scripted recording does not verify
-human input, multiplayer feel or installation into Lunar.
-
-The same runner accepts `-PsoulBoltRecord` for an isolated skull view. It records
-160 frames at 20 fps (eight seconds), checking the custom Soul Bolt renderer,
-flight, synchronized stationary wall bite and removal. The deliberately slowed
-test projectile makes the repeating jaw motion visible; normal combat uses the
-existing faster homing volleys. Use the same recording directory and receipt paths
-as above and encode with 160 frames. Run the Necromancer server fixture as well
-to verify cover and player damage.
-
-Keep useful final native views, a concise result/limitation summary, and critical
-reproduction steps. Raw successful build/client logs are regenerable and usually
+Keep useful final native views, a concise result and limitation summary, and critical
+reproduction steps. Raw successful build and client logs are regenerable and usually
 need not be retained in docs. Keep failure evidence when it explains an unresolved
 or subtle regression. Historical receipts may include checksums but do not define
 the current installation. Verify source and installed JARs when that matters.
@@ -300,68 +298,3 @@ Do not delete `art/` sources, runtime assets, test fixtures, or the only explana
 of a recovery edge case while pruning screenshots. Check links and generator
 references first. `docs/archive/evidence/` holds selected historical evidence;
 `.local-previews/` and `build/` hold local outputs rather than required starting context.
-
-### Gravity Well recording
-
-`gravity_well_client_smoke.init.gradle` accepts `-PgravityRecord` and
-`-PhubClientAssets="$HOME/.lunarclient/shared/assets"`. Its hidden-window mode
-captures 240 frames at 20 fps (12 seconds), covering the throw, impact, pulling
-mobs, accelerating collapse buildup, outward burst, a second well and automatic
-collapse. Use the encoding
-recipe above with 240 frames and `.local-previews/gravity-well/gravity-well-gameplay.mp4`.
-`build/gravity-well-client-smoke/RECORDING_DIR.txt` identifies the raw frames.
-Require its fresh `HUB_PASSED.txt` and the dedicated fixture's
-`build/gravity-well-smoke-run/PRESSURE_PASSED.txt`, with no failure markers.
-The ordinary client mode exercises the bound fifth-slot input; recording sends
-scripted packets. Neither mode establishes human Lunar balance approval.
-
-### Necromancer rush and Grasping Hands recording
-
-Use `-PrushRecord` on `necromancer_client_smoke.init.gradle` with the existing
-`hubClientAssets` option. It captures 300 frames at 20 fps (15 seconds), showing
-an ordinary rush (with its windup lane)/grab/bite/throw and the phase-two Hands
-follow-up from a side camera; the scripted victim has iron-armor points so the combo
-is survivable, as in the playtest. The server fixture `necromancer_phase_smoke.init.gradle`
-checks the old slam and rescue, rush hit/miss after the aim locks, cover, single bite,
-throw, no teammate interrupt, nearest trapped target, the combo's damage against iron
-armor, Hands escape/visual expiry and cancellation. The native
-fixture also checks that all three hand rigs lean and curl their fingers during
-the grip, guarding against shared animation-processor state.
-
-The native recording uses a scripted player with no input client; the fixture
-integrates its released throw velocity. Actual combat owns the grip, bite and
-throw impulse. Require fresh `NECRO_PASSED.txt` and no failure receipt, then encode
-the current `RECORDING_DIR.txt` to `.local-previews/grasping-hands/necromancer-rush-gameplay.mp4`.
-This does not verify human movement input or multiplayer latency.
-
-### Life Drain recording
-
-Use `-PdrainRecord` with `necromancer_client_smoke.init.gradle` and the existing
-`hubClientAssets` option. It records 300 frames at 20 fps (15 seconds), showing
-the braid from an observer camera, first-person mist, a cover break and boss
-removal. Assertions check tracked cast timing, observer and third-person mist
-exclusion, fade completion and removal cleanup. Require a fresh `NECRO_PASSED.txt`
-and no failure receipt. Encode the current `RECORDING_DIR.txt` to
-`.local-previews/life-drain/life-drain-gameplay.mp4`; run the Necromancer server
-fixture for real damage, healing caps and cover rules. This does not establish
-human Lunar appearance or installation.
-
-### Storm Roc screenshots
-
-Run the dedicated fixture first, then the client runner with the existing `hubClientAssets`
-option. Require `build/roc-smoke-run/ROC_SERVER_PASSED.txt` and
-`build/roc-client-smoke/ROC_CLIENT_PASSED.txt`, with no corresponding failure receipt.
-The client runs a hidden, scripted rehearsal in the authored summit and saves individual
-screenshots with its master volume muted in the test profile. It saves those
-screenshots under `build/roc-client-smoke/screenshots/`. The 29 views include the spire hop
-just after push-off (clip ticks 10–16) and flight looking down, both from ground cameras,
-plus a dedicated spire landing view just after touchdown (`land` ticks `LAND_LEAD`+4 to +12). Both `spire_flight` and the charge's
-`flight` must reach the native client, and the charge bolt must be captured. Assertions check
-the actual pose's plain authored clip for a downward head scan, a client gaze focus on a living
-player beyond that scan, and release back close to the authored bill for three consecutive
-ticks within the same clip while the player remains in a different direction. Inspect the
-perch, spire hop and landing for rock contact. Also inspect lightning, dive warning/impact,
-stuck opening, all seven ground moves and takeoff. Then inspect phase
-two: the charge bolt, the storm sky and ground views, the three tornadoes, the chain smash's
-mark, hop and slam, and live ground. It does not record video. The camera and challenger are scripted; this does not verify human controls,
-multiplayer latency, balance or installation into Lunar.

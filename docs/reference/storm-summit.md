@@ -2,7 +2,8 @@
 
 The Storm Roc's realm, with a playable two-phase fight that survival players reach from an
 aerie on an Overworld peak, through the Roc's intro. The phase-change cinematic and the Roc's
-death remain planned in the [roadmap](../ROADMAP.md).
+death remain planned; the decisions behind the fight are in its
+[design notes](../design/storm-roc.md).
 The realm, the aerie and the encounter lifecycle live under `summit/`; combat lives under
 `entity/roc/`; the aerie's placement is `world/StormAerieStructure`.
 

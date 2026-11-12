@@ -27,7 +27,7 @@ import net.minecraft.util.math.Vec3d;
 
 /**
  * Client-only Nature spell visuals drawn as block nature (art/nature/blocknature). The server sends spell moments
- * (BlockNatureEvents); seeds in flight and wilting flowers are read from their entities. Nothing here decides a hit or
+ * (BlockNatureEvents); flower seeds in flight and wilting flowers are read from their entities. Nothing here decides a hit or
  * a heal. Each frame every live effect adds its opaque pieces to one mesh, drawn in a single cutout pass.
  */
 public final class BlockNatureEffects {
@@ -42,7 +42,7 @@ public final class BlockNatureEffects {
     /** Effects are drawn only this close to the camera. */
     static final double REACH = 96;
     private static final List<Fx> EFFECTS = new ArrayList<>();
-    /** Seed trails by entity id, so each seed starts one. */
+    /** Flower seed trails by entity id, so each seed starts one. */
     private static final Map<Integer, Fx> ATTACHED = new HashMap<>();
     /** Flower heads already seen wilting, so each sheds its pale petals once. */
     private static final Set<Integer> WILTED = new HashSet<>();
@@ -98,9 +98,12 @@ public final class BlockNatureEffects {
         Set<Integer> seen = new HashSet<>();
         for (Entity e : client.world.getEntities()) {
             if (e.isRemoved()) continue;
-            if (e instanceof SeedProjectileEntity seed && !ATTACHED.containsKey(e.getId())) {
-                Fx fx = new NatureFx.SeedTrail(seed);
-                ATTACHED.put(e.getId(), fx); add(fx);
+            if (e instanceof SeedProjectileEntity seed) {
+                // Only a flower's small seed leaves a trail; the caster's Seed flies clean.
+                if (seed.fromFlower() && !ATTACHED.containsKey(e.getId())) {
+                    Fx fx = new NatureFx.SeedTrail(seed);
+                    ATTACHED.put(e.getId(), fx); add(fx);
+                }
             } else if (e instanceof SentryBloomEntity head) {
                 seen.add(e.getId());
                 // A flower's last two seconds: a few pale petals fall from the drooping head.

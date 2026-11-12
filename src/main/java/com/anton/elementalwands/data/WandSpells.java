@@ -102,7 +102,7 @@ public final class WandSpells {
         spell(WizardAffinity.NATURE, Ability.PRIMARY, "seed", "Seed", "Launch a winged seed. Your flowers turn on whatever it hits."),
         new Spell("thorn_lash", WizardAffinity.NATURE, Ability.PRIMARY, "Thornbite",
                 "Bite one foe with a flytrap and turn your flowers on it. Heal 75% of health damage.", 500),
-        spell(WizardAffinity.NATURE, Ability.SECONDARY, "tendril_bloom", "Sentry Bloom", "Plant a flower. It shoots what your Seed hit, or the nearest monster, and heals you as it hits."),
+        spell(WizardAffinity.NATURE, Ability.SECONDARY, "tendril_bloom", "Sentry Bloom", "Throw a flower that shoots monsters and marked foes. Collect its health up close."),
         spell(WizardAffinity.NATURE, Ability.SECONDARY, "springbloom", "Springbloom",
                 "Throw a jump flower. Land on it to launch safely. Anyone can use or break it."),
         spell(WizardAffinity.NATURE, Ability.ULTIMATE, "overgrowth", "Full Bloom", "A petal wave: you and nearby allies regenerate and gain a shield. Your flowers grow two heads."),

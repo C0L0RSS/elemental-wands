@@ -41,19 +41,15 @@ public final class NatureCombat {
 
     /**
      * A flower's seed landed. It earns its own small charge (flowers are already limited by their
-     * number and pace, so they need no window) and returns a share of the health it took to the owner.
+     * number and pace, so they need no window). The health it took stays with the flower, for its
+     * owner to collect (see {@link FlowerTurretManager#bank}).
      */
-    public static void flowerDamageDealt(Entity owner, float healthDamage) {
+    public static void flowerDamageDealt(Entity owner) {
         if (!(owner instanceof ServerPlayerEntity player)) return;
         // Grown flowers are Full Bloom's own doing, and an ultimate does not refill itself.
         AbstractWandItem.onWandDamageDealt(player, FlowerTurretManager.DAMAGE,
                 player.getMainHandStack().getItem() instanceof AbstractWandItem && !FullBloomManager.blooming(player) ? FLOWER_CHARGE : 0,
                 com.anton.elementalwands.data.WizardAffinity.NATURE);
-        float heal = healthDamage * FlowerTurretManager.HEAL_SHARE;
-        if (heal <= 0 || !player.isAlive() || player.getHealth() >= player.getMaxHealth()) return;
-        SpellCombat.heal(player, heal, player, com.anton.elementalwands.data.WizardAffinity.NATURE);
-        if (player.getEntityWorld() instanceof net.minecraft.server.world.ServerWorld world)
-            BlockNatureEvents.send(world, BlockNatureEvents.HEAL, player.getId(), player.getEntityPos(), net.minecraft.util.math.Vec3d.ZERO, 0);
     }
 
     private static void reward(Entity owner, float damage, int points) {

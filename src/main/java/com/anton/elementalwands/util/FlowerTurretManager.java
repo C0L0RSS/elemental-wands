@@ -28,11 +28,13 @@ import net.minecraft.entity.mob.Angerable;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.Monster;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
@@ -44,7 +46,7 @@ import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
 
 /**
- * The Nature wand's flowers. Sentry Bloom plants one where the caster aims; each flower spits a
+ * The Nature wand's flowers. Sentry Bloom throws a bud that takes root where it lands; each flower spits a
  * small seed at an enemy every two seconds until it wilts. A flower looks at whatever its owner's
  * own Seed or Thornbite last hit (the "seed mark"), and otherwise at the nearest hostile mob,
  * and its head turns to show it.
@@ -53,9 +55,14 @@ import net.minecraft.world.World;
  * main stem rises and a smaller second head opens on a branch; the two fire in turn, each as fast as the one head did, and each at
  * its own target when there are two. A grown flower does not age.
  *
- * <p>A flower is scenery with a job. Its base is a block with no collision and no outline, and
- * its heads are {@link SentryBloomEntity}s nothing can touch: nothing can stand on a flower, be
- * lifted by it, target it or break it by hand. It treats a boss as it treats any enemy.
+ * <p>A flower keeps a share of the health its seeds take. Its owner collects that by using the
+ * flower from close up, which heals them and uses the flower up; anything else that ends the
+ * flower wastes it.
+ *
+ * <p>A flower is never in the way. Its base is a block with no collision and its heads are
+ * {@link SentryBloomEntity}s nothing can touch: nothing can stand on a flower or be lifted by it,
+ * and no mob targets it. A player can aim at it and break it with one hit. It treats a boss as
+ * it treats any enemy.
  */
 public final class FlowerTurretManager {
     public static final int COOLDOWN = 120;
@@ -63,12 +70,15 @@ public final class FlowerTurretManager {
     public static final int BLOOM_COOLDOWN = 60;
     public static final int MAX_FLOWERS = 3;
     public static final int LIFETIME = 480;
-    public static final double PLANT_RANGE = 16;
     public static final int FIRE_INTERVAL = 40;
     public static final double RANGE = 16;
     public static final float DAMAGE = 2.5f;
-    /** The share of the health a flower's seed takes that returns to the flower's owner. */
-    public static final float HEAL_SHARE = 0.2f;
+    /** The share of the health a flower's seed takes that the flower keeps for its owner. */
+    public static final float BANK_SHARE = 0.2f;
+    /** The most health one flower holds. */
+    public static final float BANK_CAP = 8;
+    /** How close a player's eyes must be to a flower to collect from it or break it with a wand click. */
+    public static final double CLICK_REACH = 3;
     /** A flower spends its last two seconds wilting: head down, no more seeds. */
     public static final int WILT_TICKS = 40;
     public static final double SEED_SPEED = 1.4;
@@ -81,6 +91,8 @@ public final class FlowerTurretManager {
     private static final int UNFURL_TICKS = 12;
     private static final int RESCAN_TICKS = 5;
     private static final int FLOOR_SEARCH_DEPTH = 12;
+    /** A flower holding health shows hearts this often. */
+    private static final int HEART_TICKS = 30;
     /** The manager ends a flower itself; the block tracker's own expiry is only a safety net. */
     private static final int TRACKED_TICKS = LIFETIME + 2400;
 
@@ -93,6 +105,8 @@ public final class FlowerTurretManager {
         SentryBloomEntity twin;
         int plantTick;
         int nextShot, nextTwinShot;
+        /** Health its seeds have taken for its owner, until they collect it. */
+        float banked;
         Flower(UUID owner, BlockPos pos, TemporaryBlockManager.TemporaryPlacement placement, SentryBloomEntity head, int now) {
             this.owner = owner; this.pos = pos; this.placement = placement; this.head = head;
             this.plantTick = now; this.nextShot = now + FIRST_SHOT_DELAY;
@@ -111,17 +125,11 @@ public final class FlowerTurretManager {
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> { FLOWERS.clear(); MARKS.clear(); });
     }
 
-    /** Where a cast from this caster would plant, or null when the aim finds no ground. */
-    public static BlockPos plantSpot(ServerWorld world, PlayerEntity caster) {
-        Vec3d start = caster.getEyePos();
-        Vec3d end = start.add(caster.getRotationVec(1.0f).normalize().multiply(PLANT_RANGE));
-        BlockHitResult hit = world.raycast(new RaycastContext(start, end,
-                RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, caster));
-        BlockPos from;
-        if (hit.getType() == HitResult.Type.MISS) from = BlockPos.ofFloored(end);
-        else if (hit.getSide() == Direction.UP) from = hit.getBlockPos();
-        // A wall or ceiling: plant on the ground in front of or under it.
-        else from = hit.getBlockPos().offset(hit.getSide());
+    /**
+     * Where a bud that came down in this cell takes root: on the ground there, or on the first
+     * ground below it. Null when there is none in reach or something already grows on it.
+     */
+    public static BlockPos rootSpot(ServerWorld world, BlockPos from) {
         for (int down = 0; down <= FLOOR_SEARCH_DEPTH; down++) {
             BlockPos floor = from.down(down);
             if (!hasFloorTop(world, floor)) continue;
@@ -177,6 +185,84 @@ public final class FlowerTurretManager {
     public static SentryBloomEntity twinAt(ServerWorld world, BlockPos pos) {
         Flower flower = at(world, pos);
         return flower == null ? null : flower.twin;
+    }
+
+    /** The health the flower planted here holds for its owner. */
+    public static float banked(ServerWorld world, BlockPos pos) {
+        Flower flower = at(world, pos);
+        return flower == null ? 0 : flower.banked;
+    }
+
+    /** A seed this flower spat took health: the flower keeps a share of it for its owner, up to its cap. */
+    public static void bank(ServerWorld world, BlockPos pos, Entity owner, float healthDamage) {
+        Flower flower = pos == null ? null : at(world, pos);
+        if (flower == null || owner == null || !flower.owner.equals(owner.getUuid()) || !(healthDamage > 0)) return;
+        flower.banked = Math.min(BANK_CAP, flower.banked + healthDamage * BANK_SHARE);
+    }
+
+    /** The flower this player is aiming at from within reach, or null. */
+    private static Flower aimed(ServerWorld world, PlayerEntity player, double reach) {
+        Vec3d eye = player.getEyePos();
+        BlockHitResult hit = world.raycast(new RaycastContext(eye, eye.add(player.getRotationVec(1.0f).multiply(reach)),
+                RaycastContext.ShapeType.OUTLINE, RaycastContext.FluidHandling.NONE, player));
+        return hit.getType() == HitResult.Type.BLOCK && world.getBlockState(hit.getBlockPos()).isOf(ModSpellBlocks.NATURE_SEEDLING)
+                ? at(world, hit.getBlockPos()) : null;
+    }
+
+    /**
+     * A wand click on a flower from close up breaks it, whoever planted it. What it held is
+     * wasted. Returns whether the click was spent on a flower.
+     */
+    public static boolean tryBreakAimed(ServerPlayerEntity player) {
+        ServerWorld world = player.getEntityWorld();
+        Flower flower = aimed(world, player, CLICK_REACH);
+        if (flower == null) return false;
+        end(world, flower);
+        return true;
+    }
+
+    /**
+     * A wand click on the player's own flower from close up collects what it holds. Returns
+     * whether the click was spent on the flower, which it is even when there was nothing to take.
+     */
+    public static boolean tryCollectAimed(ServerPlayerEntity player) {
+        ServerWorld world = player.getEntityWorld();
+        Flower flower = aimed(world, player, CLICK_REACH);
+        if (flower == null || !flower.owner.equals(player.getUuid())) return false;
+        collect(world, player, flower);
+        return true;
+    }
+
+    /** The same collection for an owner who uses the flower's block with something other than a wand in hand. */
+    public static boolean collectAt(ServerWorld world, ServerPlayerEntity player, BlockPos pos) {
+        Flower flower = at(world, pos);
+        if (flower == null || !flower.owner.equals(player.getUuid()) || player.isSpectator()
+                || player.getEyePos().squaredDistanceTo(Vec3d.ofCenter(pos)) > (CLICK_REACH + 0.5) * (CLICK_REACH + 0.5)) return false;
+        collect(world, player, flower);
+        return true;
+    }
+
+    /** The owner takes what the flower holds: it heals them and uses the flower up. */
+    private static void collect(ServerWorld world, ServerPlayerEntity player, Flower flower) {
+        if (flower.banked <= 0) { player.sendMessage(Text.literal("This flower holds no health yet."), true); return; }
+        if (player.getHealth() >= player.getMaxHealth()) { player.sendMessage(Text.literal("You are at full health."), true); return; }
+        SpellCombat.heal(player, flower.banked, player, com.anton.elementalwands.data.WizardAffinity.NATURE);
+        BlockNatureEvents.send(world, BlockNatureEvents.HEAL, player.getId(), player.getEntityPos(), Vec3d.ZERO, 0);
+        Vec3d at = Vec3d.ofBottomCenter(flower.pos);
+        world.spawnParticles(ParticleTypes.HEART, at.x, at.y + 0.9, at.z, hearts(flower), 0.25, 0.2, 0.25, 0.02);
+        end(world, flower);
+    }
+
+    private static int hearts(Flower flower) {
+        return Math.max(1, Math.round(flower.banked / 2));
+    }
+
+    /** Ends a flower from outside the world tick. */
+    private static void end(ServerWorld world, Flower flower) {
+        List<Flower> flowers = FLOWERS.get(world.getRegistryKey());
+        if (flowers == null || !flowers.remove(flower)) return;
+        wilt(world, flower);
+        if (flowers.isEmpty()) FLOWERS.remove(world.getRegistryKey());
     }
 
     public static List<BlockPos> positions(ServerWorld world, UUID owner) {
@@ -238,6 +324,10 @@ public final class FlowerTurretManager {
             if (state.get(NatureSeedlingBlock.STAGE) != stage || state.get(NatureSeedlingBlock.GROWN) != grown)
                 com.anton.elementalwands.arena.GuardianArenaManager.setTemporarySpellBlock(world, flower.pos,
                         state.with(NatureSeedlingBlock.STAGE, stage).with(NatureSeedlingBlock.GROWN, grown));
+            // A flower holding health shows it: more hearts as it fills.
+            if (flower.banked > 0 && Math.floorMod(now + flower.pos.hashCode(), HEART_TICKS) == 0)
+                world.spawnParticles(ParticleTypes.HEART, flower.pos.getX() + 0.5, flower.pos.getY() + (grown ? 2.0 : 1.2),
+                        flower.pos.getZ() + 0.5, hearts(flower), 0.2, 0.1, 0.2, 0);
             if (age >= LIFETIME - WILT_TICKS) {
                 if (!flower.head.wilting()) { flower.head.aim(null); flower.head.wilt(); }
                 continue;
@@ -331,7 +421,7 @@ public final class FlowerTurretManager {
         // The seed leaves the mouth of the turned head, not the middle of the stem.
         Vec3d muzzle = pivot.add(direction.multiply(SentryBloomEntity.MUZZLE_OFFSET * head.scale()));
         head.fired();
-        world.spawnEntity(new SeedProjectileEntity(world, owner, muzzle, direction.multiply(SEED_SPEED), target));
+        world.spawnEntity(new SeedProjectileEntity(world, owner, muzzle, direction.multiply(SEED_SPEED), target, pos));
         // The spit: pollen and a petal or two thrown up from the mouth.
         BlockNatureEvents.send(world, BlockNatureEvents.SHOT, head.getId(), muzzle, direction, head.scale());
         world.playSound(null, pos, ModSounds.SPELL_NATURE_SENTRY_BLOOM_SHOT, SoundCategory.PLAYERS, 0.35f, 1.0f);

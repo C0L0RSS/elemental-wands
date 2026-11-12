@@ -24,8 +24,8 @@ import net.minecraft.world.World;
 
 /**
  * The Nature wand's seed. Thrown by the caster it deals a light direct hit and marks its target
- * for the caster's flowers. A flower spits a smaller one that flies straight, hits only enemies
- * and never opens a hurt window of its own. A seed that lands on the ground scatters pollen.
+ * for the caster's flowers. A flower spits a smaller one that flies straight, hits only enemies,
+ * never opens a hurt window of its own, and leaves a share of the health it takes with its flower. A seed that lands on the ground scatters pollen.
  */
 public class SeedProjectileEntity extends ProjectileEntity {
 
@@ -41,6 +41,8 @@ public class SeedProjectileEntity extends ProjectileEntity {
     private int ticksAlive;
     /** A flower's seed keeps the target it was fired at, so that target is hit even if it is not a monster. */
     private Entity intended;
+    /** Where the flower that spat this seed stands; it keeps a share of the health the seed takes. */
+    private net.minecraft.util.math.BlockPos flower;
 
     public SeedProjectileEntity(EntityType<? extends SeedProjectileEntity> type, World world) {
         super(type, world);
@@ -59,13 +61,20 @@ public class SeedProjectileEntity extends ProjectileEntity {
         setVelocity(dir.multiply(INITIAL_SPEED));
     }
 
-    /** A flower's seed: fired from the flower, credited to the flower's owner. */
+    /** A flower's seed with no flower behind it to keep what it takes. */
     public SeedProjectileEntity(ServerWorld world, LivingEntity owner, Vec3d from, Vec3d velocity, Entity intended) {
+        this(world, owner, from, velocity, intended, null);
+    }
+
+    /** A flower's seed: fired from the flower planted at {@code flower}, credited to the flower's owner. */
+    public SeedProjectileEntity(ServerWorld world, LivingEntity owner, Vec3d from, Vec3d velocity, Entity intended,
+            net.minecraft.util.math.BlockPos flower) {
         super(ModEntities.SEED_PROJECTILE, world);
         setOwner(owner);
         setNoGravity(true);
         dataTracker.set(FROM_FLOWER, true);
         this.intended = intended;
+        this.flower = flower;
         setPosition(from.x, from.y, from.z);
         setVelocity(velocity);
     }
@@ -99,12 +108,13 @@ public class SeedProjectileEntity extends ProjectileEntity {
             return;
         }
 
-        // Clients draw its trail of pollen and leaves from the entity itself (BlockNatureEffects).
+        // Clients draw a flower seed's thin pollen trail from the entity itself (BlockNatureEffects).
 
         HitResult hit = ProjectileUtil.getCollision(this, this::canHit);
         // ProjectileUtil uses COLLIDER raycasts, which skip non-collision blocks like
         // flowers, tall grass, and saplings. Do a secondary OUTLINE raycast so the seed
         // also registers a hit on those blocks (and uses whichever is closer to the start).
+        // A Sentry Bloom is the exception: seeds fly through one, and leave from inside their own.
         if (hit.getType() != HitResult.Type.ENTITY) {
             Vec3d start = getEntityPos();
             Vec3d end = start.add(getVelocity());
@@ -113,7 +123,8 @@ public class SeedProjectileEntity extends ProjectileEntity {
                     RaycastContext.FluidHandling.NONE, this));
             if (outlineHit.getType() == HitResult.Type.BLOCK) {
                 BlockState outlineState = sw.getBlockState(outlineHit.getBlockPos());
-                if (!outlineState.isAir() && outlineState.getFluidState().isEmpty()) {
+                if (!outlineState.isAir() && outlineState.getFluidState().isEmpty()
+                        && !outlineState.isOf(com.anton.elementalwands.registry.ModSpellBlocks.NATURE_SEEDLING)) {
                     if (hit.getType() == HitResult.Type.MISS
                             || outlineHit.getPos().squaredDistanceTo(start)
                                     < hit.getPos().squaredDistanceTo(start)) {
@@ -176,7 +187,9 @@ public class SeedProjectileEntity extends ProjectileEntity {
         if (com.anton.elementalwands.util.SpellCombat.damage(living, sw, new DamageSource(type, this, owner),
                 FlowerTurretManager.DAMAGE, owner, com.anton.elementalwands.data.WizardAffinity.NATURE)) {
             struck.timeUntilRegen = cooldown;
-            NatureCombat.flowerDamageDealt(owner, struck instanceof LivingEntity body ? Math.max(0, before - Math.max(0, body.getHealth())) : 0);
+            NatureCombat.flowerDamageDealt(owner);
+            // The flower keeps a share of the health it took, for its owner to collect.
+            FlowerTurretManager.bank(sw, flower, owner, struck instanceof LivingEntity body ? Math.max(0, before - Math.max(0, body.getHealth())) : 0);
         }
         com.anton.elementalwands.util.BlockNatureEvents.send(sw, com.anton.elementalwands.util.BlockNatureEvents.SEED_HIT, -1, getEntityPos(), Vec3d.ZERO, 1);
     }

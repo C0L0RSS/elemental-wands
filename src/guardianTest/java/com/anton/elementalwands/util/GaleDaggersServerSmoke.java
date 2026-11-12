@@ -35,7 +35,7 @@ public final class GaleDaggersServerSmoke implements ModInitializer {
             require(WandProgression.owns(owner,WandSpells.find(GaleDaggers.ID)),"Purchase failed");
             WandLoadouts.equip(owner,"WIND",3,GaleDaggers.ID);owner.setYaw(0);owner.setPitch(0);
             require(WandSpells.forAffinity(WizardAffinity.WIND).size()>=5,"Missing Wind spells");
-            require(WindFanRules.RANGE==7 && WindFanRules.damage(0)==7 && WindFanRules.damage(7)==4,"Primary range/falloff mismatch");
+            require(WindFanRules.RANGE==20 && WindFanRules.damage(0)==7 && WindFanRules.damage(10)==5.5f && WindFanRules.damage(20)==4,"Primary range/falloff mismatch");
         }
         if(owner==null)return;
         owner.setVelocity(Vec3d.ZERO);target.setVelocity(Vec3d.ZERO);target.setPosition(.5,100,20.5);

@@ -100,8 +100,8 @@ public final class WindBlockWindClientSmoke implements ClientModInitializer {
             }
             if (q == 85) {
                 reset(c, server, pass, 90, 0);
-                // The miss lane points west at a target twelve blocks away, beyond Shear's seven-block range.
-                cast(server, p -> positionTarget(p, -11.5, .5));
+                // The miss lane points west at a target twenty-two blocks away, beyond Shear's twenty-block range.
+                cast(server, p -> positionTarget(p, -21.5, .5));
                 if (pass == 1) side(c, server, new Vec3d(-3, floor + 4, -8), new Vec3d(-4, floor + 1.5, .5));
             }
             if (q == 100) cast(server, p -> { aim(p, 90, 0); com.anton.elementalwands.item.WindAbilityHandler.castPrimary(p.getEntityWorld(), p, p.getMainHandStack()); });

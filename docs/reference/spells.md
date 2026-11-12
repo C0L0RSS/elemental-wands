@@ -73,9 +73,10 @@ Owners: `FireAbilityHandler`, `FireBuildManager`/`FireBuildRules`,
 
 ## Wind
 
-Sky Shear fires a short three-crescent fan centered on the crosshair, with a
-strict seven-block range limit, damage falling from 7 to 4, and one hit per enemy
-per cast. Waylay Dash has two separately
+Sky Shear fires a three-crescent fan centered on the crosshair, with a strict
+20-block range limit and one hit per enemy per cast. Base damage falls linearly
+from 7 up close to 4 at maximum range (5.5 at ten blocks), retaining pressure while
+repositioning around a boss. Solid cover stops the blades. Waylay Dash has two separately
 recovering charges (five seconds per charge). Its base and chained movement
 impulses are 75% of their former strength: 1.5 base and 1.875 for the second
 chained dash. Existing momentum, aim, collisions and terrain still affect total

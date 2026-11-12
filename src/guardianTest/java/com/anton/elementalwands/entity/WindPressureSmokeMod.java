@@ -6,6 +6,7 @@ import java.nio.file.*;
 import java.util.*;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.minecraft.block.Blocks;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.EquipmentSlot;
@@ -53,25 +54,27 @@ public final class WindPressureSmokeMod implements ModInitializer {
             report.append("Two dash charges retained; recharge occurs exactly at 100 ticks.\n");
         }
         if(boss==null)return;
-        if(tick==30) {player.setHeadYaw(0);health=boss.getHealth();WindAbilityHandler.castPrimary(world,player,wand);}
+        if(tick==30) {player.setHeadYaw(0);health=boss.getHealth();firePrimary(world);}
         if(tick==36) {
             float loss=health-boss.getHealth();require(loss>3.75 && loss<=7,"Fan damage stacked or center missed: "+loss);
             require(Math.abs(boss.getVelocity().y)<.1 && boss.getY()<y+.1,"Wind lifted resistant boss");
             boss.addVelocity(0,8,0);require(boss.getVelocity().y<.1,"External launch bypassed boss resistance");
             boss.testAttack(player,GuardianCombatRules.Attack.SHOCKWAVE);
         }
-        if(tick==50 || tick==70 || tick==90)WindAbilityHandler.castPrimary(world,player,wand);
+        if(tick==50 || tick==70 || tick==90)firePrimary(world);
         if(tick>36 && tick<=105)require(boss.getY()<y+.15,"Stored impulse launched Guardian after attack: "+boss.getY());
         if(tick==106) {
             report.append("Real three-blade cast hits centered boss once; repeated fire through slam/recovery never launches it.\n");
             boss.discard();
-            zombie=EntityType.ZOMBIE.create(world,SpawnReason.COMMAND);zombie.setPosition(.5,y,8.5);zombie.setAiDisabled(true);zombie.equipStack(EquipmentSlot.HEAD,new ItemStack(net.minecraft.item.Items.CARVED_PUMPKIN));zombie.setInvulnerable(false);world.spawnEntity(zombie);zombie.setOnGround(true);
-            player.setHeadYaw(0);health=zombie.getHealth();WindAbilityHandler.castPrimary(world,player,wand);
+            zombie=EntityType.ZOMBIE.create(world,SpawnReason.COMMAND);zombie.setPosition(.5,y,18.5);zombie.setAiDisabled(true);zombie.equipStack(EquipmentSlot.HEAD,new ItemStack(net.minecraft.item.Items.CARVED_PUMPKIN));zombie.setInvulnerable(false);world.spawnEntity(zombie);zombie.setOnGround(true);
+            player.setPosition(.5,y,.5);player.setVelocity(Vec3d.ZERO);
+            player.setYaw(0);player.setHeadYaw(0);player.setPitch(0);health=zombie.getHealth();
         }
-        if(tick==115)require(zombie.getHealth()==health,"Wind projectile exceeded strict 7-block range");
-        if(tick==130) {zombie.setPosition(.5,y,5.5);zombie.setVelocity(Vec3d.ZERO);player.setHeadYaw(0);health=zombie.getHealth();WindAbilityHandler.castPrimary(world,player,wand);}
+        if(tick==110)firePrimary(world); // Full one-second recovery after the tick-90 cast.
+        if(tick==120)require(zombie.getHealth()<health,"Sky Shear missed an ordinary mob eighteen blocks away");
+        if(tick==130) {zombie.setPosition(.5,y,22.5);zombie.setVelocity(Vec3d.ZERO);player.setHeadYaw(0);health=zombie.getHealth();firePrimary(world);}
         if(tick==140) {
-            require(zombie.getHealth()<health,"Centered ordinary mob missed the new fan");
+            require(zombie.getHealth()==health,"Wind projectile exceeded strict 20-block range");
             zombie.discard();
             var ordinary=EntityType.ZOMBIE.create(world,SpawnReason.COMMAND);ordinary.setOnGround(true);
             var blade=new VacuumBladeEntity(world,player,new Vec3d(0,0,1),false,new HashSet<>());
@@ -81,7 +84,7 @@ public final class WindPressureSmokeMod implements ModInitializer {
             var rejected=new VacuumBladeEntity(world,player,new Vec3d(0,0,1),false,new HashSet<>());
             rejected.onEntityHit(new EntityHitResult(ordinary));
             require(ordinary.getHealth()==after && ordinary.getVelocity().equals(recoil),"Rejected damage still adds knockback");
-            report.append("7-block cutoff rejects distant target; center blade hits close mob; accepted hits push ordinary mobs, rejected hits do not.\n");
+            report.append("Center blade hits an ordinary mob eighteen blocks away; 20-block cutoff rejects a target at twenty-two; accepted hits push ordinary mobs, rejected hits do not.\n");
             boss=new FracturedGuardianEntity(ModEntities.FRACTURED_GUARDIAN,world);boss.setPosition(.5,y,.5);boss.stopReview();world.spawnEntity(boss);
             player.setPosition(.5,y,12.5);player.setVelocity(Vec3d.ZERO);
         }
@@ -187,9 +190,33 @@ public final class WindPressureSmokeMod implements ModInitializer {
         }
         if(tick==540) {
             report.append("Actual director reserves a ready laser after two other attacks in BOTH phases, ahead of hover and a pending fan.\n");
+            boss.stopReview();boss.discard();
+            player.setPosition(.5,y,.5);player.setVelocity(Vec3d.ZERO);player.setNoGravity(false);player.setInvulnerable(true);
+            player.setYaw(0);player.setHeadYaw(0);player.setBodyYaw(0);player.setPitch(0);
+            boss=new FracturedGuardianEntity(ModEntities.FRACTURED_GUARDIAN,world);
+            boss.setPosition(.5,y,18.5);boss.stopReview();world.spawnEntity(boss);
+            health=boss.getHealth();firePrimary(world);
+        }
+        if(tick==555) {
+            float loss=health-boss.getHealth();
+            require(loss>0 && loss<=7,"Sky Shear missed or stacked damage on a boss eighteen blocks away: "+loss);
+            require(Math.abs(boss.getVelocity().y)<.1 && boss.getY()<y+.1,"Long-range Sky Shear lifted resistant boss");
+            report.append("Sky Shear hits the Guardian eighteen blocks away without stacking blades or lifting the boss.\n");
+            boss.stopReview();boss.setPosition(.5,y,18.5);boss.setVelocity(Vec3d.ZERO);
+            for(int x=-4;x<=4;x++)for(int dy=0;dy<=5;dy++)world.setBlockState(new BlockPos(x,y+dy,10),Blocks.STONE.getDefaultState());
+        }
+        if(tick==560) {health=boss.getHealth();firePrimary(world);}
+        if(tick==575) {
+            require(boss.getHealth()==health,"Long-range Sky Shear penetrated solid cover");
+            report.append("Solid cover still stops the longer-range blades before a distant boss.\n");
             boss.stopReview();Files.writeString(Path.of("PRESSURE_PASSED.txt"),report);System.out.println("WIND PRESSURE PASSED\n"+report);server.stop(false);
         }
-        if(tick>550)throw new AssertionError("Wind/pressure fixture timed out");
+        if(tick>585)throw new AssertionError("Wind/pressure fixture timed out");
+    }
+    private void firePrimary(ServerWorld world) {
+        WindAbilityHandler.castPrimary(world,player,wand);
+        require(world.getEntitiesByClass(VacuumBladeEntity.class,player.getBoundingBox().expand(1),
+                blade->blade.getOwner()==player && blade.age==0).size()==3,"Primary cast did not spawn exactly three blades");
     }
     private String rotationState()throws Exception {
         var field=FracturedGuardianEntity.class.getDeclaredField("combat");field.setAccessible(true);var combat=field.get(boss);

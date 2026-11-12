@@ -53,7 +53,7 @@ public final class WandSpells {
                 case "astral_double" -> "45s / Teleport: 64 blocks";
                 case "updraft" -> "Rise: ~10 blocks";
                 case "gale_daggers" -> "40 blocks / 3 x 5 damage";
-                case "sky_shear" -> "Range: 7 blocks";
+                case "sky_shear" -> "Range: 20 blocks";
                 case "faultline" -> "Range: 20 / Launch + 0.6s interrupt";
                 case "stone_charge" -> "Full speed: 2.5s / Max run: 5s";
                 case "seed" -> "4 damage / Marks a target";
@@ -85,7 +85,7 @@ public final class WandSpells {
                 "Hold to aim; release to leap. Land with a fire shockwave. Closer enemies take more damage.", 500),
         new Spell("flashover", WizardAffinity.FIRE, Ability.SECONDARY, "Flashover",
                 "Stick bombs to foes or walls. Alternate: 0.15s blasts. Throw every 1s; expires in 30s.", 500),
-        spell(WizardAffinity.WIND, Ability.PRIMARY, "sky_shear", "Sky Shear", "Release three cutting crescents in a narrow fan ahead of you."),
+        spell(WizardAffinity.WIND, Ability.PRIMARY, "sky_shear", "Sky Shear", "Release three cutting crescents in a narrow fan up to 20 blocks. Hits are stronger up close."),
         spell(WizardAffinity.WIND, Ability.SECONDARY, "waylay_dash", "Waylay Dash", "Dash to reposition. Two charges recover individually over time."),
         spell(WizardAffinity.WIND, Ability.ULTIMATE, "zephyr_strike", "Zephyr Strike", "Take flight with temporary wings, then deliver a powerful landing impact."),
         new Spell("gale_daggers", WizardAffinity.WIND, Ability.SECONDARY, "Gale Daggers",

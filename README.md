@@ -80,7 +80,8 @@ plants sticky embers on enemies or surfaces for alternate-input detonation.
 
 ### Wind
 
-**Sky Shear** releases three cutting crescents in a narrow fan. **Waylay Dash**
+**Sky Shear** releases three cutting crescents in a narrow fan up to 20 blocks,
+with stronger hits up close. **Waylay Dash**
 provides two independently recovering dash charges. **Zephyr Strike** temporarily
 grants wings, launches you into the air, and delivers a landing impact.
 

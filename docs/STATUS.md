@@ -18,13 +18,12 @@ It records known verification limits; it is not a fresh installation receipt.
     reviewed. The line a Haul flies burns. A player who only circles a pillar is hooked
     off it but, in the fixture, runs clear of the Overhead that follows.
   - **Intro (Nov 11):** a 58 s cinematic from the developer's idea (the statue on his throne,
-    the web of chains, the falling sword) plays by `/ew pyreking intro`. First pass; they
-    have not seen it in game.
+    the web of chains, the falling sword) plays when the Burned Gate opens, or by
+    `/ew pyreking intro`.
   - **The Burned Gate (Nov 11):** the way in, from the developer's idea: a bridge to nowhere
     over a Nether lava lake, ending at a lone gate whose arch is filled with fire and bound
     with chains. Touching the king's seal on them twice takes everyone nearby to the hall;
-    a win or a death brings them back before the gate. First pass; they have seen
-    screenshots only.
+    a win or a death brings them back before the gate.
   - **First playtest (Nov 11):** the developer beat him on the second try with a level 1
     Space wand: "pretty clean, but really easy", slow between attacks, all throws at range,
     the spinning cut easy to leave. Answered the same day and not yet played: every clip has
@@ -34,8 +33,10 @@ It records known verification limits; it is not a fresh installation receipt.
   - **Second playtest (Nov 11):** "really good". Answered the same day, not yet played: the
     Chain Scythe strikes only from 5 blocks out and is not used close in; a win sends everyone
     home after ten seconds; mining the hall never starts.
-  - **Pending:** the developer's next playtest in Lunar, and their look at the intro.
-    Damage is set for plain diamond to netherite armor (Nov 11); his health is a first guess.
+  - **Third playtest (Nov 11):** the developer played the whole way through in Lunar, from the
+    gate through the intro and the fight: "really good". Merged to main the same day.
+  - **Pending:** a co-op playtest. Damage is set for plain diamond to netherite armor (Nov 11);
+    his health is a first guess.
   - **Pending:** the Chain Scythe's bowed chain in the workshop.
   - **Weak:** the warnings and fire are particles; he has no sounds of his own, no death
     clip and no reward.

@@ -426,8 +426,8 @@ mesh later, in a deferred callback.
 
 ## The Burned Gate
 
-The way in for Survival players. It is a first pass (November 11, 2026); the developer has
-seen it only in the test's screenshots.
+The way in for Survival players, built November 11, 2026. The developer played it in Lunar the
+same day, through the intro and the fight: "really good".
 
 - **The idea is the developer's** (Nov 11): "a bridge leading off to nowhere over a lake of
   lava", with a gate that "looks like a portal". They chose a chained gate with the king's

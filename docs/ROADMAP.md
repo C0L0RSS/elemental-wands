@@ -617,9 +617,9 @@ After the pace was raised the developer fought him again: "it was really good."
   chain winch, a war horn) the developer chose the chained gate.
 - **Decided (Nov 11):** the place is the developer's idea: "a bridge leading off to nowhere
   over a lake of lava. But the gate looks like a portal."
-- **Built (Nov 11), first pass, seen by the developer only in screenshots:** the Burned Gate.
-  See [Pyre King](reference/pyre-king.md#the-burned-gate). Touching its seal twice is what
-  sets the chains burning.
+- **Built (Nov 11):** the Burned Gate. See [Pyre King](reference/pyre-king.md#the-burned-gate).
+  Touching its seal twice is what sets the chains burning. The developer played it through the
+  intro and the fight the same day: "really good".
 - **Decided:** his intro is the developer's own idea. He sits slumped on his throne like a
   statue. Chains are webbed round the whole throne room and round him, and the greatsword
   hangs from the ceiling on one of them, high above and just in front of him. The chains

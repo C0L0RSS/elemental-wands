@@ -101,15 +101,43 @@ python3 tools/check_assets.py
 `tools/check_assets.py` runs every asset and export check, compares the installed
 effect atlases with their sources, and tests the built JAR. It takes several minutes;
 `--only <text>` runs just the checks whose path contains that text, and `--list` prints
-them. It needs Node as well as Python, and fails if a check changes a tracked file. On
-Windows use `py -3` in place of `python3`. When a generator gains a `--check`, add it to
-the list in that script, not to this guide.
+them. It needs Node as well as Python (with Pillow and NumPy), and fails if a check
+changes a tracked file. When a generator gains a `--check`, add it to the list in that
+script, not to this guide.
 
 Run the relevant server/client fixture when changing behavior it covers. Do not
 claim a fixture passed from an old report.
 
 Documentation-only changes need `./gradlew checkDocs` and `git diff --check`; they do
 not require a gameplay build.
+
+## Two machines
+
+The project is worked on from a Mac and a Windows PC that share it through git. Commands
+in these documents are written in one machine's form, usually the Mac's; translate them
+with this table. The PC column was written from the Mac. A cell marked *unverified* has
+not been confirmed on that machine: confirm it when your task needs it, then replace it.
+
+| | Mac | Windows PC |
+| --- | --- | --- |
+| Shell | zsh | PowerShell |
+| Gradle | `./gradlew` | `.\gradlew.bat` |
+| Python | `python3` | `py -3` |
+| Home folder in a command | `$HOME` | `$env:USERPROFILE` |
+| SHA-256 of a file | `shasum -a 256 <file>` | `Get-FileHash <file>` |
+| Lunar mods folder | `~/.lunarclient/profiles/1.21/mods/fabric-1.21.10/` | `%USERPROFILE%\.lunarclient\profiles\lunar\1.21\mods\fabric-1.21.10\` (*unverified*) |
+| Minecraft assets for test clients | `$HOME/.lunarclient/shared/assets` | *unverified* |
+| Viewing review pages from another device | not set up | [Remote preview](docs/reference/remote-preview.md) |
+
+Git does not carry these between the machines, so never assume the other one has them:
+
+- `.local-previews/` (workshops and review pages) and `build/`. Each exists only where it
+  was built; rerun the generator or the build.
+- The JAR installed in Lunar. Each machine has its own; compare hashes.
+- An agent's own memory or notes. Anything the next agent needs goes in these documents.
+
+Generated files must be identical on both machines, or the asset check fails on one of
+them; see [art and assets](docs/reference/art-and-assets.md#source-ownership).
 
 ## Delegating tests and gameplay recordings
 
@@ -133,11 +161,11 @@ for commands, shared-workspace coordination, and deliverables.
 
 The build writes `build/libs/elementalwands-<version>.jar`, where `<version>` is
 `mod_version` in `gradle.properties` (2.2.0 at the time of writing).
-Verified Mac destination:
-`~/.lunarclient/profiles/1.21/mods/fabric-1.21.10/`.
+It goes in the Lunar mods folder named under [two machines](#two-machines).
 
 When installation is requested or already authorized, back up the previous JAR,
-copy the verified build, and compare source and installed SHA-256 values:
+copy the verified build, and compare source and installed SHA-256 values (shown for the
+Mac):
 
 ```sh
 jar="elementalwands-$(grep '^mod_version=' gradle.properties | cut -d= -f2).jar"
@@ -146,9 +174,6 @@ shasum -a 256 "build/libs/$jar" "$HOME/.lunarclient/profiles/1.21/mods/fabric-1.
 
 Require matching hashes before reporting installation. Restart Lunar to load the
 replacement. Never infer the active build from an old documentation hash.
-The previously recorded Windows location is
-`%USERPROFILE%\.lunarclient\profiles\lunar\1.21\mods\fabric-1.21.10\`;
-verify that machine's profile before using it.
 
 ## Changing abilities safely
 

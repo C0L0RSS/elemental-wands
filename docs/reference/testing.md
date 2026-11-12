@@ -86,7 +86,9 @@ mute its client before loading a world.
 
 ### Running them
 
-Examples from the repository root:
+Examples from the repository root, in the Mac's form. On the Windows PC translate the
+Gradle command, `$HOME` and the assets folder with the table under
+[two machines](../../AGENTS.md#two-machines).
 
 ```sh
 ./gradlew -I tools/progression_server_smoke.init.gradle runServer --args nogui

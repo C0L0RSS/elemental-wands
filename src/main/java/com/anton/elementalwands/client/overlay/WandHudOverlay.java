@@ -21,6 +21,7 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.NbtComponent;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.util.Identifier;
@@ -69,10 +70,11 @@ public class WandHudOverlay implements HudRenderCallback {
         if (client.player == null || client.world == null) return;
         if (client.getDebugHud().shouldShowDebugHud()) return;
 
-        // The position editor previews the row even when no wand is held.
+        // Cooldowns live on the wand, so the row stays up whenever one is carried;
+        // the position editor previews the row even without a wand.
         boolean editing = client.currentScreen instanceof WandHudEditScreen;
-        ItemStack stack = client.player.getMainHandStack();
-        if (!editing && !(stack.getItem() instanceof AbstractWandItem)) return;
+        ItemStack stack = findWand(client.player);
+        if (!editing && stack.isEmpty()) return;
 
         int width  = client.getWindow().getScaledWidth();
         int height = client.getWindow().getScaledHeight();
@@ -132,6 +134,18 @@ public class WandHudOverlay implements HudRenderCallback {
                     ClientPlayerData.stoneMass());
         }
         context.getMatrices().popMatrix();
+    }
+
+    /** The wand whose stored cooldowns the row shows: the held one first, otherwise the first one carried. */
+    private static ItemStack findWand(PlayerEntity player) {
+        if (player.getMainHandStack().getItem() instanceof AbstractWandItem) return player.getMainHandStack();
+        if (player.getOffHandStack().getItem() instanceof AbstractWandItem) return player.getOffHandStack();
+        var inventory = player.getInventory();
+        for (int i = 0; i < inventory.size(); i++) {
+            ItemStack candidate = inventory.getStack(i);
+            if (candidate.getItem() instanceof AbstractWandItem) return candidate;
+        }
+        return ItemStack.EMPTY;
     }
 
     public static void drawFireHeat(DrawContext context, net.minecraft.client.font.TextRenderer font, int centerX, int y, float heat, boolean locked) {

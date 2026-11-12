@@ -32,7 +32,9 @@ uses a fresh press to toss its orb and another fresh press to teleport to and
 consume the formed double.
 
 The HUD sits beside the hotbar, shows owned equipped spells without key labels,
-and hides empty slots. The hub marks Basic, Technique, and Ultimate spells with
+and hides empty slots. It stays up whenever a wand is anywhere in the inventory,
+held or not, reading cooldowns from the held wand first; it hides only when the
+player carries no wand. The hub marks Basic, Technique, and Ultimate spells with
 distinct colors in the spell list, selected details, and equipped slots.
 Controls > Move HUD permits dragging or arrow nudging;
 `config/elementalwands-hud.properties` stores the position.

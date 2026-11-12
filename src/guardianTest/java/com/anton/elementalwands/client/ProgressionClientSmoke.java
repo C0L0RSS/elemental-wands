@@ -34,10 +34,10 @@ public final class ProgressionClientSmoke implements ClientModInitializer {
     public void onInitializeClient(){ClientTickEvents.END_CLIENT_TICK.register(c->{if(c.getOverlay()!=null)return;try{
         tick++;
         if(tick==1)show(c,List.of("inferno_wave"),List.of(0,0,0));
-        if(tick==20){shot(c,"progression-starter");check(buttons(c).contains("Inferno Wave")&&!buttons(c).contains("Dragon's Pyre"),"Starter library unfiltered");click(c,94,115);check(!buttons(c).contains("Inferno Wave"),"Empty Technique shows Basic");}
+        if(tick==20){shot(c,"progression-starter");check(buttons(c).contains("Fireball")&&!buttons(c).contains("Dragon's Pyre"),"Starter library unfiltered");click(c,94,115);check(!buttons(c).contains("Fireball"),"Empty Technique shows Basic");}
         if(tick==35)shot(c,"progression-empty-technique");
         if(tick==40){show(c,WandSpells.forAffinity(WizardAffinity.FIRE).stream().map(WandSpells.Spell::id).toList(),List.of(0,0,0));check(buttons(c).contains("Flamethrower")&&!buttons(c).contains("Meteor"),"Basic library filter");}
-        if(tick==55){shot(c,"progression-five-basic");click(c,70,114);check(buttons(c).contains("Flashover")&&!buttons(c).contains("Inferno Wave"),"Technique category filter");}
+        if(tick==55){shot(c,"progression-five-basic");click(c,70,114);check(buttons(c).contains("Flashover")&&!buttons(c).contains("Fireball"),"Technique category filter");}
         if(tick==70){shot(c,"progression-five-technique");click(c,102,114);check(buttons(c).contains("Meteor")&&!buttons(c).contains("Flashover"),"Ultimate category filter");}
         if(tick==85){shot(c,"progression-five-ultimate");click(c,166,114);check(buttons(c).contains("Flamethrower")&&!buttons(c).contains("Meteor"),"Flexible filter");}
         if(tick==100){shot(c,"progression-five-flexible");show(c,List.of("inferno_wave"),List.of(0,1,0));click(c,170,73);click(c,80,148);check(buttons(c).contains("Learn Free"),"Eligible store purchase is not Free");check(!buttons(c).stream().anyMatch(x->x.contains("Spell Book")),"Unexpected book tab");}

@@ -76,7 +76,7 @@ public final class WandSpells {
     }
     public static final List<Spell> ALL = List.of(
         spell(WizardAffinity.NONE, Ability.PRIMARY, "fractured_beam", "Fractured Beam", "A simple arcane beam. Choose an affinity to awaken your wand."),
-        spell(WizardAffinity.FIRE, Ability.PRIMARY, "inferno_wave", "Inferno Wave", "Send a stream of fire forward, burning enemies along its path."),
+        spell(WizardAffinity.FIRE, Ability.PRIMARY, "inferno_wave", "Fireball", "Launch a fireball forward, burning enemies along its path."),
         spell(WizardAffinity.FIRE, Ability.SECONDARY, "dragons_pyre", "Dragon's Pyre", "Send a wall of fire across the ground. Flames linger behind it."),
         spell(WizardAffinity.FIRE, Ability.ULTIMATE, "meteor", "Meteor", "Call down a huge burning meteor to strike the battlefield."),
         new Spell("flamethrower", WizardAffinity.FIRE, Ability.PRIMARY, "Flamethrower",

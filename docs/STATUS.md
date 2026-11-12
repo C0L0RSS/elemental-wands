@@ -233,8 +233,14 @@ It records known verification limits; it is not a fresh installation receipt.
   - Sentry Bloom replaces Tendril Bloom: it plants a flower (three at a time, 24 seconds
     each, 6-second cooldown) whose head turns to face the target the caster's Seed or
     Thornbite last hit, or else the nearest monster, and spits a 2.5-damage seed at it every
-    two seconds. Each seed that lands heals the owner a fifth of the damage it dealt. The
-    head kicks back on a shot and hangs for the flower's last two seconds.
+    two seconds. The head kicks back on a shot and hangs for the flower's last two seconds.
+  - Flower changes the developer asked for after trying the rework (November 11): the flower
+    is thrown as a lobbed bud, like Gravity Well's bomb, and takes root where it lands, not
+    placed at the aim; it banks a fifth of the health its seeds take (up to 8, shown as
+    hearts) in place of healing on every hit, and its owner collects by right-clicking it
+    from within three blocks, which uses the flower up; any player can break a flower with
+    one close hit; and the caster's Seed no longer leaves a trail (a flower's small seed
+    still does).
   - Verdant Step, the walk-on-water passive, is removed with its raft block (November 11).
   - Block nature (November 11): every live Nature spell effect is now drawn as opaque 3D
     petals, leaves and pollen (`client/blocknature/`), matching Fire, Wind and Space, ported
@@ -249,7 +255,7 @@ It records known verification limits; it is not a fresh installation receipt.
     hearts of absorption for the caster and allies in reach, for twelve seconds; and for those
     twelve seconds a quicker Seed and Sentry Bloom, a stronger Thornbite heal, and every flower
     grown (bigger base, a second, smaller head on a branch) to fire in turn at two targets.
-  - Vines, the bramble carpet, root knots, thorn ticks and banked flower health are gone, with
+  - Vines, the bramble carpet, root knots and thorn ticks are gone, with
     the Guardian's flower-clearing slams and extra recovery; Seed and Thornbite no longer
     slow or root.
   The build and its contract checks pass. On November 10 these passed on a Windows machine
@@ -261,7 +267,19 @@ It records known verification limits; it is not a fresh installation receipt.
   the head aimed, recoiling and wilting, the petal wave, the lawn it leaves and a grown
   two-headed flower. The party fixture's first run reached its restart point without a
   failure; its restart half was not run. No fixture has run on a dedicated server since the
-  rework. Pending:
+  rework. The November 11 flower changes (thrown bud, banked health, collecting, breaking,
+  no Seed trail) build and pass the contract checks. The Nature balance, Nature expansion,
+  Full Bloom and Guardian Nature fixtures were rewritten for them and passed that day, hosted
+  in a singleplayer world on the same Windows machine, as did both Nature native client
+  fixtures (the real slot-2 press throws the bud, the flower appears where it lands and
+  shows its outline when aimed at). The client fixtures do not press collect or break; the
+  server fixtures cover those through the real slot cast path. Pending:
+  - A Lunar look at the flower changes: the bud's arc and reach,
+    the bud itself (the flower's head at half size, tumbling), the vanilla hearts over a
+    flower that holds health, whether a fifth of the damage up to 8 is worth walking over for,
+    the three-block click reach, and whether a caster breaks their own flower by accident
+    when firing past it up close. The throw has its own sound event but plays Seed's cast
+    audio; collecting has no sound of its own beyond the flower's wilt.
   - A Lunar playtest against each boss: flower damage and pace, the 16-block range, how many
     flowers and for how long, the size of the heals, ultimate charge rate, how the heads read
     while they turn, and whether Full Bloom's twelve seconds and its buffs are too much or

@@ -9,8 +9,6 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.BlockPos;
 
 public final class NatureAbilityHandler {
 
@@ -54,16 +52,17 @@ public final class NatureAbilityHandler {
     }
 
     public static void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        BlockPos spot = FlowerTurretManager.plantSpot(world, caster);
-        if (spot == null) {
-            // Nowhere to plant: keep the cooldown, as a blocked Blink does.
-            caster.sendMessage(Text.literal("No ground there for a flower."), true);
-            return;
-        }
         // In Full Bloom a garden goes down twice as fast.
         if (!AbstractWandItem.tryStartCooldown(world, caster, stack, AbstractWandItem.Ability.SECONDARY,
                 FullBloomManager.blooming(caster) ? FlowerTurretManager.BLOOM_COOLDOWN : getSecondaryCooldownTicks())) return;
-        FlowerTurretManager.plant(world, caster, spot);
+        // The bud is thrown; the flower takes root where it lands. A bud that finds no ground is
+        // lost with its cooldown, as a missed Springbloom pod is.
+        var pod = new com.anton.elementalwands.entity.SentryBloomPodEntity(
+                com.anton.elementalwands.registry.ModEntities.SENTRY_BLOOM_POD, world);
+        pod.launch(caster);
+        world.spawnEntity(pod);
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_NATURE_SENTRY_BLOOM_THROW,
+                SoundCategory.PLAYERS, 0.7f, 1.0f);
     }
 
     public static void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {

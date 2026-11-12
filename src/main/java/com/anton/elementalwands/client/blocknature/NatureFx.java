@@ -89,8 +89,9 @@ final class NatureFx {
     }
 
     /**
-     * A seed in flight (scenes/seed.js) leaves two gold kernels per tick, and the caster's seed a leaf each tick,
-     * every one shrinking away over .3 seconds where it was dropped. A flower's seed leaves a thinner trail.
+     * A flower's seed in flight leaves two small gold kernels per tick, each shrinking away over .3 seconds where it
+     * was dropped. The caster's own Seed leaves no trail: the developer asked for it to fly clean (the browser
+     * study's scenes/seed.js still shows the fuller trail it once had).
      */
     static final class SeedTrail implements BlockNatureEffects.Fx {
         private static final double GAP = .025, LIFE = .3;
@@ -115,7 +116,6 @@ final class NatureFx {
                 }
                 lastTime = now; lastPos = p;
             } else if (now > end + LIFE) return false;
-            boolean small = seed.fromFlower();
             var m = f.m();
             for (int n = Math.max(0, samples - SLOTS); n < samples; n++) {
                 double a = now - times[n % SLOTS];
@@ -123,8 +123,7 @@ final class NatureFx {
                 Vec3d p = points[n % SLOTS];
                 if (!BlockNatureEffects.near(f, p, BlockNatureEffects.REACH)) continue;
                 double k = 1 - a / LIFE;
-                piece(m, p.add(0, -.1 * a, 0), (small ? .17 : .25) * k, POLLEN, GOLD, n, a);
-                if (!small && n % 2 == 0) piece(m, p.add(0, -.15 - .2 * a, 0), .3 * k, LEAF_PIECE, LEAF, n, a);
+                piece(m, p.add(0, -.1 * a, 0), .17 * k, POLLEN, GOLD, n, a);
             }
             return true;
         }

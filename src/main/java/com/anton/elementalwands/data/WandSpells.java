@@ -76,7 +76,7 @@ public final class WandSpells {
     }
     public static final List<Spell> ALL = List.of(
         spell(WizardAffinity.NONE, Ability.PRIMARY, "fractured_beam", "Fractured Beam", "A simple arcane beam. Choose an affinity to awaken your wand."),
-        spell(WizardAffinity.FIRE, Ability.PRIMARY, "inferno_wave", "Inferno Wave", "Send a stream of fire forward, burning enemies along its path."),
+        spell(WizardAffinity.FIRE, Ability.PRIMARY, "inferno_wave", "Fireball", "Launch a fireball forward, burning enemies along its path."),
         spell(WizardAffinity.FIRE, Ability.SECONDARY, "dragons_pyre", "Dragon's Pyre", "Send a wall of fire across the ground. Flames linger behind it."),
         spell(WizardAffinity.FIRE, Ability.ULTIMATE, "meteor", "Meteor", "Call down a huge burning meteor to strike the battlefield."),
         new Spell("flamethrower", WizardAffinity.FIRE, Ability.PRIMARY, "Flamethrower",
@@ -102,7 +102,7 @@ public final class WandSpells {
         spell(WizardAffinity.NATURE, Ability.PRIMARY, "seed", "Seed", "Launch a winged seed. Your flowers turn on whatever it hits."),
         new Spell("thorn_lash", WizardAffinity.NATURE, Ability.PRIMARY, "Thornbite",
                 "Bite one foe with a flytrap and turn your flowers on it. Heal 75% of health damage.", 500),
-        spell(WizardAffinity.NATURE, Ability.SECONDARY, "tendril_bloom", "Sentry Bloom", "Plant a flower. It shoots what your Seed hit, or the nearest monster, and heals you as it hits."),
+        spell(WizardAffinity.NATURE, Ability.SECONDARY, "tendril_bloom", "Sentry Bloom", "Throw a flower that shoots monsters and marked foes. Collect its health up close."),
         spell(WizardAffinity.NATURE, Ability.SECONDARY, "springbloom", "Springbloom",
                 "Throw a jump flower. Land on it to launch safely. Anyone can use or break it."),
         spell(WizardAffinity.NATURE, Ability.ULTIMATE, "overgrowth", "Full Bloom", "A petal wave: you and nearby allies regenerate and gain a shield. Your flowers grow two heads."),

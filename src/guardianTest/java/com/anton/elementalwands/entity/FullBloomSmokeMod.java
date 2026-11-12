@@ -135,11 +135,12 @@ public final class FullBloomSmokeMod implements ModInitializer {
         }
         if (tick == 138) {
             NatureAbilityHandler.castSecondary(world, caster, wand);
-            require(FlowerTurretManager.count(world, caster.getUuid()) == 2, "Sentry Bloom did not plant during Full Bloom");
             // This simulated player has bought nothing, so the cast is stored under its slot, not the spell's name.
             String slot = AbstractWandItem.castingSpell(caster, AbstractWandItem.Ability.SECONDARY);
             require(duration(slot) == FlowerTurretManager.BLOOM_COOLDOWN, "Sentry Bloom cooldown in Full Bloom: " + duration(slot));
         }
+        if (tick == 146) // The thrown bud has landed.
+            require(FlowerTurretManager.count(world, caster.getUuid()) == 2, "Sentry Bloom did not plant during Full Bloom");
         if (tick == 150) FlowerTurretManager.mark(caster, far); // The marked enemy goes to the first head, the other monster to the second.
         if (tick == 160) {
             var head = FlowerTurretManager.headAt(world, FLOWER); var twin = FlowerTurretManager.twinAt(world, FLOWER);

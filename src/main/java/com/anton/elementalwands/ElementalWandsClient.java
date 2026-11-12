@@ -89,6 +89,7 @@ public class ElementalWandsClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.GALE_DAGGER,com.anton.elementalwands.client.renderer.GaleDaggerRenderer::new);
         EntityRendererRegistry.register(ModEntities.SPRINGBLOOM,com.anton.elementalwands.client.renderer.SpringbloomRenderer::new);
         EntityRendererRegistry.register(ModEntities.SENTRY_BLOOM,com.anton.elementalwands.client.renderer.SentryBloomRenderer::new);
+        EntityRendererRegistry.register(ModEntities.SENTRY_BLOOM_POD,com.anton.elementalwands.client.renderer.SentryBloomPodRenderer::new);
         EntityRendererRegistry.register(ModEntities.OVERGROWTH_SEED,com.anton.elementalwands.client.renderer.OvergrowthSeedRenderer::new);
         EntityRendererRegistry.register(ModEntities.FAULTLINE_SPIKE,com.anton.elementalwands.client.renderer.FaultlineSpikeRenderer::new);
         ClientPlayNetworking.registerGlobalReceiver(ModNetworking.UpdraftLaunchPayload.ID, (payload, context) -> {

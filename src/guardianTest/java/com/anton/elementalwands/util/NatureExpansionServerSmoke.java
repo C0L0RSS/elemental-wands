@@ -93,15 +93,20 @@ public final class NatureExpansionServerSmoke implements ModInitializer {
             require(p.getEntityWorld().getBlockState(knot).isAir(),"Retired root knot did not remove itself");
         }
         if(t==245) {
-            // Sentry Bloom through the real slot cast, planted where the caster looks.
+            // Sentry Bloom through the real slot cast: a bud is thrown, and a second press inside the cooldown throws nothing.
             var w=(net.minecraft.server.world.ServerWorld)p.getEntityWorld();
             p.setYaw(0);p.setPitch(45);freshWand();WandLoadouts.cast(p,1);
-            require(FlowerTurretManager.count(w,p.getUuid())==1,"The slot cast planted no flower");
-            flower=FlowerTurretManager.positions(w,p.getUuid()).getFirst();
-            require(flower.equals(new BlockPos(0,100,2)) && w.getBlockState(flower).isOf(ModSpellBlocks.NATURE_SEEDLING),"Flower not planted where aimed: "+flower);
+            require(buds()==1 && FlowerTurretManager.count(w,p.getUuid())==0,"The slot cast did not throw one bud: "+buds());
             WandLoadouts.cast(p,1);
-            require(FlowerTurretManager.count(w,p.getUuid())==1,"Sentry Bloom ignored its cooldown");
+            require(buds()==1,"Sentry Bloom ignored its cooldown");
             enemyBefore=enemy.getHealth();allyBefore=ally.getHealth();
+        }
+        if(t==251) {
+            // The bud lands two blocks ahead and the flower takes root there.
+            var w=(net.minecraft.server.world.ServerWorld)p.getEntityWorld();
+            require(buds()==0 && FlowerTurretManager.count(w,p.getUuid())==1,"The bud planted no flower");
+            flower=FlowerTurretManager.positions(w,p.getUuid()).getFirst();
+            require(flower.equals(new BlockPos(0,100,2)) && w.getBlockState(flower).isOf(ModSpellBlocks.NATURE_SEEDLING),"Flower not planted where the bud landed: "+flower);
         }
         if(t==275) {
             // Left to itself it shoots the nearest monster, and never a player.
@@ -119,10 +124,32 @@ public final class NatureExpansionServerSmoke implements ModInitializer {
         if(t==360) {
             near(ally.getHealth(),allyBefore,"The flower shot a marked ally");
             require(mobs.get(0).getHealth()<mobBefore,"A protected mark left the flower idle");
-            // Whatever removes the block removes the flower.
-            p.getEntityWorld().setBlockState(flower,Blocks.AIR.getDefaultState());
+            // Its hits healed nobody; the flower kept a share. The owner's slot-2 press, aimed at it
+            // from close up, collects that through the real cast path and uses the flower up.
+            var w=(net.minecraft.server.world.ServerWorld)p.getEntityWorld();
+            float held=FlowerTurretManager.banked(w,flower);
+            require(held>0 && held<=FlowerTurretManager.BANK_CAP,"The flower banked nothing from its hits: "+held);
+            p.setHealth(10);p.setYaw(0);p.setPitch(36);freshWand();WandLoadouts.cast(p,1);
+            near(p.getHealth(),10+held,"Collected flower health");
+            require(buds()==0 && FlowerTurretManager.count(w,p.getUuid())==0 && w.getBlockState(flower).isAir(),"Collecting threw a bud or left the flower");
+            // Another flower, for the slot-1 press that breaks it.
+            require(FlowerTurretManager.plant(w,p,flower),"Could not replant after collecting");
         }
         if(t==362) {
+            var w=(net.minecraft.server.world.ServerWorld)p.getEntityWorld();
+            // A held repeat is not a click; a fresh slot-1 press on the flower breaks it and casts nothing.
+            p.setHealth(10);freshWand();WandLoadouts.cast(p,0,false);
+            require(FlowerTurretManager.count(w,p.getUuid())==1,"A held repeat broke a flower");
+        }
+        if(t==375) {
+            var w=(net.minecraft.server.world.ServerWorld)p.getEntityWorld();
+            freshWand();WandLoadouts.cast(p,0);
+            require(FlowerTurretManager.count(w,p.getUuid())==0 && w.getBlockState(flower).isAir() && lashes()==0,"A close slot-1 press did not break the flower");
+            // Whatever removes the block removes the flower.
+            require(FlowerTurretManager.plant(w,p,flower),"Could not replant after breaking");
+        }
+        if(t==380)p.getEntityWorld().setBlockState(flower,Blocks.AIR.getDefaultState());
+        if(t==382) {
             require(FlowerTurretManager.count((net.minecraft.server.world.ServerWorld)p.getEntityWorld(),p.getUuid())==0,"A flower outlived its block");
         }
         if(t==515) {
@@ -140,11 +167,12 @@ public final class NatureExpansionServerSmoke implements ModInitializer {
         }
         if(t==542) {
             require(lashes()==0,"Unequipping retained bite");
-            Files.writeString(Path.of("HUB_PASSED.txt"),"Nature expansion passed: ownership, cooldown, committed single-target bite, allies, cover, miss/invulnerability/overkill healing, a landed bite marks its target and winds no vine, nearest-only contact, turning after cast, invulnerable obstruction, max range, unequip cleanup; retired knot self-removal; Sentry Bloom through the slot cast with aimed placement and cooldown, nearest-monster fire, players never shot unprompted, the owner's mark obeyed, a marked ally spared, and a flower ending with its block.\n");
+            Files.writeString(Path.of("HUB_PASSED.txt"),"Nature expansion passed: ownership, cooldown, committed single-target bite, allies, cover, miss/invulnerability/overkill healing, a landed bite marks its target and winds no vine, nearest-only contact, turning after cast, invulnerable obstruction, max range, unequip cleanup; retired knot self-removal; Sentry Bloom through the slot cast as a thrown bud that plants where it lands, with its cooldown, nearest-monster fire, players never shot unprompted, the owner's mark obeyed, a marked ally spared, banked health collected by a close slot-2 press that uses the flower up, a flower broken by a fresh close slot-1 press and not by a held repeat, and a flower ending with its block.\n");
             server.stop(false);
         }
     }
     private void freshWand() {p.setStackInHand(Hand.MAIN_HAND,new ItemStack(ModItems.FRACTURED_WAND));}
+    private int buds() {return p.getEntityWorld().getEntitiesByClass(com.anton.elementalwands.entity.SentryBloomPodEntity.class,new Box(-10,90,-10,10,110,10),e->!e.isRemoved()).size();}
     private int lashes() {return p.getEntityWorld().getEntitiesByClass(ThornLashEntity.class,new Box(-10,90,-10,10,110,10),e->!e.isRemoved()).size();}
     private ZombieEntity zombie(double x,double y,double z) {
         var m=new ZombieEntity(EntityType.ZOMBIE,p.getEntityWorld());m.setAiDisabled(true);m.setNoGravity(true);

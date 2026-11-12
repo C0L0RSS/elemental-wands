@@ -2,6 +2,8 @@ package com.anton.elementalwands.entity.undead;
 
 import static com.anton.elementalwands.entity.undead.HollowUndeadClips.*;
 
+import com.anton.elementalwands.registry.ModSounds;
+
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
@@ -14,7 +16,6 @@ import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
@@ -157,7 +158,7 @@ public class HollowBruteEntity extends HollowUndeadEntity {
         bound = null;
         boundScale = 1;
         knocked = false;
-        playSound(SoundEvents.ENTITY_WITHER_SKELETON_AMBIENT, 1.2f, .55f);
+        playSound(ModSounds.ENTITY_HOLLOW_BRUTE_SLAM_WINDUP, 1.2f, .55f);
     }
 
     @Override
@@ -170,12 +171,12 @@ public class HollowBruteEntity extends HollowUndeadEntity {
         if (!ground.isAir())
             world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, ground), head.x, getY() + .1, head.z, 24, .6, .05, .6, .15);
         world.spawnParticles(ParticleTypes.SWEEP_ATTACK, head.x, head.y, head.z, 1, 0, 0, 0, 0);
-        world.playSound(null, head.x, head.y, head.z, SoundEvents.ENTITY_ZOMBIE_ATTACK_IRON_DOOR, SoundCategory.HOSTILE, 1, .6f);
+        world.playSound(null, head.x, head.y, head.z, ModSounds.ENTITY_HOLLOW_BRUTE_SLAM_IMPACT, SoundCategory.HOSTILE, 1, .6f);
     }
 
     @Override public float getSoundPitch() { return super.getSoundPitch() * .8f; }
-    @Override protected SoundEvent getAmbientSound() { return SoundEvents.ENTITY_WITHER_SKELETON_AMBIENT; }
-    @Override protected SoundEvent getHurtSound(DamageSource source) { return SoundEvents.ENTITY_WITHER_SKELETON_HURT; }
-    @Override protected SoundEvent getDeathSound() { return SoundEvents.ENTITY_WITHER_SKELETON_DEATH; }
-    @Override protected void playStepSound(BlockPos pos, BlockState state) { playSound(SoundEvents.ENTITY_WITHER_SKELETON_STEP, .4f, .8f); }
+    @Override protected SoundEvent getAmbientSound() { return ModSounds.ENTITY_HOLLOW_BRUTE_AMBIENT; }
+    @Override protected SoundEvent getHurtSound(DamageSource source) { return ModSounds.ENTITY_HOLLOW_BRUTE_HURT; }
+    @Override protected SoundEvent getDeathSound() { return ModSounds.ENTITY_HOLLOW_BRUTE_DEATH; }
+    @Override protected void playStepSound(BlockPos pos, BlockState state) { playSound(ModSounds.ENTITY_HOLLOW_BRUTE_STEP, .4f, .8f); }
 }

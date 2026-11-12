@@ -3,6 +3,7 @@ package com.anton.elementalwands.entity;
 import com.anton.elementalwands.party.WandAllies;
 
 import com.anton.elementalwands.registry.ModEntities;
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.registry.ModSpellBlocks;
 import com.anton.elementalwands.util.BlockFireEvents;
 import com.anton.elementalwands.util.TemporaryBlockManager;
@@ -15,7 +16,6 @@ import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
@@ -149,9 +149,9 @@ public class InfernoWaveEntity extends ProjectileEntity {
         serverWorld.playSound(
                 null,
                 target.getBlockPos(),
-                SoundEvents.ITEM_FIRECHARGE_USE,
+                ModSounds.SPELL_FIRE_INFERNO_WAVE_HIT,
                 SoundCategory.PLAYERS,
-                0.5f, 1.2f);
+                0.5f, 1.0f);
 
         // DON'T discard - we pierce through enemies
     }

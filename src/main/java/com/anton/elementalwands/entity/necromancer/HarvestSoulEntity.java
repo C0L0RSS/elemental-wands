@@ -1,5 +1,6 @@
 package com.anton.elementalwands.entity.necromancer;
 
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.util.SoulGlow;
 import java.util.UUID;
 import net.minecraft.entity.EntityType;
@@ -11,7 +12,6 @@ import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
@@ -66,7 +66,7 @@ public class HarvestSoulEntity extends MobEntity implements GeoEntity {
         boolean dealt = super.damage(world, source, amount);
         if (dealt && getHealth() <= 0) {
             world.spawnParticles(ParticleTypes.SOUL, getX(), getY() + .4, getZ(), 12, .25, .25, .25, .05);
-            world.playSound(null, getX(), getY(), getZ(), SoundEvents.PARTICLE_SOUL_ESCAPE.value(), SoundCategory.HOSTILE, 1.6f, 1.4f);
+            world.playSound(null, getX(), getY(), getZ(), ModSounds.ENTITY_NECROMANCER_HARVEST_SOUL_DESTROYED, SoundCategory.HOSTILE, 1.6f, 1.4f);
             if (world.getEntity(boss) instanceof NecromancerEntity owner) owner.combat().harvestDestroyed(this, source);
             discard();
         }

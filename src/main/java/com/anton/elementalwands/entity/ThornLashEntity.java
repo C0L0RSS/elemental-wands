@@ -4,7 +4,7 @@ import com.anton.elementalwands.data.EWAttachments;
 import com.anton.elementalwands.data.WizardAffinity;
 import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.party.WandAllies;
-import com.anton.elementalwands.registry.ModParticles;
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.util.NatureCombat;
 import com.anton.elementalwands.util.SpellCombat;
 import com.anton.elementalwands.util.ThornLashRules;
@@ -16,7 +16,6 @@ import net.minecraft.entity.decoration.ArmorStandEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.storage.ReadView;
 import net.minecraft.storage.WriteView;
 import net.minecraft.util.hit.HitResult;
@@ -89,7 +88,7 @@ public final class ThornLashEntity extends Entity {
                 dataTracker.set(STOP, progress); // An invulnerable first target also consumes the bite.
                 Vec3d contact = getEntityPos().add(ThornLashRules.tip(getYaw(), getPitch(), progress));
                 if (victim != null) bite(world, caster, victim, contact);
-                world.playSound(null, contact.x, contact.y, contact.z, SoundEvents.ENTITY_EVOKER_FANGS_ATTACK, SoundCategory.PLAYERS, .45f, 1.6f);
+                world.playSound(null, contact.x, contact.y, contact.z, ModSounds.SPELL_NATURE_THORNBITE_HIT, SoundCategory.PLAYERS, .45f, 1f);
                 return;
             }
         }
@@ -99,13 +98,16 @@ public final class ThornLashEntity extends Entity {
         float before = target.getHealth();
         if (!SpellCombat.damage(target, world, world.getDamageSources().playerAttack(caster), ThornLashRules.DAMAGE, caster, WizardAffinity.NATURE)) return;
         float lost = Math.max(0, before - target.getHealth());
-        NatureCombat.lashDamageDealt(caster, lost);
-        float heal = Math.min(ThornLashRules.HEAL_CAP, lost * ThornLashRules.LIFESTEAL);
+        NatureCombat.lashDamageDealt(caster, target, lost);
+        // In Full Bloom the bite gives back everything it takes, up to a higher cap.
+        boolean blooming = com.anton.elementalwands.util.FullBloomManager.blooming(caster);
+        float heal = Math.min(blooming ? com.anton.elementalwands.util.FullBloomManager.BITE_HEAL_CAP : ThornLashRules.HEAL_CAP,
+                lost * (blooming ? com.anton.elementalwands.util.FullBloomManager.BITE_LIFESTEAL : ThornLashRules.LIFESTEAL));
         float health = caster.getHealth();
         if (heal > 0) SpellCombat.heal(caster, heal, caster, WizardAffinity.NATURE);
         dataTracker.set(HEAL, caster.getHealth() - health);
-        world.spawnParticles(ModParticles.NATURE_POLLEN, contact.x, contact.y, contact.z, 5, .10, .10, .10, .015);
-        if (healed()) world.spawnParticles(ModParticles.NATURE_HEART, caster.getX(), caster.getBodyY(.6), caster.getZ(), 1, .1, .1, .1, 0);
+        com.anton.elementalwands.util.BlockNatureEvents.send(world, com.anton.elementalwands.util.BlockNatureEvents.BITE, contact);
+        if (healed()) com.anton.elementalwands.util.BlockNatureEvents.send(world, com.anton.elementalwands.util.BlockNatureEvents.HEAL, caster.getId(), caster.getEntityPos(), Vec3d.ZERO, 0);
     }
     @Override protected void initDataTracker(DataTracker.Builder builder) {
         builder.add(CASTER, -1); builder.add(START, 0L); builder.add(STOP, 2f); builder.add(HEAL, 0f);

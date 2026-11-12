@@ -1,11 +1,12 @@
 package com.anton.elementalwands.entity;
 
+import com.anton.elementalwands.registry.ModSounds;
+
 import java.util.UUID;
 import net.minecraft.entity.MovementType;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
@@ -49,7 +50,7 @@ final class GuardianLeapAttack {
         faceLanding();
         guardian.showLeapMarker(started,landing);
         guardian.triggerAnim("guardian","leap_launch");
-        world.playSound(null,guardian.getBlockPos(),SoundEvents.ENTITY_IRON_GOLEM_ATTACK,SoundCategory.HOSTILE,1.5f,.45f);
+        world.playSound(null,guardian.getBlockPos(),ModSounds.ENTITY_GUARDIAN_LEAP_WINDUP,SoundCategory.HOSTILE,1.5f,.45f);
         return true;
     }
 
@@ -72,14 +73,14 @@ final class GuardianLeapAttack {
         if (tick == TAKEOFF) {
             if (!supported(world)) return abort("ground beneath feet changed before takeoff.");
             if (!clearRoute(world,landing)) return abort("route obstructed before takeoff.");
-            combat.crushGrowth(world, origin, 4, false, 6);
+            combat.breakDoubles(world, origin, 4);
             status = "Airborne.";
             previousGravity = guardian.hasNoGravity(); flying = true;
             guardian.setNoGravity(true);
             if (!previousGravity) guardian.addCommandTag("ew_guardian_leap_gravity");
             guardian.triggerAnim("guardian","leap_air");
             combat.emitWave(world,origin,java.util.Set.of());
-            world.playSound(null,guardian.getBlockPos(),SoundEvents.ENTITY_IRON_GOLEM_ATTACK,SoundCategory.HOSTILE,1.8f,.65f);
+            world.playSound(null,guardian.getBlockPos(),ModSounds.ENTITY_GUARDIAN_LEAP_LAUNCH,SoundCategory.HOSTILE,1.8f,.65f);
         }
         guardian.setYaw(yaw); guardian.setBodyYaw(yaw); guardian.setHeadYaw(yaw);
         guardian.setVelocity(Vec3d.ZERO);

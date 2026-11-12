@@ -16,7 +16,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.*;
 
 /** Real combat and temporary-world lifecycle checks. No production world is touched. */
@@ -25,7 +24,8 @@ public final class NatureExpansionServerSmoke implements ModInitializer {
     private ServerPlayerEntity p, enemy, ally;
     private BlockPos knot;
     private final List<ZombieEntity> mobs = new ArrayList<>();
-    private float before;
+    private float mobBefore, enemyBefore, allyBefore;
+    private BlockPos flower;
     public void onInitialize() {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             try { run(server); } catch (Throwable e) {
@@ -58,7 +58,8 @@ public final class NatureExpansionServerSmoke implements ModInitializer {
         if(t==34) require(lashes()==1,"Cooldown bite count="+lashes()+" nbt="+p.getMainHandStack().get(net.minecraft.component.DataComponentTypes.CUSTOM_DATA));
         if(t==42) {
             near(enemy.getHealth(),200-ThornLashRules.DAMAGE,"Committed forward bite damage");near(p.getHealth(),10+Math.min(ThornLashRules.DAMAGE*ThornLashRules.LIFESTEAL,ThornLashRules.HEAL_CAP),"Lifesteal ratio");near(ally.getHealth(),200,"Lash hit ally");
-            require(SeedlingManager.getActiveSeedlingsForCaster(p.getEntityWorld(),p.getUuid()).isEmpty(),"Lash planted seed");
+            require(FlowerTurretManager.marked((net.minecraft.server.world.ServerWorld)p.getEntityWorld(),p.getUuid())==enemy,"A landed bite must mark its target for the caster's flowers");
+            require(EntangleTracker.getStacks(enemy)==0 && !enemy.hasStatusEffect(net.minecraft.entity.effect.StatusEffects.SLOWNESS),"The bite wound a vine or slowed");
             p.setYaw(0);p.setPitch(0);enemy.setPosition(.5,100,-3);freshWand();p.setHealth(10);WandLoadouts.cast(p,0);
         }
         if(t==54) {near(p.getHealth(),10,"Rear miss healed");near(enemy.getHealth(),200-ThornLashRules.DAMAGE,"Lash hit behind caster");
@@ -81,77 +82,48 @@ public final class NatureExpansionServerSmoke implements ModInitializer {
             require(mobs.get(1).getHealth()<200,"Bite missed aimed target");
             for(int i:new int[]{0,2,3})near(mobs.get(i).getHealth(),200,"Bite swept sideways or pierced a target");
             mobs.forEach(Entity::discard);mobs.clear();
-            mobs.add(zombie(-5,100,7));mobs.add(zombie(.5,100,10));mobs.add(zombie(6,100,7));
-            freshWand();NatureAbilityHandler.castSecondary(p.getEntityWorld(),p,p.getMainHandStack());
-            knot=p.getBlockPos();require(TendrilBloomManager.hasKnot(p.getEntityWorld(),knot),"No knot at casting position");
-            require(TendrilBloomManager.activeTendrils(p.getEntityWorld(),p.getUuid())==3,"Knot did not launch three tendrils");
-            p.setPosition(-8,100,0);p.damage(p.getEntityWorld(),p.getDamageSources().generic(),1);
+            mobs.add(zombie(-5,100,7));mobs.add(zombie(.5,100,10));mobs.add(zombie(8,100,7));
         }
-        if(t==132) {
-            require(TendrilBloomManager.activeBlooms(p.getEntityWorld(),p.getUuid())==3,"Expected three completed blooms");
-            require(TendrilBloomManager.hasKnot(p.getEntityWorld(),knot),"Movement/damage interrupted knot");
-            require(mobs.stream().allMatch(m->m.getHealth()<200),"Did not acquire three distinct enemies");
-            p.getEntityWorld().breakBlock(knot,false);before=mobs.getFirst().getHealth();
-        }
-        if(t==138) {
-            require(TendrilBloomManager.activeBlooms(p.getEntityWorld(),p.getUuid())==0,"Broken knot retained blooms");
-            require(TendrilBloomManager.activeTendrils(p.getEntityWorld(),p.getUuid())==0,"Broken knot retained tendrils");
-            near(mobs.getFirst().getHealth(),before,"Destroyed knot continued damage");
-            p.setPosition(.5,100,.5);freshWand();NatureAbilityHandler.castSecondary(p.getEntityWorld(),p,p.getMainHandStack());
-            p.getEntityWorld().breakBlock(knot,false);
-        }
-        if(t==143) {
-            require(TendrilBloomManager.activeTendrils(p.getEntityWorld(),p.getUuid())==0,"Early break retained traveling tendrils");
-            freshWand();NatureAbilityHandler.castSecondary(p.getEntityWorld(),p,p.getMainHandStack());
-            TendrilBloomManager.crushGrowth(p.getEntityWorld(),pos->pos.equals(knot));
-            require(!TendrilBloomManager.hasKnot(p.getEntityWorld(),knot),"Guardian contact did not destroy knot");
-        }
-        if(t==148) {
-            freshWand();NatureAbilityHandler.castSecondary(p.getEntityWorld(),p,p.getMainHandStack());
-            ally.setPosition(.5,100,-2);
-            aim(ally,Vec3d.ofCenter(knot));
-            require(!TendrilBloomManager.tryBreakKnotAimed(ally),"Allied Basic destroyed knot");
-            var breaker=player(server,"RootBreaker",.5,100,-2);
-            breaker.setNoGravity(true);aim(breaker,Vec3d.ofCenter(knot));
-            require(TendrilBloomManager.tryBreakKnotAimed(breaker),"Enemy Basic could not destroy knot");
-            require(!TendrilBloomManager.hasKnot(p.getEntityWorld(),knot),"Disarmed knot retained source");
-        }
-        if(t==150) {
-            freshWand();NatureAbilityHandler.castSecondary(p.getEntityWorld(),p,p.getMainHandStack());
-            p.getEntityWorld().setBlockState(knot.down(),Blocks.AIR.getDefaultState());
-        }
-        if(t==155) {
-            require(!TendrilBloomManager.hasKnot(p.getEntityWorld(),knot),"Support loss retained knot");
-            p.getEntityWorld().setBlockState(knot.down(),Blocks.STONE.getDefaultState());
-            plant(new BlockPos(-4,99,1));plant(new BlockPos(4,99,1));
-            freshWand();NatureAbilityHandler.castSecondary(p.getEntityWorld(),p,p.getMainHandStack());
-            require(!TendrilBloomManager.hasKnot(p.getEntityWorld(),knot),"Flower cast also created knot");
-            require(TendrilBloomManager.activeTendrils(p.getEntityWorld(),p.getUuid())==2,"Flower source count changed");
-        }
-        if(t==188) {
-            require(TendrilBloomManager.activeBlooms(p.getEntityWorld(),p.getUuid())==2,"Flower blooms did not arrive");
-            SeedlingManager.destroySeedlingAtAnchor(p.getEntityWorld(),new BlockPos(-4,100,1));
-            require(TendrilBloomManager.activeBlooms(p.getEntityWorld(),p.getUuid())==1,"Flower cleanup affected unrelated source or retained own bloom");
-            SeedlingManager.destroySeedlingAtAnchor(p.getEntityWorld(),new BlockPos(4,100,1));
-            require(TendrilBloomManager.activeBlooms(p.getEntityWorld(),p.getUuid())==0,"Second source cleanup failed");
-        }
-        if(t==195) {
-            freshWand();NatureAbilityHandler.castSecondary(p.getEntityWorld(),p,p.getMainHandStack());
-            p.setAttached(EWAttachments.AFFINITY,"FIRE");
-        }
-        if(t==200) {
-            require(!TendrilBloomManager.hasKnot(p.getEntityWorld(),knot),"Affinity exit retained knot");
-            p.setAttached(EWAttachments.AFFINITY,"NATURE");
-            freshWand();NatureAbilityHandler.castSecondary(p.getEntityWorld(),p,p.getMainHandStack());
-        }
-        if(t==487) {
-            require(!TendrilBloomManager.hasKnot(p.getEntityWorld(),knot),"Knot never expired");
-            require(TendrilBloomManager.activeBlooms(p.getEntityWorld(),p.getUuid())==0,"Expiry retained bloom");
-            // Orphaned block simulates a chunk loaded after loss of ephemeral source state.
+        if(t==215) {
+            // A knot left in a world by an older version has no owner and must clear itself.
+            knot=new BlockPos(3,100,-3);
             p.getEntityWorld().setBlockState(knot,ModSpellBlocks.NATURE_ROOT_KNOT.getDefaultState());
         }
-        if(t==510) {
-            require(p.getEntityWorld().getBlockState(knot).isAir(),"Orphan knot did not remove itself");
+        if(t==240) {
+            require(p.getEntityWorld().getBlockState(knot).isAir(),"Retired root knot did not remove itself");
+        }
+        if(t==245) {
+            // Sentry Bloom through the real slot cast, planted where the caster looks.
+            var w=(net.minecraft.server.world.ServerWorld)p.getEntityWorld();
+            p.setYaw(0);p.setPitch(45);freshWand();WandLoadouts.cast(p,1);
+            require(FlowerTurretManager.count(w,p.getUuid())==1,"The slot cast planted no flower");
+            flower=FlowerTurretManager.positions(w,p.getUuid()).getFirst();
+            require(flower.equals(new BlockPos(0,100,2)) && w.getBlockState(flower).isOf(ModSpellBlocks.NATURE_SEEDLING),"Flower not planted where aimed: "+flower);
+            WandLoadouts.cast(p,1);
+            require(FlowerTurretManager.count(w,p.getUuid())==1,"Sentry Bloom ignored its cooldown");
+            enemyBefore=enemy.getHealth();allyBefore=ally.getHealth();
+        }
+        if(t==275) {
+            // Left to itself it shoots the nearest monster, and never a player.
+            require(mobs.get(0).getHealth()<200,"The flower did not shoot the nearest monster");
+            near(mobs.get(1).getHealth(),200,"The flower shot a farther monster");near(mobs.get(2).getHealth(),200,"The flower shot a farther monster");
+            near(enemy.getHealth(),enemyBefore,"The flower shot an unmarked player");near(ally.getHealth(),allyBefore,"The flower shot an ally");
+            FlowerTurretManager.mark(p,mobs.get(2));mobBefore=mobs.get(0).getHealth();
+        }
+        if(t==320) {
+            require(mobs.get(2).getHealth()<200,"The flower ignored its owner's mark");
+            near(mobs.get(0).getHealth(),mobBefore,"The flower kept its old target after a mark");
+            // A mark on an ally is not an order: the flower goes back to the nearest monster.
+            FlowerTurretManager.mark(p,ally);
+        }
+        if(t==360) {
+            near(ally.getHealth(),allyBefore,"The flower shot a marked ally");
+            require(mobs.get(0).getHealth()<mobBefore,"A protected mark left the flower idle");
+            // Whatever removes the block removes the flower.
+            p.getEntityWorld().setBlockState(flower,Blocks.AIR.getDefaultState());
+        }
+        if(t==362) {
+            require(FlowerTurretManager.count((net.minecraft.server.world.ServerWorld)p.getEntityWorld(),p.getUuid())==0,"A flower outlived its block");
         }
         if(t==515) {
             mobs.forEach(Entity::discard);mobs.clear();p.setPosition(.5,100,.5);p.setYaw(0);p.setPitch(0);
@@ -168,32 +140,10 @@ public final class NatureExpansionServerSmoke implements ModInitializer {
         }
         if(t==542) {
             require(lashes()==0,"Unequipping retained bite");
-            // A flower banks what its thorns take; popping it as the owner returns exactly that, capped.
-            mobs.forEach(Entity::discard);mobs.clear();freshWand();
-            plant(new BlockPos(4,99,1));
-            bank=SeedlingManager.getActiveSeedlingsForCaster(p.getEntityWorld(),p.getUuid()).getLast().anchorPos();
-            mobs.add(zombie(bank.getX()+1.5,100,bank.getZ()+.5));
-        }
-        if(t==662) {
-            float taken=200-mobs.getFirst().getHealth();
-            require(taken>0,"Flower thorns never bit the banked target");
-            p.setHealth(10);
-            require(SeedlingManager.destroySeedlingAtAnchor(p.getEntityWorld(),bank,p),"Owner could not pop the flower");
-            near(p.getHealth(),10+Math.min(taken,NatureCombat.FLOWER_STORE_CAP),"Popped flower returned the wrong health");
-        }
-        if(t==664) {
-            require(!p.getEntityWorld().getBlockState(bank).isOf(ModSpellBlocks.NATURE_SEEDLING),"Popped flower remained");
-            Files.writeString(Path.of("HUB_PASSED.txt"),"Nature expansion passed: ownership, cooldown, committed single-target bite, allies, cover, miss/invulnerability/overkill healing, nearest-only contact, turning after cast, invulnerable obstruction, max range, unequip cleanup, no planting, three targets, moving/damaged caster, early/completed knot destruction, Guardian crush, enemy/allied wand disarm, support loss, source-specific flower cleanup, affinity exit, expiry and orphan cleanup, and a flower banking its thorn damage for its owner to pop.\n");
+            Files.writeString(Path.of("HUB_PASSED.txt"),"Nature expansion passed: ownership, cooldown, committed single-target bite, allies, cover, miss/invulnerability/overkill healing, a landed bite marks its target and winds no vine, nearest-only contact, turning after cast, invulnerable obstruction, max range, unequip cleanup; retired knot self-removal; Sentry Bloom through the slot cast with aimed placement and cooldown, nearest-monster fire, players never shot unprompted, the owner's mark obeyed, a marked ally spared, and a flower ending with its block.\n");
             server.stop(false);
         }
     }
-    private static void aim(ServerPlayerEntity player,Vec3d target) {
-        Vec3d delta=target.subtract(player.getEyePos());
-        player.setYaw((float)Math.toDegrees(Math.atan2(-delta.x,delta.z)));
-        player.setPitch((float)-Math.toDegrees(Math.atan2(delta.y,delta.horizontalLength())));
-    }
-    private void plant(BlockPos floor) {require(SeedlingManager.tryPlantSeedling(p.getEntityWorld(),p,new BlockHitResult(Vec3d.ofCenter(floor).add(0,.5,0),Direction.UP,floor,false)),"Could not plant fixture flower");}
-    private BlockPos bank;
     private void freshWand() {p.setStackInHand(Hand.MAIN_HAND,new ItemStack(ModItems.FRACTURED_WAND));}
     private int lashes() {return p.getEntityWorld().getEntitiesByClass(ThornLashEntity.class,new Box(-10,90,-10,10,110,10),e->!e.isRemoved()).size();}
     private ZombieEntity zombie(double x,double y,double z) {

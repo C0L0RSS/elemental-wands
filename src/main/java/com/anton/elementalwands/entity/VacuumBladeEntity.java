@@ -3,6 +3,7 @@ package com.anton.elementalwands.entity;
 import com.anton.elementalwands.party.WandAllies;
 
 import com.anton.elementalwands.registry.ModEntities;
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.util.BlockWindEvents;
 
 import net.minecraft.entity.Entity;
@@ -16,7 +17,6 @@ import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Vec3d;
@@ -118,9 +118,9 @@ public class VacuumBladeEntity extends ProjectileEntity {
         serverWorld.playSound(
                 null,
                 target.getBlockPos(),
-                SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP,
+                ModSounds.SPELL_WIND_SKY_SHEAR_HIT,
                 SoundCategory.PLAYERS,
-                0.5f, 1.5f);
+                0.5f, 1.0f);
 
         // Despawn after hitting entity (doesn't pierce)
         discard();

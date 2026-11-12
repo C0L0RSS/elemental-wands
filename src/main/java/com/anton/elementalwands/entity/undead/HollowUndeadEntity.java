@@ -1,6 +1,7 @@
 package com.anton.elementalwands.entity.undead;
 
 import com.anton.elementalwands.entity.necromancer.NecromancerMinion;
+import com.anton.elementalwands.registry.ModSounds;
 import java.util.EnumSet;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
@@ -27,7 +28,6 @@ import net.minecraft.particle.BlockStateParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
@@ -169,7 +169,7 @@ public abstract class HollowUndeadEntity extends HostileEntity implements GeoEnt
 
     /** Soil bursts while the body claws free; the Necromancer's summons also shed soul wisps. */
     private void riseEffects(ServerWorld world, int tick) {
-        if (tick == 0) world.playSound(null, getBlockPos(), isBound() ? SoundEvents.PARTICLE_SOUL_ESCAPE.value() : SoundEvents.BLOCK_ROOTED_DIRT_BREAK,
+        if (tick == 0) world.playSound(null, getBlockPos(), isBound() ? ModSounds.ENTITY_HOLLOW_UNDEAD_RISE_SOUL : ModSounds.ENTITY_HOLLOW_UNDEAD_RISE_SOIL,
                 SoundCategory.HOSTILE, 1.2f, .7f);
         if (tick > riseTicks() * .6) return;
         BlockState ground = world.getBlockState(BlockPos.ofFloored(getX(), getY() - .5, getZ()));

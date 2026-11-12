@@ -4,6 +4,7 @@ import com.anton.elementalwands.arena.GuardianArenaManager;
 import com.anton.elementalwands.data.WizardAffinity;
 import com.anton.elementalwands.party.WandAllies;
 import com.anton.elementalwands.registry.*;
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.util.*;
 import net.minecraft.entity.*;
 import net.minecraft.entity.attribute.EntityAttributes;
@@ -48,7 +49,7 @@ public final class GravityBombEntity extends Entity {
         if (isCollapsing() || isBurst() || !isWell()) return;
         dataTracker.set(COLLAPSE_START, getEntityWorld().getTime());
         if (getEntityWorld() instanceof ServerWorld w)
-            w.playSound(null, getBlockPos(), SoundEvents.BLOCK_RESPAWN_ANCHOR_CHARGE, SoundCategory.PLAYERS, .8f, 1.6f);
+            w.playSound(null, getBlockPos(), ModSounds.SPELL_SPACE_GRAVITY_WELL_COLLAPSE_CHARGE, SoundCategory.PLAYERS, .8f, 1f);
     }
     @Override public void tick() {
         super.tick();
@@ -85,8 +86,7 @@ public final class GravityBombEntity extends Entity {
         setPosition(pos); setVelocity(Vec3d.ZERO); dataTracker.set(WELL, true); dataTracker.set(IMPACT_AGE, age);
         expires = w.getTime() + GravityWellManager.DURATION;
         GravityWellManager.impact(owner, this);
-        w.playSound(null, getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_BREAK, SoundCategory.PLAYERS, .65f, 1.4f);
-        w.playSound(null, getBlockPos(), SoundEvents.BLOCK_RESPAWN_ANCHOR_CHARGE, SoundCategory.PLAYERS, .8f, .65f);
+        w.playSound(null, getBlockPos(), ModSounds.SPELL_SPACE_GRAVITY_WELL_LAND, SoundCategory.PLAYERS, .8f, 1f);
     }
     private boolean eligible(LivingEntity e) {
         return e.isAlive() && !e.isSpectator() && !WandAllies.protectedFrom(owner, e)
@@ -118,7 +118,7 @@ public final class GravityBombEntity extends Entity {
         dataTracker.set(BURST_START, w.getTime());
         affect(w, true);
         // Renderer carries the same stream motes from suction into the outward burst.
-        w.playSound(null, getBlockPos(), SoundEvents.BLOCK_RESPAWN_ANCHOR_DEPLETE.value(), SoundCategory.PLAYERS, 1, .7f);
+        w.playSound(null, getBlockPos(), ModSounds.SPELL_SPACE_GRAVITY_WELL_COLLAPSE_BURST, SoundCategory.PLAYERS, 1, 1f);
     }
     @Override protected void readCustomData(ReadView view) { owner = null; }
     @Override protected void writeCustomData(WriteView view) {}

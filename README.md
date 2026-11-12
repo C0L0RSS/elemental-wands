@@ -30,7 +30,7 @@ only once in a loadout; unused slots may remain empty.
 
 Basic, Technique, and Ultimate describe spell categories in the store. They do
 not restrict where you equip a spell. Fire currently offers six spells to choose
-from, Nature offers four, and Wind, Stone, and Space each offer three.
+from, and Wind, Stone, Nature, and Space each offer five.
 
 New purchases fill available empty slots without replacing your selected spells.
 Switching elements restores that element's saved loadout. Moving a spell between
@@ -67,7 +67,7 @@ reservoir and require full charge to cast.
 | Fire | Inferno Wave, Flamethrower | Dragon's Pyre, Fire Leap, Flashover | Meteor |
 | Wind | Sky Shear | Waylay Dash | Zephyr Strike |
 | Stone | Gathered Mass | Stone Wall | Titan Dome |
-| Nature | Seed, Thorn Lash | Tendril Bloom | Overgrowth |
+| Nature | Seed, Thornbite | Sentry Bloom, Springbloom | Full Bloom |
 | Space | Singularity Bolt | Blink Rift | Hollow Purple |
 
 ### Fire
@@ -93,11 +93,12 @@ and equipment effects.
 
 ### Nature
 
-**Seed** strikes enemies or plants growing flowers. **Thorn Lash** sweeps nearby
-enemies and restores health from damage dealt. **Tendril Bloom** sends vines from
-your flowers, or creates a root knot when none are available. **Overgrowth** throws
-an acorn that grows a healing oak; a nearby owned flower extends its duration.
-The **Verdant Step** passive creates temporary rafts across water.
+**Seed** strikes an enemy and turns your flowers on it; **Thornbite** bites one
+enemy, does the same and restores health from the damage dealt. **Sentry Bloom**
+plants a flower that turns to face your marked enemy, or the nearest monster,
+spits seeds at it and heals you as they land. **Springbloom** throws a jump pad.
+**Full Bloom** sends out a wave of petals: you and nearby allies regenerate and gain a
+shield, your spells quicken and each of your flowers grows a second head.
 
 ### Space
 

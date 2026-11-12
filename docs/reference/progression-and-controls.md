@@ -21,7 +21,7 @@ Default slot inputs are left mouse, right mouse, X, Z, V; Spell alternate is R.
 Bindings are editable in Controls and saved in
 `config/elementalwands-controls.properties`. Existing saved bindings can differ.
 Sneak + right mouse performs ordinary block interaction. Slot 1 also handles
-close aimed Flashover disarming and Nature root-knot/Springbloom breaking. While
+close aimed Flashover disarming and Springbloom breaking. While
 Gale Daggers is prepared, a fresh slot-1 press releases its volley instead. Holding
 that click does not also repeat Sky Shear. Updraft also requires a fresh press.
 Gravity Well requires fresh presses to throw and collapse early. Astral Double

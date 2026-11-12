@@ -1,5 +1,7 @@
 package com.anton.elementalwands.entity;
 
+import com.anton.elementalwands.registry.ModSounds;
+
 import java.util.UUID;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.EntityType;
@@ -16,7 +18,6 @@ import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import software.bernie.geckolib.animatable.GeoEntity;
@@ -29,7 +30,6 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 /** Summon-only cooperative boss, with explicit passive animation review controls. */
 public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntity, WandBoss {
-    private static final TrackedData<Long> NATURE_OPENING = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.LONG);
     private static final TrackedData<Integer> CRACKS = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Long> PULSE_START = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.LONG);
     private static final TrackedData<Boolean> UNSTABLE = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
@@ -81,7 +81,6 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
     @Override
     protected void initDataTracker(DataTracker.Builder builder) {
         super.initDataTracker(builder);
-        builder.add(NATURE_OPENING,-1L);
         builder.add(FAN_START, -1L); builder.add(FAN_PITCH, 0f);
         builder.add(ARENA_HIDDEN, false);
         builder.add(UNSTABLE, false);
@@ -170,7 +169,8 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
         timeUntilRegen = previous == null ? 0 : 10 + (int)(previous.until() - now);
         lastDamageTaken = previous == null ? 0 : previous.damage();
         boolean accepted = super.damage(world, source, GuardianShellRules.impact(amount));
-        if (accepted) hurtWindows.put(key, new HurtWindow(previous == null ? now+10 : previous.until(), lastDamageTaken));
+        if (accepted && !source.isIn(com.anton.elementalwands.util.SpellCombat.NO_HURT_WINDOW))
+            hurtWindows.put(key, new HurtWindow(previous == null ? now+10 : previous.until(), lastDamageTaken));
         return accepted;
     }
 
@@ -193,7 +193,7 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
         int oldCracks = getCracks();
         updateCracks();
         if (getCracks() > oldCracks && isAlive()) {
-            world.playSound(null, getBlockPos(), SoundEvents.BLOCK_STONE_BREAK, SoundCategory.HOSTILE, 1.3f, .7f);
+            world.playSound(null, getBlockPos(), ModSounds.ENTITY_GUARDIAN_SHELL_CRACK, SoundCategory.HOSTILE, 1.3f, .7f);
             world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, net.minecraft.block.Blocks.STONE.getDefaultState()),
                     getX(), getY()+3.3, getZ(), 22, 1.2, 1.1, 1.2, .07);
         }
@@ -267,10 +267,6 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
     @Override public boolean isBossAggressive() { return !getCommandTags().contains(PASSIVE_TAG); }
     @Override public boolean eligible(ServerPlayerEntity player) { return com.anton.elementalwands.arena.GuardianArenaManager.eligible(this, player); }
 
-    public void setNatureOpening(long start){dataTracker.set(NATURE_OPENING,start);}
-    @Override public boolean natureOpening(){long start=dataTracker.get(NATURE_OPENING),now=getEntityWorld().getTime();return start>=0 && now>=start && now<start+GuardianNatureResponse.EXTRA_RECOVERY;}
-    @Override public void onNatureEntangle(int stacks) { combat.entangle(stacks); }
-    @Override public void onNatureThorns() { combat.thorn(); }
 
     public String leapStatus() { return combat.leapStatus(); }
 
@@ -407,7 +403,7 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
                 stoneImpact(world);
             }
             if (rehearsal.equals("throw") && tick == 44) {
-                world.playSound(null, getX(), getY()+3, getZ(), SoundEvents.ENTITY_IRON_GOLEM_ATTACK,
+                world.playSound(null, getX(), getY()+3, getZ(), ModSounds.ENTITY_GUARDIAN_THROW_LAUNCH,
                         SoundCategory.HOSTILE, .8f, .65f);
             }
             int duration = switch (rehearsal) {
@@ -470,7 +466,7 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
 
     private void stoneImpact(ServerWorld world) {
         if (!isOnGround()) return;
-        world.playSound(null, getX(), getY(), getZ(), SoundEvents.BLOCK_STONE_BREAK,
+        world.playSound(null, getX(), getY(), getZ(), ModSounds.ENTITY_GUARDIAN_REHEARSAL_IMPACT,
                 SoundCategory.HOSTILE, 1.2f, .55f);
         // Sample actual support blocks; dust follows uneven ground without modifying it.
         for (int i = 0; i < 12; i++) {
@@ -488,7 +484,7 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
 
     @Override
     protected void playStepSound(BlockPos pos, BlockState state) {
-        playSound(SoundEvents.BLOCK_STONE_STEP, .65f, .6f);
+        playSound(ModSounds.ENTITY_GUARDIAN_STEP, .65f, .6f);
     }
 
     @Override

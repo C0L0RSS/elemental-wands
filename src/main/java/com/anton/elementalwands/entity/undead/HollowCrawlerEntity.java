@@ -2,6 +2,8 @@ package com.anton.elementalwands.entity.undead;
 
 import static com.anton.elementalwands.entity.undead.HollowUndeadClips.*;
 
+import com.anton.elementalwands.registry.ModSounds;
+
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
@@ -11,7 +13,6 @@ import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
@@ -56,7 +57,7 @@ public class HollowCrawlerEntity extends HollowUndeadEntity {
 
     @Override
     protected void onBegin(ServerWorld world, LivingEntity target) {
-        playSound(SoundEvents.ENTITY_SKELETON_AMBIENT, 1, 1.3f);
+        playSound(ModSounds.ENTITY_HOLLOW_CRAWLER_RAKE_WINDUP, 1, 1.3f);
     }
 
     @Override
@@ -66,8 +67,8 @@ public class HollowCrawlerEntity extends HollowUndeadEntity {
         if (distance(target.getBoundingBox(), claw) <= CLAW_RADIUS) tryAttack(world, target);
     }
 
-    @Override protected SoundEvent getAmbientSound() { return SoundEvents.ENTITY_SKELETON_AMBIENT; }
-    @Override protected SoundEvent getHurtSound(DamageSource source) { return SoundEvents.ENTITY_SKELETON_HURT; }
-    @Override protected SoundEvent getDeathSound() { return SoundEvents.ENTITY_SKELETON_DEATH; }
-    @Override protected void playStepSound(BlockPos pos, BlockState state) { playSound(SoundEvents.ENTITY_SKELETON_STEP, .08f, .7f); }
+    @Override protected SoundEvent getAmbientSound() { return ModSounds.ENTITY_HOLLOW_CRAWLER_AMBIENT; }
+    @Override protected SoundEvent getHurtSound(DamageSource source) { return ModSounds.ENTITY_HOLLOW_CRAWLER_HURT; }
+    @Override protected SoundEvent getDeathSound() { return ModSounds.ENTITY_HOLLOW_CRAWLER_DEATH; }
+    @Override protected void playStepSound(BlockPos pos, BlockState state) { playSound(ModSounds.ENTITY_HOLLOW_CRAWLER_STEP, .08f, .7f); }
 }

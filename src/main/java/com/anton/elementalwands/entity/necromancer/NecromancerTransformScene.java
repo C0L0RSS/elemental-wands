@@ -2,6 +2,7 @@ package com.anton.elementalwands.entity.necromancer;
 
 import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.registry.ModEntities;
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.util.SoulGlow;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,13 +25,11 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.particle.BlockStateParticleEffect;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.registry.tag.DamageTypeTags;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Vec3d;
@@ -215,78 +214,78 @@ public final class NecromancerTransformScene {
     private void cue(String cue, int t) {
         Vec3d at = centre.add(0, 1, 0);
         switch (cue) {
-            case "wind rush" -> sound(at.add(0, 6, 0), SoundEvents.ENTITY_PHANTOM_SWOOP, 2.5f, .5f);
+            case "wind rush" -> sound(at.add(0, 6, 0), ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_WIND_RUSH, 2.5f, .5f);
             case "crash" -> {
-                sound(at, SoundEvents.ITEM_MACE_SMASH_GROUND_HEAVY, 3f, .55f);
-                sound(at, SoundEvents.ENTITY_GENERIC_EXPLODE, 1.5f, .5f);
+                sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_CRASH_IMPACT, 3f, .55f);
+                sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_CRASH_BOOM, 1.5f, .5f);
                 dust(centre, 40);
             }
             case "staff snaps" -> {
-                sound(at, SoundEvents.ENTITY_ZOMBIE_BREAK_WOODEN_DOOR, 2.5f, 1.3f);
-                sound(at, SoundEvents.BLOCK_WOOD_BREAK, 2.5f, .6f);
+                sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_STAFF_SNAPS_CRACK, 2.5f, 1.3f);
+                sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_STAFF_SNAPS_SPLINTER, 2.5f, .6f);
             }
-            case "braziers gutter out" -> sound(at, SoundEvents.BLOCK_FIRE_EXTINGUISH, 3f, .5f);
-            case "heartbeat" -> sound(at, SoundEvents.ENTITY_WARDEN_HEARTBEAT, 3f, .55f);
-            case "the halves rattle" -> sound(at, SoundEvents.BLOCK_WOOD_HIT, 2f, .5f);
-            case "whispers" -> sound(at, SoundEvents.AMBIENT_SOUL_SAND_VALLEY_MOOD, 3f, .7f);
+            case "braziers gutter out" -> sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_BRAZIERS_GUTTER_OUT, 3f, .5f);
+            case "heartbeat" -> sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_HEARTBEAT, 3f, .55f);
+            case "the halves rattle" -> sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_HALVES_RATTLE, 2f, .5f);
+            case "whispers" -> sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_WHISPERS, 3f, .7f);
             case "souls shriek free" -> {
-                sound(at, SoundEvents.ENTITY_GHAST_SCREAM, 2.5f, .8f);
-                sound(at, SoundEvents.ENTITY_VEX_CHARGE, 2.5f, .6f);
-                sound(at, SoundEvents.PARTICLE_SOUL_ESCAPE, 3f, 1f);
+                sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_SOULS_SHRIEK_FREE_SCREAM, 2.5f, .8f);
+                sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_SOULS_SHRIEK_FREE_SHRILL, 2.5f, .6f);
+                sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_SOULS_SHRIEK_FREE_RELEASE, 3f, 1f);
             }
             case "wailing storm" -> {
-                sound(at.add(0, 3, 0), SoundEvents.ENTITY_VEX_AMBIENT, 2.5f, .6f);
-                sound(at.add(0, 3, 0), SoundEvents.AMBIENT_SOUL_SAND_VALLEY_MOOD, 3f, 1.2f);
+                sound(at.add(0, 3, 0), ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_WAILING_STORM_WAIL, 2.5f, .6f);
+                sound(at.add(0, 3, 0), ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_WAILING_STORM_MOOD, 3f, 1.2f);
             }
             case "a soul strikes" -> {
-                sound(at, SoundEvents.ENTITY_PHANTOM_BITE, 2.5f, .6f);
-                sound(at, SoundEvents.ENTITY_VEX_CHARGE, 2.5f, .5f);
+                sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_SOUL_STRIKES_BITE, 2.5f, .6f);
+                sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_SOUL_STRIKES_SHRIEK, 2.5f, .5f);
             }
             case "thud" -> {
-                sound(centre, SoundEvents.ENTITY_GENERIC_BIG_FALL, 2.5f, .6f);
+                sound(centre, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_THUD, 2.5f, .6f);
                 dust(centre, 24);
             }
             case "souls rush in" -> {
-                sound(at, SoundEvents.BLOCK_RESPAWN_ANCHOR_CHARGE, 2.5f, .6f);
-                sound(at, SoundEvents.PARTICLE_SOUL_ESCAPE, 3f, .6f);
+                sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_SOULS_RUSH_IN_CHARGE, 2.5f, .6f);
+                sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_SOULS_RUSH_IN_SOUL, 3f, .6f);
             }
-            case "the eye light gutters" -> sound(at, SoundEvents.BLOCK_CANDLE_EXTINGUISH, 2.5f, .5f);
-            case "eyes go dark" -> sound(at, SoundEvents.BLOCK_BEACON_DEACTIVATE, 2.5f, .5f);
-            case "choking" -> sound(at, SoundEvents.ENTITY_WITHER_SKELETON_AMBIENT, 2.5f, .55f);
-            case "bones crack", "finger bones crack" -> sound(at, SoundEvents.BLOCK_BONE_BLOCK_BREAK, 2.5f, cue.startsWith("finger") ? 1.3f : .7f);
-            case "hiss of smoke" -> sound(at, SoundEvents.BLOCK_FIRE_EXTINGUISH, 2f, .4f);
-            case "a hand jerks up" -> sound(at, SoundEvents.ENTITY_PHANTOM_FLAP, 2f, .8f);
-            case "the hand slams down" -> sound(at, SoundEvents.ITEM_MACE_SMASH_GROUND, 2.5f, .8f);
+            case "the eye light gutters" -> sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_EYE_LIGHT_GUTTERS, 2.5f, .5f);
+            case "eyes go dark" -> sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_EYES_GO_DARK, 2.5f, .5f);
+            case "choking" -> sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_CHOKING, 2.5f, .55f);
+            case "bones crack", "finger bones crack" -> sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_BONES_CRACK, 2.5f, cue.startsWith("finger") ? 1.3f : .7f);
+            case "hiss of smoke" -> sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_HISS_OF_SMOKE, 2f, .4f);
+            case "a hand jerks up" -> sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_HAND_JERKS_UP, 2f, .8f);
+            case "the hand slams down" -> sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_HAND_SLAMS_DOWN, 2.5f, .8f);
             case "bones grind and stretch" -> {
-                sound(at, SoundEvents.BLOCK_GRINDSTONE_USE, 2.5f, .4f);
-                sound(at, SoundEvents.BLOCK_BONE_BLOCK_BREAK, 2.5f, .5f);
+                sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_BONES_STRETCH_GRIND, 2.5f, .4f);
+                sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_BONES_STRETCH_CRACK, 2.5f, .5f);
             }
             case "a seam rips", "cloth tears" -> {
-                sound(at, SoundEvents.ENTITY_SHEEP_SHEAR, 2.5f, .55f);
-                sound(at, SoundEvents.BLOCK_WOOL_BREAK, 2.5f, .7f);
+                sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_CLOTH_TEARS_RIP, 2.5f, .55f);
+                sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_CLOTH_TEARS_SHRED, 2.5f, .7f);
             }
             case "the robe tears apart" -> {
-                sound(at, SoundEvents.ENTITY_GENERIC_EXPLODE, 2f, .45f);
-                sound(at, SoundEvents.ENTITY_EVOKER_PREPARE_SUMMON, 2.5f, .5f);
-                sound(at, SoundEvents.BLOCK_WOOL_BREAK, 3f, .5f);
+                sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_ROBE_TEARS_APART_BOOM, 2f, .45f);
+                sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_ROBE_TEARS_APART_SURGE, 2.5f, .5f);
+                sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_ROBE_TEARS_APART_SHRED, 3f, .5f);
             }
-            case "a spasm" -> sound(at, SoundEvents.ENTITY_SKELETON_HURT, 2.5f, .45f);
-            case "rags slap the stone" -> sound(centre, SoundEvents.BLOCK_WOOL_FALL, 2.5f, .6f);
-            case "it sits up" -> sound(at, SoundEvents.ENTITY_SKELETON_AMBIENT, 2.5f, .4f);
-            case "bone creaks" -> sound(at.add(0, 2, 0), SoundEvents.ENTITY_SKELETON_AMBIENT, 2.5f, .3f);
+            case "a spasm" -> sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_SPASM, 2.5f, .45f);
+            case "rags slap the stone" -> sound(centre, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_RAGS_SLAP_STONE, 2.5f, .6f);
+            case "it sits up" -> sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_SITS_UP, 2.5f, .4f);
+            case "bone creaks" -> sound(at.add(0, 2, 0), ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_BONE_CREAKS, 2.5f, .3f);
             case "soul fire ignites" -> {
-                sound(at.add(0, 3, 0), SoundEvents.ITEM_FIRECHARGE_USE, 2.5f, .5f);
-                sound(at.add(0, 3, 0), SoundEvents.BLOCK_BEACON_ACTIVATE, 2.5f, .5f);
+                sound(at.add(0, 3, 0), ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_SOUL_FIRE_IGNITES_FLARE, 2.5f, .5f);
+                sound(at.add(0, 3, 0), ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_SOUL_FIRE_IGNITES_HUM, 2.5f, .5f);
             }
-            case "a claw strikes stone" -> sound(centre, SoundEvents.ENTITY_IRON_GOLEM_STEP, 2.5f, .5f);
-            case "bone scraping stone", "claws grind into the stone" -> sound(centre, SoundEvents.BLOCK_GRINDSTONE_USE, 2.5f, cue.startsWith("claws") ? .35f : .5f);
+            case "a claw strikes stone" -> sound(centre, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_CLAW_STRIKES_STONE, 2.5f, .5f);
+            case "bone scraping stone", "claws grind into the stone" -> sound(centre, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_BONE_SCRAPES_STONE, 2.5f, cue.startsWith("claws") ? .35f : .5f);
             case "a howl" -> {
-                sound(at.add(0, 3, 0), SoundEvents.ENTITY_WARDEN_ROAR, 3f, .6f);
-                sound(at.add(0, 3, 0), SoundEvents.ENTITY_RAVAGER_ROAR, 3f, .45f);
+                sound(at.add(0, 3, 0), ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_HOWL_ROAR, 3f, .6f);
+                sound(at.add(0, 3, 0), ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_HOWL_GROWL, 3f, .45f);
                 Vec3d skull = at.add(0, 3, 0);
                 world.spawnParticles(ParticleTypes.SCULK_SOUL, true, false, skull.x, skull.y, skull.z, 30, 1.5, 1.2, 1.5, .08);
             }
-            case "braziers flare" -> sound(at, SoundEvents.ITEM_FIRECHARGE_USE, 3f, .6f);
+            case "braziers flare" -> sound(at, ModSounds.CINEMATIC_NECROMANCER_TRANSFORM_BRAZIERS_FLARE, 3f, .6f);
             default -> {}
         }
     }
@@ -436,9 +435,5 @@ public final class NecromancerTransformScene {
 
     private void sound(Vec3d at, SoundEvent sound, float volume, float pitch) {
         world.playSound(null, at.x, at.y, at.z, sound, SoundCategory.HOSTILE, volume, pitch);
-    }
-
-    private void sound(Vec3d at, RegistryEntry<SoundEvent> sound, float volume, float pitch) {
-        world.playSound(null, at.x, at.y, at.z, sound, SoundCategory.HOSTILE, volume, pitch, world.getRandom().nextLong());
     }
 }

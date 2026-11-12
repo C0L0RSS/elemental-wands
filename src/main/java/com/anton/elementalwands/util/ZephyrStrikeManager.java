@@ -4,6 +4,7 @@ import com.anton.elementalwands.data.EWAttachments;
 import com.anton.elementalwands.data.WizardAffinity;
 import com.anton.elementalwands.registry.ModItems;
 import com.anton.elementalwands.registry.ModParticles;
+import com.anton.elementalwands.registry.ModSounds;
 
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
@@ -18,7 +19,6 @@ import net.minecraft.particle.BlockParticleEffect;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.collection.Pool;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
@@ -170,7 +170,7 @@ public final class ZephyrStrikeManager {
                 ModParticles.WIND_ZEPHYR_IMPACT,
                 ModParticles.WIND_ZEPHYR_IMPACT,
                 Pool.<BlockParticleEffect>empty(),
-                SoundEvents.ENTITY_GENERIC_EXPLODE);
+                ModSounds.entry(ModSounds.SPELL_WIND_ZEPHYR_STRIKE_LAND));
 
         double visualRadius = Math.max(4.5, Math.min(9.0, 1.8 + power * 0.88));
         BlockWindEvents.send(world, BlockWindEvents.ZEPHYR_LAND, player.getId(),

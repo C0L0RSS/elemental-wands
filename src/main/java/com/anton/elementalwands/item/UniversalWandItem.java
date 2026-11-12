@@ -113,7 +113,6 @@ public class UniversalWandItem extends AbstractWandItem {
             case FIRE  -> FireAbilityHandler.inventoryTick(stack, world, entity, slot);
             case WIND  -> WindAbilityHandler.inventoryTick(stack, world, entity, slot);
             case STONE -> StoneAbilityHandler.inventoryTick(stack, world, entity, slot);
-            case NATURE -> NatureAbilityHandler.inventoryTick(stack, world, entity, slot);
             default    -> {}
         }
     }

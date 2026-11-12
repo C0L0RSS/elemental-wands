@@ -3,6 +3,7 @@ package com.anton.elementalwands.entity;
 import com.anton.elementalwands.arena.GuardianArenaManager;
 import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.registry.ModEntities;
+import com.anton.elementalwands.registry.ModSounds;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
@@ -25,7 +26,6 @@ import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
@@ -48,7 +48,6 @@ final class GuardianBossCombat {
     private final Map<Attack, Long> ready = new EnumMap<>(Attack.class);
     private final Map<UUID, Long> lastTargeted = new HashMap<>();
     private final GuardianLeapAttack leap;
-    private final GuardianNatureResponse nature = new GuardianNatureResponse();
     private final GuardianMotionSample motion = new GuardianMotionSample();
     private final GuardianFightLog log = new GuardianFightLog();
     private final List<GuardianRockEntity> rocks = new ArrayList<>();
@@ -96,9 +95,6 @@ final class GuardianBossCombat {
                 RaycastContext.FluidHandling.NONE, guardian)).getType() == HitResult.Type.MISS;
     }
 
-    void entangle(int stacks) { nature.entangle(stacks, guardian.getEntityWorld().getTime()); }
-    void thorn() { nature.thorn(guardian.getEntityWorld().getTime()); }
-
     GuardianFightLog log() { return log; }
     /** Ends the tuning record, if one is running. Safe to call more than once. */
     void finishLog(String outcome) { log.finish(guardian, outcome); }
@@ -120,7 +116,7 @@ final class GuardianBossCombat {
     }
 
     void cancel() {
-        nature.reset(); guardian.setNatureOpening(-1); hovering.clear(); pendingFan=false; approachUntil=0;
+        hovering.clear(); pendingFan=false; approachUntil=0;
         leap.cancel();
         guardian.cancelCombatBeam();
         guardian.clearFan(); guardian.clearPulse();
@@ -236,7 +232,7 @@ final class GuardianBossCombat {
         if (guardian.phasePending() && active == null && guardian.isOnGround()) {
             interruptAction(); guardian.beginPhase(); freeze();
             guardian.triggerAnim("guardian", "phase_change");
-            world.playSound(null, guardian.getBlockPos(), SoundEvents.BLOCK_RESPAWN_ANCHOR_DEPLETE.value(),
+            world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_SHELL_BREAK_WINDUP,
                     SoundCategory.HOSTILE, 2, .65f);
             log.stage(now, "shell break");
             return;
@@ -253,24 +249,8 @@ final class GuardianBossCombat {
         if (!reservedBeam && choice != Attack.PULSE && now>=ready.getOrDefault(Attack.FAN,0L) && last!=Attack.FAN
                 && target(Attack.FAN,candidates,lastTargeted,now,unstable,null)!=null
                 && (pendingFan || aerial!=null || guardian.getRandom().nextInt(3)==0)) choice=Attack.FAN;
-        Candidate clearingTarget = null;
-        if (!reservedBeam && choice != Attack.PULSE && nature.wantsClear(now)) {
-            for (Attack clearing : new Attack[]{Attack.SLAM, Attack.SHOCKWAVE}) {
-                Candidate candidate = target(clearing, candidates, lastTargeted, now, unstable, null);
-                // A local clearing slam still makes sense when players stand beyond its wave.
-                if (candidate == null && clearing == Attack.SHOCKWAVE) candidate = candidates.stream()
-                        .filter(p -> p.visible() && p.distance() <= 32)
-                        .min(Comparator.comparingDouble(Candidate::distance)).orElse(null);
-                if (clearing != last && now >= ready.getOrDefault(clearing, 0L) && candidate != null) {
-                    choice = clearing; clearingTarget = candidate;
-                    break;
-                }
-            }
-        }
         if (choice != null && guardian.isOnGround()) {
-            Candidate selected = clearingTarget != null ? clearingTarget
-                    : choice==Attack.FAN && aerial!=null ? aerial : target(choice,candidates,lastTargeted,now,unstable,null);
-            if (clearingTarget != null) nature.clearing(now);
+            Candidate selected = choice==Attack.FAN && aerial!=null ? aerial : target(choice,candidates,lastTargeted,now,unstable,null);
             ServerPlayerEntity player = world.getServer().getPlayerManager().getPlayer(selected.id());
             begin(world, choice, player, now, false);
             // Mix a single slam into a separately telegraphed fan; retain the full triple-slam pattern too.
@@ -371,14 +351,14 @@ final class GuardianBossCombat {
             guardian.syncPulse(now);
             guardian.stopTriggeredAnim("guardian", null);
             guardian.triggerAnim("guardian", "core_pulse");
-            world.playSound(null, guardian.getBlockPos(), SoundEvents.ENTITY_WARDEN_SONIC_CHARGE, SoundCategory.HOSTILE, 2.5f, .55f);
+            world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_PULSE_CHARGE, SoundCategory.HOSTILE, 2.5f, .55f);
             log.cast(now, "core pulse", null);
             return;
         }
         freeze();
         rollHold();
         triggerPhysicalAnimation();
-        world.playSound(null, guardian.getBlockPos(), SoundEvents.ENTITY_IRON_GOLEM_ATTACK, SoundCategory.HOSTILE, .8f, .55f);
+        world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_ATTACK_WINDUP, SoundCategory.HOSTILE, .8f, .55f);
         lockedAim = player.getBoundingBox().getCenter();
         logPhysical(now, player);
         volley(world, now);
@@ -417,9 +397,7 @@ final class GuardianBossCombat {
         unfreeze(); active = null; heldRock = null;
         guardian.setHoldingRock(false);
         guardian.getNavigation().stop();
-        int extraRecovery = nature.finishAttack(now);
-        guardian.setNatureOpening(extraRecovery>0?now+gap:-1);
-        nextAction = now + gap + extraRecovery;
+        nextAction = now + gap;
         approachUntil = reviewing || pendingFan ? 0 : nextAction + scaled(20, rest);
     }
     private void tickAttack(ServerWorld world, long now) {
@@ -481,11 +459,11 @@ final class GuardianBossCombat {
             if (heldRock != null && tick <= release) heldRock.setPosition(GuardianThrowSocket.worldPosition(guardian, (int)Math.round(Math.min(THROW_RELEASE,socketTick))));
             if (tick == release && heldRock != null) {
                 guardian.setHoldingRock(false); heldRock.release(lockedAim); heldRock = null;
-                world.playSound(null, guardian.getBlockPos(), SoundEvents.ENTITY_IRON_GOLEM_ATTACK, SoundCategory.HOSTILE, 1.2f, .7f);
+                world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_THROW_LAUNCH, SoundCategory.HOSTILE, 1.2f, .7f);
             }
         } else if (tick == GuardianPhaseRules.slamImpact(fastSlam(), slamHold)) {
             impactSound(world);
-            crushGrowth(world, anchor, 4.5, false, 6);
+            breakDoubles(world, anchor, 4.5);
             emitWave(world, anchor, fists(world));
         }
     }
@@ -536,7 +514,7 @@ final class GuardianBossCombat {
         guardian.syncFan(started,fanPitch);
         guardian.setYaw(attackYaw);guardian.setBodyYaw(attackYaw);guardian.setHeadYaw(attackYaw);
         guardian.setVelocity(0,Math.min(0,guardian.getVelocity().y),0);
-        if (tick==8) world.playSound(null,guardian.getBlockPos(),SoundEvents.BLOCK_AMETHYST_BLOCK_RESONATE,SoundCategory.HOSTILE,1.6f,.6f);
+        if (tick==8) world.playSound(null,guardian.getBlockPos(),ModSounds.ENTITY_GUARDIAN_FAN_CHARGE,SoundCategory.HOSTILE,1.6f,.6f);
         if (tick == GuardianFanRules.LOCK) {
             for (int i = 0; i < GuardianFanRules.COUNT; i++) {
                 Vec3d socket = GuardianFanRules.socket(guardian.getEntityPos(), attackYaw, fanPitch, i);
@@ -556,7 +534,7 @@ final class GuardianBossCombat {
                 shard.releaseShard(GuardianFanRules.direction(socket,lockedAim,i),hits,walls);
                 world.spawnEntity(shard);rocks.add(shard);
             }
-            world.playSound(null,guardian.getBlockPos(),SoundEvents.ENTITY_IRON_GOLEM_ATTACK,SoundCategory.HOSTILE,1.6f,1.1f);
+            world.playSound(null,guardian.getBlockPos(),ModSounds.ENTITY_GUARDIAN_FAN_LAUNCH,SoundCategory.HOSTILE,1.6f,1.1f);
         }
     }
 
@@ -565,7 +543,7 @@ final class GuardianBossCombat {
         Vec3d feet = guardian.getEntityPos();
         if (time < GuardianPhaseRules.BURST) {
             if (time % 8 == 0)
-                world.playSound(null, guardian.getBlockPos(), SoundEvents.BLOCK_GRINDSTONE_USE, SoundCategory.HOSTILE, 2f, .45f + time * .01f);
+                world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_SHELL_BREAK_LOOP, SoundCategory.HOSTILE, 2f, .45f + time * .01f);
             if (time % 2 == 0) {
                 world.spawnParticles(ParticleTypes.ELECTRIC_SPARK, feet.x, feet.y + 3.3, feet.z, 3 + time / 4, 1.1, 1.3, 1.1, .05);
                 world.spawnParticles(STONE, feet.x, feet.y + 3, feet.z, 2 + time / 8, 1, 1.2, 1, .04);
@@ -573,17 +551,17 @@ final class GuardianBossCombat {
         } else if (time == GuardianPhaseRules.BURST) {
             burst(world, feet);
         } else if (time == GuardianPhaseRules.BURST + 8) {
-            world.playSound(null, guardian.getBlockPos(), SoundEvents.ENTITY_RAVAGER_ROAR, SoundCategory.HOSTILE, 2.5f, .45f);
+            world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_VOICE_ROAR, SoundCategory.HOSTILE, 2.5f, .45f);
         }
     }
 
     private void burst(ServerWorld world, Vec3d feet) {
         Vec3d core = feet.add(0, GuardianShellRules.CORE_HEIGHT, 0);
-        world.playSound(null, guardian.getBlockPos(), SoundEvents.ENTITY_GENERIC_EXPLODE.value(), SoundCategory.HOSTILE, 1.8f, .8f);
-        world.playSound(null, guardian.getBlockPos(), SoundEvents.ENTITY_IRON_GOLEM_DAMAGE, SoundCategory.HOSTILE, 2f, .5f);
+        world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_SHELL_BREAK_BURST_BOOM, SoundCategory.HOSTILE, 1.8f, .8f);
+        world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_SHELL_BREAK_BURST_CRACK, SoundCategory.HOSTILE, 2f, .5f);
         world.spawnParticles(STONE, core.x, core.y, core.z, 140, 2.2, 1.6, 2.2, .35);
         world.spawnParticles(ParticleTypes.EXPLOSION, core.x, core.y, core.z, 3, .8, .6, .8, 0);
-        crushGrowth(world, feet, GuardianPhaseRules.BURST_RADIUS, false, 8);
+        breakDoubles(world, feet, GuardianPhaseRules.BURST_RADIUS);
         var walls = new GuardianWallImpact();
         for (ServerPlayerEntity player : world.getPlayers(p -> canDamage(guardian, p))) {
             if (!radial(feet, player.getBoundingBox(), GuardianPhaseRules.BURST_RADIUS, 6)
@@ -631,16 +609,16 @@ final class GuardianBossCombat {
             if (point != null) world.spawnParticles(PULSE_RING, point.x, point.y + .15, point.z, 1, .05, 0, .05, 0);
         }
         if (tick % 10 == 0)
-            world.playSound(null, guardian.getBlockPos(), SoundEvents.BLOCK_BEACON_AMBIENT, SoundCategory.HOSTILE, 2.5f, .6f + tick * .012f);
+            world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_PULSE_LOOP, SoundCategory.HOSTILE, 2.5f, .6f + tick * .012f);
     }
 
     private void blast(ServerWorld world, Vec3d feet, Vec3d core, List<ServerPlayerEntity> players) {
-        world.playSound(null, guardian.getBlockPos(), SoundEvents.ENTITY_WARDEN_SONIC_BOOM, SoundCategory.HOSTILE, 3f, .7f);
-        world.playSound(null, guardian.getBlockPos(), SoundEvents.ENTITY_GENERIC_EXPLODE.value(), SoundCategory.HOSTILE, 2f, .6f);
+        world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_PULSE_BLAST_SONIC, SoundCategory.HOSTILE, 3f, .7f);
+        world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_PULSE_BLAST_BOOM, SoundCategory.HOSTILE, 2f, .6f);
         world.spawnParticles(ParticleTypes.SONIC_BOOM, core.x, core.y, core.z, 1, 0, 0, 0, 0);
         world.spawnParticles(ParticleTypes.EXPLOSION, core.x, core.y, core.z, 6, 2, 1, 2, 0);
         world.spawnParticles(STONE, feet.x, feet.y + .5, feet.z, 90, 3, .4, 3, .2);
-        crushGrowth(world, feet, GuardianPulseRules.BLAST_RADIUS, false, 10);
+        breakDoubles(world, feet, GuardianPulseRules.BLAST_RADIUS);
         var walls = new GuardianWallImpact();
         for (ServerPlayerEntity player : players) {
             if (!GuardianPulseRules.inBlast(feet, player.getBoundingBox())
@@ -671,7 +649,7 @@ final class GuardianBossCombat {
             ServerPlayerEntity victim = world.getServer().getPlayerManager().getPlayer(others.get(cluster).id());
             log.cast(now, "back volley", victim == null ? "?" : victim.getName().getString());
         }
-        world.playSound(null, guardian.getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_RESONATE, SoundCategory.HOSTILE, 1.6f, .8f);
+        world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_VOLLEY_CHARGE, SoundCategory.HOSTILE, 1.6f, .8f);
     }
 
     private void tickVolleys(ServerWorld world, long now) {
@@ -703,7 +681,7 @@ final class GuardianBossCombat {
                 Vec3d led = lead(aim, drift.getOrDefault(player.getUuid(), Vec3d.ZERO), (int)(socket.distanceTo(aim) / GuardianFanRules.SPEED));
                 stone.releaseShard(GuardianFanRules.direction(socket, led, i), hits, walls);
             }
-            world.playSound(null, guardian.getBlockPos(), SoundEvents.ENTITY_IRON_GOLEM_ATTACK, SoundCategory.HOSTILE, 1.3f, 1.2f);
+            world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_VOLLEY_LAUNCH, SoundCategory.HOSTILE, 1.3f, 1.2f);
             return true;
         });
     }
@@ -743,44 +721,27 @@ final class GuardianBossCombat {
         }
     }
 
-    void crushGrowth(ServerWorld world, Vec3d center, double radius, boolean frontal, float treeDamage) {
-        Vec3d forward = Vec3d.fromPolar(0, attackYaw);
-        java.util.function.Predicate<BlockPos> hit = pos -> {
-            Vec3d point = Vec3d.ofCenter(pos), delta = point.subtract(center);
-            return delta.horizontalLength() <= radius && Math.abs(delta.y) <= 2
-                    && (!frontal || delta.horizontalLength() <= .5
-                        || forward.dotProduct(new Vec3d(delta.x,0,delta.z).normalize()) >= .25)
-                    && GuardianWaveSurface.clearLine(world,guardian,center.add(0,1,0),point.add(0,.6,0));
-        };
+    /** A slam's blast pops any Astral Double it reaches. */
+    void breakDoubles(ServerWorld world, Vec3d center, double radius) {
         for (AstralDoubleEntity clone : world.getEntitiesByClass(AstralDoubleEntity.class,
-                new net.minecraft.util.math.Box(center,center).expand(radius+1,3,radius+1),e->!e.isRemoved()))
-            if(hit.test(clone.getBlockPos()))clone.damage(world,world.getDamageSources().mobAttack(guardian),1);
-        com.anton.elementalwands.util.SeedlingManager.crushGrowth(world, hit);
-        com.anton.elementalwands.util.TendrilBloomManager.crushGrowth(world, hit);
-        for (AwakenedTreeEntity tree : world.getEntitiesByClass(AwakenedTreeEntity.class,
-                guardian.getBoundingBox().expand(radius,3,radius), e -> e.isAlive())) {
-            Vec3d delta = tree.getEntityPos().subtract(center);
-            if (delta.horizontalLength() > radius || Math.abs(delta.y) > 3
-                    || (frontal && delta.horizontalLength() > .5 && forward.dotProduct(new Vec3d(delta.x,0,delta.z).normalize()) < .25)) continue;
-            Vec3d from = center.add(0,1,0);
-            var cover = world.raycast(new RaycastContext(from,tree.getBoundingBox().getCenter(),
-                    RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,guardian));
-            // The tree's own log shell is part of its damageable body, not external cover.
-            if (cover.getType() == HitResult.Type.MISS || tree.getBoundingBox().expand(.1).contains(cover.getPos()))
-                tree.damage(world, world.getDamageSources().mobAttack(guardian), treeDamage);
+                new net.minecraft.util.math.Box(center,center).expand(radius+1,3,radius+1),e->!e.isRemoved())) {
+            Vec3d point = Vec3d.ofCenter(clone.getBlockPos()), delta = point.subtract(center);
+            if (delta.horizontalLength() <= radius && Math.abs(delta.y) <= 2
+                    && GuardianWaveSurface.clearLine(world,guardian,center.add(0,1,0),point.add(0,.6,0)))
+                clone.damage(world,world.getDamageSources().mobAttack(guardian),1);
         }
     }
 
     void leapLanded(ServerWorld world, Set<UUID> impactVictims) {
         Vec3d center = guardian.getEntityPos();
-        crushGrowth(world, center, 6, false, 10);
+        breakDoubles(world, center, 6);
         GuardianWallImpact walls=new GuardianWallImpact();
         for(BlockPos pos:com.anton.elementalwands.item.StoneAbilityHandler.guardianWallBlocks(world)) {
             if(GuardianLeapRules.damage(center,new net.minecraft.util.math.Box(pos))>0)
                 walls.clip(world,guardian,center.add(0,1,0),pos.toCenterPos(),false,true);
         }
         impactSound(world);
-        world.playSound(null,guardian.getBlockPos(),SoundEvents.ENTITY_GENERIC_EXPLODE.value(),SoundCategory.HOSTILE,1.6f,.65f);
+        world.playSound(null,guardian.getBlockPos(),ModSounds.ENTITY_GUARDIAN_LEAP_LAND_BOOM,SoundCategory.HOSTILE,1.6f,.65f);
         for (ServerPlayerEntity player : world.getPlayers(p -> canDamage(guardian,p))) {
             float damage = GuardianLeapRules.damage(center,player.getBoundingBox());
             if (damage <= 0 || !walls.clear(world,guardian,center.add(0,1,0),player.getBoundingBox().getCenter(),false)) continue;
@@ -803,15 +764,6 @@ final class GuardianBossCombat {
             if(floor==null || !waveContact(center,new net.minecraft.util.math.Box(pos),previous,radius,floor.y))continue;
             walls.clip(world,guardian,center.add(0,.7,0),new Vec3d(pos.getX()+.5,floor.y+.7,pos.getZ()+.5),true,true);
         }
-        // Crush only tracked Nature growth reached by this traveling band. Real
-        // defensive cover still protects plants behind it; primary spells do not.
-        java.util.function.Predicate<BlockPos> contacted = pos -> {
-            double distance = Math.hypot(pos.getX()+.5-center.x,pos.getZ()+.5-center.z);
-            if (distance < previous-1 || distance > radius+1) return false;
-            Vec3d surface = GuardianWaveSurface.ground(world,guardian,center,pos.getX()+.5,pos.getZ()+.5);
-            return surface != null && waveContact(center,new net.minecraft.util.math.Box(pos),previous,radius,surface.y)
-                    && walls.clear(world,guardian,center.add(0,.7,0),surface.add(0,.7,0),true);
-        };
         for (AstralDoubleEntity clone : world.getEntitiesByClass(AstralDoubleEntity.class,
                 new net.minecraft.util.math.Box(center,center).expand(radius+2,6,radius+2),e->!e.isRemoved())) {
             Vec3d floor=GuardianWaveSurface.ground(world,guardian,center,clone.getX(),clone.getZ());
@@ -819,8 +771,6 @@ final class GuardianBossCombat {
                     && walls.clear(world,guardian,center.add(0,.7,0),floor.add(0,.7,0),true))
                 clone.damage(world,world.getDamageSources().mobAttack(guardian),1);
         }
-        com.anton.elementalwands.util.SeedlingManager.crushGrowth(world,contacted);
-        com.anton.elementalwands.util.TendrilBloomManager.crushGrowth(world,contacted);
         // The continuous ridge is client-rendered. Keep server effects bounded as the radius grows.
         int samples = tick % 3 == 0 ? 24 : 0;
         for (int i=0; i<samples; i++) {
@@ -874,7 +824,7 @@ final class GuardianBossCombat {
         guardian.getNavigation().stop(); guardian.stopTriggeredAnim("guardian", null);
     }
     private void impactSound(ServerWorld world) {
-        world.playSound(null, guardian.getBlockPos(), SoundEvents.ENTITY_IRON_GOLEM_ATTACK, SoundCategory.HOSTILE, 1.5f, .45f);
+        world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_GROUND_IMPACT, SoundCategory.HOSTILE, 1.5f, .45f);
         world.spawnParticles(STONE, guardian.getX(), guardian.getY()+.2, guardian.getZ(), 35, 2,.15,2,.08);
     }
 }

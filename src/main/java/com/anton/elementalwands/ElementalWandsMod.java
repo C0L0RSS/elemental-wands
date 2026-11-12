@@ -8,14 +8,13 @@ import com.anton.elementalwands.registry.ModBlocks;
 import com.anton.elementalwands.registry.ModItems;
 import com.anton.elementalwands.registry.ModEntities;
 import com.anton.elementalwands.registry.ModParticles;
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.registry.ModSpellBlocks;
-import com.anton.elementalwands.util.SeedlingManager;
 import com.anton.elementalwands.util.EntangleTracker;
 import com.anton.elementalwands.util.HollowPurpleChargeManager;
 import com.anton.elementalwands.util.MeteorManager;
 import com.anton.elementalwands.util.SoulboundInventoryCarrier;
 import com.anton.elementalwands.util.TemporaryBlockManager;
-import com.anton.elementalwands.util.TendrilBloomManager;
 import com.anton.elementalwands.util.TitanDomeManager;
 import com.anton.elementalwands.util.ZephyrStrikeManager;
 import com.anton.elementalwands.util.OvergrowthManager;
@@ -59,6 +58,7 @@ public class ElementalWandsMod implements ModInitializer {
     @Override
     public void onInitialize() {
         ModParticles.registerAll();
+        ModSounds.registerAll();
         ModSpellBlocks.registerAll();
         EWAttachments.init();
         com.anton.elementalwands.party.PartyManager.init();
@@ -70,9 +70,9 @@ public class ElementalWandsMod implements ModInitializer {
         com.anton.elementalwands.util.StoneClusterManager.init();
         EntangleTracker.init();
         com.anton.elementalwands.util.NatureCombat.init();
+        com.anton.elementalwands.util.FlowerTurretManager.init();
+        com.anton.elementalwands.util.FullBloomManager.init();
         OvergrowthManager.init();
-        SeedlingManager.init();
-        TendrilBloomManager.init();
         com.anton.elementalwands.util.SpringbloomManager.init();
         MeteorManager.init();
         TitanDomeManager.init();
@@ -145,7 +145,6 @@ public class ElementalWandsMod implements ModInitializer {
             server.execute(() -> {
                 com.anton.elementalwands.util.WandGuide.removeLegacyBooks(player.getInventory());
                 ModNetworking.syncPlayerData(player);
-                SeedlingManager.syncActiveSeedlings(player);
                 EntangleTracker.syncPlayer(player);
                 ModNetworking.welcomeIfNeeded(player);
             });

@@ -147,7 +147,8 @@ public final class StormRocEntity extends PathAwareEntity implements GeoEntity, 
         boolean accepted = super.damage(world, source, amount);
         if (accepted) {
             sameTickHits.put(key, requested);
-            hurt.put(player.getUuid(), new Hurt(previous == null ? now + 10 : previous.until, lastDamageTaken));
+            if (!source.isIn(SpellCombat.NO_HURT_WINDOW))
+                hurt.put(player.getUuid(), new Hurt(previous == null ? now + 10 : previous.until, lastDamageTaken));
             combat.damaged(player, before - getHealth());
         }
         return accepted;
@@ -197,7 +198,7 @@ public final class StormRocEntity extends PathAwareEntity implements GeoEntity, 
             world.spawnEntity(part);
             parts.add(part);
         }
-        // The torso includes its ground footprint so planted thorns can find a grounded Roc;
+        // The torso includes its ground footprint so owned ground effects can find a grounded Roc;
         // the enormous wings remain outside this hurt volume.
         Vec3d chest = socket("body");
         setBoundingBox(new Box(chest.x - 2.6, Math.min(getY(), chest.y - 1.8), chest.z - 2.8, chest.x + 2.6, chest.y + 2.2, chest.z + 2.8));

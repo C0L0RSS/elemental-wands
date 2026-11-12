@@ -5,6 +5,7 @@ import com.anton.elementalwands.party.WandAllies;
 import java.util.List;
 
 import com.anton.elementalwands.registry.ModEntities;
+import com.anton.elementalwands.registry.ModSounds;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -18,7 +19,6 @@ import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Box;
@@ -183,9 +183,7 @@ public class SingularityBoltEntity extends ProjectileEntity {
         com.anton.elementalwands.util.BlockSpaceEvents.send(world, com.anton.elementalwands.util.BlockSpaceEvents.BOLT_HIT, getId(), impactPos,
                 launchDirection != null ? launchDirection : getVelocity(), strength);
         world.playSound(null, net.minecraft.util.math.BlockPos.ofFloored(impactPos),
-                SoundEvents.BLOCK_RESPAWN_ANCHOR_DEPLETE.value(), SoundCategory.PLAYERS, 0.82f, 1.35f);
-        world.playSound(null, net.minecraft.util.math.BlockPos.ofFloored(impactPos),
-                SoundEvents.ENTITY_SHULKER_BULLET_HIT, SoundCategory.PLAYERS, 0.72f, 1.12f);
+                ModSounds.SPELL_SPACE_SINGULARITY_BOLT_IMPACT, SoundCategory.PLAYERS, 0.82f, 1.0f);
     }
 
     private static boolean damageWithoutKnockback(

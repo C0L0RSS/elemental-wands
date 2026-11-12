@@ -9,7 +9,6 @@ import com.anton.elementalwands.data.WizardAffinity;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.util.math.BlockPos;
 
 @Environment(EnvType.CLIENT)
 public final class ClientPlayerData {
@@ -63,7 +62,6 @@ public final class ClientPlayerData {
         loadout = com.anton.elementalwands.data.WandSpells.reconcile(getAffinity(), ids, owned);
         canEdit = editable;
     }
-    private static List<BlockPos> natureSeedlings = List.of();
     private static int stoneMass, stoneDuration = 30;
     private static long stoneReadyAt;
 
@@ -103,17 +101,12 @@ public final class ClientPlayerData {
         affinity = affinityStr;
     }
 
-    public static void setNatureSeedlings(List<BlockPos> positions) {
-        natureSeedlings = List.copyOf(positions);
-    }
-
-    public static List<BlockPos> getNatureSeedlings() {
-        return natureSeedlings;
-    }
-
-    public static void clearNatureSeedlings() {
-        natureSeedlings = List.of();
-    }
+    private static int seedMarkEntity = -1;
+    private static long seedMarkUntil;
+    /** The enemy this player's flowers aim at; see {@code SeedMarkClientEffects}. */
+    public static void setSeedMark(int entityId, long untilTick) { seedMarkEntity = entityId; seedMarkUntil = untilTick; }
+    public static int seedMarkEntity() { return seedMarkEntity; }
+    public static long seedMarkUntil() { return seedMarkUntil; }
 
     public static void setEntangleStacks(int entityId, int stacks, long changedAtTick,
             int rootVisualTicks) {
@@ -158,8 +151,8 @@ public final class ClientPlayerData {
         unlockedSkills = 0;
         affinity = "NONE";
         owned = List.of(); xp=0;credits=List.of(0,0,0); flux = 0; loadout = List.of("fractured_beam"); canEdit = false;
-        natureSeedlings = List.of();
         entangledEntities.clear();
+        seedMarkEntity = -1;
     }
 
     public static void expireEntangles(long now){entangledEntities.values().removeIf(s->now-s.changedAtTick()>105 || (s.stacks()==0 && now>=s.rootVisualUntilTick()));}

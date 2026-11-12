@@ -4,6 +4,7 @@ import com.anton.elementalwands.ElementalWandsMod;
 import com.anton.elementalwands.arena.GuardianArenaJournal.Point;
 import com.anton.elementalwands.entity.necromancer.NecromancerEntity;
 import com.anton.elementalwands.registry.ModEntities;
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.util.SpellBooks;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -51,7 +52,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.structure.StructurePlacementData;
 import net.minecraft.structure.StructureTemplate;
 import net.minecraft.text.Text;
@@ -300,8 +300,8 @@ public final class HollowCryptManager {
         state.fights.put(String.valueOf(slot), fight);
         if (!persist()) { state.fights.remove(String.valueOf(slot)); return "The grave is silent. (Could not record return points.)"; }
         Vec3d focus = entrance.focus();
-        here.playSound(null, focus.x, focus.y, focus.z, SoundEvents.ENTITY_WARDEN_EMERGE, SoundCategory.HOSTILE, 1.4f, .6f);
-        here.playSound(null, focus.x, focus.y, focus.z, SoundEvents.PARTICLE_SOUL_ESCAPE.value(), SoundCategory.HOSTILE, 2f, .7f);
+        here.playSound(null, focus.x, focus.y, focus.z, ModSounds.WORLD_CRYPT_RITUAL_RUMBLE, SoundCategory.HOSTILE, 1.4f, .6f);
+        here.playSound(null, focus.x, focus.y, focus.z, ModSounds.WORLD_CRYPT_RITUAL_SOULS, SoundCategory.HOSTILE, 2f, .7f);
         here.spawnParticles(ParticleTypes.SOUL, focus.x, focus.y, focus.z, 60, 1.5, .6, 1.5, .03);
         for (ServerPlayerEntity p : group) p.addStatusEffect(new StatusEffectInstance(StatusEffects.BLINDNESS, 50, 0, false, false));
         if (ready(slot)) {

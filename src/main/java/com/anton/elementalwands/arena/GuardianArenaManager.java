@@ -5,6 +5,7 @@ import com.anton.elementalwands.arena.GuardianArenaJournal.Point;
 import com.anton.elementalwands.church.GuardianChurchManager;
 import com.anton.elementalwands.entity.FracturedGuardianEntity;
 import com.anton.elementalwands.registry.ModEntities;
+import com.anton.elementalwands.registry.ModSounds;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
@@ -53,7 +54,6 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.structure.StructurePlacementData;
 import net.minecraft.structure.StructureTemplate;
 import net.minecraft.text.Text;
@@ -362,8 +362,8 @@ public final class GuardianArenaManager {
         state.fights.put(String.valueOf(slot), fight);
         if (!persist()) { state.fights.remove(String.valueOf(slot)); return "The ritual could not be saved. Your heart was not consumed."; }
         accepted.run();
-        here.playSound(null, socket, SoundEvents.BLOCK_RESPAWN_ANCHOR_CHARGE, SoundCategory.BLOCKS, 1.5f, .5f);
-        here.playSound(null, socket, SoundEvents.BLOCK_BEACON_ACTIVATE, SoundCategory.BLOCKS, 1.4f, .7f);
+        here.playSound(null, socket, ModSounds.WORLD_GUARDIAN_ARENA_RITUAL_CHARGE, SoundCategory.BLOCKS, 1.5f, .5f);
+        here.playSound(null, socket, ModSounds.WORLD_GUARDIAN_ARENA_RITUAL_ACTIVATE, SoundCategory.BLOCKS, 1.4f, .7f);
         here.spawnParticles(ParticleTypes.END_ROD, socket.getX() + .5, socket.getY() + 1, socket.getZ() + .5, 80, 1.2, 1.5, 1.2, .06);
         for (ServerPlayerEntity p : group) {
             cancelEncounterEffects(p);

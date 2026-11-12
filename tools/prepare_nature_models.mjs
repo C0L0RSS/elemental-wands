@@ -3,7 +3,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {Mesh,add,sub,mul,norm,cross,mix} from '../art/nature/workshop/engine.js';
-import {plant,seedPod,wrap,TREE_BLOCKS} from '../art/nature/workshop/models.js';
+import {seedPod,wrap,TREE_BLOCKS} from '../art/nature/workshop/models.js';
+import {sentryBloom,sentryHead} from '../art/nature/workshop/sentryBloom.js';
 const base=path.resolve(import.meta.dirname,'../src/main/resources/assets/elementalwands');
 const check=process.argv.includes('--check');
 function save(name,value){const file=path.join(base,name),data=JSON.stringify(value)+'\n';if(check){if(!fs.existsSync(file)||fs.readFileSync(file,'utf8')!==data)throw Error('Nature export drift: '+name);}else{fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,data);}}
@@ -33,16 +34,16 @@ class Cuboids extends Mesh {
  leaf(a,b,width,c,mat=1){let dir=norm(sub(b,a)),side=norm(cross(dir,[0,1,.001])),up=norm(cross(side,dir)),thick=Math.max(.008,Math.min(.055,width*.14));for(let i=0;i<6;i++){let w=width*[.28,.62,.94,1,.72,.32][i],ps=[];for(let t of [i/6,(i+1)/6])for(let x of [-w,w])for(let y of [-thick,thick])ps.push(add(mix(a,b,t),add(mul(side,x),mul(up,y))));this.bounds(ps,c);}}
  model(){return {ambientocclusion:true,textures:{particle:'minecraft:block/oak_leaves',grain:'minecraft:block/white_concrete_powder'},elements:this.elements};}
 }
-for(let stage=0;stage<4;stage++){let m=new Cuboids();m.plantScale=true;plant(m,[0,0,0],[.15,.43,.72,1][stage],0,true,0);save(`models/block/nature_seedling_${stage}.json`,m.model());}
-save('blockstates/nature_seedling.json',{variants:Object.fromEntries([0,1,2,3].map(i=>['stage='+i,{model:`elementalwands:block/nature_seedling_${i}`}]))});
-for(let name of ['nature_roots','nature_raft']){
+// Sentry Bloom base (Nature turret): pixel-grid source, so no plant scaling. Stages 0-2 unfurl, 3 holds; the head is a render mesh below.
+for(let stage=0;stage<4;stage++){let m=new Cuboids();sentryBloom(m,[0,0,0],stage);save(`models/block/nature_seedling_${stage}.json`,m.model());}
+const {sentryBloomGrown}=await import('../art/nature/workshop/sentryBloom.js');
+{let m=new Cuboids();m.precise=true;sentryBloomGrown(m);save('models/block/nature_seedling_grown.json',m.model());}
+save('blockstates/nature_seedling.json',{variants:Object.fromEntries([false,true].flatMap(grown=>[0,1,2,3].map(stage=>[`grown=${grown},stage=${stage}`,{model:`elementalwands:block/nature_seedling_${grown&&stage===3?'grown':stage}`}])))});
+for(let name of ['nature_roots']){
  const variants=[];
  for(let i=0;i<3;i++){
   let m=new Cuboids();
-  if(name==='nature_raft'){ // Only the seedling anchor carries a flower.
-   for(let k=0;k<4;k++){let a=k*Math.PI/2;m.leaf([0,.025,0],[Math.cos(a)*.47,.035,Math.sin(a)*.47],.25,k%2?[.19,.72,.13]:[.47,.89,.19]);}
-   m.tube([[-.3,.065,-.35],[.22,.065,-.35],[.36,.065,-.2],[.36,.065,.24],[.21,.065,.36],[-.31,.065,.36],[-.37,.065,.18],[-.37,.065,-.2],[-.3,.065,-.35]],.025,[.18,.52,.10],0,4,.025);
-  } else { // Paired stepped roots, twigs and leaves, without destination flowers.
+  { // Paired stepped roots, twigs and leaves, without destination flowers.
    for(let axis=0;axis<2;axis++){let ps=[[-.5,.05,-.10],[-.23,.05,-.10],[-.23,.07,.08],[.17,.07,.08],[.17,.05,-.06],[.5,.05,-.06]].map(p=>axis?[p[2],p[1],p[0]]:p);m.tube(ps,.038,[.18,.52,.10],0,4,.038);}
    for(let k=0;k<3;k++){let a=k*2.4+i,v=[Math.cos(a)*.26,.065,Math.sin(a)*.26];m.box(add(v,[0,.075,0]),[.045,.15,.045],[.54,.37,.16]);m.leaf(v,add(v,[Math.cos(a+.5)*.27,.09,Math.sin(a+.5)*.27]),.075,[.19,.72,.13]);}
   }
@@ -65,6 +66,7 @@ for(let name of ['nature_heartwood','nature_flowering_leaves']){
 // Exact approved seed and wraps; RGB is carried per vertex and Minecraft supplies grain.
 const meshes={};function mesh(name,draw){let m=new Mesh();draw(m);meshes[name]=m.data.map(n=>Math.round(n*100000)/100000);}
 mesh('seed',m=>seedPod(m,[0,0,0],.62,0));
+for(let [name,pose]of [['sentry_head','loaded'],['sentry_head_fired','fired'],['sentry_head_wilt','wilt']])mesh(name,m=>sentryHead(m,pose));
 for(let [type,w,h,boss]of [['human',.6,1.8,false],['wide',1.4,.9,false],['boss',3.2,5.2,true]])for(let stacks=1;stacks<=5;stacks++)for(let mode of stacks===5?['lingering','rooted','opening','resisting']:['lingering'])mesh(`${type}_${stacks}_${mode}`,m=>wrap(m,w,h,stacks,mode,0,boss));
 save('nature/meshes.json',meshes);
 save('nature/tree_layout.json',TREE_BLOCKS);

@@ -3,6 +3,7 @@ package com.anton.elementalwands.entity.necromancer;
 import com.anton.elementalwands.crypt.HollowCryptRealm;
 import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.registry.ModEntities;
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.util.SoulGlow;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,12 +29,10 @@ import net.minecraft.particle.BlockStateParticleEffect;
 import net.minecraft.registry.tag.DamageTypeTags;
 import net.minecraft.particle.ItemStackParticleEffect;
 import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.MathHelper;
@@ -208,7 +207,7 @@ public final class NecromancerIntro {
         for (ServerPlayerEntity player : watchers.keySet())
             if (ServerPlayNetworking.canSend(player, ModNetworking.NecromancerIntroPayload.ID))
                 ServerPlayNetworking.send(player, new ModNetworking.NecromancerIntroPayload(boss.getId(), start, yaw, centre, true));
-        sound(world, centre, SoundEvents.AMBIENT_SOUL_SAND_VALLEY_MOOD, 2f, .6f);
+        sound(world, centre, ModSounds.CINEMATIC_NECROMANCER_INTRO_BEGIN_MOOD, 2f, .6f);
         IntroZombieEntity zombie = ModEntities.INTRO_ZOMBIE.create(world, SpawnReason.EVENT);
         if (zombie == null) return;
         Vec3d at = place(victimAt(0));
@@ -251,20 +250,20 @@ public final class NecromancerIntro {
     private void stage(ServerWorld world, int t) {
         turn(t);
         if (victim != null && !victim.isRemoved()) walk(world, t);
-        if (t == 12 || t == 44) sound(world, victimHead(t), SoundEvents.ENTITY_ZOMBIE_AMBIENT, 1.4f, .8f);
+        if (t == 12 || t == 44) sound(world, victimHead(t), ModSounds.CINEMATIC_NECROMANCER_INTRO_VICTIM_GROAN, 1.4f, .8f);
         if (t == ARCH) {
-            sound(world, victimHead(t), SoundEvents.ENTITY_ZOMBIE_HURT, 1.6f, .5f);
-            sound(world, victimHead(t), SoundEvents.PARTICLE_SOUL_ESCAPE.value(), 1.6f, .6f);
+            sound(world, victimHead(t), ModSounds.CINEMATIC_NECROMANCER_INTRO_ARCH_CRY, 1.6f, .5f);
+            sound(world, victimHead(t), ModSounds.CINEMATIC_NECROMANCER_INTRO_ARCH_SOUL, 1.6f, .6f);
         }
         if (t == PULL) {
             tear(world, t);
-            sound(world, place(STAFF_HEAD), SoundEvents.ENTITY_EVOKER_PREPARE_SUMMON, 2f, .6f);
+            sound(world, place(STAFF_HEAD), ModSounds.CINEMATIC_NECROMANCER_INTRO_PULL_STAFF, 2f, .6f);
         }
         if (t > PULL && t < FREE && t % 2 == 0) {
             Vec3d chest = place(victimAt(t).add(0, VICTIM_CHEST, 0));
             world.spawnParticles(ParticleTypes.SOUL, true, false, chest.x, chest.y, chest.z, 1, .12, .15, .12, .01);
         }
-        if (t == PULL + 16) sound(world, victimHead(t), SoundEvents.ENTITY_ZOMBIE_HURT, 1.4f, .4f);
+        if (t == PULL + 16) sound(world, victimHead(t), ModSounds.CINEMATIC_NECROMANCER_INTRO_PULL_CRY, 1.4f, .4f);
         if (t >= PULL && t < SOUL_ARRIVE && t % 3 == 0) {
             // The raised staff draws soul light in while he hauls.
             Vec3d head = place(STAFF_HEAD);
@@ -275,9 +274,9 @@ public final class NecromancerIntro {
             Vec3d chest = place(victimAt(t).add(0, VICTIM_CHEST, 0));
             world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, true, false, chest.x, chest.y, chest.z, 24, .15, .2, .15, .08);
             world.spawnParticles(ParticleTypes.SOUL, true, false, chest.x, chest.y, chest.z, 10, .2, .2, .2, .05);
-            sound(world, victimHead(t), SoundEvents.ENTITY_ZOMBIE_DEATH, 1.6f, .6f);
-            sound(world, victimHead(t), SoundEvents.ENTITY_VEX_CHARGE, 1.6f, .5f);
-            sound(world, victimHead(t), SoundEvents.PARTICLE_SOUL_ESCAPE.value(), 2f, 1.2f);
+            sound(world, victimHead(t), ModSounds.CINEMATIC_NECROMANCER_INTRO_RIP_DEATH, 1.6f, .6f);
+            sound(world, victimHead(t), ModSounds.CINEMATIC_NECROMANCER_INTRO_RIP_SHRIEK, 1.6f, .5f);
+            sound(world, victimHead(t), ModSounds.CINEMATIC_NECROMANCER_INTRO_RIP_SOUL, 2f, 1.2f);
         }
         if (t == CRUMBLE) crumble(world);
         if (t == SOUL_ARRIVE) {
@@ -286,8 +285,8 @@ public final class NecromancerIntro {
             torn = null;
             world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, true, false, head.x, head.y, head.z, 40, .2, .2, .2, .12);
             world.spawnParticles(ParticleTypes.SOUL, true, false, head.x, head.y, head.z, 12, .3, .3, .3, .05);
-            sound(world, head, SoundEvents.ENTITY_BLAZE_SHOOT, 1.8f, .5f);
-            sound(world, head, SoundEvents.BLOCK_RESPAWN_ANCHOR_CHARGE, 1.6f, .7f);
+            sound(world, head, ModSounds.CINEMATIC_NECROMANCER_INTRO_SOUL_ARRIVE_FLARE, 1.8f, .5f);
+            sound(world, head, ModSounds.CINEMATIC_NECROMANCER_INTRO_SOUL_ARRIVE_CHARGE, 1.6f, .7f);
             SoulGlow.light(world, head, NecromancerRules.GLOW_IMPACT, NecromancerRules.GLOW_IMPACT_TICKS);
         }
         if (t > SOUL_ARRIVE && t < STAFF_LOWER && t % 2 == 0) {
@@ -297,11 +296,11 @@ public final class NecromancerIntro {
         }
         if (t == EYES) {
             Vec3d head = centre.add(0, 2, 0);
-            sound(world, head, SoundEvents.BLOCK_BEACON_ACTIVATE, 2.5f, .5f);
-            sound(world, head, SoundEvents.ENTITY_WARDEN_HEARTBEAT, 2.5f, .6f);
+            sound(world, head, ModSounds.CINEMATIC_NECROMANCER_INTRO_EYES_IGNITE, 2.5f, .5f);
+            sound(world, head, ModSounds.CINEMATIC_NECROMANCER_INTRO_EYES_HEARTBEAT, 2.5f, .6f);
         }
-        if (t == TURN) sound(world, centre, SoundEvents.ENTITY_PHANTOM_FLAP, 2f, .5f);
-        if (t == LEVEL) sound(world, centre, SoundEvents.ENTITY_WARDEN_ROAR, 2.5f, .7f);
+        if (t == TURN) sound(world, centre, ModSounds.CINEMATIC_NECROMANCER_INTRO_TURN_ROBE, 2f, .5f);
+        if (t == LEVEL) sound(world, centre, ModSounds.CINEMATIC_NECROMANCER_INTRO_LEVEL_ROAR, 2.5f, .7f);
         if (t == SLAM) slam(world);
         if (t > SLAM && t <= RING_END) ring(world, t);
     }
@@ -322,7 +321,7 @@ public final class NecromancerIntro {
         soul.script(place(soulOrigin()), place(STAFF_HEAD), start + PULL);
         world.spawnEntity(soul);
         torn = soul;
-        sound(world, victimHead(t), SoundEvents.ENTITY_VEX_CHARGE, 1.4f, .45f);
+        sound(world, victimHead(t), ModSounds.CINEMATIC_NECROMANCER_INTRO_PULL_SHRIEK, 1.4f, .45f);
     }
 
     /** The empty body falls apart into bone dust. */
@@ -334,17 +333,17 @@ public final class NecromancerIntro {
         world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, Blocks.BONE_BLOCK.getDefaultState()), true, false,
                 at.x, at.y + .6, at.z, 40, .3, .5, .3, .1);
         world.spawnParticles(ParticleTypes.ASH, true, false, at.x, at.y + 1, at.z, 30, .4, .6, .4, .02);
-        sound(world, at, SoundEvents.ENTITY_SKELETON_DEATH, 1.4f, .5f);
-        sound(world, at, SoundEvents.BLOCK_BONE_BLOCK_BREAK, 1.5f, .7f);
+        sound(world, at, ModSounds.CINEMATIC_NECROMANCER_INTRO_CRUMBLE_RATTLE, 1.4f, .5f);
+        sound(world, at, ModSounds.CINEMATIC_NECROMANCER_INTRO_CRUMBLE_BONES, 1.5f, .7f);
         victim.discard();
         victim = null;
     }
 
     private void slam(ServerWorld world) {
         Vec3d at = centre.add(0, .1, 0);
-        sound(world, at, SoundEvents.ITEM_MACE_SMASH_GROUND_HEAVY, 3f, .6f);
-        sound(world, at, SoundEvents.ENTITY_BLAZE_SHOOT, 2.5f, .5f);
-        sound(world, at, SoundEvents.ITEM_FIRECHARGE_USE, 2.5f, .5f);
+        sound(world, at, ModSounds.CINEMATIC_NECROMANCER_INTRO_SLAM_IMPACT, 3f, .6f);
+        sound(world, at, ModSounds.CINEMATIC_NECROMANCER_INTRO_SLAM_FLARE, 2.5f, .5f);
+        sound(world, at, ModSounds.CINEMATIC_NECROMANCER_INTRO_SLAM_FIRE, 2.5f, .5f);
         // Keep the earth kick close to the impact; fast debris would cross the low cinematic lens.
         world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, floor(world, at)), true, false,
                 at.x, at.y + .2, at.z, 40, .75, .12, .75, .03);
@@ -391,7 +390,7 @@ public final class NecromancerIntro {
         if (!loud) return;
         world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, true, false, pos.getX() + .5, pos.getY() + .8, pos.getZ() + .5, 48, .3, .5, .3, .1);
         world.spawnParticles(ParticleTypes.SOUL, true, false, pos.getX() + .5, pos.getY() + 1, pos.getZ() + .5, 12, .2, .4, .2, .05);
-        world.playSound(null, pos, SoundEvents.ITEM_FIRECHARGE_USE, SoundCategory.HOSTILE, 1.4f, .7f);
+        world.playSound(null, pos, ModSounds.CINEMATIC_NECROMANCER_INTRO_BRAZIER_IGNITE, SoundCategory.HOSTILE, 1.4f, .7f);
     }
 
     /**
@@ -477,9 +476,5 @@ public final class NecromancerIntro {
 
     private static void sound(ServerWorld world, Vec3d at, SoundEvent sound, float volume, float pitch) {
         world.playSound(null, at.x, at.y, at.z, sound, SoundCategory.HOSTILE, volume, pitch);
-    }
-
-    private static void sound(ServerWorld world, Vec3d at, RegistryEntry<SoundEvent> sound, float volume, float pitch) {
-        world.playSound(null, at.x, at.y, at.z, sound, SoundCategory.HOSTILE, volume, pitch, world.getRandom().nextLong());
     }
 }

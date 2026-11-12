@@ -1075,6 +1075,14 @@ def _palette_entry(state):
     return entry
 
 
+def gzip_stable(raw):
+    """gzip with no timestamp and a fixed operating-system byte. Python writes that byte
+    differently by version and platform; fixing it gives every machine the same file."""
+    data = bytearray(gzip.compress(raw, mtime=0))
+    data[9] = 0xff
+    return bytes(data)
+
+
 def structure_nbt(blocks, size):
     """Vanilla structure template. Absent positions are left untouched when placed."""
     palette, index, entries = [], {}, []
@@ -1085,7 +1093,7 @@ def structure_nbt(blocks, size):
         entries.append({'pos': (9, (3, [x, y, z])), 'state': (3, index[state])})
     root = {'DataVersion': (3, DATA_VERSION), 'size': (9, (3, list(size))), 'palette': (9, (10, palette)),
             'blocks': (9, (10, entries)), 'entities': (9, (10, []))}
-    return gzip.compress(b'\x0a\0\0' + _payload(10, root), mtime=0)
+    return gzip_stable(b'\x0a\0\0' + _payload(10, root))
 
 
 def realm_tiles(lay):

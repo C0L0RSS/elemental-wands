@@ -336,7 +336,10 @@ def nbt(layout):
                 if b.endswith('guardian_socket'):d['nbt']=(10,{'id':(8,'elementalwands:guardian_socket'),'layout_version':(3,2)})
                 blocks.append(d)
     raw=b'\x0a\0\0'+payload(10,compound(DataVersion=(3,4556),size=(9,(3,[33,36,53])),palette=(9,(10,palette)),blocks=(9,(10,blocks)),entities=(9,(10,[]))))
-    return gzip.compress(raw,mtime=0)
+    # The operating-system byte of the header varies by Python version and platform; fix it
+    # so every machine writes the same file.
+    data=bytearray(gzip.compress(raw,mtime=0));data[9]=0xff
+    return bytes(data)
 def encoded(layout):return json.dumps([[*p,b] for p,b in sorted(layout.items())],separators=(',',':')).encode()+b'\n'
 files={
  'src/main/resources/data/elementalwands/structure/guardian_church.nbt':nbt(RUIN),

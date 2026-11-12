@@ -3,10 +3,12 @@ package com.anton.elementalwands.util;
 import com.anton.elementalwands.data.*;
 import com.anton.elementalwands.entity.GaleDaggerEntity;
 import com.anton.elementalwands.item.AbstractWandItem;
+import com.anton.elementalwands.registry.ModSounds;
 import net.fabricmc.fabric.api.event.lifecycle.v1.*;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.sound.SoundCategory;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.Vec3d;
 import java.util.*;
@@ -70,6 +72,7 @@ public final class GaleDaggers {
             if(!world.spawnEntity(dagger)){cancel(p);return false;}
         }
         p.setAttached(EWAttachments.GALE_PREPARED,3);WandLoadouts.markCombat(p);
+        world.playSound(null,p.getBlockPos(),ModSounds.SPELL_WIND_GALE_DAGGERS_PREPARE,SoundCategory.PLAYERS,.7f,1f);
         p.sendMessage(Text.literal("Gale Daggers ready — press again or use primary fire."),true);
         return true;
     }

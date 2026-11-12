@@ -6,6 +6,7 @@ import com.anton.elementalwands.crypt.HollowCryptManager;
 import com.anton.elementalwands.party.PartyManager;
 import com.anton.elementalwands.registry.ModBlocks;
 import com.anton.elementalwands.registry.ModItems;
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.util.SpellBooks;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,7 +35,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
@@ -300,8 +300,8 @@ public final class StormAerie {
     /** One deep stroke of the gong: its sound from the plate's centre, and its swing on every client near it. */
     private static void toll(ServerWorld world, Gong gong) {
         Vec3d at = Vec3d.ofCenter(gong.anchor()).add(0, 1.5, 0);
-        world.playSound(null, at.x, at.y, at.z, SoundEvents.BLOCK_BELL_USE, SoundCategory.BLOCKS, 4f, .5f);
-        world.playSound(null, at.x, at.y, at.z, SoundEvents.BLOCK_BELL_RESONATE, SoundCategory.BLOCKS, 2f, .5f);
+        world.playSound(null, at.x, at.y, at.z, ModSounds.WORLD_STORM_AERIE_TOLL_STRIKE, SoundCategory.BLOCKS, 4f, .5f);
+        world.playSound(null, at.x, at.y, at.z, ModSounds.WORLD_STORM_AERIE_TOLL_RESONATE, SoundCategory.BLOCKS, 2f, .5f);
         if (world.getBlockEntity(gong.anchor()) instanceof StormGongBlockEntity anchor) anchor.strike();
     }
 

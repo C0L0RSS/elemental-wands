@@ -189,8 +189,8 @@ public class SeedProjectileEntity extends ProjectileEntity {
 
         Vec3d p = blockHitResult.getPos();
         com.anton.elementalwands.util.BlockNatureEvents.send(sw, com.anton.elementalwands.util.BlockNatureEvents.SEED_BLOCK, p);
-        sw.playSound(null, blockHitResult.getBlockPos(), net.minecraft.sound.SoundEvents.BLOCK_AZALEA_LEAVES_HIT,
-                net.minecraft.sound.SoundCategory.PLAYERS, 0.5f, 1.2f);
+        sw.playSound(null, blockHitResult.getBlockPos(), com.anton.elementalwands.registry.ModSounds.SPELL_NATURE_SEED_HIT_BLOCK,
+                net.minecraft.sound.SoundCategory.PLAYERS, 0.5f, 1.0f);
 
         discard();
     }

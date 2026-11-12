@@ -3,6 +3,7 @@ package com.anton.elementalwands.entity;
 import com.anton.elementalwands.arena.GuardianArenaManager;
 import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.registry.ModEntities;
+import com.anton.elementalwands.registry.ModSounds;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
@@ -25,7 +26,6 @@ import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
@@ -232,7 +232,7 @@ final class GuardianBossCombat {
         if (guardian.phasePending() && active == null && guardian.isOnGround()) {
             interruptAction(); guardian.beginPhase(); freeze();
             guardian.triggerAnim("guardian", "phase_change");
-            world.playSound(null, guardian.getBlockPos(), SoundEvents.BLOCK_RESPAWN_ANCHOR_DEPLETE.value(),
+            world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_SHELL_BREAK_WINDUP,
                     SoundCategory.HOSTILE, 2, .65f);
             log.stage(now, "shell break");
             return;
@@ -351,14 +351,14 @@ final class GuardianBossCombat {
             guardian.syncPulse(now);
             guardian.stopTriggeredAnim("guardian", null);
             guardian.triggerAnim("guardian", "core_pulse");
-            world.playSound(null, guardian.getBlockPos(), SoundEvents.ENTITY_WARDEN_SONIC_CHARGE, SoundCategory.HOSTILE, 2.5f, .55f);
+            world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_PULSE_CHARGE, SoundCategory.HOSTILE, 2.5f, .55f);
             log.cast(now, "core pulse", null);
             return;
         }
         freeze();
         rollHold();
         triggerPhysicalAnimation();
-        world.playSound(null, guardian.getBlockPos(), SoundEvents.ENTITY_IRON_GOLEM_ATTACK, SoundCategory.HOSTILE, .8f, .55f);
+        world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_ATTACK_WINDUP, SoundCategory.HOSTILE, .8f, .55f);
         lockedAim = player.getBoundingBox().getCenter();
         logPhysical(now, player);
         volley(world, now);
@@ -459,7 +459,7 @@ final class GuardianBossCombat {
             if (heldRock != null && tick <= release) heldRock.setPosition(GuardianThrowSocket.worldPosition(guardian, (int)Math.round(Math.min(THROW_RELEASE,socketTick))));
             if (tick == release && heldRock != null) {
                 guardian.setHoldingRock(false); heldRock.release(lockedAim); heldRock = null;
-                world.playSound(null, guardian.getBlockPos(), SoundEvents.ENTITY_IRON_GOLEM_ATTACK, SoundCategory.HOSTILE, 1.2f, .7f);
+                world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_THROW_LAUNCH, SoundCategory.HOSTILE, 1.2f, .7f);
             }
         } else if (tick == GuardianPhaseRules.slamImpact(fastSlam(), slamHold)) {
             impactSound(world);
@@ -514,7 +514,7 @@ final class GuardianBossCombat {
         guardian.syncFan(started,fanPitch);
         guardian.setYaw(attackYaw);guardian.setBodyYaw(attackYaw);guardian.setHeadYaw(attackYaw);
         guardian.setVelocity(0,Math.min(0,guardian.getVelocity().y),0);
-        if (tick==8) world.playSound(null,guardian.getBlockPos(),SoundEvents.BLOCK_AMETHYST_BLOCK_RESONATE,SoundCategory.HOSTILE,1.6f,.6f);
+        if (tick==8) world.playSound(null,guardian.getBlockPos(),ModSounds.ENTITY_GUARDIAN_FAN_CHARGE,SoundCategory.HOSTILE,1.6f,.6f);
         if (tick == GuardianFanRules.LOCK) {
             for (int i = 0; i < GuardianFanRules.COUNT; i++) {
                 Vec3d socket = GuardianFanRules.socket(guardian.getEntityPos(), attackYaw, fanPitch, i);
@@ -534,7 +534,7 @@ final class GuardianBossCombat {
                 shard.releaseShard(GuardianFanRules.direction(socket,lockedAim,i),hits,walls);
                 world.spawnEntity(shard);rocks.add(shard);
             }
-            world.playSound(null,guardian.getBlockPos(),SoundEvents.ENTITY_IRON_GOLEM_ATTACK,SoundCategory.HOSTILE,1.6f,1.1f);
+            world.playSound(null,guardian.getBlockPos(),ModSounds.ENTITY_GUARDIAN_FAN_LAUNCH,SoundCategory.HOSTILE,1.6f,1.1f);
         }
     }
 
@@ -543,7 +543,7 @@ final class GuardianBossCombat {
         Vec3d feet = guardian.getEntityPos();
         if (time < GuardianPhaseRules.BURST) {
             if (time % 8 == 0)
-                world.playSound(null, guardian.getBlockPos(), SoundEvents.BLOCK_GRINDSTONE_USE, SoundCategory.HOSTILE, 2f, .45f + time * .01f);
+                world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_SHELL_BREAK_LOOP, SoundCategory.HOSTILE, 2f, .45f + time * .01f);
             if (time % 2 == 0) {
                 world.spawnParticles(ParticleTypes.ELECTRIC_SPARK, feet.x, feet.y + 3.3, feet.z, 3 + time / 4, 1.1, 1.3, 1.1, .05);
                 world.spawnParticles(STONE, feet.x, feet.y + 3, feet.z, 2 + time / 8, 1, 1.2, 1, .04);
@@ -551,14 +551,14 @@ final class GuardianBossCombat {
         } else if (time == GuardianPhaseRules.BURST) {
             burst(world, feet);
         } else if (time == GuardianPhaseRules.BURST + 8) {
-            world.playSound(null, guardian.getBlockPos(), SoundEvents.ENTITY_RAVAGER_ROAR, SoundCategory.HOSTILE, 2.5f, .45f);
+            world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_VOICE_ROAR, SoundCategory.HOSTILE, 2.5f, .45f);
         }
     }
 
     private void burst(ServerWorld world, Vec3d feet) {
         Vec3d core = feet.add(0, GuardianShellRules.CORE_HEIGHT, 0);
-        world.playSound(null, guardian.getBlockPos(), SoundEvents.ENTITY_GENERIC_EXPLODE.value(), SoundCategory.HOSTILE, 1.8f, .8f);
-        world.playSound(null, guardian.getBlockPos(), SoundEvents.ENTITY_IRON_GOLEM_DAMAGE, SoundCategory.HOSTILE, 2f, .5f);
+        world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_SHELL_BREAK_BURST_BOOM, SoundCategory.HOSTILE, 1.8f, .8f);
+        world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_SHELL_BREAK_BURST_CRACK, SoundCategory.HOSTILE, 2f, .5f);
         world.spawnParticles(STONE, core.x, core.y, core.z, 140, 2.2, 1.6, 2.2, .35);
         world.spawnParticles(ParticleTypes.EXPLOSION, core.x, core.y, core.z, 3, .8, .6, .8, 0);
         breakDoubles(world, feet, GuardianPhaseRules.BURST_RADIUS);
@@ -609,12 +609,12 @@ final class GuardianBossCombat {
             if (point != null) world.spawnParticles(PULSE_RING, point.x, point.y + .15, point.z, 1, .05, 0, .05, 0);
         }
         if (tick % 10 == 0)
-            world.playSound(null, guardian.getBlockPos(), SoundEvents.BLOCK_BEACON_AMBIENT, SoundCategory.HOSTILE, 2.5f, .6f + tick * .012f);
+            world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_PULSE_LOOP, SoundCategory.HOSTILE, 2.5f, .6f + tick * .012f);
     }
 
     private void blast(ServerWorld world, Vec3d feet, Vec3d core, List<ServerPlayerEntity> players) {
-        world.playSound(null, guardian.getBlockPos(), SoundEvents.ENTITY_WARDEN_SONIC_BOOM, SoundCategory.HOSTILE, 3f, .7f);
-        world.playSound(null, guardian.getBlockPos(), SoundEvents.ENTITY_GENERIC_EXPLODE.value(), SoundCategory.HOSTILE, 2f, .6f);
+        world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_PULSE_BLAST_SONIC, SoundCategory.HOSTILE, 3f, .7f);
+        world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_PULSE_BLAST_BOOM, SoundCategory.HOSTILE, 2f, .6f);
         world.spawnParticles(ParticleTypes.SONIC_BOOM, core.x, core.y, core.z, 1, 0, 0, 0, 0);
         world.spawnParticles(ParticleTypes.EXPLOSION, core.x, core.y, core.z, 6, 2, 1, 2, 0);
         world.spawnParticles(STONE, feet.x, feet.y + .5, feet.z, 90, 3, .4, 3, .2);
@@ -649,7 +649,7 @@ final class GuardianBossCombat {
             ServerPlayerEntity victim = world.getServer().getPlayerManager().getPlayer(others.get(cluster).id());
             log.cast(now, "back volley", victim == null ? "?" : victim.getName().getString());
         }
-        world.playSound(null, guardian.getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_RESONATE, SoundCategory.HOSTILE, 1.6f, .8f);
+        world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_VOLLEY_CHARGE, SoundCategory.HOSTILE, 1.6f, .8f);
     }
 
     private void tickVolleys(ServerWorld world, long now) {
@@ -681,7 +681,7 @@ final class GuardianBossCombat {
                 Vec3d led = lead(aim, drift.getOrDefault(player.getUuid(), Vec3d.ZERO), (int)(socket.distanceTo(aim) / GuardianFanRules.SPEED));
                 stone.releaseShard(GuardianFanRules.direction(socket, led, i), hits, walls);
             }
-            world.playSound(null, guardian.getBlockPos(), SoundEvents.ENTITY_IRON_GOLEM_ATTACK, SoundCategory.HOSTILE, 1.3f, 1.2f);
+            world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_VOLLEY_LAUNCH, SoundCategory.HOSTILE, 1.3f, 1.2f);
             return true;
         });
     }
@@ -741,7 +741,7 @@ final class GuardianBossCombat {
                 walls.clip(world,guardian,center.add(0,1,0),pos.toCenterPos(),false,true);
         }
         impactSound(world);
-        world.playSound(null,guardian.getBlockPos(),SoundEvents.ENTITY_GENERIC_EXPLODE.value(),SoundCategory.HOSTILE,1.6f,.65f);
+        world.playSound(null,guardian.getBlockPos(),ModSounds.ENTITY_GUARDIAN_LEAP_LAND_BOOM,SoundCategory.HOSTILE,1.6f,.65f);
         for (ServerPlayerEntity player : world.getPlayers(p -> canDamage(guardian,p))) {
             float damage = GuardianLeapRules.damage(center,player.getBoundingBox());
             if (damage <= 0 || !walls.clear(world,guardian,center.add(0,1,0),player.getBoundingBox().getCenter(),false)) continue;
@@ -824,7 +824,7 @@ final class GuardianBossCombat {
         guardian.getNavigation().stop(); guardian.stopTriggeredAnim("guardian", null);
     }
     private void impactSound(ServerWorld world) {
-        world.playSound(null, guardian.getBlockPos(), SoundEvents.ENTITY_IRON_GOLEM_ATTACK, SoundCategory.HOSTILE, 1.5f, .45f);
+        world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_GROUND_IMPACT, SoundCategory.HOSTILE, 1.5f, .45f);
         world.spawnParticles(STONE, guardian.getX(), guardian.getY()+.2, guardian.getZ(), 35, 2,.15,2,.08);
     }
 }

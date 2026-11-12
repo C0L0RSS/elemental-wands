@@ -19,7 +19,6 @@ import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.collection.Pool;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
@@ -30,6 +29,7 @@ import net.minecraft.world.RaycastContext;
 import net.minecraft.world.explosion.Explosion;
 
 import com.anton.elementalwands.registry.ModParticles;
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.registry.ModSpellBlocks;
 
 public final class MeteorManager {
@@ -109,9 +109,8 @@ public final class MeteorManager {
                         meteor.getEntityPos(),
                         explosionPower, now + 240));
 
-        // BUFFED: Play global Wither spawn sound for dramatic effect
-        world.playSound(null, spawnBlockPos, SoundEvents.ENTITY_WITHER_SPAWN, SoundCategory.PLAYERS, 2.0f, 1.0f);
-        world.playSound(null, spawnBlockPos, SoundEvents.ENTITY_GHAST_SHOOT, SoundCategory.PLAYERS, 1.4f, 0.6f);
+        // Loud enough to carry 32 blocks: the omen and the falling howl are one sound.
+        world.playSound(null, spawnBlockPos, ModSounds.SPELL_FIRE_METEOR_CAST, SoundCategory.PLAYERS, 2.0f, 1.0f);
 
         // BUFFED: Display HUD title to all players within 60-block radius
         for (ServerPlayerEntity player : world.getPlayers()) {
@@ -195,10 +194,10 @@ public final class MeteorManager {
                 ParticleTypes.EXPLOSION,
                 ParticleTypes.EXPLOSION_EMITTER,
                 Pool.<BlockParticleEffect>empty(),
-                SoundEvents.ENTITY_GENERIC_EXPLODE);
-        world.playSound(null, BlockPos.ofFloored(meteor.lastPos), SoundEvents.ENTITY_GENERIC_EXPLODE.value(),
+                ModSounds.entry(ModSounds.SPELL_FIRE_METEOR_IMPACT_BLAST));
+        world.playSound(null, BlockPos.ofFloored(meteor.lastPos), ModSounds.SPELL_FIRE_METEOR_IMPACT_BOOM,
                 SoundCategory.PLAYERS,
-                1.8f, 0.9f);
+                1.8f, 1.0f);
         BlockFireEvents.send(world, 160, BlockFireEvents.METEOR_IMPACT, -1, meteor.lastPos, Vec3d.ZERO, Vec3d.ZERO, 0);
     }
 

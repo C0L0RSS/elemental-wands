@@ -3,6 +3,7 @@ package com.anton.elementalwands.church;
 import com.anton.elementalwands.arena.GuardianArenaManager;
 import com.anton.elementalwands.entity.FracturedGuardianEntity;
 import com.anton.elementalwands.registry.*;
+import com.anton.elementalwands.registry.ModSounds;
 import com.google.gson.*;
 import java.io.*;
 import java.nio.file.*;
@@ -198,7 +199,7 @@ public final class GuardianChurchManager {
         if (!GuardianArenaManager.hosts(s.key())) { s.phase=Phase.RUINED;save();return result; }
         s.offeringTicks=1;
         updateOffering(world,s);
-        world.playSound(null,s.socket(),SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME,SoundCategory.BLOCKS,.8f,.85f);
+        world.playSound(null,s.socket(),ModSounds.WORLD_CHURCH_OFFERING_CHIME,SoundCategory.BLOCKS,.8f,.85f);
         return result;
     }
     /**
@@ -273,7 +274,7 @@ public final class GuardianChurchManager {
                         if (!save()) return;
                         release(world,s);
                         if (whole) {
-                            world.playSound(null,s.anchor(),SoundEvents.BLOCK_BELL_USE,SoundCategory.BLOCKS,4,.8f);
+                            world.playSound(null,s.anchor(),ModSounds.WORLD_CHURCH_RESTORED_BELL,SoundCategory.BLOCKS,4,.8f);
                             world.spawnParticles(ParticleTypes.END_ROD,s.x,s.y+10,s.z+20,140,10,8,15,.03);
                         }
                     }
@@ -357,7 +358,7 @@ public final class GuardianChurchManager {
                 Vec3d p=start.lerp(end,t);
                 world.spawnParticles(new net.minecraft.particle.DustParticleEffect(0x72dfdf,.55f),p.x,p.y,p.z,3,.045,.045,.045,0);
             }
-            if(tick==30)world.playSound(null,s.at(0,3,-4),SoundEvents.BLOCK_AMETHYST_BLOCK_RESONATE,SoundCategory.BLOCKS,.75f,1.1f);
+            if(tick==30)world.playSound(null,s.at(0,3,-4),ModSounds.WORLD_CHURCH_OFFERING_RESONATE,SoundCategory.BLOCKS,.75f,1.1f);
             if(tick>=64)s.offeringTicks=0;
         }
     }

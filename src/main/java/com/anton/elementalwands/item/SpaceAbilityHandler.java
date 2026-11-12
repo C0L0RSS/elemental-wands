@@ -3,13 +3,13 @@ package com.anton.elementalwands.item;
 import java.util.Optional;
 
 import com.anton.elementalwands.entity.SingularityBoltEntity;
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.util.HollowPurpleChargeManager;
 
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
@@ -48,10 +48,8 @@ public final class SpaceAbilityHandler {
         world.spawnEntity(bolt);
 
         // Clients draw the cast bloom at the wand tip when they first see the bolt.
-        world.playSound(null, caster.getBlockPos(), SoundEvents.BLOCK_RESPAWN_ANCHOR_SET_SPAWN, SoundCategory.PLAYERS,
-                0.8f, 1.4f);
-        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_ENDER_EYE_DEATH, SoundCategory.PLAYERS, 0.6f,
-                1.6f);
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_SPACE_SINGULARITY_BOLT_CAST, SoundCategory.PLAYERS,
+                0.8f, 1.0f);
     }
 
     public static void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
@@ -77,8 +75,8 @@ public final class SpaceAbilityHandler {
         caster.velocityModified = true;
 
         com.anton.elementalwands.util.BlockSpaceEvents.send(world, com.anton.elementalwands.util.BlockSpaceEvents.BLINK, caster.getId(), from, to, 0);
-        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 1.0f,
-                1.25f);
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_SPACE_BLINK_RIFT_CAST, SoundCategory.PLAYERS, 1.0f,
+                1.0f);
     }
 
     public static void castUltimate(ServerWorld world, PlayerEntity caster, ItemStack stack) {
@@ -96,7 +94,7 @@ public final class SpaceAbilityHandler {
         Vec3d feetPos = caster.getEntityPos();
         com.anton.elementalwands.util.BlockSpaceEvents.send(world, com.anton.elementalwands.util.BlockSpaceEvents.BLINK_FAIL, caster.getId(), feetPos, caster.getRotationVec(1.0f), 0);
         world.playSound(null, net.minecraft.util.math.BlockPos.ofFloored(feetPos),
-                SoundEvents.BLOCK_RESPAWN_ANCHOR_DEPLETE.value(), SoundCategory.PLAYERS, 0.55f, 0.42f);
+                ModSounds.SPELL_SPACE_BLINK_RIFT_FAIL, SoundCategory.PLAYERS, 0.55f, 1.0f);
     }
 
     private static Optional<Vec3d> findSafeBlinkDestination(ServerWorld world, PlayerEntity caster, double range) {

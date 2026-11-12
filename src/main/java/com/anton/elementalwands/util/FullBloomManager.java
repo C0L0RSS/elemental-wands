@@ -2,6 +2,7 @@ package com.anton.elementalwands.util;
 
 import com.anton.elementalwands.data.WizardAffinity;
 import com.anton.elementalwands.party.WandAllies;
+import com.anton.elementalwands.registry.ModSounds;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -23,7 +24,6 @@ import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
@@ -98,8 +98,7 @@ public final class FullBloomManager {
         Vec3d at = bloom.origin;
         // Clients draw the cast burst, the petal wave and the caster's drifting petals from this one event.
         BlockNatureEvents.send(world, BlockNatureEvents.FULL_BLOOM, caster.getId(), at, Vec3d.ZERO, RADIUS);
-        world.playSound(null, caster.getBlockPos(), SoundEvents.BLOCK_FLOWERING_AZALEA_PLACE, SoundCategory.PLAYERS, 1.3f, 0.7f);
-        world.playSound(null, caster.getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.PLAYERS, 1.2f, 0.8f);
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_NATURE_FULL_BLOOM_CAST, SoundCategory.PLAYERS, 1.3f, 1.0f);
     }
 
     private static void tick(MinecraftServer server) {

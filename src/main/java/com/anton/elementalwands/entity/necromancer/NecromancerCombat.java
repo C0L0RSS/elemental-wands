@@ -7,6 +7,7 @@ import com.anton.elementalwands.entity.undead.HollowArcherEntity;
 import com.anton.elementalwands.entity.undead.HollowBruteEntity;
 import com.anton.elementalwands.entity.undead.HollowCrawlerEntity;
 import com.anton.elementalwands.registry.ModEntities;
+import com.anton.elementalwands.registry.ModSounds;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -39,7 +40,6 @@ import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.HitResult;
@@ -221,7 +221,7 @@ final class NecromancerCombat {
             if (soulDamage >= soulKnockdown(boss.getMaxHealth())) {
                 soulReturning = world.getTime();
                 log.note(world.getTime(), "soul knocked down");
-                world.playSound(null, soul.getX(), soul.getY(), soul.getZ(), SoundEvents.ENTITY_VEX_DEATH, SoundCategory.HOSTILE, 2f, .5f);
+                world.playSound(null, soul.getX(), soul.getY(), soul.getZ(), ModSounds.ENTITY_NECROMANCER_FREED_SOUL_KNOCKDOWN, SoundCategory.HOSTILE, 2f, .5f);
             }
         }
         if (active == Action.GRAB && held != null) {
@@ -245,7 +245,7 @@ final class NecromancerCombat {
 
     private void stagger(ServerWorld world, long now) {
         staggerUntil = now + 30;
-        world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_SKELETON_HURT, SoundCategory.HOSTILE, 2f, .4f);
+        world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_STAGGER_HIT, SoundCategory.HOSTILE, 2f, .4f);
     }
 
     /**
@@ -263,7 +263,7 @@ final class NecromancerCombat {
         if (now - lastDeflect < 5) return;
         lastDeflect = now;
         world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, true, false, boss.getX(), boss.getBodyY(.5), boss.getZ(), 14, .5, .8, .5, .04);
-        world.playSound(null, boss.getX(), boss.getY(), boss.getZ(), SoundEvents.ITEM_SHIELD_BLOCK.value(), SoundCategory.HOSTILE, 1.4f, .6f);
+        world.playSound(null, boss.getX(), boss.getY(), boss.getZ(), ModSounds.ENTITY_NECROMANCER_DEFLECT_HIT, SoundCategory.HOSTILE, 1.4f, .6f);
     }
 
     float damageMultiplier(long now) { return now < exposedUntil ? EXPOSED_MULTIPLIER : 1; }
@@ -324,7 +324,7 @@ final class NecromancerCombat {
                     : players.stream().noneMatch(p -> boss.squaredDistanceTo(p) <= ENGAGE_RANGE * ENGAGE_RANGE && boss.canSee(p))) return;
             engaged = true; emptySince = -1; nextAction = now + 20;
             log.begin(now, players.size());
-            world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_EVOKER_PREPARE_SUMMON, SoundCategory.HOSTILE, 1.4f, .6f);
+            world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_ENGAGE_CALL, SoundCategory.HOSTILE, 1.4f, .6f);
         }
         updateBar(players);
         if (players.isEmpty() && !boss.isTransforming()) {
@@ -538,8 +538,8 @@ final class NecromancerCombat {
         stepAt = now + SIEGE_FLARE;
         wave = 0; nextWave = -1; spawnQueue.clear();
         log.stage(now, stage == Stage.SIEGE_1 ? "siege 1" : "siege 2");
-        world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_EVOKER_PREPARE_SUMMON, SoundCategory.HOSTILE, 2f, .5f);
-        world.playSound(null, perch.x, perch.y, perch.z, SoundEvents.PARTICLE_SOUL_ESCAPE.value(), SoundCategory.HOSTILE, 3f, .6f);
+        world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_SIEGE_BEGIN_CALL, SoundCategory.HOSTILE, 2f, .5f);
+        world.playSound(null, perch.x, perch.y, perch.z, ModSounds.ENTITY_NECROMANCER_SIEGE_PERCH_WARN, SoundCategory.HOSTILE, 3f, .6f);
     }
 
     /**
@@ -616,7 +616,7 @@ final class NecromancerCombat {
         reinforcementsLeft = reinforcements(Math.max(1, players.size()));
         nextReinforce = now + WAVE_STAGGER + REINFORCE_EVERY;
         log.note(now, "wave " + number + ": " + bodies.crawlers() + " crawlers, " + bodies.archers() + " archers, " + bodies.brutes() + " brutes");
-        world.playSound(null, boss.getX(), boss.getY(), boss.getZ(), SoundEvents.ENTITY_EVOKER_PREPARE_SUMMON, SoundCategory.HOSTILE, 3f, .7f);
+        world.playSound(null, boss.getX(), boss.getY(), boss.getZ(), ModSounds.ENTITY_NECROMANCER_SIEGE_WAVE_CALL, SoundCategory.HOSTILE, 3f, .7f);
         for (ServerPlayerEntity player : players) player.sendMessage(Text.translatable("necromancer.elementalwands.wave", number), true);
     }
 
@@ -687,7 +687,7 @@ final class NecromancerCombat {
         SoulBoltEntity bolt = new SoulBoltEntity(ModEntities.SOUL_BOLT, world);
         bolt.launch(boss, hoverer, from, BOLT_SPEED * 1.3);
         if (world.spawnEntity(bolt)) bolts.add(bolt);
-        world.playSound(null, boss.getX(), boss.getY(), boss.getZ(), SoundEvents.ENTITY_BLAZE_SHOOT, SoundCategory.HOSTILE, 1.5f, .5f);
+        world.playSound(null, boss.getX(), boss.getY(), boss.getZ(), ModSounds.ENTITY_NECROMANCER_SOUL_BOLT_LAUNCH, SoundCategory.HOSTILE, 1.5f, .5f);
         log.cast(now, "perch bolt", hoverer.getName().getString());
     }
 
@@ -702,7 +702,7 @@ final class NecromancerCombat {
         step = Step.FALLING;
         stepAt = now + SIEGE_FLARE;
         dropped = false;
-        world.playSound(null, landing.x, landing.y, landing.z, SoundEvents.PARTICLE_SOUL_ESCAPE.value(), SoundCategory.HOSTILE, 3f, .5f);
+        world.playSound(null, landing.x, landing.y, landing.z, ModSounds.ENTITY_NECROMANCER_SIEGE_LANDING_WARN, SoundCategory.HOSTILE, 3f, .5f);
     }
 
     /** Near home; before the transformation the spot must also fit the colossus. */
@@ -736,8 +736,8 @@ final class NecromancerCombat {
 
     private void crash(ServerWorld world, long now, Stage stage) {
         step = null; perch = null; landing = null; dropped = false; wave = 0;
-        world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_IRON_GOLEM_DAMAGE, SoundCategory.HOSTILE, 2.5f, .5f);
-        world.playSound(null, boss.getBlockPos(), SoundEvents.PARTICLE_SOUL_ESCAPE.value(), SoundCategory.HOSTILE, 2f, .5f);
+        world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_SIEGE_CRASH_IMPACT, SoundCategory.HOSTILE, 2.5f, .5f);
+        world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_SIEGE_CRASH_SOULS, SoundCategory.HOSTILE, 2f, .5f);
         world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, floorState(world, boss.getEntityPos())),
                 boss.getX(), boss.getY() + .1, boss.getZ(), 40, 1.2, .1, 1.2, .12);
         world.spawnParticles(ParticleTypes.SCULK_SOUL, boss.getX(), boss.getY() + .5, boss.getZ(), 20, 1, .3, 1, .05);
@@ -818,12 +818,12 @@ final class NecromancerCombat {
         if (clip != null) boss.triggerAnim(NecromancerEntity.CONTROLLER, clip);
         switch (action) {
             case BOLT -> {
-                world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_EVOKER_PREPARE_ATTACK, SoundCategory.HOSTILE, 1f, colossus ? .7f : 1.3f);
+                world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_SOUL_BOLT_WINDUP, SoundCategory.HOSTILE, 1f, colossus ? .7f : 1.3f);
                 // The colossus's jaws kindle before the volley: a distinct tell from its other roars.
-                if (colossus) world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_BLAZE_AMBIENT, SoundCategory.HOSTILE, 1.6f, .5f);
+                if (colossus) world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_SOUL_BOLT_WINDUP_KINDLE, SoundCategory.HOSTILE, 1.6f, .5f);
             }
             case HANDS -> {
-                world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_EVOKER_PREPARE_ATTACK, SoundCategory.HOSTILE, 1.3f, .7f);
+                world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_HANDS_WINDUP, SoundCategory.HOSTILE, 1.3f, .7f);
                 List<ServerPlayerEntity> victims = new ArrayList<>(List.of(player));
                 world.getPlayers(p -> p != player && canDamage(boss, p) && boss.distanceTo(p) <= HANDS_RANGE).stream()
                         .sorted(Comparator.comparingDouble(boss::squaredDistanceTo))
@@ -832,8 +832,8 @@ final class NecromancerCombat {
             }
             case DRAIN -> {
                 boss.setDrainTarget(player.getId());
-                world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_WARDEN_HEARTBEAT, SoundCategory.HOSTILE, 1.5f, .8f);
-                if (colossus) world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_WARDEN_SNIFF, SoundCategory.HOSTILE, 2f, .6f);
+                world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_DRAIN_WINDUP, SoundCategory.HOSTILE, 1.5f, .8f);
+                if (colossus) world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_DRAIN_WINDUP_INHALE, SoundCategory.HOSTILE, 2f, .6f);
             }
             case BLINK -> {
                 blinkTo = blinkDestination(world, player);
@@ -841,32 +841,32 @@ final class NecromancerCombat {
                     // Cornered: skip the escape briefly rather than teleporting into a wall.
                     active = null; ready.put(Action.BLINK, now + 40); nextAction = now + 4;
                     boss.stopTriggeredAnim(NecromancerEntity.CONTROLLER, null);
-                } else world.playSound(null, blinkTo.x, blinkTo.y, blinkTo.z, SoundEvents.PARTICLE_SOUL_ESCAPE.value(), SoundCategory.HOSTILE, 1.5f, .8f);
+                } else world.playSound(null, blinkTo.x, blinkTo.y, blinkTo.z, ModSounds.ENTITY_NECROMANCER_BLINK_WARN, SoundCategory.HOSTILE, 1.5f, .8f);
             }
             case SHIFT -> {
                 blinkTo = shiftDestination(world);
                 if (blinkTo == null) { active = null; nextAction = now + 4; castsSinceBlink = 0; }
-                else world.playSound(null, blinkTo.x, blinkTo.y, blinkTo.z, SoundEvents.PARTICLE_SOUL_ESCAPE.value(), SoundCategory.HOSTILE, 2f, .7f);
+                else world.playSound(null, blinkTo.x, blinkTo.y, blinkTo.z, ModSounds.ENTITY_NECROMANCER_SHIFT_WARN, SoundCategory.HOSTILE, 2f, .7f);
             }
             case AMBUSH -> {
                 ambushTo = behind(world, player);
                 if (ambushTo == null) { active = null; ready.put(Action.AMBUSH, now + 40); nextAction = now + 4; }
                 // The whisper plays where it will stand: behind the target, who hears it first.
-                else world.playSound(null, ambushTo.x, ambushTo.y + 1, ambushTo.z, SoundEvents.ENTITY_VEX_CHARGE, SoundCategory.HOSTILE, 2f, .5f);
+                else world.playSound(null, ambushTo.x, ambushTo.y + 1, ambushTo.z, ModSounds.ENTITY_NECROMANCER_AMBUSH_WARN, SoundCategory.HOSTILE, 2f, .5f);
             }
-            case SWIPE -> world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_WITHER_SKELETON_AMBIENT, SoundCategory.HOSTILE, 2f, .45f);
-            case GRAB -> world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_SKELETON_AMBIENT, SoundCategory.HOSTILE, 2f, .35f);
+            case SWIPE -> world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_VOICE_SNARL, SoundCategory.HOSTILE, 2f, .45f);
+            case GRAB -> world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_VOICE_RATTLE, SoundCategory.HOSTILE, 2f, .35f);
             case RUSH -> {
                 // Only a low rattle: the body tells the charge, and the roar comes with the launch.
                 rushWarning = rushWarning(new java.util.Random(boss.getRandom().nextLong()));
-                world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_SKELETON_AMBIENT, SoundCategory.HOSTILE, 1.8f, .3f);
+                world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_VOICE_RATTLE, SoundCategory.HOSTILE, 1.8f, .3f);
             }
             case DIVE -> {
                 dive = Dive.SINK; diveAt = now; diveSpot = null;
-                world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_WARDEN_DIG, SoundCategory.HOSTILE, 2.2f, .7f);
+                world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_DIVE_SINK, SoundCategory.HOSTILE, 2.2f, .7f);
             }
             case HARVEST -> // It draws itself up with a low growl before the scream.
-                    world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_WARDEN_AGITATED, SoundCategory.HOSTILE, 2.5f, .5f);
+                    world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_VOICE_GROWL, SoundCategory.HOSTILE, 2.5f, .5f);
         }
     }
 
@@ -897,7 +897,7 @@ final class NecromancerCombat {
                     SoulBoltEntity bolt = new SoulBoltEntity(ModEntities.SOUL_BOLT, world);
                     bolt.launch(boss, player, castOrigin(), boltSpeed(colossus));
                     if (world.spawnEntity(bolt)) bolts.add(bolt);
-                    world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_BLAZE_SHOOT, SoundCategory.HOSTILE, .7f, .5f);
+                    world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_SOUL_BOLT_LAUNCH, SoundCategory.HOSTILE, .7f, .5f);
                 } else if (tick >= active.impact && (tick - active.impact) % boltInterval(colossus) == 0 && boltsFired == boltCount(colossus)) {
                     // The volley ends with one more skull for a double left standing in its sight.
                     boltsFired++;
@@ -906,9 +906,9 @@ final class NecromancerCombat {
                         SoulBoltEntity bolt = new SoulBoltEntity(ModEntities.SOUL_BOLT, world);
                         bolt.launch(boss, clone, castOrigin(), boltSpeed(colossus));
                         if (world.spawnEntity(bolt)) bolts.add(bolt);
-                        world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_BLAZE_SHOOT, SoundCategory.HOSTILE, .7f, .5f);
+                        world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_SOUL_BOLT_LAUNCH, SoundCategory.HOSTILE, .7f, .5f);
                         // The double hums as it is marked, so its owner hears the skull coming.
-                        world.playSound(null, clone.getX(), clone.getY() + 1, clone.getZ(), SoundEvents.BLOCK_AMETHYST_BLOCK_RESONATE, SoundCategory.HOSTILE, 1.5f, .6f);
+                        world.playSound(null, clone.getX(), clone.getY() + 1, clone.getZ(), ModSounds.ENTITY_NECROMANCER_SOUL_BOLT_DOUBLE_MARKED, SoundCategory.HOSTILE, 1.5f, .6f);
                         log.cast(now, "double bolt", clone.owner() == null ? "?" : clone.owner().getName().getString());
                     }
                 }
@@ -921,7 +921,7 @@ final class NecromancerCombat {
                 if (tick < active.impact) break;
                 if (!valid || player.squaredDistanceTo(boss) > DRAIN_BREAK_RANGE * DRAIN_BREAK_RANGE
                         || (tick % 5 == 0 && !clear(world, castOrigin(), player.getBoundingBox().getCenter()))) {
-                    world.playSound(null, boss.getBlockPos(), SoundEvents.BLOCK_RESPAWN_ANCHOR_DEPLETE.value(), SoundCategory.HOSTILE, .8f, 1.4f);
+                    world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_DRAIN_END, SoundCategory.HOSTILE, .8f, 1.4f);
                     finish(now); return;
                 }
                 if ((tick - active.impact) % DRAIN_INTERVAL == 0 && hurt(world, player, source(world, DRAIN, null), DRAIN_DAMAGE, "drain")) {
@@ -1009,7 +1009,7 @@ final class NecromancerCombat {
             ambushTo = null;
             if (valid) { face(player.getEntityPos()); lockedYaw = boss.getYaw(); }
             boss.triggerAnim(NecromancerEntity.CONTROLLER, "ambush_burst");
-            world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_EVOKER_PREPARE_ATTACK, SoundCategory.HOSTILE, 1.6f, .5f);
+            world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_AMBUSH_WINDUP, SoundCategory.HOSTILE, 1.6f, .5f);
             return;
         }
         if (tick < Action.AMBUSH.impact) {
@@ -1021,7 +1021,7 @@ final class NecromancerCombat {
 
     private void soulBurst(ServerWorld world) {
         Vec3d center = boss.getEntityPos();
-        world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_WARDEN_SONIC_BOOM, SoundCategory.HOSTILE, 1.2f, 1.4f);
+        world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_AMBUSH_IMPACT, SoundCategory.HOSTILE, 1.2f, 1.4f);
         world.spawnParticles(ParticleTypes.SCULK_SOUL, center.x, center.y + 1, center.z, 30, 1.6, .6, 1.6, .08);
         ring(world, ground(world, center), AMBUSH_RADIUS, ParticleTypes.SOUL, 32);
         for (LivingEntity victim : world.getEntitiesByClass(LivingEntity.class, boss.getBoundingBox().expand(AMBUSH_RADIUS + 1, 2, AMBUSH_RADIUS + 1),
@@ -1067,10 +1067,10 @@ final class NecromancerCombat {
     private void teleport(ServerWorld world, Vec3d to) {
         Vec3d from = boss.getEntityPos();
         world.spawnParticles(ParticleTypes.SOUL, true, false, from.x, from.y + .8, from.z, 24, .3, .6, .3, .08);
-        world.playSound(null, from.x, from.y, from.z, SoundEvents.ENTITY_ENDERMAN_TELEPORT, SoundCategory.HOSTILE, 1f, .6f);
+        world.playSound(null, from.x, from.y, from.z, ModSounds.ENTITY_NECROMANCER_TELEPORT_DEPART, SoundCategory.HOSTILE, 1f, .6f);
         boss.requestTeleport(to.x, to.y, to.z);
         world.spawnParticles(ParticleTypes.SOUL, true, false, to.x, to.y + .8, to.z, 24, .3, .6, .3, .08);
-        world.playSound(null, to.x, to.y, to.z, SoundEvents.ENTITY_ENDERMAN_TELEPORT, SoundCategory.HOSTILE, 1f, .8f);
+        world.playSound(null, to.x, to.y, to.z, ModSounds.ENTITY_NECROMANCER_TELEPORT_ARRIVE, SoundCategory.HOSTILE, 1f, .8f);
     }
 
     /** Away from the threatening player, inside the leash, on supported ground with room to stand. */
@@ -1095,7 +1095,7 @@ final class NecromancerCombat {
 
     /** Both claws strike the floor: the ground answers under every marked player. */
     private void clawStrike(ServerWorld world) {
-        world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_IRON_GOLEM_ATTACK, SoundCategory.HOSTILE, 2f, .5f);
+        world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_HANDS_CLAW_IMPACT, SoundCategory.HOSTILE, 2f, .5f);
         for (int side = -1; side <= 1; side += 2) {
             Vec3d claw = boss.getEntityPos().add(forward().multiply(2.2)).add(-forward().z * side * 1.4, 0, forward().x * side * 1.4);
             world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, floorState(world, claw)), claw.x, claw.y + .1, claw.z, 16, .5, .05, .5, .1);
@@ -1112,7 +1112,7 @@ final class NecromancerCombat {
     }
 
     private void swipe(ServerWorld world) {
-        world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.HOSTILE, 2f, .5f);
+        world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_SWIPE_SWING, SoundCategory.HOSTILE, 2f, .5f);
         double yaw = Math.toRadians(lockedYaw);
         for (int i = 0; i <= 10; i++) {
             double angle = yaw - SWIPE_ARC / 2 + SWIPE_ARC * i / 10;
@@ -1142,9 +1142,9 @@ final class NecromancerCombat {
                 grabbedAt.put(held, now);
                 boss.setGrabbed(player.getId());
                 player.stopGliding();
-                world.playSound(null, player.getBlockPos(), SoundEvents.ENTITY_SKELETON_HURT, SoundCategory.HOSTILE, 1.6f, .5f);
+                world.playSound(null, player.getBlockPos(), ModSounds.ENTITY_NECROMANCER_GRAB_HIT, SoundCategory.HOSTILE, 1.6f, .5f);
             } else {
-                world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_PLAYER_ATTACK_NODAMAGE, SoundCategory.HOSTILE, 1.5f, .5f);
+                world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_GRAB_MISS, SoundCategory.HOSTILE, 1.5f, .5f);
                 finish(now);
             }
             return;
@@ -1165,7 +1165,7 @@ final class NecromancerCombat {
         pin(world, victim, slam);
         hurt(world, victim, world.getDamageSources().mobAttack(boss), grabDamage(victim.getMaxHealth()), "grab slam");
         world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, floorState(world, slam)), slam.x, slam.y + .1, slam.z, 30, .8, .1, .8, .1);
-        world.playSound(null, slam.x, slam.y, slam.z, SoundEvents.ENTITY_IRON_GOLEM_ATTACK, SoundCategory.HOSTILE, 2f, .5f);
+        world.playSound(null, slam.x, slam.y, slam.z, ModSounds.ENTITY_NECROMANCER_GRAB_IMPACT, SoundCategory.HOSTILE, 2f, .5f);
         release(world, false);
     }
 
@@ -1221,7 +1221,7 @@ final class NecromancerCombat {
                 pin(world, victim, feet);
                 if (grip == RUSH_BITE) {
                     hurt(world, victim, world.getDamageSources().mobAttack(boss), RUSH_DAMAGE, "rush bite");
-                    world.playSound(null, victim.getBlockPos(), SoundEvents.ENTITY_GENERIC_EAT.value(), SoundCategory.HOSTILE, 2f, .5f);
+                    world.playSound(null, victim.getBlockPos(), ModSounds.ENTITY_NECROMANCER_RUSH_BITE, SoundCategory.HOSTILE, 2f, .5f);
                     world.spawnParticles(ParticleTypes.SOUL, wrist.x, wrist.y, wrist.z, 14, .3, .3, .3, .04);
                 }
             } else if (held != null) {
@@ -1230,7 +1230,7 @@ final class NecromancerCombat {
                 Vec3d throwVelocity = forward().multiply(1.25);
                 victim.setVelocity(throwVelocity.x, .55, throwVelocity.z);
                 victim.velocityModified = true;
-                world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.HOSTILE, 1.8f, .65f);
+                world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_RUSH_THROW, SoundCategory.HOSTILE, 1.8f, .65f);
             }
             if (grip >= RUSH_RECOVER) finish(now);
             return;
@@ -1246,14 +1246,14 @@ final class NecromancerCombat {
                 double side = (elapsed - RUSH_CROUCH) % 16 == 0 ? 1.4 : -1.4;
                 Vec3d claw = boss.getEntityPos().add(forward().multiply(2.2)).add(-forward().z * side, 0, forward().x * side);
                 world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, floorState(world, claw)), claw.x, claw.y + .1, claw.z, 6, .35, .05, .35, .08);
-                world.playSound(null, claw.x, claw.y, claw.z, SoundEvents.BLOCK_GRAVEL_BREAK, SoundCategory.HOSTILE, 1.2f, .5f);
+                world.playSound(null, claw.x, claw.y, claw.z, ModSounds.ENTITY_NECROMANCER_RUSH_WINDUP_CLAWS, SoundCategory.HOSTILE, 1.2f, .5f);
             }
             return;
         }
         if (elapsed == warning) {
             boss.triggerAnim(NecromancerEntity.CONTROLLER, "rush");
-            world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_RAVAGER_ROAR, SoundCategory.HOSTILE, 2f, .7f);
-            world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_RAVAGER_ATTACK, SoundCategory.HOSTILE, 2f, .5f);
+            world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_VOICE_ROAR, SoundCategory.HOSTILE, 2f, .7f);
+            world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_RUSH_LAUNCH, SoundCategory.HOSTILE, 2f, .5f);
         }
         if (elapsed >= warning + RUSH_TRAVEL || boss.squaredDistanceTo(home) > MOVEMENT_RANGE * MOVEMENT_RANGE * 4) { finish(now); return; }
         Vec3d delta = victim.getEntityPos().subtract(boss.getEntityPos());
@@ -1275,7 +1275,7 @@ final class NecromancerCombat {
         Vec3d step = forward().multiply(RUSH_SPEED);
         boss.move(MovementType.SELF, new Vec3d(step.x, -.12, step.z));
         if (boss.getEntityPos().subtract(before).horizontalLength() < .1) { finish(now); return; }
-        if (elapsed % 5 == 0) world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_SKELETON_STEP, SoundCategory.HOSTILE, 1.8f, .55f);
+        if (elapsed % 5 == 0) world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_RUSH_STEP, SoundCategory.HOSTILE, 1.8f, .55f);
     }
 
     // ── Soul Fire Rain (sieges) ──────────────────────────────────────────────
@@ -1298,14 +1298,14 @@ final class NecromancerCombat {
             if (world.spawnEntity(fireball)) fireballs.add(fireball);
         }
         if (step == Step.WAVES) boss.triggerAnim(NecromancerEntity.CONTROLLER, "perch_cast"); // Chains back into the channel.
-        world.playSound(null, boss.getX(), boss.getY(), boss.getZ(), SoundEvents.ENTITY_GHAST_SHOOT, SoundCategory.HOSTILE, 3f, .5f);
+        world.playSound(null, boss.getX(), boss.getY(), boss.getZ(), ModSounds.ENTITY_NECROMANCER_RAIN_LAUNCH, SoundCategory.HOSTILE, 3f, .5f);
         log.cast(now, "soul fire rain", targets.size() + " markers");
     }
 
     /** A fireball reached its marker: a blast that throws everyone out, then a patch of soul fire. */
     void rainLanded(ServerWorld world, SoulFireballEntity fireball, Vec3d center) {
-        world.playSound(null, center.x, center.y, center.z, SoundEvents.ENTITY_GENERIC_EXPLODE.value(), SoundCategory.HOSTILE, 1.4f, .7f);
-        world.playSound(null, center.x, center.y, center.z, SoundEvents.PARTICLE_SOUL_ESCAPE.value(), SoundCategory.HOSTILE, 2f, .6f);
+        world.playSound(null, center.x, center.y, center.z, ModSounds.ENTITY_NECROMANCER_RAIN_IMPACT_BOOM, SoundCategory.HOSTILE, 1.4f, .7f);
+        world.playSound(null, center.x, center.y, center.z, ModSounds.ENTITY_NECROMANCER_RAIN_IMPACT_SOULS, SoundCategory.HOSTILE, 2f, .6f);
         world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, true, false, center.x, center.y + .3, center.z, 40, RAIN_RADIUS * .4, .3, RAIN_RADIUS * .4, .12);
         world.spawnParticles(ParticleTypes.SCULK_SOUL, true, false, center.x, center.y + .4, center.z, 12, .8, .3, .8, .05);
         world.spawnParticles(ParticleTypes.LARGE_SMOKE, center.x, center.y + .5, center.z, 8, .6, .3, .6, .02);
@@ -1374,7 +1374,7 @@ final class NecromancerCombat {
                 Vec3d at = boss.getEntityPos();
                 world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, floorState(world, at)), true, false, at.x, at.y + .1, at.z, 6, .6, .05, .6, .1);
                 world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, true, false, at.x, at.y + .1, at.z, 2, .5, .02, .5, .01);
-                if (t % 5 == 0) world.playSound(null, at.x, at.y, at.z, SoundEvents.BLOCK_ROOTED_DIRT_BREAK, SoundCategory.HOSTILE, 2f, .5f);
+                if (t % 5 == 0) world.playSound(null, at.x, at.y, at.z, ModSounds.ENTITY_NECROMANCER_DIVE_TUNNEL_LOOP, SoundCategory.HOSTILE, 2f, .5f);
             }
             case WARN -> {
                 hold(lockedYaw);
@@ -1382,7 +1382,7 @@ final class NecromancerCombat {
                     ringForced(world, diveSpot, DIVE_RADIUS, ParticleTypes.SOUL_FIRE_FLAME, 28);
                     debris(world, diveSpot, DIVE_RADIUS * .6, 8);
                 }
-                if (t % 5 == 0) world.playSound(null, diveSpot.x, diveSpot.y, diveSpot.z, SoundEvents.ENTITY_WARDEN_DIG, SoundCategory.HOSTILE, 2f, .9f);
+                if (t % 5 == 0) world.playSound(null, diveSpot.x, diveSpot.y, diveSpot.z, ModSounds.ENTITY_NECROMANCER_DIVE_WARN_LOOP, SoundCategory.HOSTILE, 2f, .9f);
                 if (t >= DIVE_WARNING) diveErupt(world, now);
             }
             case ERUPT -> {
@@ -1423,7 +1423,7 @@ final class NecromancerCombat {
         }
         diveSpot = spot;
         boss.setPosition(spot.x, spot.y, spot.z);
-        world.playSound(null, spot.x, spot.y, spot.z, SoundEvents.ENTITY_WARDEN_DIG, SoundCategory.HOSTILE, 2.5f, .6f);
+        world.playSound(null, spot.x, spot.y, spot.z, ModSounds.ENTITY_NECROMANCER_DIVE_WARN, SoundCategory.HOSTILE, 2.5f, .6f);
         diveStep(Dive.WARN, now);
     }
 
@@ -1433,8 +1433,8 @@ final class NecromancerCombat {
         boss.setNoGravity(false);
         boss.setBuried(false);
         boss.triggerAnim(NecromancerEntity.CONTROLLER, "erupt");
-        world.playSound(null, diveSpot.x, diveSpot.y, diveSpot.z, SoundEvents.ENTITY_WARDEN_EMERGE, SoundCategory.HOSTILE, 2.5f, .8f);
-        world.playSound(null, diveSpot.x, diveSpot.y, diveSpot.z, SoundEvents.ENTITY_GENERIC_EXPLODE.value(), SoundCategory.HOSTILE, 1.2f, .6f);
+        world.playSound(null, diveSpot.x, diveSpot.y, diveSpot.z, ModSounds.ENTITY_NECROMANCER_DIVE_IMPACT_EMERGE, SoundCategory.HOSTILE, 2.5f, .8f);
+        world.playSound(null, diveSpot.x, diveSpot.y, diveSpot.z, ModSounds.ENTITY_NECROMANCER_DIVE_IMPACT_BOOM, SoundCategory.HOSTILE, 1.2f, .6f);
         world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, floorState(world, diveSpot)), true, false,
                 diveSpot.x, diveSpot.y + .3, diveSpot.z, 70, DIVE_RADIUS * .4, .4, DIVE_RADIUS * .4, .2);
         world.spawnParticles(ParticleTypes.SCULK_SOUL, true, false, diveSpot.x, diveSpot.y + 1, diveSpot.z, 24, 1.4, .8, 1.4, .06);
@@ -1519,7 +1519,7 @@ final class NecromancerCombat {
         boss.setSoulFreed(true);
         lockedYaw = boss.getYaw();
         boss.triggerAnim(NecromancerEntity.CONTROLLER, "split");
-        world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_WARDEN_SONIC_CHARGE, SoundCategory.HOSTILE, 2.5f, .6f);
+        world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_SPLIT_CHARGE, SoundCategory.HOSTILE, 2.5f, .6f);
         log.stage(now, "soul tears free");
     }
 
@@ -1539,8 +1539,8 @@ final class NecromancerCombat {
                 soulDamage = 0; soulReturning = -1; soulBolts = 0; soulCasts = 0; soulBlinkAt = -1;
                 soulGoal = null; nextSoulGoal = now; nextSoulCast = now + 30; nextSoulBlink = now + SOUL_BLINK;
                 nextFlail = now + 40;
-                world.playSound(null, ribs.x, ribs.y, ribs.z, SoundEvents.ENTITY_VEX_CHARGE, SoundCategory.HOSTILE, 2.5f, .5f);
-                world.playSound(null, ribs.x, ribs.y, ribs.z, SoundEvents.PARTICLE_SOUL_ESCAPE.value(), SoundCategory.HOSTILE, 3f, .6f);
+                world.playSound(null, ribs.x, ribs.y, ribs.z, ModSounds.ENTITY_NECROMANCER_SPLIT_RELEASE_SHRIEK, SoundCategory.HOSTILE, 2.5f, .5f);
+                world.playSound(null, ribs.x, ribs.y, ribs.z, ModSounds.ENTITY_NECROMANCER_SPLIT_RELEASE_SOULS, SoundCategory.HOSTILE, 3f, .6f);
                 world.spawnParticles(ParticleTypes.SCULK_SOUL, true, false, ribs.x, ribs.y, ribs.z, 30, .6, .6, .6, .08);
                 announce(world, Text.translatable("necromancer.elementalwands.soul_free"));
             }
@@ -1570,7 +1570,7 @@ final class NecromancerCombat {
             if (now >= soulBlinkAt) {
                 world.spawnParticles(ParticleTypes.SOUL, true, false, soul.getX(), soul.getY() + .5, soul.getZ(), 20, .3, .3, .3, .08);
                 soul.setPosition(soulBlinkTo);
-                world.playSound(null, soulBlinkTo.x, soulBlinkTo.y, soulBlinkTo.z, SoundEvents.ENTITY_ENDERMAN_TELEPORT, SoundCategory.HOSTILE, 1.2f, .7f);
+                world.playSound(null, soulBlinkTo.x, soulBlinkTo.y, soulBlinkTo.z, ModSounds.ENTITY_NECROMANCER_FREED_SOUL_BLINK_ARRIVE, SoundCategory.HOSTILE, 1.2f, .7f);
                 soulBlinkAt = -1; soulGoal = null; nextSoulBlink = now + SOUL_BLINK;
             }
         } else if (now >= nextSoulBlink || players.stream().anyMatch(p -> p.squaredDistanceTo(soul) < SOUL_THREAT * SOUL_THREAT)) {
@@ -1578,7 +1578,7 @@ final class NecromancerCombat {
             if (to == null) nextSoulBlink = now + 20;
             else {
                 soulBlinkTo = to; soulBlinkAt = now + 10;
-                world.playSound(null, to.x, to.y, to.z, SoundEvents.PARTICLE_SOUL_ESCAPE.value(), SoundCategory.HOSTILE, 1.6f, .8f);
+                world.playSound(null, to.x, to.y, to.z, ModSounds.ENTITY_NECROMANCER_FREED_SOUL_BLINK_WARN, SoundCategory.HOSTILE, 1.6f, .8f);
             }
         } else {
             if (soulGoal == null || now >= nextSoulGoal || soul.getEntityPos().distanceTo(soulGoal) < .5) { soulGoal = soulSpot(world, players); nextSoulGoal = now + 50; }
@@ -1608,7 +1608,7 @@ final class NecromancerCombat {
                 SoulBoltEntity bolt = new SoulBoltEntity(ModEntities.SOUL_BOLT, world);
                 bolt.launch(boss, victim, soul.getEntityPos().add(0, .5, 0), BOLT_SPEED);
                 if (world.spawnEntity(bolt)) bolts.add(bolt);
-                world.playSound(null, soul.getX(), soul.getY(), soul.getZ(), SoundEvents.ENTITY_BLAZE_SHOOT, SoundCategory.HOSTILE, .8f, .6f);
+                world.playSound(null, soul.getX(), soul.getY(), soul.getZ(), ModSounds.ENTITY_NECROMANCER_SOUL_BOLT_LAUNCH, SoundCategory.HOSTILE, .8f, .6f);
             }
             soulBolts--;
             nextSoulBolt = now + BOLT_INTERVAL;
@@ -1620,11 +1620,11 @@ final class NecromancerCombat {
             if (soulCasts++ % 2 == 0) {
                 target = victim.getUuid();
                 soulBolts = BOLT_COUNT; nextSoulBolt = now + 10;
-                world.playSound(null, soul.getX(), soul.getY(), soul.getZ(), SoundEvents.ENTITY_EVOKER_PREPARE_ATTACK, SoundCategory.HOSTILE, 1.4f, 1.2f);
+                world.playSound(null, soul.getX(), soul.getY(), soul.getZ(), ModSounds.ENTITY_NECROMANCER_FREED_SOUL_BOLT_WINDUP, SoundCategory.HOSTILE, 1.4f, 1.2f);
                 log.cast(now, "soul bolts", victim.getName().getString());
             } else {
                 handsRing(world, ground(world, victim.getEntityPos()), HANDS_RADIUS, now, false);
-                world.playSound(null, soul.getX(), soul.getY(), soul.getZ(), SoundEvents.ENTITY_EVOKER_PREPARE_ATTACK, SoundCategory.HOSTILE, 1.4f, .7f);
+                world.playSound(null, soul.getX(), soul.getY(), soul.getZ(), ModSounds.ENTITY_NECROMANCER_FREED_SOUL_HANDS_WINDUP, SoundCategory.HOSTILE, 1.4f, .7f);
                 log.cast(now, "soul hands", victim.getName().getString());
             }
         }
@@ -1667,8 +1667,8 @@ final class NecromancerCombat {
         lockedYaw = boss.getYaw();
         boss.triggerAnim(NecromancerEntity.CONTROLLER, "collapse");
         Vec3d ribs = ribs();
-        world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_IRON_GOLEM_DAMAGE, SoundCategory.HOSTILE, 2.5f, .5f);
-        world.playSound(null, boss.getBlockPos(), SoundEvents.PARTICLE_SOUL_ESCAPE.value(), SoundCategory.HOSTILE, 2.5f, .5f);
+        world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_COLLAPSE_IMPACT, SoundCategory.HOSTILE, 2.5f, .5f);
+        world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_COLLAPSE_SOULS, SoundCategory.HOSTILE, 2.5f, .5f);
         world.spawnParticles(ParticleTypes.SCULK_SOUL, true, false, ribs.x, ribs.y, ribs.z, 24, .8, .6, .8, .05);
         announce(world, Text.translatable("necromancer.elementalwands.soul_back"));
         log.stage(now, "soul dragged back; body collapsed");
@@ -1698,14 +1698,14 @@ final class NecromancerCombat {
             return;
         }
         if (tick == HARVEST_SCREAM) {
-            world.playSound(null, boss.getBlockPos(), SoundEvents.BLOCK_SCULK_SHRIEKER_SHRIEK, SoundCategory.HOSTILE, 3f, .75f);
-            world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_GHAST_SCREAM, SoundCategory.HOSTILE, 2.5f, .45f);
-            world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_WARDEN_ROAR, SoundCategory.HOSTILE, 2.5f, .6f);
+            world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_HARVEST_SCREAM_SHRIEK, SoundCategory.HOSTILE, 3f, .75f);
+            world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_HARVEST_SCREAM_WAIL, SoundCategory.HOSTILE, 2.5f, .45f);
+            world.playSound(null, boss.getBlockPos(), ModSounds.ENTITY_NECROMANCER_HARVEST_SCREAM_ROAR, SoundCategory.HOSTILE, 2.5f, .6f);
             // The jaws point at the sky: the boom rises above the skull.
             world.spawnParticles(ParticleTypes.SONIC_BOOM, true, false, boss.getX(), boss.getY() + 5.2, boss.getZ(), 1, 0, 0, 0, 0);
             chooseHarvestSpots(world);
             for (Vec3d spot : harvestSpots)
-                world.playSound(null, spot.x, spot.y, spot.z, SoundEvents.PARTICLE_SOUL_ESCAPE.value(), SoundCategory.HOSTILE, 1.6f, .6f);
+                world.playSound(null, spot.x, spot.y, spot.z, ModSounds.ENTITY_NECROMANCER_HARVEST_SPOT_WARN, SoundCategory.HOSTILE, 1.6f, .6f);
             if (!harvestSpots.isEmpty()) announce(world, Text.translatable("necromancer.elementalwands.harvest"));
         }
         int since = tick - HARVEST_SCREAM;
@@ -1754,7 +1754,7 @@ final class NecromancerCombat {
             harvest.add(risen);
             raised++;
             debris(world, spot, 1, 12);
-            world.playSound(null, spot.x, spot.y, spot.z, SoundEvents.BLOCK_ROOTED_DIRT_BREAK, SoundCategory.HOSTILE, 1.4f, .6f);
+            world.playSound(null, spot.x, spot.y, spot.z, ModSounds.ENTITY_NECROMANCER_HARVEST_RAISE, SoundCategory.HOSTILE, 1.4f, .6f);
         }
         harvestSpots.clear();
         log.note(world.getTime(), "harvest raised " + raised + " souls");
@@ -1766,7 +1766,7 @@ final class NecromancerCombat {
         boss.heal(heal);
         Vec3d ribs = ribs();
         world.spawnParticles(ParticleTypes.SCULK_SOUL, true, false, ribs.x, ribs.y, ribs.z, 14, .5, .5, .5, .04);
-        world.playSound(null, ribs.x, ribs.y, ribs.z, SoundEvents.BLOCK_SCULK_CATALYST_BLOOM, SoundCategory.HOSTILE, 2.5f, .6f);
+        world.playSound(null, ribs.x, ribs.y, ribs.z, ModSounds.ENTITY_NECROMANCER_HARVEST_ABSORB, SoundCategory.HOSTILE, 2.5f, .6f);
         log.note(world.getTime(), String.format("harvested soul absorbed: +%.0f health", heal));
     }
 
@@ -1845,7 +1845,7 @@ final class NecromancerCombat {
 
     private void detonate(ServerWorld world, Grasp grasp, List<ServerPlayerEntity> caught) {
         Vec3d center = grasp.center();
-        world.playSound(null, center.x, center.y, center.z, SoundEvents.ENTITY_EVOKER_FANGS_ATTACK, SoundCategory.HOSTILE, 1.2f, .6f);
+        world.playSound(null, center.x, center.y, center.z, ModSounds.ENTITY_NECROMANCER_HANDS_IMPACT, SoundCategory.HOSTILE, 1.2f, .6f);
         for (int i = 0; i < 6; i++) {
             double angle = i * Math.PI / 3, r = grasp.radius() * .55;
             world.spawnParticles(ParticleTypes.SOUL, center.x + Math.cos(angle) * r, center.y + .4, center.z + Math.sin(angle) * r, 5, .08, .45, .08, .02);

@@ -7,6 +7,7 @@ import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.registry.ModEntities;
 import com.anton.elementalwands.registry.ModParticles;
+import com.anton.elementalwands.registry.ModSounds;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -21,7 +22,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
@@ -116,8 +116,8 @@ public final class StoneClusterManager {
         reserve.duration = mass == 0 ? StoneClusterRules.SMALL_COOLDOWN : StoneClusterRules.HEAVY_COOLDOWN;
         reserve.lastShot = world.getTime();
         applyWeight(reserve); sync(reserve);
-        world.playSound(null, player.getBlockPos(), SoundEvents.ENTITY_IRON_GOLEM_ATTACK,
-                SoundCategory.PLAYERS, mass == 0 ? .6f : 1.2f, mass == 0 ? 1.15f : .6f);
+        world.playSound(null, player.getBlockPos(), ModSounds.SPELL_STONE_GATHERED_MASS_LAUNCH,
+                SoundCategory.PLAYERS, mass == 0 ? .6f : 1.2f, mass == 0 ? 1.3f : .9f);
     }
     public static BlockHitResult gatheringTarget(ServerWorld world, PlayerEntity player) {
         Vec3d look = player.getRotationVec(1);
@@ -160,8 +160,8 @@ public final class StoneClusterManager {
         applyWeight(reserve); sync(reserve);
         var p = ground.getPos();
         reserve.world.spawnParticles(ModParticles.STONE_DUST,p.x,p.y+.1,p.z,14,.45,.1,.45,.035);
-        reserve.world.playSound(null,ground.getBlockPos(),SoundEvents.BLOCK_DEEPSLATE_BREAK,
-                SoundCategory.PLAYERS,.9f,.65f + reserve.mass*.002f);
+        reserve.world.playSound(null,ground.getBlockPos(),ModSounds.SPELL_STONE_GATHERED_MASS_GATHER,
+                SoundCategory.PLAYERS,.9f,1f + reserve.mass*.003f);
     }
     public static void onDamage(ServerPlayerEntity player, float damage) {
         Reserve reserve = RESERVES.get(player.getUuid());

@@ -7,6 +7,7 @@ import com.anton.elementalwands.entity.SentryBloomEntity;
 import com.anton.elementalwands.entity.WandBoss;
 import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.party.WandAllies;
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.registry.ModSpellBlocks;
 
 import java.util.ArrayList;
@@ -32,7 +33,6 @@ import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
@@ -145,7 +145,7 @@ public final class FlowerTurretManager {
         }
         Vec3d at = Vec3d.ofBottomCenter(pos);
         all.add(new Flower(caster.getUuid(), pos.toImmutable(), placement, spawnHead(world, at), world.getServer().getTicks()));
-        world.playSound(null, pos, SoundEvents.BLOCK_AZALEA_PLACE, SoundCategory.PLAYERS, 0.8f, 1.1f);
+        world.playSound(null, pos, ModSounds.SPELL_NATURE_SENTRY_BLOOM_PLANT, SoundCategory.PLAYERS, 0.8f, 1.0f);
         BlockNatureEvents.send(world, BlockNatureEvents.PLANT, at);
         return true;
     }
@@ -272,7 +272,7 @@ public final class FlowerTurretManager {
         flower.twin.mount(SentryBloomEntity.BRANCH_TOP, SentryBloomEntity.BRANCH_SCALE);
         flower.nextTwinShot = Math.max(now, flower.nextShot) + FIRE_INTERVAL / 2;
         BlockNatureEvents.send(world, BlockNatureEvents.GROW, at);
-        world.playSound(null, flower.pos, SoundEvents.BLOCK_AZALEA_PLACE, SoundCategory.PLAYERS, 0.8f, 0.8f);
+        world.playSound(null, flower.pos, ModSounds.SPELL_NATURE_SENTRY_BLOOM_GROW, SoundCategory.PLAYERS, 0.8f, 1.0f);
     }
 
     private static void shrink(ServerWorld world, Flower flower) {
@@ -334,7 +334,7 @@ public final class FlowerTurretManager {
         world.spawnEntity(new SeedProjectileEntity(world, owner, muzzle, direction.multiply(SEED_SPEED), target));
         // The spit: pollen and a petal or two thrown up from the mouth.
         BlockNatureEvents.send(world, BlockNatureEvents.SHOT, head.getId(), muzzle, direction, head.scale());
-        world.playSound(null, pos, SoundEvents.BLOCK_AZALEA_LEAVES_HIT, SoundCategory.PLAYERS, 0.35f, 1.6f);
+        world.playSound(null, pos, ModSounds.SPELL_NATURE_SENTRY_BLOOM_SHOT, SoundCategory.PLAYERS, 0.35f, 1.0f);
     }
 
     private static void wilt(ServerWorld world, Flower flower) {
@@ -343,7 +343,7 @@ public final class FlowerTurretManager {
         if (flower.twin != null) flower.twin.discard();
         Vec3d at = Vec3d.ofBottomCenter(flower.pos);
         BlockNatureEvents.send(world, BlockNatureEvents.WILT, at);
-        world.playSound(null, flower.pos, SoundEvents.BLOCK_GRASS_BREAK, SoundCategory.PLAYERS, 0.6f, 0.9f);
+        world.playSound(null, flower.pos, ModSounds.SPELL_NATURE_SENTRY_BLOOM_WILT, SoundCategory.PLAYERS, 0.6f, 1.0f);
     }
 
     private static boolean canHold(BlockState state) {

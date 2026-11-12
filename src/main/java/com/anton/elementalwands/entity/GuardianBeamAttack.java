@@ -1,5 +1,7 @@
 package com.anton.elementalwands.entity;
 
+import com.anton.elementalwands.registry.ModSounds;
+
 import java.util.UUID;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -7,7 +9,6 @@ import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -46,7 +47,7 @@ final class GuardianBeamAttack {
         guardian.syncBeam(started, origin, origin, pitch());
         guardian.triggerAnim("guardian", "beam");
         ServerWorld world = (ServerWorld)guardian.getEntityWorld();
-        world.playSound(null, origin.x, origin.y, origin.z, SoundEvents.ENTITY_WARDEN_SONIC_CHARGE,
+        world.playSound(null, origin.x, origin.y, origin.z, ModSounds.ENTITY_GUARDIAN_BEAM_CHARGE,
                 SoundCategory.HOSTILE, 1.1f, .85f);
     }
 
@@ -138,7 +139,7 @@ final class GuardianBeamAttack {
 
     private void fire(ServerWorld world) {
         Vec3d end = pulseEnd(world);
-        world.playSound(null, origin.x,origin.y,origin.z,SoundEvents.ENTITY_WARDEN_SONIC_BOOM,
+        world.playSound(null, origin.x,origin.y,origin.z,ModSounds.ENTITY_GUARDIAN_BEAM_LAUNCH,
                 SoundCategory.HOSTILE,1.4f,1.2f);
         world.spawnParticles(ParticleTypes.ELECTRIC_SPARK,end.x,end.y,end.z,10,.18,.18,.18,.08);
     }

@@ -3,6 +3,7 @@ package com.anton.elementalwands.client;
 import com.anton.elementalwands.entity.roc.StormRocEntity;
 import com.anton.elementalwands.mixin.ClientChunkProgressAccessor;
 import com.anton.elementalwands.network.ModNetworking;
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.summit.StormRocIntroTrack;
 import com.anton.elementalwands.summit.StormSummit;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -22,7 +23,6 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
@@ -98,7 +98,7 @@ public final class StormRocIntroClient {
         // The move into the realm stops every sound: the storm's bed comes back in the new world.
         ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE.register((client, world) -> {
             handoff = 0;
-            if (active && !finished) client.getSoundManager().play(PositionedSoundInstance.master(SoundEvents.ITEM_ELYTRA_FLYING, .7f, .5f));
+            if (active && !finished) client.getSoundManager().play(PositionedSoundInstance.master(ModSounds.CINEMATIC_STORM_ROC_INTRO_STORM_BED, .7f, .5f));
         });
         StormRocIntroPuppets.init();
     }
@@ -370,18 +370,18 @@ public final class StormRocIntroClient {
         };
         record Sound(SoundEvent event, float volume, float pitch) {}
         Sound sound = switch (cue.cue()) {
-            case "wind_rise", "wind_rush", "sky_open", "fall_wind" -> new Sound(SoundEvents.ITEM_ELYTRA_FLYING, .6f, cue.cue().equals("fall_wind") ? 1.3f : .8f);
-            case "caw" -> new Sound(SoundEvents.ENTITY_PHANTOM_AMBIENT, 6f, .45f);
-            case "wings_rush", "wingbeat" -> new Sound(SoundEvents.ENTITY_ENDER_DRAGON_FLAP, 3f, .55f + RANDOM.nextFloat() * .1f);
-            case "snatch" -> new Sound(SoundEvents.ENTITY_PLAYER_HURT, 1f, .8f);
-            case "scream", "shriek" -> new Sound(SoundEvents.ENTITY_PHANTOM_DEATH, 6f, .4f);
-            case "cloud_roar", "thunder" -> new Sound(SoundEvents.ENTITY_LIGHTNING_BOLT_THUNDER, 2.5f, .7f + RANDOM.nextFloat() * .2f);
-            case "crackle" -> new Sound(SoundEvents.ENTITY_LIGHTNING_BOLT_IMPACT, .8f, 1.6f);
-            case "struggle" -> new Sound(SoundEvents.ENTITY_PLAYER_ATTACK_WEAK, 1f, 1f);
-            case "wand_strike" -> new Sound(SoundEvents.ENTITY_BREEZE_WIND_BURST.value(), 2f, 1f);
-            case "fling" -> new Sound(SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, 1.5f, .6f);
-            case "crash" -> new Sound(SoundEvents.ENTITY_GENERIC_EXPLODE.value(), 1.2f, .7f);
-            case "roc_lands" -> new Sound(SoundEvents.ENTITY_RAVAGER_STEP, 3f, .5f);
+            case "wind_rise", "wind_rush", "sky_open", "fall_wind" -> new Sound(ModSounds.CINEMATIC_STORM_ROC_INTRO_WIND, .6f, cue.cue().equals("fall_wind") ? 1.3f : .8f);
+            case "caw" -> new Sound(ModSounds.CINEMATIC_STORM_ROC_INTRO_CAW, 6f, .45f);
+            case "wings_rush", "wingbeat" -> new Sound(ModSounds.CINEMATIC_STORM_ROC_INTRO_WINGBEAT, 3f, .55f + RANDOM.nextFloat() * .1f);
+            case "snatch" -> new Sound(ModSounds.CINEMATIC_STORM_ROC_INTRO_SNATCH, 1f, .8f);
+            case "scream", "shriek" -> new Sound(ModSounds.CINEMATIC_STORM_ROC_INTRO_SCREAM, 6f, .4f);
+            case "cloud_roar", "thunder" -> new Sound(ModSounds.CINEMATIC_STORM_ROC_INTRO_THUNDER, 2.5f, .7f + RANDOM.nextFloat() * .2f);
+            case "crackle" -> new Sound(ModSounds.CINEMATIC_STORM_ROC_INTRO_CRACKLE, .8f, 1.6f);
+            case "struggle" -> new Sound(ModSounds.CINEMATIC_STORM_ROC_INTRO_STRUGGLE, 1f, 1f);
+            case "wand_strike" -> new Sound(ModSounds.CINEMATIC_STORM_ROC_INTRO_WAND_STRIKE, 2f, 1f);
+            case "fling" -> new Sound(ModSounds.CINEMATIC_STORM_ROC_INTRO_FLING, 1.5f, .6f);
+            case "crash" -> new Sound(ModSounds.CINEMATIC_STORM_ROC_INTRO_CRASH, 1.2f, .7f);
+            case "roc_lands" -> new Sound(ModSounds.CINEMATIC_STORM_ROC_INTRO_ROC_LANDS, 3f, .5f);
             default -> null;
         };
         if (sound == null) return;

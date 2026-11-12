@@ -6,6 +6,7 @@ import com.anton.elementalwands.entity.*;
 import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.party.WandAllies;
 import com.anton.elementalwands.registry.*;
+import com.anton.elementalwands.registry.ModSounds;
 import net.fabricmc.fabric.api.event.lifecycle.v1.*;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.decoration.ArmorStandEntity;
@@ -49,7 +50,7 @@ public final class FaultlineManager {
         if (!AbstractWandItem.tryStartCooldown(player.getEntityWorld(), player, player.getMainHandStack(),
                 StoneTechniqueRules.FAULTLINE, StoneTechniqueRules.FAULT_COOLDOWN)) return;
         WAVES.add(new Wave(player));
-        player.getEntityWorld().playSound(null, player.getBlockPos(), SoundEvents.BLOCK_DEEPSLATE_BREAK, SoundCategory.PLAYERS, 1, .65f);
+        player.getEntityWorld().playSound(null, player.getBlockPos(), ModSounds.SPELL_STONE_FAULTLINE_CAST, SoundCategory.PLAYERS, 1, 1f);
     }
     /** A small vertical search accepts leaf canopies and water tops, not tall walls or distant cave floors. */
     public static Vec3d surface(ServerWorld world, ServerPlayerEntity owner, Vec3d previous, double x, double z) {
@@ -122,7 +123,7 @@ public final class FaultlineManager {
             }
         }
         if (row%3==0) wave.world.playSound(null,BlockPos.ofFloored(wave.origin.add(wave.forward.multiply(depth))),
-                SoundEvents.BLOCK_DEEPSLATE_BREAK,SoundCategory.PLAYERS,.65f,.75f);
+                ModSounds.SPELL_STONE_FAULTLINE_ERUPT,SoundCategory.PLAYERS,.65f,1f);
     }
     private static void clear(Wave wave) { wave.visuals.forEach(FaultlineSpikeEntity::discard); }
     private FaultlineManager() {}

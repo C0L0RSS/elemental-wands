@@ -1,5 +1,7 @@
 package com.anton.elementalwands.entity;
 
+import com.anton.elementalwands.registry.ModSounds;
+
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.FlyingItemEntity;
@@ -13,7 +15,6 @@ import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.storage.ReadView;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Box;
@@ -139,7 +140,7 @@ public class GuardianRockEntity extends ProjectileEntity implements FlyingItemEn
         }
         world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, Blocks.STONE.getDefaultState()),
                 center.x, center.y, center.z, isShard()?14:48, isShard()?.3:1.2, .4, isShard()?.3:1.2, .12);
-        world.playSound(null, center.x, center.y, center.z, SoundEvents.BLOCK_STONE_BREAK, SoundCategory.HOSTILE, 1.4f, .6f);
+        world.playSound(null, center.x, center.y, center.z, ModSounds.ENTITY_GUARDIAN_ROCK_IMPACT, SoundCategory.HOSTILE, 1.4f, .6f);
         discard();
     }
 }

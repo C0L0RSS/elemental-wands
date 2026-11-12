@@ -1,6 +1,7 @@
 package com.anton.elementalwands.item;
 
 import com.anton.elementalwands.entity.SeedProjectileEntity;
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.util.FlowerTurretManager;
 import com.anton.elementalwands.util.FullBloomManager;
 
@@ -8,7 +9,6 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 
@@ -38,8 +38,8 @@ public final class NatureAbilityHandler {
         SeedProjectileEntity seed = new SeedProjectileEntity(world, caster);
         world.spawnEntity(seed);
 
-        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_EGG_THROW,
-                SoundCategory.PLAYERS, 0.7f, 0.9f);
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_NATURE_SEED_CAST,
+                SoundCategory.PLAYERS, 0.7f, 1.0f);
     }
 
     public static void castThornLash(ServerWorld world, PlayerEntity caster, ItemStack stack) {
@@ -49,10 +49,8 @@ public final class NatureAbilityHandler {
                 com.anton.elementalwands.registry.ModEntities.THORN_LASH, world);
         lash.initialize(caster);
         world.spawnEntity(lash);
-        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_FISHING_BOBBER_THROW,
-                SoundCategory.PLAYERS, .55f, 1.45f);
-        world.playSound(null, caster.getBlockPos(), SoundEvents.BLOCK_AZALEA_LEAVES_BREAK,
-                SoundCategory.PLAYERS, .7f, .7f);
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_NATURE_THORNBITE_CAST,
+                SoundCategory.PLAYERS, .7f, 1f);
     }
 
     public static void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
@@ -84,7 +82,7 @@ public final class NatureAbilityHandler {
                 com.anton.elementalwands.registry.ModEntities.OVERGROWTH_SEED, world);
         seed.launch(caster, stack);
         world.spawnEntity(seed);
-        world.playSound(null, caster.getBlockPos(), SoundEvents.ENTITY_EGG_THROW,
-                SoundCategory.PLAYERS, .9f, .6f);
+        world.playSound(null, caster.getBlockPos(), ModSounds.SPELL_NATURE_OVERGROWTH_CAST,
+                SoundCategory.PLAYERS, .9f, .75f);
     }
 }

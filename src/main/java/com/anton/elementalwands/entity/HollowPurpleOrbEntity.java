@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.anton.elementalwands.registry.ModEntities;
+import com.anton.elementalwands.registry.ModSounds;
 
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -21,7 +22,6 @@ import net.minecraft.particle.BlockStateParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
@@ -98,8 +98,8 @@ public class HollowPurpleOrbEntity extends ProjectileEntity {
         damageTouchedTargets(world, getEntityPos());
 
         if (ageTicks % 10 == 0) {
-            world.playSound(null, getBlockPos(), SoundEvents.BLOCK_RESPAWN_ANCHOR_CHARGE, SoundCategory.PLAYERS, 0.7f,
-                    0.48f);
+            world.playSound(null, getBlockPos(), ModSounds.SPELL_SPACE_HOLLOW_PURPLE_LOOP, SoundCategory.PLAYERS, 0.7f,
+                    1.0f);
         }
 
         Vec3d velocity = getVelocity();
@@ -208,15 +208,15 @@ public class HollowPurpleOrbEntity extends ProjectileEntity {
         velocityModified = true;
 
         com.anton.elementalwands.util.BlockSpaceEvents.send(world, com.anton.elementalwands.util.BlockSpaceEvents.COLLAPSE, getId(), getEntityPos());
-        world.playSound(null, getBlockPos(), SoundEvents.BLOCK_BEACON_DEACTIVATE, SoundCategory.PLAYERS, 1.2f, 0.42f);
+        world.playSound(null, getBlockPos(), ModSounds.SPELL_SPACE_HOLLOW_PURPLE_COLLAPSE_IMPLODE, SoundCategory.PLAYERS, 1.2f, 1.0f);
     }
 
     private void tickFinalCollapse(ServerWorld world) {
         collapseAge++;
         // Clients draw the collapse from the COLLAPSE message; only its sound is timed here.
         if (collapseAge == 7) {
-            world.playSound(null, getBlockPos(), SoundEvents.ENTITY_WARDEN_SONIC_BOOM,
-                    SoundCategory.PLAYERS, 1.45f, 1.7f);
+            world.playSound(null, getBlockPos(), ModSounds.SPELL_SPACE_HOLLOW_PURPLE_COLLAPSE_BOOM,
+                    SoundCategory.PLAYERS, 1.45f, 1.0f);
         }
         if (collapseAge >= COLLAPSE_TICKS) {
             discard();

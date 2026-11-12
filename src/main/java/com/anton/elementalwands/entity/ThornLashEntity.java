@@ -4,6 +4,7 @@ import com.anton.elementalwands.data.EWAttachments;
 import com.anton.elementalwands.data.WizardAffinity;
 import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.party.WandAllies;
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.util.NatureCombat;
 import com.anton.elementalwands.util.SpellCombat;
 import com.anton.elementalwands.util.ThornLashRules;
@@ -15,7 +16,6 @@ import net.minecraft.entity.decoration.ArmorStandEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.storage.ReadView;
 import net.minecraft.storage.WriteView;
 import net.minecraft.util.hit.HitResult;
@@ -88,7 +88,7 @@ public final class ThornLashEntity extends Entity {
                 dataTracker.set(STOP, progress); // An invulnerable first target also consumes the bite.
                 Vec3d contact = getEntityPos().add(ThornLashRules.tip(getYaw(), getPitch(), progress));
                 if (victim != null) bite(world, caster, victim, contact);
-                world.playSound(null, contact.x, contact.y, contact.z, SoundEvents.ENTITY_EVOKER_FANGS_ATTACK, SoundCategory.PLAYERS, .45f, 1.6f);
+                world.playSound(null, contact.x, contact.y, contact.z, ModSounds.SPELL_NATURE_THORNBITE_HIT, SoundCategory.PLAYERS, .45f, 1f);
                 return;
             }
         }

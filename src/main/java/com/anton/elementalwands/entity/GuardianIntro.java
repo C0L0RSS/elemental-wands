@@ -2,6 +2,7 @@ package com.anton.elementalwands.entity;
 
 import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.registry.ModEntities;
+import com.anton.elementalwands.registry.ModSounds;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -21,13 +22,11 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.particle.BlockStateParticleEffect;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.registry.tag.DamageTypeTags;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -205,36 +204,36 @@ public final class GuardianIntro {
 
     private void stage(ServerWorld world, int t) {
         // A zombie shuffling out of the dark, groaning.
-        if (t < STOP - 4 && t % 12 == 4) sound(world, lower(t), SoundEvents.ENTITY_ZOMBIE_STEP, .7f, .9f);
-        if (t == 14 || t == 50 || t == TURN + 4) sound(world, upper(t), SoundEvents.ENTITY_ZOMBIE_AMBIENT, 1.2f, .9f + t / 400f);
+        if (t < STOP - 4 && t % 12 == 4) sound(world, lower(t), ModSounds.CINEMATIC_GUARDIAN_INTRO_ZOMBIE_STEP, .7f, .9f);
+        if (t == 14 || t == 50 || t == TURN + 4) sound(world, upper(t), ModSounds.CINEMATIC_GUARDIAN_INTRO_ZOMBIE_GROAN, 1.2f, .9f + t / 400f);
         // Something heavy moving far overhead: thunder in the vaults and grit sifting down on it.
-        if (t == 44 || t == 76) sound(world, local(0, 40, -20), SoundEvents.ENTITY_LIGHTNING_BOLT_THUNDER, .9f, .45f);
+        if (t == 44 || t == 76) sound(world, local(0, 40, -20), ModSounds.CINEMATIC_GUARDIAN_INTRO_OVERHEAD_RUMBLE, .9f, .45f);
         if (t >= 44 && t < IMPACT && t % 2 == 0) grit(world, t);
-        if (t == LOOK + 8) sound(world, upper(t), SoundEvents.ENTITY_ZOMBIE_AMBIENT, 1.2f, .7f);
+        if (t == LOOK + 8) sound(world, upper(t), ModSounds.CINEMATIC_GUARDIAN_INTRO_ZOMBIE_GROAN, 1.2f, .7f);
         // The drop: a roar out of the dark and the wind of its fall.
-        if (t == FALL + 6) sound(world, fists(t), SoundEvents.ENTITY_RAVAGER_ROAR, 3f, .5f);
+        if (t == FALL + 6) sound(world, fists(t), ModSounds.CINEMATIC_GUARDIAN_INTRO_FALL_ROAR, 3f, .5f);
         for (int gust : new int[]{POV + 8, POV + 22, IMPACT - 8})
-            if (t == gust) sound(world, fists(t), SoundEvents.ENTITY_BREEZE_WIND_BURST, 1.2f + (t - POV) / 30f, .6f);
+            if (t == gust) sound(world, fists(t), ModSounds.CINEMATIC_GUARDIAN_INTRO_FALL_GUST, 1.2f + (t - POV) / 30f, .6f);
         if (t == IMPACT) smash(world);
         if (t > IMPACT && t <= IMPACT + 18) ring(world, t);
         if (t == IMPACT + 40) guardian.clearWave(0);
-        if (t == IMPACT + 16) sound(world, local(0, 4, 0), SoundEvents.ENTITY_RAVAGER_ROAR, 2.5f, .55f);
+        if (t == IMPACT + 16) sound(world, local(0, 4, 0), ModSounds.CINEMATIC_GUARDIAN_INTRO_IMPACT_ROAR, 2.5f, .55f);
         // It takes the zombie by the head and hauls it up to look at it; the zombie claws and groans.
-        if (t == GRIP) { sound(world, upper(t), SoundEvents.ENTITY_ZOMBIE_HURT, 1.2f, 1f); dust(world, upper(t).add(0, -.3, 0), 14); }
-        if (t == GRIP + 4) sound(world, local(0, 3, 0), SoundEvents.BLOCK_GRINDSTONE_USE, 1.4f, .4f);
-        if (t == SHOW + 4 || t == SHOW + 16) sound(world, upper(t), SoundEvents.ENTITY_ZOMBIE_AMBIENT, 1.3f, 1.05f);
-        if (t == GRAB) sound(world, lower(t), SoundEvents.ENTITY_ZOMBIE_HURT, 1.2f, .9f);
-        if (t == TEAR - 12) sound(world, local(0, 3.5, 0), SoundEvents.BLOCK_GRINDSTONE_USE, 1.5f, .35f);
+        if (t == GRIP) { sound(world, upper(t), ModSounds.CINEMATIC_GUARDIAN_INTRO_ZOMBIE_HURT, 1.2f, 1f); dust(world, upper(t).add(0, -.3, 0), 14); }
+        if (t == GRIP + 4) sound(world, local(0, 3, 0), ModSounds.CINEMATIC_GUARDIAN_INTRO_STONE_GRIND, 1.4f, .4f);
+        if (t == SHOW + 4 || t == SHOW + 16) sound(world, upper(t), ModSounds.CINEMATIC_GUARDIAN_INTRO_ZOMBIE_GROAN, 1.3f, 1.05f);
+        if (t == GRAB) sound(world, lower(t), ModSounds.CINEMATIC_GUARDIAN_INTRO_ZOMBIE_HURT, 1.2f, .9f);
+        if (t == TEAR - 12) sound(world, local(0, 3.5, 0), ModSounds.CINEMATIC_GUARDIAN_INTRO_STONE_GRIND, 1.5f, .35f);
         if (t == TEAR + 3) tear(world, t);
         // The legs are flung away, and the rest thrown hard over the players' heads.
-        if (t == TOSS) sound(world, lower(t), SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, 1.6f, .55f);
-        if (t == HURL - 12) sound(world, local(0, 4, 0), SoundEvents.BLOCK_GRINDSTONE_USE, 1.4f, .45f);
+        if (t == TOSS) sound(world, lower(t), ModSounds.CINEMATIC_GUARDIAN_INTRO_TOSS_SWING, 1.6f, .55f);
+        if (t == HURL - 12) sound(world, local(0, 4, 0), ModSounds.CINEMATIC_GUARDIAN_INTRO_STONE_GRIND, 1.4f, .45f);
         if (t == HURL) {
-            sound(world, upper(t), SoundEvents.ENTITY_PLAYER_ATTACK_STRONG, 1.8f, .5f);
-            sound(world, upper(t), SoundEvents.ENTITY_BREEZE_WIND_BURST, 2f, .7f);
+            sound(world, upper(t), ModSounds.CINEMATIC_GUARDIAN_INTRO_HURL_SWING, 1.8f, .5f);
+            sound(world, upper(t), ModSounds.CINEMATIC_GUARDIAN_INTRO_HURL_GUST, 2f, .7f);
         }
-        if (t == track.event("over_players") - 2) sound(world, upper(t), SoundEvents.ENTITY_BREEZE_WIND_BURST, 2f, 1.1f);
-        if (t == POINT + 12) sound(world, local(0, 4, 0), SoundEvents.ENTITY_RAVAGER_AMBIENT, 1.8f, .5f);
+        if (t == track.event("over_players") - 2) sound(world, upper(t), ModSounds.CINEMATIC_GUARDIAN_INTRO_FLYBY_GUST, 2f, 1.1f);
+        if (t == POINT + 12) sound(world, local(0, 4, 0), ModSounds.CINEMATIC_GUARDIAN_INTRO_POINT_GROWL, 1.8f, .5f);
     }
 
     /** Grit sifting down around the zombie as the Guardian comes: more and more of it. */
@@ -251,10 +250,10 @@ public final class GuardianIntro {
     /** Both fists land: a thunderclap, a burst of stone and a ring that rolls out across the floor. */
     private void smash(ServerWorld world) {
         Vec3d fists = fists(IMPACT);
-        sound(world, fists, SoundEvents.ITEM_MACE_SMASH_GROUND_HEAVY, 3f, .55f);
-        sound(world, fists, SoundEvents.ENTITY_GENERIC_EXPLODE, 2.5f, .6f);
-        sound(world, fists, SoundEvents.ENTITY_IRON_GOLEM_DAMAGE, 2f, .5f);
-        sound(world, fists, SoundEvents.ENTITY_ZOMBIE_HURT, 1.6f, .8f);
+        sound(world, fists, ModSounds.CINEMATIC_GUARDIAN_INTRO_SMASH_SLAM, 3f, .55f);
+        sound(world, fists, ModSounds.CINEMATIC_GUARDIAN_INTRO_SMASH_BOOM, 2.5f, .6f);
+        sound(world, fists, ModSounds.CINEMATIC_GUARDIAN_INTRO_SMASH_CRACK, 2f, .5f);
+        sound(world, fists, ModSounds.CINEMATIC_GUARDIAN_INTRO_ZOMBIE_HURT, 1.6f, .8f);
         particles(world, ParticleTypes.CLOUD, fists.add(0, .6, 0), 18, 1.2, .06);
         dust(world, fists, 60);
         dust(world, centre, 30);
@@ -279,9 +278,9 @@ public final class GuardianIntro {
     /** The zombie comes apart at the waist: a crack, a groan and a puff, nothing more. */
     private void tear(ServerWorld world, int t) {
         Vec3d waist = upper(t).lerp(lower(t), .5);
-        sound(world, waist, SoundEvents.ENTITY_ZOMBIE_BREAK_WOODEN_DOOR, 1.6f, .8f);
-        sound(world, waist, SoundEvents.ENTITY_PLAYER_ATTACK_CRIT, 1.5f, .6f);
-        sound(world, waist, SoundEvents.ENTITY_ZOMBIE_DEATH, 1.4f, 1f);
+        sound(world, waist, ModSounds.CINEMATIC_GUARDIAN_INTRO_TEAR_CRACK, 1.6f, .8f);
+        sound(world, waist, ModSounds.CINEMATIC_GUARDIAN_INTRO_TEAR_RIP, 1.5f, .6f);
+        sound(world, waist, ModSounds.CINEMATIC_GUARDIAN_INTRO_ZOMBIE_DEATH, 1.4f, 1f);
         particles(world, ParticleTypes.POOF, waist, 14, .25, .05);
         particles(world, ParticleTypes.CRIT, waist, 12, .3, .3);
     }
@@ -322,9 +321,5 @@ public final class GuardianIntro {
 
     private static void sound(ServerWorld world, Vec3d at, SoundEvent sound, float volume, float pitch) {
         world.playSound(null, at.x, at.y, at.z, sound, SoundCategory.HOSTILE, volume, pitch);
-    }
-
-    private static void sound(ServerWorld world, Vec3d at, RegistryEntry<SoundEvent> sound, float volume, float pitch) {
-        world.playSound(null, at.x, at.y, at.z, sound, SoundCategory.HOSTILE, volume, pitch, world.getRandom().nextLong());
     }
 }

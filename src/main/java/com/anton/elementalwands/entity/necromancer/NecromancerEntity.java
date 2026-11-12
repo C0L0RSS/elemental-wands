@@ -1,6 +1,7 @@
 package com.anton.elementalwands.entity.necromancer;
 
 import com.anton.elementalwands.entity.WandBoss;
+import com.anton.elementalwands.registry.ModSounds;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -369,7 +370,7 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
 
     @Override
     protected void playStepSound(net.minecraft.util.math.BlockPos pos, net.minecraft.block.BlockState state) {
-        if (isColossus()) playSound(net.minecraft.sound.SoundEvents.ENTITY_SKELETON_STEP, 1.2f, .45f);
+        if (isColossus()) playSound(ModSounds.ENTITY_NECROMANCER_STEP, 1.2f, .45f);
         else super.playStepSound(pos, state);
     }
 

@@ -3,6 +3,7 @@ package com.anton.elementalwands.entity.roc;
 import static com.anton.elementalwands.entity.roc.StormRocRules.*;
 
 import com.anton.elementalwands.data.WizardAffinity;
+import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.registry.ModSpellBlocks;
 import com.anton.elementalwands.summit.StormSummit;
 import com.anton.elementalwands.summit.StormSummitLayout;
@@ -25,7 +26,6 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
@@ -325,7 +325,7 @@ final class StormRocCombat {
     private void tickSummon(long t) {
         if (t == SUMMON_SCREAM) {
             effect(RocEffectEntity.Kind.CALL_BOLT, boss.socket("beak"), 0, 0, 12);
-            sound(boss.getEntityPos(), SoundEvents.ENTITY_PHANTOM_AMBIENT, 4, .5f);
+            sound(boss.getEntityPos(), ModSounds.ENTITY_STORM_ROC_VOICE_CAW, 4, .5f);
         }
         // Where challengers just landed at the arrival, facing its spire, see it touch down: a little
         // left of the spire and well clear of it.
@@ -380,7 +380,7 @@ final class StormRocCombat {
         boolean due = t >= airDuration();
         if (cycle == CALL_AT && !due) {
             boss.pose("call");
-            sound(boss.getEntityPos(), SoundEvents.ENTITY_PHANTOM_AMBIENT, 4, .5f);
+            sound(boss.getEntityPos(), ModSounds.ENTITY_STORM_ROC_VOICE_CAW, 4, .5f);
         }
         if (cycle == CALL_AT + CALL_VOLLEY) call(players);
         if (cycle == CALL_AT + CALL_TICKS) perched();
@@ -451,7 +451,7 @@ final class StormRocCombat {
         for (var p : players)
             if (horizontal(p.getEntityPos(), mark) <= DIVE_RADIUS + p.getWidth() * .5 && p.getY() < mark.y + 26) hurt(p, DIVE_DAMAGE);
         ring(mark, 70);
-        sound(mark, SoundEvents.ENTITY_GENERIC_EXPLODE.value(), 3, .55f);
+        sound(mark, ModSounds.ENTITY_STORM_ROC_DIVE_IMPACT, 3, .55f);
         // Phase one's sky stops striking at impact; permanent tornadoes remain.
         for (var s : strikes) s.effect.discard();
         strikes.clear();
@@ -513,7 +513,7 @@ final class StormRocCombat {
         long start = boss.poseStart();
         enter(Stage.CHARGE, "flight");
         if (flying) boss.pose("flight", start);
-        sound(from, SoundEvents.ENTITY_PHANTOM_AMBIENT, 4, .4f);
+        sound(from, ModSounds.ENTITY_STORM_ROC_VOICE_CAW, 4, .4f);
     }
 
     /** Well below the storm's scud, where the whole summit can watch the bolt come down into it. */
@@ -535,7 +535,7 @@ final class StormRocCombat {
         if (t == 40 || t == 64) thunder(high, 1.2f, .55f);
         if (t == 90) {
             effect(RocEffectEntity.Kind.CHARGE_BOLT, boss.getEntityPos(), 3, 0, 26);
-            sound(boss.getEntityPos(), SoundEvents.ENTITY_LIGHTNING_BOLT_IMPACT, 6, .5f);
+            sound(boss.getEntityPos(), ModSounds.ENTITY_STORM_ROC_CHARGE_BOLT, 6, .5f);
             thunder(boss.getEntityPos(), 2, .45f);
         }
         // Hovering, it turns onto its way down to the tallest spire, then flies it.
@@ -577,7 +577,7 @@ final class StormRocCombat {
         defeated = true;
         stage = Stage.COMPLETE;
         thunder(at, 2, .5f);
-        sound(at, SoundEvents.ENTITY_PHANTOM_DEATH, 4, .35f);
+        sound(at, ModSounds.ENTITY_STORM_ROC_VOICE_DEATH, 4, .35f);
     }
 
     /** Operators can skip straight to the phase change for playtests. */
@@ -631,7 +631,7 @@ final class StormRocCombat {
 
     /** Thunder carries a couple of hundred blocks, not into the other summits' fights. */
     private void thunder(Vec3d at, float loudness, float pitch) {
-        world().playSound(null, at.x, at.y, at.z, SoundEvents.ENTITY_LIGHTNING_BOLT_THUNDER, SoundCategory.WEATHER, 14 * loudness, pitch);
+        world().playSound(null, at.x, at.y, at.z, ModSounds.ENTITY_STORM_ROC_STORM_THUNDER, SoundCategory.WEATHER, 14 * loudness, pitch);
     }
 
     private void aimed(List<ServerPlayerEntity> players, boolean large) {
@@ -663,7 +663,7 @@ final class StormRocCombat {
             var kind = large ? RocEffectEntity.Kind.LARGE_STRIKE : RocEffectEntity.Kind.SMALL_STRIKE;
             var e = effect(kind, candidate, radius, warning, warning + (bolts - 1) * BOLT_GAP + 6);
             strikes.add(new Strike(e, aimed));
-            sound(candidate, SoundEvents.BLOCK_AMETHYST_BLOCK_RESONATE, 1.7f, large ? .55f : 1.1f);
+            sound(candidate, ModSounds.ENTITY_STORM_ROC_LIGHTNING_WARN, 1.7f, large ? .55f : 1.1f);
             return e;
         }
         return null; // Never stack an unavoidable strike when the bounded search fills up.
@@ -683,7 +683,7 @@ final class StormRocCombat {
             boolean large = e.kind() == RocEffectEntity.Kind.LARGE_STRIKE;
             if (s.bolts >= (large ? LARGE_BOLTS : SMALL_BOLTS) || e.effectTicks(0) < e.warningTicks() + s.bolts * BOLT_GAP) continue;
             s.bolts++;
-            sound(e.getEntityPos(), SoundEvents.ENTITY_LIGHTNING_BOLT_IMPACT, large ? 2.3f : 1.4f, large ? .65f : 1.15f);
+            sound(e.getEntityPos(), ModSounds.ENTITY_STORM_ROC_LIGHTNING_IMPACT, large ? 2.3f : 1.4f, large ? .65f : 1.15f);
             float damage = large ? (two ? LARGE_DAMAGE_TWO : LARGE_DAMAGE) : (two ? SMALL_DAMAGE_TWO : SMALL_DAMAGE);
             for (var p : players)
                 if (horizontal(p.getEntityPos(), e.getEntityPos()) <= e.radius() + p.getWidth() * .5
@@ -729,7 +729,7 @@ final class StormRocCombat {
         }
         var e = effect(RocEffectEntity.Kind.TORNADO, spot, tornadoRadius(), form, Integer.MAX_VALUE);
         tornadoes.add(new Tornado(e, boss.getRandom().nextDouble() * Math.PI * 2));
-        if (form > 0) sound(spot.add(0, 3, 0), SoundEvents.ENTITY_BREEZE_INHALE, 3, .45f);
+        if (form > 0) sound(spot.add(0, 3, 0), ModSounds.ENTITY_STORM_ROC_TORNADO_WARN, 3, .45f);
         return e;
     }
 
@@ -752,11 +752,11 @@ final class StormRocCombat {
             if (t.effect.isRemoved() || forming(t.effect)) continue;
             // It has just touched down: its winds take hold with a gust.
             if ((int) t.effect.effectTicks(0) == t.effect.warningTicks() && t.effect.warningTicks() > 0)
-                sound(t.effect.getEntityPos().add(0, 3, 0), SoundEvents.ENTITY_BREEZE_WIND_BURST.value(), 2.5f, .5f);
+                sound(t.effect.getEntityPos().add(0, 3, 0), ModSounds.ENTITY_STORM_ROC_TORNADO_LAND, 2.5f, .5f);
             drift(t, players);
             Vec3d core = t.effect.getEntityPos();
             double radius = t.effect.radius(), reach = radius * TORNADO_REACH;
-            if (now() % 30 == t.effect.getId() % 30) sound(core.add(0, 3, 0), SoundEvents.ENTITY_BREEZE_WHIRL, 2.2f, .55f);
+            if (now() % 30 == t.effect.getId() % 30) sound(core.add(0, 3, 0), ModSounds.ENTITY_STORM_ROC_TORNADO_LOOP, 2.2f, .55f);
             for (var p : players) {
                 double distance = horizontal(p.getEntityPos(), core);
                 if (distance > reach || p.getY() > center().y + 20 || caught.containsKey(p.getUuid())) continue;
@@ -766,7 +766,7 @@ final class StormRocCombat {
                     slow(p, Math.clamp(.1 + .35 * (1 - distance / radius), .1, .45));
                     if (distance < radius * TORNADO_CATCH && !immune) {
                         caught.put(p.getUuid(), new Caught(t, now(), Math.atan2(p.getZ() - core.z, p.getX() - core.x)));
-                        sound(p.getEntityPos(), SoundEvents.ENTITY_BREEZE_WIND_BURST.value(), 1.6f, .6f);
+                        sound(p.getEntityPos(), ModSounds.ENTITY_STORM_ROC_TORNADO_CATCH, 1.6f, .6f);
                         continue;
                     }
                     if (now() % TORNADO_CHIP_EVERY == 0) hurt(p, TORNADO_CHIP);
@@ -849,7 +849,7 @@ final class StormRocCombat {
                     pushSafe(p, center().subtract(p.getEntityPos()), 2.2, .55);
                     thrown.put(entry.getKey(), now() + 60);
                 }
-                sound(p.getEntityPos(), SoundEvents.ENTITY_BREEZE_WIND_BURST.value(), 2, .8f);
+                sound(p.getEntityPos(), ModSounds.ENTITY_STORM_ROC_TORNADO_FLING, 2, .8f);
                 continue;
             }
             // Whirled up the funnel ever faster, widening with it as it climbs.
@@ -896,7 +896,7 @@ final class StormRocCombat {
                 p.setVelocity(v.x, .55, v.z);
                 p.velocityModified = true;
                 cawAt.put(p.getUuid(), now() + 40);
-                sound(p.getEntityPos(), SoundEvents.ENTITY_PHANTOM_SWOOP, 2, .5f);
+                sound(p.getEntityPos(), ModSounds.ENTITY_STORM_ROC_SPIRE_CAW_HIT, 2, .5f);
                 break;
             }
         }
@@ -984,7 +984,7 @@ final class StormRocCombat {
         enter(Stage.DIVE, "dive");
         to = landing(mark, boss.getYaw());
         marker = effect(RocEffectEntity.Kind.DIVE_MARKER, mark, DIVE_RADIUS, DIVE_TICKS, DIVE_TICKS + 2);
-        sound(mark, SoundEvents.ENTITY_PHANTOM_AMBIENT, 3, .45f);
+        sound(mark, ModSounds.ENTITY_STORM_ROC_VOICE_CAW, 3, .45f);
     }
 
     /** Where its feet go so that the pinned bill, not the body, lands on the mark. */
@@ -1003,7 +1003,7 @@ final class StormRocCombat {
         marked = false;
         marker = null;
         enter(Stage.SMASH, "dive");
-        sound(from, SoundEvents.ENTITY_PHANTOM_AMBIENT, 3, .4f);
+        sound(from, ModSounds.ENTITY_STORM_ROC_VOICE_CAW, 3, .4f);
     }
 
     private void tickSmash(List<ServerPlayerEntity> players, long t) {
@@ -1067,7 +1067,7 @@ final class StormRocCombat {
         marked = true;
         int warning = previous == null ? FIRST_SMASH_WARNING : SMASH_WARNING;
         marker = effect(RocEffectEntity.Kind.DIVE_MARKER, mark, SMASH_RADIUS, warning, warning + 2);
-        sound(mark, SoundEvents.ENTITY_PHANTOM_AMBIENT, 2.5f, .5f);
+        sound(mark, ModSounds.ENTITY_STORM_ROC_VOICE_CAW, 2.5f, .5f);
     }
 
     /** At a player if it can, but inside the summit, off the tornadoes and within a hop of the last circle. */
@@ -1130,7 +1130,7 @@ final class StormRocCombat {
         for (var p : players)
             if (horizontal(p.getEntityPos(), mark) <= SMASH_RADIUS + p.getWidth() * .5 && p.getY() < mark.y + 26) hurt(p, damage);
         ring(mark, SMASH_RING);
-        sound(mark, SoundEvents.ENTITY_GENERIC_EXPLODE.value(), 3, .55f);
+        sound(mark, ModSounds.ENTITY_STORM_ROC_SMASH_IMPACT, 3, .55f);
         if (smash == 0) {
             // The air stretch's aimed strikes stop at the first impact; the random sky keeps going.
             for (var s : strikes) if (s.aimed) s.effect.discard();
@@ -1288,7 +1288,7 @@ final class StormRocCombat {
             case SWING_LEFT, SWING_RIGHT -> swing(players, t);
             case SCREAM -> {
                 // A deep, rising inhale as it draws breath: a tell apart from the bite, even off-screen.
-                if (t == 4) sound(boss.socket("head"), SoundEvents.ENTITY_BREEZE_INHALE, 4, .45f);
+                if (t == 4) sound(boss.socket("head"), ModSounds.ENTITY_STORM_ROC_VOICE_INHALE, 4, .45f);
                 if (t == action.impact) scream(players);
             }
             case WING -> thunderclap(players, t);
@@ -1344,7 +1344,7 @@ final class StormRocCombat {
             if (along >= -1 && along <= 110 && side <= SCREAM_HALF_WIDTH + victim.getWidth() * .5 && victim.getY() < e.getY() + SCREAM_HALF_WIDTH + .5
                     && hurt(victim, SCREAM_DAMAGE)) pushSafe(victim, forward, SCREAM_PUSH, .25);
         }
-        sound(origin, SoundEvents.ENTITY_PHANTOM_DEATH, 3, .4f);
+        sound(origin, ModSounds.ENTITY_STORM_ROC_VOICE_SCREAM, 3, .4f);
     }
 
     /**
@@ -1355,10 +1355,10 @@ final class StormRocCombat {
     private void thunderclap(List<ServerPlayerEntity> players, int t) {
         if (t == WING_LIFT) {
             from = boss.getEntityPos();
-            sound(boss.getEntityPos(), SoundEvents.ENTITY_ENDER_DRAGON_FLAP, 4, .5f);
+            sound(boss.getEntityPos(), ModSounds.ENTITY_STORM_ROC_WING_FLAP, 4, .5f);
             downwash();
         }
-        if (t == WING_APEX + 1) sound(boss.getEntityPos(), SoundEvents.ENTITY_ENDER_DRAGON_FLAP, 3, .65f);
+        if (t == WING_APEX + 1) sound(boss.getEntityPos(), ModSounds.ENTITY_STORM_ROC_WING_FLAP, 3, .65f);
         if (t > WING_LIFT && t <= action.impact) {
             double h;
             if (t <= WING_APEX) h = WING_HEIGHT * (1 - Math.pow(1 - (t - WING_LIFT) / (double) (WING_APEX - WING_LIFT), 2));
@@ -1388,7 +1388,7 @@ final class StormRocCombat {
         var e = effect(RocEffectEntity.Kind.CLAP_WAVE, onFloor(boss.getEntityPos()), WING_REACH, 0, (int) Math.ceil(WING_REACH / SHOCK_SPEED) + 3);
         rings.add(new Ring(e, 0, 180, WING_DAMAGE, WING_PUSH));
         sparks(boss.getEntityPos().add(0, 2, 0), 50, 4);
-        sound(boss.getEntityPos(), SoundEvents.ENTITY_LIGHTNING_BOLT_THUNDER, 3, .8f);
+        sound(boss.getEntityPos(), ModSounds.ENTITY_STORM_ROC_THUNDERCLAP_IMPACT, 3, .8f);
     }
 
     /**
@@ -1399,7 +1399,7 @@ final class StormRocCombat {
     private void pounce(List<ServerPlayerEntity> players, int t) {
         if (t == POUNCE_LAUNCH) {
             boss.face(to);
-            sound(boss.getEntityPos(), SoundEvents.ENTITY_ENDER_DRAGON_FLAP, 4, .55f);
+            sound(boss.getEntityPos(), ModSounds.ENTITY_STORM_ROC_WING_FLAP, 4, .55f);
             from = boss.getEntityPos();
             downwash();
         }
@@ -1409,14 +1409,14 @@ final class StormRocCombat {
             boss.setPosition(from.lerp(to, f).add(0, Math.sin(Math.PI * Math.pow(f, .7)) * POUNCE_HEIGHT, 0));
         }
         // A swoop as it comes in, and a screech as it flares to strike.
-        if (t == POUNCE_LAUNCH + 6) sound(boss.getEntityPos(), SoundEvents.ENTITY_PHANTOM_SWOOP, 4, .5f);
-        if (t == action.impact - 3) sound(boss.getEntityPos(), SoundEvents.ENTITY_PHANTOM_AMBIENT, 4, .45f);
+        if (t == POUNCE_LAUNCH + 6) sound(boss.getEntityPos(), ModSounds.ENTITY_STORM_ROC_WING_SWOOP, 4, .5f);
+        if (t == action.impact - 3) sound(boss.getEntityPos(), ModSounds.ENTITY_STORM_ROC_VOICE_CAW, 4, .45f);
         if (t == action.impact) {
             boss.setPosition(to);
             hitCircle(players, to, 5, POUNCE_DAMAGE, 10);
             ring(to, 26);
             sparks(to.add(0, 1, 0), 40, 2.5);
-            sound(to, SoundEvents.ENTITY_GENERIC_EXPLODE.value(), 2, .65f);
+            sound(to, ModSounds.ENTITY_STORM_ROC_POUNCE_IMPACT, 2, .65f);
         }
     }
 
@@ -1430,7 +1430,7 @@ final class StormRocCombat {
         // Its three slow rakes drag its right talons back across the rock in a spray of sparks.
         if (t == 13 || t == 25 || t == 37) {
             sparks(boss.socket("right_foot"), 14, .6);
-            sound(boss.socket("right_foot"), SoundEvents.BLOCK_GRINDSTONE_USE, 2.5f, .5f);
+            sound(boss.socket("right_foot"), ModSounds.ENTITY_STORM_ROC_STAMPEDE_WINDUP, 2.5f, .5f);
         }
         if (t == action.impact) boss.face(to);
         if (t >= action.impact && stampedeStop < 0) {
@@ -1452,7 +1452,7 @@ final class StormRocCombat {
             if (stampedeLocked) stampedeLeft -= speed;
             if (stampedeLocked && stampedeLeft <= 0 || inside.squaredDistanceTo(ahead) > 1e-6 || t - action.impact >= STAMPEDE_MAX_RUN) stampedeEnding = true;
             // It screeches the whole way, bill gaping and spitting sparks.
-            if ((t - action.impact) % 16 == 0) sound(boss.socket("head"), SoundEvents.ENTITY_PHANTOM_AMBIENT, 4, t == action.impact ? .5f : .45f);
+            if ((t - action.impact) % 16 == 0) sound(boss.socket("head"), ModSounds.ENTITY_STORM_ROC_VOICE_CAW, 4, t == action.impact ? .5f : .45f);
             if (t % 2 == 0) sparks(boss.socket("beak"), 6, .5);
             String clip = boss.poseName();
             float k = boss.poseTicks(0);
@@ -1460,7 +1460,7 @@ final class StormRocCombat {
                 if (k >= 1 && StormRocPose.socket(clip, k - 1, side).y > .45 && StormRocPose.socket(clip, k, side).y <= .45) {
                     Vec3d foot = boss.socket(side);
                     sparks(foot, 16, .8);
-                    sound(foot, SoundEvents.ENTITY_LIGHTNING_BOLT_IMPACT, 1.6f, 1.3f);
+                    sound(foot, ModSounds.ENTITY_STORM_ROC_STAMPEDE_STEP, 1.6f, 1.3f);
                 }
             for (var victim : players) {
                 if (actionHits.contains(victim.getUuid()) || victim.getY() >= center().y + 10) continue;
@@ -1484,10 +1484,10 @@ final class StormRocCombat {
             double f = Math.min(1, (t - stampedeStop) / (double) STAMPEDE_SKID_TICKS);
             boss.setPosition(interior(skidFrom.add(skidHeading.multiply(STAMPEDE_SKID * (1 - (1 - f) * (1 - f)))), 9));
             // Its talons gouge the rock as it skids.
-            if (t == stampedeStop + 1) sound(boss.getEntityPos(), SoundEvents.BLOCK_GRINDSTONE_USE, 4, .35f);
+            if (t == stampedeStop + 1) sound(boss.getEntityPos(), ModSounds.ENTITY_STORM_ROC_STAMPEDE_SKID, 4, .35f);
             if (f < 1) for (String side : FEET) sparks(boss.socket(side), 4, .5);
             // Its head whips round to the player it missed with a huff, its bill shut.
-            if (t == stampedeStop + STAMPEDE_SKID_TICKS + 2) sound(boss.socket("head"), SoundEvents.ENTITY_HORSE_BREATHE, 3, .5f);
+            if (t == stampedeStop + STAMPEDE_SKID_TICKS + 2) sound(boss.socket("head"), ModSounds.ENTITY_STORM_ROC_VOICE_SNORT, 3, .5f);
         }
     }
 
@@ -1523,8 +1523,8 @@ final class StormRocCombat {
             if (hurt(victim, BITE_DAMAGE)) pushSafe(victim, victim.getEntityPos().subtract(boss.getEntityPos()), BITE_PUSH, .35);
         }
         sparks(bill, 40, 2);
-        sound(bill, SoundEvents.ENTITY_LIGHTNING_BOLT_IMPACT, 3, .7f);
-        sound(bill, SoundEvents.ENTITY_LIGHTNING_BOLT_THUNDER, 1.5f, 1.6f);
+        sound(bill, ModSounds.ENTITY_STORM_ROC_BITE_IMPACT_CRACK, 3, .7f);
+        sound(bill, ModSounds.ENTITY_STORM_ROC_BITE_IMPACT_BOOM, 1.5f, 1.6f);
     }
 
     private void sparks(Vec3d at, int count, double spread) {

@@ -95,8 +95,8 @@ public final class NatureOvergrowthClientSmoke implements ClientModInitializer {
                 require(effects.contains("Heal") && effects.contains("Pop"),"The bite drew no pollen or heal cue: "+effects);}
             // The bite at t=50 marked the zombie: one seed turns above it, for this player only.
             if(t==90){require(markedZombie(c),"No synchronized seed mark on the bitten zombie");screenshot(c,"thornbite-mark.png");}
-            // Sentry Bloom, aimed at the floor in front: the flower grows there and spits at the marked zombie.
-            if(t>90 && t<=96){c.player.setYaw(0);c.player.setPitch(35);}
+            // Sentry Bloom, thrown at the floor in front: the bud lands, the flower grows there and spits at the marked zombie.
+            if(t>90 && t<=96){c.player.setYaw(0);c.player.setPitch(45);}
             if(t==95) {GLFW.glfwFocusWindow(c.getWindow().getHandle());require(ClientPlayerData.loadout().get(1).equals("tendril_bloom"),"Bloom slot wrong");require(WandControls.input(true,1,GLFW.GLFW_PRESS),"Bloom input unhandled");}
             if(t==96)WandControls.input(true,1,GLFW.GLFW_RELEASE);
             if(t>96 && t<=110){c.player.setYaw(0);c.player.setPitch(18);}
@@ -120,7 +120,7 @@ public final class NatureOvergrowthClientSmoke implements ClientModInitializer {
             if(t==97)server.execute(()->server.getOverworld().getEntitiesByClass(ZombieEntity.class,new net.minecraft.util.math.Box(-1,floor-1,2,2,floor+3,5),e->true).forEach(z->z.setPosition(.5,floor,9.5)));
             if(t==106) {
                 var bloom=c.world.getBlockState(new BlockPos(0,floor,2));
-                require(bloom.isOf(com.anton.elementalwands.registry.ModSpellBlocks.NATURE_SEEDLING),"No synchronized flower where the cast aimed: "+bloom);
+                require(bloom.isOf(com.anton.elementalwands.registry.ModSpellBlocks.NATURE_SEEDLING),"No synchronized flower where the bud landed: "+bloom);
                 require(bloom.getCollisionShape(c.world,new BlockPos(0,floor,2)).isEmpty(),"The flower is solid on the client");
                 screenshot(c,"sentry-bloom-planted.png");
             }

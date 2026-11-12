@@ -206,11 +206,11 @@ and shared temporary-block ownership.
 Nature is the support element: its damage stays below Wind and Stone, and its hits turn into
 healing. Two rules keep it as simple to use as the other wands:
 
-- **Nature leaves nothing in the way.** Its flowers have no collision and no outline, it
+- **Nature leaves nothing in the way.** Its flowers have no collision, it
   plants no brambles or root knots, and its ultimate places no block in a fight. Nothing can
-  be lifted, tripped, blocked, shielded or trapped by Nature growth, and nothing can aim at a
-  flower or break it by hand. Springbloom (a jump pad the caster places on purpose) is the
-  only Nature block that can be stood on.
+  be lifted, tripped, blocked, shielded or trapped by Nature growth, and no mob targets a
+  flower. A player can aim at a flower's stem and break it (see Sentry Bloom). Springbloom (a
+  jump pad the caster places on purpose) is the only Nature block that can be stood on.
 - **A boss is an ordinary target.** Every Nature spell deals a boss the same damage as anything
   else. The one difference is the rule every wand shares: a boss is never slowed, rooted or
   moved. No boss has behaviour written for Nature.
@@ -231,12 +231,19 @@ transform: the flytrap grows out along the casting-hand side and retracts into
 the moving wand tip. This includes left-handed and third-person poses and does
 not change the committed damage origin or add hits along the visual side curve.
 
-Sentry Bloom (stable saved ID `tendril_bloom`) plants a flower on the ground where the caster
-aims, up to 16 blocks away; aimed at a wall or into the air it takes the ground in front of or
-below that point. A cast that finds no ground shows a message and costs nothing. Cooldown is
-six seconds. A caster keeps three flowers; a fourth replaces the oldest. Each lasts 24 seconds
+Sentry Bloom (stable saved ID `tendril_bloom`) throws a bud, and a flower takes root where it
+lands. The bud is lobbed as Gravity Well's bomb is: along the aim at 1.05 blocks a tick with
+0.22 of lift, then falling (a level throw lands about twelve blocks out, a raised one
+farther). It plants on the ground it comes down on; striking a wall or ceiling it takes the
+ground in front of or below that point, and striking an enemy (anything a flower would shoot
+unprompted) it takes the ground at that enemy's feet. It passes through everything else, is
+harmless, and is lost after three seconds in the air. The cooldown, six seconds, starts at the
+throw: a bud that finds no ground within twelve blocks below, lands in water or lava, or comes
+down where something already grows shows a message and is not refunded, as a missed Springbloom
+pod is not. A caster keeps three flowers; a fourth replaces the oldest. Each lasts 24 seconds
 (the last two wilting, with no more seeds) and ends early if its owner dies, leaves the world
-or its block is removed.
+or its block is removed. The bud is a `SentryBloomPodEntity`, drawn as the flower's own head at
+half size, tumbling (`SentryBloomPodRenderer`); it leaves no trail.
 
 A flower unfurls for about half a second, then spits a small seed every two seconds at one
 enemy within 16 blocks that it has a clear line to: the owner's **marked** target if there is
@@ -244,9 +251,24 @@ one, otherwise the nearest monster. Unprompted it shoots monsters and bosses onl
 animals, players and neutral monsters that have not picked a fight alone, and never shoots an
 ally, their pet or their oak even when marked. A flower's seed deals 2.5 (scaled by Nature
 level like every spell, 10% a level), flies straight, leads a moving target, and passes
-through anything that is neither its target nor a monster. Each hit returns a fifth of the
-health it took to the flower's owner, wherever they are, gives 1 ultimate charge and does not
-move the mark.
+through anything that is neither its target nor a monster. Each hit gives 1 ultimate charge
+and does not move the mark.
+
+A flower's hits heal nobody at once. The flower **banks** a fifth of the health each of its
+seeds takes (`BANK_SHARE`), up to 8 (`BANK_CAP`), and puffs hearts every second and a half
+while it holds any, more as it fills. Its owner collects by aiming at the flower from within
+three blocks (`CLICK_REACH`) and pressing slot 2 (right mouse by default) with a wand, or by
+using its block with anything else in hand: they are healed by what it holds and the flower is
+used up. Nothing is taken, and the flower stays, when it holds nothing or its owner is at full
+health; either way that press casts nothing. Only the owner can collect. Wilting, being
+replaced as the oldest, being broken and the owner's death all waste what a flower holds.
+
+A flower can be broken. Its block has no collision but has an outline around its stem and
+head (not the spread of its leaves), so a player can aim at it. A fresh slot-1 press (left
+mouse by default) with a wand, aimed at any flower from within three blocks, breaks it and
+casts nothing; a held repeat does not. Without a wand an ordinary punch breaks it at once
+where blocks can be broken. Either works on anyone's flower, the owner's included. Mobs never
+attack a flower, and seeds (the caster's and other flowers') fly through one.
 
 A flower's hit is not the caster's own, so it must not get in their way. Its damage type
 (`flower_seed`) skips the hit cooldown, and it leaves an ordinary target's hit cooldown as it
@@ -260,7 +282,7 @@ follow its target between shots (re-chosen four times a second), kicks back when
 hangs down while it wilts.
 
 A flower is kept together by `FlowerTurretManager`. Its base (roots, leaves, stem)
-is the `nature_seedling` block: scenery with no collision and no outline, tracked by
+is the `nature_seedling` block: no collision, an outline around the stem only, tracked by
 `TemporaryBlockManager` so the ground under it is restored. Its head is a `SentryBloomEntity`
 that nothing can hit, push or damage and that is never saved; it carries only the target, the
 shot count, the wilting flag and where it is mounted (the stem top, or the main stem or
@@ -337,22 +359,25 @@ Owners: `SpringbloomManager`, `SpringbloomRules`, `SpringbloomEntity`,
 `NatureCombat` sets the mark and owns the per-caster charge window: a Seed or Thornbite hit
 gives 3 ultimate charge at most once a second across both, on whichever wand is held, and each
 flower seed that lands gives 1. Owners: `NatureAbilityHandler`, `SeedProjectileEntity` (the
-caster's Seed and the flowers' smaller one), `FlowerTurretManager`,
+caster's Seed and the flowers' smaller one), `SentryBloomPodEntity`, `FlowerTurretManager`,
 `FullBloomManager`, `ThornLashEntity`/`ThornLashRules`, `NatureCombat`.
 Nature's spells are drawn client-side as "block nature": opaque, lit petals (two stepped slabs),
 leaves (three boxes) and pollen kernels from one atlas (`textures/misc/blocknature.png`), ported
 from the browser study in `art/nature/blocknature/`. Pieces face the world, not the camera, tumble a
 little and vanish by shrinking. Planting throws leaves; a flower's shot puffs pollen and a petal
 from the mouth; growth and shrinking shed petals; a wilting head drops pale petals and removal a
-last fall of pink ones. Seeds trail two gold kernels a tick (and a leaf a tick for the caster's);
-hits open into petals and block hits into pollen and leaves. Thornbite's bite puffs pollen. One heal
+last fall of pink ones. A flower's seed trails two small gold kernels a tick; the caster's own
+Seed leaves no trail (removed on November 11 at the developer's request, so only the winged pod
+flies); hits open into petals and block hits into pollen and leaves. Thornbite's bite puffs pollen. One heal
 cue (six sap leaves spiralling up with four gold kernels between them) plays on a player only when
-their health rose: Thornbite lifesteal, a flower seed's heal, and each player Full Bloom blesses.
+their health rose: Thornbite lifesteal, collecting a flower's banked health, and each player Full
+Bloom blesses. The hearts over a flower that holds health are vanilla heart particles, as the
+first banking flower used.
 Full Bloom bursts petals at the caster, rolls a low ring of 48 petals with leaves to its radius in
 its twelve wave ticks (the gold kernels follow the particle setting), then drops three petals off the
 caster every 0.4 seconds while it lasts. Springbloom bursts pollen and leaves at launch, sheds a
 leaf pair every four ticks until the rider lands, and drops dark leaves when the pad goes. Clients
-draw seed trails and wilting from the entities; the server sends `BlockNatureEvents` for the
+draw flower seed trails and wilting from the entities; the server sends `BlockNatureEvents` for the
 rest. Visuals never decide a hit or a heal; near-lens pieces shrink in first person. Visuals:
 `client/blocknature/` (`BlockNatureEffects`, `BlockNatureKit`, `NatureFx`). The old Nature particles
 are still registered for the retired oak and `EntangleTracker`, but no live spell spawns them.

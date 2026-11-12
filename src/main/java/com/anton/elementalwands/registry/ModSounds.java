@@ -49,6 +49,7 @@ public final class ModSounds {
     public static final SoundEvent SPELL_NATURE_SENTRY_BLOOM_GROW = register("spell.nature.sentry_bloom.grow");
     public static final SoundEvent SPELL_NATURE_SENTRY_BLOOM_PLANT = register("spell.nature.sentry_bloom.plant");
     public static final SoundEvent SPELL_NATURE_SENTRY_BLOOM_SHOT = register("spell.nature.sentry_bloom.shot");
+    public static final SoundEvent SPELL_NATURE_SENTRY_BLOOM_THROW = register("spell.nature.sentry_bloom.throw");
     public static final SoundEvent SPELL_NATURE_SENTRY_BLOOM_WILT = register("spell.nature.sentry_bloom.wilt");
     public static final SoundEvent SPELL_NATURE_SPRINGBLOOM_CAST = register("spell.nature.springbloom.cast");
     public static final SoundEvent SPELL_NATURE_SPRINGBLOOM_LAND = register("spell.nature.springbloom.land");

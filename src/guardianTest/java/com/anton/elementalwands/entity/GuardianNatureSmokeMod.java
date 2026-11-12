@@ -125,13 +125,15 @@ public final class GuardianNatureSmokeMod implements ModInitializer {
                     .onEntityHit(new net.minecraft.util.hit.EntityHitResult(guardian));
             require(guardian.getHealth()<health,"The Seed's hurt window swallowed a flower's seed on the Guardian");
             require(!guardian.hasStatusEffect(StatusEffects.SLOWNESS) && EntangleTracker.getStacks(guardian)==0,"Nature slowed the Guardian or wound vines on it");
-            // A flower planted on the fight floor through the real cast.
+            // A flower thrown onto the fight floor through the real cast.
             player.setPitch(45);
             com.anton.elementalwands.item.NatureAbilityHandler.castSecondary(world,player,wand);
-            require(FlowerTurretManager.count(world,player.getUuid())==1,"Sentry Bloom could not plant on the fight floor");
-            bloom=FlowerTurretManager.positions(world,player.getUuid()).getFirst();
             flowerHealth=guardian.getHealth();
             started=tick;phase=3;
+        }
+        if(phase==3 && tick-started==8) {
+            require(FlowerTurretManager.count(world,player.getUuid())==1,"Sentry Bloom's bud could not plant on the fight floor");
+            bloom=FlowerTurretManager.positions(world,player.getUuid()).getFirst();
         }
         if(phase==3 && tick-started==60) {
             require(FlowerTurretManager.count(world,player.getUuid())==1 && world.getBlockState(bloom).isOf(ModSpellBlocks.NATURE_SEEDLING),

@@ -103,23 +103,24 @@ public final class NatureBalanceSmokeMod implements ModInitializer {
                     && FlowerTurretManager.marked(world, other.getUuid()) == crowd, "Players share a seed mark");
         }
         if (tick == 52) {
-            // Sentry Bloom through the real cast. Aimed at the sky it finds no ground and costs nothing.
-            player.setYaw(0); player.setPitch(-90);
+            // Sentry Bloom through the real cast: it throws a bud, and nothing is planted until that lands.
+            player.setYaw(0); player.setPitch(45);
             NatureAbilityHandler.castSecondary(world, player, wand);
-            require(FlowerTurretManager.count(world, player.getUuid()) == 0, "A flower was planted in the sky");
-            player.setPitch(45);
-            NatureAbilityHandler.castSecondary(world, player, wand);
-            require(FlowerTurretManager.count(world, player.getUuid()) == 1, "A failed cast started the cooldown, or the cast planted nothing");
-            flower = FlowerTurretManager.positions(world, player.getUuid()).getFirst();
-            require(flower.equals(new BlockPos(2, 100, 2)), "The flower was not planted where the caster aimed: " + flower);
-            var state = world.getBlockState(flower);
-            require(state.isOf(ModSpellBlocks.NATURE_SEEDLING), "No flower block at " + flower + ": " + state);
-            require(state.getCollisionShape(world, flower).isEmpty() && state.getOutlineShape(world, flower).isEmpty(),
-                    "A flower is solid or can be aimed at");
+            require(buds(world) == 1 && FlowerTurretManager.count(world, player.getUuid()) == 0, "The cast did not throw one bud: " + buds(world));
             player.setPitch(60);
             NatureAbilityHandler.castSecondary(world, player, wand);
-            require(FlowerTurretManager.count(world, player.getUuid()) == 1, "Sentry Bloom ignored its cooldown");
+            require(buds(world) == 1, "Sentry Bloom ignored its cooldown");
             directBefore = direct.getHealth(); chargeBefore = AbstractWandItem.getUltimateCharge(wand);
+        }
+        if (tick == 58) {
+            // The bud came down in an arc two blocks ahead and took root there.
+            require(buds(world) == 0 && FlowerTurretManager.count(world, player.getUuid()) == 1, "The bud did not land and plant one flower");
+            flower = FlowerTurretManager.positions(world, player.getUuid()).getFirst();
+            require(flower.equals(new BlockPos(2, 100, 2)), "The flower did not take root where the bud landed: " + flower);
+            var state = world.getBlockState(flower);
+            require(state.isOf(ModSpellBlocks.NATURE_SEEDLING), "No flower block at " + flower + ": " + state);
+            require(state.getCollisionShape(world, flower).isEmpty() && !state.getOutlineShape(world, flower).isEmpty(),
+                    "A flower is solid or cannot be aimed at");
         }
         if (tick == 75) {
             // Its first seed went to the marked cow, not to the monster or the unmarked cow.
@@ -138,27 +139,54 @@ public final class NatureBalanceSmokeMod implements ModInitializer {
             hitSeed(world, player, direct);
             close(direct.getHealth(), directBefore - FlowerTurretManager.DAMAGE - NatureCombat.SEED_DAMAGE, "A flower's hit shaved the next Seed");
             // ...and a flower's seed landing inside the Seed's own cooldown still counts.
-            var spit = new SeedProjectileEntity(world, player, direct.getEntityPos().add(0, 3, 0), new net.minecraft.util.math.Vec3d(0, -1, 0), direct);
+            var spit = new SeedProjectileEntity(world, player, direct.getEntityPos().add(0, 3, 0), new net.minecraft.util.math.Vec3d(0, -1, 0), direct, flower);
             require(spit.canHit(direct) && spit.canHit(zombie) && !spit.canHit(ramp) && !spit.canHit(other) && !spit.canHit(player),
                     "A flower's seed must strike only its target and monsters");
-            // A flower's hit returns a fifth of the health it took to its owner.
+            // A flower's hit heals nobody at once: the flower keeps a fifth of the health it took.
+            float share = FlowerTurretManager.DAMAGE * FlowerTurretManager.BANK_SHARE;
+            close(FlowerTurretManager.banked(world, flower), share, "The flower's first hit was not banked");
             player.setHealth(10);
             spit.onEntityHit(new EntityHitResult(direct));
             close(direct.getHealth(), directBefore - 2 * FlowerTurretManager.DAMAGE - NatureCombat.SEED_DAMAGE, "The Seed's cooldown swallowed a flower's hit");
-            close(player.getHealth(), 10 + FlowerTurretManager.DAMAGE * FlowerTurretManager.HEAL_SHARE, "Flower hit healing");
-            close(other.getHealth(), other.getMaxHealth(), "A flower healed someone else");
-            player.setHealth(player.getMaxHealth());
+            close(player.getHealth(), 10, "A flower's hit healed its owner at once");
+            close(FlowerTurretManager.banked(world, flower), 2 * share, "Banked flower health");
             // A flower's hit is not the caster's: it does not move the mark.
             new SeedProjectileEntity(world, player, zombie.getEntityPos().add(0, 3, 0), new net.minecraft.util.math.Vec3d(0, -1, 0), zombie)
                     .onEntityHit(new EntityHitResult(zombie));
             require(zombie.getHealth() < 200, "A flower seed did not damage a monster"); // Its helmet takes a share.
             require(FlowerTurretManager.marked(world, player.getUuid()) == direct, "A flower's hit moved the mark");
+            close(FlowerTurretManager.banked(world, flower), 2 * share, "A seed with no flower behind it was banked");
+            // Only the owner collects, aiming at the flower from close up; it heals them and uses the flower up.
+            require(!FlowerTurretManager.collectAt(world, other, flower) && FlowerTurretManager.count(world, player.getUuid()) == 1,
+                    "Someone else collected a flower's health");
+            player.setPitch(-30);
+            require(!FlowerTurretManager.tryCollectAimed(player), "A flower was collected without aiming at it");
+            player.setPitch(36);
+            player.setHealth(player.getMaxHealth());
+            require(FlowerTurretManager.tryCollectAimed(player) && FlowerTurretManager.count(world, player.getUuid()) == 1,
+                    "A full-health owner used up their flower");
+            player.setHealth(10);
+            require(FlowerTurretManager.tryCollectAimed(player), "The owner could not collect from their flower");
+            close(player.getHealth(), 10 + 2 * share, "Collected flower health");
+            close(other.getHealth(), other.getMaxHealth(), "A flower healed someone else");
+            require(FlowerTurretManager.count(world, player.getUuid()) == 0 && world.getBlockState(flower).isAir()
+                    && FlowerTurretManager.headAt(world, flower) == null, "Collecting did not use the flower up");
+            player.setHealth(player.getMaxHealth());
+            require(FlowerTurretManager.plant(world, player, flower), "Could not replant after collecting");
         }
         if (tick == 126) world.setBlockState(flower, net.minecraft.block.Blocks.AIR.getDefaultState()); // Whatever removes the block removes the flower.
         if (tick == 128) {
             require(FlowerTurretManager.count(world, player.getUuid()) == 0 && FlowerTurretManager.headAt(world, flower) == null,
                     "A flower outlived its block");
-            // The rest is a second player's garden, so its healing stays out of the oak's healing check below.
+            // Anyone's wand click from close up breaks a flower; it is not theirs to collect.
+            require(FlowerTurretManager.plant(world, other, flower), "Could not plant the flower to break");
+            player.setYaw(0); player.setPitch(36);
+            require(!FlowerTurretManager.tryCollectAimed(player) && FlowerTurretManager.count(world, other.getUuid()) == 1,
+                    "A player collected someone else's flower");
+            require(FlowerTurretManager.tryBreakAimed(player), "A close wand click did not break the flower");
+            require(FlowerTurretManager.count(world, other.getUuid()) == 0 && world.getBlockState(flower).isAir()
+                    && FlowerTurretManager.headAt(world, flower) == null, "A broken flower was left behind");
+            // The rest is a second player's garden.
             flower = new BlockPos(2, 100, 4);
             require(FlowerTurretManager.plant(world, other, flower), "Could not plant for the second player");
         }
@@ -253,9 +281,12 @@ public final class NatureBalanceSmokeMod implements ModInitializer {
             for (BlockPos spot : new BlockPos[]{new BlockPos(4, 100, 5), new BlockPos(6, 100, 5), new BlockPos(8, 100, 5)})
                 require(world.getBlockState(spot).isAir(), "A wilted flower left its block at " + spot);
             require(zombie.isAlive() && zombie.getHealth() < zombieBefore, "Three flowers did not keep shooting the monster");
-            Files.writeString(Path.of("NATURE_PASSED.txt"), "Nature balance: flat Seed damage with a per-player seed mark and no vines or slow; Sentry Bloom through the real cast with aimed placement, free failed cast, cooldown, a pass-through untargetable flower block, a limit of three with the oldest replaced; flowers shoot the marked target first, then the nearest monster, never an animal or bystander; flower hits bypass and leave no hurt cooldown, earn their own charge, heal their owner a fifth of the damage and do not move the mark; an untouchable head turned on the target, wilting in the last two seconds; a flower ends with its block; mark expiry; shared and per-player charge windows; swapped-wand limit; rejected-hit rewards; preserved Flux; zero ultimate refund and no vines from the ultimate; the oak cannot be marked; untouchable oak with a solid unbreakable trunk that never grows through an occupant, under a pass-through canopy; actual Regeneration II healing and unchanged Regeneration I; blocks restored on expiry; flowers wilt after 24 seconds and restore their ground.\n");
+            Files.writeString(Path.of("NATURE_PASSED.txt"), "Nature balance: flat Seed damage with a per-player seed mark and no vines or slow; Sentry Bloom through the real cast as a thrown bud that plants where it lands, cooldown, a pass-through flower block a player can aim at, a limit of three with the oldest replaced; flowers shoot the marked target first, then the nearest monster, never an animal or bystander; flower hits bypass and leave no hurt cooldown, earn their own charge, heal nobody at once, bank a fifth of the damage with their flower and do not move the mark; only the owner collects, aimed from close up, not at full health, healing them and using the flower up; anyone's close wand click breaks a flower; an untouchable head turned on the target, wilting in the last two seconds; a flower ends with its block; mark expiry; shared and per-player charge windows; swapped-wand limit; rejected-hit rewards; preserved Flux; zero ultimate refund and no vines from the ultimate; the oak cannot be marked; untouchable oak with a solid unbreakable trunk that never grows through an occupant, under a pass-through canopy; actual Regeneration II healing and unchanged Regeneration I; blocks restored on expiry; flowers wilt after 24 seconds and restore their ground.\n");
             System.out.println("NATURE BALANCE CHECK PASSED"); server.stop(false);
         }
+    }
+    private static int buds(ServerWorld world) {
+        return world.getEntitiesByClass(SentryBloomPodEntity.class, new Box(-8, 90, -8, 24, 120, 24), e -> !e.isRemoved()).size();
     }
     private static void hitSeed(ServerWorld world, ServerPlayerEntity caster, CowEntity target) {
         new SeedProjectileEntity(world, caster).onEntityHit(new EntityHitResult(target));

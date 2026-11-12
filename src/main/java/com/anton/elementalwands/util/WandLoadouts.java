@@ -75,6 +75,8 @@ public final class WandLoadouts {
         if (!(stack.getItem() instanceof AbstractWandItem wand)) return;
         if(slot==0 && GaleDaggers.active(player)) { if(deliberate)GaleDaggers.fire(player); return; }
         if(slot==0 && (SpringbloomManager.tryBreakAimed(player) || FlashoverManager.tryDisarmAimed(player)))return;
+        // A fresh click on a Sentry Bloom from close up: slot 1 breaks it, slot 2 collects the owner's.
+        if(deliberate && (slot==0 && FlowerTurretManager.tryBreakAimed(player) || slot==1 && FlowerTurretManager.tryCollectAimed(player)))return;
         var ids = get(player);
         if (slot < 0 || slot >= ids.size()) return;
         var spell = WandSpells.find(ids.get(slot));

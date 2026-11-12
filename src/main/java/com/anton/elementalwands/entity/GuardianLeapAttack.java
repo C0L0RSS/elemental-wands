@@ -73,7 +73,7 @@ final class GuardianLeapAttack {
         if (tick == TAKEOFF) {
             if (!supported(world)) return abort("ground beneath feet changed before takeoff.");
             if (!clearRoute(world,landing)) return abort("route obstructed before takeoff.");
-            combat.crushGrowth(world, origin, 4, false, 6);
+            combat.breakDoubles(world, origin, 4);
             status = "Airborne.";
             previousGravity = guardian.hasNoGravity(); flying = true;
             guardian.setNoGravity(true);

@@ -48,7 +48,6 @@ final class GuardianBossCombat {
     private final Map<Attack, Long> ready = new EnumMap<>(Attack.class);
     private final Map<UUID, Long> lastTargeted = new HashMap<>();
     private final GuardianLeapAttack leap;
-    private final GuardianNatureResponse nature = new GuardianNatureResponse();
     private final GuardianMotionSample motion = new GuardianMotionSample();
     private final GuardianFightLog log = new GuardianFightLog();
     private final List<GuardianRockEntity> rocks = new ArrayList<>();
@@ -96,9 +95,6 @@ final class GuardianBossCombat {
                 RaycastContext.FluidHandling.NONE, guardian)).getType() == HitResult.Type.MISS;
     }
 
-    void entangle(int stacks) { nature.entangle(stacks, guardian.getEntityWorld().getTime()); }
-    void thorn() { nature.thorn(guardian.getEntityWorld().getTime()); }
-
     GuardianFightLog log() { return log; }
     /** Ends the tuning record, if one is running. Safe to call more than once. */
     void finishLog(String outcome) { log.finish(guardian, outcome); }
@@ -120,7 +116,7 @@ final class GuardianBossCombat {
     }
 
     void cancel() {
-        nature.reset(); guardian.setNatureOpening(-1); hovering.clear(); pendingFan=false; approachUntil=0;
+        hovering.clear(); pendingFan=false; approachUntil=0;
         leap.cancel();
         guardian.cancelCombatBeam();
         guardian.clearFan(); guardian.clearPulse();
@@ -253,24 +249,8 @@ final class GuardianBossCombat {
         if (!reservedBeam && choice != Attack.PULSE && now>=ready.getOrDefault(Attack.FAN,0L) && last!=Attack.FAN
                 && target(Attack.FAN,candidates,lastTargeted,now,unstable,null)!=null
                 && (pendingFan || aerial!=null || guardian.getRandom().nextInt(3)==0)) choice=Attack.FAN;
-        Candidate clearingTarget = null;
-        if (!reservedBeam && choice != Attack.PULSE && nature.wantsClear(now)) {
-            for (Attack clearing : new Attack[]{Attack.SLAM, Attack.SHOCKWAVE}) {
-                Candidate candidate = target(clearing, candidates, lastTargeted, now, unstable, null);
-                // A local clearing slam still makes sense when players stand beyond its wave.
-                if (candidate == null && clearing == Attack.SHOCKWAVE) candidate = candidates.stream()
-                        .filter(p -> p.visible() && p.distance() <= 32)
-                        .min(Comparator.comparingDouble(Candidate::distance)).orElse(null);
-                if (clearing != last && now >= ready.getOrDefault(clearing, 0L) && candidate != null) {
-                    choice = clearing; clearingTarget = candidate;
-                    break;
-                }
-            }
-        }
         if (choice != null && guardian.isOnGround()) {
-            Candidate selected = clearingTarget != null ? clearingTarget
-                    : choice==Attack.FAN && aerial!=null ? aerial : target(choice,candidates,lastTargeted,now,unstable,null);
-            if (clearingTarget != null) nature.clearing(now);
+            Candidate selected = choice==Attack.FAN && aerial!=null ? aerial : target(choice,candidates,lastTargeted,now,unstable,null);
             ServerPlayerEntity player = world.getServer().getPlayerManager().getPlayer(selected.id());
             begin(world, choice, player, now, false);
             // Mix a single slam into a separately telegraphed fan; retain the full triple-slam pattern too.
@@ -417,9 +397,7 @@ final class GuardianBossCombat {
         unfreeze(); active = null; heldRock = null;
         guardian.setHoldingRock(false);
         guardian.getNavigation().stop();
-        int extraRecovery = nature.finishAttack(now);
-        guardian.setNatureOpening(extraRecovery>0?now+gap:-1);
-        nextAction = now + gap + extraRecovery;
+        nextAction = now + gap;
         approachUntil = reviewing || pendingFan ? 0 : nextAction + scaled(20, rest);
     }
     private void tickAttack(ServerWorld world, long now) {
@@ -485,7 +463,7 @@ final class GuardianBossCombat {
             }
         } else if (tick == GuardianPhaseRules.slamImpact(fastSlam(), slamHold)) {
             impactSound(world);
-            crushGrowth(world, anchor, 4.5, false, 6);
+            breakDoubles(world, anchor, 4.5);
             emitWave(world, anchor, fists(world));
         }
     }
@@ -583,7 +561,7 @@ final class GuardianBossCombat {
         world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_SHELL_BREAK_BURST_CRACK, SoundCategory.HOSTILE, 2f, .5f);
         world.spawnParticles(STONE, core.x, core.y, core.z, 140, 2.2, 1.6, 2.2, .35);
         world.spawnParticles(ParticleTypes.EXPLOSION, core.x, core.y, core.z, 3, .8, .6, .8, 0);
-        crushGrowth(world, feet, GuardianPhaseRules.BURST_RADIUS, false, 8);
+        breakDoubles(world, feet, GuardianPhaseRules.BURST_RADIUS);
         var walls = new GuardianWallImpact();
         for (ServerPlayerEntity player : world.getPlayers(p -> canDamage(guardian, p))) {
             if (!radial(feet, player.getBoundingBox(), GuardianPhaseRules.BURST_RADIUS, 6)
@@ -640,7 +618,7 @@ final class GuardianBossCombat {
         world.spawnParticles(ParticleTypes.SONIC_BOOM, core.x, core.y, core.z, 1, 0, 0, 0, 0);
         world.spawnParticles(ParticleTypes.EXPLOSION, core.x, core.y, core.z, 6, 2, 1, 2, 0);
         world.spawnParticles(STONE, feet.x, feet.y + .5, feet.z, 90, 3, .4, 3, .2);
-        crushGrowth(world, feet, GuardianPulseRules.BLAST_RADIUS, false, 10);
+        breakDoubles(world, feet, GuardianPulseRules.BLAST_RADIUS);
         var walls = new GuardianWallImpact();
         for (ServerPlayerEntity player : players) {
             if (!GuardianPulseRules.inBlast(feet, player.getBoundingBox())
@@ -743,37 +721,20 @@ final class GuardianBossCombat {
         }
     }
 
-    void crushGrowth(ServerWorld world, Vec3d center, double radius, boolean frontal, float treeDamage) {
-        Vec3d forward = Vec3d.fromPolar(0, attackYaw);
-        java.util.function.Predicate<BlockPos> hit = pos -> {
-            Vec3d point = Vec3d.ofCenter(pos), delta = point.subtract(center);
-            return delta.horizontalLength() <= radius && Math.abs(delta.y) <= 2
-                    && (!frontal || delta.horizontalLength() <= .5
-                        || forward.dotProduct(new Vec3d(delta.x,0,delta.z).normalize()) >= .25)
-                    && GuardianWaveSurface.clearLine(world,guardian,center.add(0,1,0),point.add(0,.6,0));
-        };
+    /** A slam's blast pops any Astral Double it reaches. */
+    void breakDoubles(ServerWorld world, Vec3d center, double radius) {
         for (AstralDoubleEntity clone : world.getEntitiesByClass(AstralDoubleEntity.class,
-                new net.minecraft.util.math.Box(center,center).expand(radius+1,3,radius+1),e->!e.isRemoved()))
-            if(hit.test(clone.getBlockPos()))clone.damage(world,world.getDamageSources().mobAttack(guardian),1);
-        com.anton.elementalwands.util.SeedlingManager.crushGrowth(world, hit);
-        com.anton.elementalwands.util.TendrilBloomManager.crushGrowth(world, hit);
-        for (AwakenedTreeEntity tree : world.getEntitiesByClass(AwakenedTreeEntity.class,
-                guardian.getBoundingBox().expand(radius,3,radius), e -> e.isAlive())) {
-            Vec3d delta = tree.getEntityPos().subtract(center);
-            if (delta.horizontalLength() > radius || Math.abs(delta.y) > 3
-                    || (frontal && delta.horizontalLength() > .5 && forward.dotProduct(new Vec3d(delta.x,0,delta.z).normalize()) < .25)) continue;
-            Vec3d from = center.add(0,1,0);
-            var cover = world.raycast(new RaycastContext(from,tree.getBoundingBox().getCenter(),
-                    RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,guardian));
-            // The tree's own log shell is part of its damageable body, not external cover.
-            if (cover.getType() == HitResult.Type.MISS || tree.getBoundingBox().expand(.1).contains(cover.getPos()))
-                tree.damage(world, world.getDamageSources().mobAttack(guardian), treeDamage);
+                new net.minecraft.util.math.Box(center,center).expand(radius+1,3,radius+1),e->!e.isRemoved())) {
+            Vec3d point = Vec3d.ofCenter(clone.getBlockPos()), delta = point.subtract(center);
+            if (delta.horizontalLength() <= radius && Math.abs(delta.y) <= 2
+                    && GuardianWaveSurface.clearLine(world,guardian,center.add(0,1,0),point.add(0,.6,0)))
+                clone.damage(world,world.getDamageSources().mobAttack(guardian),1);
         }
     }
 
     void leapLanded(ServerWorld world, Set<UUID> impactVictims) {
         Vec3d center = guardian.getEntityPos();
-        crushGrowth(world, center, 6, false, 10);
+        breakDoubles(world, center, 6);
         GuardianWallImpact walls=new GuardianWallImpact();
         for(BlockPos pos:com.anton.elementalwands.item.StoneAbilityHandler.guardianWallBlocks(world)) {
             if(GuardianLeapRules.damage(center,new net.minecraft.util.math.Box(pos))>0)
@@ -803,15 +764,6 @@ final class GuardianBossCombat {
             if(floor==null || !waveContact(center,new net.minecraft.util.math.Box(pos),previous,radius,floor.y))continue;
             walls.clip(world,guardian,center.add(0,.7,0),new Vec3d(pos.getX()+.5,floor.y+.7,pos.getZ()+.5),true,true);
         }
-        // Crush only tracked Nature growth reached by this traveling band. Real
-        // defensive cover still protects plants behind it; primary spells do not.
-        java.util.function.Predicate<BlockPos> contacted = pos -> {
-            double distance = Math.hypot(pos.getX()+.5-center.x,pos.getZ()+.5-center.z);
-            if (distance < previous-1 || distance > radius+1) return false;
-            Vec3d surface = GuardianWaveSurface.ground(world,guardian,center,pos.getX()+.5,pos.getZ()+.5);
-            return surface != null && waveContact(center,new net.minecraft.util.math.Box(pos),previous,radius,surface.y)
-                    && walls.clear(world,guardian,center.add(0,.7,0),surface.add(0,.7,0),true);
-        };
         for (AstralDoubleEntity clone : world.getEntitiesByClass(AstralDoubleEntity.class,
                 new net.minecraft.util.math.Box(center,center).expand(radius+2,6,radius+2),e->!e.isRemoved())) {
             Vec3d floor=GuardianWaveSurface.ground(world,guardian,center,clone.getX(),clone.getZ());
@@ -819,8 +771,6 @@ final class GuardianBossCombat {
                     && walls.clear(world,guardian,center.add(0,.7,0),floor.add(0,.7,0),true))
                 clone.damage(world,world.getDamageSources().mobAttack(guardian),1);
         }
-        com.anton.elementalwands.util.SeedlingManager.crushGrowth(world,contacted);
-        com.anton.elementalwands.util.TendrilBloomManager.crushGrowth(world,contacted);
         // The continuous ridge is client-rendered. Keep server effects bounded as the radius grows.
         int samples = tick % 3 == 0 ? 24 : 0;
         for (int i=0; i<samples; i++) {

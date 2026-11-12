@@ -366,8 +366,8 @@ the authored clips.
 The body, head and neck share the boss's health and damage admission. The latter two
 hurtboxes follow authored sockets; their client copies step their position every tick, so melee
 aims where the server has them. The Roc's own position reaches clients with a one-tick blend,
-so a charge is drawn where it hits. The torso includes its grounded footprint for planted
-thorns; authored feet also test owned coals and flame floors during grounded combat. Spell
+so a charge is drawn where it hits. The torso includes its grounded footprint, and
+authored feet test owned coals and flame floors during grounded combat. Spell
 damage and fire attribution resolve to the owning Roc so hitting multiple parts does not
 multiply one attack's reward.
 

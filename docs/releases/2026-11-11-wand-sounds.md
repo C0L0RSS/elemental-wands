@@ -1,7 +1,7 @@
 # Every wand has its own sounds
 
 - No spell plays a vanilla Minecraft sound any more. All five elements have their own sound sets,
-  146 sounds in all, and each has its own character.
+  141 sounds in all, and each has its own character.
 - Fire roars, whooshes and thumps, with sparks only inside the blast.
 - Wind is round, controlled air: a soft push and a breathy tone that glides with the movement.
   Gale Daggers ring like thrown blades, and now also make a sound when the three daggers form.

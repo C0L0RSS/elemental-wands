@@ -113,19 +113,22 @@ public final class AuditFixSmokeMod implements ModInitializer {
             System.out.println("AUDIT FIX RUNTIME CHECKS PASSED");server.stop(false);
         }
     }
+    /** Overlapping temporary layers: an older lease may neither erase a newer one nor come back from under it. */
     private void checkNatureOwnership(ServerWorld world,BlockPos anchor) {
-        var old=SeedlingManager.placeVerdantGrowth(world,List.of(anchor.down()),Set.of(),200);
-        require(old.placed().contains(anchor),"Could not place roots");
-        require(SeedlingManager.tryPlantSeedling(world,player,new BlockHitResult(Vec3d.ofCenter(anchor.down()),Direction.UP,anchor.down(),false)),"Could not plant on another growth lease");
-        SeedlingManager.restoreBlocks(world,old.placements());
-        require(world.getBlockState(anchor).isOf(ModSpellBlocks.NATURE_SEEDLING),"Old thicket erased newer flower");
-        SeedlingManager.destroySeedlingAtAnchor(world,anchor);
-        require(world.getBlockState(anchor).isAir(),"Flower resurrected old roots");
+        java.util.function.Predicate<net.minecraft.block.BlockState> open=s->s.isAir()||s.isReplaceable();
+        var roots=TemporaryBlockManager.placeTrackedTemporaryBlocks(world,List.of(anchor),ModSpellBlocks.NATURE_ROOTS.getDefaultState(),200,open);
+        require(world.getBlockState(anchor).isOf(ModSpellBlocks.NATURE_ROOTS),"Could not place roots");
+        var bloom=TemporaryBlockManager.placeTrackedTemporaryBlocks(world,List.of(anchor),ModSpellBlocks.SPRINGBLOOM.getDefaultState(),200,open);
+        require(world.getBlockState(anchor).isOf(ModSpellBlocks.SPRINGBLOOM),"Could not place on another growth lease");
+        TemporaryBlockManager.restoreTemporaryBlocks(world,roots);
+        require(world.getBlockState(anchor).isOf(ModSpellBlocks.SPRINGBLOOM),"Old roots erased newer growth");
+        TemporaryBlockManager.restoreTemporaryBlocks(world,bloom);
+        require(world.getBlockState(anchor).isAir(),"Newer growth resurrected the old roots");
         var fire=TemporaryBlockManager.placeTrackedTemporaryBlocks(world,List.of(anchor),ModSpellBlocks.INFERNO_FLAME.getDefaultState(),200,s->s.isAir());
-        var roots=SeedlingManager.placeVerdantGrowth(world,List.of(anchor.down()),Set.of(),200);
+        var over=TemporaryBlockManager.placeTrackedTemporaryBlocks(world,List.of(anchor),ModSpellBlocks.NATURE_ROOTS.getDefaultState(),200,open);
         TemporaryBlockManager.restoreTemporaryBlocks(world,fire);
-        require(world.getBlockState(anchor).isOf(ModSpellBlocks.NATURE_ROOTS),"Old flame erased newer roots");
-        SeedlingManager.restoreBlocks(world,roots.placements());
+        require(world.getBlockState(anchor).isOf(ModSpellBlocks.NATURE_ROOTS),"Old flame erased newer growth");
+        TemporaryBlockManager.restoreTemporaryBlocks(world,over);
         require(world.getBlockState(anchor).isAir(),"Nature restored an untracked flame");
     }
     private void checkMeteor(ServerWorld world,BlockPos target) throws Exception {

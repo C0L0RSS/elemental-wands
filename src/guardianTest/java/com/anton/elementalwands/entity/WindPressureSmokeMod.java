@@ -183,10 +183,10 @@ public final class WindPressureSmokeMod implements ModInitializer {
         // Allow normal gravity to restore support after interrupting the frozen awakening.
         if(tick==519 || tick==539) {
             require(boss.getBeamTime(0)>=0 && boss.getFanTime(0)<0,
-                    "Ready laser was overridden by aerial/pending fan or Nature clearing in phase "+(boss.isUnstable()?2:1)+rotationState());
+                    "Ready laser was overridden by an aerial or pending fan in phase "+(boss.isUnstable()?2:1)+rotationState());
         }
         if(tick==540) {
-            report.append("Actual director reserves a ready laser after two other attacks in BOTH phases, ahead of hover/pending fan and Nature clearing.\n");
+            report.append("Actual director reserves a ready laser after two other attacks in BOTH phases, ahead of hover and a pending fan.\n");
             boss.stopReview();Files.writeString(Path.of("PRESSURE_PASSED.txt"),report);System.out.println("WIND PRESSURE PASSED\n"+report);server.stop(false);
         }
         if(tick>550)throw new AssertionError("Wind/pressure fixture timed out");
@@ -213,10 +213,6 @@ public final class WindPressureSmokeMod implements ModInitializer {
         @SuppressWarnings("unchecked") var ready=(Map<GuardianCombatRules.Attack,Long>)readyField.get(combat);ready.clear();
         var last=GuardianBossCombat.class.getDeclaredField("last");last.setAccessible(true);last.set(combat,GuardianCombatRules.Attack.FAN);
         var pending=GuardianBossCombat.class.getDeclaredField("pendingFan");pending.setAccessible(true);pending.setBoolean(combat,true);
-        var natureField=GuardianBossCombat.class.getDeclaredField("nature");natureField.setAccessible(true);
-        var response=(GuardianNatureResponse)natureField.get(combat);response.reset();
-        response.thorn(world.getTime()-40);response.thorn(world.getTime());
-        require(response.wantsClear(world.getTime()),"Nature clearing override fixture was not armed");
         boss.setPosition(.5,y,.5);boss.setVelocity(Vec3d.ZERO);boss.setOnGround(true);
     }
     private int hoverTicks()throws Exception {

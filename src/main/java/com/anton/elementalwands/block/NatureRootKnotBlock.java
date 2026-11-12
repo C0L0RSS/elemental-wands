@@ -1,6 +1,5 @@
 package com.anton.elementalwands.block;
 
-import com.anton.elementalwands.util.TendrilBloomManager;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.block.*;
 import net.minecraft.server.world.ServerWorld;
@@ -10,7 +9,7 @@ import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 
-/** A stationary, breakable source. Scheduled checks also remove orphan knots after reload. */
+/** Retired: no spell places a knot. One left in a world from an older version clears itself. */
 public final class NatureRootKnotBlock extends Block {
     public static final MapCodec<NatureRootKnotBlock> CODEC = createCodec(NatureRootKnotBlock::new);
     public NatureRootKnotBlock(Settings settings) { super(settings); }
@@ -23,7 +22,6 @@ public final class NatureRootKnotBlock extends Block {
         if (world instanceof ServerWorld server) server.scheduleBlockTick(pos, this, 20);
     }
     @Override protected void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
-        if (!TendrilBloomManager.hasKnot(world, pos)) world.removeBlock(pos, false);
-        else world.scheduleBlockTick(pos, this, 20);
+        world.removeBlock(pos, false);
     }
 }

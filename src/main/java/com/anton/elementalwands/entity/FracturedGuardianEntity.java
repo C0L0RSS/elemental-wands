@@ -30,7 +30,6 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 /** Summon-only cooperative boss, with explicit passive animation review controls. */
 public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntity, WandBoss {
-    private static final TrackedData<Long> NATURE_OPENING = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.LONG);
     private static final TrackedData<Integer> CRACKS = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Long> PULSE_START = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.LONG);
     private static final TrackedData<Boolean> UNSTABLE = DataTracker.registerData(FracturedGuardianEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
@@ -82,7 +81,6 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
     @Override
     protected void initDataTracker(DataTracker.Builder builder) {
         super.initDataTracker(builder);
-        builder.add(NATURE_OPENING,-1L);
         builder.add(FAN_START, -1L); builder.add(FAN_PITCH, 0f);
         builder.add(ARENA_HIDDEN, false);
         builder.add(UNSTABLE, false);
@@ -171,7 +169,8 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
         timeUntilRegen = previous == null ? 0 : 10 + (int)(previous.until() - now);
         lastDamageTaken = previous == null ? 0 : previous.damage();
         boolean accepted = super.damage(world, source, GuardianShellRules.impact(amount));
-        if (accepted) hurtWindows.put(key, new HurtWindow(previous == null ? now+10 : previous.until(), lastDamageTaken));
+        if (accepted && !source.isIn(com.anton.elementalwands.util.SpellCombat.NO_HURT_WINDOW))
+            hurtWindows.put(key, new HurtWindow(previous == null ? now+10 : previous.until(), lastDamageTaken));
         return accepted;
     }
 
@@ -268,10 +267,6 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
     @Override public boolean isBossAggressive() { return !getCommandTags().contains(PASSIVE_TAG); }
     @Override public boolean eligible(ServerPlayerEntity player) { return com.anton.elementalwands.arena.GuardianArenaManager.eligible(this, player); }
 
-    public void setNatureOpening(long start){dataTracker.set(NATURE_OPENING,start);}
-    @Override public boolean natureOpening(){long start=dataTracker.get(NATURE_OPENING),now=getEntityWorld().getTime();return start>=0 && now>=start && now<start+GuardianNatureResponse.EXTRA_RECOVERY;}
-    @Override public void onNatureEntangle(int stacks) { combat.entangle(stacks); }
-    @Override public void onNatureThorns() { combat.thorn(); }
 
     public String leapStatus() { return combat.leapStatus(); }
 

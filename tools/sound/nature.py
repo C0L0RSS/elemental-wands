@@ -105,15 +105,15 @@ def seed_cast(rng):
     return sparkle(rng, mix, 0.3, 0.2)
 
 
-def seed_fail(rng):
-    # The seed finds nowhere to root: two notes drooping down.
-    d = 0.45
-    mix = 0.9 * run(d, (SCALE[2], SCALE[0] * 0.943), 0.0, 0.11, 18) + 0.4 * tap(rng, d, 700, 30, 0.11) + 0.3 * rustle(rng, d, decay(d, 0.01, 14), 1500, 4000)
-    return sparkle(rng, mix, 0.25, 0.18)
+def seed_hit_block(rng):
+    # A seed that missed bursts on the ground: a small tick and one soft note.
+    d = 0.24
+    mix = 0.8 * tap(rng, d, vary(rng, 1500), 46) + 0.7 * unit(bell(d, pick(rng, 3, 1)[0], 34)) + 0.25 * rustle(rng, d, decay(d, 0.004, 30))
+    return sparkle(rng, mix, 0.22, 0.16)
 
 
-def seed_plant(rng):
-    # The seed settles and a shoot pops up: a plink, then three notes climbing.
+def sentry_bloom_plant(rng):
+    # The flower settles and a shoot pops up: a plink, then three notes climbing.
     d = 0.6
     mix = (0.8 * unit(bell(d, SCALE[0], 22)) + 0.9 * run(d, pick(rng, 2, 3), 0.14, 0.06, 20, 0.15)
            + 0.4 * twinkle(rng, d, 0.2, 0.42, 5, 6, 11, 30, 6) + 0.3 * swish(rng, d, 0.2, 0.06, 0.1, 700, 2600)
@@ -121,24 +121,24 @@ def seed_plant(rng):
     return sparkle(rng, mix, 0.4, 0.24)
 
 
-def seed_grow(rng):
-    # A quiet pulse of growth, repeated as a seedling or bloom spreads.
-    d = 0.5
-    mix = (1.0 * twinkle(rng, d, 0.0, 0.26, 6, 3, 10, 24, 5) + 0.35 * glow(rng, d, bump(d, 0.15, 0.1, 0.16))
-           + 0.2 * rustle(rng, d, bump(d, 0.12, 0.08, 0.1)))
-    return sparkle(rng, mix, 0.4, 0.26)
+def sentry_bloom_grow(rng):
+    # The flower grows its second head: four notes climbing through a pulse of dust.
+    d = 0.7
+    mix = (0.9 * run(d, pick(rng, 3, 4), 0.02, 0.06, 18, 0.15) + 0.8 * twinkle(rng, d, 0.12, 0.45, 8, 5, 11, 26, 5)
+           + 0.35 * glow(rng, d, bump(d, 0.18, 0.1, 0.18)) + 0.2 * rustle(rng, d, bump(d, 0.14, 0.08, 0.1)))
+    return sparkle(rng, mix, 0.45, 0.26)
 
 
-def seed_harvest(rng):
-    # A seedling picked for its healing: a run of notes up and a shower of dust.
-    d = 1.0
-    mix = (1.0 * run(d, pick(rng, 1, 5), 0.0, 0.055, 14, 0.12) + 0.7 * twinkle(rng, d, 0.2, 0.7, 14, 5, 11, 22, 3.5)
-           + 0.45 * glow(rng, d, bump(d, 0.25, 0.14, 0.32)) + 0.2 * swish(rng, d, 0.2, 0.12, 0.25, 900, 3200))
-    return sparkle(rng, mix, 0.7, 0.3)
+def sentry_bloom_shot(rng):
+    # A flower spits a seed. Heard every two seconds per head, so it stays tiny: one high pip and a puff.
+    d = 0.2
+    note = pick(rng, 5, 1)[0]
+    mix = 0.9 * unit(bell(d, note, 40) + 0.4 * bell(d, note * 1.5, 46, 0.012)) + 0.5 * swish(rng, d, 0.03, 0.015, 0.04, 900, vary(rng, 3200))
+    return sparkle(rng, mix, 0.2, 0.14)
 
 
-def seed_end(rng):
-    # A plant fades: notes stepping down and the last of its dust.
+def sentry_bloom_wilt(rng):
+    # A flower fades: notes stepping down and the last of its dust.
     d = 0.75
     mix = (0.9 * run(d, pick(rng, 6, 4, -1), 0.0, 0.09, 13) + 0.4 * twinkle(rng, d, 0.1, 0.45, 5, 2, 8, 24, 5)
            + 0.3 * rustle(rng, d, decay(d, 0.03, 8), 1600, 4500, 30))
@@ -161,30 +161,14 @@ def springbloom_launch(rng):
     return sparkle(rng, mix, 0.5, 0.26)
 
 
-def tendril_bloom_cast(rng):
-    # Vines stir at the caster's call.
-    d = 0.6
-    stir = bump(d, 0.16, 0.1, 0.16)
-    mix = (0.6 * rustle(rng, d, stir) + 0.8 * run(d, pick(rng, 1, 3, 2), 0.04, 0.07, 18, 0.1) + 0.4 * swish(rng, d, 0.15, 0.08, 0.18, 600, 2400)
-           + 0.4 * twinkle(rng, d, 0.15, 0.4, 5, 5, 11, 28, 6))
-    return sparkle(rng, mix, 0.4, 0.24)
-
-
-def tendril_bloom_launch(rng):
-    # A tendril shoots out of a seedling.
-    d = 0.5
-    mix = (0.9 * swish(rng, d, 0.1, 0.04, 0.14, 700, vary(rng, 3400)) + 0.9 * run(d, pick(rng, 2, 5), 0.0, 0.028, 24, 0.1)
-           + 0.3 * rustle(rng, d, bump(d, 0.12, 0.06, 0.08)))
-    return sparkle(rng, mix, 0.35, 0.22)
-
-
-def tendril_bloom_bloom(rng):
-    # The knot of vines opens into flower: the full run up and a long shower of dust.
-    d = 1.4
-    mix = (1.0 * run(d, SCALE[0:9], 0.0, 0.05, 12, 0.1) + 0.8 * twinkle(rng, d, 0.3, 1.0, 24, 4, 11, 20, 2.6)
-           + 0.5 * glow(rng, d, bump(d, 0.35, 0.2, 0.4)) + 0.3 * rustle(rng, d, bump(d, 0.25, 0.15, 0.25))
-           + 0.3 * swish(rng, d, 0.25, 0.15, 0.35, 800, 3200))
-    return sparkle(rng, mix, 0.9, 0.32)
+def full_bloom_cast(rng):
+    # The ultimate: everything flowers at once. The full run up, a warm chord, a wave of petals
+    # rolling outward and a long shower of dust.
+    d = 2.0
+    mix = (1.0 * run(d, SCALE[0:9], 0.0, 0.05, 12, 0.1) + 0.9 * twinkle(rng, d, 0.3, 1.5, 36, 4, 11, 20, 2.2)
+           + 0.6 * glow(rng, d, bump(d, 0.4, 0.22, 0.6)) + 0.3 * rustle(rng, d, bump(d, 0.3, 0.18, 0.35))
+           + 0.45 * swish(rng, d, 0.35, 0.2, 0.5, 800, 3200))
+    return sparkle(rng, mix, 1.1, 0.34)
 
 
 def overgrowth_awaken(rng):
@@ -220,17 +204,8 @@ def overgrowth_grow_canopy(rng):
     return sparkle(rng, mix, 0.9, 0.32)
 
 
-def overgrowth_hurt(rng):
-    # The tree is struck: a woody tick and two notes knocked sour.
-    d = 0.42
-    note = pick(rng, 0, 1)[0]
-    mix = (0.8 * tap(rng, d, vary(rng, 620), 22) + 0.9 * unit(bell(d, note, 20) + 0.9 * bell(d, note * 1.06, 20, 0.008))
-           + 0.4 * thump(d, 170, 95, 30, 22) + 0.25 * rustle(rng, d, decay(d, 0.01, 18)))
-    return sparkle(rng, mix, 0.3, 0.2, 1.2)
-
-
 def overgrowth_empower(rng):
-    # The tree feeds the seedlings around it: a warm chord with dust spiralling up.
+    # The tree's heart wakes: a warm chord with dust spiralling up.
     d = 1.2
     mix = (0.7 * glow(rng, d, bump(d, 0.28, 0.16, 0.4)) + 0.9 * run(d, (SCALE[0], SCALE[2], SCALE[3], SCALE[5], SCALE[7], SCALE[8]), 0.0, 0.07, 12, 0.1)
            + 0.8 * twinkle(rng, d, 0.25, 0.9, 20, 5, 11, 22, 3))
@@ -260,20 +235,17 @@ SOUNDS = {
     "spell/nature/thornbite_cast": (thornbite_cast, 3),
     "spell/nature/thornbite_hit": (thornbite_hit, 3),
     "spell/nature/seed_cast": (seed_cast, 3),
-    "spell/nature/seed_fail": (seed_fail, 1),
-    "spell/nature/seed_plant": (seed_plant, 2),
-    "spell/nature/seed_grow": (seed_grow, 3),
-    "spell/nature/seed_harvest": (seed_harvest, 2),
-    "spell/nature/seed_end": (seed_end, 2),
+    "spell/nature/seed_hit_block": (seed_hit_block, 3),
+    "spell/nature/sentry_bloom_plant": (sentry_bloom_plant, 2),
+    "spell/nature/sentry_bloom_grow": (sentry_bloom_grow, 2),
+    "spell/nature/sentry_bloom_shot": (sentry_bloom_shot, 3),
+    "spell/nature/sentry_bloom_wilt": (sentry_bloom_wilt, 2),
     "spell/nature/springbloom_land": (springbloom_land, 1),
     "spell/nature/springbloom_launch": (springbloom_launch, 2),
-    "spell/nature/tendril_bloom_cast": (tendril_bloom_cast, 2),
-    "spell/nature/tendril_bloom_launch": (tendril_bloom_launch, 2),
-    "spell/nature/tendril_bloom_bloom": (tendril_bloom_bloom, 1),
+    "spell/nature/full_bloom_cast": (full_bloom_cast, 1),
     "spell/nature/overgrowth_awaken": (overgrowth_awaken, 1),
     "spell/nature/overgrowth_grow_stage": (overgrowth_grow_stage, 2),
     "spell/nature/overgrowth_grow_canopy": (overgrowth_grow_canopy, 1),
-    "spell/nature/overgrowth_hurt": (overgrowth_hurt, 3),
     "spell/nature/overgrowth_empower": (overgrowth_empower, 1),
     "spell/nature/overgrowth_break": (overgrowth_break, 1),
     "spell/nature/overgrowth_end": (overgrowth_end, 1),

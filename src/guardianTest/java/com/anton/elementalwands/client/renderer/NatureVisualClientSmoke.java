@@ -58,10 +58,6 @@ public final class NatureVisualClientSmoke {
                     for(int stage=0;stage<4;stage++)world.setBlockState(new BlockPos(-6+stage*2,floor,0),
                             ModSpellBlocks.NATURE_SEEDLING.getDefaultState().with(NatureSeedlingBlock.STAGE,stage),3);
                     for(int x=-6;x<=0;x++)for(int z=1;z<=3;z++)world.setBlockState(new BlockPos(x,floor,z),ModSpellBlocks.NATURE_ROOTS.getDefaultState(),3);
-                    for(int x=-6;x<=-3;x++)for(int z=-4;z<=-2;z++){
-                        world.setBlockState(new BlockPos(x,floor-1,z),Blocks.WATER.getDefaultState(),3);
-                        world.setBlockState(new BlockPos(x,floor,z),ModSpellBlocks.NATURE_RAFT.getDefaultState(),3);
-                    }
                     var pig=EntityType.PIG.create(world,SpawnReason.COMMAND);pig.setPosition(4.5,floor,1.5);pig.setAiDisabled(true);world.spawnEntity(pig);targets.add(pig);
                     var spider=EntityType.SPIDER.create(world,SpawnReason.COMMAND);spider.setPosition(7.5,floor,1.5);spider.setAiDisabled(true);world.spawnEntity(spider);targets.add(spider);
                     var boss=new FracturedGuardianEntity(ModEntities.FRACTURED_GUARDIAN,world);boss.setPosition(6.5,floor,8.5);boss.stopReview();world.spawnEntity(boss);targets.add(boss);

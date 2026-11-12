@@ -18,6 +18,14 @@ import java.util.*;
 public final class SpellCombat {
     private record Effect(UUID owner,WizardAffinity element,long until,int amplifier) {}
     private static final Map<Entity,Effect> BURNS=new WeakHashMap<>(),REGEN=new WeakHashMap<>();
+    /**
+     * Damage from something a caster left behind to fight beside them (a flower's seed). It is
+     * not one of the caster's own hits, so a boss's per-attacker hurt window neither swallows it
+     * nor is opened by it, and it cannot shave the caster's next spell.
+     */
+    public static final net.minecraft.registry.tag.TagKey<net.minecraft.entity.damage.DamageType> NO_HURT_WINDOW =
+            net.minecraft.registry.tag.TagKey.of(net.minecraft.registry.RegistryKeys.DAMAGE_TYPE,
+                    net.minecraft.util.Identifier.of("elementalwands","no_hurt_window"));
     public static void clear(){BURNS.clear();REGEN.clear();}
     public static float multiplier(Entity owner,WizardAffinity affinity) {
         return owner instanceof PlayerEntity p && affinity!=WizardAffinity.NONE ? ElementLevels.multiplier(WandProgression.get(p,affinity).xp()) : 1;
@@ -25,7 +33,7 @@ public final class SpellCombat {
     public static boolean damage(Entity target,ServerWorld world,DamageSource source,float amount,Entity owner,WizardAffinity affinity) {
         target = damageTarget(target);
         if(!Float.isFinite(amount)||amount<=0||WandAllies.protectedFrom(owner,target))return false;
-        // Environmental spell sources (thorns, coals and flame floors) still have an explicit
+        // Environmental spell sources (coals and flame floors) still have an explicit
         // caster. Preserve the damage type while presenting that owner to Roc admission.
         if(target instanceof com.anton.elementalwands.entity.roc.StormRocEntity
                 && owner instanceof ServerPlayerEntity && source.getAttacker()!=owner)

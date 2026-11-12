@@ -36,6 +36,7 @@ public final class ModSounds {
     public static final SoundEvent SPELL_FIRE_METEOR_IMPACT_BOOM = register("spell.fire.meteor.impact_boom");
 
     // spell.nature
+    public static final SoundEvent SPELL_NATURE_FULL_BLOOM_CAST = register("spell.nature.full_bloom.cast");
     public static final SoundEvent SPELL_NATURE_OVERGROWTH_AWAKEN = register("spell.nature.overgrowth.awaken");
     public static final SoundEvent SPELL_NATURE_OVERGROWTH_BREAK = register("spell.nature.overgrowth.break");
     public static final SoundEvent SPELL_NATURE_OVERGROWTH_CAST = register("spell.nature.overgrowth.cast");
@@ -43,21 +44,15 @@ public final class ModSounds {
     public static final SoundEvent SPELL_NATURE_OVERGROWTH_END = register("spell.nature.overgrowth.end");
     public static final SoundEvent SPELL_NATURE_OVERGROWTH_GROW_CANOPY = register("spell.nature.overgrowth.grow_canopy");
     public static final SoundEvent SPELL_NATURE_OVERGROWTH_GROW_STAGE = register("spell.nature.overgrowth.grow_stage");
-    public static final SoundEvent SPELL_NATURE_OVERGROWTH_HURT = register("spell.nature.overgrowth.hurt");
     public static final SoundEvent SPELL_NATURE_SEED_CAST = register("spell.nature.seed.cast");
-    public static final SoundEvent SPELL_NATURE_SEED_END = register("spell.nature.seed.end");
-    public static final SoundEvent SPELL_NATURE_SEED_FAIL = register("spell.nature.seed.fail");
-    public static final SoundEvent SPELL_NATURE_SEED_GROW = register("spell.nature.seed.grow");
-    public static final SoundEvent SPELL_NATURE_SEED_HARVEST = register("spell.nature.seed.harvest");
-    public static final SoundEvent SPELL_NATURE_SEED_PLANT = register("spell.nature.seed.plant");
+    public static final SoundEvent SPELL_NATURE_SEED_HIT_BLOCK = register("spell.nature.seed.hit_block");
+    public static final SoundEvent SPELL_NATURE_SENTRY_BLOOM_GROW = register("spell.nature.sentry_bloom.grow");
+    public static final SoundEvent SPELL_NATURE_SENTRY_BLOOM_PLANT = register("spell.nature.sentry_bloom.plant");
+    public static final SoundEvent SPELL_NATURE_SENTRY_BLOOM_SHOT = register("spell.nature.sentry_bloom.shot");
+    public static final SoundEvent SPELL_NATURE_SENTRY_BLOOM_WILT = register("spell.nature.sentry_bloom.wilt");
     public static final SoundEvent SPELL_NATURE_SPRINGBLOOM_CAST = register("spell.nature.springbloom.cast");
     public static final SoundEvent SPELL_NATURE_SPRINGBLOOM_LAND = register("spell.nature.springbloom.land");
     public static final SoundEvent SPELL_NATURE_SPRINGBLOOM_LAUNCH = register("spell.nature.springbloom.launch");
-    public static final SoundEvent SPELL_NATURE_TENDRIL_BLOOM_BLOOM = register("spell.nature.tendril_bloom.bloom");
-    public static final SoundEvent SPELL_NATURE_TENDRIL_BLOOM_CAST = register("spell.nature.tendril_bloom.cast");
-    public static final SoundEvent SPELL_NATURE_TENDRIL_BLOOM_GROW = register("spell.nature.tendril_bloom.grow");
-    public static final SoundEvent SPELL_NATURE_TENDRIL_BLOOM_KNOT_END = register("spell.nature.tendril_bloom.knot_end");
-    public static final SoundEvent SPELL_NATURE_TENDRIL_BLOOM_LAUNCH = register("spell.nature.tendril_bloom.launch");
     public static final SoundEvent SPELL_NATURE_THORNBITE_CAST = register("spell.nature.thornbite.cast");
     public static final SoundEvent SPELL_NATURE_THORNBITE_HIT = register("spell.nature.thornbite.hit");
 

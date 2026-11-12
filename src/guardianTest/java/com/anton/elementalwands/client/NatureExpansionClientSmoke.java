@@ -27,11 +27,11 @@ import org.lwjgl.glfw.GLFW;
 /** Actual native input, network entity/model rendering, healing and source removal. */
 public final class NatureExpansionClientSmoke implements ClientModInitializer {
     private int ticks, scene, floor;
-    private boolean started, arranged, done, sawLash, sawKnot;
+    private boolean started, arranged, done, sawLash;
     private volatile boolean ready;
-    private BlockPos knot;
     private int originalFov;
     private final java.util.Set<String> frames = new java.util.HashSet<>();
+    private boolean sawSpit;
     public void onInitializeClient() {ClientTickEvents.END_CLIENT_TICK.register(this::tick);}
     private void tick(MinecraftClient c) {
         if(done || c.getOverlay()!=null)return;
@@ -86,20 +86,26 @@ public final class NatureExpansionClientSmoke implements ClientModInitializer {
                 if(entity instanceof ThornLashEntity lash && lash.elapsed(0)>=1 && !sawLash){sawLash=true;screenshot(c,"thornbite-first-person.png");}
             }
             if(t==85){require(sawLash,"No synchronized Lash entity");require(c.player.getHealth()>10,"Lash did not heal client");}
-            if(t==95) {GLFW.glfwFocusWindow(c.getWindow().getHandle());require(ClientPlayerData.loadout().get(1).equals("tendril_bloom"),"Bloom slot wrong");require(WandControls.input(true,1,GLFW.GLFW_PRESS),"Bloom input unhandled");knot=c.player.getBlockPos();}
+            // The bite at t=50 marked the zombie: one seed turns above it, for this player only.
+            if(t==90){require(markedZombie(c),"No synchronized seed mark on the bitten zombie");screenshot(c,"thornbite-mark.png");}
+            // Sentry Bloom, aimed at the floor in front: the flower grows there and spits at the marked zombie.
+            if(t>90 && t<=96){c.player.setYaw(0);c.player.setPitch(35);}
+            if(t==95) {GLFW.glfwFocusWindow(c.getWindow().getHandle());require(ClientPlayerData.loadout().get(1).equals("tendril_bloom"),"Bloom slot wrong");require(WandControls.input(true,1,GLFW.GLFW_PRESS),"Bloom input unhandled");}
             if(t==96)WandControls.input(true,1,GLFW.GLFW_RELEASE);
-            if(t==105) {
-                require(c.world.getBlockState(knot).isOf(ModSpellBlocks.NATURE_ROOT_KNOT),"No synchronized knot block");
-                sawKnot=true;var uuid=c.player.getUuid();server.execute(()->server.getPlayerManager().getPlayer(uuid).networkHandler.requestTeleport(.5,floor,-3.5,0,18));
+            if(t>96 && t<=150){c.player.setYaw(0);c.player.setPitch(18);}
+            // Step the marked zombie back so the flower's seed has a flight a client can see.
+            if(t==97)server.execute(()->server.getOverworld().getEntitiesByClass(ZombieEntity.class,new net.minecraft.util.math.Box(-1,floor-1,2,2,floor+3,5),e->true).forEach(z->z.setPosition(.5,floor,9.5)));
+            if(t==106) {
+                var bloom=c.world.getBlockState(new BlockPos(0,floor,2));
+                require(bloom.isOf(com.anton.elementalwands.registry.ModSpellBlocks.NATURE_SEEDLING),"No synchronized flower where the cast aimed: "+bloom);
+                require(bloom.getCollisionShape(c.world,new BlockPos(0,floor,2)).isEmpty(),"The flower is solid on the client");
+                screenshot(c,"sentry-bloom-planted.png");
             }
-            if(t>=110 && t<=150){c.player.setYaw(0);c.player.setPitch(18);}
-            if(t==125)screenshot(c,"nature-root-knot.png");
-            if(t==145){server.execute(()->server.getOverworld().breakBlock(knot,false));}
-            if(t==160) {
-                require(sawKnot && c.world.getBlockState(knot).isAir(),"Knot destruction not synchronized");
-                screenshot(c,"nature-root-knot-destroyed.png");
-                c.setScreen(new com.anton.elementalwands.client.screen.WandHubScreen());
+            if(t>96 && t<150 && !sawSpit)for(var entity:c.world.getEntities()) {
+                if(entity instanceof com.anton.elementalwands.entity.SeedProjectileEntity seed && seed.fromFlower() && seed.age>=2){sawSpit=true;screenshot(c,"sentry-bloom-spit.png");break;}
             }
+            if(t==150)require(sawSpit,"The flower never spat a synchronized seed at the marked zombie");
+            if(t==160)c.setScreen(new com.anton.elementalwands.client.screen.WandHubScreen());
             if(t==165) {
                 for (String id : new String[]{"thorn_lash","tendril_bloom"}) {
                     var spell=WandSpells.find(id);
@@ -116,6 +122,8 @@ public final class NatureExpansionClientSmoke implements ClientModInitializer {
                 server.execute(()->{
                     server.getPlayerManager().getPlayer(c.player.getUuid()).networkHandler.requestTeleport(.5,floor,.5,0,0);
                     server.getOverworld().getEntitiesByClass(ZombieEntity.class,new Box(-15,floor-2,-15,15,floor+8,25),e->true).forEach(Entity::discard);
+                    // Clear the flower too: the bite review frames that follow are of the bite alone.
+                    server.getOverworld().setBlockState(new BlockPos(0,floor,2),Blocks.AIR.getDefaultState());
                 });}
             if(t>=185 && t<=215){c.player.setYaw(0);c.player.setPitch(0);}
             if(t==195){GLFW.glfwFocusWindow(c.getWindow().getHandle());require(WandControls.input(true,0,GLFW.GLFW_PRESS),"Third-person bite input unhandled");}
@@ -137,7 +145,7 @@ public final class NatureExpansionClientSmoke implements ClientModInitializer {
             if(t>=283 && t<=287)c.player.setYaw((t-282)*9);
             if(t==300) {
                 require(frames.stream().anyMatch(f->f.startsWith("thornbite-moving-")),"Missing moving-wand preview");
-                Files.writeString(Path.of("HUB_PASSED.txt"),"Native client passed: purchased/equipped Lash, mouse casting, synchronized bite entity and health gain, secondary input, custom knot block model, source destruction, wand-tip emergence/return invariants, right/left/third-person and moving-wand screenshots, wide-FOV left hand. Human combat feel pending.\n");
+                Files.writeString(Path.of("HUB_PASSED.txt"),"Native client passed: purchased/equipped Lash, mouse casting, synchronized bite entity and health gain, synchronized seed mark, Sentry Bloom input with a synchronized pass-through flower spitting at the marked zombie, wand-tip emergence/return invariants, right/left/third-person and moving-wand screenshots, wide-FOV left hand. Human combat feel pending.\n");
                 done=true;c.scheduleStop();
             }
         } catch(Throwable e) {
@@ -163,5 +171,6 @@ public final class NatureExpansionClientSmoke implements ClientModInitializer {
         }
     }
     private void screenshot(MinecraftClient c,String name){ScreenshotRecorder.saveScreenshot(c.runDirectory,name,c.getFramebuffer(),1,text->{});}
+    private static boolean markedZombie(MinecraftClient c){return c.world.getEntityById(ClientPlayerData.seedMarkEntity()) instanceof ZombieEntity && ClientPlayerData.seedMarkUntil()>c.world.getTime();}
     private static void require(boolean condition,String why){if(!condition)throw new AssertionError(why);}
 }

@@ -5,13 +5,11 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 
-/** Provisional throw and optional flower bonus. Placement never depends on the selected Basic. */
+/** The acorn's throw and where its oak may stand. */
 public final class OvergrowthThrowRules {
     public static final double SPEED = 1.1;
     public static final double GRAVITY = .05;
     public static final int FLIGHT_LIMIT = 120;
-    public static final double FLOWER_RADIUS = 3;
-    public static final int BONUS_TICKS = 100;
 
     public static boolean validGround(ServerWorld world, BlockPos anchor) {
         if (!world.isChunkLoaded(anchor) || !world.isInBuildLimit(anchor.up(9))

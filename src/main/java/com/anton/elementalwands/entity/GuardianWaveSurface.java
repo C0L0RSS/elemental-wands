@@ -19,7 +19,8 @@ public final class GuardianWaveSurface {
     private GuardianWaveSurface() {}
 
     // Small primary spell obstacles are not defenses against this ground wave.
-    // Do not ignore tree trunks/leaves, Stone Wall, Titan Dome or ordinary terrain.
+    // Do not ignore real tree trunks/leaves, Stone Wall, Titan Dome or ordinary terrain.
+    // The Overgrowth oak needs no entry here: its blocks have no collision at all.
     private static boolean permeable(BlockState state) {
         return ModSpellBlocks.isNatureGrowth(state) || state.isOf(ModSpellBlocks.STONE_SPIKE) || state.isOf(Blocks.FLOWERING_AZALEA)
                 || state.isOf(Blocks.MOSS_CARPET) || state.isOf(Blocks.LILY_PAD);

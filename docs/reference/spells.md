@@ -203,23 +203,27 @@ and shared temporary-block ownership.
 
 ## Nature
 
-Seed is a winged pod that damages enemies (4) or plants staged flowers. Flowers and
-Tendril Bloom brambles provide the sustained damage/Entangle loop. Nature is the support
-element: its damage stays below Wind and Stone, and its flowers bank health. A thorn deals
-1, rising to 2 at five Entangle stacks, ×1.5 against a `WandBoss` (bosses ignore the root).
-A patch bites anything with any block column of its body over it (at the feet or just
-below), so a wide body is not tested by its centre alone. Each flower banks the health its
-own patch's thorns take, up to 8, and shows hearts while it holds some. Its owner collects
-it by left-clicking the flower within normal block reach, outside Spectator mode (this works
-where blocks cannot be broken, such as the Hollow Crypt) or popping it with their own Seed, or by feeding it to their Overgrowth; the
-health heals them. Expiry, anyone else's break or a stray projectile wastes it. Tendril
-Bloom brambles bite but bank nothing. Thornbite
+Nature is the support element: its damage stays below Wind and Stone, and its hits turn into
+healing. Two rules keep it as simple to use as the other wands:
+
+- **Nature leaves nothing in the way.** Its flowers have no collision and no outline, it
+  plants no brambles or root knots, and its ultimate places no block in a fight. Nothing can
+  be lifted, tripped, blocked, shielded or trapped by Nature growth, and nothing can aim at a
+  flower or break it by hand. Springbloom (a jump pad the caster places on purpose) is the
+  only Nature block that can be stood on.
+- **A boss is an ordinary target.** Every Nature spell deals a boss the same damage as anything
+  else. The one difference is the rule every wand shares: a boss is never slowed, rooted or
+  moved. No boss has behaviour written for Nature.
+
+Seed is a winged pod that deals 4 on a direct hit; a pod that lands on the ground only scatters
+pollen. A Seed or Thornbite hit that deals damage **marks** its target for the caster's flowers
+for five seconds (see Sentry Bloom). It winds no vine and slows nothing. Thornbite
 (stable saved ID `thorn_lash`) is a separate Basic: a Venus flytrap on three
 braided vines extends immediately with a slight upward arc and snaps at the first
 non-allied target. Aim and damage origin commit on press; turning or moving does
 not sweep the attack. Only the mouth deals damage, at most once per cast, and
 solid cover stops it. An invulnerable first target also consumes the bite.
-It does not plant seeds. Base damage is 4, range 4.5 blocks, cooldown one second,
+Base damage is 4, range 4.5 blocks, cooldown one second,
 and healing is 75% of actual health damage, capped at one and a half hearts. Extension takes
 three ticks, closure one tick, and retraction four ticks; an early contact shortens
 the cast. Both the decorative mouth and stem use the held wand's actual render
@@ -227,15 +231,74 @@ transform: the flytrap grows out along the casting-hand side and retracts into
 the moving wand tip. This includes left-handed and third-person poses and does
 not change the committed damage origin or add hits along the visual side curve.
 
-Tendril Bloom sends vines from flowers; without flowers it grows a stationary
-three-tendril root knot. Every trail and bramble patch belongs to its source.
-Destroying that flower/knot, losing support, expiry, owner exit, or reload orphan
-cleanup must end linked effects without removing another source's growth.
+Sentry Bloom (stable saved ID `tendril_bloom`) plants a flower on the ground where the caster
+aims, up to 16 blocks away; aimed at a wall or into the air it takes the ground in front of or
+below that point. A cast that finds no ground shows a message and costs nothing. Cooldown is
+six seconds. A caster keeps three flowers; a fourth replaces the oldest. Each lasts 24 seconds
+(the last two wilting, with no more seeds) and ends early if its owner dies, leaves the world
+or its block is removed.
 
-Overgrowth throws an acorn and grows the approved block-built healing oak on
-supported impact. A nearby owned flower extends duration; it is not required to
-cast, and only the nearest eligible flower is consumed. Invalid landings restore
-charge to the retained casting wand. Verdant Step creates temporary water rafts.
+A flower unfurls for about half a second, then spits a small seed every two seconds at one
+enemy within 16 blocks that it has a clear line to: the owner's **marked** target if there is
+one, otherwise the nearest monster. Unprompted it shoots monsters and bosses only. It leaves
+animals, players and neutral monsters that have not picked a fight alone, and never shoots an
+ally, their pet or their oak even when marked. A flower's seed deals 2.5 (scaled by Nature
+level like every spell, 10% a level), flies straight, leads a moving target, and passes
+through anything that is neither its target nor a monster. Each hit returns a fifth of the
+health it took to the flower's owner, wherever they are, gives 1 ultimate charge and does not
+move the mark.
+
+A flower's hit is not the caster's own, so it must not get in their way. Its damage type
+(`flower_seed`) skips the hit cooldown, and it leaves an ordinary target's hit cooldown as it
+found it. A boss keeps hurt windows per attacker: damage tagged `elementalwands:no_hurt_window`
+neither is swallowed by nor opens that window, so a flower can never shave its owner's next
+Seed. That tag is the general rule for anything a caster leaves behind to fight beside them.
+
+The mark shows to the flowers' owner only, as one winged seed turning above the marked
+enemy (`SeedMarkClientEffects`). Everyone sees where a flower is looking: its head turns to
+follow its target between shots (re-chosen four times a second), kicks back when it fires and
+hangs down while it wilts.
+
+A flower is kept together by `FlowerTurretManager`. Its base (roots, leaves, stem)
+is the `nature_seedling` block: scenery with no collision and no outline, tracked by
+`TemporaryBlockManager` so the ground under it is restored. Its head is a `SentryBloomEntity`
+that nothing can hit, push or damage and that is never saved; it carries only the target, the
+shot count, the wilting flag and where it is mounted (the stem top, or the main stem or
+branch of a grown flower, with that head's size), and each client eases the head toward the target itself
+(`SentryBloomRenderer`, head meshes authored mouth-up with the pivot at the stem top). Sight
+lines are measured from that pivot and seeds leave from the mouth of the turned head.
+
+Full Bloom is the ultimate (stable saved ID `overgrowth`). A wave of petals rolls out from the
+caster to ten blocks in about half a second. The caster and every ally within ten blocks at
+the cast are blessed for the bloom's twelve seconds, wherever they go afterwards:
+Regeneration II (about twelve health with its last lingering seconds, as the oak used to
+heal) and two hearts of Absorption. For the same twelve seconds the caster's own spells are
+stronger: Seed recovers in 0.6 seconds, not one; Thornbite heals all the damage it deals, up to
+two and a half hearts; Sentry Bloom recovers in three seconds, not six; and every flower the
+caster owns is **grown**. A grown flower has a bigger leaf base, a taller main stem with its head, and a side branch
+with a smaller second head. Each head fires at the single
+head's pace, half a beat after the other, so the flower spits twice as many seeds, and the
+second head takes a second enemy when one is in sight (the marked enemy always goes to the
+first head). A grown flower does not age, and a flower planted mid-bloom unfurls and then
+grows too. When the bloom ends each flower is one head again.
+
+The wave is harmless: Full Bloom is a blessing for the party, and Nature's damage comes from
+its flowers and its other spells. On grass blocks the wave leaves short grass and wild flowers
+behind, as bone meal would; that is the only thing Full Bloom places, and it places nothing on
+any other ground. Flower seeds give no ultimate charge while their owner blooms.
+`FullBloomManager` owns it.
+
+The earlier ultimate, Overgrowth (a thrown acorn that grows a healing oak with a solid trunk
+and walk-through leaves), is archived: no spell casts it, but the developer wants it kept for possible
+later use. Its code, blocks, art and fixtures (`OvergrowthManager`, `OvergrowthSeedEntity`,
+`AwakenedTreeEntity`, `NatureAbilityHandler.castOvergrowth`) stay in the project and its
+fixture keeps running through that kept entry point; do not delete them in a clean-up. Invalid
+landings of that acorn restore
+charge to the retained casting wand.
+
+Nature has no passive. Verdant Step (lily-pad rafts that let the holder walk on water) was
+removed on November 11 at the developer's request: walking on water did not fit the kit. Its
+raft block, models and fixture went with it.
 
 Springbloom is Nature's second Technique and fifth spell. It throws a harmless
 pod that opens immediately on supported ground into the approved stemless
@@ -264,18 +327,40 @@ player as well as the casting wand, survives death/reconnects, and is not refund
 for failed placement. Each caster can have one active pad. There is no caster-order
 or ground-touch chain restriction. Fall protection ends after the next actual
 landing; the server tolerates the client ground flag arriving before landing damage.
-Leaf particles mark protected flight. Death, disconnect, world changes, flight,
+Falling leaves mark protected flight. Death, disconnect, world changes, flight,
 vehicles, fluids and climbing end the flight state. Pad expiry, breaking, support
 loss and owner exit restore only that pad's tracked placement. Scheduled checks
 remove orphan pads after reload; transient visual entities are not saved.
 Owners: `SpringbloomManager`, `SpringbloomRules`, `SpringbloomEntity`,
 `SpringbloomBlock`, the Springbloom movement/fall mixins and `SpringbloomRenderer`.
 
-`NatureCombat` owns per-caster damage/charge windows; prevent thorn spam or
-multiple wands from bypassing them. Boss resistance prevents permanent rooting
-while preserving earned recovery openings. Owners: `NatureAbilityHandler`,
-`SeedlingManager`, `TendrilBloomManager`, `ThornLashEntity`/`ThornLashRules`,
-`OvergrowthSeedEntity`/`OvergrowthManager`, `EntangleTracker`, `NatureCombat`.
+`NatureCombat` sets the mark and owns the per-caster charge window: a Seed or Thornbite hit
+gives 3 ultimate charge at most once a second across both, on whichever wand is held, and each
+flower seed that lands gives 1. Owners: `NatureAbilityHandler`, `SeedProjectileEntity` (the
+caster's Seed and the flowers' smaller one), `FlowerTurretManager`,
+`FullBloomManager`, `ThornLashEntity`/`ThornLashRules`, `NatureCombat`.
+Nature's spells are drawn client-side as "block nature": opaque, lit petals (two stepped slabs),
+leaves (three boxes) and pollen kernels from one atlas (`textures/misc/blocknature.png`), ported
+from the browser study in `art/nature/blocknature/`. Pieces face the world, not the camera, tumble a
+little and vanish by shrinking. Planting throws leaves; a flower's shot puffs pollen and a petal
+from the mouth; growth and shrinking shed petals; a wilting head drops pale petals and removal a
+last fall of pink ones. Seeds trail two gold kernels a tick (and a leaf a tick for the caster's);
+hits open into petals and block hits into pollen and leaves. Thornbite's bite puffs pollen. One heal
+cue (six sap leaves spiralling up with four gold kernels between them) plays on a player only when
+their health rose: Thornbite lifesteal, a flower seed's heal, and each player Full Bloom blesses.
+Full Bloom bursts petals at the caster, rolls a low ring of 48 petals with leaves to its radius in
+its twelve wave ticks (the gold kernels follow the particle setting), then drops three petals off the
+caster every 0.4 seconds while it lasts. Springbloom bursts pollen and leaves at launch, sheds a
+leaf pair every four ticks until the rider lands, and drops dark leaves when the pad goes. Clients
+draw seed trails and wilting from the entities; the server sends `BlockNatureEvents` for the
+rest. Visuals never decide a hit or a heal; near-lens pieces shrink in first person. Visuals:
+`client/blocknature/` (`BlockNatureEffects`, `BlockNatureKit`, `NatureFx`). The old Nature particles
+are still registered for the retired oak and `EntangleTracker`, but no live spell spawns them.
+
+`EntangleTracker` still holds the vine-stack rules (slow, root at five, and an entangled
+caster's halved spell recovery) and the wrap art, but no spell winds vines now; its live user
+is the retired Overgrowth root. The bramble and root-knot blocks and their art remain registered but
+no spell places them; a knot left in a world by an older version removes itself.
 
 ## Space
 
@@ -374,5 +459,6 @@ skin under a void-glass shell drawn by `AstralDoubleRenderer`. Visuals live in
 is described in [art and assets](art-and-assets.md).
 Targeted test runners are listed in [testing](testing.md).
 
-Bosses implement `WandBoss` (the Guardian and Hollow Necromancer). Wand spells
-do not root, knock back, stagger or interrupt them; they still take normal damage.
+Bosses implement `WandBoss` (the Guardian, Hollow Necromancer and Storm Roc). Wand spells
+do not slow, root, knock back, stagger or interrupt them; they still take normal damage.
+That is the whole interface: a boss has no hook for a particular element.

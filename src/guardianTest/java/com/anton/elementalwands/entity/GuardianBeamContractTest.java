@@ -14,7 +14,6 @@ public final class GuardianBeamContractTest {
         GuardianBossContractTest.run();
         GuardianShellContractTest.run();
         GuardianPhaseContractTest.run();
-        GuardianNatureContractTest.run();
         GuardianLeapContractTest.run();
         GuardianSocketContractTest.run();
         Vec3d start = new Vec3d(0,1,0), end = new Vec3d(0,1,24);

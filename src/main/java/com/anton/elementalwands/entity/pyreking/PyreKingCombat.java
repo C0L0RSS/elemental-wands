@@ -1,7 +1,7 @@
 package com.anton.elementalwands.entity.pyreking;
 
 import com.anton.elementalwands.ElementalWandsMod;
-import com.anton.elementalwands.registry.ModParticles;
+import com.anton.elementalwands.registry.ModSpellBlocks;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -11,6 +11,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.MovementType;
 import net.minecraft.entity.attribute.EntityAttributes;
@@ -33,6 +36,8 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.HitResult;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.Difficulty;
@@ -59,8 +64,25 @@ final class PyreKingCombat {
         double ground;
     }
 
-    /** Fire left on the floor: a line (or, with both ends the same, a disc) that arms and then burns. */
-    private record Fire(Vec3d from, Vec3d to, double half, double height, long armed, long until) {}
+    /**
+     * Fire left on the floor: a line (or, with both ends the same, a disc). It catches for a moment as low licks of
+     * flame, then burns as blocks of fire (the developer, Nov 11: vanilla fire, not flat pictures of flame), and
+     * whoever touches one of those blocks is burned.
+     */
+    private static final class Fire {
+        final Vec3d from, to;
+        final double half, height;
+        final long armed, until;
+        /** The foot of each column of fire, once it is lit. */
+        final List<BlockPos> cells = new ArrayList<>();
+        boolean lit;
+
+        Fire(Vec3d from, Vec3d to, double half, double height, long armed, long until) {
+            this.from = from; this.to = to; this.half = half; this.height = height; this.armed = armed; this.until = until;
+        }
+
+        int levels() { return height > 1.5 ? 2 : 1; }
+    }
 
     /** A mark on the floor that only warns: the line a throw will fly along, or the ring where he will land. */
     private record Mark(Vec3d from, Vec3d to, double radius, long until) {}
@@ -127,7 +149,10 @@ final class PyreKingCombat {
         if (move == Move.UNBOUND) boss.setSecondPhase(true);
         move = null; last = before = lastFlank = null; target = lastTarget = null; flank = null; pending = null; flanking = false;
         engaged = reviewing = false; emptySince = -1; chained = 0;
-        fires.clear(); marks.clear(); seen.clear(); groups.clear();
+        List<Fire> burning = new ArrayList<>(fires);
+        fires.clear();
+        if (boss.getEntityWorld() instanceof ServerWorld world) for (Fire fire : burning) quench(world, fire);
+        marks.clear(); seen.clear(); groups.clear();
         phasePending = false;
         halt();
         bar.clearPlayers();
@@ -155,6 +180,20 @@ final class PyreKingCombat {
         }
         begin(world, next, player, world.getTime(), 3);
         return true;
+    }
+
+    /**
+     * The intro's last beat: his chain hauls him to his mark from wherever the scene has stood him, with nobody to
+     * aim at. The mark is his home from here on.
+     */
+    void introHaul(ServerWorld world, Vec3d mark) {
+        home = mark;
+        reviewing = true;
+        Vec3d heading = mark.subtract(boss.getEntityPos()).multiply(1, 0, 1).normalize();
+        double shortOf = PyreKingAim.get(Move.HAUL.clip).stick()[2] - PyreKingTracks.get(Move.HAUL.clip).travelEnd();
+        face(mark, 180);
+        begin(world, Move.HAUL, null, world.getTime(), 2);
+        flank = mark.add(heading.multiply(shortOf));
     }
 
     boolean requestUnbound() {
@@ -530,6 +569,8 @@ final class PyreKingCombat {
             return;
         }
         boolean second = boss.isSecondPhase();
+        // The chain brought him to them: he presses at once.
+        if (closes(done)) { chained = 0; nextPick = now; return; }
         // Sometimes he goes straight into another string; otherwise he closes on his next target for a moment.
         if (done.swordString() && chained < chainLimit(second) - 1 && boss.getRandom().nextDouble() < chainChance(second)) {
             chained++;
@@ -547,8 +588,12 @@ final class PyreKingCombat {
         return null;
     }
 
+    /** The tick at which this moment of the move's clip shows. */
+    private long at(double moment) { return started + Math.round(move.seconds(moment) * 20); }
+
     private void tickMove(ServerWorld world, long now, List<ServerPlayerEntity> players) {
-        double t = (now - started) / 20.0;
+        // Every time below is a moment of the clip; its tempo says which moment shows now.
+        double t = move.tempo().clip((now - started) / 20.0);
         ServerPlayerEntity player = victim(players);
         if (player == null && reviewing) player = world.getPlayers(p -> p.getUuid().equals(target)).stream().findFirst().orElse(null);
         halt();
@@ -563,15 +608,19 @@ final class PyreKingCombat {
         // Aim: he tracks until the snap, then the direction is fixed; a follow-up may turn a little toward the dodge.
         if (aimAt != null && !aimFrozen && t < move.aimUntil && !boss.clipCarriesHim()) face(aimAt, turn);
         if (!aimFrozen && t >= move.aimUntil) { aimFrozen = true; freeze(world, player, t); }
-        if (player != null) for (Retrack retrack : move.retracks) if (t >= retrack.from() && t < retrack.to()) {
+        if (player != null) for (Retrack retrack : move.retracks) {
+            double from = Math.max(swept, retrack.from()), to = Math.min(t, retrack.to());
+            if (to <= from) continue;
             float room = retrack.degrees() - retracked;
-            if (room > 0) retracked += Math.abs(face(player.getEntityPos(), Math.min(room, retrack.degrees() / (float) ((retrack.to() - retrack.from()) * 20))));
+            if (room > 0) retracked += Math.abs(face(player.getEntityPos(), Math.min(room, (float) (retrack.degrees() * (to - from) / (retrack.to() - retrack.from())))));
         }
         while (cue < move.cues.length && t >= move.cues[cue]) warn(world, cue++);
 
         // His own steps.
-        for (Advance advance : move.advances) if (t >= advance.from() && t < advance.to()) {
-            double step = advance.blocks() / Math.max(1, (advance.to() - advance.from()) * 20);
+        for (Advance advance : move.advances) {
+            double from = Math.max(swept, advance.from()), to = Math.min(t, advance.to());
+            if (to <= from) continue;
+            double step = advance.blocks() * (to - from) / (advance.to() - advance.from());
             if (player != null) step = Math.min(step, Math.max(0, player.getEntityPos().subtract(boss.getEntityPos()).multiply(1, 0, 1).length() - 2.6));
             Vec3d forward = forward(boss.getBodyYaw());
             if (home == null || boss.getEntityPos().add(forward.multiply(step)).subtract(home).multiply(1, 0, 1).length() <= LEASH + 2)
@@ -698,21 +747,21 @@ final class PyreKingCombat {
     private void freeze(ServerWorld world, ServerPlayerEntity player, double t) {
         PyreKingAim.Throw thrown = PyreKingAim.get(move.clip);
         if (thrown == null || move == Move.ZIP) return;
-        if (player == null) { aimPoint = world(thrown.stick()); return; }      // nobody to aim at: where the clip throws it
+        if (player == null && flank == null) { aimPoint = world(thrown.stick()); return; }      // nobody to aim at: where the clip throws it
         double[] stick = thrown.stick();
         Vec3d point;
         switch (move) {
-            case CAST -> point = reachable(world, lead(player, (1.26 - .47) * 20));
+            case CAST -> point = reachable(world, lead(player, (move.seconds(1.26) - move.seconds(move.aimUntil)) * 20));
             case LUNGE, HAUL -> {
                 if (flank != null) point = flank;
                 else {
-                    Vec3d wanted = lead(player, move == Move.HAUL ? 6 : (1.7 - .45) * 20 * .5);
+                    Vec3d wanted = lead(player, move == Move.HAUL ? 6 : (move.seconds(1.7) - move.seconds(move.aimUntil)) * 20 * .5);
                     Vec3d back = boss.getEntityPos().subtract(wanted).multiply(1, 0, 1);
                     Vec3d spot = wanted.add(back.lengthSquared() < 1e-6 ? Vec3d.ZERO : back.normalize().multiply(Math.min(LUNGE_SHORT, back.length())));
                     point = reachable(world, spot);
                 }
             }
-            case HOOK -> point = lead(player, 8).add(0, player.getHeight() * .55, 0);
+            case HOOK -> point = lead(player, (move.seconds(1.2) - move.seconds(move.aimUntil)) * 20).add(0, player.getHeight() * .55, 0);
             case SNARE -> {
                 // Thrown past them: a target running from him runs onto the blade, not out from under its point.
                 Vec3d at = lead(player, 8, 4), out = at.subtract(boss.getEntityPos()).multiply(1, 0, 1);
@@ -733,9 +782,9 @@ final class PyreKingCombat {
         aimRight = in[0] - stick[0]; aimUp = in[1] - stick[1]; aimAhead = in[2] - stick[2];
         boss.setAim(aimRight, aimUp, aimAhead);
         if (move == Move.CAST || move.hooks())        // the line the throw will fly along, solid from the freeze
-            marks.add(new Mark(boss.getEntityPos().add(0, .15, 0), new Vec3d(aimPoint.x, boss.getY() + .15, aimPoint.z), 0, started + (long) ((1.2 - move.hookLead()) * 20)));
-        if (move == Move.LUNGE) land(world, thrown, started + (long) (1.75 * 20));
-        if (move == Move.HAUL) land(world, thrown, started + (long) (.85 * 20));
+            marks.add(new Mark(boss.getEntityPos().add(0, .15, 0), new Vec3d(aimPoint.x, boss.getY() + .15, aimPoint.z), 0, at(1.2 - move.hookLead())));
+        if (move == Move.LUNGE) land(world, thrown, at(1.75));
+        if (move == Move.HAUL) land(world, thrown, at(.85));
     }
 
     /** Where the chain will set him down, ringed with embers until his cut lands there. */
@@ -762,7 +811,7 @@ final class PyreKingCombat {
                 sound(world, at, SoundEvents.ENTITY_IRON_GOLEM_ATTACK, 2.4f, .5f);
                 ring(world, at.add(0, .1, 0), 2.2, ParticleTypes.LAVA, 14);
                 // The Haul scorches the line he flew: past a pillar, that is a wall across the way round it.
-                if (move == Move.HAUL && !reviewing)
+                if (move == Move.HAUL && (!reviewing || flank != null))
                     fire(world, boss.clipOrigin(), new Vec3d(at.x, boss.getY(), at.z), FIRE_HALF, boss.isSecondPhase() ? FIRE_TALL : FIRE_LOW, world.getTime(), HAUL_FIRE);
             }
         }
@@ -808,6 +857,9 @@ final class PyreKingCombat {
     private boolean touches(ServerWorld world, Window window, double[][] a, double[][] b, ServerPlayerEntity player) {
         if ((groups.getOrDefault(player.getUuid(), 0) & 1 << window.group()) != 0) return false;
         double[] at = frame(player.getEntityPos());
+        // The Chain Scythe strikes only out where its blade swings; inside that the player is under the chain.
+        if (window.part() == Part.CHAIN && (window.band() == Band.LOW || window.band() == Band.HIGH)
+                && !scytheReaches(Math.hypot(at[0], at[2]), player.getWidth() / 2)) return false;
         double reach = window.radius() + player.getWidth() / 2;
         for (int i = 0; i + 1 < a.length; i++) {
             double low = Math.min(Math.min(a[i][1], a[i + 1][1]), Math.min(b[i][1], b[i + 1][1])),
@@ -899,7 +951,8 @@ final class PyreKingCombat {
                 if (!decided && t >= CAST_DECIDE) {
                     decided = true;
                     double away = player == null ? 0 : player.getEntityPos().subtract(boss.getEntityPos()).multiply(1, 0, 1).length();
-                    if (aimPoint != null && (away > ZIP_BEYOND || second && boss.getRandom().nextDouble() < .35)) zipNext = true;
+                    // A rehearsed Cast is not left to chance: it ends in the pull-back unless its target is far off.
+                    if (aimPoint != null && (away > ZIP_BEYOND || !reviewing && boss.getRandom().nextDouble() < zipChance(second))) zipNext = true;
                     if (zipNext && aimPoint == null) zipNext = false;
                 }
                 if (zipNext && t >= CAST_ZIP_AT) { zip(world, now); return true; }
@@ -988,7 +1041,7 @@ final class PyreKingCombat {
                     sound(world, boss.getEntityPos(), SoundEvents.BLOCK_CHAIN_BREAK, 3f, .4f);
                     sound(world, boss.getEntityPos(), SoundEvents.ENTITY_WARDEN_ROAR, 3f, .7f);
                     world.spawnParticles(ParticleTypes.FLAME, true, false, boss.getX(), boss.getBodyY(.5), boss.getZ(), 120, .5, .8, .5, .25);
-                    marks.add(new Mark(boss.getEntityPos().add(0, .15, 0), boss.getEntityPos().add(0, .15, 0), UNBOUND_REACH, started + (long) (1.95 * 20)));
+                    marks.add(new Mark(boss.getEntityPos().add(0, .15, 0), boss.getEntityPos().add(0, .15, 0), UNBOUND_REACH, at(1.95)));
                 }
                 if (crossed(t, UNBOUND_WALLS_AT)) {
                     PyreKingTracks.Track track = PyreKingTracks.get(move.clip);
@@ -1035,7 +1088,7 @@ final class PyreKingCombat {
         boss.setAim(right, up, ahead);
         before = last; last = done;
         marks.removeIf(mark -> mark.radius() == 0);
-        land(world, PyreKingAim.get(Move.ZIP.clip), started + (long) (1.5 * 20));
+        land(world, PyreKingAim.get(Move.ZIP.clip), at(1.5));
         sound(world, boss.getEntityPos(), SoundEvents.BLOCK_CHAIN_BREAK, 2.6f, .5f);
     }
 
@@ -1096,20 +1149,26 @@ final class PyreKingCombat {
                 if (to.subtract(from).dotProduct(hit.getPos().subtract(from)) <= 0) return;      // it starts against the pillar
             }
         }
-        fires.add(new Fire(from, to, half, height, now + FIRE_ARM, now + ticks));
+        fires.add(new Fire(from, to, half, height, now + FIRE_ARM, now + ticks));      // lit as blocks when it arms
         sound(world, from, SoundEvents.ITEM_FIRECHARGE_USE, 1.8f, .7f);
     }
 
     private void tickFloor(ServerWorld world, long now, List<ServerPlayerEntity> players) {
         marks.removeIf(mark -> now >= mark.until());
-        fires.removeIf(fire -> now >= fire.until());
+        for (var each = fires.iterator(); each.hasNext();) {
+            Fire fire = each.next();
+            if (now < fire.until) continue;
+            each.remove();
+            quench(world, fire);
+        }
         if (now % 2 == 0) for (Mark mark : marks) {
             if (mark.radius() > 0) ring(world, mark.from(), mark.radius(), ParticleTypes.FLAME, (int) (mark.radius() * 9));
             else line(world, mark.from(), mark.to(), .7, ParticleTypes.SMALL_FLAME);
         }
-        if (now % 3 == 0) for (Fire fire : fires) flames(world, fire, now);
+        if (now % 3 == 0) for (Fire fire : fires) if (!fire.lit) catching(world, fire);
         for (Fire fire : fires) {
-            if (now < fire.armed()) continue;
+            if (now < fire.armed) continue;
+            if (!fire.lit || now % 10 == 0) light(world, fire);
             for (ServerPlayerEntity player : players) {
                 Seen s = seen.computeIfAbsent(player.getUuid(), id -> new Seen());
                 if (now < s.burnAt || !burning(fire, player)) continue;
@@ -1123,41 +1182,75 @@ final class PyreKingCombat {
         }
     }
 
+    /** Whoever touches one of its blocks of fire burns, as in any fire. */
     private static boolean burning(Fire fire, ServerPlayerEntity player) {
-        double up = player.getY() - fire.from().y;
-        if (up >= fire.height() || up < -1) return false;
-        double reach = fire.half() + player.getWidth() / 2;
-        return segment(player.getX(), player.getZ(), fire.from().x, fire.from().z, fire.to().x, fire.to().z) <= reach * reach;
+        var box = player.getBoundingBox();
+        for (BlockPos cell : fire.cells)
+            if (box.intersects(cell.getX(), cell.getY(), cell.getZ(), cell.getX() + 1, cell.getY() + fire.levels(), cell.getZ() + 1)) return true;
+        return false;
     }
 
-    private void flames(ServerWorld world, Fire fire, long now) {
-        boolean armed = now >= fire.armed();
-        Vec3d along = fire.to().subtract(fire.from());
+    /**
+     * Lights a fire that has caught: a block of fire on the floor in every cell of its line or disc, two high for a
+     * tall one. Called again while it burns, it puts back any block that has gone out. It burns only where it could
+     * be lit: in open air over a floor, never in place of anything that stands in the hall.
+     */
+    private void light(ServerWorld world, Fire fire) {
+        if (!fire.lit) {
+            fire.lit = true;
+            int floor = MathHelper.floor(fire.from.y + .5);
+            int x0 = MathHelper.floor(Math.min(fire.from.x, fire.to.x) - fire.half), x1 = MathHelper.floor(Math.max(fire.from.x, fire.to.x) + fire.half);
+            int z0 = MathHelper.floor(Math.min(fire.from.z, fire.to.z) - fire.half), z1 = MathHelper.floor(Math.max(fire.from.z, fire.to.z) + fire.half);
+            for (int x = x0; x <= x1; x++) for (int z = z0; z <= z1; z++) {
+                if (segment(x + .5, z + .5, fire.from.x, fire.from.z, fire.to.x, fire.to.z) > fire.half * fire.half) continue;
+                BlockPos foot = footing(world, x, floor, z);
+                if (foot != null) fire.cells.add(foot);
+            }
+        }
+        BlockState flame = ModSpellBlocks.PYRE_KING_FIRE.getDefaultState();
+        for (BlockPos cell : fire.cells) for (int up = 0; up < fire.levels(); up++)
+            if (world.getBlockState(cell.up(up)).isAir()) world.setBlockState(cell.up(up), flame, Block.NOTIFY_LISTENERS);
+    }
+
+    /** Where fire can stand in this column: open air (or his own fire already) over a floor, at his level or a step off it. */
+    private static BlockPos footing(ServerWorld world, int x, int y, int z) {
+        for (int step : new int[]{0, 1, -1}) {
+            BlockPos pos = new BlockPos(x, y + step, z);
+            BlockState state = world.getBlockState(pos);
+            if ((state.isAir() || state.isOf(ModSpellBlocks.PYRE_KING_FIRE)) && world.getBlockState(pos.down()).isSideSolidFullSquare(world, pos.down(), Direction.UP)) return pos;
+        }
+        return null;
+    }
+
+    /** Puts a fire's blocks out, but for any that another fire still burning shares. */
+    private void quench(ServerWorld world, Fire fire) {
+        for (BlockPos cell : fire.cells) for (int up = 0; up < fire.levels(); up++) {
+            BlockPos pos = cell.up(up);
+            int level = up;
+            if (fires.stream().anyMatch(other -> other.lit && other.levels() > level && other.cells.contains(cell))) continue;
+            if (world.getBlockState(pos).isOf(ModSpellBlocks.PYRE_KING_FIRE)) world.setBlockState(pos, Blocks.AIR.getDefaultState(), Block.NOTIFY_LISTENERS);
+        }
+        fire.cells.clear();
+    }
+
+    /** A fire that has not caught yet: low licks of flame along it, the half second of warning before it burns. */
+    private void catching(ServerWorld world, Fire fire) {
+        Vec3d along = fire.to.subtract(fire.from);
         double length = along.length();
         var random = boss.getRandom();
         if (length < 1e-3) {        // a disc
-            int count = (int) Math.ceil(fire.half() * fire.half() * 2.2);
+            int count = (int) Math.ceil(fire.half * fire.half * 2.2);
             for (int i = 0; i < count; i++) {
-                double angle = random.nextDouble() * Math.PI * 2, r = Math.sqrt(random.nextDouble()) * fire.half();
-                flame(world, fire.from().add(Math.cos(angle) * r, 0, Math.sin(angle) * r), fire.height(), armed);
+                double angle = random.nextDouble() * Math.PI * 2, r = Math.sqrt(random.nextDouble()) * fire.half;
+                world.spawnParticles(ParticleTypes.FLAME, true, false, fire.from.x + Math.cos(angle) * r, fire.from.y + .2, fire.from.z + Math.sin(angle) * r, 1, .05, .05, .05, .01);
             }
             return;
         }
         int count = (int) Math.ceil(length / .7);
         for (int i = 0; i <= count; i++) {
-            Vec3d at = fire.from().add(along.multiply((i + random.nextDouble() * .6 - .3) / count)).add((random.nextDouble() - .5) * fire.half(), 0, (random.nextDouble() - .5) * fire.half());
-            flame(world, at, fire.height(), armed);
+            Vec3d at = fire.from.add(along.multiply((i + random.nextDouble() * .6 - .3) / count)).add((random.nextDouble() - .5) * fire.half, 0, (random.nextDouble() - .5) * fire.half);
+            world.spawnParticles(ParticleTypes.FLAME, true, false, at.x, at.y + .2, at.z, 1, .05, .05, .05, .01);
         }
-    }
-
-    private void flame(ServerWorld world, Vec3d at, double height, boolean armed) {
-        var random = boss.getRandom();
-        // Catching: a low lick of flame. Burning: the Fire spells' big block flames, stacked as tall as the fire is.
-        if (!armed) { world.spawnParticles(ModParticles.FIRE_FLAME_RIBBON, true, false, at.x, at.y + .2, at.z, 1, .05, .05, .05, .01); return; }
-        world.spawnParticles(ModParticles.FIRE_PYRE_FRONT, true, false, at.x, at.y + .55, at.z, 1, 0, 0, 0, 0);
-        if (height > 1.5) world.spawnParticles(ModParticles.FIRE_PYRE_FRONT, true, false, at.x, at.y + 1.5 + random.nextDouble() * .3, at.z, 1, 0, 0, 0, 0);
-        if (random.nextInt(6) == 0) world.spawnParticles(ParticleTypes.LAVA, true, false, at.x, at.y + .2, at.z, 1, 0, 0, 0, 0);
-        if (random.nextInt(3) == 0) world.spawnParticles(ParticleTypes.FLAME, true, false, at.x, at.y + height + random.nextDouble() * .5, at.z, 1, .1, .1, .1, .03);
     }
 
     private void ring(ServerWorld world, Vec3d centre, double radius, ParticleEffect effect, int points) {
@@ -1187,7 +1280,7 @@ final class PyreKingCombat {
     /** For the fixture: the blade's two ends now, in the world, as the sweep reads them. */
     Vec3d[] blade() {
         if (move == null) return null;
-        double[][] shape = shape(Part.BLADE, Math.max(0, (now() - started) / 20.0), 0);
+        double[][] shape = shape(Part.BLADE, Math.max(0, move.tempo().clip((now() - started) / 20.0)), 0);
         return new Vec3d[]{world(shape[0]), world(shape[1])};
     }
 

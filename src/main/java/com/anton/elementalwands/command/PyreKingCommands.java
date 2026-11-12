@@ -49,6 +49,11 @@ public final class PyreKingCommands {
             context.getSource().sendFeedback(() -> Text.literal(status), false);
             return 1;
         }));
+        root.then(CommandManager.literal("intro").executes(context -> {
+            String said = com.anton.elementalwands.hall.PyreHallManager.intro(context.getSource().getPlayerOrThrow());
+            context.getSource().sendFeedback(() -> Text.literal(said), false);
+            return 1;
+        }));
         var move = CommandManager.literal("move");
         for (PyreKingRules.Move each : PyreKingRules.Move.values())
             move.then(CommandManager.literal(each.name().toLowerCase(java.util.Locale.ROOT)).executes(context -> {

@@ -65,6 +65,8 @@ public final class ModNetworking {
         PayloadTypeRegistry.playS2C().register(NecromancerTransformPayload.ID, NecromancerTransformPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(GuardianIntroPayload.ID, GuardianIntroPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(GuardianIntroSkipPayload.ID, GuardianIntroSkipPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(PyreKingIntroPayload.ID, PyreKingIntroPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(PyreKingIntroSkipPayload.ID, PyreKingIntroSkipPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(GuardianPullPayload.ID, GuardianPullPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(StormRocIntroPayload.ID, StormRocIntroPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(StormRocIntroSkipPayload.ID, StormRocIntroSkipPayload.CODEC);
@@ -101,6 +103,8 @@ public final class ModNetworking {
                 (payload, context) -> com.anton.elementalwands.summit.StormRocIntro.landed(context.player()));
         ServerPlayNetworking.registerGlobalReceiver(GuardianIntroSkipPayload.ID,
                 (payload, context) -> com.anton.elementalwands.entity.GuardianIntro.skip(context.player()));
+        ServerPlayNetworking.registerGlobalReceiver(PyreKingIntroSkipPayload.ID,
+                (payload, context) -> com.anton.elementalwands.entity.pyreking.PyreKingIntro.skip(context.player()));
     }
 
     // -----------------------------------------------------------------------
@@ -399,6 +403,20 @@ public final class ModNetworking {
         public static final StormRocIntroLandedPayload INSTANCE = new StormRocIntroLandedPayload();
         public static final Id<StormRocIntroLandedPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"storm_roc_intro_landed"));
         public static final PacketCodec<RegistryByteBuf,StormRocIntroLandedPayload> CODEC = PacketCodec.unit(INSTANCE);
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
+    /** The Pyre King's intro starts (or, inactive, lets go) for this client: the king, the tick its first frame plays, and the hall's centre. */
+    public record PyreKingIntroPayload(int kingId, long start, BlockPos centre, boolean active) implements CustomPayload {
+        public static final Id<PyreKingIntroPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"pyre_king_intro"));
+        public static final PacketCodec<RegistryByteBuf,PyreKingIntroPayload> CODEC = PacketCodec.tuple(
+                PacketCodecs.VAR_INT,PyreKingIntroPayload::kingId,PacketCodecs.VAR_LONG,PyreKingIntroPayload::start,
+                BlockPos.PACKET_CODEC,PyreKingIntroPayload::centre,PacketCodecs.BOOLEAN,PyreKingIntroPayload::active,PyreKingIntroPayload::new);
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
+    public record PyreKingIntroSkipPayload() implements CustomPayload {
+        public static final PyreKingIntroSkipPayload INSTANCE = new PyreKingIntroSkipPayload();
+        public static final Id<PyreKingIntroSkipPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"pyre_king_intro_skip"));
+        public static final PacketCodec<RegistryByteBuf,PyreKingIntroSkipPayload> CODEC = PacketCodec.unit(INSTANCE);
         @Override public Id<? extends CustomPayload> getId() { return ID; }
     }
     public record GuardianIntroSkipPayload() implements CustomPayload {

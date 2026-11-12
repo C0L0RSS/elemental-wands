@@ -17,9 +17,20 @@ It records known verification limits; it is not a fresh installation receipt.
     himself with the Haul and the Snare, or a Lunge. Their two clips are new and not yet
     reviewed. The line a Haul flies burns. A player who only circles a pillar is hooked
     off it but, in the fixture, runs clear of the Overhead that follows.
-  - **Pending:** the developer's review of the fight clips, then a look and a playtest in
-    Lunar. Damage is set for plain diamond to netherite armor (Nov 11); his health,
-    speeds and timings are first guesses.
+  - **Intro (Nov 11):** a 58 s cinematic from the developer's idea (the statue on his throne,
+    the web of chains, the falling sword) plays by `/ew pyreking intro`. First pass; they
+    have not seen it. The gatehouse in the Nether that will start it is not built.
+  - **First playtest (Nov 11):** the developer beat him on the second try with a level 1
+    Space wand: "pretty clean, but really easy", slow between attacks, all throws at range,
+    the spinning cut easy to leave. Answered the same day and not yet played: every clip has
+    a tempo (`PyreKingRules.tempo`), gaps are shorter, strings chain more, the Lunge and
+    Hook come more often at range, and his fire is blocks that look like vanilla fire (their
+    choice). Health and damage are unchanged.
+  - **Second playtest (Nov 11):** "really good". Answered the same day, not yet played: the
+    Chain Scythe strikes only from 5 blocks out and is not used close in; a win sends everyone
+    home after ten seconds; mining the hall never starts.
+  - **Pending:** the developer's next playtest in Lunar, and their look at the intro.
+    Damage is set for plain diamond to netherite armor (Nov 11); his health is a first guess.
   - **Pending:** the Chain Scythe's bowed chain in the workshop.
   - **Weak:** the warnings and fire are particles; he has no sounds of his own, no death
     clip and no reward.

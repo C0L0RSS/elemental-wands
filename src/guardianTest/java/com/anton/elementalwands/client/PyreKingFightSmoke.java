@@ -70,18 +70,23 @@ public final class PyreKingFightSmoke implements ClientModInitializer {
             new Case("scythe-low-jumped", PyreKingRules.Move.SCYTHE_LOW, 0, 1, -10, true, false, 60, 0, 20),
             new Case("scythe-high", PyreKingRules.Move.SCYTHE_HIGH, 10, 0, 0, false, false, 60, CHAIN, 17, 21),
             new Case("scythe-high-crouched", PyreKingRules.Move.SCYTHE_HIGH, 10, 0, 0, false, true, 60, 0, 21),
-            new Case("cast", PyreKingRules.Move.CAST, 0, 0, -20, false, false, 100, CHAIN, 14, 24, 29, 50),
-            new Case("cast-reel", PyreKingRules.Move.CAST, 0, 0, -20, false, false, 100, CHAIN * 2, 62, 74, 77),
-            new Case("zip", PyreKingRules.Move.ZIP, 0, 0, -24, false, false, 132, CHAIN, 62, 76, 80, 86, 100),
+            // Standing close, under the chain: neither swing reaches them.
+            new Case("scythe-low-inside", PyreKingRules.Move.SCYTHE_LOW, 0, 0, -3.5, false, false, 60, 0, 19),
+            new Case("scythe-high-inside", PyreKingRules.Move.SCYTHE_HIGH, 3.5, 0, 0, false, false, 60, 0, 21),
+            new Case("cast", PyreKingRules.Move.CAST, 0, 0, -20, false, false, 70, CHAIN, 10, 16, 22, 26),
+            // The throw and the pull-back are one combo now (they are half a second apart), so a player takes only one
+            // of them: this one steps out of the throw and onto the line the sword comes back along.
+            new Case("cast-reel", PyreKingRules.Move.CAST, 0, 0, -20, false, false, 70, CHAIN, 26, 34, 38),
+            new Case("zip", PyreKingRules.Move.ZIP, 0, 0, -24, false, false, 90, CHAIN, 30, 38, 42, 46, 52),
             new Case("hook", PyreKingRules.Move.HOOK, 0, 0, -30, false, false, 70, PyreKingRules.TUG, 16, 26, 36, 50),
-            new Case("lunge", PyreKingRules.Move.LUNGE, 0, 0, -13, false, false, 76, SWORD, 12, 20, 28, 36, 40),
+            new Case("lunge", PyreKingRules.Move.LUNGE, 0, 0, -13, false, false, 66, SWORD, 10, 16, 22, 26, 32),
             new Case("drag-down", PyreKingRules.Move.DRAG_DOWN, 0, 8, -7.5, true, false, 56, PyreKingRules.YANK, 14, 22, 28),
             // The Haul with nothing to get round, and the Snare that follows it in the fight.
             new Case("haul", PyreKingRules.Move.HAUL, 0, 0, -22, false, false, 40, 0, 4, 8, 12, 16, 20),
             new Case("snare", PyreKingRules.Move.SNARE, 0, 0, -16, false, false, 60, PyreKingRules.TUG, 5, 9, 14, 24, 36),
             // A pillar stands between them in the cases named for it (5 across, 8 to 12 blocks in front of him; for the
             // hiding cases one like the hall's, round and 7 across).
-            new Case("cast-at-a-pillar", PyreKingRules.Move.CAST, 0, 0, -20, false, false, 100, 0, 29, 50),
+            new Case("cast-at-a-pillar", PyreKingRules.Move.CAST, 0, 0, -20, false, false, 70, 0, 22, 26),
             new Case("hook-at-a-pillar", PyreKingRules.Move.HOOK, 0, 0, -30, false, false, 70, 0, 26),
             // The stone stops his chain: a player just behind the pillar, inside the Scythe's reach, is not struck.
             new Case("scythe-behind-a-pillar", PyreKingRules.Move.SCYTHE_LOW, 0, 0, -13.5, false, false, 60, 0, 19),
@@ -216,16 +221,21 @@ public final class PyreKingFightSmoke implements ClientModInitializer {
             // The aim froze 0.35 s in; a step aside after that beats it.
             case "thrust-sidestepped" -> { if (t == 13) server.execute(() -> guard(() -> place(server, uuid, 3.5, 0, -7, false))); }
             // Struck by the throw, then well clear of the fire it leaves and of the pull-back.
+            // The sword stands stuck from 0.93 to 1.37 s (ticks 22 to 30 here, the blend included): measured then.
             case "cast" -> {
-                if (t == 31) server.execute(() -> guard(() -> place(server, uuid, 7, 0, -20, false)));
-                if (t == 44) server.execute(() -> guard(() -> serverBlade = king(server).sweptBlade()));
-                if (t == 45) clientBlade = PyreKingRenderer.drawnBlade();
+                if (t == 27) server.execute(() -> guard(() -> place(server, uuid, 7, 0, -20, false)));
+                if (t == 25) server.execute(() -> guard(() -> serverBlade = king(server).sweptBlade()));
+                if (t == 26) clientBlade = PyreKingRenderer.drawnBlade();
             }
-            // Struck by the throw, then standing on the line the sword comes back along.
-            case "cast-reel" -> { if (t == 31) server.execute(() -> guard(() -> place(server, uuid, 0, 0, -9, false))); }
+            // Out of the throw once its aim is fixed (tick 14 or 15 here; the sword reaches them at 21 or 22), then
+            // standing on the line the sword comes back along.
+            case "cast-reel" -> {
+                if (t == 18) server.execute(() -> guard(() -> place(server, uuid, 6, 0, -20, false)));
+                if (t == 25) server.execute(() -> guard(() -> place(server, uuid, 0, 0, -9, false)));
+            }
             case "cast-at-a-pillar" -> {
-                if (t == 44) server.execute(() -> guard(() -> serverBlade = king(server).sweptBlade()));
-                if (t == 45) clientBlade = PyreKingRenderer.drawnBlade();
+                if (t == 25) server.execute(() -> guard(() -> serverBlade = king(server).sweptBlade()));
+                if (t == 26) clientBlade = PyreKingRenderer.drawnBlade();
             }
             // A player who never moves from behind the pillar: he gets round it, by whichever flank he picks, and strikes.
             case "flanks-a-pillar" -> server.execute(() -> guard(() -> {
@@ -297,14 +307,15 @@ public final class PyreKingFightSmoke implements ClientModInitializer {
                 p.fallDistance = 0;
                 p.networkHandler.requestTeleport(next.x, next.y, next.z, (float) Math.toDegrees(Math.atan2(-look.x, look.z)), 5);
             }));
+            // Both are measured in the return to his guard, after the cut: the Zip begins 1.27 s into the Cast.
             case "zip" -> {
-                if (t == 31) server.execute(() -> guard(() -> place(server, uuid, 8, 0, -24, false)));
-                if (t == 104) server.execute(() -> guard(() -> serverBlade = king(server).sweptBlade()));
-                if (t == 105) clientBlade = PyreKingRenderer.drawnBlade();
+                if (t == 27) server.execute(() -> guard(() -> place(server, uuid, 8, 0, -24, false)));
+                if (t == 56) server.execute(() -> guard(() -> serverBlade = king(server).sweptBlade()));
+                if (t == 57) clientBlade = PyreKingRenderer.drawnBlade();
             }
             case "lunge" -> {
-                if (t == 52) server.execute(() -> guard(() -> serverBlade = king(server).sweptBlade()));
-                if (t == 53) clientBlade = PyreKingRenderer.drawnBlade();
+                if (t == 41) server.execute(() -> guard(() -> serverBlade = king(server).sweptBlade()));
+                if (t == 42) clientBlade = PyreKingRenderer.drawnBlade();
             }
             // Swept by the chains, then out of the hall's fire walls before they light.
             case "unbound" -> {
@@ -389,7 +400,8 @@ public final class PyreKingFightSmoke implements ClientModInitializer {
                 notes.add("in " + scene.ticks / 20 + " s: " + circleFlanks + " flanks, struck " + circleHits + " times and burned " + circleBurns + " for " + circleDamage + " in all"
                         + (perfect ? "" : " (" + circleHitsEating + " while eating, the second half)") + ", unseen "
                         + circleHidden + " of " + scene.ticks + " ticks, " + circleLongest + " at the longest; moves: " + circleMoves);
-                if (circleFlanks < (perfect ? 3 : 6)) fail(scene, "a player circling a pillar should draw flank after flank; he flanked " + circleFlanks + " times");
+                // Fewer than before his pace was raised: he now spends more of the half minute striking them in the open.
+                if (circleFlanks < (perfect ? 3 : 4)) fail(scene, "a player circling a pillar should draw flank after flank; he flanked " + circleFlanks + " times");
                 if (!perfect && circleLongest > 120) fail(scene, "nobody should stay out of his sight for six seconds; they did for " + circleLongest + " ticks");
                 if (!perfect && circleHits < 2) fail(scene, "a player circling a pillar for 30 s, a quarter of a second behind him, should not come away unhurt");
             }

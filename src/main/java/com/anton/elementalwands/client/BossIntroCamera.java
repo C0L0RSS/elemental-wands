@@ -21,19 +21,21 @@ public final class BossIntroCamera {
 
     /** The player is held by a cinematic: no walking, jumping or sneaking. */
     public static boolean frozen() {
-        return GuardianIntroClient.frozen() || NecromancerIntroClient.frozen() || NecromancerTransformClient.frozen() || StormRocIntroClient.frozen();
+        return GuardianIntroClient.frozen() || NecromancerIntroClient.frozen() || NecromancerTransformClient.frozen() || StormRocIntroClient.frozen()
+                || PyreKingIntroClient.frozen();
     }
 
     /** A cinematic owns the camera: HUD, hand, bobbing and block outline stay hidden. */
     public static boolean cinematic() {
         return GuardianIntroClient.cinematic() || NecromancerIntroClient.cinematic() || NecromancerTransformClient.cinematic()
-                || StormRocIntroClient.cinematic();
+                || StormRocIntroClient.cinematic() || PyreKingIntroClient.cinematic();
     }
 
     /** Where the camera looks this frame, or null when the player's own view applies. */
     public static Pose pose(float tickDelta) {
         if (GuardianIntroClient.frozen()) return GuardianIntroClient.pose(tickDelta);
         if (StormRocIntroClient.frozen()) return StormRocIntroClient.pose(tickDelta);
+        if (PyreKingIntroClient.frozen()) return PyreKingIntroClient.pose(tickDelta);
         if (NecromancerTransformClient.frozen()) return NecromancerTransformClient.pose(tickDelta);
         NecromancerIntroClient.Pose pose = NecromancerIntroClient.pose(tickDelta);
         return pose == null ? null : new Pose(pose.pos(), pose.yaw(), pose.pitch());
@@ -42,13 +44,14 @@ public final class BossIntroCamera {
     public static float fov(float fov, float tickDelta) {
         if (GuardianIntroClient.frozen()) return GuardianIntroClient.fov(fov, tickDelta);
         if (StormRocIntroClient.frozen()) return StormRocIntroClient.fov(fov, tickDelta);
+        if (PyreKingIntroClient.frozen()) return PyreKingIntroClient.fov(fov, tickDelta);
         if (NecromancerTransformClient.frozen()) return NecromancerTransformClient.fov(fov, tickDelta);
         return NecromancerIntroClient.fov(fov, tickDelta);
     }
 
-    /** The crypt's light under the Necromancer's cinematics: 1 as normal, 0 at its darkest. */
+    /** The arena's light under a cinematic that darkens it (the Necromancer's, the Pyre King's): 1 as normal, 0 at its darkest. */
     public static float arenaLight(float tickDelta) {
-        return Math.min(NecromancerIntroClient.arenaLight(tickDelta), NecromancerTransformClient.arenaLight(tickDelta));
+        return Math.min(Math.min(NecromancerIntroClient.arenaLight(tickDelta), NecromancerTransformClient.arenaLight(tickDelta)), PyreKingIntroClient.arenaLight(tickDelta));
     }
 
     /** Dim the constant ambient fill, while the soul effects and lantern pools remain readable. */
@@ -59,6 +62,7 @@ public final class BossIntroCamera {
     public static void drawCinematic(DrawContext context, RenderTickCounter counter) {
         if (GuardianIntroClient.cinematic()) GuardianIntroClient.drawCinematic(context, counter);
         else if (StormRocIntroClient.cinematic()) StormRocIntroClient.drawCinematic(context, counter);
+        else if (PyreKingIntroClient.cinematic()) PyreKingIntroClient.drawCinematic(context, counter);
         else if (NecromancerTransformClient.cinematic()) NecromancerTransformClient.drawCinematic(context, counter);
         else NecromancerIntroClient.drawCinematic(context, counter);
     }
@@ -66,6 +70,7 @@ public final class BossIntroCamera {
     public static void drawWaiting(DrawContext context) {
         GuardianIntroClient.drawWaiting(context);
         StormRocIntroClient.drawWaiting(context);
+        PyreKingIntroClient.drawWaiting(context);
         NecromancerIntroClient.drawWaiting(context);
         NecromancerTransformClient.drawWaiting(context);
     }

@@ -71,6 +71,8 @@ public class PyreKingEntity extends PathAwareEntity implements GeoEntity, WandBo
     private record HurtWindow(long until, float damage) {}
     private final Map<UUID, HurtWindow> hurtWindows = new HashMap<>();
     private boolean unboundDone;
+    /** Server: the cinematic that opens his fight, while it plays. */
+    private PyreKingIntro intro;
     /** Client: the clip start already handed to the animation controller, and the clip before it. */
     private int shownSequence = -1;
     private String shownClip = "idle";
@@ -139,8 +141,13 @@ public class PyreKingEntity extends PathAwareEntity implements GeoEntity, WandBo
     public long clipStart() { return dataTracker.get(CLIP_START); }
     /** Ticks clients blend into the current clip before its first frame. */
     public int clipBlend() { return dataTracker.get(BLEND); }
-    /** Seconds into the current clip by the world's clock; negative while clients are still blending into it. */
-    public double clipSeconds(float partialTick) { return (getEntityWorld().getTime() - clipStart() + partialTick) / 20.0; }
+    /**
+     * The moment of the current clip that shows now, by the world's clock and the clip's tempo; negative while clients
+     * are still blending into it.
+     */
+    public double clipSeconds(float partialTick) {
+        return PyreKingRules.tempo(clip()).clip((getEntityWorld().getTime() - clipStart() + partialTick) / 20.0);
+    }
     /** Where he stood, and the way he faced, when the current clip began. */
     public Vec3d clipOrigin() {
         BlockPos block = dataTracker.get(ORIGIN_BLOCK);
@@ -185,20 +192,45 @@ public class PyreKingEntity extends PathAwareEntity implements GeoEntity, WandBo
     // ── Operator controls ────────────────────────────────────────────────────
 
     @Override public boolean isBossAggressive() { return !getCommandTags().contains(PASSIVE_TAG); }
-    public void startFight() { removeCommandTag(PASSIVE_TAG); combat.start(); }
-    public void stopFight() { addCommandTag(PASSIVE_TAG); combat.cancel(); play("idle", 3); }
+    public void startFight() { dropIntro(); removeCommandTag(PASSIVE_TAG); combat.start(); }
+    public void stopFight() { dropIntro(); addCommandTag(PASSIVE_TAG); combat.cancel(); play("idle", 3); }
+
+    /**
+     * His intro: he is put on his throne in the hall whose centre this is, and the scene plays for these players.
+     * The fight starts when it ends, with him on his mark.
+     */
+    public void beginIntro(ServerWorld world, net.minecraft.util.math.BlockPos centre, java.util.List<ServerPlayerEntity> watchers) {
+        dropIntro();
+        addCommandTag(PASSIVE_TAG);
+        combat.cancel();
+        intro = new PyreKingIntro(this, world, centre, watchers, world.getTime() + 1);
+    }
+    public boolean inIntro() { return intro != null; }
+    /** For fixtures: the intro's tick, or -1 when none plays. */
+    public int introClock() { return intro == null ? -1 : intro.clock(); }
+    /** The scene has run out, or everyone skipped it: the fight. */
+    void endIntro() { intro = null; startFight(); }
+    /** An operator took over, or he is gone: the scene lets everyone go and the hall is lit again. */
+    private void dropIntro() {
+        if (intro == null) return;
+        PyreKingIntro running = intro;
+        intro = null;
+        running.cancel();
+    }
     /** Play one clip from the start and stand passive; a looping clip plays until {@link #stopRehearsal()}. */
     public boolean rehearse(String clip) {
         if (PyreKingClips.get(clip) == null) return false;
+        dropIntro();
         addCommandTag(PASSIVE_TAG);
         combat.cancel();
         play(clip, 0);
         return true;
     }
     /** Back to his guard. Whatever move was in hand is dropped with it, so nothing unseen goes on hitting. */
-    public void stopRehearsal() { combat.cancel(); play("idle", 0); }
+    public void stopRehearsal() { dropIntro(); combat.cancel(); play("idle", 0); }
     /** One move at the nearest eligible player, then passive again; used by the operator rehearsal command. */
     public boolean testMove(ServerPlayerEntity player, PyreKingRules.Move move) {
+        dropIntro();
         addCommandTag(PASSIVE_TAG);
         combat.cancel();
         return combat.testMove(player, move);
@@ -227,7 +259,7 @@ public class PyreKingEntity extends PathAwareEntity implements GeoEntity, WandBo
     public boolean damage(ServerWorld world, DamageSource source, float amount) {
         if (source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY)) return super.damage(world, source, amount);
         Entity attacker = source.getAttacker();
-        if (attacker == this) return false;
+        if (attacker == this || intro != null) return false;       // nothing reaches him while his intro plays
         if (source.isOf(DamageTypes.IN_WALL) || source.isOf(DamageTypes.DROWN) || source.isOf(DamageTypes.CRAMMING)) return false;
         if (combat.untouchable()) { combat.deflect(world); return false; }   // Unbound is a set piece; it cannot be burst down.
         // Per-attacker hurt windows: one teammate's hit must not swallow another's simultaneous spell.
@@ -284,9 +316,13 @@ public class PyreKingEntity extends PathAwareEntity implements GeoEntity, WandBo
             return;
         }
         if (isAlive()) {
-            if (isBossAggressive()) combat.tick(world);
+            if (intro != null) {
+                // The scene first (its last beat starts a Haul), then whatever move that left in hand.
+                if (!intro.tick()) intro = null;
+                else combat.tickReview(world);
+            } else if (isBossAggressive()) combat.tick(world);
             else combat.tickReview(world);
-        } else combat.cancel();
+        } else { dropIntro(); combat.cancel(); }
         dataTracker.set(FACING, getBodyYaw());
     }
 
@@ -299,7 +335,7 @@ public class PyreKingEntity extends PathAwareEntity implements GeoEntity, WandBo
     /** Every removal passes here, including a chunk unload or a portal, which skip {@link #remove}. */
     @Override
     public void onRemove(Entity.RemovalReason reason) {
-        if (getEntityWorld() instanceof ServerWorld) combat.cancel();
+        if (getEntityWorld() instanceof ServerWorld) { dropIntro(); combat.cancel(); }
         super.onRemove(reason);
     }
 
@@ -357,13 +393,19 @@ public class PyreKingEntity extends PathAwareEntity implements GeoEntity, WandBo
             protected double adjustTick(double tick) {
                 double adjusted = super.adjustTick(tick);
                 PyreKingEntity king = PyreKingEntity.this;
-                if (!king.setClock || getAnimationState() != State.RUNNING) return adjusted;
-                king.setClock = false;
+                if (getAnimationState() != State.RUNNING) return adjusted;
                 PyreKingClips.Clip clip = PyreKingClips.get(king.clip());
-                if (clip == null || clip.loop()) return adjusted;
-                double into = Math.max(0, king.getEntityWorld().getTime() - king.clipStart() - .5);      // mid-tick: the tick's fraction is not known here
-                this.tickOffset = tick - into;
-                return this.animationSpeed * into;
+                if (clip == null) return adjusted;
+                if (king.setClock) {
+                    king.setClock = false;
+                    if (!clip.loop()) {
+                        double into = Math.max(0, king.getEntityWorld().getTime() - king.clipStart() - .5);      // mid-tick: the tick's fraction is not known here
+                        this.tickOffset = tick - into;
+                        adjusted = this.animationSpeed * into;
+                    }
+                }
+                // The clip's tempo: which moment of it shows this long after it began. The server sweeps his blade by the same map.
+                return PyreKingRules.tempo(clip.name()).clip(adjusted / 20) * 20;
             }
         });
     }

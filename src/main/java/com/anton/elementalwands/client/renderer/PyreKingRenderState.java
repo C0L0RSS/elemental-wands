@@ -16,6 +16,9 @@ public class PyreKingRenderState extends LivingEntityRenderState implements GeoR
     public float aimRight, aimUp, aimAhead;
     /** For a clip that carries him: where the clip began less where he is drawn, in the clip's own axes (blocks). */
     public float carryRight, carryUp, carryAhead;
+    /** His intro: the scene's tick (-1 when none plays), how much of his own glow shows, and how far up the blade the fire has run. */
+    public double intro = -1;
+    public float ember = 1, blade = 1;
 
     @Override
     public <D> void addGeckolibData(DataTicket<D> ticket, D data) {

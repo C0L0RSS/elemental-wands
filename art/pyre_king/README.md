@@ -19,6 +19,9 @@ the model gains six empty marker bones for Unbound's chains.
 Pass 14 (November 11) adds two clips for getting round a pillar, the Haul and the Snare.
 The developer asked for the move; they have not yet seen these two clips.
 
+Pass 15 (November 11) adds his intro's two clips, `throned` and `awaken`, from the
+developer's idea for the scene. They have not yet seen them either.
+
 ## The design
 
 - **Height:** upright, he is exactly 80 px (5 blocks). In the guard pose the torso leans 6°
@@ -421,6 +424,29 @@ unless noted: the sword whips in, the right fist takes it, and the left follows 
     sword drives into the floor about 4 blocks in front of him.
   - 1.5 s: it whips back into his hand. He is back in his guard at 2.4 s, because a sword
     string follows.
+- `throned` and `awaken`: his intro. Both are authored with him standing half a block in
+  front of his throne's seat (one block high, two deep), facing down the hall.
+  - `throned` (a 10 s loop): the statue. He has slid down in the seat and leans back into
+    the throne, his head fallen forward and to his right, his right hand on the arm of the
+    throne and his left in his lap, his left leg slid out. Nothing of him moves. The sword
+    hangs point down with its pommel 34 blocks up, 1.75 blocks in front of him, turning 8°
+    each way on its chain.
+  - `awaken` (23.5 s):
+    - 0.5–1.9 s: the sword falls and drives into the floor, then shivers as it settles
+      leaning 16° back toward him.
+    - 4.5 and 5.1 s: the fingers of his right hand stir. 5.3–6.3 s: his head lifts.
+    - 6.5–8.8 s: he leans out of the throne and reaches; his fist closes on the hilt.
+    - 10 s: the game lights the blade. His head comes up, he starts to breathe, and the
+      heat lifts his cloth.
+    - 15.5–19.3 s: his left hand finds the arm of the throne and he hauls himself up on
+      the sword.
+    - 19.3–20.6 s: he draws the blade out along itself and lifts it point first into a
+      high guard, then holds it.
+    - 21.2–22.4 s: he brings it down into his guard, both hands on it from 21.6 s.
+  - The flat of the stuck blade faces the one way, of every roll about it, that his
+    reaching wrist is easiest in, seated and standing.
+  - The camera, the web of chains, the hall's fires and its light are not in these clips:
+    `intro/build_intro.py` owns them.
 - `unbound`: the phase change, 4.3 s.
   - 0–0.64 s: he raises the sword and cuts down into the floor with the overhead cut.
   - 0.64–0.95 s: he leans on the hilt and drives the blade in at an angle, kneeling behind

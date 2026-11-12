@@ -588,6 +588,9 @@ def build_piers(lay):
 
 # ---------------------------------------------------------------- the throne end
 
+THRONE_SEAT_FRONT = -52      # the seat's front row of cells; its top is one block above the platform
+
+
 def build_throne(lay, rng):
     # Dais: 19 wide, steps up from the gallery, platform at 6 running back into the apse.
     for x in range(-9, 10):
@@ -610,7 +613,9 @@ def build_throne(lay, rng):
                 top = 'cracked_polished_blackstone_bricks'
             lay.put(x, 6, z, top)
     # The throne, sized for a five-block king: a tall pointed back edged all round in gold,
-    # a crown on it, and a broad seat between solid arms.
+    # a crown on it, and a seat between solid arms that he can sit in (his intro opens with
+    # him slumped on it). His knees are a block above the floor and his elbows two, so the
+    # seat is one block high, three wide and two deep, and the arms stand one above it.
     put = lambda x, y, z, s: (lay.put(x, y, z, s), lay.put(-x, y, z, s))
     half = {y: 4 for y in range(7, 22)} | {22: 3, 23: 3, 24: 2, 25: 1, 26: 0}   # y -> half-width of the back
 
@@ -630,27 +635,22 @@ def build_throne(lay, rng):
                 else:
                     state = 'polished_blackstone'
                 put(x, y, z, state)
-    # The seat, five wide and two high, its front edge gold.
-    for x in range(0, 3):
-        for z in range(-53, -49):
-            put(x, 7, z, 'polished_blackstone')
-            put(x, 8, z, 'polished_blackstone')
-        put(x, 7, -50, 'chiseled_polished_blackstone')
-        put(x, 8, -50, 'gold_block')
+    # The seat, its front edge gold.
+    for x in range(0, 2):
+        put(x, 7, -53, 'polished_blackstone')
+        put(x, 7, THRONE_SEAT_FRONT, 'gold_block')
     # Solid arms, gold capped at the front.
-    for z in range(-53, -49):
-        for y in range(7, 11):
-            put(3, y, z, 'polished_blackstone_bricks' if y < 10 else 'polished_blackstone')
-    for y in range(7, 10):
-        put(3, y, -50, 'chiseled_polished_blackstone')
-    put(3, 10, -50, 'gold_block')
+    put(2, 7, -53, 'polished_blackstone_bricks')
+    put(2, 8, -53, 'polished_blackstone')
+    put(2, 7, THRONE_SEAT_FRONT, 'chiseled_polished_blackstone')
+    put(2, 8, THRONE_SEAT_FRONT, 'gold_block')
     # Gold that melted off it ran from the seat's foot down the dais in two clean runs; one
     # reached the floor and froze in a small pool.
     for _ in range(23):
         rng.choice((-1, 0, 0, 1))   # the old runs' draws, so the rest of the stream is unchanged
     steps = {-45: 5, -44: 4, -43: 3, -42: 2, -41: 1, -40: 0}
     for x, last in ((-2, -40), (3, -43)):
-        for z in range(-49, last + 1):
+        for z in range(THRONE_SEAT_FRONT + 1, last + 1):
             y = steps.get(z, 6)
             if x == 3 and z <= -46:
                 x_here = 2   # it slid off the arm's foot and ran out beside it

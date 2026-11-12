@@ -575,6 +575,57 @@ the developer's direction made it melee first.
   - **Proposed:** the Nether fortresses were his kingdom's roads. The piglins' love of
     gold began with the gold they picked from his ashes.
 
+#### The first playtest (Nov 11)
+
+The developer fought him in Lunar with a level 1 Space wand, all abilities unlocked, and won
+on the second try. "The fight is pretty clean, but it's really easy."
+
+- **Too slow.** "His overall speed in terms of the speed between his attacks just has to be
+  faster."
+- **No melee against a ranged player.** "Most players aren't really playing close range, he
+  wasn't really doing any melee attacks. It was just different variations of him throwing
+  the sword, and the sword throw was very slow. So it wasn't hard to dash."
+- **The spin is easy to leave.** "During the spin maneuver, the little pause that he does
+  in between, it was really easy to get out. I don't think I got hit by it once."
+- **The Haul is liked.** "Him pulling himself with a chain was a really good move."
+- **Decided:** his fire on the floor is regular vanilla fire, not a custom flat texture.
+  "The 2D textures don't really fit in that well in a 3D environment."
+- **Built the same day, not yet played:** a tempo for every clip, shorter gaps, more
+  chained strings, more Lunges and Hooks at range, and fire as blocks. See
+  [Pyre King](reference/pyre-king.md#the-fight). His health and damage are unchanged.
+
+#### The second playtest (Nov 11)
+
+After the pace was raised the developer fought him again: "it was really good."
+
+- **The Chain Scythe up close.** "It is impossible to dodge that at close range. So I think it
+  has to either be removed or changed." Changed the same day, not yet played: it strikes only
+  out where its blade swings (5 blocks or more from him), so a player close in is under the
+  chain, and he no longer uses it on a player within 6.5 blocks. Jumping the low swing and
+  crouching under the high one still work further out.
+- **The hall's blocks** should be as indestructible as the other arenas'. The way they were
+  not was the time after a win: nothing sent the player home. Survival players already could
+  not break them; now mining one does not even start.
+- **Decided:** a win sends everyone home, as in the other arenas. Built the same day: ten
+  seconds after he dies.
+
+#### Summoning and the intro (Nov 11)
+
+- **Decided:** players reach him at a burned gatehouse of his kingdom in the Nether, by
+  right-clicking something there, as the Storm Roc's gong is struck. Not built yet.
+- **Decided:** his intro is the developer's own idea. He sits slumped on his throne like a
+  statue. Chains are webbed round the whole throne room and round him, and the greatsword
+  hangs from the ceiling on one of them, high above and just in front of him. The chains
+  burn and go loose, the sword falls and digs into the floor in front of him, a close-up
+  shows his hand reaching and gripping the hilt, and everything takes fire: the sword and
+  the hall. "This is my general overview idea, we can change it a lot later."
+- **Decided:** it should be long. The other intros run over 30 seconds and there is no time
+  limit: "I would rather have a long intro that is cool and feels the impact instead of an
+  intro that looks super sped up."
+- **Built (Nov 11), first pass, not yet seen by the developer:** 58 seconds, started by an
+  operator command. See [Pyre King](reference/pyre-king.md#the-intro).
+- **Open:** what the player does to set the chains burning. For now the scene simply begins.
+
 #### Decided for the fight (Nov 10)
 
 The developer settled these before the first pass was built. Where they differ from the

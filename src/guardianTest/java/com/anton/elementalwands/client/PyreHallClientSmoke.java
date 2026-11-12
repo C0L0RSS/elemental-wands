@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.util.UUID;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.util.ScreenshotRecorder;
@@ -34,7 +35,9 @@ import org.lwjgl.glfw.GLFW;
  * to be laid out, /ew hall summon, checks the realm, the floor under the arrival and the king, the
  * barrier ring and lid, the lava sea and the king on his mark, photographs ten viewpoints, then the
  * sea again at render distances 8, 12 and 16 and under a server that sends only 8 (each once the
- * client has built what it draws), a brazier from the gallery, then /ew hall leave and checks the player is back where they started. Hidden window, muted before the
+ * client has built what it draws), a brazier from the gallery, then /ew hall leave and checks the player is back where they started.
+ * Then in again: a Survival player cannot so much as start mining the floor, and ten seconds after the Pyre King dies the
+ * hall sends the player back where they entered. Hidden window, muted before the
  * world loads. Screenshots land in build/pyre-hall-client-smoke/screenshots/; they are not a Lunar look.
  */
 public final class PyreHallClientSmoke implements ClientModInitializer {
@@ -70,7 +73,9 @@ public final class PyreHallClientSmoke implements ClientModInitializer {
     private volatile String pillarNote = "";
     private final java.util.List<String> seaNotes = new java.util.ArrayList<>();
     private volatile String serverFailure;
-    private volatile boolean entered, checked, home;
+    private volatile boolean entered, checked, home, summoned, won;
+    private volatile int wonAt;
+    private volatile String victoryNote = "";
     private volatile String startDimension, lightNote = "";
     private volatile Vec3d start;
 
@@ -220,11 +225,59 @@ public final class PyreHallClientSmoke implements ClientModInitializer {
                         home = true;
                     });
                     if (!home) return;
+                    home = false;
+                    next();
+                }
+                case 8 -> { // in again; the floor will not break; he dies, and ten seconds later the hall sends the player home
+                    int t = ++scene;
+                    if (t == 1) onServer(server, () -> run(server, player(server, uuid), "ew hall enter"));
+                    if (t > 900) throw new AssertionError("The victory check never finished");
+                    if (t < 20) return;
+                    if (!won) {
+                        if (!inHall) return;
+                        if (!summoned) { summoned = true; onServer(server, () -> run(server, player(server, uuid), "ew hall summon")); return; }
+                        won = true;
+                        onServer(server, () -> {
+                            var p = player(server, uuid);
+                            ServerWorld hall = (ServerWorld) p.getEntityWorld();
+                            BlockPos centre = PyreHall.nearestCentre(p.getEntityPos());
+                            p.changeGameMode(GameMode.SURVIVAL);
+                            BlockPos floor = PyreHall.cell(centre, 3, 0, 30);
+                            var before = hall.getBlockState(floor);
+                            require(!before.isAir(), "No floor block at layout 3,0,30 to try to break");
+                            require(AttackBlockCallback.EVENT.invoker().interact(p, hall, net.minecraft.util.Hand.MAIN_HAND, floor, net.minecraft.util.math.Direction.UP)
+                                    == net.minecraft.util.ActionResult.FAIL, "A Survival player could start mining the hall's floor");
+                            p.interactionManager.tryBreakBlock(floor);
+                            require(hall.getBlockState(floor).equals(before), "A Survival player broke the hall's floor: " + hall.getBlockState(floor));
+                            var kings = hall.getEntitiesByClass(PyreKingEntity.class, PyreHall.footprint(centre), e -> e.isAlive());
+                            require(kings.size() == 1, "Expected one Pyre King to defeat, found " + kings.size());
+                            kings.get(0).kill(hall);
+                            wonAt = server.getTicks();
+                        });
+                        return;
+                    }
+                    if (wonAt == 0) return;
+                    if (inHall) {
+                        if (server.getTicks() - wonAt > 260) throw new AssertionError("Still in the hall " + (server.getTicks() - wonAt) + " ticks after the Pyre King died");
+                        return;
+                    }
+                    if (!home) onServer(server, () -> {
+                        var p = player(server, uuid);
+                        int after = server.getTicks() - wonAt;
+                        require(after >= 195, "Sent home only " + after + " ticks after he died; the hall waits ten seconds");
+                        String dimension = p.getEntityWorld().getRegistryKey().getValue().toString();
+                        require(dimension.equals(startDimension) && p.getEntityPos().distanceTo(start) < 1,
+                                "After the win, sent to " + dimension + " " + fmt(p.getEntityPos()) + ", entered from " + startDimension + " " + fmt(start));
+                        victoryNote = "a Survival player could not start mining the floor; " + after / 20.0 + " s after the Pyre King died the hall sent the player back to where they entered";
+                        home = true;
+                    });
+                    if (!home) return;
                     Files.writeString(Path.of("PYRE_HALL_CLIENT_PASSED.txt"), "Entered elementalwands:pyre_hall by /ew hall enter, slot laid out; "
                             + "solid floor under the arrival and the king, barrier ring and lid, lava sea at its contract height; "
                             + "/ew hall summon stood one Pyre King on his mark facing south; " + pillarNote + lightNote + (VIEWS.length + SEA.length + 1)
                             + " screenshots in screenshots/ (" + SEA.length + " of them the sea again once built: " + String.join("; ", seaNotes)
-                            + "; the last a brazier from the gallery); /ew hall leave returned to " + startDimension + " " + fmt(start) + ".\n");
+                            + "; the last a brazier from the gallery); /ew hall leave returned to " + startDimension + " " + fmt(start) + "; then in again, "
+                            + victoryNote + ".\n");
                     done = true; c.scheduleStop();
                 }
                 default -> {}

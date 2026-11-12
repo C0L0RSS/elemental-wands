@@ -51,6 +51,7 @@ public class ElementalWandsClient implements ClientModInitializer {
         SpaceParticleFactories.registerAll();
         BlockRenderLayerMap.putBlock(ModSpellBlocks.INFERNO_FLAME, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModSpellBlocks.PYRE_FLAME, BlockRenderLayer.CUTOUT);
+        BlockRenderLayerMap.putBlock(ModSpellBlocks.PYRE_KING_FIRE, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModSpellBlocks.STONE_SPIKE, BlockRenderLayer.CUTOUT);
         for (var relic : com.anton.elementalwands.registry.ModBlocks.SUMMIT_RELICS) BlockRenderLayerMap.putBlock(relic, BlockRenderLayer.CUTOUT);
         EntangleClientEffects.register();
@@ -133,6 +134,7 @@ public class ElementalWandsClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.GUARDIAN_INTRO_ZOMBIE, com.anton.elementalwands.client.renderer.GuardianIntroZombieRenderer::new);
         com.anton.elementalwands.client.GuardianIntroClient.init();
         com.anton.elementalwands.client.StormRocIntroClient.init();
+        com.anton.elementalwands.client.PyreKingIntroClient.init();
         com.anton.elementalwands.client.GuardianPullClient.init();
         EntityRendererRegistry.register(ModEntities.HOLLOW_CRAWLER, context -> new com.anton.elementalwands.client.renderer.HollowUndeadRenderer<>(context, "hollow_crawler", .6f));
         EntityRendererRegistry.register(ModEntities.HOLLOW_ARCHER, context -> new com.anton.elementalwands.client.renderer.HollowUndeadRenderer<>(context, "hollow_archer", .4f));

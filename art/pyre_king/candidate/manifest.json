@@ -808,6 +808,28 @@
         0.0,
         0.0
       ]
+    },
+    "throned": {
+      "length": 10.0,
+      "loop": true,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "awaken": {
+      "length": 23.5,
+      "loop": false,
+      "ground_speed": 0,
+      "end_turn_degrees": 0,
+      "end_offset_blocks": [
+        0.0,
+        0.0,
+        0.0
+      ]
     }
   },
   "preview_rendering": "Shared effects.js samples posed sockets: a low overlapping flame roots on the blade's upper edge at every socket, making one continuous fringe, and five taller peaks break the silhouette. Still flames stand upright in world space. As the blade moves, it re-poses the clip at a few earlier moments (carried back by the body's own travel for a walk or run played in place): each flame lies back along the path its root just travelled, never shorter than it stands still and never hanging below the blade, and a fast blow leaves one sheet of fire across the arc the blade swept, faded in from the blade, tinted and glowing additively. Slow moves only lean the fire, everything settles upright within a fraction of a second after the blade stops, and a teleport or parent switch is never traced. No flame geometry in either sword export.",

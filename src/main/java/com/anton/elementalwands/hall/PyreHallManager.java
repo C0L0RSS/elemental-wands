@@ -21,9 +21,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.zip.CRC32;
+import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.minecraft.block.Block;
@@ -59,7 +61,8 @@ import org.slf4j.LoggerFactory;
  * the Pyre King in it. Slots are laid out from the builder's tiles one per tick the first time they
  * are used and reused afterwards; a changed layout moves to fresh ground. Return points are saved
  * before anyone moves. A player who leaves the fight floor is set back at the arrival, nothing drops
- * if one dies here, and nobody but a Creative player edits the hall.
+ * if one dies here, and nobody but a Creative player edits the hall. Ten seconds after the Pyre King
+ * dies, everyone in his slot who came in through the hall is sent back to where they entered.
  */
 public final class PyreHallManager {
     private PyreHallManager() {}
@@ -97,11 +100,15 @@ public final class PyreHallManager {
     /** Players sliding off a pillar: their fall is forgiven until they stand on the floor. */
     private static final Set<UUID> slipping = new HashSet<>();
     private static boolean internalTeleport;
+    /** Ten seconds after he dies, as in the other bosses' realms, the hall sends the victors home. */
+    private static final int VICTORY_DELAY = 200;
+    /** Slot centres whose king has died, and the server tick at which their players are sent home. */
+    private static final Map<BlockPos, Integer> releases = new HashMap<>();
 
     public static void init() {
         ServerLifecycleEvents.SERVER_STARTED.register(PyreHallManager::load);
         ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resources, success) -> layout = fingerprint(server));
-        ServerLifecycleEvents.SERVER_STOPPED.register(server -> { state = null; path = null; builds.clear(); kept.clear(); });
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> { state = null; path = null; builds.clear(); kept.clear(); releases.clear(); });
         ServerTickEvents.END_SERVER_TICK.register(PyreHallManager::tick);
         ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) -> {
             // The set is lost on a restart; the body still lying in the hall is what survives a quit from the death screen.
@@ -111,6 +118,11 @@ public final class PyreHallManager {
             newPlayer.totalExperience = oldPlayer.totalExperience;
             newPlayer.experienceProgress = oldPlayer.experienceProgress;
         });
+        ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
+            if (entity instanceof PyreKingEntity king && inRealm(king) && state != null) victory(king);
+        });
+        // Not even a crack: mining a block of the hall never starts (on the client as well, so nothing flickers).
+        AttackBlockCallback.EVENT.register((player, world, hand, pos, direction) -> restricted(world, player) ? ActionResult.FAIL : ActionResult.PASS);
         PlayerBlockBreakEvents.BEFORE.register((world, player, pos, block, entity) -> !restricted(world, player));
         UseBlockCallback.EVENT.register((player, world, hand, hit) -> {
             Item item = player.getStackInHand(hand).getItem();
@@ -201,6 +213,26 @@ public final class PyreHallManager {
                 + ". He fights anyone in Survival or Adventure who comes near; /ew pyreking calm stops him.";
     }
 
+    /**
+     * Removes any Pyre King in the slot, seats a new one on his throne and plays his intro for everyone in the hall
+     * who is alive and not spectating. The fight follows it.
+     */
+    public static String intro(ServerPlayerEntity player) {
+        if (!inRealm(player)) return "Enter the hall first with /ew hall enter.";
+        ServerWorld realm = (ServerWorld) player.getEntityWorld();
+        BlockPos centre = PyreHall.nearestCentre(player.getEntityPos());
+        realm.getEntitiesByClass(PyreKingEntity.class, PyreHall.footprint(centre), e -> true).forEach(Entity::discard);
+        PyreKingEntity king = ModEntities.PYRE_KING.create(realm, SpawnReason.COMMAND);
+        if (king == null) return "Could not create the Pyre King.";
+        Vec3d at = PyreHall.king(centre);
+        king.refreshPositionAndAngles(at.x, at.y, at.z, PyreHall.KING_YAW, 0);
+        realm.spawnEntity(king);
+        List<ServerPlayerEntity> watchers = realm.getPlayers(p -> p.isAlive() && !p.isSpectator() && PyreHall.footprint(centre).contains(p.getEntityPos()));
+        king.beginIntro(realm, centre, watchers);
+        return "The Pyre King sits on his throne and his intro plays for " + watchers.size() + (watchers.size() == 1 ? " player" : " players")
+                + ". Hold Sneak to skip it; the fight follows.";
+    }
+
     /** Clears the slot's entities (not players) and lays its tiles out again. */
     public static String reset(ServerPlayerEntity player) {
         if (!inRealm(player)) return "Stand in the hall slot you want to reset.";
@@ -213,6 +245,29 @@ public final class PyreHallManager {
         if (slot < 0) return "Cleared " + leftovers.size() + " entities. This slot is from an older layout, so it was not laid out again.";
         Build build = build(realm, slot);   // a slot already being laid out just carries on
         return "Cleared " + leftovers.size() + " entities; laying out " + build.tiles.size() + " sections of slot " + slot + " again.";
+    }
+
+    // ------------------------------------------------------------------ victory
+
+    /** He died in his hall: everyone in his slot hears that they will be sent home, and ten seconds later they are. */
+    private static void victory(PyreKingEntity king) {
+        ServerWorld realm = (ServerWorld) king.getEntityWorld();
+        BlockPos centre = PyreHall.nearestCentre(king.getEntityPos());
+        if (releases.containsKey(centre)) return;
+        releases.put(centre, realm.getServer().getTicks() + VICTORY_DELAY);
+        for (ServerPlayerEntity player : realm.getPlayers(p -> PyreHall.footprint(centre).contains(p.getEntityPos())))
+            player.sendMessage(Text.literal("The Burned Throne Hall releases you in 10 seconds."), false);
+    }
+
+    /**
+     * Sends home everyone in the slot who came in through the hall and is standing in it (alive and connected). As in
+     * the other realms, anyone without a recorded way back, such as an operator who teleported in, is left alone.
+     */
+    private static void release(MinecraftServer server, ServerWorld realm, BlockPos centre) {
+        for (ServerPlayerEntity player : realm.getPlayers(p -> PyreHall.footprint(centre).contains(p.getEntityPos()))) {
+            if (!player.isAlive() || player.networkHandler.player != player || !state.returns.containsKey(player.getUuidAsString())) continue;
+            if (sendHome(player)) player.sendMessage(Text.literal("You leave the Burned Throne Hall."), true);
+        }
     }
 
     // ------------------------------------------------------------------ moving players
@@ -308,6 +363,11 @@ public final class PyreHallManager {
     private static void tick(MinecraftServer server) {
         ServerWorld realm = realm(server);
         if (realm == null || state == null) return;
+        releases.entrySet().removeIf(release -> {
+            if (server.getTicks() < release.getValue()) return false;
+            release(server, realm, release.getKey());
+            return true;
+        });
         // One 48x48 section per tick lays out a fresh slot in about a second without a long stall.
         for (var it = builds.values().iterator(); it.hasNext(); ) {
             Build build = it.next();

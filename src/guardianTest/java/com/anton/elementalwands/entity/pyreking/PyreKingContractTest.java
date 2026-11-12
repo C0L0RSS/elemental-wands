@@ -47,7 +47,54 @@ public final class PyreKingContractTest {
         require(PyreKingRules.flankWeights(true, true, false, Move.HAUL).get(Move.HAUL) < all.get(Move.HAUL)
                 && PyreKingRules.flankWeights(true, false, false, Move.HAUL).get(Move.HAUL).equals(all.get(Move.HAUL))
                 && PyreKingRules.flankWeights(false, false, false, null).isEmpty(), "He varies his flanks when he has more than one");
-        require(PyreKingRules.RUN < 5.6 && PyreKingRules.RUN > 4.3 && PyreKingRules.RUN_TWO < 5.6, "He must be slower than a sprint and faster than a player backing away");
+        require(PyreKingRules.RUN < 5.6 && PyreKingRules.RUN > 5 && PyreKingRules.RUN_TWO < 5.6 && PyreKingRules.RUN_TWO >= PyreKingRules.RUN,
+                "He must be a little slower than a sprint, and no slower than that");
+        require(near(PyreKingRules.tempo("run").clip(1), PyreKingRules.RUN / PyreKingRules.RUN_AUTHORED), "His run clip should stride at the speed he runs");
+
+        // The Chain Scythe up close (the developer's second playtest, Nov 11: "impossible to dodge at close range").
+        require(!PyreKingRules.scytheReaches(PyreKingRules.HOLD, .3) && !PyreKingRules.scytheReaches(4, .3) && PyreKingRules.scytheReaches(6.5, .3),
+                "The Scythe should strike only out where its blade swings, not a player standing close to him");
+        for (double d : new double[]{1, 3, 5, 6.5})
+            for (boolean jumped : new boolean[]{false, true}) {
+                Map<Move, Double> near = PyreKingRules.weights(new Read(d, false, false, false, jumped, false, true, d > 3), null, null);
+                require(!near.containsKey(Move.SCYTHE_LOW) && !near.containsKey(Move.SCYTHE_HIGH), "He should not use the Scythe on a player " + d + " blocks away");
+            }
+
+        // Tempo: the pace the developer's playtest asked for (Nov 11), set without baking the clips again.
+        for (PyreKingClips.Clip clip : PyreKingClips.ALL) {
+            PyreKingRules.Tempo tempo = PyreKingRules.tempo(clip.name());
+            double last = -1;
+            for (double seconds = 0; seconds <= clip.seconds(); seconds += .05) {
+                double moment = tempo.clip(seconds);
+                require(moment > last && near(tempo.seconds(moment), seconds), clip.name() + "'s tempo should run forward and turn back into the same time");
+                require(moment >= seconds - 1e-9, clip.name() + " should never play slower than it was made");
+                last = moment;
+            }
+            require(near(tempo.clip(-.1), -.1), "Before a clip begins its time is the blend's own");
+        }
+        for (String plain : new String[]{"haul", "snare", "unbound", "drag_down", "throned", "awaken", "idle"})
+            require(PyreKingRules.tempo(plain).plain(), plain + " should play as it was made");
+        require(Move.CAST.seconds(Move.CAST.free) < 2.2, "A Cast should cost him about two seconds, not four");
+        require(Move.CAST.seconds(3.45) - Move.CAST.seconds(1.3) < .5, "He should stand with the sword out for under half a second");
+        for (Move move : new Move[]{Move.CAST, Move.HOOK, Move.LUNGE}) {
+            // A throw is judged where it ends, at range; the Lunge where its cut begins.
+            double warned = move.seconds(move == Move.LUNGE ? move.windows.get(0).from() : move.windows.get(0).to()) - move.seconds(move.aimUntil);
+            require(warned >= .25 && warned <= (move == Move.LUNGE ? .8 : .5), move + " should fix its aim late enough that a dash must be timed, with a fair warning: " + warned);
+        }
+        // The pause before the spinning cut "was really easy to get out" of: from landing to the cut is now a moment.
+        for (Move move : new Move[]{Move.ZIP, Move.LUNGE}) {
+            PyreKingTracks.Track track = PyreKingTracks.get(move.clip);
+            double landed = 0;
+            while (track.travel(landed) < track.travelEnd() - .05) landed += .01;
+            double pause = move.seconds(move.windows.get(0).from()) - move.seconds(landed);
+            require(pause >= 0 && pause < .2, move + " should cut within a fifth of a second of landing, not " + pause);
+            require(PyreKingRules.closes(move), move + " brings him to his target, so he presses at once");
+        }
+        for (int i = 0; i <= 10; i++) {
+            double roll = i / 10.0 * .999;
+            require(PyreKingRules.gap(false, () -> roll) <= 8 && PyreKingRules.gap(false, () -> roll) >= 3 && PyreKingRules.gap(true, () -> roll) <= 3,
+                    "His gap between strings should be under half a second, and next to nothing in phase two");
+        }
 
         // Every move is a real clip with tracks, and everything it does happens inside that clip.
         for (Move move : Move.values()) {
@@ -62,13 +109,14 @@ public final class PyreKingContractTest {
                 require(window.from() >= move.aimUntil, move + " can hit before its aim freezes");
                 end = window.to();
             }
-            // The opening after his last blow is tight, as the developer asked: under a second (Unbound is a set piece).
+            // The opening after his last blow is tight, as the developer asked, and tighter since their playtest (Nov 11):
+            // about half a second (Unbound is a set piece).
             if (move != Move.UNBOUND && move != Move.CAST && !move.hooks() && move != Move.HAUL)
-                require(move.free - move.lastBlow() <= 1.0 + 1e-6 && move.free - move.lastBlow() >= .4, move + " should leave an opening of 0.4 to 1 s, not " + (move.free - move.lastBlow()));
+                require(move.opening() <= .7 + 1e-6 && move.opening() >= .3, move + " should leave an opening of 0.3 to 0.7 s, not " + move.opening());
             for (double cue : move.cues) require(cue >= 0 && cue < move.lastBlow(), move + " warns after its last blow");
             // A blow that needs a warning gets one at least 0.3 s before it can land.
             if (!move.windows.isEmpty() && move != Move.ZIP)
-                require(move.cues.length > 0 && move.windows.get(0).from() - move.cues[0] >= .3, move + " lands without a warning");
+                require(move.cues.length > 0 && move.seconds(move.windows.get(0).from()) - move.seconds(move.cues[0]) >= .28, move + " lands without a warning");
         }
         // The thrown sword's aim: none in his hand, all of it where it sticks, and his body takes it over a haul.
         for (String clip : new String[]{"cast_reel", "hook", "lunge", "drag_down", "haul", "snare"}) {
@@ -89,6 +137,34 @@ public final class PyreKingContractTest {
         double[] stick = PyreKingAim.get("cast_reel").stick();
         require(near(stick[1], 0) && stick[2] > 11.5 && stick[2] < 12.5, "The Cast's sword should meet the floor about 12 blocks out");
 
+        // His intro: the baked scene and his two clips share one clock, and the camera stays in the hall.
+        PyreKingIntroTrack scene = PyreKingIntroTrack.get();
+        require(scene.length() == scene.beat("length") && scene.length() >= 600, "His intro should be long, and as long as its last beat says");
+        require(Math.round(PyreKingClips.get("awaken").seconds() * 20) == scene.beat("haul") - scene.beat("awaken"), "awaken must end as the last Haul begins");
+        require(PyreKingClips.get("throned").loop() && scene.beat("awaken") % Math.round(PyreKingClips.get("throned").seconds() * 20) == 0,
+                "The statue's loop must end as awaken begins");
+        require(scene.beat("pulse") < scene.beat("burn") && scene.beat("burn") < scene.beat("fall") && scene.beat("fall") < scene.beat("struck")
+                && scene.beat("struck") < scene.beat("grasp") && scene.beat("grasp") < scene.beat("ignite") && scene.beat("ignite") < scene.beat("braziers")
+                && scene.beat("braziers") < scene.beat("lit") && scene.beat("lit") <= scene.beat("rise") && scene.beat("rise") < scene.beat("title")
+                && scene.beat("title_end") <= scene.beat("haul") && scene.beat("haul") < scene.beat("landed") && scene.beat("landed") < scene.beat("return")
+                && scene.beat("return") < scene.beat("length"), "His intro's beats are out of order");
+        require(scene.chains().length >= 15, "His intro needs its web of chains");
+        for (PyreKingIntroTrack.Chain chain : scene.chains())
+            require(chain.heat() < chain.parts() && chain.parts() <= scene.beat("fall") && chain.gone() < scene.beat("ignite") && chain.a().distanceTo(chain.b()) > 1,
+                    "Every chain must heat, part by the time the sword falls, and be ash before the blade lights");
+        require(java.util.Arrays.stream(scene.chains()).filter(PyreKingIntroTrack.Chain::sword).count() == 1, "One chain holds the sword");
+        require(scene.flames().length >= 300, "The hall's fires and their lights should be in the track");
+        for (PyreKingIntroTrack.Flame flame : scene.flames())
+            require(flame.tick() >= scene.beat("braziers") && flame.tick() <= scene.beat("lit"), "A fire catches outside the wave: " + flame);
+        for (int t = 0; t <= scene.length(); t++) {
+            net.minecraft.util.math.Vec3d eye = scene.eye(t);
+            require(Math.hypot(eye.x, eye.z) < 60 && eye.y > 1.3 && eye.y < 62 && scene.fov(t) >= 25 && scene.fov(t) <= 75 && Math.abs(scene.pitch(t)) < 89,
+                    "The intro's camera leaves the hall or loses its lens at tick " + t + ": " + eye);
+        }
+        require(scene.dark(0) == 1 && scene.dark(scene.length()) == 0 && scene.ember(0) == 0 && scene.ember(scene.length()) == 1
+                && scene.blade(scene.beat("ignite")) == 0 && scene.blade(scene.length()) == 1, "The hall starts dark and he cold; both end lit");
+        require(scene.mark().distanceTo(new net.minecraft.util.math.Vec3d(.5, 1, .5)) < 1e-6 && scene.seat().z < -45, "He ends on his mark and starts at his throne");
+
         // The chooser: distance picks the family, reads tilt it, and he never repeats a string three times.
         Random random = new Random(7);
         Read close = new Read(4, false, false, false, false, false, true, false), behind = new Read(4, false, true, false, false, false, true, false);
@@ -105,7 +181,10 @@ public final class PyreKingContractTest {
         require(share(mid, Move.SCYTHE_LOW, random) > share(mid, Move.SCYTHE_HIGH, random), "The low Scythe is the usual one");
         require(share(jumper, Move.SCYTHE_HIGH, random) > share(jumper, Move.SCYTHE_LOW, random) * 3, "Jumping should draw the high Scythe");
         require(share(retreat, Move.THRUST, random) > .4, "Backing straight away should draw the Thrust");
-        require(share(far, Move.CAST, random) > .5 && share(distant, Move.HOOK, random) > .5, "Far targets draw the Cast, very far ones the Hook");
+        require(share(far, Move.CAST, random) > share(far, Move.LUNGE, random) && share(far, Move.LUNGE, random) > share(far, Move.HOOK, random)
+                && share(distant, Move.HOOK, random) > .5, "Far targets draw the Cast most, very far ones the Hook");
+        // A player who keeps their distance is brought to sword range (the developer's playtest, Nov 11: at range he only threw).
+        require(share(far, Move.LUNGE, random) + share(far, Move.HOOK, random) > .45, "Far targets should often draw a move that closes the distance");
         require(PyreKingRules.choose(hidden, null, null, random::nextDouble) == null
                 && PyreKingRules.weights(new Read(10, false, false, false, false, false, false, false), null, null).isEmpty()
                 && PyreKingRules.weights(new Read(4, false, true, false, false, true, false, true), null, null).isEmpty(),

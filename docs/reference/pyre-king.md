@@ -21,6 +21,7 @@ He fights any Survival or Adventure player who comes within 34 blocks.
 | `/ew pyreking move <name>` | He uses that one move on you, then stands passive. It only hurts in Survival or Adventure. |
 | `/ew pyreking unbound` | The phase change starts as soon as his move in hand allows. He must be fighting. |
 | `/ew pyreking status` | His phase, move, health and fires. |
+| `/ew pyreking intro` | In his hall only. Replaces any Pyre King there with one on his throne and plays [his intro](#the-intro) for everyone in the hall. The fight follows. |
 | `/ew pyreking <clip>` | He plays that clip from the start and stands passive. `walk` and `run` loop. |
 | `/ew pyreking stop` | He returns to his guard. |
 
@@ -45,6 +46,9 @@ blow lands where and when it is drawn.
   - a **cut** reaches down to the floor under the blade, and no deeper;
   - a **low sweep** misses feet 0.6 or more above his floor (jump it);
   - a **high sweep** misses a body under 1.55 tall (crouch);
+  - both sweeps are the Chain Scythe's, and it strikes only bodies that reach 5 blocks or more
+    from him, out where its blade swings. Closer in a player is under the chain (the
+    developer's second playtest, Nov 11: up close it was "impossible to dodge");
   - a **thrown sword** hits only where it really is.
 - **One mistake, one hit.** A combo is a run of blows less than 1.2 s apart. A player takes
   at most one heavy hit (24 or more) per combo.
@@ -54,21 +58,36 @@ blow lands where and when it is drawn.
   shelters them from his blade in hand, the Chain Scythe, the Cast's pull-back, the Hook
   and the Snare. Unbound's chains and his lines of fire already stopped at stone.
 
-**Moves.** Times are seconds into the clip. "Free" is when he may act again.
+**Pace.** The clips are baked art, and each is played at its own tempo: a table in
+`PyreKingRules` says how fast each part of a clip runs. The server sweeps his blade by that
+table and every client draws him by it, so a blow still lands where it is drawn. Changing
+the pace of the fight is a change to that table; the clips are not baked again.
+
+- The developer's first playtest (Nov 11) found him slow: at range he only threw his sword,
+  the throw was easy to dash, the pause before the spinning cut was easy to walk out of, and
+  he took too long between attacks. The tempo table is the answer to that.
+- Sword strings play 12% faster, and the return to his guard after the last blow 60% faster.
+- The Cast's wind-up plays 40% faster. He stood 2.2 s with the sword out; now 0.44 s.
+- The Zip and the Lunge cut 0.1 s after he lands (it was 0.22 s), and the wait before the
+  chain takes him is cut.
+- The Haul, the Snare, Drag Down, Unbound and the intro's clips play as they were made.
+
+**Moves.** Times are seconds from the start of the move, as it plays. "Free" is when he may
+act again.
 
 | Move | Warning | Can hit | Free | Notes |
 | --- | --- | --- | --- | --- |
-| Royal Cut | 0.55, 1.38 | 0.88–1.17, 1.73–2.07 | 2.95 | Tracks until 0.75, steps in up to 1.5; the backhand may turn 45° toward the dodge |
-| Royal Cut (three) | + 2.25 | + 2.6–2.8 | 3.65 | Phase two. If an earlier blow landed he calls the third off and is free at 2.95; it leaves a 12-block line of fire |
-| Thrust | 0.35 | 0.8–0.97 | 1.85 | Aim freezes at 0.35; he drives 2.4 forward, so it reaches about 8 |
-| Turning Cut | 0.25 | 0.68–0.86 | 1.75 | Cuts the half behind him and ends turned about |
-| Overhead | 0.25 | 0.7–0.87 | 1.75 | Aim freezes at 0.5; a line straight ahead, about 7.5 long |
-| Chain Scythe, low | 0.2 | 0.7–1.17 | 2.1 | Chain and blade round him to 14; jump |
-| Chain Scythe, high | 0.2 | 0.64–1.15 | 2.1 | The same at head height; crouch |
-| Cast | 0.47 | 0.87–1.26 (throw), 3.48–3.8 (pull-back) | 4.25 | Aim freezes at 0.47 and leads a moving target. Two separate tests |
-| Zip | ring | 1.22–1.64 | 2.55 | Follows a Cast: the chain hauls him to the sword and he spins into a cut |
-| Hook | 0.6 | 1.0–1.37 | 2.9 | Catches and drags; the Overhead follows a catch |
-| Lunge | 0.45 | 1.52–1.94 | 2.85 | He slings the sword short and flies after it into the spinning cut |
+| Royal Cut | 0.49, 1.23 | 0.79–1.04, 1.54–1.85 | 2.4 | Tracks until 0.67, steps in up to 1.5; the backhand may turn 45° toward the dodge |
+| Royal Cut (three) | + 2.01 | + 2.32–2.5 | 3.03 | Phase two. If an earlier blow landed he calls the third off; it leaves a 12-block line of fire |
+| Thrust | 0.31 | 0.71–0.87 | 1.42 | Aim freezes at 0.31; he drives 2.4 forward, so it reaches about 8 |
+| Turning Cut | 0.22 | 0.61–0.77 | 1.32 | Cuts the half behind him and ends turned about |
+| Overhead | 0.22 | 0.62–0.78 | 1.33 | Aim freezes at 0.45; a line straight ahead, about 7.5 long |
+| Chain Scythe, low | 0.18 | 0.64–1.06 | 1.64 | Chain and blade round him from 5 to 14 out; jump, or step in under it |
+| Chain Scythe, high | 0.18 | 0.58–1.05 | 1.64 | The same at head height; crouch, or step in under it |
+| Cast | 0.34 | 0.62–0.93 (throw), 1.43–1.7 (pull-back) | 2.0 | Aim freezes at 0.51 and leads a moving target, so the sword lands 0.42 s later. Two separate tests |
+| Zip | ring | 0.65–1.02 | 1.59 | Follows a Cast: the chain hauls him to the sword (he lands at 0.58) and he spins into a cut |
+| Hook | 0.44 | 0.74–1.06 | 2.19 | Aim freezes at 0.61. Catches and drags; the Overhead follows a catch |
+| Lunge | 0.35 | 1.13–1.49 | 2.06 | Aim freezes at 0.45. He slings the sword short, lands at 1.03 and spins into the cut |
 | Haul | 0.05, ring | none | 0.85 | Only round a pillar. A low sling at 0.3 s; the chain sets him down at 0.8 s, 10 to 28 blocks away. The Snare follows |
 | Snare | 0.05 | 0.4–0.77 | 2.3 | Only after a Haul. The Hook with a 0.4 s tell: catches and drags; the Overhead follows a catch. A miss frees him at 1.2 |
 | Drag Down | 0.2 | 0.8–1.07 | 1.75 | For a player overhead. Aim freezes at 0.7 and leads a moving target; yanks them to the floor at his feet |
@@ -80,22 +99,29 @@ blow lands where and when it is drawn.
     There a sword blow costs 8.6 or 7.7 of 20 health, so two leave a player alive and the
     third kills. The chain costs 5.8 or 5.2, and a second in his fire about 2.
   - An unarmored player dies to one sword blow. The contract check holds the armored sums.
-- **Openings are tight** (the developer's choice, Nov 10): he is free 0.6 to 1 s after his
-  last blow. The contract check holds every move but the Cast, Hook, Snare and Haul to that.
+- **Openings are tight** (the developer's choice, Nov 10, and tighter since their playtest
+  of Nov 11): he is free about 0.55 s after his last blow. The contract check holds every
+  move but the Cast, Hook, Snare and Haul to 0.3–0.7 s.
 - **No stagger** (the developer's choice, Nov 10): nothing interrupts him.
 
-**How he chooses.** While free he runs at his target (4.5 blocks/s, 5.2 in phase two),
-turning at most 9° a tick, and holds at 3.4 blocks. When his gap runs out he weighs the
+**How he chooses.** While free he runs at his target (5.3 blocks/s, 5.5 in phase two: a
+little slower than a sprint, the developer's rule), turning at most 9° a tick, and holds at
+3.4 blocks. When his gap runs out he weighs the
 moves for where the target stands and picks one by chance, so the same spot does not
 always draw the same move.
 
 | Target is | He weighs |
 | --- | --- |
 | More than 3 blocks up for 1.5 s | Drag Down, once within 18 blocks; until then he closes in |
-| Within 6.5 | Royal Cut (most), Overhead, Thrust, a rare low Scythe |
-| 6.5–14 | Low Scythe (most), high Scythe, Lunge, Thrust and Overhead where they reach |
-| 14–26 | Cast (most), Lunge, a rare Hook |
-| Beyond 26 | Hook (most), Cast, Lunge |
+| Within 6.5 | Royal Cut (most), Overhead, Thrust (never the Scythe, since Nov 11) |
+| 6.5–14 | Low Scythe (most), Lunge, high Scythe, Thrust and Overhead where they reach |
+| 14–26 | Cast (most, a little under half), Lunge, Hook |
+| Beyond 26 | Hook (most), Lunge, Cast |
+
+A player who keeps their distance is brought to sword range (the developer's playtest,
+Nov 11: against a ranged wand he "wasn't really doing any melee attacks"). The Lunge and
+the Hook weigh more at range than they did, most Casts end in a Zip, and a Zip or a Lunge
+is followed by his next move at once.
 
 What the target just did tilts the weights:
 
@@ -136,13 +162,15 @@ What the target just did tilts the weights:
 
 **Combos.**
 
-- After a sword string he sometimes goes straight into another with no gap: a 30% chance
-  and at most two strings in phase one, 55% and three in phase two.
+- After a sword string he often goes straight into another with no gap: a 50% chance
+  and at most three strings in phase one, 75% and four in phase two.
+- After a Zip or a Lunge he picks his next move at once: the chain brought him to them.
 - After the Royal Cut's first blow he breaks off into the Turning Cut if his target is
   behind him, or often the Thrust if it has backed out to 6.5–9.5 blocks.
-- A Cast ends in a Zip when the target is more than 16 blocks from him at 2.75 s (and
-  sometimes in phase two). In phase two a second Cast follows the first.
-- Otherwise his gap between strings is 0.3 to 0.8 s in phase one and 0.1 to 0.5 s in two.
+- A Cast ends in a Zip when the target is more than 12 blocks from him as the sword lands,
+  and 35% of the time otherwise (60% in phase two). In phase two a second Cast follows a
+  pull-back.
+- Otherwise his gap between strings is 0.15 to 0.4 s in phase one and under 0.2 s in two.
 - A move called off part-way (the third cut, a Drag Down whose target has landed) eases him
   back to his guard, so the clip does not go on to show a blow that cannot hit.
 
@@ -178,9 +206,22 @@ blade:
 - A clip's time is set from the tick the server named (see below), not from when the
   client first drew it.
 
-**Fire.** Both phases leave fire (the developer's choice, Nov 10). It shows as low flames
-for 0.5 s, then burns on contact and once a second. It uses his own damage type, so Fire
-Resistance does not stop it. A burn within 1 s of a weapon hit deals only what exceeds it.
+**Fire.** Both phases leave fire (the developer's choice, Nov 10). It shows as low licks of
+flame for 0.5 s, then burns on contact and once a second. It uses his own damage type, so
+Fire Resistance does not stop it. A burn within 1 s of a weapon hit deals only what exceeds it.
+
+- **It is vanilla fire to look at** (the developer's choice, Nov 11: the flat pictures of
+  flame it used before "don't really fit in that well in a 3D environment"). Once it
+  catches it is blocks of `pyre_king_fire`, which use vanilla fire's own models, textures,
+  light, crackle and smoke.
+- **It is his own to burn by.** The block does not spread, sets nothing alight, does no
+  damage itself and cannot be aimed at or broken. `PyreKingCombat` places the blocks, burns
+  whoever touches one, and takes them away when the fire ends.
+- A line of fire is the floor cells whose centres lie within 0.6 of it; a tall fire is two
+  blocks high. A block goes only into open air over a floor, so it never replaces anything
+  in the hall.
+- A fire block nobody takes away (he was removed, the server stopped) puts itself out
+  after 10 s.
 
 A line of fire stops at a pillar.
 
@@ -200,7 +241,7 @@ held at half health starts Unbound again.
 
 **Warnings.** Each blow has a sound and a ring of embers at his feet. A throw's line is
 marked on the floor from the aim freeze, and a ring marks where a Zip or Lunge will land.
-All of these, and the fire, are particles sent by the server.
+These are particles sent by the server.
 
 **Around the fight.**
 
@@ -210,6 +251,62 @@ All of these, and the fire, are particles sent by the server.
 - With nobody eligible nearby for 10 s he resets: full health, phase one, back on his mark.
 - He stays within 36 blocks of where he started.
 - When he dies he burns away where he stands. He has no death clip and gives no reward.
+- Ten seconds after he dies, the hall sends everyone in his slot back to where they entered,
+  as the other bosses' realms do (the developer, Nov 11). Anyone with no recorded way back,
+  such as an operator who teleported in, is left alone.
+
+## The intro
+
+A 58-second cinematic opens his fight. The idea is the developer's (Nov 11): he sits slumped
+on his throne like a statue, bound by a web of chains strung through the dark hall, with his
+greatsword hanging point down on a chain high above and just in front of him. The chains
+burn through, the sword falls and drives into the dais, his hand closes on the hilt, the
+blade and then the hall take fire, and he rises. It is a first pass. The developer has not
+seen it yet, and asked for it to be long and unhurried, with no time limit.
+
+For now only `/ew pyreking intro` starts it. The way in for Survival players is not built.
+
+| Seconds | Beat |
+| --- | --- |
+| 0–5 | Arrival: in through the south gate. The hall is dark; every fire is out. |
+| 5–11 | The web: a drift along the chains between the pillars. |
+| 11–18 | The king on his throne, then the sword hanging 34 blocks above the dais. |
+| 18–22 | The shard in his chest pulses once. A link by the gate begins to glow. |
+| 22–30.5 | The web burns from the gate to the throne. What binds him goes last, from his feet up. |
+| 30.5–33.5 | The sword's chain parts; it falls for 1.4 s and drives into the dais. |
+| 33.5–40 | His fingers stir twice, his head lifts, he leans out and takes the hilt (38.8 s). |
+| 40–45.5 | Fire runs up the blade from his fist; the hall's fires catch in a wave from the throne. |
+| 45.5–53.5 | He hauls himself up on the sword, draws it and lifts it. His name shows from 50 s. |
+| 53.5–58 | A cut puts him 26 blocks up the hall; a Haul brings him to his mark, its line burning. |
+
+- **Two clips are his acting.** `throned` is the statue (a 10 s loop in which only the
+  hanging sword turns) and `awaken` is everything from the fall to his guard (23.5 s). Both
+  are played with him standing half a block in front of the seat. The sword is his own
+  sword bone throughout.
+- **`art/pyre_king/intro/build_intro.py` owns the rest,** on the same clock: 16 camera
+  shots with hard cuts, the 25 chains (each one's two ends, when heat starts along it, when
+  it parts and when it is ash), every fire and light block in the hall with the tick it
+  catches, and per tick how dark the hall is, how much of his own glow shows and how far
+  the blade burns. It writes `cinematics/pyre_king_intro.json`, which the server and
+  every client read (`PyreKingIntroTrack`). `--install` writes it; `--check` detects drift.
+- **The server** (`PyreKingIntro`, ticked by him) runs the timeline. It holds every watcher
+  where they stand, unhurt and unable to cast; puts out the hall's 293 fires and 92 light
+  blocks and lights them again on their ticks; plays the sounds (vanilla, placeholders);
+  and starts the last Haul. When it ends he is on his mark and the fight starts.
+- **Each client** (`PyreKingIntroClient`) flies its camera along the track, letterboxes the
+  screen, dims the hall's ambient light, and shows his name. `BossIntroCamera` shares the
+  camera, HUD and input hooks with the other bosses' scenes.
+- **The chains are drawn, not built.** They are not blocks or entities: his effects layer
+  draws them with him from the track, so nothing is left on the fight floor. While the scene
+  plays he is drawn wherever the camera looks, since the web runs the length of the hall.
+- **The statue is cold.** Until the track says otherwise his eyes, shard and hot blade do
+  not glow, he is tinted grey, the blade has no fire, and the chain from his wrist to his
+  sword is not drawn.
+- **Skipping.** Held Sneak skips it for that player. It ends early only once every watcher
+  has skipped; then the hall is lit at once and he is stood on his mark.
+- **If it is cut short** (an operator command, his removal, the server stopping) the hall
+  is lit again and everyone is let go. A world saved in mid-scene loads with him wherever
+  the scene had him, passive; `/ew pyreking intro` or `/ew hall summon` puts that right.
 
 ## What a rehearsed clip does not do
 
@@ -227,12 +324,16 @@ Lunge and the Turning Cut leave him back where he stood when the clip ends.
 | Weapon tracks and thrown-sword aim | `entity/pyreking/PyreKingTracks`, `PyreKingAim` |
 | Clip table | `entity/pyreking/PyreKingClips` (generated) |
 | Command | `command/PyreKingCommands` |
+| The pace of each clip | `PyreKingRules.tempo` |
+| His fire on the floor (the block) | `block/PyreKingFireBlock`, `registry/ModSpellBlocks.PYRE_KING_FIRE` |
+| The intro's script (camera, chains, fires, light) | `art/pyre_king/intro/build_intro.py` |
+| The intro: track, server scene, client camera | `entity/pyreking/PyreKingIntroTrack`, `PyreKingIntro`, `client/PyreKingIntroClient` |
 | Model and renderer | `client/model/PyreKingModel`, `client/renderer/PyreKingRenderer`, `PyreKingRenderState` |
 | Blade fire and chains | `client/renderer/PyreKingEffectsLayer` |
 
 The model, its 46 bones and its clips are the approved review candidate, installed
-unchanged. The Haul and Snare clips (Nov 11) are the exception: the developer has not yet
-reviewed them. Do not edit the installed files, `PyreKingClips.java` or
+unchanged. The Haul and Snare clips and the intro's two, `throned` and `awaken` (all Nov 11),
+are the exception: the developer has not yet reviewed them. Do not edit the installed files, `PyreKingClips.java` or
 `pyre_king_tracks.json`; change the art sources and run
 `py -3 art/pyre_king/build_art.py --install`.
 
@@ -307,6 +408,11 @@ mesh later, in a deferred callback.
     circles and jumps, runs far off, eats, climbs out of reach and gets behind him.
   - `-PpyreFightRecord` also saves a frame of the free fight every other tick, and
     `-PpyreFightRecordCase=<name>[,<name>]` a frame of those cases.
+- `pyre_king_intro_smoke.init.gradle` runs a hidden, muted client. A Survival player enters
+  the hall and `/ew pyreking intro` plays the whole scene through its own camera. It checks
+  that the braziers are dark at the start and burning after, that he ends on his mark and
+  fights, and that a second run, skipped, ends at once with the hall lit. It saves a still
+  at each beat, and with `-PpyreIntroVideo` a frame every other tick.
 - `pyre_king_client_smoke.init.gradle` runs a hidden, muted client. It checks that he uses
   his GeckoLib renderer and that every clip in `PyreKingClips` is in the baked animation
   file. It then rehearses every clip and saves 56 screenshots to
@@ -345,7 +451,9 @@ not walked it in Lunar, and only operators can reach it.
   chains and lanterns.
 - **Gate and throne:** players arrive at (0, 1, 33), just inside the south gate, facing
   north. The king stands at the centre facing them. Behind him, in an apse in the north
-  wall, a gold-edged throne stands on a dais under a broken round window. Two braziers and
+  wall, a gold-edged throne stands on a dais under a broken round window. Its seat is one
+  block high, three wide and two deep between arms one block higher, so that he can sit in
+  it for his intro (resized Nov 11; it was five wide and two high). Two braziers and
   two hanging lanterns flank it, and fifteen invisible `light` blocks just in front of its
   back light it from top to bottom. The builder refuses a light block inside the fight
   volume.
@@ -377,8 +485,11 @@ covers the sea where far chunks are missing.
 
 **Rules in the hall.** They reuse the other realms' hooks.
 
-- Survival players can't break or place blocks. Explosions and Hollow Purple destroy
-  nothing and start no fires.
+- Survival players can't break or place blocks; mining one never even starts. Explosions and
+  Hollow Purple destroy nothing and start no fires.
+- Ten seconds after the Pyre King dies, everyone in his slot is sent back to where they
+  entered (`PyreHallManager.victory`). The wait is not saved: after a restart in those ten
+  seconds, `/ew hall leave` takes a player home.
 - A Survival player who leaves the walled floor is set back at the arrival. Teleports can't
   cross into or out of the hall, and must land on the floor.
 - The pillars are scenery (the developer's choice, Nov 11). A Survival player who lands on
@@ -440,5 +551,6 @@ the floor's rim are faint: most of the hall's brightness is the ambient light.
 - **The Snare's turn and its recall are the game's, not the clips'.** He turns on his
   target up to 36° a tick while the clip plays straight ahead, and a throw that catches
   nobody is blended back to his guard in a quarter of a second.
-- **Around the fight:** a reward, an intro, a way into the hall for Survival players, and
+- **Around the fight:** a reward, a way into the hall for Survival players (the developer's
+  plan: a burned gatehouse in the Nether with something to right-click, as the Roc's gong), and
   the hall's per-block floor protection.

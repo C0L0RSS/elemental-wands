@@ -1695,6 +1695,144 @@ def snare(t):
     return spec
 
 
+# ---------------------------------------------------------------- the intro: on his throne
+# His intro (the developer's idea, Nov 11): he sits slumped on his throne like a statue, bound
+# in chains, with the greatsword hanging point down from a chain high above and just in front
+# of him. The chains burn through, the sword falls and drives into the floor at his feet, his
+# hand reaches out and closes on the hilt, the blade takes fire, and he rises.
+# Two clips, both played with him standing where he will end up, half a block in front of the
+# seat (the seat is one block high and two deep; its front edge is SEAT_FRONT behind him):
+# `throned`, a loop, is the statue with the sword turning slowly on its chain, and `awaken`
+# is everything from the fall to his guard. The scene's camera, the web of chains and the
+# hall's fires are art/pyre_king/intro/build_intro.py's.
+SEAT_FRONT, SEAT_TOP, ARM_TOP = .5, 1., 2.
+SEAT_HIP = np.array([0., 1.33, 1.37])                 # his hip joints, seated: thighs along the seat
+SEAT_PELVIS = SEAT_HIP-np.array([0., 2.06, .06])
+SEAT_FEET = {'right': np.array([.80, .31, .2]), 'left': np.array([-.74, .31, -.05])}   # the left leg slid out
+ARMREST = {'right': np.array([1.85, 2.22, .9]), 'left': np.array([-1.85, 2.22, .9])}
+LAP = np.array([-.42, 1.72, .85])                     # his left hand, fallen into his lap
+SWORD_DROP = np.array([.35, 0., -1.75])               # where the point enters the floor
+SWORD_HUNG = 34.                                       # the pommel's height while it hangs
+SWORD_SUNK = 3.67                                      # pommel to the floor along the blade, once it has struck
+STUCK_LEAN = 16.                                       # deg the hilt leans back toward him
+FALL, STRUCK = .5, 1.9                                 # awaken: the chain parts, the point strikes
+TWIST, TWIST_PERIOD = 8., 10.                          # deg and s: the hanging sword turns on its chain
+
+
+def _hung(t):
+    """The hanging sword at t s (pommel, direction, flat): point down, turning a little."""
+    a = TWIST*RAD*math.sin(2*math.pi*t/TWIST_PERIOD)
+    sway = np.array([.05*math.sin(2*math.pi*t/TWIST_PERIOD), 0, .03*math.sin(4*math.pi*t/TWIST_PERIOD)])
+    # Its flat faces down the hall, so that whoever comes in at the gate sees the whole blade.
+    return SWORD_DROP+np.array([0, SWORD_HUNG, 0])+sway, np.array([0., -1., 0.]), np.array([math.sin(a), 0., math.cos(a)])
+
+
+def _leaning(deg):
+    """The struck sword leaning deg back toward him about the point where it entered the floor."""
+    d = np.array([0., -math.cos(deg*RAD), -math.sin(deg*RAD)])
+    return SWORD_DROP-SWORD_SUNK*d, d
+
+
+STUCK_P, STUCK_D = _leaning(STUCK_LEAN)
+# The flat's facing while it stands there: of every roll about the blade, the one his reaching
+# wrist is easiest in, seated and standing (searched; 283 deg from the blade's left).
+_SX = unit(np.cross(STUCK_D, [0., 0., 1.]))
+STUCK_N = math.cos(283*RAD)*_SX+math.sin(283*RAD)*np.cross(STUCK_D, _SX)
+STUCK_GRIP = STUCK_P+GRIP['right']*STUCK_D
+
+
+def _slumped(t=0.):
+    """The statue: slid down in the seat and leaning back into the throne, his head fallen
+    forward and to his right, his right hand on the arm of the throne and his left in his lap."""
+    P, D, N = _hung(t)
+    return {'pelvis_pos': SEAT_PELVIS, 'pelvis_rot': (-28, 0, 0), 'torso_rot': (14, -4, 3), 'neck_rot': (22, 6, -4),
+            'head_rot': (26, 8, -6), 'sword_p': P, 'sword_d': D, 'sword_n': N, 'hands': 'none',
+            'free_hands': {'right': ARMREST['right'], 'left': LAP}, 'free_elbow': {'right': (.8, -.3, .6), 'left': (-.7, -.3, .5)},
+            'feet': dict(SEAT_FEET), 'extra': {}, 'hinge': True}
+
+
+def throned(t):
+    """The statue on his throne, a 10 s loop. Nothing of him moves; the sword, hanging point
+    down 34 blocks up, turns a few degrees each way on its chain."""
+    return _slumped(t)
+
+
+AWAKEN = 23.5
+GRASP = 8.8                  # his hand closes on the hilt
+
+
+def _awaken(t):
+    """awaken's pose at t, before the wrists are planned."""
+    twitch = curve([(0, 0), (4.5, 0), (4.62, 1, 'out'), (4.8, 0), (5.1, 0), (5.2, .7, 'out'), (5.45, 0)])
+    pelvis_pos = curve([(0, SEAT_PELVIS), (6.5, SEAT_PELVIS), (8.4, SEAT_PELVIS+(0, .03, -.16)), (15.5, SEAT_PELVIS+(0, .03, -.16)),
+                        (16.6, (0, -.62, .75), 'in'), (17.8, (0, -.14, .28)), (18.6, (0, -.03, .13), 'out'), (19.3, (0, 0, .1)),
+                        (21., (0, 0, 0)), (AWAKEN, (0, 0, 0))])
+    pelvis_rot = curve([(0, (-28, 0, 0)), (5.3, (-28, 0, 0)), (6.3, (-24, 0, 0)), (8.4, (8, -6, 0)), (10., (8, -6, 0)), (10.8, (6, -5, 0), 'out'),
+                        (15.5, (6, -5, 0)), (16.6, (24, -4, 0), 'in'), (17.8, (16, -2, 0)), (18.6, (6, 0, 0), 'out'), (21., (0, 0, 0))])
+    torso = curve([(0, (14, -4, 3)), (5.3, (14, -4, 3)), (6.3, (12, -2, 2)), (8.4, (16, -14, 0)), (10., (16, -14, 0)), (10.8, (12, -12, 0), 'out'),
+                   (15.5, (12, -12, 0)), (16.6, (22, -8, 0), 'in'), (17.8, (18, -6, 0)), (18.6, (10, -4, 0), 'out'), (19.3, (8, -4, 0)),
+                   (19.65, (0, -2, 0), 'in'), (20.6, (-8, 4, 0), 'out'), (21.2, (-8, 4, 0)), (22.4, (0, 0, 0)), (AWAKEN, (0, 0, 0))])
+    neck = curve([(0, (22, 6, -4)), (5.3, (22, 6, -4)), (6.3, (8, 2, -1)), (8.4, (6, 6, 0)), (10., (6, 6, 0)), (10.8, (-2, 4, 0), 'out'),
+                  (15.5, (0, 4, 0)), (16.6, (8, 2, 0)), (18.6, (4, 0, 0)), (19.3, (4, 0, 0)), (20.6, (-6, 0, 0), 'out'), (22.4, (0, 0, 0))])
+    head = curve([(0, (26, 8, -6)), (5.3, (26, 8, -6)), (6.3, (10, 4, -2)), (8.4, (8, 8, 0)), (10., (8, 8, 0)), (10.8, (-4, 6, 0), 'out'),
+                  (15.5, (-2, 6, 0)), (16.6, (10, 2, 0)), (18.6, (6, 0, 0)), (19.3, (6, 0, 0)), (20.6, (-10, 0, 0), 'out'), (21.2, (-10, 0, 0)),
+                  (22.4, (0, 0, 0))])
+    # The sword: hanging, falling as a dropped thing does, striking, shivering as it leans back
+    # toward him; then, in his fist, drawn out along itself and lifted point first into a
+    # high guard, held, and brought down into his guard.
+    home = GUARD_P+GRIP['right']*GUARD_D
+    fist = curve([(19.3, STUCK_GRIP), (19.65, STUCK_GRIP-1.1*STUCK_D, 'in'), (20., (.55, 3.9, -.75)), (20.6, (.8, 4.2, -.3), 'out'),
+                  (21.2, (.8, 4.2, -.3)), (22.4, home), (AWAKEN, home)])
+    held = ncurve([(19.3, STUCK_D), (19.65, STUCK_D), (20., (.1, -.2, -.97)), (20.6, (.15, .93, -.33), 'out'), (21.2, (.15, .93, -.33)),
+                   (22.4, GUARD_D), (AWAKEN, GUARD_D)])
+    if t < FALL: P, D, N = _hung(t)
+    elif t < STRUCK:
+        P, D, N = _hung(t); P = P-np.array([0, (SWORD_HUNG-SWORD_SUNK)*((t-FALL)/(STRUCK-FALL))**2, 0])
+    elif t < 19.3:
+        tau = t-STRUCK; lean = STUCK_LEAN*(1-math.exp(-9*tau)*math.cos(24*tau))
+        P, D = _leaning(lean); N = slerp(_hung(STRUCK)[2], STUCK_N, _ramp(t, STRUCK, STRUCK+.3))
+    else:
+        D = held(t); P = fist(t)-GRIP['right']*D; N = slerp(STUCK_N, _turned_n(D), _ramp(t, 19.4, 20.2))
+    hands = 'none' if t < GRASP else 'right' if t < 21.6 else 'both'
+    lift = float(twitch(t))
+    right = curve([(0, ARMREST['right']), (6.5, ARMREST['right']), (7.3, (1.55, 2.7, .45)), (8.3, (.6, 2.86, -.6)), (GRASP, STUCK_GRIP, 'out')])
+    grip_left = fist(21.6)-GRIP['right']*held(21.6)+GRIP['left']*held(21.6)
+    left = curve([(0, LAP), (15.5, LAP), (16.2, ARMREST['left']), (18., ARMREST['left']), (19., (-1.05, 2.3, .1)), (20.6, (-1.25, 2.7, -.25), 'out'),
+                  (21.2, (-1.2, 2.7, -.3)), (21.6, grip_left, 'in')])
+    # His feet stay where they lay until he is up; then each takes one step into his stance.
+    step_r, step_l = curve([(0, 0), (19.3, 0), (19.75, 1)]), curve([(0, 0), (20.3, 0), (20.75, 1)])
+    up_r = curve([(0, 0), (19.3, 0), (19.5, .16, 'out'), (19.75, 0, 'in')])
+    up_l = curve([(0, 0), (20.3, 0), (20.5, .16, 'out'), (20.75, 0, 'in')])
+    feet = {'right': SEAT_FEET['right']+(ANKLE['right']-SEAT_FEET['right'])*float(step_r(t))+np.array([0, float(up_r(t)), 0]),
+            'left': SEAT_FEET['left']+(ANKLE['left']-SEAT_FEET['left'])*float(step_l(t))+np.array([0, float(up_l(t)), 0])}
+    # Once the blade burns he breathes, and the heat lifts his cloth.
+    breath = _ramp(t, 10., 11.5)*math.sin(2*math.pi*(t-10.)/3.2)
+    stir = _ramp(t, 10., 10.8)                    # a statue's cloth hangs dead still
+    heat = curve([(0, 0), (10., 0), (10.7, 1.3, 'out'), (12.5, .5), (15.5, .4), (17.8, .9), (20.6, 1.2), (22.5, 0)])
+    swing = curve([(0, 0), (15.5, 0), (16.6, .5), (18.6, 0), (19.65, -.3), (20.6, .6, 'hit'), (22.4, 0)])
+    spec = {'pelvis_pos': pelvis_pos(t), 'pelvis_rot': pelvis_rot(t), 'torso_rot': torso(t)+np.array([-1.5*breath, 0, 0]),
+            'neck_rot': neck(t), 'head_rot': head(t), 'sword_p': P, 'sword_d': D, 'sword_n': N, 'hands': hands,
+            'free_hands': {'right': right(t)+np.array([0, .07*lift, -.03*lift]), 'left': left(t)},
+            'free_elbow': {'right': (.8, -.3, .6), 'left': (-.7, -.3, .5)}, 'feet': feet,
+            'extra': {name: (tuple(np.array(deg)*stir), px) for name, (deg, px) in cloth(t, swing=float(swing(t)), lift=float(heat(t))).items()},
+            'hinge': True}
+    if GRASP <= t < 19.4: spec['edge_lock'] = 1.      # a blade that stands in stone does not roll in his fist
+    return spec
+
+
+@easy_wrists(AWAKEN)
+def awaken(t):
+    """The sword falls (0.5 s) and drives into the floor in front of him (1.9 s), shivering.
+    At 4.5 s the fingers of his right hand stir, twice; at 5.3 s his head lifts toward it. From
+    6.5 s he leans out of the throne and reaches, and at 8.8 s his fist closes on the hilt. The
+    game lights the blade at 10 s: his head comes up, he breathes, the heat lifts his cloth.
+    At 15.5 s his left hand finds the arm of the throne and he hauls himself up on the sword,
+    standing by 19.3 s. He draws the blade out along itself and lifts it point first into a
+    high guard (20.6 s), holds it there, and brings it down into his guard, both hands on it
+    from 21.6 s, settled at 22.4 s."""
+    return _awaken(t)
+
+
 # ---------------------------------------------------------------- Unbound
 # The phase change. He drives the sword into the floor with the overhead cut and lets go; the
 # chains of his curse tear loose from his chest, sweep the hall low, hook on, and reel back in.
@@ -1803,7 +1941,7 @@ ATTACKS = ('royal_cut', 'royal_cut_three', 'kingsguard_thrust', 'turning_cut', '
            'chain_scythe_high', 'zip', 'hook', 'overhead_sentence', 'lunge', 'drag_down', 'unbound', 'haul', 'snare')
 # While a fist holds the sword it must stay above the floor, except where the clip means it
 # to be in the floor: Unbound drives it in and later tears it out.
-BURIED = {'unbound': ((.6, 3.8),)}
+BURIED = {'unbound': ((.6, 3.8),), 'awaken': ((GRASP, 19.8),)}
 
 
 # What check_edges holds each clip to (summary key: limit; 'lowest' keys are minimums).
@@ -1956,6 +2094,8 @@ CLIPS = {
     'haul': (haul, 1.5, False),
     'snare': (snare, 2.7, False),
     'unbound': (unbound, 4.3, False),
+    'throned': (throned, TWIST_PERIOD, True),
+    'awaken': (awaken, AWAKEN, False),
 }
 # Clips that end with him turned: degrees to his left, about his origin. The game turns his
 # body yaw by this much on the clip's last frame, as the next clip starts in his own frame.

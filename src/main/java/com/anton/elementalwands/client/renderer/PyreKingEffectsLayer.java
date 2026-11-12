@@ -1,6 +1,8 @@
 package com.anton.elementalwands.client.renderer;
 
+import com.anton.elementalwands.client.PyreKingIntroClient;
 import com.anton.elementalwands.client.model.PyreKingModel;
+import com.anton.elementalwands.entity.pyreking.PyreKingIntroTrack;
 import com.anton.elementalwands.entity.pyreking.PyreKingEntity;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -153,8 +155,13 @@ final class PyreKingEffectsLayer extends GeoRenderLayer<PyreKingEntity, Void, Py
         memories.values().removeIf(m -> m != memory && Math.abs(now - m.seen) > 30);   // kings no longer drawn
 
         Batch core = new Batch(), tint = new Batch(), glow = new Batch(), iron = new Batch(), hot = new Batch();
-        fire(memory, now, roots, core, tint, glow);
-        chains(memory, now, wrist, pommel, chest, ends, iron, hot, core);
+        // In his intro the blade is cold until his fist lights it, and the fire runs up it from the hilt.
+        int lit = (int) Math.round(Math.max(0, Math.min(1, state.blade)) * roots.length);
+        if (lit > 0) fire(memory, now, roots, lit, core, tint, glow);
+        // Nor does his wrist's chain run to a sword that hangs from the roof or stands in the floor.
+        boolean tether = state.intro < 0 || state.intro >= PyreKingIntroTrack.get().beat("grasp");
+        chains(memory, now, tether, wrist, pommel, chest, ends, iron, hot, core);
+        if (state.intro >= 0) web(state.intro, now, iron, hot, core);
         float ex = (float) eye[0], ey = (float) eye[1], ez = (float) eye[2];
         if (!iron.isEmpty()) queue.submitCustom(matrices, CHAIN, (entry, out) -> iron.emit(out, ex, ey, ez, light, false));
         if (!hot.isEmpty()) queue.submitCustom(matrices, CHAIN, (entry, out) -> hot.emit(out, ex, ey, ez, BRIGHT, false));
@@ -279,7 +286,7 @@ final class PyreKingEffectsLayer extends GeoRenderLayer<PyreKingEntity, Void, Py
         return new Motion(stream / total);
     }
 
-    private static void fire(Memory memory, double now, double[][] roots, Batch core, Batch tint, Batch glow) {
+    private static void fire(Memory memory, double now, double[][] roots, int lit, Batch core, Batch tint, Batch glow) {
         int n = roots.length;
         // Where every root was at each sampled age, one extra sample past the window to catch a jump.
         double[][][] history = new double[SAMPLES + 2][][];
@@ -311,11 +318,11 @@ final class PyreKingEffectsLayer extends GeoRenderLayer<PyreKingEntity, Void, Py
         for (int i = 0; i < n; i++) licks[i] = between(plain[i], plain[Math.min(i + 1, n - 1)], .45 * hash(i));
         Motion[] plainMotion = new Motion[n], lickMotion = new Motion[n];
         for (int i = 0; i < n; i++) { plainMotion[i] = motionOf(plain[i]); lickMotion[i] = motionOf(licks[i]); }
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < Math.min(n, lit); i++) {
             tongue(core, now, i, 0, licks[i], lickMotion[i], bladeAxis);
             for (double[] peak : PEAKS) if ((int) peak[0] == i) tongue(core, now, i, peak[1], plain[i], plainMotion[i], bladeAxis);
         }
-        wake(tint, glow, now, plain, plainMotion);
+        if (lit >= n) wake(tint, glow, now, plain, plainMotion);
     }
 
     private static double noise(double t, double i) { return .5 + .27 * Math.sin(t * 7.3 + i * 2.71) + .23 * Math.sin(t * 11.9 + i * 7.13); }
@@ -503,9 +510,9 @@ final class PyreKingEffectsLayer extends GeoRenderLayer<PyreKingEntity, Void, Py
         return out;
     }
 
-    private static void chains(Memory memory, double now, double[] wrist, double[] pommel, double[][] chest, double[][] ends,
+    private static void chains(Memory memory, double now, boolean tether, double[] wrist, double[] pommel, double[][] chest, double[][] ends,
             Batch iron, Batch hot, Batch fire) {
-        if (dist(wrist, pommel) >= WRIST_MIN) links(iron, null, wrist, pommel, bow(memory, now, wrist, pommel, Sample::pommel, WRIST_BOW_SHARE), true);
+        if (tether && dist(wrist, pommel) >= WRIST_MIN) links(iron, null, wrist, pommel, bow(memory, now, wrist, pommel, Sample::pommel, WRIST_BOW_SHARE), true);
         for (int i = 0; i < ends.length; i++) {
             if (dist(chest[i], ends[i]) < LOOSE_MIN) continue;
             int chain = i;
@@ -527,6 +534,66 @@ final class PyreKingEffectsLayer extends GeoRenderLayer<PyreKingEntity, Void, Py
             chainFlame(fire, now, hook[4], was[4], dt, i * 40 + 39, false);
         }
     }
+
+    // ---------------------------------------------------------------- the intro's web
+    /**
+     * The web of chains his intro strings through the hall, at scene tick t ({@link PyreKingIntroTrack}): each hangs
+     * between its two ends; heat runs along it and its links glow and burn; it parts, each half swings down from its
+     * own end, and the fire eats both back from the break until nothing is left. The one the sword hangs on follows
+     * the sword's pommel and parts there.
+     */
+    private static void web(double t, double now, Batch iron, Batch hot, Batch fire) {
+        PyreKingIntroTrack track = PyreKingIntroTrack.get();
+        int id = 400;
+        for (PyreKingIntroTrack.Chain chain : track.chains()) {
+            id += 97;
+            if (t >= chain.gone()) continue;
+            double[] a = vec(PyreKingIntroClient.place(chain.a()));
+            double[] b = vec(PyreKingIntroClient.place(chain.sword() ? track.sword(Math.min(t, chain.parts())) : chain.b()));
+            double span = dist(a, b), cut = chain.part();
+            int n = Math.max(4, (int) Math.round(span / .34));
+            double heat = Math.max(0, Math.min(1, (t - chain.heat()) / Math.max(1, chain.run())));
+            boolean parted = t >= chain.parts();
+            double swung = parted ? smooth((t - chain.parts()) / 26.0) : 0;
+            double burned = parted ? (t - chain.parts()) / Math.max(1.0, chain.gone() - chain.parts()) : 0;
+            for (int i = 0; i < n; i++) {
+                double u = (i + .5) / n;
+                boolean first = u < cut;
+                // 0 at the break, 1 at the half's own end: the fire eats it back that way.
+                double left = first ? (cut - u) / Math.max(cut, 1e-6) : (u - cut) / Math.max(1 - cut, 1e-6);
+                if (parted && left < burned) continue;
+                double[] p = hang(a, b, chain.sag(), span, (double) i / n, cut, swung), q = hang(a, b, chain.sag(), span, (double) (i + 1) / n, cut, swung);
+                if (dist(p, q) < 1e-4) continue;        // heaped on the floor
+                double[] d = norm(sub(q, p)), side = norm(cross(d, Math.abs(d[1]) > .9 ? new double[]{1, 0, 0} : UP)), up = cross(side, d);
+                double w = i % 2 == 1 ? .06 : .13, h = i % 2 == 1 ? .13 : .06, half = dist(p, q) * .62;
+                double[] c = mul(add(p, q), .5);
+                boolean glowing = u <= heat;
+                box(glowing ? hot : iron, glowing ? HOT : IRON, c, mul(d, half), mul(side, w), mul(up, h));
+                // Fire along what glows, and a taller flame where the heat is arriving and where each half is burning back.
+                boolean front = heat < 1 && Math.abs(u - heat) < .6 / n, eaten = parted && left - burned < 1.2 / (n * Math.max(first ? cut : 1 - cut, .05));
+                if (glowing && (front || eaten || (i + id) % 6 == 2)) chainFlame(fire, now, c, c, .03, id + i, front || eaten);
+            }
+        }
+    }
+
+    /**
+     * Where a chain's point a share u of the way from a to b hangs. Whole, it sags between its ends. Parted at `cut`,
+     * each half swings down (swung 0 to 1) to hang straight from its own end, and what reaches the floor lies on it.
+     */
+    private static double[] hang(double[] a, double[] b, double sag, double span, double u, double cut, double swung) {
+        double[] p = add(add(a, mul(sub(b, a), u)), new double[]{0, -sag * 4 * u * (1 - u), 0});
+        if (swung <= 0) return p;
+        boolean first = u < cut;
+        double[] end = first ? a : b;
+        double along = span * (first ? u : 1 - u);
+        double floor = PyreKingIntroClient.floor(end[0], end[2]) + .07;
+        double[] down = {end[0], Math.max(floor, end[1] - along), end[2]};
+        double[] out = mix(p, down, swung);
+        out[1] = Math.max(out[1], Math.min(p[1], floor));
+        return out;
+    }
+
+    private static double[] vec(net.minecraft.util.math.Vec3d v) { return new double[]{v.x, v.y, v.z}; }
 
     /** Upright where its chain is still; where the chain moves it lies back along the way it came. */
     private static void chainFlame(Batch out, double t, double[] root, double[] prev, double dt, int i, boolean tall) {

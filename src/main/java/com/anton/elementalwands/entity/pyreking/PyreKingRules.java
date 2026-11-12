@@ -22,8 +22,13 @@ public final class PyreKingRules {
      * third kills), the chain a little over a quarter, and a second in his fire about a tenth.
      */
     public static final float SWORD = 21, CHAIN = 16, FIRE = 8, UNBOUND_SWEEP = 19, YANK = 5, TUG = 4;
-    /** Blocks per second. He is slower than a sprinting player (5.6) and faster than one backing away (4.3). */
-    public static final double RUN = 4.5, RUN_TWO = 5.2;
+    /**
+     * Blocks per second. A little slower than a sprinting player (5.6), the developer's rule, and well clear of one
+     * backing away (4.3). It was 4.5 and 5.2 until their playtest (Nov 11) found him slow.
+     */
+    public static final double RUN = 5.3, RUN_TWO = 5.5;
+    /** The speed his run clip strides at when played plainly; {@link #tempo} plays it faster to match RUN. */
+    public static final double RUN_AUTHORED = 4.5;
     /** He stops closing inside this and holds his ground; beyond it he runs at his target. */
     public static final double HOLD = 3.4;
     /** Degrees per tick he can turn while free, so a quick player can get behind him for a moment. */
@@ -85,6 +90,18 @@ public final class PyreKingRules {
     public static final double LOW_CLEAR = .6, HIGH_UNDER = 1.55, HIGH_OVER = 3.2;
 
     /**
+     * The Chain Scythe hurts only out where its blade swings: a body must reach this far from him (blocks, on the
+     * floor). Inside it the low swing's chain runs at chest height and the high one's four blocks overhead, so
+     * neither a jump nor a crouch could be read there; the developer's second playtest (Nov 11) found the Scythe
+     * "impossible to dodge at close range". Close in, his sword is the threat, and stepping in under the chain is
+     * a third way out of it.
+     */
+    public static final double SCYTHE_INNER = 5;
+
+    /** Whether the Chain Scythe can strike a body whose middle is this far from him, this wide across. */
+    public static boolean scytheReaches(double distance, double halfWidth) { return distance + halfWidth >= SCYTHE_INNER; }
+
+    /**
      * Seconds into the clip the part can hit, how thick it is, and what it does. Each blow is its own group: it tests a
      * player once. A blow that a shield or a moment of immunity turned aside does not spare them the next; the combo
      * rule is what stops two heavy blows landing.
@@ -124,17 +141,17 @@ public final class PyreKingRules {
         SCYTHE_HIGH("chain_scythe_high", .3, 2.1, new double[]{.2},
                 List.of(new Window(.64, 1.15, Part.CHAIN, Band.HIGH, .4, CHAIN, 0)), List.of(), List.of()),
         /** He throws the sword, waits, and reels it back along its chain, or follows it with a Zip. */
-        CAST("cast_reel", .47, 4.25, new double[]{.47, 2.8},
+        CAST("cast_reel", .72, 4.25, new double[]{.47, 2.8},
                 List.of(new Window(.87, 1.26, Part.BLADE, Band.TRUE, .55, CHAIN, 0), new Window(3.48, 3.8, Part.CHAIN, Band.TRUE, .55, CHAIN, 1)),
                 List.of(), List.of()),
         /** The chain hauls him to his stuck sword; he tears it free and spins into one cut. */
         ZIP("zip", 0, 2.55, new double[]{.0},
                 List.of(blade(1.22, 1.64, Band.SOLID, .45, SWORD, 0)), List.of(), List.of()),
         /** A harpoon throw that drags whoever it catches to his feet, under the overhead cut. */
-        HOOK("hook", .6, 2.9, new double[]{.6},
+        HOOK("hook", .82, 2.9, new double[]{.6},
                 List.of(new Window(1.0, 1.37, Part.BLADE, Band.TRUE, .65, TUG, 0)), List.of(), List.of()),
         /** He slings the sword short and flies after it into the same spinning cut. */
-        LUNGE("lunge", .45, 2.85, new double[]{.45},
+        LUNGE("lunge", .58, 2.85, new double[]{.45},
                 List.of(blade(1.52, 1.94, Band.SOLID, .45, SWORD, 0)), List.of(), List.of()),
         /**
          * His way round a pillar: a quick low sling sends the sword far out past it, and the chain hauls him there at
@@ -175,7 +192,93 @@ public final class PyreKingRules {
         public double hookLead() { return this == SNARE ? SNARE_LEAD : 0; }
         /** The end of his last blow, which the opening is measured from. A move with no blow has none until it ends. */
         public double lastBlow() { return windows.isEmpty() ? free : windows.get(windows.size() - 1).to(); }
+        /** How fast this move's clip is played, part by part. */
+        public Tempo tempo() { return PyreKingRules.tempo(clip); }
+        /** Seconds after the move began at which this moment of its clip shows. */
+        public double seconds(double moment) { return tempo().seconds(moment); }
+        /** Seconds from the end of his last blow until he may act again: the opening he leaves. */
+        public double opening() { return seconds(free) - seconds(lastBlow()); }
     }
+
+    // ── Tempo ────────────────────────────────────────────────────────────────
+
+    /**
+     * How fast a clip is played, part by part. The clips are baked art; this is the dial that sets the fight's pace
+     * without baking them again. Every time in the move table is a moment of its clip, so a blade is still swept
+     * exactly where it is drawn; the server and every client read the same map.
+     */
+    public static final class Tempo {
+        public static final Tempo PLAIN = new Tempo(new double[]{0}, new double[]{1});
+        private final double[] at, rate, real;
+
+        private Tempo(double[] at, double[] rate) {
+            this.at = at; this.rate = rate;
+            real = new double[at.length];
+            for (int i = 1; i < at.length; i++) real[i] = real[i - 1] + (at[i] - at[i - 1]) / rate[i - 1];
+        }
+
+        /** Pairs of (moment of the clip, the rate it plays at from there until the next moment); the first moment is 0. */
+        static Tempo of(double... pairs) {
+            double[] at = new double[pairs.length / 2], rate = new double[pairs.length / 2];
+            for (int i = 0; i < at.length; i++) {
+                at[i] = pairs[i * 2]; rate[i] = pairs[i * 2 + 1];
+                if (rate[i] <= 0 || (i == 0 ? at[i] != 0 : at[i] <= at[i - 1])) throw new IllegalArgumentException("A tempo runs forward from 0");
+            }
+            return new Tempo(at, rate);
+        }
+
+        /** The moment of the clip that shows this many seconds after it began. Before it begins, the same negative time. */
+        public double clip(double seconds) {
+            if (seconds <= 0) return seconds;
+            int i = at.length - 1;
+            while (i > 0 && real[i] > seconds) i--;
+            return at[i] + (seconds - real[i]) * rate[i];
+        }
+
+        /** Seconds after the clip began at which this moment of it shows. */
+        public double seconds(double clip) {
+            if (clip <= 0) return clip;
+            int i = at.length - 1;
+            while (i > 0 && at[i] > clip) i--;
+            return real[i] + (clip - at[i]) / rate[i];
+        }
+
+        public boolean plain() { return this == PLAIN; }
+    }
+
+    private static final double STRING = 1.12, RECOVER = 1.6;
+    /**
+     * The pace of each clip (the developer's playtest, Nov 11: "his overall speed in terms of the speed between his
+     * attacks just has to be faster"; the thrown sword "was very slow"; and the pause before the spinning cut "was
+     * really easy to get out" of). A clip not named here plays plainly: the Haul and the Snare, which they liked,
+     * Drag Down, Unbound and his intro.
+     * <ul>
+     * <li>Sword strings: a little quicker throughout, and the return to his guard after the last blow much quicker.
+     * <li>The Cast: a quicker wind-up, and the 2.2 s he stood with the sword out is under half a second.
+     * <li>The Zip and the Lunge: the wait before the chain takes him is cut, and the pause between landing and the
+     *     spinning cut is a tenth of a second, not a quarter.
+     * <li>The Hook: a quicker wind-up and haul.
+     * </ul>
+     */
+    private static final Map<String, Tempo> TEMPO = Map.ofEntries(
+            Map.entry("run", Tempo.of(0, RUN / RUN_AUTHORED)),
+            Map.entry("royal_cut", Tempo.of(0, STRING, 2.07, RECOVER)),
+            Map.entry("royal_cut_three", Tempo.of(0, STRING, 2.8, RECOVER)),
+            Map.entry("kingsguard_thrust", Tempo.of(0, STRING, .97, RECOVER)),
+            Map.entry("turning_cut", Tempo.of(0, STRING, .86, RECOVER)),
+            Map.entry("overhead_sentence", Tempo.of(0, STRING, .87, RECOVER)),
+            Map.entry("chain_scythe_low", Tempo.of(0, 1.1, 1.17, RECOVER)),
+            Map.entry("chain_scythe_high", Tempo.of(0, 1.1, 1.15, RECOVER)),
+            // wind-up, flight, the wait with the sword out, the pull-back, his guard
+            Map.entry("cast_reel", Tempo.of(0, 1.4, .87, 1.25, 1.3, 4.9, 3.45, 1.2, 3.8, 1.5)),
+            // the wait, the flight, landing to the cut, the cut, his guard
+            Map.entry("zip", Tempo.of(0, 3, .6, 1.2, 1.05, 2.2, 1.22, 1.15, 1.64, RECOVER)),
+            // the tell and throw, the flight, landing to the cut, the cut, his guard
+            Map.entry("lunge", Tempo.of(0, 1.3, .9, 1.2, 1.3, 2.2, 1.52, 1.15, 1.94, RECOVER)),
+            // wind-up, flight, the haul in, his guard
+            Map.entry("hook", Tempo.of(0, 1.35, 1, 1.15, 1.37, 1.3, 2.42, 1.5)));
+
+    public static Tempo tempo(String clip) { return TEMPO.getOrDefault(clip, Tempo.PLAIN); }
 
     private static Window blade(double from, double to, Band band, double radius, float damage, int group) {
         return new Window(from, to, Part.BLADE, band, radius, damage, group);
@@ -186,7 +289,9 @@ public final class PyreKingRules {
     /** The Cast: seconds in at which he decides between the Reel and a Zip, and at which a Zip takes over the clip. */
     public static final double CAST_DECIDE = 2.75, CAST_ZIP_AT = 2.8;
     /** He Zips when his target is this far from him at the decision, or always after a missed Hook's wait. */
-    public static final double ZIP_BEYOND = 16;
+    public static final double ZIP_BEYOND = 12;
+    /** And this often when they are nearer: the chain exists to bring the fight back to sword range. */
+    public static double zipChance(boolean second) { return second ? .6 : .35; }
     /**
      * Hiding. His own answers to a target behind a pillar (the developer, Nov 11: he gets round it himself, the hall
      * does not help him, and nothing of his passes through the stone). Out of his sight this many ticks, or this
@@ -269,14 +374,19 @@ public final class PyreKingRules {
     public record Read(double distance, boolean elevated, boolean behind, boolean backedAway, boolean jumped,
                        boolean healing, boolean sight, boolean second) {}
 
-    /** He waits this many ticks, closing on his target, between strings. Phase two barely waits. */
+    /**
+     * He waits this many ticks, closing on his target, between strings: 0.15 to 0.4 s, and next to nothing in phase
+     * two. It was 0.3 to 0.8 s and 0.1 to 0.5 s until the developer's playtest (Nov 11) found him slow between attacks.
+     */
     public static int gap(boolean second, DoubleSupplier random) {
-        return second ? 2 + (int) (random.getAsDouble() * 8) : 6 + (int) (random.getAsDouble() * 10);
+        return second ? (int) (random.getAsDouble() * 4) : 3 + (int) (random.getAsDouble() * 6);
     }
 
     /** How likely he is to go straight into another string with no gap, and how many he may chain. */
-    public static double chainChance(boolean second) { return second ? .55 : .3; }
-    public static int chainLimit(boolean second) { return second ? 3 : 2; }
+    public static double chainChance(boolean second) { return second ? .75 : .5; }
+    public static int chainLimit(boolean second) { return second ? 4 : 3; }
+    /** A move that carries him to his target is followed at once, with no gap. */
+    public static boolean closes(Move move) { return move == Move.ZIP || move == Move.LUNGE; }
 
     /**
      * The weights of every move he could open with now. Distance decides the family (sword strings
@@ -298,26 +408,27 @@ public final class PyreKingRules {
             w.put(cut, 5.0);
             w.put(Move.OVERHEAD, 2.0);
             if (d > 3) w.put(Move.THRUST, 2.0);
-            w.put(Move.SCYTHE_LOW, .6);
+            // No Scythe this close: it could not touch them (SCYTHE_INNER).
             if (read.behind()) w.put(Move.TURNING_CUT, 14.0);
             if (read.backedAway() && d > 3) w.merge(Move.THRUST, 5.0, Double::sum);
         } else if (d <= 14) {
             w.put(Move.SCYTHE_LOW, read.jumped() ? 1.0 : 5.0);
             w.put(Move.SCYTHE_HIGH, read.jumped() ? 7.0 : 2.0);
-            w.put(Move.LUNGE, read.second() ? 3.0 : 1.5);
-            if (d <= 9.5) w.put(Move.THRUST, read.backedAway() ? 7.0 : 3.0);
+            w.put(Move.LUNGE, read.second() ? 4.0 : 3.0);
+            if (d <= 9.5) w.put(Move.THRUST, read.backedAway() ? 9.0 : 3.0);
             if (d <= 8) w.put(Move.OVERHEAD, 1.5);
             if (read.healing()) {
                 w.merge(Move.LUNGE, 7.0, Double::sum);
                 if (d <= 9.5) w.merge(Move.THRUST, 5.0, Double::sum);
             }
         } else if (d <= 26) {
-            w.put(Move.CAST, read.healing() ? 12.0 : 6.0);
-            w.put(Move.LUNGE, read.healing() ? 5.0 : 2.0);
-            w.put(Move.HOOK, read.second() ? 2.0 : 1.0);
+            // A player who keeps their distance is brought to sword range: the Lunge and the Hook weigh more than they did.
+            w.put(Move.CAST, read.healing() ? 12.0 : 5.0);
+            w.put(Move.LUNGE, read.healing() ? 6.0 : 4.0);
+            w.put(Move.HOOK, read.second() ? 3.0 : 2.0);
         } else {
             w.put(Move.CAST, 2.0);
-            w.put(Move.LUNGE, 2.0);
+            w.put(Move.LUNGE, 3.0);
             w.put(Move.HOOK, 6.0);
         }
         // Never the same string three times running, and seldom twice.

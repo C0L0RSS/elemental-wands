@@ -63,6 +63,8 @@ import org.slf4j.LoggerFactory;
  * before anyone moves. A player who leaves the fight floor is set back at the arrival, nothing drops
  * if one dies here, and nobody but a Creative player edits the hall. Ten seconds after the Pyre King
  * dies, everyone in his slot who came in through the hall is sent back to where they entered.
+ * Survival players come in by the Burned Gate ({@link PyreGate}), which uses this class's slots and
+ * ways back.
  */
 public final class PyreHallManager {
     private PyreHallManager() {}
@@ -78,6 +80,8 @@ public final class PyreHallManager {
         List<Integer> built = new ArrayList<>();
         /** Where each player entered from; leaving always sends them back here. */
         Map<String, Point> returns = new LinkedHashMap<>();
+        /** Players who came in through a Burned Gate: whoever of them no party holds is sent back to it. */
+        List<String> gated = new ArrayList<>();
     }
 
     private static final class Build {
@@ -110,6 +114,7 @@ public final class PyreHallManager {
         ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resources, success) -> layout = fingerprint(server));
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> { state = null; path = null; builds.clear(); kept.clear(); releases.clear(); });
         ServerTickEvents.END_SERVER_TICK.register(PyreHallManager::tick);
+        PyreGate.init();
         ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) -> {
             // The set is lost on a restart; the body still lying in the hall is what survives a quit from the death screen.
             if (alive || !kept.remove(oldPlayer.getUuid()) && !inRealm(oldPlayer)) return;
@@ -159,6 +164,32 @@ public final class PyreHallManager {
         return from && to && PyreHall.inPlay(PyreHall.nearestCentre(player.getEntityPos()), target, .4);
     }
 
+    // ------------------------------------------------------------------ what the Burned Gate uses
+
+    /** Ways back and who came through a gate, to change and then {@link #persist}; null while storage is unavailable. */
+    static Map<String, Point> savedReturns() { return state == null ? null : state.returns; }
+    static List<String> savedGated() { return state == null ? null : state.gated; }
+    static BlockPos slotCentre(int slot) { refreshGeneration(); return PyreHall.centre(state.generation, slot); }
+    /** Lays the slot out unless it is ready or already being laid out. */
+    static void raise(ServerWorld realm, int slot) { if (!ready(slot)) build(realm, slot); }
+    /** A slot whose king has died, until its players have been sent home. */
+    static boolean releasing(BlockPos centre) { return releases.containsKey(centre); }
+
+    /**
+     * Removes any Pyre King in the slot, seats a new one on his throne and plays his intro for these players. The
+     * fight follows it. Null if he could not be created.
+     */
+    static PyreKingEntity wake(ServerWorld realm, BlockPos centre, List<ServerPlayerEntity> watchers) {
+        realm.getEntitiesByClass(PyreKingEntity.class, PyreHall.footprint(centre), e -> true).forEach(Entity::discard);
+        PyreKingEntity king = ModEntities.PYRE_KING.create(realm, SpawnReason.COMMAND);
+        if (king == null) return null;
+        Vec3d at = PyreHall.king(centre);
+        king.refreshPositionAndAngles(at.x, at.y, at.z, PyreHall.KING_YAW, 0);
+        realm.spawnEntity(king);
+        king.beginIntro(realm, centre, watchers);
+        return king;
+    }
+
     // ------------------------------------------------------------------ commands
 
     public static String enter(ServerPlayerEntity player, int slot) {
@@ -192,6 +223,7 @@ public final class PyreHallManager {
                 .append(state.layout.equals(layout) ? "" : " (layout changed; slots move to fresh ground on next entry)")
                 .append(", built slots ").append(state.built).append(", ").append(state.returns.size()).append(" return point(s) held.");
         builds.values().forEach(b -> out.append(" Slot ").append(b.slot).append(" building ").append(b.next).append('/').append(b.tiles.size()).append('.'));
+        out.append(PyreGate.status());
         return out.toString();
     }
 
@@ -221,14 +253,8 @@ public final class PyreHallManager {
         if (!inRealm(player)) return "Enter the hall first with /ew hall enter.";
         ServerWorld realm = (ServerWorld) player.getEntityWorld();
         BlockPos centre = PyreHall.nearestCentre(player.getEntityPos());
-        realm.getEntitiesByClass(PyreKingEntity.class, PyreHall.footprint(centre), e -> true).forEach(Entity::discard);
-        PyreKingEntity king = ModEntities.PYRE_KING.create(realm, SpawnReason.COMMAND);
-        if (king == null) return "Could not create the Pyre King.";
-        Vec3d at = PyreHall.king(centre);
-        king.refreshPositionAndAngles(at.x, at.y, at.z, PyreHall.KING_YAW, 0);
-        realm.spawnEntity(king);
         List<ServerPlayerEntity> watchers = realm.getPlayers(p -> p.isAlive() && !p.isSpectator() && PyreHall.footprint(centre).contains(p.getEntityPos()));
-        king.beginIntro(realm, centre, watchers);
+        if (wake(realm, centre, watchers) == null) return "Could not create the Pyre King.";
         return "The Pyre King sits on his throne and his intro plays for " + watchers.size() + (watchers.size() == 1 ? " player" : " players")
                 + ". Hold Sneak to skip it; the fight follows.";
     }
@@ -272,12 +298,12 @@ public final class PyreHallManager {
 
     // ------------------------------------------------------------------ moving players
 
-    private static void arrive(ServerPlayerEntity player, ServerWorld realm, int slot) {
+    static void arrive(ServerPlayerEntity player, ServerWorld realm, int slot) {
         transfer(player, realm, PyreHall.arrival(PyreHall.centre(state.generation, slot)), PyreHall.ARRIVAL_YAW, 0);
     }
 
     /** Back to the recorded entry point, or world spawn. */
-    private static boolean sendHome(ServerPlayerEntity player) {
+    static boolean sendHome(ServerPlayerEntity player) {
         MinecraftServer server = player.getEntityWorld().getServer();
         String id = player.getUuidAsString();
         Point point = state.returns.get(id);
@@ -295,6 +321,7 @@ public final class PyreHallManager {
         // home instead of leaving them in the hall with no way back.
         server.getPlayerManager().saveAllPlayerData();
         state.returns.remove(id);
+        state.gated.remove(id);
         persist();
         return recorded;
     }
@@ -311,12 +338,12 @@ public final class PyreHallManager {
 
     // ------------------------------------------------------------------ building
 
-    private static boolean ready(int slot) {
+    static boolean ready(int slot) {
         refreshGeneration();
         return state.built.contains(slot) && !builds.containsKey(slot);
     }
 
-    private static boolean building(int slot) { return builds.containsKey(slot); }
+    static boolean building(int slot) { return builds.containsKey(slot); }
 
     /** For fixtures: the slot is laid out in the current generation and nothing is building it. */
     public static boolean slotReady(int slot) { return state != null && ready(slot); }
@@ -463,6 +490,7 @@ public final class PyreHallManager {
             state = Files.exists(path) ? JSON.fromJson(Files.readString(path), State.class) : new State();
             if (state == null || state.version != 1 || state.built == null || state.returns == null || state.layout == null)
                 throw new IOException("Invalid Burned Throne Hall record");
+            if (state.gated == null) state.gated = new ArrayList<>();      // records from before the Burned Gate
             persist();
         } catch (Exception e) {
             state = null;
@@ -470,7 +498,7 @@ public final class PyreHallManager {
         }
     }
 
-    private static boolean persist() {
+    static boolean persist() {
         if (state == null || path == null) return false;
         try {
             Files.createDirectories(path.getParent());

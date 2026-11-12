@@ -19,7 +19,12 @@ It records known verification limits; it is not a fresh installation receipt.
     off it but, in the fixture, runs clear of the Overhead that follows.
   - **Intro (Nov 11):** a 58 s cinematic from the developer's idea (the statue on his throne,
     the web of chains, the falling sword) plays by `/ew pyreking intro`. First pass; they
-    have not seen it. The gatehouse in the Nether that will start it is not built.
+    have not seen it in game.
+  - **The Burned Gate (Nov 11):** the way in, from the developer's idea: a bridge to nowhere
+    over a Nether lava lake, ending at a lone gate whose arch is filled with fire and bound
+    with chains. Touching the king's seal on them twice takes everyone nearby to the hall;
+    a win or a death brings them back before the gate. First pass; they have seen
+    screenshots only.
   - **First playtest (Nov 11):** the developer beat him on the second try with a level 1
     Space wand: "pretty clean, but really easy", slow between attacks, all throws at range,
     the spinning cut easy to leave. Answered the same day and not yet played: every clip has

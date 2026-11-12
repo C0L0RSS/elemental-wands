@@ -16,5 +16,8 @@ public class ModWorldGen {
                 HollowGraveyardStructure.TYPE);
         Registry.register(Registries.STRUCTURE_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "storm_aerie"),
                 StormAerieStructure.TYPE);
+        // The Burned Gate's finds a lava shore in the Nether to run its bridge out from.
+        Registry.register(Registries.STRUCTURE_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "pyre_gate"),
+                PyreGateStructure.TYPE);
     }
 }

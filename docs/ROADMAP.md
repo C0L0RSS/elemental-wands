@@ -612,7 +612,14 @@ After the pace was raised the developer fought him again: "it was really good."
 #### Summoning and the intro (Nov 11)
 
 - **Decided:** players reach him at a burned gatehouse of his kingdom in the Nether, by
-  right-clicking something there, as the Storm Roc's gong is struck. Not built yet.
+  right-clicking something there, as the Storm Roc's gong is struck.
+- **Decided (Nov 11):** of three things to right-click (a chained gate with the king's seal, a
+  chain winch, a war horn) the developer chose the chained gate.
+- **Decided (Nov 11):** the place is the developer's idea: "a bridge leading off to nowhere
+  over a lake of lava. But the gate looks like a portal."
+- **Built (Nov 11), first pass, seen by the developer only in screenshots:** the Burned Gate.
+  See [Pyre King](reference/pyre-king.md#the-burned-gate). Touching its seal twice is what
+  sets the chains burning.
 - **Decided:** his intro is the developer's own idea. He sits slumped on his throne like a
   statue. Chains are webbed round the whole throne room and round him, and the greatsword
   hangs from the ceiling on one of them, high above and just in front of him. The chains
@@ -624,7 +631,10 @@ After the pace was raised the developer fought him again: "it was really good."
   intro that looks super sped up."
 - **Built (Nov 11), first pass, not yet seen by the developer:** 58 seconds, started by an
   operator command. See [Pyre King](reference/pyre-king.md#the-intro).
-- **Open:** what the player does to set the chains burning. For now the scene simply begins.
+- **Open:** whether the player's touch at the gate should show in the intro itself (the
+  scene opens in the hall as before); whether a fallen player should watch the rest of a
+  co-op fight, as in the other realms; where the Pyre King comes in the order of bosses,
+  since his gate needs a Nether portal.
 
 #### Decided for the fight (Nov 10)
 

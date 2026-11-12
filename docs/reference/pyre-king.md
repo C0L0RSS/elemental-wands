@@ -264,7 +264,8 @@ burn through, the sword falls and drives into the dais, his hand closes on the h
 blade and then the hall take fire, and he rises. It is a first pass. The developer has not
 seen it yet, and asked for it to be long and unhurried, with no time limit.
 
-For now only `/ew pyreking intro` starts it. The way in for Survival players is not built.
+Players start it at [the Burned Gate](#the-burned-gate): touching its seal is what sets the
+chains burning. Operators can also start it with `/ew pyreking intro`.
 
 | Seconds | Beat |
 | --- | --- |
@@ -328,6 +329,9 @@ Lunge and the Turning Cut leave him back where he stood when the clip ends.
 | His fire on the floor (the block) | `block/PyreKingFireBlock`, `registry/ModSpellBlocks.PYRE_KING_FIRE` |
 | The intro's script (camera, chains, fires, light) | `art/pyre_king/intro/build_intro.py` |
 | The intro: track, server scene, client camera | `entity/pyreking/PyreKingIntroTrack`, `PyreKingIntro`, `client/PyreKingIntroClient` |
+| The Burned Gate: its look and template | `art/pyre_gate/build_layout.py` |
+| The Burned Gate: the seal, its parties and their fights | `hall/PyreGate`, `hall/PyreSealBlock`, `hall/PyreGateVeilBlock` |
+| The Burned Gate: where it generates | `world/PyreGateStructure`, `worldgen/structure/pyre_gate.json` and its set, pool and tag |
 | Model and renderer | `client/model/PyreKingModel`, `client/renderer/PyreKingRenderer`, `PyreKingRenderState` |
 | Blade fire and chains | `client/renderer/PyreKingEffectsLayer` |
 
@@ -420,12 +424,74 @@ mesh later, in a deferred callback.
 - The screenshots show how he draws in the fixture. Nobody has yet looked at him, or
   fought him, in Lunar.
 
+## The Burned Gate
+
+The way in for Survival players. It is a first pass (November 11, 2026); the developer has
+seen it only in the test's screenshots.
+
+- **The idea is the developer's** (Nov 11): "a bridge leading off to nowhere over a lake of
+  lava", with a gate that "looks like a portal". They chose a chained gate with the king's
+  seal on it, touched twice as the Storm Roc's gong is struck, over a winch or a war horn.
+- **What stands there.** From a lava shore in the Nether a Nether-brick bridge runs 32 blocks
+  out over the lake on two piers. It ends on a round last pier, where a lone, half-ruined gate
+  of burnt blackstone stands with nothing behind it. Fire fills its arch
+  (`pyre_gate_veil`, banked to embers), chains cross it, and the king's seal (`pyre_seal`)
+  hangs where they cross, at eye height. Two fire bowls mark the bridge's head on the shore.
+- **The fire in the arch** is one animated picture across the whole opening, as the
+  Necromancer's veil is: a vortex of fire turning in on a dark eye, jagged flames reaching in
+  from the stone and standing up from the threshold, and rising sparks. Its few hard shades
+  keep the edges sharp (the developer, Nov 11: like fire, "sharp or aggressive"; the first,
+  smooth version looked "like an old Mario 64 painting"). It is dim embers until the seal is
+  touched, then a blaze that turns twice as fast.
+- **Touching the seal.**
+  - The first right-click lights the seal and blazes the fire in the arch, and names who
+    would go: the player and every living Survival or Adventure player within 16 blocks.
+  - A second by the same player within 5 seconds burns the chains. For 2.5 seconds flames
+    run along them; then everyone named who is still within 24 blocks is taken to a free slot
+    of the hall, where his [intro](#the-intro) plays and the fight follows.
+  - It refuses on Peaceful, for Creative and spectating players, while another party from
+    the same gate is fighting, when all eight slots are busy, and for a player held by
+    another boss's fight.
+- **How a fight ends.**
+  - **A win:** ten seconds after he dies the hall sends everyone back to stand before the
+    gate.
+  - **A fall:** a player who dies in the hall keeps their belongings and, on respawning,
+    wakes before the gate. They are out of that fight; there is no spectating yet.
+  - **A wipe:** when nobody of the party is left standing in his slot he is removed, his
+    fires go out, and the gate can be touched again.
+  - **A crash, stop or relog in the hall:** the player is sent back to the gate when they
+    are next online. Ways back and who came through a gate are saved in
+    `elementalwands/pyre-hall.json`.
+- The seal and the fire in the arch stay lit while a party of that gate is on its way or
+  fighting, and go cold when it is over. A lit seal checks every 2 s that something still
+  holds it lit, so a restart never leaves one burning.
+- **Where it generates.** In every Nether biome, about as often as a bastion is tried for
+  (a spot every 24 chunks; many have no fitting shore). `PyreGateStructure` looks round the
+  spot for a shore beside open lava and turns the gate to fit:
+  - the bridge's head must be solid ground at about one height, 3 to 13 blocks above the
+    lava, with 14 blocks of open air over it;
+  - everything under the bridge and the gate, and 14 blocks behind the gate, must be the
+    open lava sea.
+  - The template carries its own piers down into the lava and its own open air, so the land
+    is not reshaped. It is placed in the last feature step, over whatever grew there.
+- `/locate structure elementalwands:pyre_gate` finds one and its link stands the player on
+  the gate's platform. `/place structure` works only where a shore fits.
+- **Not protected:** the seal, the fire and nothing else is unbreakable. The gate's stone and
+  the bridge can be mined like any other structure. Ghasts cannot break the blackstone.
+- **Not built:** a hint when a player looks at the seal, sounds of its own (it borrows
+  vanilla ones), rewards at the gate, and spectating for the fallen.
+
+`art/pyre_gate/build_layout.py` authors it: the template, the seal's and the fire's block
+states, models and textures, and `hall/PyreGateLayout.java`. `--install` writes them and
+`--check` detects drift. Its default run writes two rough pictures to
+`.local-previews/pyre-gate/`.
+
 ## The Burned Throne Hall
 
 His arena is its own dimension, `elementalwands:pyre_hall`: the throne hall he set alight,
 on a crag in a lava sea. It is a first pass (November 10, 2026). The developer liked it from
-screenshots and the preview, and approved it the same day once the braziers were in. They have
-not walked it in Lunar, and only operators can reach it.
+screenshots and the preview, and approved it the same day once the braziers were in. Survival
+players reach it by [the Burned Gate](#the-burned-gate); operators also by `/ew hall enter`.
 
 **The hall.** Offsets are from the centre block; the fight floor is y=0.
 
@@ -551,6 +617,5 @@ the floor's rim are faint: most of the hall's brightness is the ambient light.
 - **The Snare's turn and its recall are the game's, not the clips'.** He turns on his
   target up to 36° a tick while the clip plays straight ahead, and a throw that catches
   nobody is blended back to his guard in a quarter of a second.
-- **Around the fight:** a reward, a way into the hall for Survival players (the developer's
-  plan: a burned gatehouse in the Nether with something to right-click, as the Roc's gong), and
-  the hall's per-block floor protection.
+- **Around the fight:** a reward, spectating for a fallen player, and the hall's per-block
+  floor protection.

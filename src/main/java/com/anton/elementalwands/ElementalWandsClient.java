@@ -52,6 +52,8 @@ public class ElementalWandsClient implements ClientModInitializer {
         BlockRenderLayerMap.putBlock(ModSpellBlocks.INFERNO_FLAME, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModSpellBlocks.PYRE_FLAME, BlockRenderLayer.CUTOUT);
         BlockRenderLayerMap.putBlock(ModSpellBlocks.PYRE_KING_FIRE, BlockRenderLayer.CUTOUT);
+        BlockRenderLayerMap.putBlock(com.anton.elementalwands.registry.ModBlocks.PYRE_SEAL, BlockRenderLayer.CUTOUT);
+        BlockRenderLayerMap.putBlock(com.anton.elementalwands.registry.ModBlocks.PYRE_GATE_VEIL, BlockRenderLayer.TRANSLUCENT);
         BlockRenderLayerMap.putBlock(ModSpellBlocks.STONE_SPIKE, BlockRenderLayer.CUTOUT);
         for (var relic : com.anton.elementalwands.registry.ModBlocks.SUMMIT_RELICS) BlockRenderLayerMap.putBlock(relic, BlockRenderLayer.CUTOUT);
         EntangleClientEffects.register();

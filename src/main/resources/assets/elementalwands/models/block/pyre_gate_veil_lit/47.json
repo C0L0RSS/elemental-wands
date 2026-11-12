@@ -1,0 +1,42 @@
+{
+  "textures": {
+    "veil": "elementalwands:block/pyre_gate_veil_lit",
+    "particle": "elementalwands:block/pyre_gate_veil_lit"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        7
+      ],
+      "to": [
+        16,
+        16,
+        9
+      ],
+      "shade": false,
+      "light_emission": 15,
+      "faces": {
+        "south": {
+          "uv": [
+            11.4286,
+            4.8,
+            13.7143,
+            6.4
+          ],
+          "texture": "#veil"
+        },
+        "north": {
+          "uv": [
+            13.7143,
+            4.8,
+            11.4286,
+            6.4
+          ],
+          "texture": "#veil"
+        }
+      }
+    }
+  ]
+}

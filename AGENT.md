@@ -116,6 +116,7 @@ python3 art/hollow_necromancer/v2/build_art.py --check
 python3 art/pyre_king/build_art.py --check
 python3 art/pyre_king/intro/build_intro.py --check
 python3 art/pyre_hall/build_layout.py --check
+python3 art/pyre_gate/build_layout.py --check
 python3 art/hollow_necromancer/soul_bolt/build_preview.py --check
 python3 art/hollow_necromancer/grasping_hands/build_preview.py --check
 python3 art/hollow_necromancer/life_drain/build_runtime.py --check

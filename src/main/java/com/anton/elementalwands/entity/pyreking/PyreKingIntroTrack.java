@@ -34,7 +34,7 @@ public final class PyreKingIntroTrack {
     private final Map<String, Integer> beats = new HashMap<>();
     private final Chain[] chains;
     private final Flame[] flames;
-    private final Vec3d seat, mark;
+    private final Vec3d seat, mark, runway, stuck;
 
     private PyreKingIntroTrack(JsonObject json) {
         JsonObject ticks = json.getAsJsonObject("ticks");
@@ -69,6 +69,8 @@ public final class PyreKingIntroTrack {
         }
         seat = vec(json.getAsJsonArray("seat"));
         mark = vec(json.getAsJsonArray("mark"));
+        runway = vec(json.getAsJsonArray("runway"));
+        stuck = vec(json.getAsJsonArray("stuck"));
     }
 
     public static PyreKingIntroTrack get() {
@@ -90,6 +92,9 @@ public final class PyreKingIntroTrack {
     /** Where he stands for the statue and the waking, and his mark at the hall's centre, in hall cells. */
     public Vec3d seat() { return seat; }
     public Vec3d mark() { return mark; }
+    /** Where he begins the haul that ends the scene, and where the sword he slings drives into the floor, in hall cells. */
+    public Vec3d runway() { return runway; }
+    public Vec3d stuck() { return stuck; }
 
     public Vec3d eye(double t) { return point(eye, t); }
     /** His sword's pommel: hanging, falling, struck, in his fist. */

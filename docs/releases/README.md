@@ -5,6 +5,7 @@ are not claims of public publication. Older entries describe what changed then;
 use [current guides](../README.md) for today’s behavior and [status](../STATUS.md)
 for outstanding verification. Detailed historical reports are optional background.
 
+- [2026-11-12 — Pyre King: a more natural awakening](2026-11-12-pyre-king-intro.md)
 - [2026-11-12 — Wind: longer-reaching Sky Shear](2026-11-12-wind-range.md)
 - [2026-11-11 — The Pyre King](2026-11-11-pyre-king.md)
 - [2026-11-11 — Nature: thrown flowers that store health](2026-11-11-nature-flowers.md)

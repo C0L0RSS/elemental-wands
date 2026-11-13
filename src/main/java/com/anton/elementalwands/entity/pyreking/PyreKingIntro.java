@@ -34,8 +34,9 @@ import net.minecraft.util.math.Vec3d;
  * throne like a statue, bound by a web of chains strung through the dark hall, his greatsword
  * hanging point down on a chain high above him. The chains burn through from the gate to the
  * throne, the sword falls and drives into the dais at his feet, his hand reaches and closes on
- * the hilt, the blade and then the whole hall take fire, and he rises. Then his chain hauls him to
- * the centre of the hall and the fight begins.
+ * the hilt, the blade and then the whole hall take fire, and he rises. Then he slings the sword
+ * down the hall, takes its chain in both fists and heaves himself after it to the hall's centre,
+ * and the fight begins.
  * <p>
  * The server runs the timeline, holds everyone still and unhurt, puts the hall's fires out and
  * lights them again, and plays the sounds; each watcher's client flies its camera and draws the
@@ -45,8 +46,13 @@ import net.minecraft.util.math.Vec3d;
 public final class PyreKingIntro {
     /** A unanimous skip ends the scene no sooner than this, so a key still held from before can't. */
     public static final int SKIP_AFTER = 20;
-    /** Before the Haul that ends the scene he is stood this far up the hall from his mark, behind a cut. */
-    static final double RUNWAY = 26;
+    /** The clip that ends the scene: it brings him down the hall to his mark, and its travel is made real here. */
+    static final String HAUL = "intro_haul";
+    /**
+     * He is stood on the runway this many ticks before the cut that shows him there: a client draws a moved entity
+     * that much after the scene's clock, which its camera cuts on.
+     */
+    private static final int MOVED_EARLY = 3;
     private static final int QUIET = Block.NOTIFY_LISTENERS | Block.FORCE_STATE;
     private static final Map<UUID, PyreKingIntro> WATCHING = new HashMap<>();
     private static final Set<PyreKingIntro> RUNNING = new HashSet<>();
@@ -57,6 +63,7 @@ public final class PyreKingIntro {
     private final Map<ServerPlayerEntity, Vec3d> watchers = new LinkedHashMap<>();
     private final Set<UUID> skipped = new HashSet<>();
     private final PyreKingIntroTrack track = PyreKingIntroTrack.get();
+    private final PyreKingTracks.Track pull = PyreKingTracks.get(HAUL);
     private final int length = track.length(), awaken = track.beat("awaken"), haul = track.beat("haul");
     private long start;
     private int clock = -1, lit;
@@ -218,15 +225,90 @@ public final class PyreKingIntro {
         if (t == rise + 8) sound(seat, SoundEvents.BLOCK_GRINDSTONE_USE, 1.8f, .35f);
         if (t == awaken + 386) sound(sword, SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, 2.4f, .5f);      // the blade torn out of the stone
         if (t == awaken + 412) sound(seat, SoundEvents.ENTITY_RAVAGER_ROAR, 3f, .55f);
-        if (t == haul) {
-            // Behind the cut he is down off the dais; the chain brings him the rest of the way, to his mark.
-            Vec3d mark = at(track.mark()), runway = mark.add(0, 0, -RUNWAY);
+        if (t >= haul - MOVED_EARLY) haul(t);
+    }
+
+    /**
+     * The scene's last move. Behind a cut he is stood down off the dais, a throw's length up the hall; he slings the
+     * sword to his mark, takes the chain and heaves himself after it. The clip draws that from where it began, and
+     * this moves him as it does, so he is where he is drawn.
+     */
+    private void haul(int t) {
+        Vec3d mark = at(track.mark()), runway = at(track.runway()), stuck = at(track.stuck());
+        if (t == haul - MOVED_EARLY) {                // awaken has him in his guard already, which idle holds
             king.refreshPositionAndAngles(runway.x, runway.y, runway.z, PyreHall.KING_YAW, 0);
             king.setBodyYaw(PyreHall.KING_YAW);
             king.setHeadYaw(PyreHall.KING_YAW);
             king.play("idle", 0);
-            king.combat().introHaul(world, mark);
         }
+        if (t == haul) king.play(HAUL, 0);
+        if (!HAUL.equals(king.clip())) return;        // not begun, or ended: he stands where he is
+        Vec3d was = king.getEntityPos(), at = runway.lerp(mark, pull.travel((t - haul) / 20.0) / pull.travelEnd());
+        king.setPosition(at.x, at.y, at.z);
+        int thrown = track.beat("throw"), struck = track.beat("stuck"), grab = track.beat("grab"), strain = track.beat("strain"),
+                heave = track.beat("heave"), launch = track.beat("launch"), landed = track.beat("landed"), stopped = track.beat("stopped"),
+                tear = track.beat("tear");
+        if (t == haul + 12) sound(at, SoundEvents.ITEM_ARMOR_EQUIP_NETHERITE.value(), 1.6f, .55f);          // he sinks back over the blade
+        if (t == thrown) {
+            sound(at, SoundEvents.ITEM_TRIDENT_THROW.value(), 2.6f, .6f);
+            sound(at, SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, 2.2f, .5f);
+        }
+        if (t > thrown && t < struck && (t - thrown) % 2 == 0) sound(at, SoundEvents.BLOCK_CHAIN_STEP, 1.8f, .9f + (t - thrown) * .04f);    // the chain pays out
+        if (t == struck) {
+            sound(stuck, SoundEvents.ITEM_MACE_SMASH_GROUND_HEAVY, 3f, .7f);
+            sound(stuck, SoundEvents.BLOCK_ANVIL_LAND, 2.2f, .55f);
+            dust(stuck, 40, .4, .12);
+            world.spawnParticles(ParticleTypes.LAVA, true, false, stuck.x, stuck.y + .2, stuck.z, 8, .3, .1, .3, 0);
+        }
+        if (t == struck + 4) sound(stuck, SoundEvents.BLOCK_ANVIL_PLACE, 1f, 1.5f);                           // the blade still ringing
+        if (t == grab - 8 || t == grab - 4) sound(at, SoundEvents.BLOCK_CHAIN_PLACE, 1.8f, t == grab - 8 ? .7f : .6f);  // a turn round his forearm
+        if (t == grab) sound(at, SoundEvents.ITEM_ARMOR_EQUIP_IRON.value(), 2f, .5f);
+        if (t == strain - 3) {                                                                                 // the chain comes taut and holds him
+            sound(at, SoundEvents.BLOCK_CHAIN_HIT, 2.6f, .5f);
+            sound(at, SoundEvents.BLOCK_GRINDSTONE_USE, 1.6f, .35f);
+        }
+        if (t == heave) sound(at, SoundEvents.ENTITY_RAVAGER_ATTACK, 2.6f, .5f);
+        if (t >= heave + 2 && t < launch) dust(at, 8, .4, .08);                                                // his feet dragged across the floor
+        if (t == launch) {
+            sound(at, SoundEvents.ENTITY_BREEZE_WIND_BURST.value(), 2.2f, .5f);
+            dust(at, 30, .5, .15);
+        }
+        if (t > launch && t < landed && (t - launch) % 3 == 0) sound(at, SoundEvents.BLOCK_CHAIN_STEP, 1.8f, 1.3f);
+        if (t == landed) {
+            sound(at, SoundEvents.ITEM_MACE_SMASH_GROUND_HEAVY, 3.5f, .5f);
+            sound(at, SoundEvents.ENTITY_IRON_GOLEM_ATTACK, 2.6f, .5f);
+            sound(at, SoundEvents.BLOCK_ANVIL_LAND, 2.4f, .4f);
+            dust(at, 70, .8, .2);
+            world.spawnParticles(ParticleTypes.LARGE_SMOKE, true, false, at.x, at.y + .2, at.z, 10, .7, .1, .7, .02);
+            // The line he flew burns behind him, as a Haul's does in the fight.
+            king.combat().scorch(world, runway.lerp(mark, pull.travel((launch - haul) / 20.0) / pull.travelEnd()), at);
+        }
+        if (t >= landed && t < stopped) {                                                                      // ploughing to a stop: stone and sparks along the way
+            for (int i = 0; i < 3; i++) {
+                Vec3d on = was.lerp(at, (i + .5) / 3);
+                dust(on, 8, .5, .12);
+                world.spawnParticles(ParticleTypes.LAVA, true, false, on.x, on.y + .15, on.z, 2, .5, .05, .2, 0);
+            }
+            if ((t - landed) % 2 == 0) sound(at, SoundEvents.BLOCK_BASALT_BREAK, 2.2f, .5f + (t - landed) * .01f);
+            if (t == landed + 1) sound(at, SoundEvents.BLOCK_GRINDSTONE_USE, 2.4f, .4f);
+        }
+        if (t == stopped) {
+            sound(at, SoundEvents.ENTITY_IRON_GOLEM_STEP, 2.4f, .5f);
+            dust(at, 20, .6, .08);
+        }
+        if (t == track.beat("take")) sound(stuck, SoundEvents.ITEM_ARMOR_EQUIP_IRON.value(), 2.4f, .5f);
+        if (t == tear - 5) sound(stuck, SoundEvents.BLOCK_GRINDSTONE_USE, 1.8f, .5f);
+        if (t == tear) {
+            sound(stuck, SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, 2.4f, .5f);
+            dust(stuck, 24, .3, .15);
+        }
+    }
+
+    /** Stone thrown up off the floor. */
+    private void dust(Vec3d at, int count, double spread, double speed) {
+        BlockState floor = world.getBlockState(BlockPos.ofFloored(at.x, at.y - .5, at.z));
+        if (floor.isAir()) floor = Blocks.POLISHED_BLACKSTONE.getDefaultState();
+        world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, floor), true, false, at.x, at.y + .15, at.z, count, spread, .1, spread, speed);
     }
 
     // ------------------------------------------------------------------ the hall's fires
@@ -262,13 +344,14 @@ public final class PyreKingIntro {
         relight();
         RUNNING.remove(this);
         holdWatchers(true);
-        // Skipped, he is simply on his mark. Otherwise the Haul has just set him down there.
+        // Skipped, he is simply on his mark, in his guard. Otherwise his haul has just set him down there.
         Vec3d mark = at(track.mark());
         if (king.getEntityPos().squaredDistanceTo(mark) > .25) {
             king.refreshPositionAndAngles(mark.x, mark.y, mark.z, PyreHall.KING_YAW, 0);
             king.setBodyYaw(PyreHall.KING_YAW);
             king.setHeadYaw(PyreHall.KING_YAW);
         }
+        if (!"idle".equals(king.clip())) king.play("idle", 0);
         king.endIntro();
     }
 

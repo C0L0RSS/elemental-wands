@@ -375,15 +375,15 @@ def numbers(o):
 def tracks(animations):
     """Where his weapon is at every moment of every attack clip, for the fight: the wrist shackle,
     the pommel and the blade's tip, TRACK_RATE times a second, in the frame he started the clip
-    in (blocks: right, up, forward). Zip and Lunge add how far the chain has hauled him, and
-    Unbound adds its six chains' ends and where they leave his chest. The server sweeps these
-    for hits, so what is drawn is what strikes."""
+    in (blocks: right, up, forward). Zip, Lunge, Haul and the intro's own haul add how far the
+    chain has brought him, and Unbound adds its six chains' ends and where they leave his
+    chest. The server sweeps these for hits, so what is drawn is what strikes."""
     import numpy as np
     from rig import fk, player, pivot_world, SWORD_LENGTH
-    from clips import ATTACKS, CLIPS, TRAVEL, UNBOUND_CHAINS
+    from clips import TRACKED, CLIPS, TRAVEL, UNBOUND_CHAINS
     def flat(points):return [round(float(v)+0.,3) for q in points for v in (q[0],q[1],-q[2])]
     out={}
-    for name in ATTACKS:
+    for name in TRACKED:
         at=player(animations['animation.pyre_king.'+name]);n=round(CLIPS[name][1]*TRACK_RATE)+1
         wrist,pommel,tip,chest,ends=[],[],[],[],[[] for _ in UNBOUND_CHAINS]
         for i in range(n):

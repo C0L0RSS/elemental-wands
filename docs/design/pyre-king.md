@@ -182,8 +182,9 @@ After the pace was raised the developer fought him again: "it was really good."
 - **Decided:** it should be long. The other intros run over 30 seconds and there is no time
   limit: "I would rather have a long intro that is cool and feels the impact instead of an
   intro that looks super sped up."
-- **Built (Nov 11), first pass, not yet seen by the developer:** 58 seconds, started by an
-  operator command. See [Pyre King](../reference/pyre-king.md#the-intro).
+- **Built (Nov 11) and approved (Nov 12):** 61 seconds. The developer had the arms reworked
+  and the last pull given weight, then approved it from the in-game video. See
+  [Pyre King](../reference/pyre-king.md#the-intro).
 - **Open:** whether the player's touch at the gate should show in the intro itself (the
   scene opens in the hall as before); whether a fallen player should watch the rest of a
   co-op fight, as in the other realms; where the Pyre King comes in the order of bosses,

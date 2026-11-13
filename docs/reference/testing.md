@@ -73,7 +73,7 @@ client runners use `runClient`. Run only the suites relevant to the change.
 | Storm Roc | `roc_server_smoke` | `roc_client_smoke` | Run the server fixture first. The client saves screenshots, not video |
 | Storm Summit realm | — | `summit_client_smoke` | |
 | Storm aerie and intro | `aerie_server_smoke` | `aerie_client_smoke`, `roc_intro_client_smoke` | `-PaerieSeed` (default 12345), `-PaerieGongs="label@x,y,z;…"`; for the intro `-ProcIntroGong=x,y,z`, `-ProcIntroVideo`, `-ProcIntroEvery`, `-ProcIntroViewDistance`, `-ProcIntroSkipAt=<beat>` |
-| Pyre King | `checkPyreKing` (in the build) | `pyre_king_client_smoke`, `pyre_king_fight_smoke`, `pyre_king_intro_smoke` | `-PpyreFightRecord`, `-PpyreFightRecordCase=<name>[,<name>]`, `-PpyreIntroVideo`. See [Pyre King](pyre-king.md#verification) |
+| Pyre King | `checkPyreKing` (in the build) | `pyre_king_client_smoke`, `pyre_king_fight_smoke`, `pyre_king_intro_smoke` | `-PpyreFightRecord`, `-PpyreFightRecordCase=<name>[,<name>]`, `-PpyreIntroVideo`, `-PpyreIntroEvery=<ticks>`. See [Pyre King](pyre-king.md#verification) |
 | Burned Gate | — | `pyre_gate_smoke` | Uses a fresh normal world |
 | Burned Throne Hall | — | `pyre_hall_client_smoke` | |
 | Worldgen, locate | `guardian_church_worldgen_smoke`, `guardian_church_locate_smoke`, `aerie_worldgen_smoke` | — | `guardian_church_locate_smoke` also checks where the locate teleport links land at a church, a graveyard and an aerie. `-PaerieSeed` for the aerie runner. Terrain fit still needs a human look |
@@ -261,7 +261,7 @@ earlier clip. Raw frames need not be kept once the video is verified.
 | `crypt_client_smoke -PintroVideo` (Necromancer intro) | 383 at 20 fps (19.15 s) | `build/crypt-client-smoke/screenshots/intro-video-%03d.png`, from 000 | `build/crypt-client-smoke/CRYPT_PASSED.txt` |
 | `crypt_client_smoke -PtransformVideo` (transformation) | about 692 at 20 fps; the receipt gives the count | `build/crypt-client-smoke/screenshots/transform-video-%03d.png`, from 000 | `build/crypt-client-smoke/CRYPT_PASSED.txt` |
 | `roc_intro_client_smoke -ProcIntroVideo` (Roc intro and opening summon) | one frame every `-ProcIntroEvery` ticks (default 2, so 10 fps) | `build/roc-intro-client-smoke/screenshots/roc-intro-video-%04d.png` | `build/roc-intro-client-smoke/ROC_INTRO_CLIENT_PASSED.txt` |
-| `pyre_king_intro_smoke -PpyreIntroVideo` | one frame every other tick (10 fps) | `build/pyre-king-intro-smoke/screenshots/intro-%05d.png`; check the first number | `build/pyre-king-intro-smoke/PYRE_KING_INTRO_PASSED.txt` |
+| `pyre_king_intro_smoke -PpyreIntroVideo` | one frame every other tick (10 fps); every tick (20 fps) with `-PpyreIntroEvery=1` | `build/pyre-king-intro-smoke/screenshots/intro-%05d.png`; check the first number | `build/pyre-king-intro-smoke/PYRE_KING_INTRO_PASSED.txt` |
 | `pyre_king_fight_smoke -PpyreFightRecord` | one frame every other tick of the free fight (10 fps) | `build/pyre-king-fight-smoke/screenshots/record-%05d.png`; check the first number | `build/pyre-king-fight-smoke/PYRE_KING_FIGHT_PASSED.txt` |
 | `pyre_king_fight_smoke -PpyreFightRecordCase=<name>[,<name>]` | one frame every other tick of those cases (10 fps) | `build/pyre-king-fight-smoke/screenshots/case-<name>-%05d.png` | same |
 

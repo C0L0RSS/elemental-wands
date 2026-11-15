@@ -20,7 +20,16 @@ Pass 14 (November 11) adds two clips for getting round a pillar, the Haul and th
 The developer asked for the move; they have not yet seen these two clips.
 
 Pass 15 (November 11) adds his intro's two clips, `throned` and `awaken`, from the
-developer's idea for the scene. They have not yet seen them either.
+developer's idea for the scene.
+
+Pass 16 (November 12) reworks those two clips after the developer's first look, which
+found his arms wacky: resting hands and wrists, a reach whose elbow stays low, a rise
+pushing on his knee, and a two-handed lift. The rest of the kit is unchanged.
+
+Pass 17 (November 12) adds `intro_haul`, the pull to his mark that ends the intro. The
+fight's Haul did that at first and looked weightless at 26 blocks; the developer asked for
+weight, and to see him take the chain before he pulls. The developer approved the intro's
+three clips from the in-game video the same day.
 
 ## The design
 
@@ -267,14 +276,21 @@ channels.
   (`rig.PAULDRON_FOLLOW` / `PAULDRON_ROOM`). Strides stay inside that room, so the plates
   stay steady with the chest; big raises carry them. The workshop's test sweep doesn't
   drive the plates.
-- A free fist can keep a `wrist` turn instead of snapping straight to its forearm.
+- A free fist can keep a `wrist` turn instead of snapping straight to its forearm. In a
+  clip whose wrists are planned, the planner starts from that turn when it eases a fist
+  into or out of its grip. The intro bends resting hands with `clips._wrist`.
 - A clip can pose its arms as hinges (`hinge: True`). Each arm bone's roll then follows the
   plane the elbow bends in. The default takes the shortest turn from the sculpt, which
   flips a bone's roll when an arm is flung up or folded tight. Both agree in the guard.
   The chain moves use the hinge; the sword strings keep the default, so their bakes are
   unchanged.
 - A clip can say where a free arm's elbow points (`free_elbow`). The chain moves point it
-  back and out. Near a grip change it blends into the planned elbow.
+  back and out. Near a grip change it blends into the planned elbow. With
+  `elbow_into_grip` (the intro), it instead eases over 0.3 s straight into the elbow
+  planned at the grip itself, so the arm does not swing as the fist closes or opens.
+- A clip can say which way a gripping elbow should rather point (`elbow_pref`); the
+  planner then weighs each degree off it like a degree of wrist. The intro hangs its
+  weight-bearing elbows down.
 - `chain_ends` sends marker bones to world points.
 - A thrown sword leaves the hand and flies free. Meanwhile the short tether is hidden, and
   `effects.js` draws the long chain from the wrist shackle to the pommel ring.
@@ -427,26 +443,54 @@ unless noted: the sword whips in, the right fist takes it, and the left follows 
 - `throned` and `awaken`: his intro. Both are authored with him standing half a block in
   front of his throne's seat (one block high, two deep), facing down the hall.
   - `throned` (a 10 s loop): the statue. He has slid down in the seat and leans back into
-    the throne, his head fallen forward and to his right, his right hand on the arm of the
-    throne and his left in his lap, his left leg slid out. Nothing of him moves. The sword
-    hangs point down with its pommel 34 blocks up, 1.75 blocks in front of him, turning 8°
-    each way on its chain.
-  - `awaken` (23.5 s):
+    the throne, his head fallen forward and to his right. His right forearm lies along the
+    arm of the throne, the hand hanging over its end; his left hand lies on his thigh, that
+    elbow at his side. Nothing of him moves. The sword hangs point down with its pommel 34
+    blocks up, 1.75 blocks in front of him, turning 8° each way on its chain.
+  - `awaken` (23.5 s). Each move starts in his hips or chest and the head and arms follow:
     - 0.5–1.9 s: the sword falls and drives into the floor, then shivers as it settles
       leaning 16° back toward him.
-    - 4.5 and 5.1 s: the fingers of his right hand stir. 5.3–6.3 s: his head lifts.
-    - 6.5–8.8 s: he leans out of the throne and reaches; his fist closes on the hilt.
-    - 10 s: the game lights the blade. His head comes up, he starts to breathe, and the
-      heat lifts his cloth.
-    - 15.5–19.3 s: his left hand finds the arm of the throne and he hauls himself up on
-      the sword.
-    - 19.3–20.6 s: he draws the blade out along itself and lifts it point first into a
-      high guard, then holds it.
-    - 21.2–22.4 s: he brings it down into his guard, both hands on it from 21.6 s.
+    - 4.5 and 5.1 s: the hanging hand stirs at the wrist. 5.3–6.4 s: his head lifts, the
+      neck leading and the head a beat behind.
+    - 6.4–8.8 s: he pulls himself forward, his hand sliding to the end of the arm of the
+      throne, then lifts it away, the wrist trailing, reaches with the elbow low, and closes
+      his fist on the hilt.
+    - 10 s: the game lights the blade. His head follows the fire down it and comes up, he
+      starts to breathe, and the heat lifts his cloth.
+    - 15.4–18.6 s: his left hand slides to his knee and his left foot draws back. He leans
+      over his feet and pushes up on knee and sword; once he leaves the seat the left hand
+      lets go and hangs at his side.
+    - 19.45–19.75 s: after a small dip he tears the blade out along itself; the left arm
+      swings back for balance.
+    - 19.75–20.6 s: he swings it up point first and his left hand takes the grip (20.4 s).
+      He steps his right foot into his stance and holds the blade upright in both fists before
+      his right shoulder, the hold both wrists are easiest in (searched).
+    - 21.2–22.7 s: he brings it down into his guard, where it dips once with its weight.
   - The flat of the stuck blade faces the one way, of every roll about it, that his
     reaching wrist is easiest in, seated and standing.
   - The camera, the web of chains, the hall's fires and its light are not in these clips:
     `intro/build_intro.py` owns them.
+- `intro_haul`: the pull to his mark that ends the intro, 7 s. It is authored from 26 blocks
+  up the hall and carries him exactly that far.
+  - 0–1.12 s: he sinks back over his right leg with the blade low behind his hip in both
+    hands, steps his left foot into the throw and slings it long and flat.
+  - 1.5 s: it drives into the floor 2.6 blocks past his mark and 1.3 to his right, leaning
+    back at him, and shivers.
+  - 1.62–2.05 s: he winds the chain a turn and a half round his right forearm and takes it
+    in both fists, the left ahead of the right.
+  - 2.05–2.7 s: he steps his right foot back and sinks against the chain until it holds
+    his weight, arms straight.
+  - 2.7–2.95 s: he heaves, tearing both fists back to his hip. The chain drags him a block
+    on his toes before his feet leave the floor.
+  - 2.95–3.8 s: he flies low, pitched forward with the chain held in to his chest and his
+    legs trailing (1.4 blocks up at the top), and throws his feet out ahead to land.
+  - 3.8–4.3 s: he strikes the floor 3 blocks short and ploughs on to his mark in a deep
+    crouch, on both heels and his left fist. His speed is keyed, not his place, so he
+    gathers way and loses it as a heavy thing does (`clips._ih_travel`).
+  - 4.3–5.3 s: he stays down, takes the hilt (4.95 s) and draws the blade back out along
+    its own line.
+  - 5.3–7 s: he rises slowly, carrying it low with the point skimming the floor, takes it
+    in both hands (6.5 s) and comes up into his guard.
 - `unbound`: the phase change, 4.3 s.
   - 0–0.64 s: he raises the sword and cuts down into the floor with the overhead cut.
   - 0.64–0.95 s: he leans on the hilt and drives the blade in at an angle, kneeling behind
@@ -468,6 +512,8 @@ unless noted: the sword whips in, the right fist takes it, and the left follows 
   at the end, in the frame he started in: 10.4, 6.9 and 12.9 blocks forward. The game moves him there on
   the clip's last frame. The flight is authored for one distance, so the game will have to
   stretch it to the real one.
+- `intro_haul` moves him 26 blocks and is never stretched: the intro stands him exactly
+  that far from his mark.
 - The low Scythe, Zip and Lunge spin him a full turn, so their pelvis channel ends at 360°.
   As with the Turning Cut, the next clip must start with no blend.
 - Throw distances and targets are fixed in the clips (27 blocks for the Hook and the Snare,
@@ -480,8 +526,9 @@ unless noted: the sword whips in, the right fist takes it, and the left follows 
 **What the build gives the game for that.** `--install` also writes
 `data/elementalwands/pyre_king_tracks.json`: for every attack clip, where his wrist
 shackle, the sword's pommel and its tip are, 120 times a second, in the frame he started the
-clip in (blocks: right, up, forward). Zip, Lunge and Haul add how far the chain has hauled
-him (`clips.TRAVEL`), and Unbound adds its six chains' ends. The fight sweeps these for hits
+clip in (blocks: right, up, forward). Zip, Lunge, Haul and `intro_haul` (tracked for its
+travel alone, `clips.TRACKED`) add how far the chain has hauled him (`clips.TRAVEL`), and
+Unbound adds its six chains' ends. The fight sweeps these for hits
 and aims thrown swords from them; see
 [Pyre King](../../docs/reference/pyre-king.md#the-fight).
 

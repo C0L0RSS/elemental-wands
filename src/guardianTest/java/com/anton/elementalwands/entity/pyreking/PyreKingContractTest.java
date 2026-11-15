@@ -72,7 +72,7 @@ public final class PyreKingContractTest {
             }
             require(near(tempo.clip(-.1), -.1), "Before a clip begins its time is the blend's own");
         }
-        for (String plain : new String[]{"haul", "snare", "unbound", "drag_down", "throned", "awaken", "idle"})
+        for (String plain : new String[]{"haul", "snare", "unbound", "drag_down", "throned", "awaken", "intro_haul", "idle"})
             require(PyreKingRules.tempo(plain).plain(), plain + " should play as it was made");
         require(Move.CAST.seconds(Move.CAST.free) < 2.2, "A Cast should cost him about two seconds, not four");
         require(Move.CAST.seconds(3.45) - Move.CAST.seconds(1.3) < .5, "He should stand with the sword out for under half a second");
@@ -140,13 +140,25 @@ public final class PyreKingContractTest {
         // His intro: the baked scene and his two clips share one clock, and the camera stays in the hall.
         PyreKingIntroTrack scene = PyreKingIntroTrack.get();
         require(scene.length() == scene.beat("length") && scene.length() >= 600, "His intro should be long, and as long as its last beat says");
-        require(Math.round(PyreKingClips.get("awaken").seconds() * 20) == scene.beat("haul") - scene.beat("awaken"), "awaken must end as the last Haul begins");
+        require(Math.round(PyreKingClips.get("awaken").seconds() * 20) == scene.beat("haul") - scene.beat("awaken"), "awaken must end as his haul down the hall begins");
+        // The scene's own haul is made for exactly its distance, and slow enough to carry his weight.
+        PyreKingTracks.Track pull = PyreKingTracks.get(PyreKingIntro.HAUL);
+        require(near(pull.travelEnd(), scene.runway().distanceTo(scene.mark())), "intro_haul should carry him exactly from the runway to his mark");
+        require(scene.beat("haul") + Math.round(PyreKingClips.get(PyreKingIntro.HAUL).seconds() * 20) <= scene.length(), "The scene must not end before intro_haul does");
+        double slung = (scene.beat("launch") - scene.beat("haul")) / 20.0, flown = (scene.beat("stopped") - scene.beat("launch")) / 20.0;
+        require(pull.travel(slung - .25) == 0 && slung >= 2.5, "He should throw, take the chain and brace before it moves him");
+        require(flown >= 1.2 && pull.travel((scene.beat("landed") - scene.beat("haul")) / 20.0) < pull.travelEnd() - 2,
+                "He should take over a second to cross the hall, and land short enough to plough to a stop");
+        require(PyreKingAim.get(PyreKingIntro.HAUL) == null, "intro_haul is never aimed or stretched");
         require(PyreKingClips.get("throned").loop() && scene.beat("awaken") % Math.round(PyreKingClips.get("throned").seconds() * 20) == 0,
                 "The statue's loop must end as awaken begins");
         require(scene.beat("pulse") < scene.beat("burn") && scene.beat("burn") < scene.beat("fall") && scene.beat("fall") < scene.beat("struck")
                 && scene.beat("struck") < scene.beat("grasp") && scene.beat("grasp") < scene.beat("ignite") && scene.beat("ignite") < scene.beat("braziers")
                 && scene.beat("braziers") < scene.beat("lit") && scene.beat("lit") <= scene.beat("rise") && scene.beat("rise") < scene.beat("title")
-                && scene.beat("title_end") <= scene.beat("haul") && scene.beat("haul") < scene.beat("landed") && scene.beat("landed") < scene.beat("return")
+                && scene.beat("title_end") <= scene.beat("haul") && scene.beat("haul") < scene.beat("throw") && scene.beat("throw") < scene.beat("stuck")
+                && scene.beat("stuck") < scene.beat("grab") && scene.beat("grab") < scene.beat("strain") && scene.beat("strain") < scene.beat("heave")
+                && scene.beat("heave") < scene.beat("launch") && scene.beat("launch") < scene.beat("landed") && scene.beat("landed") < scene.beat("stopped")
+                && scene.beat("stopped") < scene.beat("take") && scene.beat("take") < scene.beat("tear") && scene.beat("tear") < scene.beat("return")
                 && scene.beat("return") < scene.beat("length"), "His intro's beats are out of order");
         require(scene.chains().length >= 15, "His intro needs its web of chains");
         for (PyreKingIntroTrack.Chain chain : scene.chains())

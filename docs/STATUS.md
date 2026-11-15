@@ -25,8 +25,7 @@ Videos, browser previews and workshop clips waiting for the developer's approval
   the summon.
 - **Storm Roc intro (the snatch):** the in-game video.
 - **Guardian intro (the zombie):** the in-game video of the retimed intro.
-- **Pyre King:** the Haul and Snare clips, the intro's `throned` and `awaken` clips, and the
-  Chain Scythe's bowed chain in the workshop.
+- **Pyre King:** the Haul and Snare clips and the Chain Scythe's bowed chain in the workshop.
 - **Necromancer:** the remaining workshop clips, including the standalone dragged-soul
   clip, and the fireball and soul models (`.local-previews/soul-fire/`). Once approved they
   need installing and a client check.

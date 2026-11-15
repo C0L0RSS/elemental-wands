@@ -5,10 +5,12 @@ The developer's idea (Nov 11): he sits slumped on his throne like a statue, boun
 chains strung through the hall, with his greatsword hanging point down on a chain high above
 and just in front of him. The chains burn through one after another, the sword falls and
 drives into the dais at his feet, his hand reaches and closes on the hilt, the blade and then
-the whole hall take fire, and he rises. Then his chain hauls him down the hall to its centre
-and the fight begins. It is long on purpose (58 s): every beat is given room.
+the whole hall take fire, and he rises. Then he slings the sword down the hall, takes its
+chain in both fists and heaves himself after it to the hall's centre, and the fight begins. It
+is long on purpose (61 s): every beat is given room.
 
-His own acting is two clips in ../clips.py, `throned` (the statue, a loop) and `awaken`. This
+His own acting is three clips in ../clips.py: `throned` (the statue, a loop), `awaken`, and
+`intro_haul`, which he plays from RUNWAY, where the scene stands him behind a cut. This
 script owns everything else, on the same clock (20 ticks a second):
   - the camera, one shot after another, with hard cuts;
   - the web: every chain's two ends, when heat starts along it, when it parts and when the
@@ -52,13 +54,21 @@ IGNITE = AWAKEN+200                                 # awaken's 10 s: the blade t
 BRAZIERS, LIT = IGNITE+30, IGNITE+100               # the hall's fires catch, throne to gate
 RISE = AWAKEN+310
 TITLE, TITLE_END = AWAKEN+400, AWAKEN+460
-HAUL = AWAKEN+round(clips.AWAKEN*RATE)              # awaken ends in his guard; the chain takes him down the hall
-LANDED = HAUL+2+16                                  # the Haul's 2-tick blend and its 0.8 s flight
-RETURN, LENGTH = HAUL+65, HAUL+90
+HAUL = AWAKEN+round(clips.AWAKEN*RATE)              # awaken ends in his guard; behind a cut, `intro_haul` begins
+def hauled(seconds): return HAUL+round(seconds*RATE)
+THROW, STUCK = hauled(clips.IH_THROW), hauled(clips.IH_STICK)       # the sword leaves his hand; it drives in by his mark
+GRAB, STRAIN = hauled(clips.IH_GRAB), hauled(clips.IH_TAUT)         # both fists have the chain; it holds his weight
+HEAVE, LAUNCH = hauled(clips.IH_HEAVE), hauled(clips.IH_OFF)        # he heaves; his feet leave the floor
+LANDED, STOPPED = hauled(clips.IH_TOUCH), hauled(clips.IH_STOP)     # they strike; he has ploughed to a stop on his mark
+TAKE, TEAR = hauled(clips.IH_TAKE), hauled(clips.IH_TEAR)           # his fist closes on the hilt; the blade comes out
+RETURN = hauled(clips.IH_LEN)-10                    # the camera starts home as he comes up into his guard
+LENGTH = RETURN+25
 PULSE = 390                                         # the shard in his chest stirs once
 FIRST_LINK, BURN = 416, 440                         # one link by the gate begins to glow; then the web goes
 BEATS = {'awaken': AWAKEN, 'fall': FALL, 'struck': STRUCK, 'grasp': GRASP, 'ignite': IGNITE, 'braziers': BRAZIERS, 'lit': LIT,
-         'rise': RISE, 'title': TITLE, 'title_end': TITLE_END, 'haul': HAUL, 'landed': LANDED, 'return': RETURN, 'length': LENGTH,
+         'rise': RISE, 'title': TITLE, 'title_end': TITLE_END, 'haul': HAUL, 'throw': THROW, 'stuck': STUCK, 'grab': GRAB,
+         'strain': STRAIN, 'heave': HEAVE, 'launch': LAUNCH, 'landed': LANDED, 'stopped': STOPPED, 'take': TAKE, 'tear': TEAR,
+         'return': RETURN, 'length': LENGTH,
          'pulse': PULSE, 'burn': BURN}
 assert AWAKEN % round(clips.TWIST_PERIOD*RATE) == 0, 'the statue loop must end as awaken begins'
 
@@ -66,6 +76,8 @@ assert AWAKEN % round(clips.TWIST_PERIOD*RATE) == 0, 'the statue loop must end a
 SEAT = np.array([.5, 7., -50.5])                    # where he stands for both clips: half a block in front of the seat
 KING_MARK = np.array([hall.KING[0]+.5, hall.KING[1], hall.KING[2]+.5])
 ARRIVAL = np.array([hall.ARRIVAL[0]+.5, hall.ARRIVAL[1], hall.ARRIVAL[2]+.5])
+RUNWAY = KING_MARK-np.array([0, 0, clips.IH_RUN])  # where `intro_haul` begins: its travel ends on his mark
+STUCK_AT = RUNWAY+np.array([-clips.IH_FLOOR[0], 0, -clips.IH_FLOOR[2]])     # where the slung sword enters the floor
 assert hall.THRONE_SEAT_FRONT == -52 and abs(SEAT[2]-(hall.THRONE_SEAT_FRONT+1+clips.SEAT_FRONT)) < 1e-9, 'the seat moved'
 
 
@@ -209,15 +221,20 @@ def shots():
         (BRAZIERS, 'the hall takes fire', [(BRAZIERS, (.5, 15.5, 46.5)), (RISE, (.5, 14., 43.), 'lin')], [(BRAZIERS, (.5, 8., -20.))], [(BRAZIERS, 64)]),
         (RISE, 'he rises', [(RISE, (4.1, 7.9, -45.4)), (TITLE, (4.4, 8.0, -44.8), 'lin'), (HAUL, (4.5, 8.0, -44.6), 'lin')],
          [(RISE, SEAT+np.array([0, 2.6, .5])), (RISE+90, SEAT+np.array([0, 3.5, .2]), 'slow'), (HAUL, SEAT+np.array([0, 3.7, .2]))], [(RISE, 50)]),
-        (HAUL, 'down the hall', [(HAUL, (-3.6, 1.9, 8.)), (LENGTH, (-3.6, 1.9, 8.))],
-         [(HAUL, (.5, 4.5, -22.)), (LANDED-4, (.5, 4.5, -22.)), (LANDED+14, KING_MARK+np.array([0, 2.9, 0]), 'out')], [(HAUL, 58)]),
+        # Close on his sword side, low, so the wind-up, the fists on the chain and his weight against it all read.
+        (HAUL, 'the throw', [(HAUL, RUNWAY+np.array([-5.1, 1.3, 8.])), (LAUNCH+2, RUNWAY+np.array([-4.7, 1.2, 7.2]), 'lin')],
+         [(HAUL, RUNWAY+np.array([-.2, 2.6, .9])), (LAUNCH+2, RUNWAY+np.array([-.2, 2.4, 1.1]), 'lin')], [(HAUL, 46)]),
+        # From beside his mark, on his left, so the stuck sword stands clear beside where he will stop: he comes at it.
+        (LAUNCH+2, 'down the hall', [(LAUNCH+2, (3.4, 1.7, 6.)), (LENGTH, (3.4, 1.7, 6.))],
+         [(LAUNCH+2, (.5, 3.8, -12.)), (LANDED, KING_MARK+np.array([-.3, 2.6, -2.]), 'lin'), (STOPPED+4, KING_MARK+np.array([-.8, 1.7, 0]), 'out'),
+          (TEAR, KING_MARK+np.array([-.8, 1.8, 0])), (RETURN, KING_MARK+np.array([-.2, 2.9, 0]), 'slow')], [(LAUNCH+2, 58)]),
     ]
 
 
 def camera(t):
     """Eye, yaw, pitch (Minecraft's: yaw 0 looks south, positive pitch looks down) and field of view."""
     shot = [s for s in shots() if s[0] <= t][-1]
-    eye = key(t, shot[2])+jolt(t, STRUCK, .35)+(jolt(t, LANDED, .3) if shot[1] == 'down the hall' else 0)
+    eye = key(t, shot[2])+jolt(t, STRUCK, .35)+jolt(t, STUCK, .1, 8)+jolt(t, LANDED, .45, 18)
     look = key(t, shot[3])
     d = look-eye
     return eye, math.degrees(math.atan2(-d[0], d[2])), -math.degrees(math.atan2(d[1], math.hypot(d[0], d[2]))), float(key(t, shot[4]))
@@ -261,7 +278,8 @@ def bake():
     fire, light = fires()
     return {'beats': BEATS, 'cuts': cuts, 'shots': {s[1]: s[0] for s in shots()},
             'frame': 'hall cells: +X east, +Z south, the fight floor\'s top at y = 1; world = centre + (x, SURFACE_Y + y, z)',
-            'seat': [float(v) for v in SEAT], 'mark': [float(v) for v in KING_MARK], 'chains': WEB, 'fires': fire, 'lights': light, 'ticks': ticks}
+            'seat': [float(v) for v in SEAT], 'mark': [float(v) for v in KING_MARK], 'runway': [float(v) for v in RUNWAY],
+            'stuck': [float(v) for v in STUCK_AT], 'chains': WEB, 'fires': fire, 'lights': light, 'ticks': ticks}
 
 
 def packed(track):

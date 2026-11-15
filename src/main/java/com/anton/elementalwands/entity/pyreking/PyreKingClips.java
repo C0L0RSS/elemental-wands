@@ -33,7 +33,8 @@ public final class PyreKingClips {
         new Clip("snare", 2.7f, false, 0f, 0.0f, 0.0f, 0.0f),
         new Clip("unbound", 4.3f, false, 0f, 0.0f, 0.0f, 0.0f),
         new Clip("throned", 10.0f, true, 0f, 0.0f, 0.0f, 0.0f),
-        new Clip("awaken", 23.5f, false, 0f, 0.0f, 0.0f, 0.0f));
+        new Clip("awaken", 23.5f, false, 0f, 0.0f, 0.0f, 0.0f),
+        new Clip("intro_haul", 7.0f, false, 0f, 0.0f, 0.0f, -26.0f));
 
     public static Clip get(String name) {
         for (Clip clip : ALL) if (clip.name().equals(name)) return clip;

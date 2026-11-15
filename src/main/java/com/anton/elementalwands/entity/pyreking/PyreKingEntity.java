@@ -317,7 +317,7 @@ public class PyreKingEntity extends PathAwareEntity implements GeoEntity, WandBo
         }
         if (isAlive()) {
             if (intro != null) {
-                // The scene first (its last beat starts a Haul), then whatever move that left in hand.
+                // The scene first, then the review tick, which returns him to his idle when the scene's last clip ends.
                 if (!intro.tick()) intro = null;
                 else combat.tickReview(world);
             } else if (isBossAggressive()) combat.tick(world);

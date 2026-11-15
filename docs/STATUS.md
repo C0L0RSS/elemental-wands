@@ -84,6 +84,17 @@ Looks and balance that only a person playing can judge.
 
 ### Fractured Guardian and the nave
 
+- **The November overhaul has not been played.** Step one (the chooser, strings, the
+  later-locking leap, the Airburst and the heavier damage) and step two (the Sweep and the
+  Scar) are built and pass their checks, but nobody has fought them, and the two new clips have
+  not been seen in a game. The design notes list what to judge in the
+  [first](design/guardian.md#what-to-look-for-in-the-first-playtest) and
+  [second](design/guardian.md#what-to-look-for-in-the-second-playtest) playtest. The amber
+  marks and bursts are plain particles, and the spikes are drawn in code, until a playtest says
+  they need drawn effects.
+- **The beam is out of the fight but its code remains** (`GuardianBeamAttack` and its rules,
+  visual, clip and rehearsal). Delete it once the Scar has been played and kept; put it back in
+  `GuardianCombatRules.weights` if the Scar is dropped.
 - A full fight with `/ew guardian log on` to tune health (1,400 plus 1,000 per extra player
   is a starting estimate) and fight length, aiming at about ten tries and four minutes.
 - The core pulse clip, the held slams, the pull's feel and the ring's readability. The pull
@@ -185,7 +196,14 @@ Automated work an agent can do without the developer.
 - `tools/check_assets.py` has not had a full run on the Windows machine since the
   structure files and the Pyre King's model were made to come out the same on every
   machine (November 12). Run it there once; a failure means a generator still depends on
-  the machine.
+  the machine. A run of only its Guardian checks there on November 13 found two such cases:
+  - `tools/prepare_guardian_assets.py --check` calls the four Guardian body textures stale.
+    Regenerated there, their pixels match the committed files exactly, but the last seven
+    bytes of the compressed data differ (Pillow 13.0.0). The committed files were kept.
+  - `tools/build_guardian_church.py`, `art/guardian_nave/build_layout.py` and
+    `art/fractured_guardian/intro/build_intro.py` fail their `--check` although nothing they
+    write has changed. That checkout converts line endings (`core.autocrlf=true`), and those
+    checks appear to compare raw bytes.
 
 ## Known gaps
 

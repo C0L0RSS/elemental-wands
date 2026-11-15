@@ -58,9 +58,9 @@ public final class GuardianShellContractTest {
                 && GuardianShellRules.health(8) > GuardianShellRules.health(4), "Pressure must cap at four while health grows");
         require(GuardianCombatRules.restScale(1, Difficulty.HARD) < 1 && GuardianCombatRules.restScale(1, Difficulty.EASY) > 1,
                 "Difficulty no longer changes rest");
-        require(GuardianCombatRules.delayChance(Difficulty.EASY) < GuardianCombatRules.delayChance(Difficulty.NORMAL)
-                && GuardianCombatRules.delayChance(Difficulty.NORMAL) < GuardianCombatRules.delayChance(Difficulty.HARD)
-                && GuardianCombatRules.delayChance(Difficulty.HARD) < 1, "Delayed slam chance out of order");
+        require(GuardianCombatRules.holdChance(Difficulty.EASY) < GuardianCombatRules.holdChance(Difficulty.NORMAL)
+                && GuardianCombatRules.holdChance(Difficulty.NORMAL) < GuardianCombatRules.holdChance(Difficulty.HARD)
+                && GuardianCombatRules.holdChance(Difficulty.HARD) <= 1, "Held slam chance out of order");
         require(GuardianCombatRules.scaled(12, .45) >= 1 && GuardianCombatRules.scaled(1, .1) == 1, "Rest collapsed to zero");
 
         // Delayed slams pause at the apex: later impact, same follow-through; fast combo slams never hold.

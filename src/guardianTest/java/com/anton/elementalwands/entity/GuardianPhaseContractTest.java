@@ -27,13 +27,14 @@ final class GuardianPhaseContractTest {
                 require(groundedHit && !jumpHit,"Ordinary timed jump failed at "+distance+" unstable="+unstable);
             }
         }
-        // The triple sequence needs at most two concurrent wave slots, including the next leap launch.
-        int[] impacts={21,66,116,170,212};
+        // A phase-two string of three slams (the second and third fast), then a leap after the shortest
+        // rest, needs at most two concurrent wave slots.
+        int[] impacts={26,77,122,171,213};
         for(int tick=0;tick<260;tick++) {
             int count=0;for(int impact:impacts)if(tick>=impact && tick<impact+GuardianPhaseRules.waveTicks(true))count++;
-            require(count<=2,"Combo can exhaust wave slots");
+            require(count<=2,"A string can exhaust wave slots");
         }
-        require(GuardianLeapRules.damage(Vec3d.ZERO,new Box(4,0,0,4.6,1.8,.6))==0,"Outer landing remains unjumpable");
+        require(GuardianLeapRules.damage(Vec3d.ZERO,new Box(5,0,0,5.6,1.8,.6))==0,"Outer landing remains unjumpable");
         System.out.println("Guardian phase checks passed: party threshold, vanilla jump arcs, outer impact, overlapping wave capacity.");
     }
     private static void require(boolean value,String reason){if(!value)throw new AssertionError(reason);}

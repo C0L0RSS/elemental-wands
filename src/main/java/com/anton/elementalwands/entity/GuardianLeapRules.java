@@ -5,10 +5,19 @@ import net.minecraft.util.math.Vec3d;
 
 /** Timings and volume shared by leap planning, damage, animation and the warning marker. */
 public final class GuardianLeapRules {
-    public static final int LOCK = 10, TAKEOFF = 14, FLIGHT = 36;
+    public static final int TAKEOFF = 14, FLIGHT = 36;
     public static final int LAND = TAKEOFF + FLIGHT, WAVE_DELAY = 6, RECOVERY = 44;
+    /**
+     * It follows its target through the wind-up and the first part of the flight, then commits here:
+     * the landing ring is marked and stays put for the last {@code LAND - LOCK} ticks.
+     */
+    public static final int LOCK = LAND - 22;
+    /** Blocks a tick the landing may slide across the floor once it is airborne. */
+    public static final double STEER = .7;
     public static final double MIN_RANGE = 12, MAX_RANGE = 30, HEIGHT = 11;
-    public static final double CORE_RADIUS = 3, IMPACT_RADIUS = 3;
+    /** The marked ring: everyone inside it when it lands takes {@link #DAMAGE}. */
+    public static final double IMPACT_RADIUS = 4.5;
+    public static final float DAMAGE = 18;
     private GuardianLeapRules() {}
 
     private static int waveTick(int age) {
@@ -38,6 +47,6 @@ public final class GuardianLeapRules {
         double x = Math.clamp(landing.x,victim.minX,victim.maxX);
         double z = Math.clamp(landing.z,victim.minZ,victim.maxZ);
         double radius = Math.hypot(x-landing.x,z-landing.z);
-        return radius <= CORE_RADIUS ? 18 : radius <= IMPACT_RADIUS ? 12 : 0;
+        return radius <= IMPACT_RADIUS ? DAMAGE : 0;
     }
 }

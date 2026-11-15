@@ -46,7 +46,8 @@ final class GuardianLeapContractTest {
         }
         Vec3d landing=Vec3d.ZERO;
         require(damage(landing,new Box(-.3,0,-.3,.3,1.8,.3))==18,"Center smash must be heavy");
-        require(damage(landing,new Box(4,0,0,4.6,1.8,.6))==0,"Outer landing must be handled by the jumpable wave");
+        require(damage(landing,new Box(4,0,0,4.6,1.8,.6))==18,"The marked ring must hit out to its edge");
+        require(damage(landing,new Box(4.6,0,0,5.2,1.8,.6))==0,"The landing hit beyond its marked ring");
         require(damage(landing,new Box(6.1,0,0,6.7,1.8,.6))==0,"Marked perimeter does not bound damage");
         require(damage(landing,new Box(-.3,-4,-.3,.3,-2,.3))==0,"Smash damaged a player through a lower floor");
         require(damage(landing,new Box(-.3,4,-.3,.3,6,.3))==0,"Smash reached above the impact volume");
@@ -61,7 +62,10 @@ final class GuardianLeapContractTest {
         require(overlap==0,"The longer airtime should separate the two waves");
         require(launchWaveTick(TAKEOFF)==0,"Push-off wave is not synchronized to the fists");
         require(landingWaveTick(LAND)<0 && landingWaveTick(LAND+WAVE_DELAY)==0,"Landing wave lost its distinct beat");
-        require(LOCK<TAKEOFF && TAKEOFF<LAND,"Commitment/launch/impact order broke");
+        require(TAKEOFF<LOCK && LOCK<LAND,"Launch/commitment/impact order broke");
+        // From the middle of the ring a sprint gets out and a walk does not: 5.6 and 4.3 blocks a second.
+        require((LAND-LOCK)*.28>IMPACT_RADIUS+.6 && (LAND-LOCK)*.2158<IMPACT_RADIUS+.6,"The marked ring no longer asks for a sprint");
+        require(STEER>.3,"A sprinting target outruns the landing while it still follows them");
         require(GuardianCombatRules.Attack.LEAP.duration==LAND+RECOVERY,"Director can overlap the leap recovery");
         try {
             var animations=com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(java.nio.file.Path.of(
@@ -72,6 +76,6 @@ final class GuardianLeapContractTest {
             require(Math.abs(animations.getAsJsonObject("animation.fractured_guardian.leap_launch")
                     .get("animation_length").getAsDouble()-TAKEOFF/20.0)<.0001,"Takeoff pose lost fist-impact sync");
         } catch (java.io.IOException e) { throw new AssertionError(e); }
-        System.out.println("Guardian leap checks passed: high arc, continuous travel, marked AoE bounds, two complete separated waves, recovery timing.");
+        System.out.println("Guardian leap checks passed: high arc, continuous travel, marked ring bounds and escape, two complete separated waves, recovery timing.");
     }
 }

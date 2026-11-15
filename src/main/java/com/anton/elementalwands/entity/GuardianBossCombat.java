@@ -20,6 +20,7 @@ import net.minecraft.entity.boss.BossBar;
 import net.minecraft.entity.boss.ServerBossBar;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.item.consume.UseAction;
 import net.minecraft.particle.BlockStateParticleEffect;
 import net.minecraft.particle.DustParticleEffect;
 import net.minecraft.particle.ParticleTypes;
@@ -29,6 +30,7 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.text.Text;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.Difficulty;
@@ -37,12 +39,15 @@ import static com.anton.elementalwands.entity.GuardianCombatRules.*;
 
 /**
  * Server-authoritative encounter: one committed action at a time, threat-aware targeting, real
- * recovery. Co-op adds pressure up to four players (shorter rests, back volleys at the players it
- * is not attacking); the world's difficulty sets the intensity.
+ * recovery. {@link GuardianCombatRules} holds the chooser; this reads the players for it and carries
+ * out what it picks. Co-op adds pressure up to four players (shorter walks between strings, stones off
+ * its back and spike walls for the players it is not attacking); the world's difficulty sets the intensity.
  */
 final class GuardianBossCombat {
     private static final BlockStateParticleEffect STONE = new BlockStateParticleEffect(ParticleTypes.BLOCK, Blocks.STONE.getDefaultState());
     private static final DustParticleEffect PULSE_RING = new DustParticleEffect(0x3CE1FF, 1.6f);
+    /** Where something is about to land: the leap, or stones bursting on the floor. */
+    private static final DustParticleEffect IMPACT_RING = new DustParticleEffect(0xFFA238, 1.8f);
     private final FracturedGuardianEntity guardian;
     private final ServerBossBar bar = new ServerBossBar(Text.literal("Fractured Guardian"), BossBar.Color.BLUE, BossBar.Style.PROGRESS);
     private final Map<Attack, Long> ready = new EnumMap<>(Attack.class);
@@ -53,23 +58,38 @@ final class GuardianBossCombat {
     private final List<GuardianRockEntity> rocks = new ArrayList<>();
     private Vec3d home, anchor, lockedAim;
     private UUID target;
-    private Attack active, last;
+    private Attack active, last, before;
     private long started, nextAction, emptySince = -1, nextMove, nextVolley;
     private boolean engaged, frozen, previousNoAi;
     private boolean reviewing;
     private int waking;
     private float attackYaw;
     private GuardianRockEntity heldRock;
+    /** Attacks begun in the current string; 0 while it walks between strings. */
+    private int chain;
+    /**
+     * The wait before its next pick is the walk after a string, which a punished player cuts short.
+     * Waking, the shell break and an interrupted attack are followed by a plain pause that nothing does.
+     */
+    private boolean walking;
     /** Ticks the current slam pauses at the top of its swing (0 for an ordinary slam). */
-    private int comboIndex, comboCount = 1, slamHold;
-    private int attacksSinceBeam;
-    private boolean leapFollowup, pendingFan;
-    private long approachUntil;
+    private int slamHold;
+    /** Phase two: a slam chained inside a string comes down faster. */
+    private boolean fastSlam;
     private float fanPitch;
+    /** Players the current Airburst cast has already hurt, and whether it has run out of players in the air. */
+    private Set<UUID> burstHits = new HashSet<>();
+    private boolean burstSpent;
     /** Party size and difficulty as of the last fight tick; pressure scales with both. */
     private int party = 1;
     private Difficulty difficulty = Difficulty.NORMAL;
-    private final Map<UUID,Integer> hovering = new HashMap<>();
+    /** Ticks each player has been off the ground and well clear of the floor, and how far clear. */
+    private final Map<UUID,Integer> airborne = new HashMap<>();
+    private final Map<UUID,Double> clearance = new HashMap<>();
+    /** Ticks each player has stayed beyond {@link GuardianCombatRules#MID}. */
+    private final Map<UUID,Integer> farTicks = new HashMap<>();
+    /** Whether each player jumped the last wave that reached them; it answers that with a held slam. */
+    private final Map<UUID,Boolean> jumped = new HashMap<>();
     /** Recent damage each player dealt it, fading with {@link GuardianCombatRules#THREAT_DECAY}. */
     private record Threat(float amount, long at) {
         float current(long now) { return amount * (float)Math.exp(-(now - at) / (double)THREAT_DECAY); }
@@ -77,10 +97,35 @@ final class GuardianBossCombat {
     private final Map<UUID, Threat> threat = new HashMap<>();
     private final Map<UUID, Vec3d> lastSeen = new HashMap<>(), drift = new HashMap<>();
     private final Map<UUID, Integer> stillTicks = new HashMap<>();
+    /** Each player's movement in all three axes, smoothed, and how quickly they are falling faster: for aiming into the air. */
+    private final Map<UUID, Vec3d> flight = new HashMap<>(), lastStep = new HashMap<>();
+    private final Map<UUID, Double> fall = new HashMap<>();
     private record TravelingWave(long start, Vec3d origin, Set<UUID> hits, boolean unstable, int slot, GuardianWallImpact walls) {}
     private final List<TravelingWave> waves = new ArrayList<>();
     private record Volley(UUID target, List<GuardianRockEntity> stones, int cluster, int clusters, long started) {}
     private final List<Volley> volleys = new ArrayList<>();
+    /**
+     * A ring marked on the floor where something is about to land. With a {@code gap}, the wedge that
+     * many degrees either side of {@code yaw} is left open: the Sweep's arc.
+     */
+    private record Ring(Vec3d center, double radius, long until, boolean leap, float yaw, double gap) {
+        Ring(Vec3d center, double radius, long until, boolean leap) { this(center, radius, until, leap, 0, 0); }
+    }
+    private final List<Ring> rings = new ArrayList<>();
+    /** Players beside or behind it and within reach of its arm, as of the last pick. */
+    private Set<UUID> arc = Set.of();
+    /** The Scar. Cracks scored on the floor and waiting to erupt: one list of footings for each wall. */
+    private List<List<Vec3d>> cracks = List.of();
+    /** A spike about to come up. */
+    private record Eruption(Vec3d base, float yaw, long at, int life) {}
+    private final List<Eruption> eruptions = new ArrayList<>();
+    private final List<GuardianSpikeEntity> spikes = new ArrayList<>();
+    /** The pen its walls make: scored but not yet up, and standing until {@link #penUntil}. */
+    private GuardianScarRules.Pen scoredPen, pen;
+    private long penUntil;
+    /** Players the current Scar's eruption has already hurt, and when a spike last hurt each player. */
+    private Set<UUID> scarHits = new HashSet<>();
+    private final Map<UUID, Long> spikeTouch = new HashMap<>();
 
     GuardianBossCombat(FracturedGuardianEntity guardian) { this.guardian = guardian; this.leap = new GuardianLeapAttack(guardian,this); }
 
@@ -116,19 +161,19 @@ final class GuardianBossCombat {
     }
 
     void cancel() {
-        hovering.clear(); pendingFan=false; approachUntil=0;
+        airborne.clear(); clearance.clear(); farTicks.clear(); jumped.clear();
         leap.cancel();
         guardian.cancelCombatBeam();
         guardian.clearFan(); guardian.clearPulse();
         guardian.setHoldingRock(false);
-        guardian.clearWave(); waves.clear(); volleys.clear();
+        guardian.clearWave(); waves.clear(); volleys.clear(); rings.clear(); clearScar();
         unfreeze();
         active = null; waking = 0; engaged = false;
-        guardian.finishPhase(); leapFollowup=false;
+        guardian.finishPhase();
         target = null;
         reviewing = false;
-        ready.clear(); lastTargeted.clear(); last = null; attacksSinceBeam = 0; nextVolley = 0;
-        threat.clear(); lastSeen.clear(); drift.clear(); stillTicks.clear();
+        ready.clear(); lastTargeted.clear(); last = null; before = null; chain = 0; walking = false; nextVolley = 0;
+        threat.clear(); lastSeen.clear(); drift.clear(); stillTicks.clear(); flight.clear(); lastStep.clear(); fall.clear();
         for (GuardianRockEntity rock : rocks) rock.discard();
         rocks.clear(); heldRock = null;
         bar.clearPlayers();
@@ -155,7 +200,10 @@ final class GuardianBossCombat {
 
     void tickReview(ServerWorld world) {
         rocks.removeIf(GuardianRockEntity::isRemoved);
-        if (active != null) tickAttack(world, world.getTime());
+        if (active == null) return;
+        // The same reading of the players a fight takes, so a rehearsed Airburst leads a moving target.
+        trackPlayers(world, world.getPlayers(p -> p.isAlive() && !p.isSpectator() && guardian.squaredDistanceTo(p) <= 64*64));
+        tickAttack(world, world.getTime());
     }
 
     void tick(ServerWorld world) {
@@ -238,32 +286,85 @@ final class GuardianBossCombat {
             return;
         }
         if (active != null) { tickAttack(world, now); return; }
-        if (now < nextAction) return;
-        boolean unstable = guardian.isUnstable();
-        List<Candidate> candidates = candidates(players, now);
-        if (!pendingFan && now < approachUntil) { pursue(players,now); return; }
-        boolean reservedBeam = beamDue(candidates, ready, now, last, attacksSinceBeam);
-        Attack choice = choose(candidates, ready, now, last, unstable, attacksSinceBeam);
-        Candidate aerial = target(Attack.FAN,candidates.stream()
-                .filter(p -> hovering.getOrDefault(p.id(),0)>=GuardianFanRules.HOVER_TICKS).toList(),lastTargeted,now,unstable,null);
-        if (!reservedBeam && choice != Attack.PULSE && now>=ready.getOrDefault(Attack.FAN,0L) && last!=Attack.FAN
-                && target(Attack.FAN,candidates,lastTargeted,now,unstable,null)!=null
-                && (pendingFan || aerial!=null || guardian.getRandom().nextInt(3)==0)) choice=Attack.FAN;
-        if (choice != null && guardian.isOnGround()) {
-            Candidate selected = choice==Attack.FAN && aerial!=null ? aerial : target(choice,candidates,lastTargeted,now,unstable,null);
-            ServerPlayerEntity player = world.getServer().getPlayerManager().getPlayer(selected.id());
-            begin(world, choice, player, now, false);
-            // Mix a single slam into a separately telegraphed fan; retain the full triple-slam pattern too.
-            if (unstable && (choice==Attack.SLAM || choice==Attack.SHOCKWAVE)
-                    && now>=ready.getOrDefault(Attack.FAN,0L) && guardian.getRandom().nextBoolean()) {
-                comboCount=1; pendingFan=true;
-            }
-        } else {
-            pursue(players,now);
+        boolean resting = now < nextAction;
+        if (decide(world, players, now, resting)) return;
+        if (!resting && chain > 0) {
+            // The string broke off with nothing in reach: it walks again.
+            chain = 0; walking = true; nextAction = now + scaled(REST, restScale(party, difficulty));
         }
+        pursue(players, now);
     }
 
-    /** Hovering, a smoothed walking velocity for aim leads, and how long each player has stood still. */
+    /**
+     * Picks who to turn on and what to do to them. While it is still walking off its last string,
+     * only a player it punishes (launched, eating, or standing still at range) makes it start early.
+     */
+    private boolean decide(ServerWorld world, List<ServerPlayerEntity> players, long now, boolean resting) {
+        if (!guardian.isOnGround() || resting && !walking) return false;
+        Map<UUID, ServerPlayerEntity> byId = new HashMap<>();
+        for (ServerPlayerEntity player : players) byId.put(player.getUuid(), player);
+        List<Candidate> all = candidates(players, now);
+        List<Candidate> seen = all.stream().filter(Candidate::visible).toList();
+        arc = new HashSet<>();
+        for (ServerPlayerEntity player : players)
+            if (GuardianSweepRules.inArc(guardian.getEntityPos(), guardian.getBodyYaw(), player.getEntityPos())) arc.add(player.getUuid());
+        boolean pulse = guardian.isUnstable() && now >= ready.getOrDefault(Attack.PULSE, 0L)
+                && all.stream().anyMatch(p -> eligible(Attack.PULSE, p, true));
+        List<Candidate> punished = seen.stream().filter(c -> punishes(read(c, byId.get(c.id()), now, false))).toList();
+        if (punished.isEmpty() && resting) return false;
+        // A player in the air comes first: the Airburst has the shortest window.
+        List<Candidate> aloft = punished.stream().filter(c -> read(c, byId.get(c.id()), now, false).airborne()).toList();
+        // The Scar is followed into the pen it made, whoever is in it.
+        List<Candidate> held = chain > 0 && last == Attack.SCAR
+                ? seen.stream().filter(c -> read(c, byId.get(c.id()), now, false).penned()).toList() : List.<Candidate>of();
+        // Otherwise, inside a string, it turns on someone else when it can.
+        UUID avoid = chain > 0 && party > 1 && held.isEmpty() ? target : null;
+        // Cutting its walk short, it turns on whoever earned that. Otherwise everyone in sight is weighed, so a player
+        // who stands still or eats all fight long cannot keep it off the rest of the party.
+        List<Candidate> pool = new ArrayList<>(!aloft.isEmpty() ? aloft : !held.isEmpty() ? held : resting ? punished : seen);
+        Candidate first = null;
+        // Whoever matters most comes first, but a player beyond every reach does not keep it off the ones it can hit.
+        while (!pool.isEmpty()) {
+            Candidate pick = focus(pool, lastTargeted, now, avoid);
+            if (first == null) first = pick;
+            Read read = read(pick, byId.get(pick.id()), now, pulse);
+            Map<Attack, Double> weights = weights(read, last, before);
+            weights.keySet().removeIf(attack -> now < ready.getOrDefault(attack, 0L));
+            // No landing in the pen: its wave goes down it instead.
+            if (weights.isEmpty() && read.penned() && now >= ready.getOrDefault(Attack.SLAM, 0L)) weights.put(Attack.SLAM, 1.0);
+            Attack choice = pick(weights, guardian.getRandom()::nextDouble);
+            if (choice != null) {
+                begin(world, choice, byId.get(pick.id()), now, false);
+                if (active != null) return true;
+                // A leap with no landing: the same player is weighed again without it.
+                continue;
+            }
+            pool.remove(pick);
+        }
+        // Nothing it can do to anyone: it walks at whoever matters most, in sight or not.
+        if (first == null) first = focus(all, lastTargeted, now, null);
+        if (first != null && !resting) target = first.id();
+        return false;
+    }
+
+    private boolean aloft(UUID id) { return airborne.getOrDefault(id, 0) >= GuardianAirburstRules.AIRBORNE_TICKS; }
+
+    private Read read(Candidate candidate, ServerPlayerEntity player, long now, boolean pulse) {
+        UUID id = candidate.id();
+        UseAction use = player != null && player.isUsingItem() ? player.getActiveItem().getUseAction() : UseAction.NONE;
+        boolean behind = player != null && GuardianSweepRules.behind(guardian.getEntityPos(), guardian.getBodyYaw(), player.getEntityPos());
+        boolean flanked = arc.stream().anyMatch(other -> !other.equals(id));
+        return new Read(candidate.distance(), aloft(id) && now >= ready.getOrDefault(Attack.AIRBURST, 0L), candidate.still(),
+                use == UseAction.EAT || use == UseAction.DRINK, farTicks.getOrDefault(id, 0) >= KEPT_AWAY, guardian.isUnstable(), pulse,
+                behind, flanked, player != null && penned(player.getEntityPos(), now));
+    }
+
+    /** Between the Scar's walls while they still have a while to stand. */
+    private boolean penned(Vec3d point, long now) {
+        return pen != null && now < penUntil - GuardianScarRules.FADING && pen.contains(point);
+    }
+
+    /** What it reads off each player: time in the air, smoothed movement for aim leads, standing still, keeping away. */
     private void trackPlayers(ServerWorld world, List<ServerPlayerEntity> players) {
         Set<UUID> present = new HashSet<>();
         for (ServerPlayerEntity player : players) {
@@ -271,18 +372,25 @@ final class GuardianBossCombat {
             present.add(id);
             var floor=world.raycast(new RaycastContext(player.getEntityPos(),player.getEntityPos().add(0,-16,0),
                     RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,guardian));
-            double clearance=floor.getType()==HitResult.Type.MISS?16:player.getY()-floor.getPos().y;
-            hovering.compute(id,(key,count) -> !player.isOnGround() && clearance>2.5
+            double clear=floor.getType()==HitResult.Type.MISS?16:player.getY()-floor.getPos().y;
+            clearance.put(id,clear);
+            airborne.compute(id,(key,count) -> !player.isOnGround() && clear>GuardianAirburstRules.CLEARANCE
                     ? Math.min(60,(count==null?0:count)+1) : 0);
+            farTicks.compute(id,(key,count) -> guardian.distanceTo(player)>MID ? Math.min(400,(count==null?0:count)+1) : 0);
             Vec3d position = player.getEntityPos(), previous = lastSeen.put(id, position);
             // A teleport or dash is not walking; it never inflates an aim lead.
             Vec3d step = previous == null || previous.squaredDistanceTo(position) > 1 ? Vec3d.ZERO : position.subtract(previous);
             drift.merge(id, step, (old, latest) -> old.multiply(.6).add(latest.multiply(.4)));
+            // The same reading with its height kept, and how quickly that is changing: a fall is led as a fall.
+            Vec3d moved = previous == null || previous.squaredDistanceTo(position) > 16 ? Vec3d.ZERO : position.subtract(previous);
+            Vec3d earlier = lastStep.put(id, moved);
+            flight.merge(id, moved, (old, latest) -> old.multiply(.5).add(latest.multiply(.5)));
+            fall.merge(id, earlier == null ? 0 : moved.y - earlier.y, (old, latest) -> old * .5 + latest * .5);
             boolean slow = step.horizontalLengthSquared() < STILL_SPEED * STILL_SPEED;
             stillTicks.merge(id, slow ? 1 : 0, (old, add) -> add == 0 ? 0 : Math.min(100, old + 1));
         }
-        hovering.keySet().retainAll(present); lastSeen.keySet().retainAll(present);
-        drift.keySet().retainAll(present); stillTicks.keySet().retainAll(present);
+        for (Map<UUID, ?> map : List.of(airborne, clearance, farTicks, jumped, lastSeen, drift, stillTicks, flight, lastStep, fall))
+            map.keySet().retainAll(present);
     }
 
     private List<Candidate> candidates(List<ServerPlayerEntity> players, long now) {
@@ -290,9 +398,11 @@ final class GuardianBossCombat {
                 threat(p.getUuid(), now), stillTicks.getOrDefault(p.getUuid(), 0) >= STILL_TICKS)).toList();
     }
 
+    /** It walks at its target, not at whoever is nearest, and stops once its fists could reach them. */
     private void pursue(List<ServerPlayerEntity> players,long now) {
-        ServerPlayerEntity destination=players.stream().min(Comparator.comparingDouble(guardian::squaredDistanceTo)).orElse(null);
-        if(destination==null || guardian.squaredDistanceTo(destination)<6*6) { guardian.getNavigation().stop(); approachUntil=0; return; }
+        ServerPlayerEntity destination=players.stream().filter(p -> p.getUuid().equals(target)).findFirst()
+                .orElseGet(() -> players.stream().min(Comparator.comparingDouble(guardian::squaredDistanceTo)).orElse(null));
+        if(destination==null || guardian.squaredDistanceTo(destination)<4*4) { guardian.getNavigation().stop(); return; }
         if(now<nextMove)return;
         nextMove=now+8;
         Vec3d delta=destination.getEntityPos().subtract(home);
@@ -313,124 +423,132 @@ final class GuardianBossCombat {
     }
 
     private void begin(ServerWorld world, Attack attack, ServerPlayerEntity player, long now, boolean rehearsal) {
-        reviewing = rehearsal; pendingFan=false; approachUntil=0;
-        comboIndex = 0; comboCount = GuardianPhaseRules.repeats(attack, guardian.isUnstable());
-        leapFollowup = attack == Attack.LEAP && guardian.isUnstable();
-        active = attack; last = attack; target = player.getUuid(); started = now; slamHold = 0;
-        attacksSinceBeam = attack == Attack.BEAM ? 0 : Math.min(2, attacksSinceBeam + 1);
+        Attack priorLast = last, priorBefore = before;
+        reviewing = rehearsal;
+        if (rehearsal) chain = 0; else chain++;
+        walking = false;
+        active = attack; before = last; last = attack; target = player.getUuid(); started = now; slamHold = 0; fastSlam = false;
         anchor = guardian.getEntityPos();
         motion.reset(player.getEntityPos());
         lastTargeted.put(target, now);
-        ready.put(attack, now + attack.duration + attack.cooldown);
         guardian.getNavigation().stop();
-        face(player.getEntityPos(), true);
-        if (attack == Attack.LEAP) {
-            freeze();
-            if (!leap.begin(world,player,home == null ? anchor : home)) {
-                unfreeze(); active = null; nextAction = now+10;
-                ready.put(Attack.LEAP,now+60);
-                return;
+        if (attack == Attack.SWEEP) {
+            // It does not turn first: whoever got behind it is still behind it when the arm comes round.
+            attackYaw = guardian.getBodyYaw();
+            guardian.setYaw(attackYaw); guardian.setBodyYaw(attackYaw); guardian.setHeadYaw(attackYaw);
+        } else face(player.getEntityPos(), true);
+        String name = player.getName().getString();
+        switch (attack) {
+            case SWEEP -> {
+                freeze();
+                guardian.stopTriggeredAnim("guardian", null);
+                guardian.triggerAnim("guardian", "sweep");
+                world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_ATTACK_WINDUP, SoundCategory.HOSTILE, .8f, .45f);
+                rings.add(new Ring(anchor, GuardianSweepRules.REACH, now + GuardianSweepRules.IMPACT, false,
+                        attackYaw, GuardianSweepRules.FRONT_DEGREES));
+                log.cast(now, "sweep", name);
             }
-            log.cast(now, "leap", player.getName().getString());
-            return;
+            case SCAR -> {
+                freeze(); cracks = List.of(); scoredPen = null; scarHits = new HashSet<>();
+                // Not again until these walls have stood and fallen.
+                ready.put(Attack.SCAR, now + GuardianScarRules.ERUPT + GuardianScarRules.LIFE
+                        + scaled(GuardianScarRules.LOCKOUT, cooldownScale(party, difficulty)));
+                guardian.stopTriggeredAnim("guardian", null);
+                guardian.triggerAnim("guardian", "scar");
+                world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_ATTACK_WINDUP, SoundCategory.HOSTILE, .9f, .4f);
+                log.cast(now, "scar", name);
+            }
+            case LEAP -> {
+                freeze();
+                if (!leap.begin(world,player,home == null ? anchor : home)) {
+                    // No clear landing: it picks something else, and tries the leap again later.
+                    unfreeze(); active = null; last = priorLast; before = priorBefore; chain = Math.max(0, chain - 1);
+                    ready.put(Attack.LEAP,now+60);
+                    return;
+                }
+                log.cast(now, "leap", name);
+            }
+            case BEAM -> {
+                guardian.beginCombatBeam(player);
+                log.cast(now, "beam", name);
+                backStones(world, now);
+            }
+            case AIRBURST -> {
+                freeze(); burstHits = new HashSet<>(); burstSpent = false;
+                ready.put(Attack.AIRBURST, now + attack.duration + AIRBURST_LOCKOUT);
+                lockedAim=airAim(player,GuardianFanRules.socket(guardian.getEntityPos(),attackYaw,0,1),GuardianFanRules.RELEASE);
+                fanPitch=aimPitch(lockedAim); guardian.syncFan(now,fanPitch); guardian.triggerAnim("guardian","fan");
+                log.cast(now, "airburst", name);
+            }
+            case PULSE -> {
+                freeze();
+                ready.put(Attack.PULSE, now + attack.duration + PULSE_COOLDOWN);
+                guardian.syncPulse(now);
+                guardian.stopTriggeredAnim("guardian", null);
+                guardian.triggerAnim("guardian", "core_pulse");
+                world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_PULSE_CHARGE, SoundCategory.HOSTILE, 2.5f, .55f);
+                log.cast(now, "core pulse", null);
+            }
+            case SLAM, THROW -> {
+                freeze();
+                if (attack == Attack.SLAM) rollHold();
+                triggerPhysicalAnimation();
+                world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_ATTACK_WINDUP, SoundCategory.HOSTILE, .8f, .55f);
+                lockedAim = player.getBoundingBox().getCenter();
+                log.cast(now, attack == Attack.THROW ? "throw" : slamHold > 0 ? "held slam (" + slamHold / 20.0 + "s hold)"
+                        : fastSlam ? "fast slam" : "slam", name);
+                backStones(world, now);
+            }
         }
-        if (attack == Attack.BEAM) {
-            guardian.beginCombatBeam(player);
-            log.cast(now, "beam", player.getName().getString());
-            volley(world, now);
-            return;
-        }
-        if (attack == Attack.FAN) {
-            freeze(); lockedAim=player.getBoundingBox().getCenter();
-            fanPitch=aimPitch(lockedAim); guardian.syncFan(now,fanPitch); guardian.triggerAnim("guardian","fan");
-            log.cast(now, "fan", player.getName().getString());
-            return;
-        }
-        if (attack == Attack.PULSE) {
-            freeze();
-            guardian.syncPulse(now);
-            guardian.stopTriggeredAnim("guardian", null);
-            guardian.triggerAnim("guardian", "core_pulse");
-            world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_PULSE_CHARGE, SoundCategory.HOSTILE, 2.5f, .55f);
-            log.cast(now, "core pulse", null);
-            return;
-        }
-        freeze();
-        rollHold();
-        triggerPhysicalAnimation();
-        world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_ATTACK_WINDUP, SoundCategory.HOSTILE, .8f, .55f);
-        lockedAim = player.getBoundingBox().getCenter();
-        logPhysical(now, player);
-        volley(world, now);
     }
 
-    private boolean fastSlam() {
-        return guardian.isUnstable() && comboCount == 3 && comboIndex < 2;
-    }
-    /** Ordinary slams sometimes pause at the top of the swing, so jumping in rhythm stops working. */
+    /**
+     * It holds its fists overhead against a player who jumped its last wave, so jumping in rhythm stops
+     * working. In phase two a slam chained inside a string comes down faster instead.
+     */
     private void rollHold() {
-        boolean slam = active == Attack.SLAM || active == Attack.SHOCKWAVE;
         int[] holds = GuardianPhaseRules.SLAM_HOLDS;
-        slamHold = slam && !fastSlam() && !reviewing && guardian.getRandom().nextDouble() < delayChance(difficulty)
-                ? holds[guardian.getRandom().nextInt(holds.length)] : 0;
+        boolean remembered = !reviewing && jumped.getOrDefault(target, false) && guardian.getRandom().nextDouble() < holdChance(difficulty);
+        slamHold = remembered ? holds[guardian.getRandom().nextInt(holds.length)] : 0;
+        fastSlam = !reviewing && guardian.isUnstable() && chain > 1 && slamHold == 0;
     }
     private void triggerPhysicalAnimation() {
         guardian.stopTriggeredAnim("guardian", null);
         guardian.triggerAnim("guardian", active == Attack.THROW
-                ? (guardian.isUnstable() ? "throw_fast" : "throw") : GuardianPhaseRules.slamClip(fastSlam(), slamHold));
+                ? (guardian.isUnstable() ? "throw_fast" : "throw") : GuardianPhaseRules.slamClip(fastSlam, slamHold));
     }
     private int physicalDuration() {
         return active == Attack.THROW ? GuardianPhaseRules.throwDuration(guardian.isUnstable())
-                : GuardianPhaseRules.slamDuration(fastSlam(), slamHold);
+                : GuardianPhaseRules.slamDuration(fastSlam, slamHold);
     }
-    private void logPhysical(long now, ServerPlayerEntity player) {
-        String what = active == Attack.THROW ? "throw" : slamHold > 0 ? "delayed slam (" + slamHold / 20.0 + "s hold)" : "slam";
-        log.cast(now, what, player == null ? "?" : player.getName().getString());
-    }
+    /** The attack's whole clip has played. It goes straight into another (a string), or walks at its target for a while. */
     private void finishAction(long now) {
-        // Cooldowns begin after the whole combo. The laser keeps its first-phase clock.
-        int cooldown = active == Attack.BEAM ? active.cooldown : Math.round(active.cooldown * (guardian.isUnstable() ? .8f : 1));
-        ready.put(active, now + scaled(cooldown, cooldownScale(party, difficulty)));
-        double rest = restScale(party, difficulty);
-        int gap = scaled(active == Attack.BEAM ? RECOVERY_GAP : GuardianPhaseRules.gap(guardian.isUnstable()), rest);
+        Attack finished = active;
+        double lockout = cooldownScale(party, difficulty);
+        if (finished == Attack.PULSE) ready.put(Attack.PULSE, now + scaled(PULSE_COOLDOWN, lockout));
+        if (finished == Attack.AIRBURST) ready.put(Attack.AIRBURST, now + scaled(AIRBURST_LOCKOUT, lockout));
         guardian.clearFan(); guardian.clearPulse();
         unfreeze(); active = null; heldRock = null;
         guardian.setHoldingRock(false);
         guardian.getNavigation().stop();
-        nextAction = now + gap;
-        approachUntil = reviewing || pendingFan ? 0 : nextAction + scaled(20, rest);
+        boolean more = !reviewing && (finished == Attack.SCAR || chain < chainLimit(guardian.isUnstable()))
+                && guardian.getRandom().nextDouble() < chainChance(guardian.isUnstable(), finished, difficulty);
+        if (more) { nextAction = now; return; }
+        chain = 0; walking = !reviewing;
+        nextAction = now + scaled(REST, restScale(party, difficulty));
     }
     private void tickAttack(ServerWorld world, long now) {
-        if (active == Attack.FAN) { tickFan(world,now); return; }
+        if (active == Attack.AIRBURST) { tickAirburst(world,now); return; }
         if (active == Attack.PULSE) { tickPulse(world,now); return; }
+        if (active == Attack.SWEEP) { tickSweep(world,now); return; }
+        if (active == Attack.SCAR) { tickScar(world,now); return; }
         if (active == Attack.LEAP) {
-            if (leap.tick(world)) {
-                if (leapFollowup && leap.status().equals("Last leap completed.")) {
-                    leapFollowup = false;
-                    ready.put(Attack.LEAP, now + 144);
-                    active = Attack.SHOCKWAVE; comboIndex = 0; comboCount = 1; started = now; slamHold = 0;
-                    anchor = guardian.getEntityPos(); triggerPhysicalAnimation();
-                } else finishAction(now);
-            }
+            if (leap.tick(world)) finishAction(now);
             return;
         }
         int tick = (int)(now - started);
         if (guardian.getEntityPos().squaredDistanceTo(anchor) > .75*.75) { interruptAction(); nextAction = now + 30; return; }
-        if (tick >= (active == Attack.BEAM ? active.duration : physicalDuration())) {
-            if (active != Attack.BEAM && ++comboIndex < comboCount) {
-                // Each repeat turns to someone else when it can; a rock never bends after release.
-                Candidate candidate = target(active, candidates(world.getPlayers(p -> canDamage(guardian,p)), now),
-                        lastTargeted, now, guardian.isUnstable(), target);
-                if (candidate != null) {
-                    target = candidate.id(); lastTargeted.put(target,now);
-                    motion.reset(world.getServer().getPlayerManager().getPlayer(target).getEntityPos());
-                } else if (active == Attack.THROW) { finishAction(now); return; }
-                started = now; tick = 0;
-                rollHold();
-                triggerPhysicalAnimation();
-                logPhysical(now, world.getServer().getPlayerManager().getPlayer(target));
-            } else { finishAction(now); return; }
-        }
+        if (tick >= (active == Attack.BEAM ? active.duration : physicalDuration())) { finishAction(now); return; }
         if (active == Attack.BEAM) return;
         guardian.setVelocity(0, Math.min(0,guardian.getVelocity().y), 0);
         ServerPlayerEntity player = world.getServer().getPlayerManager().getPlayer(target);
@@ -461,11 +579,192 @@ final class GuardianBossCombat {
                 guardian.setHoldingRock(false); heldRock.release(lockedAim); heldRock = null;
                 world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_THROW_LAUNCH, SoundCategory.HOSTILE, 1.2f, .7f);
             }
-        } else if (tick == GuardianPhaseRules.slamImpact(fastSlam(), slamHold)) {
+        } else if (tick == GuardianPhaseRules.slamImpact(fastSlam, slamHold)) {
             impactSound(world);
             breakDoubles(world, anchor, 4.5);
             emitWave(world, anchor, fists(world));
         }
+    }
+
+    /** The Sweep: one blow through everything beside and behind it, where the marked arc showed. */
+    private void tickSweep(ServerWorld world, long now) {
+        int tick = (int)(now - started);
+        if (guardian.getEntityPos().squaredDistanceTo(anchor) > .75*.75) { interruptAction(); nextAction = now + 30; return; }
+        if (tick >= GuardianSweepRules.DURATION) { finishAction(now); return; }
+        guardian.setVelocity(0, Math.min(0, guardian.getVelocity().y), 0);
+        guardian.setYaw(attackYaw); guardian.setBodyYaw(attackYaw); guardian.setHeadYaw(attackYaw);
+        if (tick != GuardianSweepRules.IMPACT) return;
+        world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_GROUND_IMPACT, SoundCategory.HOSTILE, 1.3f, .7f);
+        double gap = GuardianSweepRules.FRONT_DEGREES;
+        for (int i = 0; i <= 30; i++) {
+            // Dust along the path of the arm.
+            Vec3d out = Vec3d.fromPolar(0, attackYaw + (float)(gap + (360 - 2 * gap) * i / 30)).multiply(GuardianSweepRules.REACH * .7);
+            world.spawnParticles(STONE, anchor.x + out.x, anchor.y + 1.4, anchor.z + out.z, 4, .3, .5, .3, .08);
+        }
+        Vec3d shoulder = anchor.add(0, 1.5, 0);
+        for (AstralDoubleEntity clone : world.getEntitiesByClass(AstralDoubleEntity.class,
+                new Box(anchor, anchor).expand(GuardianSweepRules.REACH + 1, 4, GuardianSweepRules.REACH + 1), e -> !e.isRemoved())) {
+            if (GuardianSweepRules.contact(anchor, attackYaw, clone.getBoundingBox())
+                    && GuardianWaveSurface.clearLine(world, guardian, shoulder, clone.getBoundingBox().getCenter()))
+                clone.damage(world, world.getDamageSources().mobAttack(guardian), 1);
+        }
+        var walls = new GuardianWallImpact();
+        for (ServerPlayerEntity player : world.getPlayers(p -> canDamage(guardian, p))) {
+            if (!GuardianSweepRules.contact(anchor, attackYaw, player.getBoundingBox())
+                    || !walls.clear(world, guardian, shoulder, player.getBoundingBox().getCenter(), false)) continue;
+            if (strike(world, player, world.getDamageSources().mobAttack(guardian), GuardianSweepRules.DAMAGE, "sweep"))
+                knockAway(player, anchor, 1.3);
+        }
+    }
+
+    /**
+     * The Scar: it follows its target until its hands hit the floor, scores the cracks where they will be
+     * a moment later, and the walls erupt along them. The pen they make is what its next attack goes into.
+     */
+    private void tickScar(ServerWorld world, long now) {
+        int tick = (int)(now - started);
+        if (guardian.getEntityPos().squaredDistanceTo(anchor) > .75*.75) { interruptAction(); nextAction = now + 30; return; }
+        if (tick >= GuardianScarRules.DURATION) { finishAction(now); return; }
+        guardian.setVelocity(0, Math.min(0, guardian.getVelocity().y), 0);
+        if (tick <= GuardianScarRules.PLANT) {
+            ServerPlayerEntity player = world.getServer().getPlayerManager().getPlayer(target);
+            if (player == null || !player.isAlive() || player.isSpectator() || player.getEntityWorld() != world
+                    || (!reviewing && !canDamage(guardian, player))) { interruptAction(); nextAction = now + 20; return; }
+            if (tick < GuardianScarRules.PLANT) face(player.getEntityPos(), false);
+            else {
+                score(world, player, now);
+                // Its target is under its hands, or there is no floor for the walls: there is nothing to pen.
+                if (cracks.isEmpty()) { interruptAction(); nextAction = now + 20; return; }
+            }
+        }
+        guardian.setYaw(attackYaw); guardian.setBodyYaw(attackYaw); guardian.setHeadYaw(attackYaw);
+        if (tick > GuardianScarRules.PLANT && tick < GuardianScarRules.ERUPT && tick % 2 == 0) {
+            // The cracks race outward from its hands.
+            double run = Math.clamp((tick - GuardianScarRules.PLANT) / (GuardianScarRules.COMMIT - 2.0), 0, 1);
+            for (List<Vec3d> crack : cracks) {
+                int shown = (int)Math.ceil(crack.size() * run);
+                for (int i = 0; i < shown; i++) {
+                    Vec3d point = crack.get(i);
+                    world.spawnParticles(IMPACT_RING, point.x, point.y + .15, point.z, 2, .25, 0, .25, 0);
+                }
+                Vec3d tip = crack.get(Math.max(0, shown - 1));
+                world.spawnParticles(STONE, tip.x, tip.y + .2, tip.z, 6, .3, .2, .3, .06);
+            }
+        }
+        if (tick == GuardianScarRules.ERUPT) erupt(world, now);
+    }
+
+    /** Commits the Scar: the pen round where its target will be, and in co-op a wall for each of the others. */
+    private void score(ServerWorld world, ServerPlayerEntity player, long now) {
+        impactSound(world);
+        Vec3d aim = lead(player.getEntityPos(), drift.getOrDefault(player.getUuid(), Vec3d.ZERO), GuardianScarRules.COMMIT);
+        GuardianScarRules.Pen made = GuardianScarRules.pen(guardian.getEntityPos(), aim);
+        if (made == null) return;
+        List<GuardianScarRules.Wall> walls = new ArrayList<>(List.of(made.wall(true), made.wall(false)));
+        if (!reviewing && party > 1) {
+            candidates(world.getPlayers(p -> canDamage(guardian, p) && !p.getUuid().equals(target)), now).stream()
+                    .filter(c -> c.visible() && c.distance() <= GuardianScarRules.MAX_RANGE + 6)
+                    .sorted(Comparator.comparingDouble(c -> -priority(c, lastTargeted, now)))
+                    .limit(GuardianScarRules.MAX_FLANKS).forEach(c -> {
+                        Vec3d at = lastSeen.get(c.id());
+                        GuardianScarRules.Wall wall = at == null ? null
+                                : GuardianScarRules.flank(made, at, drift.getOrDefault(c.id(), Vec3d.ZERO));
+                        if (wall != null) walls.add(wall);
+                    });
+        }
+        List<List<Vec3d>> scored = new ArrayList<>();
+        // It is only a pen if both of its walls stand, unbroken enough, to past where its target will be.
+        double reach = Math.hypot(aim.x - made.origin().x, aim.z - made.origin().z);
+        boolean holds = true;
+        int sides = 0;
+        for (int i = 0; i < walls.size(); i++) {
+            List<Vec3d> footing = footing(world, walls.get(i));
+            if (i < 2) {
+                Vec3d end = footing.isEmpty() ? made.origin() : footing.get(footing.size() - 1);
+                double covered = new Vec3d(end.x - made.origin().x, 0, end.z - made.origin().z).dotProduct(made.axis());
+                holds &= covered >= reach + 2 && footing.size() >= .8 * (reach + 2 - made.near());
+                if (!footing.isEmpty()) sides++;
+            }
+            if (!footing.isEmpty()) scored.add(footing);
+        }
+        // With no floor for either wall there is nothing to score. With part of them, the walls still come up, as obstacles.
+        cracks = sides == 0 ? List.of() : scored; scoredPen = holds ? made : null;
+    }
+
+    /** The floor under each spike of a wall. A gap or a pillar is stepped over; the edge of the floor ends the wall. */
+    private List<Vec3d> footing(ServerWorld world, GuardianScarRules.Wall wall) {
+        List<Vec3d> bases = new ArrayList<>();
+        double level = guardian.getY();
+        int missing = 0;
+        for (Vec3d point : wall.columns()) {
+            Vec3d ground = GuardianWaveSurface.ground(world, guardian, new Vec3d(point.x, level, point.z), point.x, point.z);
+            BlockPos above = ground == null ? null : BlockPos.ofFloored(ground.x, ground.y + .5, ground.z);
+            if (ground == null || !world.getBlockState(above).getCollisionShape(world, above).isEmpty()) {
+                if (++missing >= 3) break;
+                continue;
+            }
+            missing = 0; level = ground.y; bases.add(ground);
+        }
+        return bases;
+    }
+
+    /** The walls come up along the cracks, from its hands outward. */
+    private void erupt(ServerWorld world, long now) {
+        for (List<Vec3d> crack : cracks) {
+            for (int i = 0; i < crack.size(); i++) {
+                Vec3d before = crack.get(Math.max(0, i - 1)), after = crack.get(Math.min(crack.size() - 1, i + 1));
+                // Each spike's teeth line up along its wall (see GuardianSpikeRenderer).
+                float yaw = (float)Math.toDegrees(Math.atan2(-(after.z - before.z), after.x - before.x));
+                int delay = GuardianScarRules.ripple(i, crack.size());
+                eruptions.add(new Eruption(crack.get(i), yaw, now + delay, GuardianScarRules.LIFE - delay));
+            }
+        }
+        cracks = List.of();
+        pen = scoredPen; scoredPen = null; penUntil = now + GuardianScarRules.LIFE;
+        world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_SHELL_CRACK, SoundCategory.HOSTILE, 2f, .55f);
+        world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_GROUND_IMPACT, SoundCategory.HOSTILE, 1.6f, .6f);
+    }
+
+    /** Spikes coming up hurt whoever stands on the crack; standing spikes hurt whoever touches them. */
+    private void tickSpikes(ServerWorld world, long now) {
+        eruptions.removeIf(eruption -> {
+            if (now < eruption.at()) return false;
+            Vec3d base = eruption.base();
+            var spike = new GuardianSpikeEntity(ModEntities.GUARDIAN_SPIKE, world);
+            spike.setPosition(base); spike.setYaw(eruption.yaw()); spike.begin(eruption.life());
+            world.spawnEntity(spike); spikes.add(spike);
+            world.spawnParticles(STONE, base.x, base.y + .5, base.z, 8, .3, .7, .3, .12);
+            Box body = GuardianScarRules.column(base);
+            for (AstralDoubleEntity clone : world.getEntitiesByClass(AstralDoubleEntity.class, body, e -> !e.isRemoved()))
+                clone.damage(world, world.getDamageSources().mobAttack(guardian), 1);
+            for (ServerPlayerEntity player : world.getPlayers(p -> canDamage(guardian, p) && !scarHits.contains(p.getUuid()))) {
+                if (!body.intersects(player.getBoundingBox())) continue;
+                scarHits.add(player.getUuid()); spikeTouch.put(player.getUuid(), now);
+                if (strike(world, player, world.getDamageSources().mobAttack(guardian), GuardianScarRules.ERUPT_DAMAGE, "scar eruption"))
+                    knockAway(player, base, 1.0);
+            }
+            return true;
+        });
+        spikes.removeIf(Entity::isRemoved);
+        if (pen != null && now >= penUntil) pen = null;
+        if (spikes.isEmpty()) return;
+        for (ServerPlayerEntity player : world.getPlayers(p -> canDamage(guardian, p))) {
+            UUID id = player.getUuid();
+            if (now - spikeTouch.getOrDefault(id, -1000L) < GuardianScarRules.TOUCH_INTERVAL) continue;
+            Box body = player.getBoundingBox().expand(.12);
+            for (GuardianSpikeEntity spike : spikes) {
+                if (!spike.standing() || spike.elapsed(0) < GuardianSpikeEntity.RISE || !spike.getBoundingBox().intersects(body)) continue;
+                spikeTouch.put(id, now);
+                if (strike(world, player, world.getDamageSources().mobAttack(guardian), GuardianScarRules.TOUCH_DAMAGE, "spikes"))
+                    knockAway(player, spike.getEntityPos(), .9);
+                break;
+            }
+        }
+    }
+
+    private void clearScar() {
+        for (GuardianSpikeEntity spike : spikes) spike.discard();
+        spikes.clear(); eruptions.clear(); cracks = List.of(); pen = null; scoredPen = null; spikeTouch.clear();
     }
 
     /** The slam's fists: a heavy hit in front of and under it. Those struck are spared its own wave. */
@@ -486,34 +785,48 @@ final class GuardianBossCombat {
         return (float)-Math.toDegrees(Math.atan2(delta.y,delta.horizontalLength()));
     }
 
-    private void tickFan(ServerWorld world,long now) {
+    /** Where a stone leaving {@code origin} after {@code wait} ticks meets this player, in the air or on the ground. */
+    private Vec3d airAim(ServerPlayerEntity player, Vec3d origin, int wait) {
+        UUID id = player.getUuid();
+        Vec3d center = player.getBoundingBox().getCenter(), velocity = flight.getOrDefault(id, Vec3d.ZERO);
+        double falling = fall.getOrDefault(id, 0.0);
+        if (player.isOnGround()) { velocity = new Vec3d(velocity.x, 0, velocity.z); falling = 0; }
+        Vec3d aim = GuardianAirburstRules.aim(origin, center, velocity, falling, wait);
+        // Never under the floor they would land on.
+        double floor = player.getY() - clearance.getOrDefault(id, 0.0) + player.getHeight() / 2;
+        return aim.y < floor ? new Vec3d(aim.x, floor, aim.z) : aim;
+    }
+
+    /** Three bursts of three stones. Each commits its aim, flies to where its target will be and bursts there. */
+    private void tickAirburst(ServerWorld world,long now) {
         int age=(int)(now-started);
-        if (age>=GuardianFanRules.duration(guardian.isUnstable())) { finishAction(now); return; }
+        if (age>=GuardianFanRules.duration()) { finishAction(now); return; }
         if (guardian.getEntityPos().squaredDistanceTo(anchor)>.75*.75) { interruptAction(); nextAction=now+20; return; }
+        guardian.setYaw(attackYaw);guardian.setBodyYaw(attackYaw);guardian.setHeadYaw(attackYaw);
+        guardian.setVelocity(0,Math.min(0,guardian.getVelocity().y),0);
+        if (burstSpent) return;
         int burst = GuardianFanRules.burst(age);
         int tick = (int)GuardianFanRules.localTime(age);
         if (burst > 0 && burst != GuardianFanRules.burst(age - 1)) {
             var players=world.getPlayers(p -> reviewing ? p.isAlive() && !p.isSpectator() : canDamage(guardian,p));
-            // Later bursts spread across the party where they can.
-            Candidate next=target(Attack.FAN,candidates(players,now),lastTargeted,now,guardian.isUnstable(),target);
-            if(next==null) { finishAction(now); return; }
+            List<Candidate> pool=candidates(players,now), aloft=pool.stream().filter(c -> aloft(c.id())).toList();
+            // Later bursts go to whoever is still in the air, spread across the party where they can.
+            Candidate next=aloft.isEmpty() && !reviewing ? null
+                    : target(Attack.AIRBURST,aloft.isEmpty()?pool:aloft,lastTargeted,now,guardian.isUnstable(),target);
+            // Nobody left up there: no more stones form, and the clip plays out.
+            if(next==null) { burstSpent=true; guardian.clearFan(); return; }
             target=next.id(); lastTargeted.put(target,now);
-            motion.reset(world.getServer().getPlayerManager().getPlayer(target).getEntityPos());
-
         }
         if (tick<GuardianFanRules.LOCK) {
             ServerPlayerEntity player=world.getServer().getPlayerManager().getPlayer(target);
             if(player==null || !player.isAlive() || player.isSpectator() || player.getEntityWorld()!=world
                     || (!reviewing && !canDamage(guardian,player)) || guardian.distanceTo(player)>48) { interruptAction();nextAction=now+20;return; }
             face(player.getEntityPos(),false);
-            Vec3d velocity=motion.observe(player.getEntityPos());
-            int leadTicks=GuardianFanRules.RELEASE-tick+(int)(guardian.distanceTo(player)/GuardianFanRules.SPEED);
-            lockedAim=lead(player.getBoundingBox().getCenter(),velocity,leadTicks);
+            lockedAim=airAim(player,GuardianFanRules.socket(guardian.getEntityPos(),attackYaw,fanPitch,1),GuardianFanRules.RELEASE-tick);
             fanPitch=aimPitch(lockedAim);
+            guardian.setYaw(attackYaw);guardian.setBodyYaw(attackYaw);guardian.setHeadYaw(attackYaw);
         }
         guardian.syncFan(started,fanPitch);
-        guardian.setYaw(attackYaw);guardian.setBodyYaw(attackYaw);guardian.setHeadYaw(attackYaw);
-        guardian.setVelocity(0,Math.min(0,guardian.getVelocity().y),0);
         if (tick==8) world.playSound(null,guardian.getBlockPos(),ModSounds.ENTITY_GUARDIAN_FAN_CHARGE,SoundCategory.HOSTILE,1.6f,.6f);
         if (tick == GuardianFanRules.LOCK) {
             for (int i = 0; i < GuardianFanRules.COUNT; i++) {
@@ -523,16 +836,17 @@ final class GuardianBossCombat {
             }
         }
         if (tick==GuardianFanRules.RELEASE) {
-            var hits=new HashSet<UUID>(); var walls=new GuardianWallImpact();
+            var walls=new GuardianWallImpact();
             for(int i=0;i<GuardianFanRules.COUNT;i++) {
                 Vec3d socket=GuardianFanRules.socket(guardian.getEntityPos(),attackYaw,fanPitch,i);
                 Vec3d source=guardian.getEntityPos().add(0,3.3,0);
                 // Floating stones cannot materialize on the far side of solid cover.
                 if (walls.clip(world,guardian,source,socket,false,true).squaredDistanceTo(socket)>1e-10) continue;
-                var shard=new GuardianRockEntity(ModEntities.GUARDIAN_ROCK,world);
-                shard.setOwner(guardian);shard.setPosition(socket);
-                shard.releaseShard(GuardianFanRules.direction(socket,lockedAim,i),hits,walls);
-                world.spawnEntity(shard);rocks.add(shard);
+                Vec3d aim=socket.add(GuardianFanRules.direction(socket,lockedAim,i).multiply(socket.distanceTo(lockedAim)));
+                var stone=new GuardianRockEntity(ModEntities.GUARDIAN_ROCK,world);
+                stone.setOwner(guardian);stone.setPosition(socket);
+                stone.releaseBurst(aim,GuardianAirburstRules.flightTicks(socket,aim),burstHits,walls);
+                world.spawnEntity(stone);rocks.add(stone);
             }
             world.playSound(null,guardian.getBlockPos(),ModSounds.ENTITY_GUARDIAN_FAN_LAUNCH,SoundCategory.HOSTILE,1.6f,1.1f);
         }
@@ -629,7 +943,7 @@ final class GuardianBossCombat {
     }
 
     /** Co-op pressure: while it commits to one player, stones lift off its back for the others. */
-    private void volley(ServerWorld world, long now) {
+    private void backStones(ServerWorld world, long now) {
         if (!engaged || reviewing || party < 2 || now < nextVolley) return;
         var others = candidates(world.getPlayers(p -> canDamage(guardian, p) && !p.getUuid().equals(target)), now).stream()
                 .filter(c -> c.visible() && c.distance() <= GuardianVolleyRules.RANGE)
@@ -647,11 +961,15 @@ final class GuardianBossCombat {
             }
             volleys.add(new Volley(others.get(cluster).id(), stones, cluster, others.size(), now));
             ServerPlayerEntity victim = world.getServer().getPlayerManager().getPlayer(others.get(cluster).id());
-            log.cast(now, "back volley", victim == null ? "?" : victim.getName().getString());
+            log.cast(now, "back stones", victim == null ? "?" : victim.getName().getString());
         }
         world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_VOLLEY_CHARGE, SoundCategory.HOSTILE, 1.6f, .8f);
     }
 
+    /**
+     * Back stones rise with a spark, then go. At a player on the ground they burst on a ring marked
+     * where that player is heading; at a player in the air they fly straight to them.
+     */
     private void tickVolleys(ServerWorld world, long now) {
         volleys.removeIf(volley -> {
             if (volley.stones().stream().allMatch(GuardianRockEntity::isRemoved)) return true;
@@ -671,16 +989,26 @@ final class GuardianBossCombat {
                 return true;
             }
             var hits = new HashSet<UUID>(); var walls = new GuardianWallImpact();
-            Vec3d body = guardian.getEntityPos().add(0, GuardianShellRules.CORE_HEIGHT, 0), aim = player.getBoundingBox().getCenter();
+            Vec3d body = guardian.getEntityPos().add(0, GuardianShellRules.CORE_HEIGHT, 0);
+            boolean inAir = aloft(player.getUuid());
+            Vec3d mark = null;
+            if (!inAir) {
+                Vec3d led = lead(player.getEntityPos(), drift.getOrDefault(player.getUuid(), Vec3d.ZERO), GuardianAirburstRules.FUSE);
+                Vec3d ground = GuardianWaveSurface.ground(world, guardian, player.getEntityPos(), led.x, led.z);
+                mark = ground == null ? led : ground;
+            }
+            boolean released = false;
             for (int i = 0; i < volley.stones().size(); i++) {
                 var stone = volley.stones().get(i);
                 if (stone.isRemoved()) continue;
                 Vec3d socket = stone.getEntityPos();
-                // Like the fan, stones cannot launch from the far side of solid cover.
+                // Stones cannot launch from the far side of solid cover.
                 if (walls.clip(world, guardian, body, socket, false, true).squaredDistanceTo(socket) > 1e-10) { stone.discard(); continue; }
-                Vec3d led = lead(aim, drift.getOrDefault(player.getUuid(), Vec3d.ZERO), (int)(socket.distanceTo(aim) / GuardianFanRules.SPEED));
-                stone.releaseShard(GuardianFanRules.direction(socket, led, i), hits, walls);
+                Vec3d aim = inAir ? airAim(player, socket, 0) : mark.add((i - 1) * .5, .45, 0);
+                stone.releaseBurst(aim, inAir ? GuardianAirburstRules.flightTicks(socket, aim) : GuardianAirburstRules.FUSE, hits, walls);
+                released = true;
             }
+            if (released && mark != null) rings.add(new Ring(mark, GuardianAirburstRules.BLAST, now + GuardianAirburstRules.FUSE, false));
             world.playSound(null, guardian.getBlockPos(), ModSounds.ENTITY_GUARDIAN_VOLLEY_LAUNCH, SoundCategory.HOSTILE, 1.3f, 1.2f);
             return true;
         });
@@ -709,9 +1037,29 @@ final class GuardianBossCombat {
         });
     }
     void clearWaves() { waves.clear(); guardian.clearWave(); }
+    /** The leap marks its landing once it commits to it. */
+    void markRing(Vec3d center, double radius, long until) { rings.add(new Ring(center, radius, until, true)); }
+    void clearLeapRing() { rings.removeIf(Ring::leap); }
 
     void tickEffects(ServerWorld world) {
         expireWaves(world);
+        long time = world.getTime();
+        tickSpikes(world, time);
+        rings.removeIf(ring -> time > ring.until());
+        if (time % 2 == 0) for (Ring ring : rings) {
+            int points = (int)Math.ceil(ring.radius() * 9);
+            for (int i = 0; i < points; i++) {
+                double angle = Math.PI * 2 * i / points;
+                Vec3d rim = ring.center().add(Math.cos(angle) * ring.radius(), 0, Math.sin(angle) * ring.radius());
+                if (ring.gap() > 0 && !GuardianSweepRules.behind(ring.center(), ring.yaw(), rim)) continue;
+                mark(world, ring.center(), rim);
+            }
+            // The two edges of the open wedge, so the safe ground in front of it can be read.
+            if (ring.gap() > 0) for (int side = -1; side <= 1; side += 2) {
+                Vec3d edge = Vec3d.fromPolar(0, ring.yaw() + side * (float)ring.gap());
+                for (double out = 2; out < ring.radius(); out += .7) mark(world, ring.center(), ring.center().add(edge.multiply(out)));
+            }
+        }
         for (TravelingWave w : waves)
             wave(world, (int)(world.getTime()-w.start()), w.origin(), w.hits(), w.unstable(), w.walls());
         if (guardian.isUnstable() && !guardian.isArenaHidden() && (engaged || reviewing) && world.getTime()%4 == 0) {
@@ -719,6 +1067,11 @@ final class GuardianBossCombat {
             world.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, guardian.getX(),guardian.getY()+3.3,guardian.getZ(),count,1.1,.8,1.1,.04);
             world.spawnParticles(ParticleTypes.ELECTRIC_SPARK, guardian.getX(),guardian.getY()+3,guardian.getZ(),count,1.5,1.5,1.5,.14);
         }
+    }
+
+    private void mark(ServerWorld world, Vec3d origin, Vec3d at) {
+        Vec3d point = GuardianWaveSurface.ground(world, guardian, origin, at.x, at.z);
+        if (point != null) world.spawnParticles(IMPACT_RING, point.x, point.y + .15, point.z, 1, .05, 0, .05, 0);
     }
 
     /** A slam's blast pops any Astral Double it reaches. */
@@ -783,9 +1136,18 @@ final class GuardianBossCombat {
         for (ServerPlayerEntity player : world.getPlayers(p -> canDamage(guardian, p) && !hitPlayers.contains(p.getUuid()))) {
             if (Math.hypot(player.getX()-center.x,player.getZ()-center.z) > radius+2) continue;
             Vec3d p = GuardianWaveSurface.ground(world, guardian, center, player.getX(), player.getZ());
-            if (p == null || !waveContact(center, player.getBoundingBox(), previous, radius, p.y)) continue;
+            if (p == null) continue;
+            Box body = player.getBoundingBox();
+            if (!waveContact(center, body, previous, radius, p.y)) {
+                // Over it as it passed underneath: it remembers, and answers the next one with a held slam.
+                if (waveCrossing(center, body, previous, radius) && !player.isOnGround()
+                        && body.minY > p.y + WAVE_HEIGHT && body.minY < p.y + 3
+                        && walls.clear(world,guardian,center.add(0,.7,0),p.add(0,.7,0),true)) jumped.put(player.getUuid(), true);
+                continue;
+            }
             if (!walls.clear(world,guardian,center.add(0,.7,0),p.add(0,.7,0),true)) continue;
             hitPlayers.add(player.getUuid());
+            jumped.put(player.getUuid(), false);
             if (strike(world, player, world.getDamageSources().mobAttack(guardian), WAVE_DAMAGE, "wave")) {
                 Vec3d delta = player.getEntityPos().subtract(center);
                 player.takeKnockback(.7, -delta.x, -delta.z);
@@ -816,8 +1178,8 @@ final class GuardianBossCombat {
         leap.cancel();
         guardian.cancelCombatBeam();
         guardian.setHoldingRock(false);
-        guardian.clearFan(); guardian.clearPulse(); pendingFan=false; approachUntil=0;
-        guardian.clearWave(); waves.clear(); volleys.clear(); leapFollowup=false; unfreeze(); active = null; waking = 0;
+        guardian.clearFan(); guardian.clearPulse(); chain = 0; walking = false;
+        guardian.clearWave(); waves.clear(); volleys.clear(); rings.clear(); clearScar(); unfreeze(); active = null; waking = 0;
         if (heldRock != null) { heldRock.discard(); heldRock = null; }
         for (GuardianRockEntity rock : rocks) rock.discard();
         rocks.clear();

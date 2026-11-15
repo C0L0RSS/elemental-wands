@@ -4,7 +4,8 @@ import net.minecraft.util.math.Vec3d;
 
 /**
  * Co-op pressure: while the Guardian commits an attack to one player, stones peel off its back
- * and fly at the others. Each volley hits a player at most once, for {@link GuardianCombatRules#SHARD_DAMAGE}.
+ * for the others and burst where they land (see {@link GuardianAirburstRules}). Each cluster hurts
+ * a player at most once.
  */
 public final class GuardianVolleyRules {
     /** Stones per target; ticks they rise with a spark before release; ticks between volleys. */

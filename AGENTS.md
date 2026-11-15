@@ -53,7 +53,7 @@ task; `./gradlew checkDocs` fails when it names something that does not exist.
 | Churches, the Shattered Nave, the Hollow Crypt, recovery, rewards | [Church and arena](docs/reference/church-and-arena.md) |
 | Storm Roc's fight, summit realm and aerie | [Storm Summit](docs/reference/storm-summit.md) |
 | Pyre King's fight, body, clips, gate and hall | [Pyre King](docs/reference/pyre-king.md) |
-| Why a built boss is designed the way it is | Design notes: [Storm Roc](docs/design/storm-roc.md), [Pyre King](docs/design/pyre-king.md) |
+| Why a built boss is designed the way it is | Design notes: [Fractured Guardian](docs/design/guardian.md), [Storm Roc](docs/design/storm-roc.md), [Pyre King](docs/design/pyre-king.md) |
 | Test runners and verification boundaries | [Testing](docs/reference/testing.md) |
 | Viewing local review pages from another device | [Remote preview](docs/reference/remote-preview.md) |
 | What changed for players | [Release summaries](docs/releases/README.md) |
@@ -126,7 +126,8 @@ not been confirmed on that machine: confirm it when your task needs it, then rep
 | Home folder in a command | `$HOME` | `$env:USERPROFILE` |
 | SHA-256 of a file | `shasum -a 256 <file>` | `Get-FileHash <file>` |
 | Lunar mods folder | `~/.lunarclient/profiles/1.21/mods/fabric-1.21.10/` | `%USERPROFILE%\.lunarclient\profiles\lunar\1.21\mods\fabric-1.21.10\` (*unverified*) |
-| Minecraft assets for test clients | `$HOME/.lunarclient/shared/assets` | *unverified* |
+| Minecraft assets for test clients | `$HOME/.lunarclient/shared/assets` | `$env:USERPROFILE\.lunarclient\shared\assets` |
+| Server fixtures | Dedicated runners | No `run/eula.txt` on file: use the [hosted runner](docs/reference/testing.md#server-fixtures-on-a-machine-with-no-accepted-eula) |
 | Viewing review pages from another device | not set up | [Remote preview](docs/reference/remote-preview.md) |
 
 Git does not carry these between the machines, so never assume the other one has them:

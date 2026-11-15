@@ -11,6 +11,8 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityDimensions;
+import net.minecraft.entity.EntityType;
 import net.minecraft.entity.FallingBlockEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.particle.BlockParticleEffect;
@@ -23,6 +25,8 @@ import net.minecraft.util.collection.Pool;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Box;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraft.world.RaycastContext;
@@ -88,15 +92,19 @@ public final class MeteorManager {
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> METEORS.clear());
     }
 
-    public static void spawnMeteor(ServerWorld world, PlayerEntity caster, Vec3d targetPos, int spawnHeight,
+    /** Returns the falling meteor, for fixtures that check where it started. */
+    public static FallingBlockEntity spawnMeteor(ServerWorld world, PlayerEntity caster, Vec3d targetPos, int spawnHeight,
             float explosionPower) {
         BlockState meteorState = ModSpellBlocks.METEOR_CORE.getDefaultState();
 
         // Construct the projectile directly: even the occupied-column fallback must
         // preserve block entities, inventories and neighboring blocks at the spawn cell.
-        BlockPos spawnBlockPos = findClearSpawnPos(world, BlockPos.ofFloored(targetPos), spawnHeight);
+        double spawnY = inBossArena(world)
+                ? arenaSpawnY(world, targetPos, spawnHeight)
+                : findClearSpawnPos(world, BlockPos.ofFloored(targetPos), spawnHeight).getY();
+        BlockPos spawnBlockPos = BlockPos.ofFloored(targetPos.x, spawnY, targetPos.z);
         FallingBlockEntity meteor = com.anton.elementalwands.mixin.FallingBlockEntityInvoker.elementalwands$create(
-                world, targetPos.x, spawnBlockPos.getY(), targetPos.z, meteorState);
+                world, targetPos.x, spawnY, targetPos.z, meteorState);
         meteor.setVelocity(0.0, -0.2, 0.0); // BUFFED: Much slower fall (was -0.3)
         // Explosion is the sole impact damage path; falling collision must not stack with it.
         meteor.setDestroyedOnLanding();
@@ -125,6 +133,32 @@ public final class MeteorManager {
         // Clients draw the ball from the falling block and the warning ring from this event.
         BlockFireEvents.send(world, 160, BlockFireEvents.METEOR_FALL, meteor.getId(), landingBrandPos, Vec3d.ZERO, Vec3d.ZERO,
                 (float) meteor.getY());
+        return meteor;
+    }
+
+    /**
+     * The boss realms. Each is roofed by an invisible barrier lid with open air above it, so the
+     * usual spawn search finds that air, and the meteor bursts on the lid far above the fight.
+     */
+    static boolean inBossArena(World world) {
+        return com.anton.elementalwands.crypt.HollowCryptRealm.keepsTerrain(world)
+                || com.anton.elementalwands.arena.ShatteredNave.keepsTerrain(world)
+                || com.anton.elementalwands.summit.StormSummit.keepsTerrain(world)
+                || com.anton.elementalwands.hall.PyreHall.keepsTerrain(world);
+    }
+
+    /**
+     * The point a cast aims the meteor at. In a boss arena a wall hit moves out beside the wall
+     * and a ceiling hit moves just under the ceiling, so the meteor drops onto the fight instead
+     * of starting inside the block. Everywhere else it is the hit itself.
+     */
+    public static Vec3d aimPoint(ServerWorld world, HitResult hit) {
+        if (!inBossArena(world) || hit.getType() != HitResult.Type.BLOCK || !(hit instanceof BlockHitResult block))
+            return hit.getPos();
+        EntityDimensions size = EntityType.FALLING_BLOCK.getDimensions();
+        Direction side = block.getSide();
+        double away = side == Direction.DOWN ? size.height() : side.getAxis().isHorizontal() ? size.width() / 2 : 0;
+        return hit.getPos().add(Vec3d.of(side.getVector()).multiply(away + 0.01));
     }
 
     /** Highest air cell in the column at or below the requested height, at least four blocks above the target. */
@@ -135,6 +169,26 @@ public final class MeteorManager {
             if (world.getBlockState(pos).isAir()) return pos.toImmutable();
         }
         return target.up(spawnHeight);
+    }
+
+    /**
+     * In a boss arena the meteor starts up to spawnHeight above the target but under the first
+     * solid block in the way, measured upward from the target, so the barrier lid (or an arch
+     * inside the arena) stays above it and it always falls onto the fight. Outside the arenas a
+     * roof still shelters what is under it; see {@link #findClearSpawnPos}.
+     */
+    static double arenaSpawnY(ServerWorld world, Vec3d target, int spawnHeight) {
+        EntityDimensions size = EntityType.FALLING_BLOCK.getDimensions();
+        double half = size.width() / 2, top = Math.min(target.y + spawnHeight, world.getTopYInclusive());
+        double y = target.y;
+        // Each step checks the slab the meteor would sweep between one start and the next, so a
+        // thin block cannot slip between two checked heights.
+        while (y + 1 <= top && world.isBlockSpaceEmpty(null, new Box(
+                target.x - half, y + size.height(), target.z - half,
+                target.x + half, y + 1 + size.height(), target.z + half))) {
+            y += 1;
+        }
+        return y;
     }
 
     private static void tickWorld(ServerWorld world) {

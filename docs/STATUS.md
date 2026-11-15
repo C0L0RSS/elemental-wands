@@ -111,6 +111,10 @@ Looks and balance that only a person playing can judge.
 
 ### Spells
 
+- **Meteor in the boss arenas:** it used to burst on the invisible barrier lid over the
+  Hollow Crypt and the Burned Throne Hall (fixed November 15). Check it lands on the floor
+  in the Crypt, the Hall, the Shattered Nave and the Storm Summit. Outside the arenas it is
+  unchanged: roofs and trees still stop it.
 - **Nature flowers:** the bud's arc, reach and look; the vanilla hearts over a flower
   holding health; whether a fifth of the damage, up to 8, is worth walking over for; the
   three-block collect reach; whether a caster breaks their own flower by accident when

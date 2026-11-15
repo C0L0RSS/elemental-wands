@@ -31,8 +31,14 @@ meshes near the first-person camera through `client/renderer/SpellViewClearance`
 Fireball is the traveling primary, with a 20-block configured range. It retains
 the stable `inferno_wave` ID for saved loadouts. Dragon's Pyre sends a ground-following wall
 and leaves low lingering flames. Meteor calls the large stepped fire sphere with
-bounded distance/cover-aware explosion damage. Its spawn must not delete the
-block above the target, and falling-block contact must not add unintended damage.
+bounded distance/cover-aware explosion damage. It starts at the highest air cell up to
+35 blocks above the target, so a roof or a tree shelters what is under it; this is
+deliberate. The boss arenas (Hollow Crypt, Shattered Nave, Storm Summit, Burned Throne
+Hall) are the exception: each has an invisible barrier lid with open air above it, so
+there the height is measured upward from the target and stops under the first solid
+block, and a wall or ceiling hit is moved into the open, so it always falls onto the
+fight. Its spawn must not delete the block it starts in, and falling-block contact must
+not add unintended damage.
 Spell ground fire is owned and temporary so it cannot bypass allied protection.
 
 Flamethrower is a held close-range cone with gradual damage ramp, heat, overheat,

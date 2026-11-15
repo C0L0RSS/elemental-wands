@@ -158,6 +158,17 @@ public final class ModEntities {
                                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
                                                         Identifier.of(ElementalWandsMod.MOD_ID, "guardian_rock"))));
 
+        // One column of the Scar's spike wall: solid to players, never saved.
+        public static final EntityType<com.anton.elementalwands.entity.GuardianSpikeEntity> GUARDIAN_SPIKE = Registry.register(
+                        Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "guardian_spike"),
+                        FabricEntityTypeBuilder.<com.anton.elementalwands.entity.GuardianSpikeEntity>create(SpawnGroup.MISC,
+                                        com.anton.elementalwands.entity.GuardianSpikeEntity::new)
+                                        .dimensions(EntityDimensions.fixed((float)com.anton.elementalwands.entity.GuardianScarRules.WIDTH,
+                                                        (float)com.anton.elementalwands.entity.GuardianScarRules.HEIGHT))
+                                        .trackRangeBlocks(96).trackedUpdateRate(20).disableSaving()
+                                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
+                                                        Identifier.of(ElementalWandsMod.MOD_ID, "guardian_spike"))));
+
         // Core-sized provisional hitbox; the long hands reach beyond it.
         // Summon-only boss; its encounter controller disables aggression in Peaceful.
         public static final EntityType<FracturedGuardianEntity> FRACTURED_GUARDIAN = Registry.register(

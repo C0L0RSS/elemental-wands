@@ -7,7 +7,7 @@ The chest stays shut: the core never comes out.
 import base64,copy,json,runpy,math
 from pathlib import Path
 import numpy as np
-from PIL import Image,ImageDraw
+from PIL import Image,ImageDraw,ImageFont
 HERE=Path(__file__).resolve().parent
 ROOT=HERE.parents[2]
 OUT=ROOT/'.local-previews/guardian-phase'
@@ -51,6 +51,14 @@ def moved(clip,t):
     return out
 code=(source/'render_preview.py').read_text().split('views=[')[0].replace('scale=size/112','scale=size/125').replace('tri-[0,40,0]','tri-[0,43,0]')
 r={'__file__':str(source/'render_preview.py')};exec(code,r)
+# The rasterizer names macOS's Arial; fall back to Windows' copy, then Pillow's own font.
+mac_font=r['font']
+def font(size,bold=False):
+    for attempt in (lambda:mac_font(size,bold),lambda:ImageFont.truetype('arialbd.ttf' if bold else 'arial.ttf',size)):
+        try:return attempt()
+        except OSError:pass
+    return ImageFont.load_default(size)
+r['font']=font
 assets=ROOT/'src/main/resources/assets/elementalwands/textures/entity'
 OUT.mkdir(parents=True,exist_ok=True)
 sheet=Image.new('RGB',(2400,1260),(239,237,232));draw=ImageDraw.Draw(sheet)
@@ -64,11 +72,46 @@ for i,(label,clip,t,stage) in enumerate(frames):
     r['mesh']=moved(clips[clip],t)
     x,y=i%4*600,i//4*630;sheet.paste(r['render'](-20,8,600),(x,y));draw.text((x+25,y+598),label,fill=(40,55,53),font=r['font'](21))
 sheet.save(OUT/'phase-review.png')
+# Phase-two step two: the turning backhand and the floor scar, with the times the server acts on.
+# The sweep is shown from above (front at the bottom, a ring marks the 60-degree safe wedge) and from
+# high on its right; the scar from in front and from its right side over a floor line.
+wide={'__file__':str(source/'render_preview.py')}
+exec(code.replace('scale=size/125','scale=size/VIEW_SCALE').replace('tri-[0,43,0]','tri-[0,VIEW_Y,0]'),wide)
+step_two=[('sweep',[(.5,'coiling, looking back'),(1.0,'loaded'),(1.4,'blow starts'),(1.45,'arm at its right'),
+                    (1.5,'HIT: arm straight back'),(1.55,'through its left'),(1.6,'60 deg left of front'),(2.2,'dragging home')],
+           [(0,90,185,40,'from above: front is down, its right is left'),(-55,28,165,40,'high, from front right')]),
+          ('scar',[(.5,'rearing, arms wide'),(.95,'driving down'),(1.0,'HANDS HIT FLOOR'),(1.3,'braced, buried'),
+                   (1.5,'ERUPT: heave'),(1.6,'arms wrenched up'),(2.0,'recovering'),(2.5,'stance')],
+           [(-25,6,150,42,'front three-quarter'),(-90,0,150,42,'from its right side (floor line)')])]
+cell=300;rows=sum(len(views) for _,_,views in step_two)
+sheet=Image.new('RGB',(cell*8,rows*(cell+44)+10),(239,237,232));draw=ImageDraw.Draw(sheet)
+wide['atlas']=np.asarray(Image.open(assets/'fractured_guardian_cracks_3.png').convert('RGB'))
+wide['atlas_h'],wide['atlas_w']=wide['atlas'].shape[:2]
+row=0
+for clip,times,views in step_two:
+    for yaw,pitch,view_scale,view_y,view in views:
+        wide['VIEW_SCALE'],wide['VIEW_Y']=view_scale,view_y
+        for col,(t,label) in enumerate(times):
+            wide['mesh']=moved(clips[NAME+clip],t)
+            frame=wide['render'](yaw,pitch,cell);marks=ImageDraw.Draw(frame);scale=cell/view_scale
+            if pitch==90:
+                # The server's safe wedge: 60 degrees either side of straight ahead (screen down).
+                cx,cy=cell/2,cell/2-4*scale
+                for a in (-60,60):
+                    rad=math.radians(a);marks.line([(cx,cy),(cx+math.sin(rad)*cell*.48,cy+math.cos(rad)*cell*.48)],fill=(90,160,110),width=2)
+            if pitch==0:
+                floor=cell/2+view_y*scale;marks.line([(0,floor),(cell,floor)],fill=(170,90,60),width=1)
+            sheet.paste(frame,(col*cell,row*(cell+44)))
+            x,y=col*cell,row*(cell+44)
+            draw.text((x+8,y+cell+2),f'{clip} {t:.2f}s  {label}',fill=(40,55,53),font=r['font'](15))
+            draw.text((x+8,y+cell+21),view,fill=(105,110,106),font=r['font'](13))
+        row+=1
+sheet.save(OUT/'step-two-review.png')
 # Fully offline viewer, reusing the approved rig's browser renderer.
 template=(HERE.parent/'v4-expressive/viewer.template.html').read_text()
 start=template.index('<select id="clip">');end=template.index('</select>',start)
 options=[('core_pulse','Core pulse'),('slam_hold_22','Delayed slam (longest hold)'),('slam_hold_10','Delayed slam (shortest hold)'),
-         ('phase_change','Shell break'),('fan','Aimed stone barrage'),('slam_fast','Fast slam'),('throw_fast','Fast rock throw')]
+         ('sweep','Turning backhand (phase two)'),('scar','Floor scar (phase two)'),('phase_change','Shell break'),('fan','Aimed stone barrage'),('slam_fast','Fast slam'),('throw_fast','Fast rock throw')]
 template=template[:start]+'<select id="clip">'+''.join(f'<option value="{v}">{l}</option>' for v,l in options)+template[end:]
 template=template.replace("let clipName='idle'","let clipName='core_pulse'")
 template=template.replace('max="6"','max="3.9"').replace('zoom=1','zoom=1.45').replace('pos-vec3(0.,60.,0.)','pos-vec3(0.,42.,0.)')

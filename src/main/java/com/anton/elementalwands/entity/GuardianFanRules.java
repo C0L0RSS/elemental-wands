@@ -2,13 +2,16 @@ package com.anton.elementalwands.entity;
 
 import net.minecraft.util.math.Vec3d;
 
-/** Three committed bursts. Shared by server release, client formation and timing checks. */
+/**
+ * The Airburst cast's formation: three committed bursts of three stones, as the {@code fan} clip shows them.
+ * Shared by server release, client formation and timing checks; {@link GuardianAirburstRules} has the rest.
+ */
 public final class GuardianFanRules {
     public static final int COUNT = 3, BURSTS = 3, LOCK = 14, RELEASE = 18, REPEAT = 8,
-            RECOVERY = 14, HOVER_TICKS = 24;
+            RECOVERY = 14;
     public static final double SPEED = 1.8, RANGE = 40, RADIUS = .32;
     private GuardianFanRules() {}
-    public static int duration(boolean secondPhase) { return RELEASE + (BURSTS - 1) * REPEAT + RECOVERY; }
+    public static int duration() { return RELEASE + (BURSTS - 1) * REPEAT + RECOVERY; }
     public static int burst(float age) {
         return Math.clamp((int)Math.ceil((age - RELEASE) / REPEAT), 0, BURSTS - 1);
     }
@@ -20,8 +23,5 @@ public final class GuardianFanRules {
     }
     public static Vec3d direction(Vec3d origin, Vec3d aim, int index) {
         return aim.subtract(origin).normalize().rotateY((float)Math.toRadians((index - 1) * 4));
-    }
-    public static boolean hovering(double clearance, boolean grounded, int ticks) {
-        return !grounded && clearance > 2.5 && ticks >= HOVER_TICKS;
     }
 }

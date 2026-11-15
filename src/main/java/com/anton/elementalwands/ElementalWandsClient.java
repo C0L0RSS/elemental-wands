@@ -146,6 +146,7 @@ public class ElementalWandsClient implements ClientModInitializer {
         com.anton.elementalwands.client.FireLeapPreview.init();
         EntityRendererRegistry.register(ModEntities.FLASHOVER_EMBER, com.anton.elementalwands.client.renderer.EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.GUARDIAN_ROCK, com.anton.elementalwands.client.renderer.GuardianRockRenderer::new);
+        EntityRendererRegistry.register(ModEntities.GUARDIAN_SPIKE, com.anton.elementalwands.client.renderer.GuardianSpikeRenderer::new);
         EntityRendererRegistry.register(ModEntities.STONE_CLUSTER, com.anton.elementalwands.client.renderer.StoneClusterRenderer::new);
 
         // Receive synced player data from server

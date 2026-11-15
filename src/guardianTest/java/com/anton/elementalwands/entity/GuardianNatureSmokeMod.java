@@ -113,7 +113,7 @@ public final class GuardianNatureSmokeMod implements ModInitializer {
             player.setAttached(com.anton.elementalwands.data.EWAttachments.AFFINITY,"NATURE");
             WandProgression.grant(player,3);
             require(WandLoadouts.get(player).contains("tendril_bloom"),"Fixture could not equip Sentry Bloom");
-            guardian.testAttack(player,GuardianCombatRules.Attack.SHOCKWAVE);attackStarted=world.getTime();
+            guardian.testAttack(player,GuardianCombatRules.Attack.SLAM);attackStarted=world.getTime();
             // A Seed damages and marks the Guardian like anything else; a flower's seed lands inside
             // the Seed's own hurt window; nothing slows or holds it.
             float health=guardian.getHealth();
@@ -141,7 +141,7 @@ public final class GuardianNatureSmokeMod implements ModInitializer {
                             +", alive "+player.isAlive()+", spectator "+player.isSpectator()+", loaded "+world.isChunkLoaded(bloom));
             require(guardian.getHealth()<flowerHealth,"The flower did not shoot the Guardian");
             var next=GuardianBossCombat.class.getDeclaredField("nextAction");next.setAccessible(true);
-            require(next.getLong(combat)==attackStarted+GuardianCombatRules.Attack.SHOCKWAVE.duration+GuardianCombatRules.RECOVERY_GAP,
+            require(next.getLong(combat)==attackStarted+GuardianCombatRules.Attack.SLAM.duration+GuardianCombatRules.REST,
                     "Nature changed the Guardian's attack timing or recovery");
             guardian.stopReview();
             // The oak grows right where the Guardian stands. It must not lift, push or block it.

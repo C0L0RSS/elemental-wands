@@ -64,7 +64,7 @@ client runners use `runClient`. Run only the suites relevant to the change.
 | Space void-glass visuals | — | `space_blockspace_client_smoke` | |
 | Space Gravity Well | `gravity_well_server_smoke` | `gravity_well_client_smoke` | `-PgravityRecord` |
 | Space Astral Double | `astral_double_server_smoke` | `astral_double_client_smoke` | `-PastralRecord` |
-| Guardian combat | `guardian_combat_smoke`, `guardian_shell_smoke`, `guardian_phase_smoke` | `guardian_floor_client_smoke` | The floor client takes `-PfloorClientAssets` and the visual switches `-PguardianPedestalVisual`, `-PguardianBurnVisual`, `-PnatureVisual` |
+| Guardian combat | `guardian_combat_smoke`, `guardian_scar_smoke`, `guardian_shell_smoke`, `guardian_phase_smoke` | `guardian_floor_client_smoke` | The floor client takes `-PfloorClientAssets` and the visual switches `-PguardianPedestalVisual`, `-PguardianBurnVisual`, `-PnatureVisual` |
 | Guardian cover, Nature, walls | `guardian_cover_smoke`, `guardian_nature_smoke`, `guardian_wall_smoke` | — | `guardian_nature_smoke -PnatureBalance` runs the Nature damage, mark and flower fixture on a flat world |
 | Church, Shattered Nave | `guardian_church_smoke`, `guardian_nave_smoke` | `nave_client_smoke` | Recovery pairs: `-PchurchRecovery`, `-PnaveRecovery`. `-PintroVideo` records the Guardian intro |
 | Hollow Necromancer | `necromancer_server_smoke` (robed fight, sieges), `necromancer_phase_smoke` (phase two) | `necromancer_client_smoke` | All flags are for the client runner: `-PnecroMechanics` for the phase-two mechanics against a scripted player; recording flags `-PnecroRecord`, `-PrushRecord`, `-PdrainRecord`, `-PsoulBoltRecord` |

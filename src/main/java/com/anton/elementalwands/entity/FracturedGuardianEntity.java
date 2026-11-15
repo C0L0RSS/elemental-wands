@@ -512,6 +512,8 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
                     return state.setAndContinue(state.isMoving() ? WALK : IDLE);
                 }).receiveTriggeredAnimations()
                 .triggerableAnim("fan", RawAnimation.begin().thenPlay("animation.fractured_guardian.fan"))
+                .triggerableAnim("sweep", RawAnimation.begin().thenPlay("animation.fractured_guardian.sweep"))
+                .triggerableAnim("scar", RawAnimation.begin().thenPlay("animation.fractured_guardian.scar"))
                 .triggerableAnim("phase_change", RawAnimation.begin().thenPlay("animation.fractured_guardian.phase_change"))
                 .triggerableAnim("slam_fast", RawAnimation.begin().thenPlay("animation.fractured_guardian.slam_fast"))
                 .triggerableAnim("throw_fast", RawAnimation.begin().thenPlay("animation.fractured_guardian.throw_fast"))

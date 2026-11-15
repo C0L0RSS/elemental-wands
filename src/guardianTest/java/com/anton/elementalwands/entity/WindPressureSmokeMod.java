@@ -19,7 +19,7 @@ import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.math.*;
 import net.minecraft.world.Heightmap;
 
-/** Real projectile collisions, shared cast hits, dash recharge, fan timing and guard interruption. */
+/** Real projectile collisions, shared cast hits, dash recharge, Airburst timing, cover and targeting, and guard interruption. */
 public final class WindPressureSmokeMod implements ModInitializer {
     private int tick,y;
     private FracturedGuardianEntity boss;
@@ -59,7 +59,7 @@ public final class WindPressureSmokeMod implements ModInitializer {
             float loss=health-boss.getHealth();require(loss>3.75 && loss<=7,"Fan damage stacked or center missed: "+loss);
             require(Math.abs(boss.getVelocity().y)<.1 && boss.getY()<y+.1,"Wind lifted resistant boss");
             boss.addVelocity(0,8,0);require(boss.getVelocity().y<.1,"External launch bypassed boss resistance");
-            boss.testAttack(player,GuardianCombatRules.Attack.SHOCKWAVE);
+            boss.testAttack(player,GuardianCombatRules.Attack.SLAM);
         }
         if(tick==50 || tick==70 || tick==90)firePrimary(world);
         if(tick>36 && tick<=105)require(boss.getY()<y+.15,"Stored impulse launched Guardian after attack: "+boss.getY());
@@ -88,7 +88,7 @@ public final class WindPressureSmokeMod implements ModInitializer {
             boss=new FracturedGuardianEntity(ModEntities.FRACTURED_GUARDIAN,world);boss.setPosition(.5,y,.5);boss.stopReview();world.spawnEntity(boss);
             player.setPosition(.5,y,12.5);player.setVelocity(Vec3d.ZERO);
         }
-        if(tick==145){boss.testAttack(player,GuardianCombatRules.Attack.FAN);shards.clear();}
+        if(tick==145){boss.testAttack(player,GuardianCombatRules.Attack.AIRBURST);shards.clear();}
         if(tick>=145 && tick<205) {
             collect(world);
             if(tick==162)require(shards.isEmpty(),"Barrage released before windup ended");
@@ -102,7 +102,7 @@ public final class WindPressureSmokeMod implements ModInitializer {
             require(shards.size()==9,"Phase-one fan released "+shards.size()+" projectiles");
             require(boss.getFanTime(0)<0,"Fan telegraph did not end");
             boss.stopReview();boss.beginPhase();boss.finishPhase();shards.clear();
-            player.setPosition(.5,y,12.5);boss.testAttack(player,GuardianCombatRules.Attack.FAN);
+            player.setPosition(.5,y,12.5);boss.testAttack(player,GuardianCombatRules.Attack.AIRBURST);
         }
         if(tick>205 && tick<320)collect(world);
         if(tick==220) {lockedPitch=boss.getFanPitch();player.setPosition(8.5,y+6,12.5);}
@@ -117,7 +117,7 @@ public final class WindPressureSmokeMod implements ModInitializer {
             var f=FracturedGuardianEntity.class.getDeclaredField("combat");f.setAccessible(true);
             var combat=(GuardianBossCombat)f.get(boss);
             var interrupt=GuardianBossCombat.class.getDeclaredMethod("interruptAction");interrupt.setAccessible(true);interrupt.invoke(combat);
-            combat.testAttack(player,GuardianCombatRules.Attack.FAN);
+            combat.testAttack(player,GuardianCombatRules.Attack.AIRBURST);
         }
         if(tick==333) {
             boss.resetPhase(); // Earlier steps left it in phase two, where there is no gate.
@@ -139,8 +139,8 @@ public final class WindPressureSmokeMod implements ModInitializer {
         }
         if(tick==351)fireShard(world); // Delayed member of the same volley still sees the absorbed wall.
         if(tick==367) {
-            require(player.getHealth()==20,"A later shard leaked through its own volley's absorbed wall: "+player.getHealth());
-            require(com.anton.elementalwands.item.StoneAbilityHandler.guardianWallBlocks(world).isEmpty(),"Fan failed to consume wall");
+            require(player.getHealth()==20,"A later stone leaked through its own volley's absorbed wall: "+player.getHealth());
+            require(com.anton.elementalwands.item.StoneAbilityHandler.guardianWallBlocks(world).isEmpty(),"The burst stone failed to consume the wall");
             sharedWall=new GuardianWallImpact();wallHits=new HashSet<>();fireShard(world);
         }
         if(tick==381) {
@@ -148,8 +148,8 @@ public final class WindPressureSmokeMod implements ModInitializer {
             health=player.getHealth();player.timeUntilRegen=0;fireShard(world);
         }
         if(tick==397) {
-            require(player.getHealth()==health,"Multiple shards from one volley stacked damage");
-            report.append("Fan consumes Stone Wall once; delayed shards retain that volley's cover, next volley hits, and one volley cannot stack damage.\n");
+            require(player.getHealth()==health,"Two stones from one volley hurt the player twice");
+            report.append("A burst stone consumes a Stone Wall without hurting the player behind it; a later stone of that volley is still stopped by the absorbed wall, the next volley hits, and one volley cannot hurt a player twice.\n");
             player.setInvulnerable(true);player.setPosition(.5,y,22.5);boss.startFight();chaseStart=boss.getEntityPos();
             var field=FracturedGuardianEntity.class.getDeclaredField("combat");field.setAccessible(true);var combat=(GuardianBossCombat)field.get(boss);
             var readyField=GuardianBossCombat.class.getDeclaredField("ready");readyField.setAccessible(true);
@@ -162,34 +162,42 @@ public final class WindPressureSmokeMod implements ModInitializer {
             player.setNoGravity(true);player.setOnGround(false);player.setPosition(.5,y+1.2,22.5);
         }
         if(tick==460) {
-            require(hoverTicks()==0,"Normal jump height is treated as hovering");
+            require(airborneTicks()==0,"Normal jump height counted as airborne: "+airborneTicks());
             player.setPosition(.5,y+5,22.5);player.setOnGround(false);
         }
-        if(tick==486) {
-            require(hoverTicks()>=GuardianFanRules.HOVER_TICKS,"Sustained hovering not recognized");
-            var f=FracturedGuardianEntity.class.getDeclaredField("combat");f.setAccessible(true);var combat=(GuardianBossCombat)f.get(boss);
-            var r=GuardianBossCombat.class.getDeclaredField("ready");r.setAccessible(true);
-            @SuppressWarnings("unchecked") var ready=(Map<GuardianCombatRules.Attack,Long>)r.get(combat);ready.put(GuardianCombatRules.Attack.FAN,world.getTime());
+        if(tick==460+GuardianAirburstRules.AIRBORNE_TICKS) {
+            require(airborneTicks()>=GuardianAirburstRules.AIRBORNE_TICKS,"A player held 5 blocks up was not recognised within "
+                    +GuardianAirburstRules.AIRBORNE_TICKS+" ticks: "+airborneTicks());
+            require(boss.getFanTime(0)<0,"Airburst started while every attack was locked out");
+            // Free the Airburst alone, and leave it resting long after: a launched player must cut the rest short.
+            readyMap().put(GuardianCombatRules.Attack.AIRBURST,world.getTime());
+            // A long walk between strings, which only a punished player cuts short.
+            setField("nextAction",world.getTime()+1000);setField("walking",true);
         }
-        if(tick==490) {
-            require(boss.getFanTime(0)>=0,"Available aerial fan was not selected against hovering");
-            report.append("Normal jump height never counts as hovering; sustained airborne target selects an available fan.\n");
+        if(tick==468) {
+            require(boss.getFanTime(0)>=0 && getField("active")==GuardianCombatRules.Attack.AIRBURST,
+                    "A launched player was not answered with the Airburst"+rotationState());
+            require((long)getField("nextAction")>world.getTime()+900,"The Airburst waited out the rest instead of cutting it short"+rotationState());
+            report.append("Normal jump height never counts as airborne; a player held 5 blocks up is recognised within "
+                    +GuardianAirburstRules.AIRBORNE_TICKS+" ticks and drawn the Airburst at once, without the rest running out.\n");
             boss.stopReview(); boss.discard();
             boss=new FracturedGuardianEntity(ModEntities.FRACTURED_GUARDIAN,world);
             boss.setPosition(.5,y,.5);world.spawnEntity(boss);boss.startFight();
             player.setPosition(.5,y+5,12.5);player.setNoGravity(true);player.setOnGround(false);
         }
+        if(tick>468 && tick<540) {player.setPosition(.5,y+5,12.5);player.setVelocity(Vec3d.ZERO);player.setOnGround(false);}
         if(tick==515 || tick==535) {
             if(tick==535){boss.beginPhase();boss.finishPhase();}
-            forceDueBeam(world);
+            forceOpenChoice(world);
         }
         // Allow normal gravity to restore support after interrupting the frozen awakening.
         if(tick==519 || tick==539) {
-            require(boss.getBeamTime(0)>=0 && boss.getFanTime(0)<0,
-                    "Ready laser was overridden by an aerial or pending fan in phase "+(boss.isUnstable()?2:1)+rotationState());
+            require(getField("active")==GuardianCombatRules.Attack.AIRBURST && (long)getField("started")>=world.getTime()-4
+                    && boss.getFanTime(0)>=0 && boss.getBeamTime(0)<0,
+                    "A launched player did not draw the Airburst ahead of every other attack in phase "+(boss.isUnstable()?2:1)+rotationState());
         }
         if(tick==540) {
-            report.append("Actual director reserves a ready laser after two other attacks in BOTH phases, ahead of hover and a pending fan.\n");
+            report.append("With every attack free and no rest, a launched player draws the Airburst first in BOTH phases (ahead of the core pulse in phase two).\n");
             boss.stopReview();boss.discard();
             player.setPosition(.5,y,.5);player.setVelocity(Vec3d.ZERO);player.setNoGravity(false);player.setInvulnerable(true);
             player.setYaw(0);player.setHeadYaw(0);player.setBodyYaw(0);player.setPitch(0);
@@ -221,35 +229,36 @@ public final class WindPressureSmokeMod implements ModInitializer {
     private String rotationState()throws Exception {
         var field=FracturedGuardianEntity.class.getDeclaredField("combat");field.setAccessible(true);var combat=field.get(boss);
         String state=" pos="+boss.getEntityPos()+" grounded="+boss.isOnGround()+" visible="+boss.canSee(player)+" player="+player.getEntityPos()+" cracks="+boss.getCracks()+" beam="+boss.getBeamTime(0);
-        for(String key:List.of("active","last","engaged","waking","attacksSinceBeam","nextAction","pendingFan","approachUntil")) {
-            var f=GuardianBossCombat.class.getDeclaredField(key);f.setAccessible(true);state+=" "+key+"="+f.get(combat);
-        }
+        for(String key:List.of("active","last","before","chain","engaged","waking","started","nextAction","airborne","ready")) state+=" "+key+"="+getField(key);
         return state;
     }
-    private void forceDueBeam(ServerWorld world)throws Exception {
-        var f=FracturedGuardianEntity.class.getDeclaredField("combat");f.setAccessible(true);
-        var combat=(GuardianBossCombat)f.get(boss);
-        var interrupt=GuardianBossCombat.class.getDeclaredMethod("interruptAction");interrupt.setAccessible(true);interrupt.invoke(combat);
-        for(String name:List.of("waking","attacksSinceBeam")) {
-            var field=GuardianBossCombat.class.getDeclaredField(name);field.setAccessible(true);field.setInt(combat,name.equals("waking")?0:2);
-        }
-        for(String name:List.of("nextAction","approachUntil")) {
-            var field=GuardianBossCombat.class.getDeclaredField(name);field.setAccessible(true);field.setLong(combat,0);
-        }
-        var readyField=GuardianBossCombat.class.getDeclaredField("ready");readyField.setAccessible(true);
-        @SuppressWarnings("unchecked") var ready=(Map<GuardianCombatRules.Attack,Long>)readyField.get(combat);ready.clear();
-        var last=GuardianBossCombat.class.getDeclaredField("last");last.setAccessible(true);last.set(combat,GuardianCombatRules.Attack.FAN);
-        var pending=GuardianBossCombat.class.getDeclaredField("pendingFan");pending.setAccessible(true);pending.setBoolean(combat,true);
+    private GuardianBossCombat combat()throws Exception {
+        var f=FracturedGuardianEntity.class.getDeclaredField("combat");f.setAccessible(true);return (GuardianBossCombat)f.get(boss);
+    }
+    private Object getField(String name)throws Exception {
+        var f=GuardianBossCombat.class.getDeclaredField(name);f.setAccessible(true);return f.get(combat());
+    }
+    private void setField(String name,Object value)throws Exception {
+        var f=GuardianBossCombat.class.getDeclaredField(name);f.setAccessible(true);f.set(combat(),value);
+    }
+    @SuppressWarnings("unchecked") private Map<GuardianCombatRules.Attack,Long> readyMap()throws Exception {
+        return (Map<GuardianCombatRules.Attack,Long>)getField("ready");
+    }
+    /** Every attack free, no rest, no awakening, and a different last attack: only the chooser decides. */
+    private void forceOpenChoice(ServerWorld world)throws Exception {
+        var interrupt=GuardianBossCombat.class.getDeclaredMethod("interruptAction");interrupt.setAccessible(true);interrupt.invoke(combat());
+        setField("waking",0);setField("nextAction",0L);setField("chain",0);
+        setField("last",GuardianCombatRules.Attack.BEAM);setField("before",GuardianCombatRules.Attack.SLAM);
+        readyMap().clear();
         boss.setPosition(.5,y,.5);boss.setVelocity(Vec3d.ZERO);boss.setOnGround(true);
     }
-    private int hoverTicks()throws Exception {
-        var f=FracturedGuardianEntity.class.getDeclaredField("combat");f.setAccessible(true);
-        var h=GuardianBossCombat.class.getDeclaredField("hovering");h.setAccessible(true);
-        @SuppressWarnings("unchecked") var counts=(Map<UUID,Integer>)h.get(f.get(boss));return counts.getOrDefault(player.getUuid(),0);
+    @SuppressWarnings("unchecked") private int airborneTicks()throws Exception {
+        return ((Map<UUID,Integer>)getField("airborne")).getOrDefault(player.getUuid(),0);
     }
+    /** A burst stone flown from the Guardian's side at the player, on the given volley's shared hits and cover. */
     private void fireShard(ServerWorld world) {
         var shard=new GuardianRockEntity(ModEntities.GUARDIAN_ROCK,world);shard.setOwner(boss);shard.setPosition(.5,y+1,.5);
-        shard.releaseShard(new Vec3d(0,0,1),wallHits,sharedWall);world.spawnEntity(shard);
+        shard.releaseBurst(player.getBoundingBox().getCenter(),6,wallHits,sharedWall);world.spawnEntity(shard);
     }
     private void collect(ServerWorld world){for(var r:world.getEntitiesByClass(GuardianRockEntity.class,boss.getBoundingBox().expand(70),r->r.isShard()))shards.add(r.getUuid());}
     private static void near(float value,float expected,String reason){require(Math.abs(value-expected)<.02,reason+": "+value+" != "+expected);}

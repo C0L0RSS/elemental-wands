@@ -107,7 +107,7 @@ These come from the Guardian and Necromancer playtests:
 
 The design decisions for a built boss live with that boss, not here:
 
-- Fractured Guardian: [Guardian combat](reference/guardian-combat.md).
+- Fractured Guardian: [design notes](design/guardian.md) and [Guardian combat](reference/guardian-combat.md).
 - Hollow Necromancer: [Necromancer combat](reference/necromancer-combat.md).
 - Storm Roc: [design notes](design/storm-roc.md) and [Storm Summit](reference/storm-summit.md).
 - Pyre King: [design notes](design/pyre-king.md) and [Pyre King](reference/pyre-king.md).

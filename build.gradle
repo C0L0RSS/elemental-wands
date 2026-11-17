@@ -106,6 +106,13 @@ tasks.register('checkStormRocGaze', JavaExec) {
 }
 check.dependsOn checkStormRocGaze
 
+tasks.register('checkStormRocBrain', JavaExec) {
+    dependsOn guardianTestClasses
+    classpath = sourceSets.guardianTest.runtimeClasspath
+    mainClass = 'com.anton.elementalwands.entity.roc.StormRocBrainContractTest'
+}
+check.dependsOn checkStormRocBrain
+
 tasks.register('checkPyreWave', JavaExec) {
     dependsOn guardianTestClasses
     classpath = sourceSets.guardianTest.runtimeClasspath

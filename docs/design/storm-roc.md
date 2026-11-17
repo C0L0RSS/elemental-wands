@@ -362,3 +362,120 @@ Record new design decisions here, not in the roadmap.
   fight, then the cinematics.
 - **Open:** whether Windcallers appear in the fight; the intro's exact shots and timings,
   and the details of each landing; fight length and the gear it is tuned against.
+
+## The brain (November 17)
+
+The developer liked the choosers built for the Pyre King and the Guardian and asked for the
+Roc's: "I think the Big Bird is going to be one of the hardest to fight, because it's not
+going to be like any other mob. It's just so large, so we can really plan out and fine-tune
+this fight. We also need to take into account that this is Minecraft, so players aren't
+going to move like Elden Ring or Souls-like players."
+
+What the old fight did, measured against a player who walks at 4.3 blocks a second while
+watching it, sprints at 5.6 (facing away from it) and has no roll and no hit immunity:
+
+| Part of the fight | Problem |
+| --- | --- |
+| Storm Scream | Its aim followed its target until 0.3 s before a line 6 blocks wide. On foot it always hit. |
+| Raptor Strike, Thunder Bite | Their aims locked 1.1 to 1.6 s before a 5-block hit. They never landed on anyone who kept moving. |
+| Dive | Its landing was chosen from the tornadoes, as near the centre as they allowed. Anyone away from the middle was never under it. |
+| Chain smash hops | 1.2 s to leave an 8-block circle placed on the player. On foot every hop hit. |
+| Choosing in the brawl | At random from whatever reached, never the last attack again. It read nothing about its target and never strung attacks. |
+| Choosing in the air | Nothing: spires in a fixed order, the same call every visit, the dive on a timer. |
+| Turning | 300 degrees a second, so standing beside a 23-block bird meant nothing. |
+
+### Identity
+
+- **Decided:** the Roc is a raptor. It watches, the storm herds, and it commits on whoever is
+  predictable. The Guardian takes ground away and the Pyre King closes distance; the Roc
+  punishes straight lines and habits.
+
+### Rules for every attack
+
+These follow from Minecraft movement, and the developer agreed them with the plan.
+
+- **Decided:** a hit is either an area to leave or a strike aimed ahead of a runner. Nothing
+  locks on, and nothing needs a movement spell to survive.
+- **Decided:** every warning has a sound and a mark on the rock, because a sprinting player
+  is facing away from the Roc and cannot read its pose.
+- **Decided:** jumping is a habit, so ground rings alone do not threaten. What a jump does not
+  clear (the chest-high sweep, the scream) answers players who jump everything.
+- **Carried over from the other bosses:** eating is punished at once; openings are tight
+  (1.25 s solo after a string); attacks must hurt; weighted chance, not fixed thresholds.
+
+### What the developer decided
+
+1. **Slow body, fast head: agreed.** Its body turns 80 degrees a second; its head stays on
+   its prey. Getting beside it takes its bill away until it has turned, and the Thunderclap
+   is its answer.
+2. **A lethal dive aimed at the players: left to the agent's judgment.** It now lands where
+   they are, so its circle went from 14 blocks to 12. From its middle a sprint gets out with
+   about half a second to spare (it had under 0.2 s at 14) and a walk still does not, the
+   same rule as the Guardian's leap. Aimed strikes stop while it falls, so nothing is aimed
+   at a player who is running out of a lethal circle. The earlier rule still holds in the
+   part that mattered: the circle is fixed the moment it is marked and never chases.
+3. **The low pass: wanted,** "like plane flybys in video games where he shoots a line of
+   electricity on the ground in a line and the players avoid the line of fire but can also
+   shoot back." This changes the earlier decision that the air stretch is pure survival:
+   during a pass the Roc is in spell reach and can be hurt.
+4. **The Raptor Strike's marker: agreed.** The October 19 decision (no floor circle) is
+   replaced: with its aim locking as it launches, its shadow falls on the landing spot.
+
+### What was built (November 17, not yet played)
+
+See [Storm Summit](../reference/storm-summit.md#phase-one) for exactly what it does. Each of
+these is a first guess for the playtest to correct.
+
+- **Leads.** Each aim follows where its target will be when the hit lands and locks about a
+  second before it: the scream 0.9 s, the bite, its leap and the Raptor Strike 1 s. With the
+  lead at full strength a straight sprint is hit dead centre, a walker who merely stops is
+  still hit, and turning back after the lock clears a sprinter by more than a block. A
+  half-strength lead was worked through on paper and hit everything, a reversal included.
+  The server fixture runs both cases against the scream: a straight sprint is hit, and
+  turning back six ticks after the lock is not.
+- **Lock tells.** A crack at each lock; a ring of sparks under the bite; sparks along the
+  scream's line; the Raptor Strike's shadow. The spark marks are vanilla particles until a
+  playtest says whether they are seen at all.
+- **The chooser's weights, the strings and the rest** are in
+  [the reference](../reference/storm-summit.md#how-it-chooses-in-the-brawl). The rest was
+  0.9 s after every attack; it is now 1.25 s after a string and 0.2 s inside one, which
+  averages about the same in phase one and tighter in phase two.
+- **"Standing still" is punished only in front of it at scream range.** Under its bill it is
+  what a close-range build does in the opening, as with the Guardian.
+- **A dash is punished, not led.** The lead ignores a dash or a blink; the Roc remembers it
+  for 1.5 s and cuts its rest short, on the reasoning that the player's movement spell is
+  then on cooldown.
+- **Three calls.** The volley (keep moving), the fork (turn aside) and the cage (hold still)
+  ask for three different answers from the same circles. The cage is the one that punishes
+  the habit the rest of the fight builds: it hits whoever runs. Each call has its own pitch
+  of caw so it can be told apart by ear; whether that is enough is for the playtest.
+- **When it dives.** After two calls or three on Normal (it was always three), sooner on a
+  good read. Phase two may dive after one.
+- **Chain smash hops** show their circle as the last slam lands and wait 0.3 s longer in the
+  rock, so a hop's circle warns for 1.9 s where it warned for 1.2 s. The hop itself is
+  unchanged.
+- **The low pass** flies in the spire hop's clip and the flight loop, with its head turned
+  down onto its lane by the gaze. It has no clip of its own. Its lane is a row of strike
+  circles rather than a drawn strip, so it reads in the lightning's existing language. It
+  does about eight hearts once, to anyone in the lane, jumping or not.
+- **The spire it hops to** is the neighbour nearer the players, which keeps it in their view.
+- **Health is unchanged** (2,400 plus 1,600 per extra player) until a logged fight says
+  otherwise. Being hit during a pass shortens the next brawl.
+
+### What to look for in the first playtest
+
+- Whether a lock can be told (the crack, the sparks) by a player who is running away, and
+  whether one second is enough to act on it.
+- Whether turning back to dodge feels fair or fiddly, and whether circling it (the commonest
+  Minecraft movement) is hit as intended.
+- Whether the slow body makes it feel heavy or merely slow to respond, and whether getting
+  beside it is worth doing.
+- Whether the dive on the players is escaped with a sprint often enough, with tornadoes about.
+- Whether the three calls can be told apart in time, and whether the cage feels like a trick
+  or like a read.
+- Whether the low pass reads as the Roc shooting the lane, whether it can be hit as it
+  crosses, and whether it runs too long.
+- Whether the air stretch still drags, now that it varies.
+- Whether strings read as strings, and whether 1.25 s is an opening a close-range build can use.
+- In co-op, whether its attacks rotate fairly and whether the Thunderclap answers a second
+  player beside it.

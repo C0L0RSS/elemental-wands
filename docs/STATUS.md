@@ -53,6 +53,12 @@ Looks and balance that only a person playing can judge.
   chain hop), the dive that waits for a landing to settle, and whether the slams' last-tick
   drop reads as a hit or a pop.
 - The phase-two "fewer perches" idea.
+- **The new brain (built November 17, never played):** everything in the
+  [first-playtest list](design/storm-roc.md#what-to-look-for-in-the-first-playtest). Record
+  the fight with `/ew summit log on`. The low pass has no clip of its own (it flies in the
+  spire hop's clip and the flight loop) and its bolts end at the bill's authored place, not
+  where its turned head shows it; the lock marks for the bite and the scream are plain
+  spark particles.
 - The aerie: the gong, the call and the rewards; the gong's swing and lighting; how the
   levelled summit reads on more peaks; that stony peaks get no snow from the build; how
   findable aeries are without the hub map page; whether one Ultimate book per aerie is the
@@ -193,8 +199,6 @@ Automated work an agent can do without the developer.
 - No fixture has run on a dedicated server since the Nature rework; the November 10–11 runs
   were hosted in a singleplayer world on the Windows machine.
 - The party fixture's restart half was not run after the Nature rework.
-- The Storm Roc fixtures last passed before the flowers' turning head, banked healing and
-  Full Bloom were added; rerun them.
 - The Thornbite heal buff inside Full Bloom has no fixture.
 - Springbloom's launch and flight leaves are in no client fixture, and its revised arc has
   no fresh native-client measurement (the server fixture checks about a 15-block apex and

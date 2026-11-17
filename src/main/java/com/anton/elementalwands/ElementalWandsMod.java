@@ -138,6 +138,7 @@ public class ElementalWandsMod implements ModInitializer {
         com.anton.elementalwands.hall.PyreHallManager.init();
         com.anton.elementalwands.entity.necromancer.NecromancerFightLog.init();
         com.anton.elementalwands.entity.GuardianFightLog.init();
+        com.anton.elementalwands.entity.roc.StormRocFightLog.init();
 
         // ── First-join starter kit ──────────────────────────────────────
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {

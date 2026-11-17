@@ -37,7 +37,8 @@ public final class StormRocClientSmoke implements ClientModInitializer {
     private final AtomicInteger completedShots=new AtomicInteger();
     private int requestedShots;
     private final Set<String> phaseShots=new HashSet<>();
-    private boolean stormChecked;
+    private boolean stormChecked,stormHeld,synced;
+    private volatile long fightStart;
     private boolean sawBoss,sawEffects,partsChecked;
     private boolean sawFlightScan,sawFlightFocus,sawFlightRelease;
     private int flightCameraAt=-1,spireCameraAt=-1,landingCameraAt=-1,challengerMovedAt=-1,focusedAt=-1,focusedPlayer=-1,releaseTicks;
@@ -78,6 +79,10 @@ public final class StormRocClientSmoke implements ClientModInitializer {
             if(c.world.getRegistryKey()!=StormSummit.WORLD)return;
             if(!arranged){arranged=true;onServer(server,()->arrange(server,id));return;}
             if(!ready)return;
+            // The fight began on the server while this client was still loading the summit: start the
+            // timeline where the fight already is, short of its first shot, so later shots land on their beats.
+            // The server's own clock, read across threads: the client's copy of it is stale just after it arrives.
+            if(!synced){synced=true;opening=(int)Math.clamp(server.getWorld(StormSummit.WORLD).getTime()-fightStart,0,StormRocRules.SUMMON_SCREAM-1);System.out.println("Roc client timeline starts at fight tick "+opening);}
             // It opens the fight by summoning its first tornado from its home spire: framed on its
             // spire as it screams the storm down, then from the rock as the funnel touches down. The
             // timeline below starts once it is back on its perch.
@@ -139,7 +144,9 @@ public final class StormRocClientSmoke implements ClientModInitializer {
                 if(entity instanceof RocEffectEntity e){
                     // Its call's bolt and the first of the large bolts it calls down, timed by their own ages.
                     if(e.kind()==RocEffectEntity.Kind.CALL_BOLT&&scene<110&&e.effectTicks(0)>=6&&e.effectTicks(0)<8&&phaseShots.add("call"))shot(c,"roc-call.png");
-                    if(e.kind()==RocEffectEntity.Kind.LARGE_STRIKE&&scene>56&&scene<110&&e.effectTicks(0)>=e.warningTicks()+1&&e.effectTicks(0)<e.warningTicks()+3&&phaseShots.add("large"))shot(c,"roc-large-bolt.png");
+                    // The camera looks up from the rock on the strike's own clock: this client can run a second behind the fight.
+                    if(e.kind()==RocEffectEntity.Kind.LARGE_STRIKE&&scene<110&&e.effectTicks(0)>=12&&phaseShots.add("large-camera"))onServer(server,()->camera(server,id,22,102,40,0,140,8));
+                    if(e.kind()==RocEffectEntity.Kind.LARGE_STRIKE&&scene<110&&e.effectTicks(0)>=e.warningTicks()+1&&e.effectTicks(0)<e.warningTicks()+3&&phaseShots.add("large"))shot(c,"roc-large-bolt.png");
                     if(e.kind()==RocEffectEntity.Kind.CHARGE_BOLT&&e.effectTicks(0)>=3&&e.effectTicks(0)<6&&scene<1086&&phaseShots.add("charge"))shot(c,"roc-charge-bolt.png");
                     if(e.kind()==RocEffectEntity.Kind.DIVE_MARKER&&scene>1166&&scene<1226){
                         if(e.effectTicks(0)<5)onServer(server,()->camera(server,id,e.getX()-centre.getX()+35,128,e.getZ()-centre.getZ()+38,e.getX()-centre.getX(),102,e.getZ()-centre.getZ()));
@@ -149,8 +156,9 @@ public final class StormRocClientSmoke implements ClientModInitializer {
                     if(e.kind()==RocEffectEntity.Kind.LIVE_GROUND&&scene>1466&&e.effectTicks(0)>=12&&phaseShots.add("live"))shot(c,"roc-live-ground.png");
                 }
                 if(entity instanceof StormRocEntity roc&&roc.poseName().equals("hop")&&scene>1234&&scene<1316){
-                    if(scene<1239)onServer(server,()->camera(server,id,roc.getX()-centre.getX()+38,125,roc.getZ()-centre.getZ()+45,roc.getX()-centre.getX(),roc.getY()+5,roc.getZ()-centre.getZ()));
-                    if(scene>=1244&&phaseShots.add("hop"))shot(c,"roc-chain-hop.png");
+                    // It rips free SMASH_PAUSE after the first slam (scene 1226).
+                    if(scene<1245)onServer(server,()->camera(server,id,roc.getX()-centre.getX()+38,125,roc.getZ()-centre.getZ()+45,roc.getX()-centre.getX(),roc.getY()+5,roc.getZ()-centre.getZ()));
+                    if(scene>=1250&&phaseShots.add("hop"))shot(c,"roc-chain-hop.png");
                 }
             }
             if(scene==20){require(c.world.getPlayerByUuid(target.getUuid())!=null,"Scripted gaze target never spawned on the client");shot(c,"roc-perched.png");}if(scene==66)shot(c,"roc-large-warning.png");
@@ -161,17 +169,35 @@ public final class StormRocClientSmoke implements ClientModInitializer {
                 if(scene==280+i*64+action.impact+2)shot(c,"roc-"+action.pose+".png");
             }
             if(scene==790)shot(c,"roc-takeoff.png");
-            if(scene>=1536&&completedShots.get()==requestedShots){
+            // The Raptor Strike's shadow on the rock while it is in the air, 30 blocks out.
+            if(scene==1536){stormHeld=SummitStormClient.level(1)>.95;onServer(server,()->{
+                target.setPosition(centre.getX()+.5,101,centre.getZ()+30.5);target.onTeleportationDone();
+                serverBoss.testAction(target,StormRocRules.Action.POUNCE);camera(server,id,26,112,44,0,101,26);});}
+            if(scene==1536+StormRocRules.POUNCE_LAUNCH+10)shot(c,"roc-raptor-shadow.png");
+            // A fresh fight for the low pass: from its home spire, after its summon, through the challenger at the centre.
+            if(scene==1640)onServer(server,()->{serverBoss.stopFight();target.setPosition(centre.getX()+.5,101,centre.getZ()+.5);target.onTeleportationDone();
+                serverBoss.startFight(centre,List.of(target));camera(server,id,30,128,-10,0,101,10);});
+            if(scene==1640+StormRocRules.SUMMON_TICKS+3)onServer(server,()->require(serverBoss.testPass(),"No low pass from the home spire: "+serverBoss.status()));
+            if(scene==1640+StormRocRules.SUMMON_TICKS+3+22)shot(c,"roc-pass-lane.png");
+            for(var entity:c.world.getEntities())if(entity instanceof RocEffectEntity e&&e.kind()==RocEffectEntity.Kind.LANE&&scene>1640){
+                // As its lightning reaches the challenger's circle, and a few circles on.
+                double off=Math.hypot(e.getX()-centre.getX()-.5,e.getZ()-centre.getZ()-.5);
+                if(off<2.1&&e.effectTicks(0)>=e.warningTicks()+1&&phaseShots.add("pass"))shot(c,"roc-pass-strafe.png");
+                if(off<2.1&&e.effectTicks(0)>=e.warningTicks()-12&&e.effectTicks(0)<e.warningTicks()-8&&phaseShots.add("pass-camera"))onServer(server,()->camera(server,id,34,110,22,0,108,0));
+            }
+            if(scene>=1640+StormRocRules.SUMMON_TICKS+200&&completedShots.get()==requestedShots){
+                require(phaseShots.contains("pass"),"The low pass never reached the challenger's circle on the client");
+                require(effects.containsAll(Set.of(RocEffectEntity.Kind.SHADOW,RocEffectEntity.Kind.LANE)),"The shadow or the lane never reached the native client: "+effects);
                 require(sawBoss,"No synchronized Roc reached the native client");require(sawEffects,"No synchronized Roc effects reached native client");require(poses.containsAll(Set.of("perched","summon","call","land","flight","spire_flight","dive","stuck","bite","swing_left","swing_right","scream","wing","pounce","stampede","takeoff","hop")),"Requested tracked poses missing from native client: "+poses);
                 require(effects.containsAll(Set.of(RocEffectEntity.Kind.SMALL_STRIKE,RocEffectEntity.Kind.LARGE_STRIKE,RocEffectEntity.Kind.TORNADO,RocEffectEntity.Kind.DIVE_MARKER,RocEffectEntity.Kind.SHOCKWAVE,RocEffectEntity.Kind.SCREAM,RocEffectEntity.Kind.LIVE_GROUND,RocEffectEntity.Kind.CHARGE_BOLT,RocEffectEntity.Kind.STORM_BOLT,RocEffectEntity.Kind.CALL_BOLT)),"Required tracked effect kinds missing: "+effects);
                 require(sawFlightScan,"Authored flying Roc clip never looked down toward the ground");
                 require(sawFlightFocus,"Flying Roc never focused a player below beyond its authored scan");
                 require(sawFlightRelease,"Flying Roc never released its player focus back to the authored scan within the same clip");
                 require(phaseShots.containsAll(Set.of("charge","flight-look","spire-hop","spire-land")),"Required charge/flight/spire screenshots missing: "+phaseShots);
-                require(requestedShots==32,"Expected32 native screenshots, requested"+requestedShots);
-                require(stormChecked&&SummitStormClient.level(1)>.95,"Storm level did not remain above.95");
+                require(requestedShots==35,"Expected35 native screenshots, requested"+requestedShots);
+                require(stormChecked&&stormHeld,"Storm level did not remain above.95");
                 require(partsChecked,"Client hurtbox positions were never compared");
-                Files.writeString(Path.of("ROC_CLIENT_PASSED.txt"),"Scripted native summit rehearsal: "+completedShots.get()+" completed screenshots; phase two storm level="+SummitStormClient.level(1)+"; synchronized Roc, effects "+effects+" and poses "+poses+"; authored flight scan, player focus and release checked; spire hop clip tick="+spireHopTick+", landing clip tick="+spireLandTick+"; client head/neck hurtboxes follow the server's. Not human input or Lunar balance approval.\n");
+                Files.writeString(Path.of("ROC_CLIENT_PASSED.txt"),"Scripted native summit rehearsal: "+completedShots.get()+" completed screenshots; phase two storm held above .95="+stormHeld+"; synchronized Roc, effects "+effects+" and poses "+poses+"; authored flight scan, player focus and release checked; spire hop clip tick="+spireHopTick+", landing clip tick="+spireLandTick+"; client head/neck hurtboxes follow the server's. Not human input or Lunar balance approval.\n");
                 done=true;c.scheduleStop();
             }
         }catch(Throwable error){error.printStackTrace();try{Files.writeString(Path.of("ROC_CLIENT_FAILED.txt"),error+"\n");}catch(Exception ignored){}done=true;c.scheduleStop();}
@@ -187,7 +213,7 @@ public final class StormRocClientSmoke implements ClientModInitializer {
         // the native client can render it and the Roc can actually watch this player.
         camera.networkHandler.sendPacket(net.minecraft.network.packet.s2c.play.PlayerListS2CPacket.entryFromPlayer(List.of(target)));
         camera.networkHandler.sendPacket(new net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket(target.getId(),target.getUuid(),target.getX(),target.getY(),target.getZ(),target.getPitch(),target.getYaw(),target.getType(),0,target.getVelocity(),target.getHeadYaw()));
-        serverBoss=new StormRocEntity(ModEntities.STORM_ROC,world);serverBoss.startFight(centre,List.of(target));require(serverBoss.eligible(target),"Scripted survival target was not eligible");world.spawnEntity(serverBoss);bossId=serverBoss.getUuid();
+        com.anton.elementalwands.entity.roc.StormRocFightLog.setEnabled(true);serverBoss=new StormRocEntity(ModEntities.STORM_ROC,world);serverBoss.startFight(centre,List.of(target));fightStart=world.getTime();require(serverBoss.eligible(target),"Scripted survival target was not eligible");world.spawnEntity(serverBoss);bossId=serverBoss.getUuid();
         camera.changeGameMode(GameMode.SPECTATOR);camera(server,observer,24,142,-60,2,140,-88);ready=true;
     }
     private void camera(MinecraftServer server,UUID id,double x,double y,double z,double tx,double ty,double tz){

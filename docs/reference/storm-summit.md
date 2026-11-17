@@ -227,8 +227,9 @@ Each has a different answer, read from the circles on the rock, and each has its
   makes the same call three times running.
 - Against a challenger standing still the fork's line runs away from the Roc.
 - A cage's strikes are never moved off the rim or off another live circle, as other strikes
-  are: one that cannot fall in its place is left out. Where the rim, a live circle or phase
-  two's live ground would hit a challenger who held still, they get a plain large strike.
+  are: one that cannot fall in its place is left out. Where the ring would not fit on the
+  rock, or a live circle or phase two's live ground would hit a challenger who held still,
+  they get a plain large strike.
 - Nothing placed after a cage reaches into its safe middle while it is on the rock: random
   strikes and strikes aimed at other challengers are moved clear of it, and another cage's
   strike that would reach it is left out.

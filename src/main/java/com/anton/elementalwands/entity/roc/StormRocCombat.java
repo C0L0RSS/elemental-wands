@@ -271,6 +271,7 @@ final class StormRocCombat {
         for (var e : lane) e.discard();
         if (marker != null) marker.discard();
         strikes.clear();
+        cages.clear();
         lane.clear();
         rings.clear();
         fields.clear();
@@ -977,7 +978,7 @@ final class StormRocCombat {
     private boolean reachesCage(Vec3d candidate, double radius) {
         if (now() > cagesUntil) return false;
         double safe = (two ? SMALL_RADIUS_TWO : SMALL_RADIUS) * (CAGE_RING - 1);
-        for (Vec3d middle : cages) if (horizontal(candidate, middle) < safe + radius) return true;
+        for (Vec3d middle : cages) if (horizontal(candidate, middle) < safe + radius + .3) return true;
         return false;
     }
 
@@ -1971,8 +1972,13 @@ final class StormRocCombat {
     /** For tests: from its spire in the air stretch, a low pass at once, with the storm held off. */
     boolean rehearsePass() {
         if (stage != Stage.AIR || flight != Flight.NONE) return false;
+        var players = players();
+        if (players.isEmpty()) return false;
+        boolean was = review;
         review = true;
-        return beginPass(players());
+        if (beginPass(players)) return true;
+        review = was;
+        return false;
     }
 
     /** For tests: the dive, landing where it chooses to. */

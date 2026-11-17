@@ -34,7 +34,8 @@ the stable `inferno_wave` ID for saved loadouts. Dragon's Pyre sends a five-wide
 change its path. It starts on the block the caster stands on, even from the lip of a ledge.
 Each half-block lane keeps its own footing: it follows the floor down drops of up to three
 blocks through open air and up one-block steps, crosses deeper holes unseen, and ends at
-anything taller, at fences and walls, and at water or lava level with the ground or below it.
+anything taller, at fences and walls, and at water or lava level with the ground or below it,
+waterlogged slabs and stairs included.
 The path is read a block at a time as the front reaches it, so ground that changes while the
 wall runs counts as it is then. Damage goes by the block column a target stands in: lit fire
 there, at any height, hits; a pillar shields only what is behind it. It leaves low lingering

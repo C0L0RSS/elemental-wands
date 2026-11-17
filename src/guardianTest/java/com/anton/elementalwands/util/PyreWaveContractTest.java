@@ -41,6 +41,13 @@ public final class PyreWaveContractTest {
             expect(!pool.covers(20, new Vec3d(.5, 64, 20.5), 0), "a pool's far bank is hit");
         }
 
+        // Waterlogged slabs in place of the floor are water at ground level: they end the wall too.
+        var logged = run(floor().box(-6, FLOOR, 10, 6, FLOOR, 14, .5).soak(-6, FLOOR, 10, 6, FLOOR, 14), 0);
+        for (int lane = 0; lane < LANES; lane++) {
+            expect(logged.ground(9, lane) == FLOOR, "bank before waterlogged slabs, lane " + lane);
+            expect(logged.ground(10, lane) == NONE && logged.ground(20, lane) == NONE, "fire over waterlogged slabs, lane " + lane);
+        }
+
         // A 2-high wall on a 1-thick floor over a cellar: the fire stops at it, not under the floor.
         var cellar = floor().box(-6, FLOOR - 3, -2, 6, FLOOR - 3, 60, 1).box(-6, FLOOR - 2, -2, 6, FLOOR - 1, 60, 0)
                 .box(-6, FLOOR + 1, 10, 6, FLOOR + 2, 10, 1);
@@ -125,6 +132,12 @@ public final class PyreWaveContractTest {
 
         Terrain water(int x0, int y0, int z0, int x1, int y1, int z1) {
             box(x0, y0, z0, x1, y1, z1, 0);
+            for (int x = x0; x <= x1; x++) for (int y = y0; y <= y1; y++) for (int z = z0; z <= z1; z++) fluid.add(new BlockPos(x, y, z));
+            return this;
+        }
+
+        /** Fluid in cells that keep their collision, like a waterlogged slab. */
+        Terrain soak(int x0, int y0, int z0, int x1, int y1, int z1) {
             for (int x = x0; x <= x1; x++) for (int y = y0; y <= y1; y++) for (int z = z0; z <= z1; z++) fluid.add(new BlockPos(x, y, z));
             return this;
         }

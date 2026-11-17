@@ -12,8 +12,20 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.decoration.BlockAttachedEntity;
+import net.minecraft.entity.decoration.InteractionEntity;
+import net.minecraft.entity.passive.AbstractHorseEntity;
+import net.minecraft.entity.passive.MerchantEntity;
+import net.minecraft.entity.passive.TameableEntity;
+import net.minecraft.entity.vehicle.VehicleEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.hit.EntityHitResult;
+import net.minecraft.util.hit.HitResult;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.RaycastContext;
 import org.lwjgl.glfw.GLFW;
 
 /** Slot bindings are separate from vanilla's single-key lookup, so mouse bindings
@@ -149,13 +161,31 @@ public final class WandControls {
         }
         return false;
     }
-    /** Sneak + Use on a block within reach is the interaction gesture (doors, chests, ritual
-     * blocks) and goes to vanilla without a cast. Aimed at anything else, it casts as usual.
-     * Both follow the player's own Sneak and Use bindings, toggled Sneak included. */
+    /** Sneak + Use on something to use within reach is the interaction gesture and goes to vanilla
+     * without a cast: a block (doors, chests, ritual blocks), or a villager, mount, pet, vehicle or
+     * frame. Aimed at anything else, mobs and bosses included, it casts as usual. Both follow the
+     * player's own Sneak and Use bindings, toggled Sneak included. */
     private static boolean sneakInteraction(MinecraftClient client, InputUtil.Key key) {
-        return held(client, client.options.sneakKey)
-                && key.getTranslationKey().equals(client.options.useKey.getBoundKeyTranslationKey())
-                && client.crosshairTarget != null && client.crosshairTarget.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK;
+        if (!held(client, client.options.sneakKey)
+                || !key.getTranslationKey().equals(client.options.useKey.getBoundKeyTranslationKey())) return false;
+        if (client.crosshairTarget instanceof EntityHitResult e) return usable(e.getEntity());
+        if (!(client.crosshairTarget instanceof BlockHitResult b) || b.getType() != HitResult.Type.BLOCK) return false;
+        var world = client.player.getEntityWorld();
+        if (!world.getBlockState(b.getBlockPos()).getCollisionShape(world, b.getBlockPos()).isEmpty()) return true;
+        // Grass, flowers and fire take the crosshair without being in the way, even in front of a mob:
+        // they count only with solid ground behind them in reach, as when aimed at the floor.
+        Vec3d eye = client.player.getCameraPosVec(1f);
+        Vec3d end = eye.add(client.player.getRotationVec(1f).multiply(client.player.getBlockInteractionRange()));
+        return world.raycast(new RaycastContext(eye, end, RaycastContext.ShapeType.COLLIDER,
+                RaycastContext.FluidHandling.NONE, client.player)).getType() == HitResult.Type.BLOCK;
+    }
+    /** Entities a player uses rather than fights: never a mob or a boss, which a sneaking caster aims at. */
+    private static boolean usable(Entity entity) {
+        if (entity.isInvisible()) return false;
+        return entity instanceof MerchantEntity || entity instanceof AbstractHorseEntity
+                || entity instanceof TameableEntity t && t.isTamed()
+                || entity instanceof VehicleEntity || entity instanceof BlockAttachedEntity
+                || entity instanceof InteractionEntity;
     }
     /** A binding pressed for vanilla, or its key physically down: a wand slot on the same key keeps vanilla from
      * ever seeing it pressed. */

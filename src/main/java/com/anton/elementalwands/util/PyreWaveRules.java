@@ -16,7 +16,7 @@ import net.minecraft.world.BlockView;
  * Each of its nine half-block lanes finds its own footing one block at a time: level ground first, then a step
  * down, a one-block step up, or a drop of up to three through open air. A lane crosses a hole too deep for that
  * unseen, at the height it had, and lands again beyond it. Anything taller than a one-block step, or water or lava
- * where the fire would burn or fall, ends it. Each slice is traced as the front reaches it, so the path follows
+ * where the fire would burn, fall or stand (a waterlogged slab), ends it. Each slice is traced as the front reaches it, so the path follows
  * ground that changes while the wall runs.
  */
 public final class PyreWaveRules {
@@ -142,6 +142,11 @@ public final class PyreWaveRules {
                 int y = from + k;
                 // The fire needs open air from where it lands up to the height it arrives at.
                 if (stands(column.withY(y)) && open(column, y + 1, Math.max(y + 1, from + 1))) {
+                    // A waterlogged slab or stair is water at ground level: it ends the lane like a pool.
+                    if (world.wet(column.withY(y))) {
+                        end[lane] = step;
+                        return;
+                    }
                     surface[lane] = y;
                     ground[step][lane] = y;
                     return;

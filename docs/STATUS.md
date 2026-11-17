@@ -138,15 +138,15 @@ Looks and balance that only a person playing can judge.
   terrain and destruction balance. Its launch was reported as not noticeable on Hollow
   undead; check how the launch and the 1.5-block shove read, including on a struck player.
 - **Fire:** recent Fire Leap and Flashover changes. Dragon's Pyre now runs along the floor
-  whatever the pitch (November 15): its full 40 blocks aimed up at a boss, over slopes,
+  whatever the pitch (November 17): its full 40 blocks aimed up at a boss, over slopes,
   steps and pillars. Open looks from the block-fire study:
   the Pyre carpet reads like lava; Meteor's warning ring is 5.4 blocks against a 10-block
   danger; the Fireball's head size; the Leap's wall burns longer than it hurts; the
   Flamethrower thins in first person.
 - **Loadouts:** free-slot combinations and progression pace.
-- **Sneak + right click** (November 15): it should cast while crouched in a fight, and
-  still open doors and chests and work the church sockets, gong and seal when aimed at
-  them within reach.
+- **Sneak + right click** (November 17): it should cast while crouched in a fight, also
+  at a mob standing in grass, and still open doors and chests, work the church sockets,
+  gong and seal, and trade with villagers or mount a horse when aimed at them in reach.
 - **Locate links:** the teleport link from `/locate` to a church, a graveyard, an aerie
   and a Burned Gate should each land on clear ground.
 - **Wand-tip cast particles:** whether casts leave the wand tip convincingly in either

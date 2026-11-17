@@ -21,10 +21,14 @@ Default slot inputs are left mouse, right mouse, X, Z, V; Spell alternate is R.
 Bindings are editable in Controls and saved in
 `config/elementalwands-controls.properties`. Existing saved bindings can differ.
 Sneak + Use aimed at a block within reach performs ordinary block interaction (doors,
-chests, ritual sockets, the gong, the seal) and casts nothing. Aimed at anything else,
-including a mob or a boss within reach, it casts as usual. `WandControls` follows the
-player's own Sneak and Use bindings, toggled Sneak included; Use is right mouse by
-default. Slot 1 also handles
+chests, ritual sockets, the gong, the seal) and casts nothing. Grass, flowers and fire
+count only with solid ground behind them in reach, so they do not stop a cast at a mob
+beyond them. The same goes to vanilla for a villager, a horse or other mount, a tamed
+pet, a boat or minecart and an item frame or painting. Aimed at anything else, including
+a mob or a boss within reach, the press reaches the wand slot on that key (slot 1 on
+right mouse by default) and casts, so with a wand in the main hand an off-hand shield or
+food is used only where the press goes to vanilla. `WandControls` follows the player's
+own Sneak and Use bindings, toggled Sneak included. Slot 1 also handles
 close aimed Flashover disarming and Springbloom breaking, and a fresh slot-1 press
 breaks a Sentry Bloom aimed at from within three blocks. A fresh slot-2 press aimed
 at the player's own Sentry Bloom from that close collects its banked health and

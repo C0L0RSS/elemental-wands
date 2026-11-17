@@ -143,11 +143,16 @@ Looks and balance that only a person playing can judge.
 - **Stone:** Faultline's steering, interruption feel, spike appearance, behavior on varied
   terrain and destruction balance. Its launch was reported as not noticeable on Hollow
   undead; check how the launch and the 1.5-block shove read, including on a struck player.
-- **Fire:** recent Fire Leap and Flashover changes. Open looks from the block-fire study:
+- **Fire:** recent Fire Leap and Flashover changes. Dragon's Pyre now runs along the floor
+  whatever the pitch (November 17): its full 40 blocks aimed up at a boss, over slopes,
+  steps and pillars. Open looks from the block-fire study:
   the Pyre carpet reads like lava; Meteor's warning ring is 5.4 blocks against a 10-block
   danger; the Fireball's head size; the Leap's wall burns longer than it hurts; the
   Flamethrower thins in first person.
 - **Loadouts:** free-slot combinations and progression pace.
+- **Sneak + right click** (November 17): it should cast while crouched in a fight, also
+  at a mob standing in grass, and still open doors and chests, work the church sockets,
+  gong and seal, and trade with villagers or mount a horse when aimed at them in reach.
 - **Locate links:** the teleport link from `/locate` to a church, a graveyard, an aerie
   and a Burned Gate should each land on clear ground.
 - **Wand-tip cast particles:** whether casts leave the wand tip convincingly in either
@@ -225,6 +230,8 @@ Accepted for now; fix when the feature is next touched.
 
 - **Pyre King:** a player who only circles a pillar is hooked off it but can run clear of
   the Overhead that follows.
+- **Dragon's Pyre over slabs:** its flames sit in the block above a bottom slab or deep snow,
+  so over them they float half a block up.
 - **Storm aerie:** an operator `/ew summit start` on a slot a gong call has reserved takes
   the called players into an operator fight with no rewards. A broken reward chest only
   comes back after the next win there. On jagged peaks an aerie can sit on a shoulder below

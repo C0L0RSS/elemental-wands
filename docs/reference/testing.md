@@ -37,7 +37,8 @@ of trusting a name or an old description.
 
 The standard build and asset commands are in [AGENTS.md](../../AGENTS.md#build-and-required-checks).
 `./gradlew build` includes `checkGuardianBeam`, `checkNecromancer`, `checkPyreKing`,
-`checkParties`, `checkStormRocGaze`, `checkStormRocBrain` and `checkDocs`; none is a live gameplay test.
+`checkPyreWave`, `checkParties`, `checkStormRocGaze`, `checkStormRocBrain` and `checkDocs`; none is a
+live gameplay test.
 Use `--offline` only when dependencies and assets are already cached.
 
 ## Selecting a fixture

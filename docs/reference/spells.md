@@ -29,8 +29,18 @@ meshes near the first-person camera through `client/renderer/SpellViewClearance`
 ## Fire
 
 Fireball is the traveling primary, with a 20-block configured range. It retains
-the stable `inferno_wave` ID for saved loadouts. Dragon's Pyre sends a ground-following wall
-and leaves low lingering flames. Meteor calls the large stepped fire sphere with
+the stable `inferno_wave` ID for saved loadouts. Dragon's Pyre sends a five-wide wall
+40 blocks along the ground in the direction the caster faces; looking up or down does not
+change its path. It starts on the block the caster stands on, even from the lip of a ledge.
+Each half-block lane keeps its own footing: it follows the floor down drops of up to three
+blocks through open air and up one-block steps, crosses deeper holes unseen, and ends at
+anything taller, at fences and walls, and at water or lava level with the ground or below it,
+waterlogged slabs and stairs included.
+The path is read a block at a time as the front reaches it, so ground that changes while the
+wall runs counts as it is then. Damage goes by the block column a target stands in: lit fire
+there, at any height, hits; a pillar shields only what is behind it. It leaves low lingering
+flames; standing in them gives Speed and Regeneration. The server and each client trace the
+same path (`PyreWaveRules`), checked over made-up terrain by `checkPyreWave`. Meteor calls the large stepped fire sphere with
 bounded distance/cover-aware explosion damage. It starts at the highest air cell up to
 35 blocks above the target, so a roof or a tree shelters what is under it; this is
 deliberate. The boss arenas (Hollow Crypt, Shattered Nave, Storm Summit, Burned Throne
@@ -401,7 +411,9 @@ Singularity Bolt is a black star with limited initial aim assistance. It cannot
 retarget or U-turn and loses guidance through cover or invalid angles. Impact
 causes damage without restoring the retired pull/mobility-disruption mechanics.
 Blink Rift teleports up to 10 blocks along the caster's aim to the farthest safe
-spot, on a 10-second cooldown. It leaves no return point.
+spot, on a 10-second cooldown. It leaves no return point. The aim's pitch counts, by
+choice: it reaches up onto ledges, and aimed at the floor it lands only a block or two
+ahead.
 
 Astral Double (`astral_double`, 500 Flux) tosses a harmless, visible orb in a short
 arc (about seven blocks on level ground). A supported landing with clear standing

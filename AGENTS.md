@@ -87,8 +87,8 @@ the testing guide before launching a fixture.
 ```
 
 Run `./gradlew build` after code changes. It includes the Guardian, Necromancer,
-Pyre King, party, Roc gaze and Roc brain contract checks and `checkDocs`; none of them launches a
-live gameplay session.
+Pyre King, Pyre wave, party, Roc gaze and Roc brain contract checks and `checkDocs`; none of
+them launches a live gameplay session.
 
 For changes to art, models, textures, effects, layouts or sounds, also run:
 

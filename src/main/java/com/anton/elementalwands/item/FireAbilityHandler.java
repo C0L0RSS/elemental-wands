@@ -130,7 +130,7 @@ public final class FireAbilityHandler {
             return;
 
         HitResult hit = AbstractWandItem.raycast(world, caster, AbstractWandItem.DEFAULT_RANGE);
-        Vec3d target = hit.getPos();
+        Vec3d target = MeteorManager.aimPoint(world, hit);
 
         MeteorManager.spawnMeteor(world, caster, target, METEOR_SPAWN_HEIGHT, METEOR_EXPLOSION_POWER);
     }

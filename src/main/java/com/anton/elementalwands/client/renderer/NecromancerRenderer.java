@@ -28,7 +28,6 @@ public class NecromancerRenderer extends GeoEntityRenderer<NecromancerEntity, Ne
         super.updateRenderState(entity, state, partialTick);
         state.colossus = entity.isColossus();
         state.transformTime = entity.getTransformTime(partialTick);
-        state.split = entity.isSplit();
         state.buried = entity.isBuried();
         state.povHood = com.anton.elementalwands.client.NecromancerTransformClient.hidesHood(entity.getId());
     }

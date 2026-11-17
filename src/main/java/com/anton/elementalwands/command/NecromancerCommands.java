@@ -20,7 +20,7 @@ public final class NecromancerCommands {
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         var root = CommandManager.literal("necromancer").requires(source -> source.hasPermissionLevel(2));
-        for (String action : new String[]{"fight", "intro", "stop", "status", "transform", "siege", "split", "rain", "bolt", "hands", "drain", "blink", "shift", "ambush", "swipe", "grab", "rush", "dive", "harvest"})
+        for (String action : new String[]{"fight", "intro", "stop", "status", "transform", "siege", "frenzy", "rain", "bolt", "hands", "drain", "blink", "shift", "ambush", "burst", "swipe", "grab", "rush", "dive", "harvest"})
             root.then(CommandManager.literal(action).executes(context -> run(context.getSource(), action)));
         root.then(CommandManager.literal("wave").then(CommandManager.argument("number", IntegerArgumentType.integer(1, 4))
                 .executes(context -> wave(context.getSource(), IntegerArgumentType.getInteger(context, "number")))));
@@ -74,11 +74,11 @@ public final class NecromancerCommands {
                 if (!boss.requestSiege()) yield "no siege left to start: it is " + boss.stage().name().toLowerCase(Locale.ROOT) + (boss.isColossus() ? " (colossus)" : "") + ".";
                 yield "starting the current duel's siege: it takes its perch and raises waves. Kill them to bring it down.";
             }
-            case "split" -> {
-                if (!boss.isColossus()) yield "split needs the colossus; use /ew necromancer transform first.";
+            case "frenzy" -> {
+                if (!boss.isColossus()) yield "frenzy needs the colossus; use /ew necromancer transform first.";
                 if (!boss.isBossAggressive()) boss.startFight();
-                if (!boss.requestSplit()) yield "its soul is already out.";
-                yield "its soul tears free after the current action. Deal enough damage to the soul to drag it back.";
+                if (!boss.requestFrenzy()) yield "it is already in its frenzy.";
+                yield "it howls into its frenzy after the current action: faster, with shorter rests, and no more feeding.";
             }
             case "rain" -> {
                 int markers = boss.testRain(source.getPlayerOrThrow());

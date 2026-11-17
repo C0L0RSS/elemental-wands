@@ -5,6 +5,8 @@ are not claims of public publication. Older entries describe what changed then;
 use [current guides](../README.md) for today’s behavior and [status](../STATUS.md)
 for outstanding verification. Detailed historical reports are optional background.
 
+- [2026-11-16 — Hollow Necromancer: a smarter fight](2026-11-16-necromancer-ai.md)
+- [2026-11-15 — Fire: Meteor works inside boss arenas](2026-11-15-meteor-arenas.md)
 - [2026-11-12 — Fractured Guardian: a smarter, heavier fight](2026-11-12-guardian-overhaul.md)
 - [2026-11-12 — Pyre King: a more natural awakening](2026-11-12-pyre-king-intro.md)
 - [2026-11-12 — Wind: longer-reaching Sky Shear](2026-11-12-wind-range.md)

@@ -2,6 +2,7 @@ package com.anton.elementalwands.entity.undead;
 
 import static com.anton.elementalwands.entity.undead.HollowUndeadClips.*;
 
+import com.anton.elementalwands.entity.necromancer.NecromancerMinion;
 import com.anton.elementalwands.registry.ModSounds;
 
 import net.minecraft.block.BlockState;
@@ -78,7 +79,9 @@ public class HollowArcherEntity extends HollowUndeadEntity {
         if (target == null) return;
         ItemStack bow = getMainHandStack().isOf(Items.BOW) ? getMainHandStack() : new ItemStack(Items.BOW);
         ItemStack ammo = getProjectileType(bow);
-        PersistentProjectileEntity arrow = ProjectileUtil.createArrowProjectile(this, ammo, 1, bow);
+        // A siege archer's arrow carries its caster's share of extra attack damage; a wild archer has none.
+        float power = 1 + (float)NecromancerMinion.empowered(this);
+        PersistentProjectileEntity arrow = ProjectileUtil.createArrowProjectile(this, ammo, power, bow);
         Vec3d from = socket(ARCHER_SOCKET);
         arrow.setPosition(from);
         double dx = target.getX() - from.x, dy = target.getBodyY(1 / 3d) - from.y, dz = target.getZ() - from.z;

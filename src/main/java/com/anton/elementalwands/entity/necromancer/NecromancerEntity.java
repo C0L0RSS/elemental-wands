@@ -43,11 +43,10 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
     private static final TrackedData<Boolean> COLOSSUS = DataTracker.registerData(NecromancerEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Long> TRANSFORM_START = DataTracker.registerData(NecromancerEntity.class, TrackedDataHandlerRegistry.LONG);
     private static final TrackedData<Integer> GRABBED = DataTracker.registerData(NecromancerEntity.class, TrackedDataHandlerRegistry.INTEGER);
-    private static final TrackedData<Boolean> SPLIT = DataTracker.registerData(NecromancerEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Boolean> BURIED = DataTracker.registerData(NecromancerEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Long> INTRO_START = DataTracker.registerData(NecromancerEntity.class, TrackedDataHandlerRegistry.LONG);
     private static final EntityDimensions COLOSSUS_SIZE = EntityDimensions.fixed(NecromancerRules.COLOSSUS_WIDTH, NecromancerRules.COLOSSUS_HEIGHT);
-    private boolean phasePending, soulFreed, soulHitting;
+    private boolean phasePending;
     /** Saved mid-transformation: its storm may have left the crypt's braziers out. */
     private boolean relightBraziers;
     private NecromancerRules.Stage stage = NecromancerRules.Stage.DUEL_A;
@@ -81,7 +80,6 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
         builder.add(COLOSSUS, false);
         builder.add(TRANSFORM_START, -1L);
         builder.add(GRABBED, -1);
-        builder.add(SPLIT, false);
         builder.add(BURIED, false);
         builder.add(INTRO_START, -1L);
     }
@@ -106,14 +104,9 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
     /** Entity id of the player held by the colossus hand; -1 when empty. */
     public int getGrabbed() { return dataTracker.get(GRABBED); }
     void setGrabbed(int id) { dataTracker.set(GRABBED, id); }
-    /** The soul is out of the ribcage: the client hides the colossus's soul core. */
-    public boolean isSplit() { return dataTracker.get(SPLIT); }
-    void setSplit(boolean split) { dataTracker.set(SPLIT, split); }
     /** Tunnelling during a Grave Dive: nothing to draw, nothing to hit. */
     public boolean isBuried() { return dataTracker.get(BURIED); }
     void setBuried(boolean buried) { dataTracker.set(BURIED, buried); }
-    /** The soul has torn free; the split happens once. */
-    void setSoulFreed(boolean freed) { soulFreed = freed; }
 
     @Override
     protected EntityDimensions getBaseDimensions(EntityPose pose) {
@@ -190,8 +183,10 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
     public void requestTransform() { combat.skipSieges(); schedulePhaseTwo(); }
     /** Starts the current duel's siege now, whatever the health; used by the operator rehearsal command. */
     public boolean requestSiege() { return combat.requestSiege(); }
-    /** Starts the colossus's soul split now, whatever the health; used by the operator rehearsal command. */
-    public boolean requestSplit() { return combat.requestSplit(); }
+    /** Sends the colossus into its frenzy now, whatever the health; used by the operator rehearsal command. */
+    public boolean requestFrenzy() { return combat.requestFrenzy(); }
+    /** Past its quarter-health howl: faster, with shorter rests, and no longer feeding. */
+    public boolean isFrenzied() { return combat.frenzied(); }
     /** Fires one Soul Fire Rain volley at the nearby party and stays passive; used by the operator rehearsal command. */
     public int testRain(ServerPlayerEntity player) {
         cancelIntro();
@@ -220,10 +215,9 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
         if (attacker == this || NecromancerMinion.belongsTo(attacker, this)) return false;
         if (source.isOf(DamageTypes.IN_WALL) || source.isOf(DamageTypes.DROWN)) return false;
         if (isTransforming()) return false; // The emergence is a cinematic; it cannot be burst down.
-        if (combat.buried() && !soulHitting) return false; // Underground mid-dive.
-        // Out of reach on a siege perch, or with its soul out of the colossus, the body is shielded:
-        // the waves, or the soul itself, come first. Hits on the freed soul arrive through soulHit.
-        if (combat.shielded() && !soulHitting) { combat.deflect(world); return false; }
+        if (combat.buried()) return false; // Underground mid-dive.
+        // Out of reach on a siege perch the caster is shielded: the waves come first.
+        if (combat.shielded()) { combat.deflect(world); return false; }
         amount *= combat.damageMultiplier(world.getTime()); // Exposed after a siege crash.
         // Per-attacker hurt windows: one teammate's hit must not swallow another's simultaneous spell.
         long now = world.getTime();
@@ -237,15 +231,9 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
         if (accepted) {
             if (!source.isIn(com.anton.elementalwands.util.SpellCombat.NO_HURT_WINDOW))
                 hurtWindows.put(key, new HurtWindow(previous == null ? now + 10 : previous.until(), lastDamageTaken));
-            combat.damaged(attacker, before - getHealth(), soulHitting);
+            combat.damaged(attacker, before - getHealth());
         }
         return accepted;
-    }
-
-    /** A hit on the freed soul: it wounds the boss through the body's shield. */
-    boolean soulHit(ServerWorld world, DamageSource source, float amount) {
-        soulHitting = true;
-        try { return damage(world, source, amount); } finally { soulHitting = false; }
     }
 
     @Override
@@ -253,15 +241,7 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
         float before = getHealth();
         super.applyDamage(world, source, amount);
         if (source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY)) return;
-        if (isColossus()) {
-            // The first time it reaches a quarter health the colossus holds there until its soul tears free.
-            float floor = Math.min(before, getMaxHealth() * NecromancerRules.SPLIT_GATE);
-            if (!soulFreed && getHealth() <= floor) {
-                setHealth(Math.max(getHealth(), floor));
-                combat.splitReached();
-            }
-            return;
-        }
+        if (isColossus()) return; // Nothing holds the colossus's health: its frenzy is read off it.
         // Burst damage cannot skip a siege or the second phase: each duel holds at its gate
         // (75%, then half health) until the siege or the transformation takes over. Never a heal.
         float floor = Math.min(before, getMaxHealth() * NecromancerRules.gate(stage));
@@ -332,7 +312,6 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
         setColossus(view.getBoolean("NecromancerColossus", false) || view.getBoolean("NecromancerTransforming", false));
         relightBraziers = view.getBoolean("NecromancerTransforming", false);
         phasePending = !isColossus() && view.getBoolean("NecromancerPhasePending", false);
-        soulFreed = isColossus() && view.getBoolean("NecromancerSoulFreed", false);
         // A siege saved mid-way restarts from its first wave; the army itself never saves.
         var stages = NecromancerRules.Stage.values();
         stage = isColossus() ? NecromancerRules.Stage.DONE : stages[Math.clamp(view.getInt("NecromancerStage", 0), 0, stages.length - 1)];
@@ -355,8 +334,6 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
         view.putBoolean("NecromancerColossus", isColossus());
         view.putBoolean("NecromancerTransforming", isTransforming());
         view.putBoolean("NecromancerPhasePending", phasePending);
-        // The split happens once; one saved before its collapse plays again on the next hit.
-        view.putBoolean("NecromancerSoulFreed", soulFreed && !combat.splitUnfinished());
         view.putInt("NecromancerStage", stage.ordinal());
         view.putBoolean("NecromancerIntro", intro != null);
         var home = combat.home();
@@ -395,7 +372,7 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
                 .triggerableAnim("perch_channel", RawAnimation.begin().thenLoop("animation.hollow_necromancer.perch_channel"))
                 .triggerableAnim("crash", RawAnimation.begin().thenPlay("animation.hollow_necromancer.crash"))
                 .triggerableAnim("ambush_burst", RawAnimation.begin().thenPlay("animation.hollow_necromancer.ambush_burst"))
-                // Second playtest: stealthier charge, Grave Dive, the soul split, Soul Harvest and the perch volley.
+                // Second playtest: stealthier charge, Grave Dive, Soul Harvest and the perch volley.
                 .triggerableAnim("rush_windup", RawAnimation.begin().thenPlay("animation.hollow_necromancer.colossus_rush_crouch")
                         .thenLoop("animation.hollow_necromancer.colossus_rush_coil"))
                 .triggerableAnim("rush_set", RawAnimation.begin().thenPlayAndHold("animation.hollow_necromancer.colossus_rush_set"))
@@ -403,8 +380,8 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
                 .triggerableAnim("erupt", RawAnimation.begin().thenPlayAndHold("animation.hollow_necromancer.colossus_erupt"))
                 .triggerableAnim("stuck", RawAnimation.begin().thenLoop("animation.hollow_necromancer.colossus_stuck"))
                 .triggerableAnim("haul", RawAnimation.begin().thenPlay("animation.hollow_necromancer.colossus_haul"))
-                .triggerableAnim("split", RawAnimation.begin().thenPlay("animation.hollow_necromancer.colossus_split"))
-                .triggerableAnim("collapse", RawAnimation.begin().thenPlay("animation.hollow_necromancer.colossus_collapse"))
+                // The frenzy's howl: it rears upright, arms wide and jaws open, then drops back to all fours.
+                .triggerableAnim("frenzy", RawAnimation.begin().thenPlay("animation.hollow_necromancer.colossus_roar"))
                 .triggerableAnim("harvest", RawAnimation.begin().thenPlay("animation.hollow_necromancer.colossus_harvest"))
                 .triggerableAnim("perch_cast", RawAnimation.begin().thenPlay("animation.hollow_necromancer.perch_cast")
                         .thenLoop("animation.hollow_necromancer.perch_channel"))

@@ -28,6 +28,9 @@ import net.minecraft.util.math.*;
 public final class StormRocServerSmoke implements ModInitializer {
     /** A quick head attack that only puts the Roc in its brawl: it sweeps where its target first stood, so it can't follow them into a later check. */
     private static final StormRocRules.Action SETUP=StormRocRules.Action.SWING_LEFT;
+    private Vec3d runFrom=Vec3d.ZERO,perchBefore=Vec3d.ZERO,passLast=Vec3d.ZERO;
+    private double run,passLow;
+    private int passHitAt=-1;
     private int tick, step, elapsed, melee;
     /** When the Thunder Charge under test began its skid: its run lasts as long as its distance needs. */
     private int skidAt = -1;
@@ -63,7 +66,7 @@ public final class StormRocServerSmoke implements ModInitializer {
         });
     }
     private void run(MinecraftServer server) throws Exception {
-        if (++tick > 5000) throw new AssertionError("Roc server fixture timeout at " + step);
+        if (++tick > 6500) throw new AssertionError("Roc server fixture timeout at " + step);
         if (tick == 25) {
             world = server.getWorld(StormSummit.WORLD);
             require(world != null, "Summit dimension missing");
@@ -157,9 +160,10 @@ public final class StormRocServerSmoke implements ModInitializer {
                 if(elapsed==call)require(boss.poseName().equals("call"),"Roc did not rear into its call: "+boss.poseName());
                 if(elapsed==call+StormRocRules.CALL_VOLLEY+1){
                     require(effects().stream().anyMatch(e->e.kind()==RocEffectEntity.Kind.CALL_BOLT),"Call raised no bolt into the clouds");
-                    require(effects().stream().filter(e->e.kind()==RocEffectEntity.Kind.LARGE_STRIKE).count()>=2,"Call did not strike every challenger");
+                    // Whichever pattern it chose: a volley or a fork is large strikes, a cage a ring of small ones.
+                    require(effects().stream().filter(e->e.kind()==RocEffectEntity.Kind.LARGE_STRIKE).count()>=2||effects().stream().filter(e->e.kind()==RocEffectEntity.Kind.SMALL_STRIKE).count()>=10,"Call did not strike every challenger");
                     require(boss.lookTarget()==target.getId()||boss.lookTarget()==dodge.getId(),"Roc does not look at the player it strikes");
-                    checks.add("Spire call: rears up, bolt into the clouds, a large strike at each challenger, and it watches its mark");
+                    checks.add("Spire call: rears up, bolt into the clouds, its pattern on each challenger, and it watches its mark");
                     boss.stopFight();boss.startFight(CENTRE,List.of(target,dodge));step=15;elapsed=0;
                 }
             }
@@ -401,7 +405,121 @@ public final class StormRocServerSmoke implements ModInitializer {
                     require(StormSummit.beyondRim(CENTRE,target.getEntityPos().add(impulse.multiply(12)))<=-8,"Wing impulse projected outside interior safety margin");
                     require(outsider.getHealth()==200,"Rim wing hit outsider");require(dodge.getHealth()==200,"Rim wing hit elevated dodger");checks.add("Rim wing impulse points inward and stops within interior margin");
                 }
-                if(elapsed==StormRocRules.Action.WING.impact+15){target.setPosition(30.5,101,.5);target.setHealth(200);target.setVelocity(Vec3d.ZERO);dodge.setPosition(30.5,101,12.5);boss.stopFight();boss.startFight(CENTRE,List.of(target,dodge));boss.testAction(target,SETUP);step=18;elapsed=0;}
+                if(elapsed==StormRocRules.Action.WING.impact+15){target.setPosition(30.5,101,.5);target.setHealth(200);target.setVelocity(Vec3d.ZERO);dodge.setPosition(30.5,101,12.5);boss.stopFight();boss.startFight(CENTRE,List.of(target,dodge));boss.testAction(target,SETUP);step=40;elapsed=0;}
+            }
+            // Led aim: a scream at a target sprinting straight across its line hits; one that turns back after the lock does not.
+            case 40, 41 -> {
+                var scream=StormRocRules.Action.SCREAM;
+                Vec3d ahead=Vec3d.fromPolar(0,boss.getYaw()),side=Vec3d.fromPolar(0,boss.getYaw()+90);
+                if(elapsed==1){
+                    target.setPosition(.5,101,30.5);target.setHealth(200);target.timeUntilRegen=0;target.setVelocity(Vec3d.ZERO);dodge.setPosition(-40.5,101,-30.5);dodge.setHealth(200);
+                    boss.testAction(target,scream);runFrom=target.getEntityPos();run=0;
+                }
+                if(elapsed>1&&elapsed<=scream.impact+1){
+                    // A sprint: .28 blocks a tick. In step 41 it turns back six ticks after the aim locks.
+                    boolean back=step==41&&elapsed>scream.lock+7;
+                    run+=back?-.28:.28;
+                    Vec3d at=runFrom.add(Vec3d.fromPolar(0,boss.getYaw()+90).multiply(run));
+                    target.setPosition(at.x,101,at.z);
+                }
+                if(elapsed==scream.impact+3){
+                    if(step==40){damage(200-target.getHealth(),16,"Storm Scream on a straight sprinter");checks.add("Storm Scream's aim runs ahead of a sprinter and hits a straight line");}
+                    else{require(target.getHealth()==200,"Storm Scream hit a sprinter who turned back after its lock: "+target.getHealth());checks.add("Turning back after the Storm Scream's lock dodges it");}
+                }
+                if(elapsed==scream.duration+3){
+                    if(step==40){step=41;elapsed=0;}
+                    else{boss.stopFight();target.setPosition(30.5,101,.5);target.setHealth(200);target.setVelocity(Vec3d.ZERO);dodge.setPosition(-30.5,101,.5);dodge.setHealth(200);
+                        boss.startFight(CENTRE,List.of(target,dodge));boss.testAction(target,SETUP);step=42;elapsed=0;}
+                }
+            }
+            // The cage: a ring of small strikes round each challenger, its middle safe, the ring itself not.
+            case 42 -> {
+                if(elapsed==2){
+                    boss.testCall(StormRocBrain.Call.CAGE);
+                    var ring=effects().stream().filter(e->e.kind()==RocEffectEntity.Kind.SMALL_STRIKE&&flatDistance(e.getEntityPos(),target.getEntityPos())<12).toList();
+                    require(ring.size()>=6,"Cage did not ring its challenger: "+ring.size());
+                    for(var e:ring){
+                        require(Math.abs(flatDistance(e.getEntityPos(),target.getEntityPos())-StormRocRules.SMALL_RADIUS*StormRocRules.CAGE_RING)<.05,"A cage strike moved off its ring");
+                        require(e.warningTicks()==StormRocRules.CAGE_WARNING,"Cage warning");
+                    }
+                    Vec3d on=ring.getFirst().getEntityPos();dodge.setPosition(on.x,101,on.z);dodge.setVelocity(Vec3d.ZERO);
+                }
+                if(elapsed==2+StormRocRules.CAGE_WARNING+StormRocRules.BOLT_GAP+3){
+                    require(target.getHealth()==200,"The middle of a cage was struck");
+                    require(dodge.getHealth()<200,"Standing on a cage's ring was not struck");
+                    checks.add("Cage call: a ring of small strikes round a challenger, the middle safe and the ring struck");
+                    target.setHealth(200);dodge.setHealth(200);dodge.setPosition(-30.5,101,.5);
+                }
+                if(elapsed==60){
+                    boss.testCall(StormRocBrain.Call.FORK);
+                    var fork=effects().stream().filter(e->e.kind()==RocEffectEntity.Kind.LARGE_STRIKE&&e.effectTicks(0)==0&&flatDistance(e.getEntityPos(),target.getEntityPos())<16).toList();
+                    require(fork.size()==3,"Fork did not bring three strikes on its challenger: "+fork.size());
+                    require(fork.stream().anyMatch(e->flatDistance(e.getEntityPos(),target.getEntityPos())<.05),"Fork left the challenger's own spot unstruck");
+                    // Its three fall in a line: the two outer ones on opposite sides of the challenger.
+                    var outer=fork.stream().filter(e->flatDistance(e.getEntityPos(),target.getEntityPos())>1).toList();
+                    require(outer.size()==2&&outer.get(0).getEntityPos().subtract(target.getEntityPos()).multiply(1,0,1).normalize().dotProduct(outer.get(1).getEntityPos().subtract(target.getEntityPos()).multiply(1,0,1).normalize())<-.99,"Fork's strikes are not in a line through its challenger");
+                    checks.add("Fork call: three large strikes in a line through each challenger");
+                    // The player in the lane stands where the summon's tornado cannot drift onto them before the pass is over.
+                    boss.stopFight();target.setPosition(25.5,101,.5);target.setHealth(200);target.timeUntilRegen=0;target.setVelocity(Vec3d.ZERO);dodge.setPosition(40.5,101,.5);dodge.setHealth(200);outsider.setPosition(25.5,101,.5);outsider.setHealth(200);
+                    boss.startFight(CENTRE,List.of(target,dodge));step=43;elapsed=0;
+                }
+            }
+            // The low pass: from its spire across the summit through a challenger, its lane marked whole, one hit each, then onto the far spire.
+            case 43 -> {
+                int ready=StormRocRules.SUMMON_TICKS+3;
+                if(elapsed<ready){target.setPosition(25.5,101,.5);target.setHealth(200);dodge.setPosition(40.5,101,.5);dodge.setHealth(200);}
+                if(elapsed==ready){
+                    perchBefore=boss.getEntityPos();
+                    require(boss.testPass(),"The Roc had no line for a low pass from its spire: "+boss.status());
+                    var lane=effects().stream().filter(e->e.kind()==RocEffectEntity.Kind.LANE).toList();
+                    require(lane.size()>=20,"A low pass marked no lane across the summit: "+lane.size());
+                    Vec3d line=target.getEntityPos().subtract(perchBefore).multiply(1,0,1).normalize();
+                    for(var e:lane){
+                        require(e.warningTicks()>=StormRocRules.LANE_WARNING,"A lane circle warns for under LANE_WARNING: "+e.warningTicks());
+                        require(StormSummit.beyondRim(CENTRE,e.getEntityPos())<0,"A lane circle lies beyond the rim");
+                        Vec3d off=e.getEntityPos().subtract(perchBefore).multiply(1,0,1);
+                        require(off.subtract(line.multiply(off.dotProduct(line))).length()<.05,"A lane circle is off the pass's line");
+                    }
+                    passLow=1e9;
+                }
+                if(elapsed>ready){
+                    passLow=Math.min(passLow,boss.getY());
+                    if(target.getHealth()<200&&passHitAt<0){
+                        passHitAt=elapsed;
+                        require(flatDistance(boss.getEntityPos(),target.getEntityPos())<StormRocRules.PASS_FRONT+StormRocRules.LANE_RADIUS+3,"The lane struck far from the Roc: "+flatDistance(boss.getEntityPos(),target.getEntityPos()));
+                        require(Math.abs(boss.getY()-(101.03+StormRocRules.PASS_HEIGHT))<1.5,"The pass was not at its height over the rock as it struck: "+boss.getY());
+                    }
+                    // It has touched down on a far spire once it has stopped moving there, before its next call.
+                    boolean landed=boss.stage()==StormRocRules.Stage.AIR&&flatDistance(boss.getEntityPos(),perchBefore)>100&&boss.getEntityPos().distanceTo(passLast)<1e-6;
+                    passLast=boss.getEntityPos();
+                    if(landed){
+                        require(elapsed-ready>120&&elapsed-ready<300,"The low pass took "+(elapsed-ready)+" ticks");
+                        require(passHitAt>0,"The lane never struck the player standing in it");
+                        damage(200-target.getHealth(),16,"Low pass lane diamond damage, once");
+                        require(dodge.getHealth()==200,"The lane struck a player well off its line");require(outsider.getHealth()==200,"The lane struck an outsider");
+                        require(effects().stream().noneMatch(e->e.kind()==RocEffectEntity.Kind.LANE&&e.effectTicks(0)<e.warningTicks()),"The pass ended with its lane unspent");
+                        checks.add("Low pass: a whole lane marked across the summit with fair warning, one hit for a player in it, none beside it, flown at its height and ended on the far spire after "+(elapsed-ready)+" ticks");
+                        boss.stopFight();target.setPosition(20.5,101,10.5);target.setHealth(200);dodge.setPosition(18.5,101,-12.5);dodge.setHealth(200);
+                        boss.startFight(CENTRE,List.of(target,dodge));step=44;elapsed=0;
+                    }
+                    else if(elapsed>ready+420)throw new AssertionError("The low pass never ended on a spire: "+boss.status()+" at "+boss.getEntityPos()+" pose "+boss.poseName());
+                }
+            }
+            // The dive lands on its challengers, not on the summit's centre.
+            case 44 -> {
+                int ready=StormRocRules.SUMMON_TICKS+3;
+                // Both stand within the 24 blocks of the centre its circle keeps to, and well clear of the first tornado.
+                if(elapsed<=ready){target.setPosition(20.5,101,10.5);dodge.setPosition(18.5,101,-12.5);}
+                if(elapsed==ready){
+                    boss.testLanding();
+                    var mark=effects().stream().filter(e->e.kind()==RocEffectEntity.Kind.DIVE_MARKER).findFirst().orElseThrow(()->new AssertionError("Dive marked nothing"));
+                    require(mark.radius()==(float)StormRocRules.DIVE_RADIUS,"Dive radius");
+                    require(flatDistance(mark.getEntityPos(),target.getEntityPos())<.1||flatDistance(mark.getEntityPos(),dodge.getEntityPos())<.1,"The dive did not land on a challenger: "+mark.getEntityPos());
+                    require(tornadoes().stream().allMatch(t->flatDistance(t.getEntityPos(),mark.getEntityPos())>StormRocRules.DIVE_RADIUS+StormRocRules.TORNADO_RADIUS),"The dive's circle covers a tornado");
+                    checks.add("The dive marks its circle on a challenger, clear of the tornadoes");
+                    target.setPosition(30.5,101,.5);target.setHealth(200);target.setVelocity(Vec3d.ZERO);dodge.setPosition(30.5,101,12.5);dodge.setHealth(200);
+                    boss.stopFight();boss.startFight(CENTRE,List.of(target,dodge));boss.testAction(target,SETUP);step=18;elapsed=0;
+                }
             }
             case 18 -> {
                 if(elapsed==1){
@@ -509,9 +627,9 @@ public final class StormRocServerSmoke implements ModInitializer {
             case 22 -> {
                 var marks=effects().stream().filter(e->e.kind()==RocEffectEntity.Kind.DIVE_MARKER).toList();
                 for(var m:marks)if(chainMarkers.add(m.getUuid())){
-                    int n=chainMarkers.size();int expected=n==1?20:68+(n-2)*32;
+                    int n=chainMarkers.size();int hop=StormRocRules.SMASH_PAUSE+StormRocRules.SMASH_WARNING;int expected=n==1?20:61+(n-2)*hop;
                     require(elapsed==expected,"Chain marker"+n+" at tick"+elapsed+" expected"+expected);
-                    require(m.radius()==8&&m.warningTicks()==(n==1?40:24),"Chain marker radius/warning");
+                    require(m.radius()==8&&m.warningTicks()==(n==1?40:hop-1),"Chain marker radius/warning");
                     if(lastMark!=null)require(flatDistance(lastMark,m.getEntityPos())<=25.01,"Chain hop exceeded25");
                     if(n<4)require(StormSummit.beyondRim(CENTRE,m.getEntityPos())<=-13+.001,"Chain mark lacked rim margin");
                     else require(flatDistance(CENTRE.toCenterPos(),m.getEntityPos())<=24.01,"Final chain mark outside24");
@@ -532,7 +650,7 @@ public final class StormRocServerSmoke implements ModInitializer {
                         if(chainMarkers.size()==2){damage(before-target.getHealth(),12,"Later chain slam diamond damage");target.setPosition(55,135,0);target.setVelocity(Vec3d.ZERO);}
                     }
                 }
-                if(elapsed==156){require(chainMarkers.size()==4&&boss.stage()==StormRocRules.Stage.STUCK,"Fourth slam did not leave STUCK with exactly4 markers");checks.add("Four chain markers, launch/warnings/pauses, hop caps, rim margins, later12HP slam, four jumpable rings and aimed-strike cleanup");step=23;elapsed=0;}
+                if(elapsed==60+3*(StormRocRules.SMASH_PAUSE+StormRocRules.SMASH_WARNING)){require(chainMarkers.size()==4&&boss.stage()==StormRocRules.Stage.STUCK,"Fourth slam did not leave STUCK with exactly4 markers");checks.add("Four chain markers, launch/warnings/pauses, hop caps, rim margins, later12HP slam, four jumpable rings and aimed-strike cleanup");step=23;elapsed=0;}
             }
             case 23 -> {
                 if(boss.stage()==StormRocRules.Stage.BRAWL){
@@ -618,16 +736,15 @@ public final class StormRocServerSmoke implements ModInitializer {
     }
     private void beginStrike(boolean large){target.setHealth(200);target.timeUntilRegen=0;dodge.setHealth(200);outsider.setHealth(200);boss.testAction(target,SETUP);before=target.getHealth();target.setVelocity(Vec3d.ZERO);velocity=target.getVelocity();strike=boss.testStrike(target.getEntityPos(),large);require(strike!=null,"testStrike did not create effect");}
     private void answerChecks(){
-        var wing=List.of(StormRocRules.Action.WING);
-        require(StormRocCombat.answers(2,1,true,null).equals(wing),"Target between the Roc's feet had no answer");
-        require(StormRocCombat.answers(6,1,true,null).equals(wing),"Target under the Roc's neck had no answer: "+StormRocCombat.answers(6,1,true,null));
-        require(StormRocCombat.answers(6,1,true,StormRocRules.Action.WING).equals(List.of(StormRocRules.Action.POUNCE)),"Target staying under the neck was not pounced");
-        require(StormRocCombat.answers(5,-1,true,null).equals(wing),"Target behind the Roc drew no wing wave");
-        var front=StormRocCombat.answers(12.5,1,true,null);
+        // The chooser itself is checked by StormRocBrainContractTest; this confirms the shipped sockets feed it.
+        var under=StormRocBrain.weights(new StormRocBrain.Read(2,0),null,null).keySet();
+        require(under.contains(StormRocRules.Action.WING)&&!under.contains(StormRocRules.Action.BITE)&&!under.contains(StormRocRules.Action.SCREAM),"Target between the Roc's feet drew a head attack: "+under);
+        require(StormRocBrain.weights(new StormRocBrain.Read(5,170),null,null).keySet().equals(java.util.Set.of(StormRocRules.Action.WING)),"Target behind the Roc drew anything but the Thunderclap");
+        var front=StormRocBrain.weights(new StormRocBrain.Read(12.5,0,true,false,false,false,false,false,false,false,true,0),null,null).keySet();
         require(front.containsAll(List.of(StormRocRules.Action.BITE,StormRocRules.Action.SWING_LEFT,StormRocRules.Action.SCREAM)),"Target in bill reach lacked head attacks: "+front);
-        require(!StormRocCombat.answers(7.5,1,true,null).contains(StormRocRules.Action.BITE),"Bite offered where its bill cannot reach");
-        require(!StormRocCombat.answers(12.5,1,true,StormRocRules.Action.BITE).contains(StormRocRules.Action.BITE),"Brawl repeated its last attack");
-        checks.add("Brawl answers every place to stand: wings and pounce under the neck, head attacks only within reach, no repeats");
+        require(!StormRocBrain.weights(new StormRocBrain.Read(7.5,0),null,null).containsKey(StormRocRules.Action.BITE),"Bite offered where its bill cannot reach");
+        require(!StormRocBrain.weights(new StormRocBrain.Read(12.5,0),StormRocRules.Action.BITE,StormRocRules.Action.BITE).containsKey(StormRocRules.Action.BITE),"Brawl made the same attack three times running");
+        checks.add("Brawl answers every place to stand: the Thunderclap under and behind it, head attacks only within reach, no attack three times running");
     }
     private List<RocEffectEntity> effects(){return world.getEntitiesByClass(RocEffectEntity.class,AREA,e->!e.isRemoved());}
     private List<RocEffectEntity> tornadoes(){return effects().stream().filter(e->e.kind()==RocEffectEntity.Kind.TORNADO).toList();}

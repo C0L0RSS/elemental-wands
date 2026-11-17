@@ -145,7 +145,12 @@ victors can still claim. The Wind Shard replaces this once shards exist.
 
 Operators raise and visit a slot with `/ew summit enter [slot]`.
 Anyone on the summit can use `/ew summit leave`, which returns them to where they entered.
-`/ew summit status` reports the generation and built slots and any fight's phase and stage. A slot is laid out the first
+`/ew summit status` reports the generation and built slots and any fight's phase and stage.
+`/ew summit log on` (operators) records fights that start from then on, for tuning: every
+stage and how long it lasted, each call and its pattern, each brawl attack with what the Roc
+read of its target and whether it hit anybody, every hit on a player before and after armor,
+and the damage each player dealt. It tells operators a summary when the fight ends and writes
+`logs/storm-roc-fight-*.txt`. A slot is laid out the first
 time it is used, one 48×48 tile per server tick (70 tiles), and is then reused. When the
 installed tiles change, every slot moves to untouched ground. `elementalwands/storm-summit.json`
 records the built slots and return points.
@@ -179,18 +184,20 @@ the summit's first tornado (`summon`, 4.4 seconds):
 
 The air stretch then begins. Its first strikes come 1.25 seconds later.
 
-The Roc flies between the six spires for about 22.5 seconds on Normal (26.7 on Easy, 17.8 on
-Hard). Each spire visit lasts 8.9 seconds:
+The Roc keeps to the six spires while the storm works, and [chooses](#what-it-chooses-in-the-air)
+what it calls, how it leaves each spire and when it comes down. Each spire visit lasts 8.9
+seconds:
 - It touches down as the visit begins, having flared 0.8 seconds out, every move slow and
   heavy for its size. It sinks deep under its weight, holds its wings high while it finds its
   balance, takes one slow look aside, folds its wings and turns to glare at a challenger.
 - About 1.7 seconds in, it calls the lightning: its head jerks up to the sky in electric
   stutters while its body swells and rises, and half a second later a bolt shoots from its
-  bill into the cap cloud, the sky flashes, and a large strike marks each challenger (up to
-  four, like every aimed volley). Its crest and wing edges crackle as it opens its wings and
-  holds. It whips its head down onto its mark as the first bolt lands, 1.5 seconds later, and
-  folds its wings as the others follow.
-- About 4.9 seconds in, it crouches on its spire and turns onto its way out. At 5.3 seconds
+  bill into the cap cloud, the sky flashes, and one of its three patterns marks each
+  challenger (up to four, like every aimed volley). Its crest and wing edges crackle as it
+  opens its wings and holds. It whips its head down onto its mark 1.5 seconds later, and
+  folds its wings as the bolts follow.
+- About 4.9 seconds in, it crouches on its spire and turns onto its way out: a hop to a
+  neighbouring spire, or a low pass across the summit. For the hop, at 5.3 seconds
   it pushes off with one huge downbeat, and a second, weaker beat carries it out to the side of
   the next spire; it never flies straight at it. It banks round onto the spire in one wide turn
   (`RocApproach`: a 20-block radius, rolled in and out, the shorter way round) and comes in on
@@ -200,18 +207,82 @@ Hard). Each spire visit lasts 8.9 seconds:
 Its perched idle (slow, heavy head turns, a feather rouse, a slow wing stretch over its back) plays after
 the summon and briefly after each call, resuming where it left off.
 
-It dives only from a spire, once it has landed and never mid-call. A dive that comes due while
-it lands waits for the landing to settle and takes the place of that visit's call. It crouches
+#### What it chooses in the air
+
+The choices are made in `StormRocBrain`; `StormRocBrainContractTest` checks them in the build.
+
+**Its call** is one of three patterns, brought down on every challenger at once (up to four).
+Each has a different answer, read from the circles on the rock, and each has its own voice:
+
+| Call | What falls | Answer | Its caw |
+| --- | --- | --- | --- |
+| Volley | A large strike where each challenger stands | Keep moving | As before |
+| Fork | Three large strikes in a line along the way a challenger is running: where they will be when the first bolt falls, where they are, and behind them | Turn aside | Higher |
+| Cage | A ring of small strikes round a challenger (6 blocks out, 2.1 in phase two's larger circles), warned for 1.3 seconds, with the middle left safe | Hold still | Lower |
+
+- Challengers who are running mostly draw the fork and the cage, which a straight sprint does
+  not dodge. Challengers who are standing mostly draw the volley, sometimes the fork, and
+  never the cage, which cannot hit them.
+- A call that hit nobody is seldom made again at once; one that worked may be. It never
+  makes the same call three times running.
+- Against a challenger standing still the fork's line runs away from the Roc.
+- A cage's strikes are never moved off the rim or off another live circle, as other strikes
+  are: one that cannot fall in its place is left out. Where the rim or a live circle leaves a
+  challenger no safe middle, they get a plain large strike.
+- Aimed small strikes hold off for 2.25 seconds after a call, so nothing aimed lands in a
+  cage's middle.
+
+**Its hop** goes to whichever neighbouring spire is nearer its challengers, so it stays on
+their side of the summit and in their view. When neither is nearer by 8 blocks it flies on
+the way it was going. After the brawl it takes off for the spire nearest them.
+
+**The low pass** takes the place of a hop: never in the fight's first air stretch, never
+before a stretch's first call, at most once in a stretch (twice in phase two), on half its
+chances (0.6 in phase two).
+
+- Crouched on its spire, it turns onto a line from the spire through one challenger (aimed
+  1.5 seconds ahead of them, within 30 blocks of the centre) and screams.
+- The whole lane is marked at once and never moves: circles of radius 3.5 every 4 blocks,
+  from rim to rim, each with a chevron pointing the way it will fly. Each circle fills as
+  the lightning nears it; the first never warns for less than 1.5 seconds.
+- It drops from its spire to 13 blocks over the rock by the rim, then flies the line level
+  at 34 blocks a second, its head down on the lane and its bill spitting sparks. A bolt from
+  its bill strikes each circle in turn, 10 blocks ahead of it.
+- Everyone in a circle as it goes off is hit once a pass (about eight hearts through full
+  diamond), on the rock or jumping. Leaving the lane sideways is the answer: 3.8 blocks,
+  which a walk covers in the first warning.
+- It is within spell reach the whole way across, and anything it loses there counts toward
+  its next landing's gate.
+- Past the far rim it banks round onto the spire most nearly straight ahead, slowing all the
+  way, and lands as it does from a hop. Aimed strikes wait while the lane is live and resume
+  as it climbs away. The whole pass takes about 9 seconds.
+
+**It comes down** where its next call would be, never mid-call or mid-flight. On Normal it
+never dives before its second call and always after its third (Easy: third and fourth; Hard:
+first and second). In between it is a coin toss, unless it has a good read: somebody is
+slowed or caught by a tornado, somebody is eating, or the whole party stands within 6 blocks
+of its middle. Then it dives at once.
+
+It crouches
 on its spire for 0.4 seconds with its head locked on the marker, drives off with one huge
 downbeat, climbs, hangs and tips over into a tight stoop, then flares high and wide just before
-it strikes: the warning from the ground. It commits to the fixed marker for three seconds. Small lightning circles have a one-second warning and two bolts; large circles
-have a 1.5-second warning and three. Repeats arrive half a second apart, with full damage on
-each bolt. Their centres cannot sit inside another live circle. Small aimed strikes keep
-coming every two seconds, some leading movement; random damaging strikes and harmless distant
-bolts from the cap cloud add atmosphere. Aimed volleys rotate through at most four
-challengers at once.
+it strikes: the warning from the ground. It commits to the fixed marker for three seconds.
 
-The dive marker keeps clear of tornadoes. Its impact is lethal against full unenchanted
+The dive's circle (radius 12) is marked where its challengers are as it commits: on the one
+it is watching, or on another whose circle would catch more of them. It never moves once
+marked, stays within 24 blocks of the centre and keeps clear of tornadoes, so a tornado beside
+a challenger pushes the circle off them. From its middle a sprint gets out with about half a
+second to spare and a walk does not. Nothing is aimed at a challenger while they run out of
+it: aimed strikes stop for the dive, and only the random sky keeps striking.
+
+Small lightning circles have a one-second warning and two bolts; large circles
+have a 1.5-second warning and three. Repeats arrive half a second apart, with full damage on
+each bolt. Their centres cannot sit inside another live circle. Between calls, small aimed
+strikes come every two seconds, half of them leading movement; random damaging strikes and
+harmless distant bolts from the cap cloud add atmosphere. Aimed volleys rotate through at
+most four challengers at once.
+
+Its impact is lethal against full unenchanted
 diamond and launches a jumpable smoke/lightning ring; it rolls over low rocks, so only being
 in the air clears it. Sky strikes stop on impact. The Roc stays stuck for six seconds with
 its bill driven into the rock and its wings splayed on the ground (harmless): stunned at first,
@@ -220,33 +291,48 @@ then a slow heave against the bill, panting, and a wrench to each side as its ta
 and at 5 seconds it rips its bill free, rocks back and folds its wings into its guard. Then it
 brawls.
 
-Where its target stands decides the answer, so every spot has one:
+Where its target stands, which way its body faces and what its target has just done decide
+what it does ([how it chooses](#how-it-chooses-in-the-brawl)). Two rules hold for all of it:
+
+- **Its body turns slowly:** 80° a second, resting or winding up. Its bill reaches only what
+  its body can come round to before an attack's aim locks, so a player beside or behind it
+  is off its bill until it has turned, and only the Thunderclap answers them.
+- **Its aims run ahead of a runner.** Each aim follows where its target will be when the hit
+  lands if they keep running as they are (at most 8 blocks ahead), and stops following at
+  its lock, about a second before the hit. A straight line is hit; so is stopping; a sharp
+  turn after the lock is the dodge. A dash or a blink is never led, only remembered. Each
+  lock has a sound and a mark on the rock, for players who are running away from it.
+
+Its attacks:
 
 - **Head attacks** (Thunder Bite, Storm Sweep, Storm Scream) are offered only where the
   bill's authored path reaches. The reach is measured from the shipped sockets: sweeps about
   7.25–15.75 blocks ahead of its feet, the bite about 9.5–27.5 (its leap included), the scream
   from 11.75 out.
 - **Thunder Bite:** it rears up slowly with its bill wide, lightning crackling at the corners
-  of its mouth, its head looking down at its prey, turning to follow them. At 1.2 s its aim
-  locks on where its prey stands and the crackles grow. If its prey is within reach it lunges
-  and snaps its bill shut in the air at 2.3 s, at player height. If not, it leaps, slower as befits
-  its size: it sinks into a deep crouch as its wings rise, drives off the rock with a heavy
+  of its mouth, its head looking down at its prey, turning after where they are heading. If
+  they are heading within reach it lunges and snaps its bill shut in the air at 2.3 s, at
+  player height; its aim locks at 1.3 s. If not, at 1.2 s it switches to its leap, slower as befits
+  its size: it sinks into a deep crouch as its wings rise, still turning after them until its
+  aim locks at 1.8 s, drives off the rock with a heavy
   downbeat at 2.15 s, sails up to 10 blocks over 0.6 s with its legs trailing then reaching and
-  its wings flaring to brake, lands hard right in front of its prey at 2.75 s and bites at 2.8 s. Crackles burst from the bill: everyone within 5 blocks of it,
+  its wings flaring to brake, lands hard at 2.75 s and bites at 2.8 s. As the aim locks
+  there is a sharp crack, and a ring of sparks marks the rock under where its bill will shut
+  until it does. Crackles burst from the bill: everyone within 5 blocks of it,
   jumping or not, is hit (about eight hearts through full diamond) and thrown away from the Roc.
-  Moving during the windup doesn't escape it; getting clear after the lock does. Its feet don't
-  stomp during the leap.
+  Its feet don't stomp during the leap.
 - **Storm Sweep:** it coils its neck far round to one side, body twisting and bill crackling,
   holds a beat, then at 1.25 s scythes its open bill across its whole front at chest height,
-  trailing crackles. Everyone within 5.5 blocks of the bill's path is hit (about five hearts
+  trailing crackles. It aims once, as it starts, at where its target will be when it swings. Everyone within 5.5 blocks of the bill's path is hit (about five hearts
   through full diamond) and thrown hard to the side. As the sweep ends a crescent of crackles
   rolls out over the swept front (80° each side of ahead) from 10 to 22 blocks, like a ring:
   anyone on the ground it reaches is hit, so jump it.
 - **Storm Scream:** a huge, slow breath that reads apart from the bite's rear-up: it sinks low
   and draws its head back with its bill to the sky, wings spread wide and level, crackles
-  gathering in its flared crest, with a deep rising inhale. Then at 1.6 s a blast straight ahead: a line 6 blocks wide and 110
+  gathering in its flared crest, with a deep rising inhale. Its aim locks at 0.7 s with a
+  low crack, and sparks crawl along the rock under its line until it fires. Then at 1.6 s a blast straight ahead: a line 6 blocks wide and 110
   long of racing crackles. Everyone in it takes about eight hearts through full diamond and is
-  shoved back along the line. It can't be jumped; behind it is safe.
+  shoved back along the line. It can't be jumped; beside or behind it is safe.
 - **Thunderclap** (its wing wave) for players beside or behind it, or under its neck and chest: it
   sinks into a deep crouch as its wings rise, then leaps 9 blocks straight up on its legs and one
   huge downbeat (a heavy whoosh and dust blown out over the rock), hangs a moment at the top with
@@ -254,18 +340,18 @@ Where its target stands decides the answer, so every spot has one:
   blocks under it is crushed (about eight hearts through full diamond), and a ring of crackles and
   dust rolls out to 16 blocks. Anyone on the ground it reaches takes about three hearts and is
   thrown far away; a jump clears it. Its feet don't stomp while it is in the air.
-- **Raptor Strike** (its pounce) at a target over 26 blocks away, after four attacks in one spot,
-  or at a player who stays underneath after a Thunderclap. It sinks into a low stalking crouch,
+- **Raptor Strike** (its pounce): likeliest at a target over 26 blocks away or after four
+  attacks in one spot. It sinks into a low stalking crouch,
   wings half open and low, its weight rocking and its tail lashing, its head dead still on its
-  prey and turning to follow them. At 1.2 s its aim locks on where its prey stands: it draws back
-  and coils, talons crackling, and at 1.6 s drives off with one huge downbeat (a whoosh and dust
+  prey, its body turning after where they are heading. It draws back
+  and coils, talons crackling, and at 1.6 s its aim locks as it drives off with one huge downbeat (a whoosh and dust
   over the rock) and flies flat and fast at that spot on a low arc, at most 4 blocks up, with a
-  swoop. It screeches, flares and swings its talons forward, striking the spot at 2.6 s: anyone
+  swoop. Its shadow falls on the spot as it leaves the rock: a dark circle that grows and deepens
+  inside a pale rim, with a second ring closing on the rim, for the second it is in the air. It screeches, flares and swings its talons forward, striking the spot at 2.6 s: anyone
   within 5 blocks is crushed (about ten hearts through full diamond), and a shockwave rolls out to
-  26 blocks that a jump clears. Nothing marks the spot: its locked head and coil are the warning,
-  so sprint clear once it coils. It then mantles over the spot to 3.4 s, a window to punish it,
+  26 blocks that a jump clears. It then mantles over the spot to 3.4 s, a window to punish it,
   and settles by 4 s. Its feet don't stomp while it is in the air.
-- **Thunder Charge** (its stampede) at the player who last hit it from more than 22 blocks, at
+- **Thunder Charge** (its stampede): from 16 blocks, likeliest at a player keeping away, at
   most every eight seconds. It lowers its head and rakes the rock three times with its right
   talons, sparks flying, while it turns to its target (its aim locks at 1.8 s), then charges at
   2.2 s, bill gaping in a crackling screech and lightning cracking at each footfall. It runs at
@@ -276,11 +362,48 @@ Where its target stands decides the answer, so every spot has one:
   where its target stood (less at the rim, and 4.5 s at most), then skids 5 blocks with its bill
   snapped shut and its head whips round to the player it missed: about two seconds to punish it.
 
-It never repeats an attack back to back and picks among the rest at random. Its target is
-chosen at random, weighted by each player's recent damage (counting half after five seconds),
-so the main damage dealer draws most attacks but not all. It turns 15° a tick while winding up,
-and each attack's aim stops following its target at a lock tick. The Raptor Strike locks 0.4
-seconds before launch. A moving foot, from turning, scraping or
+#### How it chooses in the brawl
+
+Like the Guardian and the Pyre King it is a hand-written rule system (`StormRocBrain`): where
+its target stands decides what it weighs, what they have just done tilts the weights, and
+chance picks among them.
+
+| Its target is | It weighs |
+| --- | --- |
+| In front, 7–16 blocks | Sweep and bite, the scream from 12; the Thunderclap and the Raptor Strike as mix-ups |
+| In front, 16–27 blocks | Bite (its leap) and scream; the Raptor Strike and the Thunder Charge less |
+| In front, beyond 27 blocks | Scream and Raptor Strike; the Thunder Charge less |
+| Under its chest, or beside or behind it within 14 blocks | The Thunderclap, almost always |
+| Behind it and further out | Only the Thunder Charge, or nothing: it keeps turning |
+
+| What its target did | What that draws |
+| --- | --- |
+| Eating or drinking | An attack at once, usually the scream or the sweep; in a party it also draws its eye |
+| Standing still (0.75 s), usually to cast | The scream; at once if they stand in front of it at scream range. Standing still under its bill is left alone: that is the opening a close-range build fights in |
+| Jumped the last ring that reached them | The sweep (chest high) and the scream, which a jump does not clear, and far fewer Thunderclaps, until a ring next catches them or 15 seconds pass |
+| Kept beyond 22 blocks for 5 seconds, or just hit it from there | The Thunder Charge, and the Raptor Strike |
+| Just spent a dash or a blink (1.5 s) | An attack at once if they are in front of it, usually the scream or the sweep |
+| In the air, more than 3.5 blocks up | The bite, whose burst reaches them; the scream and the rings, which pass under them, far less |
+| Somebody else is beside or behind it | The Thunderclap as well |
+| Four attacks without moving | The Raptor Strike |
+
+- It never makes the same attack three times running, and a repeat is less than half as
+  likely. Both sweeps count as one attack.
+- **Strings:** after an attack it may go straight into another, 0.2 seconds after the first
+  clip's own recovery, chosen fresh from where its target has gone. Phase one strings two
+  at most, about a third of the time; phase two three, about two thirds of the time. A
+  Raptor Strike that has just landed usually strings (0.6, and 0.9 in phase two); the
+  Thunder Charge never does, since its skid is the opening. In a party each attack of a
+  string turns on a different player.
+- **The opening:** after a string it rests 1.25 seconds solo (1 s with two players, 0.8 with
+  three, 0.7 with four; 1.4 times that on Easy and 0.75 on Hard), turning toward whoever it
+  will attack next with its head on them. Eating, a spent dash or standing still in its
+  line cuts the rest short.
+- **Who it attacks:** nobody goes 10 seconds unattacked. Otherwise the highest priority: recent
+  damage dealt (counting half after five seconds), eating, standing still, and time since it
+  last attacked them, so equal players are attacked in turn.
+
+A moving foot, from turning, scraping or
 landing, hurts players under it; the pounce's flight and the stampede's charge use their own hits.
 Between attacks it holds its brawl guard: electric head twitches, uneven breathing, weight
 shifts, beak clacks, talon kneads, a mantling hiss and a rouse. Its clock resumes after each blow, so each pause shows a
@@ -358,10 +481,12 @@ legs forward, head steady) and beats once to brake on the way in (its legs start
 arrives and settles until the call, which follows it without a crossfade. The takeoff from the
 brawl ends in the same landing, cutting into its flare without a crossfade, and the half-health
 takeoff flies straight on into the phase change's flight loop the same way. The 7.2-second
-`flight` loop, with two unequal power strokes and a long glide, now only plays in the phase
-change's stand-in. In either flight it briefly watches a living player below (only once the
+`flight` loop, with two unequal power strokes and a long glide, plays in the phase
+change's stand-in and across a low pass, which leaves its spire in the hop's clip and has no
+clip of its own yet. In either flight it briefly watches a living player below (only once the
 hop's launch is over), then returns to its authored glances; spectators and creative players
-don't draw its gaze. All of this client tracking and banking is presentation; hitboxes follow
+don't draw its gaze. On a low pass its head stays down on its lane instead, following the next
+circle its lightning will reach. All of this client tracking and banking is presentation; hitboxes follow
 the authored clips.
 
 The body, head and neck share the boss's health and damage admission. The latter two
@@ -402,15 +527,17 @@ Phase two keeps phase one's loop, but the storm is on its side:
   taking off and between smashes. Aimed strikes stay in the air stretch.
 - **Tornadoes:** they swell to radius 7 and a third joins them. The core, catch height and
   spacing grow with them.
-- **More landings:** the air stretch is about 17.8 seconds on Normal (22.5 Easy, 13.6 Hard).
+- **More landings:** on Normal and Hard it may come down after its first call and always
+  does after its second (Easy: second and third). It may make two low passes in a stretch.
 - **Chain smash** in place of the dive: four beak slams with radius-8 circles, each turned on
   the next player in turn and fixed once marked.
   - The first crouches on the perch for 0.4 seconds, launches up, marks its player and falls
     on them two seconds after launching. Like the dive it is lethal.
-  - After each slam it stays buried for 0.4 seconds, then tears free with a screech and hops,
-    one slow wingbeat with its wings held high as the warning, at most 25
-    blocks to the next circle, which lands 1.2 seconds after it appears and costs about six
-    hearts.
+  - Its next circle appears as each slam lands. It stays buried for 0.7 seconds, then tears
+    free with a screech and hops, one slow wingbeat with its wings held high, at most 25
+    blocks onto that circle, which lands 1.9 seconds after it appeared and costs about six
+    hearts. From its middle a sprint gets out.
+  - As in the dive, nothing is aimed at a challenger while the first smash falls.
   - Every slam sends a jumpable ring 26 blocks out.
   - Circles stay within 41 blocks of the centre (13 inside the narrowest rim) and off the
     tornadoes, close enough that the chain can always reach its last spot, within 24
@@ -420,7 +547,8 @@ Phase two keeps phase one's loop, but the storm is on its side:
     turns a little further to keep its body over the summit. Only the last slam leaves it stuck,
     then it brawls as before.
 
-Its brawl moves, the caw and the landing gates are unchanged.
+Its brawl moves, the caw and the landing gates are unchanged; it strings its attacks more
+often and for longer ([how it chooses](#how-it-chooses-in-the-brawl)).
 Phase two takes four more landings of an eighth of total health each. At the last gate
 it is defeated. It has no death yet: it simply vanishes and the encounter ends. An aerie
 fight's victors go home to its [rewards](#the-aerie) after 10 seconds.
@@ -501,8 +629,17 @@ Run `python3 art/storm_roc_mod/build_mod.py --check`, `python3 art/storm_roc/bui
 `python3 art/storm_roc/validate_runtime.py` to check export drift, anatomy and hit-frame
 agreement. `render_runtime.py` produces offline review images.
 
+`StormRocBrainContractTest` (`checkStormRocBrain`, part of the build) checks what the Roc
+chooses and whether a Minecraft player can answer it: that every place to stand has an
+answer, that its bill never reaches further round than its body can turn, each read, the
+strings and rests, the calls, and each attack's dodge against a walk (4.3 blocks a second), a
+sprint (5.6) and a third of a second's reaction. A retimed clip or a retuned radius that
+breaks a dodge fails the build.
+
 `tools/roc_server_smoke.init.gradle` exercises real damage and encounter lifecycle in a
-disposable server, through both phases. `tools/roc_client_smoke.init.gradle` runs a hidden
+disposable server, through both phases, including a scream at a sprinting target (hit on a
+straight line, dodged by turning back after the lock), the cage and the fork, a whole low
+pass and where the dive lands. `tools/roc_client_smoke.init.gradle` runs a hidden
 native summit rehearsal and captures individual screenshots of the Roc, its attacks, the phase
-change and phase two's storm. Fresh receipts and inspection are required
+change and phase two's storm, the Raptor Strike's shadow and the low pass. Fresh receipts and inspection are required
 before claiming either passed; neither establishes human Lunar/co-op balance.

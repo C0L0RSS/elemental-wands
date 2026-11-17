@@ -189,6 +189,8 @@ scene the camera, HUD, input, fog and light, `mixin/IntroCameraMixin`, `IntroGam
 | Feature | Owners | Reference |
 | --- | --- | --- |
 | Fight loop, state and tuning | `entity/roc/StormRocEntity`, `StormRocCombat`, `StormRocRules` | [Storm Summit](reference/storm-summit.md#phase-one) |
+| What it chooses: brawl attacks, strings, targets, calls, hops, low passes and when it dives | `entity/roc/StormRocBrain`; checked by `StormRocBrainContractTest` | [Storm Summit](reference/storm-summit.md#how-it-chooses-in-the-brawl) |
+| Fight log for tuning (`/ew summit log on`) | `entity/roc/StormRocFightLog`, `entity/BossFightLog` | [Storm Summit](reference/storm-summit.md#visiting) |
 | Poses, hurtboxes, flight path | `entity/roc/StormRocPose`, `RocBodyPartEntity`, `RocApproach` | [Storm Summit](reference/storm-summit.md#phase-one) |
 | How tornadoes, lightning strikes and warning circles are drawn | `client/renderer/RocEffectRenderer`, `entity/roc/RocEffectEntity` (what the server sends; damage stays in the fight loop); tornado texture `art/roc_effects/build_tornado_texture.py` | [Storm Summit](reference/storm-summit.md#phase-one) |
 | Fight roster and lifecycle | `summit/StormRocEncounter` | [Storm Summit](reference/storm-summit.md) |
@@ -227,7 +229,7 @@ scene the camera, HUD, input, fog and light, `mixin/IntroCameraMixin`, `IntroGam
 
 | What | Where | Reference |
 | --- | --- | --- |
-| Contract checks run by the build | `GuardianBeamContractTest`, `NecromancerContractTest`, `PyreKingContractTest`, `PartyStoreTest`, `StormRocGazeContractTest`, wired in `build.gradle` | [Testing](reference/testing.md) |
+| Contract checks run by the build | `GuardianBeamContractTest`, `NecromancerContractTest`, `PyreKingContractTest`, `PartyStoreTest`, `StormRocGazeContractTest`, `StormRocBrainContractTest`, wired in `build.gradle` | [Testing](reference/testing.md) |
 | Server and client fixtures | Helper classes under `src/guardianTest/java/`; runners in `tools/` named after the area and ending in smoke.init.gradle | [Testing](reference/testing.md#selecting-a-fixture) |
 | Asset and export checks | `tools/check_assets.py` | [Art](reference/art-and-assets.md) |
 | This index and the docs' links | `gradle/docs-check.gradle` | [Documentation rules](README.md) |

@@ -37,7 +37,7 @@ of trusting a name or an old description.
 
 The standard build and asset commands are in [AGENTS.md](../../AGENTS.md#build-and-required-checks).
 `./gradlew build` includes `checkGuardianBeam`, `checkNecromancer`, `checkPyreKing`,
-`checkParties`, `checkStormRocGaze` and `checkDocs`; none is a live gameplay test.
+`checkParties`, `checkStormRocGaze`, `checkStormRocBrain` and `checkDocs`; none is a live gameplay test.
 Use `--offline` only when dependencies and assets are already cached.
 
 ## Selecting a fixture
@@ -286,7 +286,9 @@ screenshots under `build/roc-client-smoke/screenshots/`; it records no video. In
 perch, spire hop and landing for rock contact, then lightning, the dive warning and
 impact, the stuck opening, every ground move and the takeoff, then phase two: the charge
 bolt, the storm from the sky and the ground, the tornadoes, the chain smash and live
-ground. The camera and challenger are scripted.
+ground, then the Raptor Strike's shadow and the low pass (its lane, then its lightning
+reaching the challenger). The camera and challenger are scripted. The client turns the Roc's
+fight log on, so `build/roc-client-smoke/logs/storm-roc-fight-*.txt` records what it chose.
 
 ## Evidence retention
 

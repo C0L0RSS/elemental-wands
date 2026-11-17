@@ -53,7 +53,7 @@ task; `./gradlew checkDocs` fails when it names something that does not exist.
 | Churches, the Shattered Nave, the Hollow Crypt, recovery, rewards | [Church and arena](docs/reference/church-and-arena.md) |
 | Storm Roc's fight, summit realm and aerie | [Storm Summit](docs/reference/storm-summit.md) |
 | Pyre King's fight, body, clips, gate and hall | [Pyre King](docs/reference/pyre-king.md) |
-| Why a built boss is designed the way it is | Design notes: [Fractured Guardian](docs/design/guardian.md), [Storm Roc](docs/design/storm-roc.md), [Pyre King](docs/design/pyre-king.md) |
+| Why a built boss is designed the way it is | Design notes: [Fractured Guardian](docs/design/guardian.md), [Hollow Necromancer](docs/design/necromancer.md), [Storm Roc](docs/design/storm-roc.md), [Pyre King](docs/design/pyre-king.md) |
 | Test runners and verification boundaries | [Testing](docs/reference/testing.md) |
 | Viewing local review pages from another device | [Remote preview](docs/reference/remote-preview.md) |
 | What changed for players | [Release summaries](docs/releases/README.md) |

@@ -106,5 +106,12 @@ tasks.register('checkStormRocGaze', JavaExec) {
 }
 check.dependsOn checkStormRocGaze
 
+tasks.register('checkPyreWave', JavaExec) {
+    dependsOn guardianTestClasses
+    classpath = sourceSets.guardianTest.runtimeClasspath
+    mainClass = 'com.anton.elementalwands.util.PyreWaveContractTest'
+}
+check.dependsOn checkPyreWave
+
 // The feature index and documentation links must point at things that exist.
 apply from: 'gradle/docs-check.gradle'

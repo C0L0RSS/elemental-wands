@@ -76,7 +76,8 @@ public final class GuardianNatureSmokeMod implements ModInitializer {
         if(phase==1) {
             guardian.stopReview();floor=player.getBlockY()-1;
             // Casts aim with the head, which the arrival teleport turned toward the seat; a client would turn it back.
-            player.setPosition(-20.5,floor+1,-20.5); player.setYaw(0);player.setHeadYaw(0);player.setPitch(0);
+            // Aimed 30 degrees up, as at a tall boss: the wall still runs its length along the floor.
+            player.setPosition(-20.5,floor+1,-20.5); player.setYaw(0);player.setHeadYaw(0);player.setPitch(-30);
             player.equipStack(EquipmentSlot.MAINHAND,wand);
             testRootVisualOwnership(world);
             coalsFloor=world.getBlockState(new BlockPos(-21,floor,-15));
@@ -95,6 +96,9 @@ public final class GuardianNatureSmokeMod implements ModInitializer {
         if(phase==2 && tick-started==50) {
             require(world.getBlockState(coals).isOf(ModSpellBlocks.PYRE_COALS),"Real Fire secondary has no coals on the nave floor");
             require(world.getBlockState(coals.up()).isOf(ModSpellBlocks.PYRE_FLAME),"Real Fire secondary has no flames");
+            BlockPos far=new BlockPos(-21,floor,9);
+            require(world.getBlockState(far).isOf(ModSpellBlocks.PYRE_COALS)&&world.getBlockState(far.up()).isOf(ModSpellBlocks.PYRE_FLAME),
+                    "Pyre aimed up stopped short of 30 blocks along the floor");
             player.setPosition(coals.getX()+.5,floor+1,coals.getZ()+.5);
             FireAbilityHandler.inventoryTick(wand,world,player,EquipmentSlot.MAINHAND);
             require(player.hasStatusEffect(StatusEffects.SPEED)&&player.hasStatusEffect(StatusEffects.REGENERATION),"Pyre did not grant both buffs");

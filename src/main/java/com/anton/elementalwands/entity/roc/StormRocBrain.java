@@ -90,8 +90,11 @@ public final class StormRocBrain {
      * priority wins: recent damage dealt, eating, standing still, and time since it last attacked
      * them, with distance breaking ties, so equal threat still rotates through the party.
      * {@code avoid} (whom it just attacked, inside a string) is skipped when someone else qualifies.
+     * A player it has not weighed before joins {@code lastTargeted} as of now, so their NEGLECT
+     * ticks run from the first time it could have attacked them.
      */
     public static Candidate focus(List<Candidate> players, Map<UUID, Long> lastTargeted, long now, UUID avoid) {
+        for (var p : players) lastTargeted.putIfAbsent(p.id(), now);
         List<Candidate> pool = players;
         if (avoid != null && pool.stream().anyMatch(p -> !p.id().equals(avoid)))
             pool = pool.stream().filter(p -> !p.id().equals(avoid)).toList();
@@ -109,7 +112,7 @@ public final class StormRocBrain {
 
     private static long unattacked(Candidate player, Map<UUID, Long> lastTargeted, long now) {
         Long at = lastTargeted.get(player.id());
-        return at == null ? NEGLECT - 1 : Math.max(0, now - at);
+        return at == null ? 0 : Math.max(0, now - at);
     }
 
     // ── The brawl's chooser ──────────────────────────────────────────────────

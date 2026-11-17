@@ -218,7 +218,7 @@ Each has a different answer, read from the circles on the rock, and each has its
 | --- | --- | --- | --- |
 | Volley | A large strike where each challenger stands | Keep moving | As before |
 | Fork | Three large strikes in a line along the way a challenger is running: where they will be when the first bolt falls, where they are, and behind them | Turn aside | Higher |
-| Cage | A ring of small strikes round a challenger (6 blocks out, 2.1 in phase two's larger circles), warned for 1.3 seconds, with the middle left safe | Hold still | Lower |
+| Cage | A ring of small strikes round a challenger (6 blocks out, 8.4 in phase two's larger circles), warned for 1.3 seconds, with the middle left safe | Hold still | Lower |
 
 - Challengers who are running mostly draw the fork and the cage, which a straight sprint does
   not dodge. Challengers who are standing mostly draw the volley, sometimes the fork, and

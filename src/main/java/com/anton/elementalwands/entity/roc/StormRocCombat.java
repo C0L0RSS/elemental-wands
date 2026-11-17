@@ -109,6 +109,9 @@ final class StormRocCombat {
     private final Map<UUID, Integer> stillFor = new HashMap<>(), awayFor = new HashMap<>();
     /** Challengers its current attack has hurt, for the fight log. */
     private final Set<String> struck = new LinkedHashSet<>();
+    /** The safe middles of the cages now on the rock, and the tick their last bolt has fallen by. */
+    private final List<Vec3d> cages = new ArrayList<>();
+    private long cagesUntil;
     private final StormRocFightLog log = new StormRocFightLog();
     /** Players a tornado has thrown, until they come down: the throw's own hit is their fall. */
     private final Map<UUID, Long> thrown = new HashMap<>();
@@ -216,6 +219,7 @@ final class StormRocCombat {
         cameFrom = -1;
         calling = lastCall = beforeCall = null;
         callHit = false;
+        nextStampede = 0;
         boss.setPosition(perch(0));
         boss.face(center());
         log.begin(now(), players.size(), " on " + world().getDifficulty().asString() + ", " + health + " health");
@@ -249,6 +253,7 @@ final class StormRocCombat {
         for (var e : effects) e.discard();
         effects.clear();
         strikes.clear();
+        cages.clear();
         lane.clear();
         tornadoes.clear();
         rings.clear();
@@ -533,6 +538,9 @@ final class StormRocCombat {
             strike(at, true, LARGE_WARNING, true, true, false);
             return;
         }
+        if (now() > cagesUntil) cages.clear();
+        cages.add(at);
+        cagesUntil = now() + CAGE_WARNING + (SMALL_BOLTS - 1) * BOLT_GAP + 6;
         int count = (int) Math.ceil(Math.PI * ring / (radius * .95));
         double turn = boss.getRandom().nextDouble() * Math.PI * 2;
         for (int i = 0; i < count; i++) {
@@ -946,6 +954,8 @@ final class StormRocCombat {
                 candidate = onFloor(point.add(Math.cos(a) * r, 0, Math.sin(a) * r));
             }
             if (StormSummit.beyondRim(centre, candidate) > -1 || insideLiveCircle(candidate, radius)) continue;
+            // A cage's own strikes are strict; nothing else may reach into its safe middle.
+            if (!strict && reachesCage(candidate, radius)) continue;
             var kind = large ? RocEffectEntity.Kind.LARGE_STRIKE : RocEffectEntity.Kind.SMALL_STRIKE;
             var e = effect(kind, candidate, radius, warning, warning + (bolts - 1) * BOLT_GAP + 6);
             strikes.add(new Strike(e, aimed, call));
@@ -953,6 +963,20 @@ final class StormRocCombat {
             return e;
         }
         return null; // Never stack an unavoidable strike when the bounded search fills up.
+    }
+
+    /** Whether a strike of this radius would reach into the safe middle of a cage still on the rock. */
+    private boolean reachesCage(Vec3d candidate, double radius) {
+        if (now() > cagesUntil) return false;
+        double safe = (two ? SMALL_RADIUS_TWO : SMALL_RADIUS) * (CAGE_RING - 1);
+        for (Vec3d middle : cages) if (horizontal(candidate, middle) < safe + radius) return true;
+        return false;
+    }
+
+    /** The air stretch's aimed strikes, the ones still warning included, are taken off the rock. */
+    private void dropAimed() {
+        for (var s : strikes) if (s.aimed) s.effect.discard();
+        strikes.removeIf(s -> s.aimed);
     }
 
     private boolean insideLiveCircle(Vec3d candidate, double radius) {
@@ -1293,6 +1317,7 @@ final class StormRocCombat {
         enter(Stage.DIVE, "dive");
         to = landing(mark, boss.getYaw());
         marker = effect(RocEffectEntity.Kind.DIVE_MARKER, mark, DIVE_RADIUS, DIVE_TICKS, DIVE_TICKS + 2);
+        dropAimed();
         sound(mark, ModSounds.ENTITY_STORM_ROC_VOICE_CAW, 3, .45f);
         log.cast(now(), "dive", null);
     }
@@ -1313,6 +1338,7 @@ final class StormRocCombat {
         marked = false;
         marker = null;
         enter(Stage.SMASH, "dive");
+        dropAimed();
         sound(from, ModSounds.ENTITY_STORM_ROC_VOICE_CAW, 3, .4f);
         log.cast(now(), "chain smash", null);
     }
@@ -1444,9 +1470,8 @@ final class StormRocCombat {
         ring(mark, SMASH_RING);
         sound(mark, ModSounds.ENTITY_STORM_ROC_SMASH_IMPACT, 3, .55f);
         if (smash == 0) {
-            // The air stretch's aimed strikes stop at the first impact; the random sky keeps going.
-            for (var s : strikes) if (s.aimed) s.effect.discard();
-            strikes.removeIf(s -> s.aimed);
+            // The air stretch's aimed strikes went as it launched; the random sky keeps going.
+            dropAimed();
         }
         smash++;
         smashAt = now();

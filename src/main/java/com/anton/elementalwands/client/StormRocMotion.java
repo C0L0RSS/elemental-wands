@@ -126,7 +126,8 @@ public final class StormRocMotion {
             case "flight", "spire_flight" -> flightTarget != null ? 1 : 0;
             // The bite's windup keeps its head on its prey until the aim locks, then lets go
             // before the lunge, which bites where the server aimed.
-            case "bite", "bite_leap" -> roc.poseTicks(0) < StormRocRules.Action.BITE.lock ? 1 : 0;
+            case "bite" -> roc.poseTicks(0) < StormRocRules.Action.BITE.lock ? 1 : 0;
+            case "bite_leap" -> roc.poseTicks(0) < StormRocRules.BITE_LEAP_LOCK ? 1 : 0;
             // So does the Raptor Strike's stalk: its head stays on its prey until it coils to leap.
             case "pounce" -> roc.poseTicks(0) < StormRocRules.Action.POUNCE.lock ? 1 : 0;
             // Charging, its head leads it round after its prey; once its skid stops, its head whips

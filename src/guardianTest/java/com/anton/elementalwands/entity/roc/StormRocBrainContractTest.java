@@ -147,6 +147,11 @@ public final class StormRocBrainContractTest {
         require(StormRocBrain.focus(List.of(loud), attacked, 1000, a) == loud, "Solo, a string has nobody to attack");
         var eater = new Candidate(b, 40, 0, false, true);
         require(StormRocBrain.focus(List.of(new Candidate(a, 10, 20, false, false), eater), attacked, 1000, null) == eater, "Eating does not draw its eye in a party");
+        // A player it has never attacked is still reached: their clock starts when it first weighs them.
+        Map<UUID, Long> fresh = new HashMap<>();
+        require(StormRocBrain.focus(List.of(loud, quiet), fresh, 1000, null) == loud, "The main damage dealer does not draw its first attack");
+        fresh.put(a, 1000L + NEGLECT - 1);
+        require(StormRocBrain.focus(List.of(loud, quiet), fresh, 1000 + NEGLECT, null) == quiet, "A player it has never attacked is left alone longer than NEGLECT");
         // Equal threat rotates: whoever was attacked longer ago comes first.
         attacked.put(a, 900L);
         attacked.put(b, 950L);

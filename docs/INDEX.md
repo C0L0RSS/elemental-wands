@@ -82,7 +82,7 @@ not in its manager, look in the handler and in `util/WandLoadouts`.
 | Spell | Owners | Reference |
 | --- | --- | --- |
 | Fireball (inferno_wave) | `item/FireAbilityHandler`, `entity/InfernoWaveEntity`, `block/InfernoFlameBlock`, `client/blockfire/InfernoFx` | [Spells](reference/spells.md#fire) |
-| Dragon's Pyre (dragons_pyre) | `item/FireAbilityHandler`, `entity/PyreFrontEntity`, `block/PyreFlameBlock`, `block/PyreCoalsBlock`, `client/blockfire/PyreFx` | [Spells](reference/spells.md#fire) |
+| Dragon's Pyre (dragons_pyre) | `item/FireAbilityHandler`, `util/PyreWaveRules` (the ground path, shared with the client), `entity/PyreFrontEntity`, `block/PyreFlameBlock`, `block/PyreCoalsBlock`, `client/blockfire/PyreFx` | [Spells](reference/spells.md#fire) |
 | Meteor | `util/MeteorManager`, `client/renderer/FireMeteorRenderer`, `client/blockfire/MeteorFx` | [Spells](reference/spells.md#fire) |
 | Flamethrower (heat and overheat) | `util/FireBuildManager`, `FireBuildRules`, `client/blockfire/FlameFx` | [Spells](reference/spells.md#fire) |
 | Fire Leap (fire_hop) | `util/FireLeapManager`, `FireLeapRules`, `client/FireLeapClient`, `client/FireLeapPreview`, `mixin/FireLeapFallMixin`, `mixin/FireLeapMotionMixin`, `client/blockfire/LeapFx` | [Spells](reference/spells.md#fire) |

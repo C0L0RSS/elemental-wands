@@ -131,9 +131,7 @@ public final class WandControls {
         if (client.currentScreen != null || client.player == null || !client.player.isAlive() || client.player.isSpectator()
                 || !client.isWindowFocused() || !(client.player.getMainHandStack().getItem() instanceof AbstractWandItem)) return false;
         if (key.getTranslationKey().equals(hubKey.getBoundKeyTranslationKey())) return false;
-        // A deliberate vanilla interaction gesture; never casts as well as interacting.
-        if (mouse && code == GLFW.GLFW_MOUSE_BUTTON_RIGHT && (InputUtil.isKeyPressed(client.getWindow(), GLFW.GLFW_KEY_LEFT_SHIFT)
-                || InputUtil.isKeyPressed(client.getWindow(), GLFW.GLFW_KEY_RIGHT_SHIFT))) return false;
+        if (sneakInteraction(client, key)) return false;
         for (int i = 0; i < KEYS.length; i++) if (KEYS[i].equals(key)) {
             if (action == GLFW.GLFW_PRESS) {
                 boolean daggersReady=client.player.getAttachedOrElse(com.anton.elementalwands.data.EWAttachments.GALE_PREPARED,0)>0;
@@ -150,6 +148,24 @@ public final class WandControls {
             return true;
         }
         return false;
+    }
+    /** Sneak + Use on a block within reach is the interaction gesture (doors, chests, ritual
+     * blocks) and goes to vanilla without a cast. Aimed at anything else, it casts as usual.
+     * Both follow the player's own Sneak and Use bindings, toggled Sneak included. */
+    private static boolean sneakInteraction(MinecraftClient client, InputUtil.Key key) {
+        return held(client, client.options.sneakKey)
+                && key.getTranslationKey().equals(client.options.useKey.getBoundKeyTranslationKey())
+                && client.crosshairTarget != null && client.crosshairTarget.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK;
+    }
+    /** A binding pressed for vanilla, or its key physically down: a wand slot on the same key keeps vanilla from
+     * ever seeing it pressed. */
+    private static boolean held(MinecraftClient client, KeyBinding binding) {
+        if (binding.isPressed()) return true;
+        var key = InputUtil.fromTranslationKey(binding.getBoundKeyTranslationKey());
+        if (key.getCode() < 0) return false;
+        if (key.getCategory() == InputUtil.Type.MOUSE)
+            return GLFW.glfwGetMouseButton(client.getWindow().getHandle(), key.getCode()) == GLFW.GLFW_PRESS;
+        return key.getCategory() == InputUtil.Type.KEYSYM && InputUtil.isKeyPressed(client.getWindow(), key.getCode());
     }
     public static void tick(MinecraftClient client) {
         if(leapAim && !validLeapContext()) { leapAim=false;leapWand=null; }

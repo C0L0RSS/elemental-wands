@@ -3,9 +3,8 @@ package com.anton.elementalwands.client.blockfire;
 import static com.anton.elementalwands.client.blockfire.BlockFireKit.*;
 
 import com.anton.elementalwands.registry.ModSpellBlocks;
-import java.util.ArrayList;
+import com.anton.elementalwands.util.PyreWaveRules;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.LivingEntity;
@@ -14,11 +13,12 @@ import net.minecraft.util.math.Vec3d;
 
 /**
  * Dragon's Pyre (art/fire/blockfire/scenes/pyre.js): five block-fire columns rush 40 blocks along the ground,
- * each finding its own footing with the server's rule, and leave a carpet of flames a few inches high on every
- * PYRE_FLAME cell for its five seconds. The scheduler owns all damage, coals and flame blocks.
+ * each on the footing the server's path gives its lane ({@link PyreWaveRules}), and leave a carpet of flames a
+ * few inches high on every PYRE_FLAME cell for its five seconds. The scheduler owns all damage, coals and flame
+ * blocks.
  */
 final class PyreFx implements BlockFireEffects.Fx {
-    private static final int TPS = 20, WAVE = 40, GROUND = 100, MAX_DELAY = 4;
+    private static final int TPS = 20, WAVE = PyreWaveRules.LENGTH, GROUND = 100, MAX_DELAY = 4;
     private static final double WALL_H = 2.8, FADE = .6;
     private static final double[] HEIGHTS = {.84, .93, 1, .93, .84};
     private static final double END = (WAVE - 1) / (double) TPS;
@@ -28,34 +28,29 @@ final class PyreFx implements BlockFireEffects.Fx {
     private final ClientWorld world;
     private final int caster;
     private final double start;
-    private final Vec3d origin, forward, flat, right, lean;
-    /** Surface height of each slice and half-block lane, filled on first use; NaN where the server finds no ground. */
-    private final double[][] ground = new double[WAVE + 2][9];
-    private final boolean[][] known = new boolean[WAVE + 2][9];
-    private List<Cell> cells;
+    /** The caster's feet and flat facing, as the server sent them. */
+    private final Vec3d origin, forward, right, lean;
+    /** Each slice's footing per half-block lane, traced a step ahead of the drawn front as the server traces it. */
+    private PyreWaveRules.Tracer path;
+    /** Floor cells of the slices traced so far, and how many slices that is. */
+    private final Map<BlockPos, Cell> cells = new LinkedHashMap<>();
+    private int cellSteps;
 
     PyreFx(ClientWorld world, int caster, Vec3d origin, Vec3d forward, double now) {
-        this.world = world; this.caster = caster; this.origin = origin; this.forward = forward.normalize(); this.start = now;
-        Vec3d r = this.forward.crossProduct(UP);
-        right = r.lengthSquared() < .001 ? X : r.normalize();
-        Vec3d f = new Vec3d(this.forward.x, 0, this.forward.z);
-        flat = f.lengthSquared() < 1e-6 ? UP.crossProduct(right).normalize() : f.normalize();
-        lean = flat.multiply(.16).add(UP).normalize();
+        this.world = world; this.caster = caster; this.origin = origin; this.forward = forward; this.start = now;
+        right = PyreWaveRules.right(forward);
+        lean = forward.multiply(.16).add(UP).normalize();
     }
 
-    /** The server's footing rule: the first solid block from the slice point down three blocks. */
+    private PyreWaveRules.Tracer path() {
+        if (path == null) path = new PyreWaveRules.Tracer(PyreWaveRules.Ground.of(world), origin, forward);
+        return path;
+    }
+    /** Surface height of a slice's lane: the top of the block the fire sits on, NaN where the path has none yet. */
     private double groundY(int d, int lane) {
         if (d < 1 || d > WAVE) return Double.NaN;
-        if (!known[d][lane]) {
-            known[d][lane] = true;
-            ground[d][lane] = Double.NaN;
-            BlockPos base = BlockPos.ofFloored(origin.add(forward.multiply(d)).add(right.multiply(lane * .5 - 2)));
-            for (int y = 0; y >= -3; y--) {
-                BlockPos p = base.up(y);
-                if (world.getBlockState(p).isSolidBlock(world, p)) { ground[d][lane] = p.getY() + 1; break; }
-            }
-        }
-        return ground[d][lane];
+        int y = path().ground(d, lane);
+        return y == PyreWaveRules.NONE ? Double.NaN : y + 1;
     }
     /** Ground under a moving column at distance d, blended between slices like the entity's interpolation. */
     private double laneGround(double d, int lane) {
@@ -79,7 +74,10 @@ final class PyreFx implements BlockFireEffects.Fx {
     @Override public boolean draw(BlockFireEffects.Frame f) {
         double a = f.now() - start;
         if (a > (WAVE - 1 + GROUND) / (double) TPS + .2) return false;
-        if (!BlockFireEffects.near(f, origin.add(flat.multiply(20)), 128)) return true;
+        if (!BlockFireEffects.near(f, origin.add(forward.multiply(20)), 128)) return true;
+        // Each slice is read from the world when the front gets to it, as the scheduler reads it, so ground that
+        // changes or loads while the wall runs is drawn as the server burns it.
+        path().advance(Math.min(WAVE, (int) Math.ceil(front(a)) + 1));
         BlockFireMesh m = f.m();
         double t = f.t();
         ignition(f, a);
@@ -155,14 +153,13 @@ final class PyreFx implements BlockFireEffects.Fx {
     }
 
     /** The floor cells, mirrored from the scheduler: each lights after its lane's fan-out delay and ends with its slice. */
-    private List<Cell> cells() {
-        if (cells != null) return cells;
-        Map<BlockPos, Cell> found = new LinkedHashMap<>();
-        for (int k = 0; k < WAVE; k++) {
+    private Iterable<Cell> cells() {
+        Map<BlockPos, Cell> found = cells;
+        for (int k = cellSteps; k < path().traced(); k++) {
             for (int lane = 0; lane <= 8; lane++) {
-                double w = lane * .5 - 2, y = groundY(k + 1, lane);
+                double w = PyreWaveRules.lateral(lane), y = groundY(k + 1, lane);
                 if (Double.isNaN(y)) continue;
-                BlockPos column = BlockPos.ofFloored(origin.add(forward.multiply(k + 1)).add(right.multiply(w)));
+                BlockPos column = PyreWaveRules.column(origin, forward, k + 1, lane);
                 BlockPos cell = new BlockPos(column.getX(), (int) y, column.getZ());
                 int delay = Math.min(MAX_DELAY, (int) Math.round(Math.abs(w) * 2));
                 double seed = cell.getX() * 31.7 + cell.getZ() * 7.3 + .5;
@@ -172,8 +169,8 @@ final class PyreFx implements BlockFireEffects.Fx {
                     found.put(cell, new Cell(cell, seed, lit, (k + GROUND) / (double) TPS, rnd(seed + .9) < .16));
             }
         }
-        cells = new ArrayList<>(found.values());
-        return cells;
+        cellSteps = path().traced();
+        return found.values();
     }
 
     private void carpet(BlockFireMesh m, double a, double t) {

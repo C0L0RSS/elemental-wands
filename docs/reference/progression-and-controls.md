@@ -20,7 +20,11 @@ the minimum development target per element, not a cap on the learnable catalog.
 Default slot inputs are left mouse, right mouse, X, Z, V; Spell alternate is R.
 Bindings are editable in Controls and saved in
 `config/elementalwands-controls.properties`. Existing saved bindings can differ.
-Sneak + right mouse performs ordinary block interaction. Slot 1 also handles
+Sneak + Use aimed at a block within reach performs ordinary block interaction (doors,
+chests, ritual sockets, the gong, the seal) and casts nothing. Aimed at anything else,
+including a mob or a boss within reach, it casts as usual. `WandControls` follows the
+player's own Sneak and Use bindings, toggled Sneak included; Use is right mouse by
+default. Slot 1 also handles
 close aimed Flashover disarming and Springbloom breaking, and a fresh slot-1 press
 breaks a Sentry Bloom aimed at from within three blocks. A fresh slot-2 press aimed
 at the player's own Sentry Bloom from that close collects its banked health and

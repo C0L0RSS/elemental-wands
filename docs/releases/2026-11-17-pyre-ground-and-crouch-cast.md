@@ -11,4 +11,4 @@
   trades with villagers or mounts a horse when you aim at them within reach. Toggle sneak
   and rebound keys count.
 - Crouched with a shield or food in your off hand, Sneak + right click now casts instead
-  of using it unless you aim at a block within reach.
+  of using it, unless you aim at something to interact with within reach.

@@ -11,6 +11,8 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
+import net.minecraft.block.PlantBlock;
+import net.minecraft.block.SweetBerryBushBlock;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.decoration.BlockAttachedEntity;
@@ -18,6 +20,7 @@ import net.minecraft.entity.decoration.InteractionEntity;
 import net.minecraft.entity.passive.AbstractHorseEntity;
 import net.minecraft.entity.passive.MerchantEntity;
 import net.minecraft.entity.passive.TameableEntity;
+import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.entity.vehicle.VehicleEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
@@ -171,13 +174,25 @@ public final class WandControls {
         if (client.crosshairTarget instanceof EntityHitResult e) return usable(e.getEntity());
         if (!(client.crosshairTarget instanceof BlockHitResult b) || b.getType() != HitResult.Type.BLOCK) return false;
         var world = client.player.getEntityWorld();
-        if (!world.getBlockState(b.getBlockPos()).getCollisionShape(world, b.getBlockPos()).isEmpty()) return true;
+        var state = world.getBlockState(b.getBlockPos());
+        var block = state.getBlock();
         // Grass, flowers and fire take the crosshair without being in the way, even in front of a mob:
-        // they count only with solid ground behind them in reach, as when aimed at the floor.
+        // they count only with solid ground behind them in reach, as when aimed at the floor. Every other
+        // block, gates, signs, buttons and berry bushes included, is something to use.
+        boolean decor = state.getCollisionShape(world, b.getBlockPos()).isEmpty()
+                && (state.isReplaceable() || block instanceof PlantBlock && !(block instanceof SweetBerryBushBlock));
+        if (!decor) return true;
         Vec3d eye = client.player.getCameraPosVec(1f);
         Vec3d end = eye.add(client.player.getRotationVec(1f).multiply(client.player.getBlockInteractionRange()));
-        return world.raycast(new RaycastContext(eye, end, RaycastContext.ShapeType.COLLIDER,
-                RaycastContext.FluidHandling.NONE, client.player)).getType() == HitResult.Type.BLOCK;
+        var ground = world.raycast(new RaycastContext(eye, end, RaycastContext.ShapeType.COLLIDER,
+                RaycastContext.FluidHandling.NONE, client.player));
+        if (ground.getType() != HitResult.Type.BLOCK) return false;
+        // A mob too short to show over the grass, between it and that ground, still takes the cast.
+        Vec3d to = ground.getPos();
+        var mob = ProjectileUtil.raycast(client.player, eye, to,
+                client.player.getBoundingBox().stretch(to.subtract(eye)).expand(1),
+                e -> !e.isSpectator() && e.canHit(), eye.squaredDistanceTo(to));
+        return mob == null || usable(mob.getEntity());
     }
     /** Entities a player uses rather than fights: never a mob or a boss, which a sneaking caster aims at. */
     private static boolean usable(Entity entity) {

@@ -227,8 +227,11 @@ Each has a different answer, read from the circles on the rock, and each has its
   makes the same call three times running.
 - Against a challenger standing still the fork's line runs away from the Roc.
 - A cage's strikes are never moved off the rim or off another live circle, as other strikes
-  are: one that cannot fall in its place is left out. Where the rim or a live circle leaves a
-  challenger no safe middle, they get a plain large strike.
+  are: one that cannot fall in its place is left out. Where the rim, a live circle or phase
+  two's live ground would hit a challenger who held still, they get a plain large strike.
+- Nothing placed after a cage reaches into its safe middle while it is on the rock: random
+  strikes and strikes aimed at other challengers are moved clear of it, and another cage's
+  strike that would reach it is left out.
 - Aimed small strikes hold off for 2.25 seconds after a call, so nothing aimed lands in a
   cage's middle.
 
@@ -242,6 +245,7 @@ chances (0.6 in phase two).
 
 - Crouched on its spire, it turns onto a line from the spire through one challenger (aimed
   1.5 seconds ahead of them, within 30 blocks of the centre) and screams.
+- Aimed strikes still warning are taken off the rock as the lane appears.
 - The whole lane is marked at once and never moves: circles of radius 3.5 every 4 blocks,
   from rim to rim, each with a chevron pointing the way it will fly. Each circle fills as
   the lightning nears it; the first never warns for less than 1.5 seconds.

@@ -316,6 +316,10 @@ final class StormRocCombat {
         if (stage == Stage.STUCK || stage == Stage.BRAWL) groundSpells();
         // Phase two's sky keeps striking at random wherever the Roc is; aimed strikes stay in the air.
         if (two && !review && (stage == Stage.STUCK || stage == Stage.BRAWL || stage == Stage.TAKEOFF || stage == Stage.SMASH && smash > 0)) sky();
+        // A hazard may have killed a challenger this tick: nothing below weighs or attacks them.
+        // With nobody left, the next tick calls the fight off.
+        players = players();
+        if (players.isEmpty()) return;
         // Phase one's gate is the last landing's floor, so the brawl's own check takes off there:
         // chipping it from the air never skips that landing.
         long t = now() - since;
@@ -534,19 +538,20 @@ final class StormRocCombat {
     private void cage(ServerPlayerEntity p) {
         double radius = two ? SMALL_RADIUS_TWO : SMALL_RADIUS, ring = radius * CAGE_RING;
         Vec3d at = onFloor(p.getEntityPos());
-        if (StormSummit.beyondRim(centre, at) > -(ring + radius) || insideLiveCircle(at, ring - radius)) {
+        if (StormSummit.beyondRim(centre, at) > -(ring + radius) || unsafeToHold(at, ring - radius)) {
             strike(at, true, LARGE_WARNING, true, true, false);
             return;
         }
         if (now() > cagesUntil) cages.clear();
-        cages.add(at);
-        cagesUntil = now() + CAGE_WARNING + (SMALL_BOLTS - 1) * BOLT_GAP + 6;
         int count = (int) Math.ceil(Math.PI * ring / (radius * .95));
         double turn = boss.getRandom().nextDouble() * Math.PI * 2;
         for (int i = 0; i < count; i++) {
             double a = turn + i * Math.PI * 2 / count;
             strike(at.add(Math.cos(a) * ring, 0, Math.sin(a) * ring), false, CAGE_WARNING, true, true, true);
         }
+        // Its middle is kept clear from here on; its own ring, placed above, only touches it.
+        cages.add(at);
+        cagesUntil = now() + CAGE_WARNING + (SMALL_BOLTS - 1) * BOLT_GAP + 6;
     }
 
     /** Somebody is slowed, caught or eating, or the whole party stands under one landing. */
@@ -599,6 +604,8 @@ final class StormRocCombat {
         double first = in + LANE_RADIUS;
         passPush = SPIRE_PUSH + Math.max(0, LANE_WARNING - SPIRE_PUSH - StormRocBrain.passTick(first - PASS_FRONT));
         passRun = StormRocBrain.passTick(out + 8);
+        // Its lane is the threat now: nothing aimed earlier lands on a challenger leaving it.
+        dropAimed();
         lane.clear();
         laneHits.clear();
         laneFired = 0;
@@ -954,8 +961,9 @@ final class StormRocCombat {
                 candidate = onFloor(point.add(Math.cos(a) * r, 0, Math.sin(a) * r));
             }
             if (StormSummit.beyondRim(centre, candidate) > -1 || insideLiveCircle(candidate, radius)) continue;
-            // A cage's own strikes are strict; nothing else may reach into its safe middle.
-            if (!strict && reachesCage(candidate, radius)) continue;
+            // Nothing reaches into the safe middle of a cage already on the rock: a strike is moved
+            // clear of it, and another cage's strike, which is never moved, is left out.
+            if (reachesCage(candidate, radius)) continue;
             var kind = large ? RocEffectEntity.Kind.LARGE_STRIKE : RocEffectEntity.Kind.SMALL_STRIKE;
             var e = effect(kind, candidate, radius, warning, warning + (bolts - 1) * BOLT_GAP + 6);
             strikes.add(new Strike(e, aimed, call));
@@ -970,6 +978,17 @@ final class StormRocCombat {
         if (now() > cagesUntil) return false;
         double safe = (two ? SMALL_RADIUS_TWO : SMALL_RADIUS) * (CAGE_RING - 1);
         for (Vec3d middle : cages) if (horizontal(candidate, middle) < safe + radius) return true;
+        return false;
+    }
+
+    /**
+     * Whether a challenger holding still here would be hit: a live strike centred inside the middle
+     * or reaching to within a block of them, or phase two's live ground, which outlasts its strike.
+     */
+    private boolean unsafeToHold(Vec3d at, double middle) {
+        for (var s : strikes)
+            if (!s.effect.isRemoved() && horizontal(at, s.effect.getEntityPos()) < Math.max(middle, s.effect.radius() + 1)) return true;
+        for (var f : fields) if (!f.isRemoved() && horizontal(at, f.getEntityPos()) < f.radius() + 1) return true;
         return false;
     }
 

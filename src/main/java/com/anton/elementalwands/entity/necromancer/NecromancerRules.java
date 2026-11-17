@@ -1,11 +1,22 @@
 package com.anton.elementalwands.entity.necromancer;
 
 import java.util.Comparator;
+import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.DoubleSupplier;
+import java.util.function.Predicate;
 
-/** Pure encounter tuning: no world access, so the contract checks can exercise every rule. */
+/**
+ * Pure encounter tuning: no world access, so the contract checks can exercise every rule. Like the
+ * Pyre King and the Guardian it is a hand-written rule system: where its target stands decides which
+ * casts it weighs, what the target just did tilts them, and chance picks among them. It is the one
+ * that sets a trap and cashes it in: robed, it punishes where a player stands; as the colossus it
+ * hunts them down.
+ */
 public final class NecromancerRules {
     private NecromancerRules() {}
 
@@ -13,10 +24,12 @@ public final class NecromancerRules {
     public enum Action {
         /** Escape from a close player; a flare marks where it lands. */
         BLINK(16, 7, 110),
-        /** Reposition anywhere in the clearing every few casts; a flare marks the arrival point. */
-        SHIFT(20, 12, 0),
+        /** Reposition for a reason (cover, range, heavy fire); a flare marks the arrival point. */
+        SHIFT(20, 12, 200),
         /** A whisper behind the target, then he appears there and bursts after a short windup. */
         AMBUSH(46, 26, 180),
+        /** The ambush's staff slam where he stands, against a player he has already fled once. */
+        BURST(34, 14, 140),
         /** The staff hand rises and motes gather for 1.5 s before the first pulse, so a player can step out of range. */
         DRAIN(84, 30, 200),
         HANDS(48, 32, 110),
@@ -33,9 +46,11 @@ public final class NecromancerRules {
         public final int duration, impact, cooldown;
         Action(int duration, int impact, int cooldown) { this.duration = duration; this.impact = impact; this.cooldown = cooldown; }
         public boolean colossusOnly() { return this == SWIPE || this == GRAB || this == RUSH || this == DIVE || this == HARVEST; }
-        /** The caster's own spells: while its soul is out, the body cannot cast them. */
-        public boolean soulSpell() { return this == BOLT || this == HANDS || this == DRAIN || this == HARVEST; }
-        public boolean robedOnly() { return this == BLINK || this == SHIFT || this == AMBUSH; }
+        /** The casts that heal it: a frenzied colossus stops feeding and only hunts. */
+        public boolean feeds() { return this == DRAIN || this == HARVEST; }
+        public boolean robedOnly() { return this == BLINK || this == SHIFT || this == AMBUSH || this == BURST; }
+        /** He moves in order to cast: the next cast follows at once. It is never a second shift, and a blink only from a player on top of him. */
+        public boolean repositions() { return this == BLINK || this == SHIFT; }
     }
 
     /**
@@ -66,13 +81,32 @@ public final class NecromancerRules {
     public static final double BLINK_TRIGGER = 4.5, BLINK_MIN = 8, BLINK_MAX = 14;
     public static final int CURSE_TICKS = 100;
     public static final double CURSE_RADIUS = 2.5;
-    /** Casts between repositioning shifts: two or three, chosen after each blink. */
-    public static final int SHIFT_EVERY_MIN = 2, SHIFT_EVERY_MAX = 3;
-    public static final double SHIFT_MIN = 10, SHIFT_MAX = 24, SHIFT_CLEAR = 8;
+    /** A shift lands this far from the player it is for, clear of everyone, where it can see them. */
+    public static final double SHIFT_MIN = 10, SHIFT_MAX = 20, SHIFT_CLEAR = 8;
+    /** After this many casts from one spot he starts to think about moving. */
+    public static final int STALE_CASTS = 4;
+
+    /**
+     * What it reads off the players. Still: slower than STILL_SPEED for STILL_TICKS. Hidden: out of
+     * its sight for HIDDEN_TICKS. Airborne: ALOFT_HEIGHT above the floor for ALOFT_TICKS. Pressing:
+     * on top of him again within PRESS_MEMORY of the blink or burst they last drew. Jumped: cleared
+     * its last swipe within JUMP_MEMORY. Bunched: another player within BUNCH blocks. Retreating:
+     * moving straight away from it faster than RETREAT_SPEED (blocks a tick).
+     */
+    public static final int STILL_TICKS = 15, HIDDEN_TICKS = 30, ALOFT_TICKS = 20, PRESS_MEMORY = 200, JUMP_MEMORY = 200;
+    public static final double STILL_SPEED = .05, ALOFT_HEIGHT = 3, BUNCH = 6, RETREAT_SPEED = .12;
+    /**
+     * Wounded: it has lost this share of its health since it last fed (drain, harvest). Hounded:
+     * it lost HOUNDED_SHARE of its health within a few seconds (damage fading over HOUNDED_DECAY).
+     */
+    public static final float FEED_SHARE = .08f, COLOSSUS_FEED_SHARE = .1f, HOUNDED_SHARE = .06f;
+    public static final int HOUNDED_DECAY = 60;
 
     public static final int AMBUSH_APPEAR = 12;
     public static final double AMBUSH_BEHIND = 2.5, AMBUSH_RADIUS = 4.5, AMBUSH_MIN = 6;
     public static final float AMBUSH_DAMAGE = 14;
+    /** The burst where he stands is tighter than the ambush's: a player beside him can still sprint out of it. */
+    public static final double BURST_RADIUS = 3.5;
 
     public static final int BOLT_COUNT = 3, BOLT_INTERVAL = 8, BOLT_LIFE = 100;
     public static final double BOLT_SPEED = .38, BOLT_TURN = Math.toRadians(4.5), BOLT_RADIUS = .3, BOLT_RANGE = 28;
@@ -83,6 +117,15 @@ public final class NecromancerRules {
     public static final double HANDS_RADIUS = 4, HANDS_RANGE = 24;
     public static final int HANDS_MAX_TARGETS = 3, ROOT_TICKS = 40;
     public static final float HANDS_DAMAGE = 10;
+    /**
+     * A ring rises where a moving player is heading, HANDS_LEAD ticks ahead for the robed caster's
+     * ring: a player walking or sprinting starts just outside it, and running on carries them in.
+     */
+    public static final int HANDS_LEAD = 20;
+    /** Ticks ahead a ring is led: longer for the colossus's wider ring, so a walking player still starts outside it. */
+    public static int handsLead(boolean colossus) { return (int)Math.round(HANDS_LEAD * handsRadius(colossus) / HANDS_RADIUS); }
+    /** The furthest a ring is led: a block past its own edge. */
+    public static double handsLeadMax(boolean colossus) { return handsRadius(colossus) + 1; }
 
     public static final double DRAIN_RANGE = 10, DRAIN_BREAK_RANGE = 14;
     public static final int DRAIN_INTERVAL = 10;
@@ -118,7 +161,7 @@ public final class NecromancerRules {
      * Soul light: block light levels the spells carry through the dark crypt. A light outlives its
      * last refresh by GLOW_LINGER ticks, so a moving spell leaves only a short trail of glows.
      */
-    public static final int GLOW_FIREBALL = 14, GLOW_BOLT = 11, GLOW_HARVEST = 9, GLOW_SOUL = 13, GLOW_LINGER = 3,
+    public static final int GLOW_FIREBALL = 14, GLOW_BOLT = 11, GLOW_HARVEST = 9, GLOW_LINGER = 3,
             GLOW_IMPACT = 15, GLOW_IMPACT_TICKS = 8;
     /** A rain marker brightens in four steps as its fireball closes in (6, 9, 12, 15): few light rebuilds. */
     public static int rainGlow(int age) { return 6 + 3 * Math.clamp(age * 4L / RAIN_WARNING, 0, 3); }
@@ -180,16 +223,17 @@ public final class NecromancerRules {
     public static final float HARVEST_HEAL = .03f, HARVEST_SOUL_HEALTH = 4;
 
     /**
-     * The caster inside: once, at a quarter health, the Necromancer's soul tears out of the ribcage.
-     * The body is shielded until the soul takes {@link #soulKnockdown}; then it collapses, exposed.
-     * While the soul is out the body is blind: every FLAIL_GAP_MIN..MAX ticks after a swing it turns
-     * FLAIL_TURN degrees a tick toward a random heading and sweeps there, aimed at no one.
+     * The frenzy: once, at a quarter health, the colossus rears and howls. The tell is the
+     * {@code colossus_roar} clip: FRENZY_TELL ticks long, upright with its jaws wide from FRENZY_HOWL
+     * until FRENZY_HOWL_END. From then on it crawls faster, rests less, strings more and stops
+     * feeding: no drain and no harvest.
      */
-    public static final float SPLIT_GATE = .25f, FLAIL_TURN = 20;
-    public static final int SPLIT_TELL = 30, SPLIT_RELEASE = 22, COLLAPSE_TICKS = 100, SOUL_RETURN = 16;
-    public static final int FLAIL_GAP_MIN = 10, FLAIL_GAP_MAX = 30;
-    public static final int SOUL_CAST = 60, SOUL_BLINK = 80;
-    public static final double SOUL_NEAR = 8, SOUL_FAR = 14, SOUL_LOW = 3, SOUL_HIGH = 6, SOUL_SPEED = .25, SOUL_THREAT = 4;
+    public static final float FRENZY_GATE = .25f;
+    public static final int FRENZY_TELL = 40, FRENZY_HOWL = 8, FRENZY_HOWL_END = 28;
+    /** A frenzied crawl: quicker than the hunt, still short of a sprint. */
+    public static final double FRENZY_SPEED = .34;
+    /** Mid range for the colossus: inside it the rush is the likelier gap closer, beyond it the dive. */
+    public static final double COLOSSUS_MID = 14;
 
     public static int boltCount(boolean colossus) { return colossus ? 4 : BOLT_COUNT; }
     public static int boltInterval(boolean colossus) { return colossus ? 6 : BOLT_INTERVAL; }
@@ -230,14 +274,16 @@ public final class NecromancerRules {
         return switch (kind) { case CRAWLER -> .68; case ARCHER -> .1; case BRUTE -> .15; };
     }
 
+    /**
+     * Siege bodies also hit harder than their wild kin: a share added to a crawler's claws (3 to 4.5),
+     * an archer's arrow and a brute's slam (10 to 12). A horde should be feared in iron, not waded through.
+     */
+    public static double empowerment(Undead kind) {
+        return switch (kind) { case CRAWLER -> .5; case ARCHER -> .35; case BRUTE -> .2; };
+    }
+
     /** Souls per harvest: three solo, one more per extra player, at most six. */
     public static int harvestSouls(int players) { return Math.min(6, Math.max(1, players) + 2); }
-
-    /** Damage the freed soul must take before it is dragged back and the body collapses: 30 solo. */
-    public static float soulKnockdown(float bossMaxHealth) {
-        return bossMaxHealth <= health(1) ? SOLO_SOUL_KNOCKDOWN : Math.max(40, bossMaxHealth * .06f);
-    }
-    public static final float SOLO_SOUL_KNOCKDOWN = 30;
 
     /** A charge's warning, drawn at random so its rhythm cannot be counted. */
     public static int rushWarning(java.util.Random random) { return RUSH_WARNING_MIN + random.nextInt(RUSH_WARNING_MAX - RUSH_WARNING_MIN + 1); }
@@ -278,6 +324,7 @@ public final class NecromancerRules {
             case BLINK -> candidate.distance() <= BLINK_TRIGGER;
             case SHIFT -> candidate.distance() <= ENCOUNTER_RANGE;
             case AMBUSH -> candidate.distance() >= AMBUSH_MIN && candidate.distance() <= ENCOUNTER_RANGE;
+            case BURST -> candidate.distance() <= BURST_RADIUS;
             case SWIPE -> candidate.distance() <= REACH + 1;
             case GRAB -> candidate.visible() && candidate.distance() <= GRAB_REACH;
             case RUSH -> candidate.visible() && candidate.distance() >= RUSH_MIN && candidate.distance() <= RUSH_MAX;
@@ -286,48 +333,205 @@ public final class NecromancerRules {
         };
     }
 
-    /**
-     * Duel choice. A close player makes it blink away; after two or three casts it shifts to a new
-     * spot; otherwise the ready spell that differs from the last cast wins, bolts as the fallback.
-     * The Hands follow-up (an ambush on a rooted player) is started by the controller directly.
-     */
-    public static Action choose(List<Candidate> players, Map<Action, Long> ready, long now, Action last, int castsSinceBlink, int shiftEvery) {
-        if (players.isEmpty()) return null;
-        java.util.function.Predicate<Action> available = action -> now >= ready.getOrDefault(action, 0L)
-                && players.stream().anyMatch(p -> canTarget(action, p));
-        if (available.test(Action.BLINK)) return Action.BLINK;
-        if (castsSinceBlink >= shiftEvery && available.test(Action.SHIFT)) return Action.SHIFT;
-        for (Action action : new Action[]{Action.DRAIN, Action.HANDS, Action.AMBUSH, Action.BOLT})
-            if (action != last && available.test(action)) return action;
-        return available.test(Action.BOLT) ? Action.BOLT : null;
-    }
+    // ── The chooser ──────────────────────────────────────────────────────────
 
-    /**
-     * The colossus answers close players with its arms, alternating swipe and grab, dives after
-     * or rushes distant players, harvests souls when ready, and otherwise keeps casting its larger
-     * spells. It raises no army. While its soul is out ({@code split}) the body only fights.
-     */
-    public static Action chooseColossus(List<Candidate> players, Map<Action, Long> ready, long now, Action last, boolean split) {
-        if (players.isEmpty()) return null;
-        java.util.function.Predicate<Action> available = action -> now >= ready.getOrDefault(action, 0L)
-                && !(split && action.soulSpell()) && players.stream().anyMatch(p -> canTarget(action, p));
-        for (Action melee : last == Action.SWIPE ? new Action[]{Action.GRAB, Action.SWIPE} : new Action[]{Action.SWIPE, Action.GRAB})
-            if (available.test(melee)) return melee;
-        // A gap closer only when every player stands off: nobody near enough to swing at.
-        boolean allFar = players.stream().allMatch(p -> p.distance() > REACH + 1);
-        for (Action action : new Action[]{Action.DIVE, Action.RUSH, Action.HARVEST, Action.HANDS, Action.DRAIN, Action.BOLT}) {
-            if (action == last || !available.test(action)) continue;
-            if (action == Action.DIVE && !allFar) continue;
-            return action;
+    /** Something a player is doing, or just did, that it answers. HELD means its hand had them recently. */
+    public enum Tell { STILL, HEALING, PRESSING, HIDDEN, BUNCHED, AIRBORNE, RETREATING, JUMPED, HELD }
+
+    /** What it knows about one player when it picks. Distance is in blocks. */
+    public record Read(double distance, boolean visible, Set<Tell> tells) {
+        public static Read at(double distance, Tell... tells) { return new Read(distance, true, set(tells)); }
+        public static Read unseen(double distance, Tell... tells) { return new Read(distance, false, set(tells)); }
+        public boolean is(Tell tell) { return tells.contains(tell); }
+        private static Set<Tell> set(Tell... tells) {
+            Set<Tell> set = EnumSet.noneOf(Tell.class);
+            set.addAll(List.of(tells));
+            return set;
         }
-        return available.test(Action.BOLT) ? Action.BOLT : null;
     }
 
-    /** Rotates pressure through the group: the least recently targeted eligible player, nearest first. */
-    public static Candidate target(Action action, List<Candidate> players, Map<UUID, Long> lastTargeted) {
-        return players.stream().filter(p -> canTarget(action, p))
-                .min(Comparator.<Candidate>comparingLong(p -> lastTargeted.getOrDefault(p.id(), Long.MIN_VALUE))
-                        .thenComparingDouble(Candidate::distance))
-                .orElse(null);
+    /**
+     * What it knows about itself when it picks.
+     *
+     * @param wounded it has lost a real share of its health since it last fed
+     * @param hounded it is taking heavy damage where it stands
+     * @param stale it has cast several times from this spot
+     * @param allFar nobody stands within its arms' reach (the colossus dives only then)
+     * @param frenzy the colossus is past its quarter-health howl
+     */
+    public record Self(boolean wounded, boolean hounded, boolean stale, boolean allFar, boolean frenzy) {
+        public static final Self CALM = new Self(false, false, false, true, false);
+    }
+
+    /** A player and what it read off them. */
+    public record Seen(UUID id, Read read) {}
+
+    private static boolean reaches(Action action, Read read) {
+        return canTarget(action, new Candidate(null, read.distance(), read.visible()));
+    }
+
+    /**
+     * The robed caster's weights for one player. A player on top of him makes him blink away, and one
+     * he has already fled a moment ago gets the burst instead, once they are inside it: that is a
+     * memory, not a roll. Past
+     * that, range decides the family (drain up close, bolts at range, hands and the ambush anywhere)
+     * and what the player is doing tilts it: standing still or eating draws the ambush, hiding draws
+     * the hands or a shift round the cover, standing together draws the hands, hovering draws the
+     * skulls. He drains when he is wounded and shifts when he has a reason to, never on a count.
+     */
+    public static Map<Action, Double> robedWeights(Read read, Self self, Action last, Action before, Predicate<Action> ready) {
+        Map<Action, Double> w = new EnumMap<>(Action.class);
+        Predicate<Action> can = action -> ready.test(action) && reaches(action, read);
+        Action answer = read.is(Tell.PRESSING) ? Action.BURST : Action.BLINK, other = answer == Action.BURST ? Action.BLINK : Action.BURST;
+        if (can.test(answer)) { w.put(answer, 1.0); return w; }
+        // A player he has already fled who hangs just outside the slam is not fled again, nor given a
+        // slam that cannot reach them: he fights them like anyone else at that range.
+        boolean hanging = read.is(Tell.PRESSING) && read.distance() > BURST_RADIUS;
+        if (!hanging && can.test(other)) { w.put(other, 1.0); return w; }
+        boolean idle = read.is(Tell.STILL) || read.is(Tell.HEALING), aloft = read.is(Tell.AIRBORNE);
+        if (can.test(Action.BOLT)) w.put(Action.BOLT, aloft ? 10.0 : read.distance() > DRAIN_RANGE ? 5.0 : 3.0);
+        // Nothing that comes out of the ground reaches a player held in the air.
+        if (!aloft && can.test(Action.HANDS)) w.put(Action.HANDS, (read.visible() ? 3.0 : 5.0) + (read.is(Tell.BUNCHED) ? 5 : 0));
+        if (!aloft && can.test(Action.AMBUSH)) w.put(Action.AMBUSH, 2.0 + (idle ? 9 : 0) + (read.is(Tell.HIDDEN) ? 2 : 0));
+        if (can.test(Action.DRAIN)) w.put(Action.DRAIN, self.wounded() ? 7.0 : 1.5);
+        // He moves for a reason: to see round cover, to close a gap, to get out from under heavy fire.
+        double shift = (read.is(Tell.HIDDEN) ? 6 : 0) + (read.distance() > HANDS_RANGE ? 6 : 0) + (self.hounded() ? 7 : 0) + (self.stale() ? 2 : 0);
+        if (shift > 0 && (last == null || !last.repositions()) && can.test(Action.SHIFT)) w.put(Action.SHIFT, shift);
+        return tempered(w, last, before);
+    }
+
+    /**
+     * The colossus's weights for one player. Within its arms it swipes or grabs, and a player who
+     * jumped its last swipe gets the hand: a memory, not a roll. Beyond them it rushes (more surely at
+     * a player backing away) or, when nobody is in reach, dives (more surely under one standing still,
+     * eating or out of sight). A player held in the air draws skulls, or the hand if it can reach.
+     * It harvests when it is wounded, not on a clock, and in its frenzy it does not feed at all.
+     */
+    public static Map<Action, Double> colossusWeights(Read read, Self self, Action last, Action before, Predicate<Action> ready) {
+        Map<Action, Double> w = new EnumMap<>(Action.class);
+        Predicate<Action> can = action -> ready.test(action) && reaches(action, read) && !(self.frenzy() && action.feeds());
+        boolean grab = !read.is(Tell.HELD) && can.test(Action.GRAB);
+        if (read.is(Tell.AIRBORNE)) {
+            if (can.test(Action.BOLT)) w.put(Action.BOLT, 4.0);
+            if (grab) w.put(Action.GRAB, 6.0);
+            return tempered(w, last, before);
+        }
+        boolean idle = read.is(Tell.STILL) || read.is(Tell.HEALING);
+        if (read.distance() <= REACH + 1) {
+            if (read.is(Tell.JUMPED) && grab) { w.put(Action.GRAB, 1.0); return w; }
+            if (can.test(Action.SWIPE)) w.put(Action.SWIPE, 6.0);
+            if (grab) w.put(Action.GRAB, 3.0);
+            if (can.test(Action.HANDS)) w.put(Action.HANDS, 1.5);
+        } else {
+            boolean mid = read.distance() <= COLOSSUS_MID;
+            if (can.test(Action.RUSH)) w.put(Action.RUSH, (mid ? 5.0 : 4.0) + (read.is(Tell.RETREATING) ? 5 : 0));
+            if (self.allFar() && can.test(Action.DIVE)) w.put(Action.DIVE, (mid ? 2.0 : 5.0) + (idle ? 7 : 0) + (read.visible() ? 0 : 6));
+            if (can.test(Action.HANDS)) w.put(Action.HANDS, (mid ? 3.0 : 2.0) + (read.is(Tell.BUNCHED) ? 4 : 0));
+            if (can.test(Action.BOLT)) w.put(Action.BOLT, mid ? 2.0 : 3.0);
+            if (can.test(Action.DRAIN)) w.put(Action.DRAIN, self.wounded() ? 4.0 : 1.0);
+        }
+        if (self.wounded() && can.test(Action.HARVEST)) w.put(Action.HARVEST, self.allFar() ? 7.0 : 3.0);
+        return tempered(w, last, before);
+    }
+
+    /** Never the same cast three times running while it has another, and seldom twice. */
+    private static Map<Action, Double> tempered(Map<Action, Double> w, Action last, Action before) {
+        if (last != null && w.size() > 1) {
+            if (last == before) w.remove(last);
+            else w.computeIfPresent(last, (action, weight) -> weight * .45);
+        }
+        return w;
+    }
+
+    public static Action pick(Map<Action, Double> weights, DoubleSupplier random) {
+        double total = 0;
+        for (double weight : weights.values()) total += weight;
+        if (total <= 0) return null;
+        double roll = random.getAsDouble() * total;
+        Action chosen = null;
+        for (Map.Entry<Action, Double> entry : weights.entrySet()) {
+            chosen = entry.getKey();
+            roll -= entry.getValue();
+            if (roll < 0) break;
+        }
+        return chosen;
+    }
+
+    /** Eating or drinking cuts its rest short: it answers at once. */
+    public static boolean punishes(Read read) { return read.is(Tell.HEALING); }
+
+    /** Nobody's turn waits longer than this (ticks). */
+    public static final int NEGLECT = 200;
+
+    /**
+     * Who it turns on: whoever it has left alone longest, with a player eating or standing still
+     * moved up the order (worth six seconds and about two and a half). A player left alone for ten
+     * seconds comes before everyone who has not been, so pressure still goes round the party. {@code avoid} (the player it just attacked, inside a string) is skipped when someone
+     * else is there. Nearest breaks ties.
+     */
+    public static Seen focus(List<Seen> players, Map<UUID, Long> lastTargeted, long now, UUID avoid) {
+        List<Seen> pool = players;
+        if (avoid != null && pool.stream().anyMatch(p -> !p.id().equals(avoid)))
+            pool = pool.stream().filter(p -> !p.id().equals(avoid)).toList();
+        if (pool.stream().anyMatch(p -> overdue(p.id(), lastTargeted, now)))
+            pool = pool.stream().filter(p -> overdue(p.id(), lastTargeted, now)).toList();
+        return pool.stream().min(Comparator.<Seen>comparingDouble(p -> -priority(p, lastTargeted, now))
+                .thenComparingDouble(p -> p.read().distance()).thenComparing(p -> p.id().toString())).orElse(null);
+    }
+
+    /** Ten seconds without being attacked: this player's turn comes before any answer to someone else. */
+    public static boolean overdue(UUID id, Map<UUID, Long> lastTargeted, long now) {
+        Long at = lastTargeted.get(id);
+        return at == null || now - at >= NEGLECT;
+    }
+
+    public static double priority(Seen player, Map<UUID, Long> lastTargeted, long now) {
+        Long at = lastTargeted.get(player.id());
+        double unattacked = at == null ? NEGLECT : Math.min(NEGLECT, Math.max(0, now - at));
+        return (player.read().is(Tell.HEALING) ? 30 : 0) + (player.read().is(Tell.STILL) ? 12 : 0) + 5 * unattacked / 20.0;
+    }
+
+    // ── Pace and strings ─────────────────────────────────────────────────────
+
+    /**
+     * How hard it presses: the share of casts that go straight into another, the most casts in one
+     * string, how much of the rest between strings is left, and how much of each cast's cooldown. The
+     * second duel and the frenzy are where it gets meaner. The frenzy's shorter cooldowns are what let
+     * its strings happen at arm's length, where it has only three attacks to string.
+     */
+    public enum Temper {
+        FIRST_DUEL(.25, 2, 1, 1), SECOND_DUEL(.55, 3, .85, 1), COLOSSUS(.3, 2, 1, 1), FRENZY(.75, 3, .55, .7);
+
+        public final double chain, rest, cooldown;
+        public final int limit;
+        Temper(double chain, int limit, double rest, double cooldown) { this.chain = chain; this.limit = limit; this.rest = rest; this.cooldown = cooldown; }
+    }
+
+    /** Ticks after a cast ends before it can be chosen again. */
+    public static int cooldown(Action action, Temper temper) { return (int)Math.round(action.cooldown * temper.cooldown); }
+
+    /** Ticks from a cast's start until it can be chosen again, if it runs its full length. */
+    public static int recast(Action action, Temper temper) { return action.duration + cooldown(action, temper); }
+
+    public static Temper temper(Stage stage, boolean colossus, boolean frenzy) {
+        return frenzy ? Temper.FRENZY : colossus ? Temper.COLOSSUS : stage == Stage.DUEL_A ? Temper.FIRST_DUEL : Temper.SECOND_DUEL;
+    }
+
+    /**
+     * A string is a run of casts with no rest between them. A blink or a shift always goes straight
+     * into a cast: he moved in order to cast. The casts that leave it open (the ambush and the burst,
+     * a drain, the dive, the harvest) never do: those are the players' turn. Each player beyond the
+     * first makes strings likelier.
+     */
+    public static double chainChance(Temper temper, Action finished, int players) {
+        if (finished.repositions()) return 1;
+        if (finished == Action.AMBUSH || finished == Action.BURST || finished == Action.DRAIN || finished == Action.DIVE || finished == Action.HARVEST) return 0;
+        return Math.min(.9, temper.chain + .15 * (Math.clamp(players, 1, 4) - 1));
+    }
+
+    /** Ticks it rests between strings: shorter with each player, down to half with four. */
+    public static int rest(Temper temper, int players) {
+        double[] party = {1, .75, .6, .5};
+        return Math.max(6, (int)Math.round(RECOVERY_GAP * temper.rest * party[Math.clamp(players, 1, 4) - 1]));
     }
 }

@@ -29,7 +29,7 @@ public final class NecromancerPhaseSmoke implements ModInitializer {
     private boolean caughtRush, thrownRush, sidestepped, erupted, stepped;
     private int eruptedAt;
     private float bossBefore;
-    private NecromancerSoulEntity freed;
+    private int howlAt = -1;
     private boolean litHarvest;
 
     public void onInitialize() {
@@ -314,42 +314,38 @@ public final class NecromancerPhaseSmoke implements ModInitializer {
                 require(litHarvest, "Harvested souls carried no light");
                 boss.stopFight();
                 require(w.getEntitiesByClass(HarvestSoulEntity.class, boss.getBoundingBox().expand(40), e -> !e.isRemoved()).isEmpty(), "Harvested souls outlived the encounter");
-                // The caster inside: fight mode, burst to a quarter health.
+                // The frenzy: fight mode, then below a quarter health.
                 boss.refreshPositionAndAngles(.5, 100, .5, 0, 0);
                 target.setPosition(.5, 100, 12.5); second.setPosition(8.5, 100, 12.5); heal(target); heal(second);
                 boss.startFight(); mark = t; stage = 16;
-                return; // The split's clock starts next tick.
+                return; // The fight's clock starts next tick.
             }
         }
         if (stage == 16) {
             for (var p : List.of(target, second)) if (p.getHealth() < 10) heal(p);
-            int release = 3 + NecromancerRules.SPLIT_RELEASE;
+            float max = boss.getMaxHealth();
+            double pace = boss.getAttributeBaseValue(net.minecraft.entity.attribute.EntityAttributes.MOVEMENT_SPEED);
             if (g == 2) {
-                SpellCombat.damage(boss, w, w.getDamageSources().playerAttack(target), 5000, target, WizardAffinity.FIRE);
-                require(Math.abs(boss.getHealth() - boss.getMaxHealth() * NecromancerRules.SPLIT_GATE) < .01, "Burst skipped the soul split: " + boss.getHealth());
+                require(!boss.isFrenzied() && !boss.status().contains("howling") && pace == NecromancerRules.COLOSSUS_SPEED, "Frenzied above a quarter health: " + boss.status());
+                // Nothing holds its health at the quarter any more: one hit carries it straight through.
+                boss.setHealth(max * .3f);
+                require(boss.damage(w, w.getDamageSources().playerAttack(target), max * .1f) && Math.abs(boss.getHealth() - max * .2f) < .01,
+                        "Something still holds the colossus at a quarter health: " + boss.getHealth());
             }
-            if (g == 4) require(boss.status().contains("soul tearing free"), "Quarter health did not free the soul: " + boss.status());
-            if (g == release + 3) {
-                freed = w.getEntitiesByClass(NecromancerSoulEntity.class, boss.getBoundingBox().expand(20), e -> e.isAlive()).stream().findFirst().orElse(null);
-                require(freed != null && boss.isSplit(), "The soul did not tear free: " + boss.status());
-                require(lit(w, freed), "The freed soul carried no light");
+            if (howlAt < 0 && g > 2 && boss.status().contains("howling")) howlAt = g;
+            require(howlAt >= 0 || g < 200, "A quarter health never brought the howl: " + boss.status());
+            if (howlAt >= 0 && g == howlAt + 5) {
+                require(!boss.isFrenzied() && boss.status().contains("idle"), "It attacked through its own howl: " + boss.status());
                 float health = boss.getHealth();
-                require(!boss.damage(w, w.getDamageSources().playerAttack(target), 20) && boss.getHealth() == health, "The body took damage while its soul was out");
-                require(freed.damage(w, w.getDamageSources().playerAttack(target), 30)
-                        && Math.abs(health - 30 - boss.getHealth()) < .01, "A hit on the soul did not wound the boss: " + (health - boss.getHealth()));
-                require(boss.isSplit(), "One hit dragged the soul back");
+                require(boss.damage(w, w.getDamageSources().playerAttack(second), 10) && Math.abs(health - boss.getHealth() - 10) < .01, "The howling colossus shrugged off a hit");
             }
-            // The blind body stays put and swings on its own two seconds after the soul leaves.
-            if (g == release + 46) require(boss.status().contains("swipe"), "The body did not swing while its soul was out: " + boss.status());
-            if (g == release + 50) {
-                require(SpellCombat.damage(freed, w, w.getDamageSources().playerAttack(second), 60, second, WizardAffinity.FIRE), "Second soul hit rejected");
-            }
-            if (g == release + 50 + NecromancerRules.SOUL_RETURN + 3) {
-                require(freed.isRemoved() && !boss.isSplit() && boss.status().contains("collapsed"), "Knocked-down soul did not collapse the body: " + boss.status());
-                float health = boss.getHealth();
-                require(boss.damage(w, w.getDamageSources().playerAttack(target), 10)
-                        && Math.abs(health - boss.getHealth() - 10 * NecromancerRules.EXPOSED_MULTIPLIER) < .01, "The collapsed body took no extra damage");
-                boss.stopFight(); mark = t; stage = 17;
+            if (howlAt >= 0 && g == howlAt + NecromancerRules.FRENZY_TELL + 2) {
+                require(boss.isFrenzied() && boss.status().contains("frenzied"), "The howl did not end in the frenzy: " + boss.status());
+                require(pace == NecromancerRules.FRENZY_SPEED, "The frenzied colossus crawls no faster: " + pace);
+                boss.stopFight();
+                require(!boss.isFrenzied() && boss.getAttributeBaseValue(net.minecraft.entity.attribute.EntityAttributes.MOVEMENT_SPEED) == NecromancerRules.COLOSSUS_SPEED,
+                        "Stopping the fight left it frenzied");
+                mark = t; stage = 17;
             }
         }
         // Every soul light of the phase clears once its spells are gone.
@@ -358,7 +354,7 @@ public final class NecromancerPhaseSmoke implements ModInitializer {
             for (BlockPos pos : BlockPos.iterate(-30, 99, -30, 45, 120, 45))
                 if (w.getBlockState(pos).isOf(com.anton.elementalwands.registry.ModSpellBlocks.SOUL_GLOW)) left.add(pos.toImmutable());
             require(left.isEmpty(), "Soul light outlived phase two: " + left);
-            Files.writeString(Path.of("NECROMANCER_PASSED.txt"), "Phase two passed: the transformation cinematic holding both players unhurt while its ghosts come and go, then releasing them; transformation and save, original grab/slam and teammate rescue, swipe; grounded rush with a random windup, single bite, throw, no team interrupt, sidestep, wall collision, hands visuals and nearest caught target combo against iron armor, escape, expiry and cancellation; grave dive shielded underground, erupting under a still player and stuck, exposed after a dodge, cancelled safely; soul harvest raised away from players, destroyed by a hit, healing on arrival and cleared on stop; the soul split at a quarter health shields the body, passes soul hits to the boss, swings blind and collapses it exposed when knocked down; harvested and freed souls carry soul light and none outlives the phase.\n");
+            Files.writeString(Path.of("NECROMANCER_PASSED.txt"), "Phase two passed: the transformation cinematic holding both players unhurt while its ghosts come and go, then releasing them; transformation and save, original grab/slam and teammate rescue, swipe; grounded rush with a random windup, single bite, throw, no team interrupt, sidestep, wall collision, hands visuals and nearest caught target combo against iron armor, escape, expiry and cancellation; grave dive shielded underground, erupting under a still player and stuck, exposed after a dodge, cancelled safely; soul harvest raised away from players, destroyed by a hit, healing on arrival and cleared on stop; a quarter health no longer holds its health, and brings the howl and then the frenzy (a faster crawl), which stopping the fight clears; harvested souls carry soul light and none outlives the phase.\n");
             server.stop(false);
         }
     }

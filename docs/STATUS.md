@@ -67,13 +67,16 @@ Looks and balance that only a person playing can judge.
 
 ### Hollow Necromancer and the crypt
 
+- **The smarter fight (November 16):** the first fight against the chooser, the Soul Burst,
+  the led hand rings and the frenzy that replaced the flying head. What to judge is listed
+  in the [design notes](design/necromancer.md#what-to-look-for-in-the-first-playtest).
 - A full fight with `/ew necromancer log on` to tune health, wave sizes, rain damage, and
-  the dive and split timing. The Hands→ambush and Hands→bite combos cost an iron-armored
-  player about three quarters of their health.
+  the dive timing. The Hands→ambush and Hands→bite combos cost an iron-armored
+  player about three quarters of their health, and the hands now lead a moving player.
 - The November 4 siege tuning: horde sizes, how the faster crawl and the brute's charging
-  slam look, and frame rate with a full horde.
-- Life Drain (starts within 10 blocks, 1.5 s windup, breaks at 14), the single soul split
-  and the blind body.
+  slam look, and frame rate with a full horde; and whether the November 16 damage buff
+  (crawlers 4.5, brutes 12, arrows a third more) makes the horde a threat.
+- Life Drain (starts within 10 blocks, 1.5 s windup, breaks at 14).
 - The transformation cinematic's length.
 - Astral Double against him: the 70% echo bolt and the extra skull per visible double. Is
   the double surviving too long, and is Space's pace right?
@@ -169,7 +172,8 @@ Things one player cannot show.
 - **Storm Roc:** a co-op fight, the aerie call with a party, and the intro with several
   watchers.
 - **Necromancer:** a co-op fight with `/ew necromancer log on`, including the November 4
-  siege hordes at duo size; the transformation cinematic's skip with several watchers; spectating
+  siege hordes at duo size; whether two players are now pressed hard enough (likelier
+  strings, shorter rests, and strings that turn on the other player); the transformation cinematic's skip with several watchers; spectating
   after death; the victory release for everyone the crypt brought in; a second party member
   walking into the veil while the slot is being laid out.
 - **Guardian:** co-op pressure up to four players; every watcher's intro camera staying in
@@ -190,9 +194,6 @@ Automated work an agent can do without the developer.
 - No fixture has run on a dedicated server since the Nature rework; the November 10–11 runs
   were hosted in a singleplayer world on the Windows machine.
 - The party fixture's restart half was not run after the Nature rework.
-- The Necromancer fixtures last passed before the flowers' turning head, banked healing and
-  Full Bloom were added; rerun them. (The Storm Roc's server and client fixtures passed on
-  November 17 with its new brain, the server one hosted in a singleplayer world.)
 - The Thornbite heal buff inside Full Bloom has no fixture.
 - Springbloom's launch and flight leaves are in no client fixture, and its revised arc has
   no fresh native-client measurement (the server fixture checks about a 15-block apex and
@@ -214,6 +215,9 @@ Automated work an agent can do without the developer.
     `art/fractured_guardian/intro/build_intro.py` fail their `--check` although nothing they
     write has changed. That checkout converts line endings (`core.autocrlf=true`), and those
     checks appear to compare raw bytes.
+  - `art/hollow_necromancer/v2/build_art.py --check` (November 16) calls the model and the
+    animation JSON stale there even with the line endings set aside; the two generated
+    Java sockets match. Nothing was regenerated, and what differs was not looked into.
 
 ## Known gaps
 
@@ -258,4 +262,9 @@ Accepted for now; fix when the feature is next touched.
 - **Nature clean-up, once the kit is approved:** `EntangleTracker`'s vine stacks, the wrap
   art, the entangled HUD buds and the halved-recovery penalty have no source in play. Remove
   them or give them a use. The Overgrowth oak is kept on purpose and is not part of this.
+- **Soul split leftovers:** the split is out of the fight. Its `colossus_split` and
+  `colossus_collapse` clips and eight of its sounds (the five `freed_soul` events,
+  `split.release_souls` and the two `collapse` events) are no longer played. Remove them or
+  give them a use in the next art and sound passes. The frenzy's howl borrows
+  `split.charge` and `split.release_shriek`.
 - **Space particles** are unused since the void-glass redesign.

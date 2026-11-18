@@ -53,6 +53,7 @@ public final class SpringbloomServerSmoke implements ModInitializer {
             double startY=enemy.getY(),startX=enemy.getX(),top=startY;Vec3d v=enemy.getVelocity();
             for(int i=0;i<65;i++){
                 enemy.setVelocity(v);enemy.move(MovementType.SELF,v);top=Math.max(top,enemy.getY());
+                if(i==0)packet(enemy,enemy.getY(),false); // The client reports its first airborne tick.
                 if(enemy.isOnGround())break;
                 v=new Vec3d(v.x*.91,(v.y-.08)*.98,v.z*.91);
             }
@@ -82,10 +83,14 @@ public final class SpringbloomServerSmoke implements ModInitializer {
         }
         if(t==59){
             require(SpringbloomManager.protectedFall(owner),"Ground contact before lift-off ended protection");
-            owner.move(MovementType.SELF,new Vec3d(0,2,0));owner.move(MovementType.SELF,new Vec3d(0,-3,0));
-            require(owner.isOnGround() && owner.getY()==100,"Owner lift-off fixture did not land");
+            // Before the client applies the launch it may step up or jump; neither is the launch.
+            packet(owner,100.5,true);packet(owner,101.2,false);packet(owner,100,true);
         }
-        if(t==63)require(!SpringbloomManager.protectedFall(owner),"Ground contact after lift-off kept protection");
+        if(t==63){
+            require(SpringbloomManager.protectedFall(owner),"A step or jump before the launch counted as lift-off");
+            packet(owner,102,false);packet(owner,100,true);
+        }
+        if(t==67)require(!SpringbloomManager.protectedFall(owner),"Ground contact after lift-off kept protection");
         if(t==55){
             enemy.setPosition(-2,100,.5);enemy.setOnGround(true);enemy.setVelocity(.28,0,0);
             enemy.move(MovementType.SELF,new Vec3d(2,0,0));require(enemy.getY()==100 && enemy.getX()<-.4,"Could walk onto pad");
@@ -169,12 +174,18 @@ public final class SpringbloomServerSmoke implements ModInitializer {
         }
         if(t==F+L+16){
 
-            Files.writeString(Path.of("HUB_PASSED.txt"),"Springbloom server passed: five Nature spells, ownership/purchase/equip, thrown pod planting, player-owned cooldown, hostile high-fall catch, rim catch, ~15-block apex/~21-block travel, run-in launch along facing, protection through the launch packet race until real lift-off, protected landing then ordinary fall damage, landing after lift-off, no side activation without movement input, destruction, support/ceiling checks, exact lifetime expiry, orphan and affinity cleanup, thrown pod through forest floor cover, grass/fern/leaf-litter placement, tall-plant restoration, canopy/fluid/growth rejection, partial placement beside obstacles, obstacle preservation, clipped collision, partial high-fall catch, and live footprint updates. Client physics needs its separate native fixture.\n");server.stop(false);}
+            Files.writeString(Path.of("HUB_PASSED.txt"),"Springbloom server passed: five Nature spells, ownership/purchase/equip, thrown pod planting, player-owned cooldown, hostile high-fall catch, rim catch, ~15-block apex/~21-block travel, run-in launch along facing, protection through the launch packet race until a real move packet lifts off (steps and jumps do not count), protected landing then ordinary fall damage, landing after lift-off, no side activation without movement input, destruction, support/ceiling checks, exact lifetime expiry, orphan and affinity cleanup, thrown pod through forest floor cover, grass/fern/leaf-litter placement, tall-plant restoration, canopy/fluid/growth rejection, partial placement beside obstacles, obstacle preservation, clipped collision, partial high-fall catch, and live footprint updates. Client physics needs its separate native fixture.\n");server.stop(false);}
     }
     private static final int L=SpringbloomRules.LIFETIME,C=SpringbloomRules.COOLDOWN,F=64+L+11;
     private int pods(){return owner.getEntityWorld().getEntitiesByClass(SpringbloomEntity.class,new Box(-30,90,-30,30,140,30),e->!e.open()&&!e.isRemoved()).size();}
     private static ServerPlayerEntity player(MinecraftServer s,String name,double x,double y,double z)throws Exception {
         var f=com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);f.setAccessible(true);return (ServerPlayerEntity)f.invoke(null,s,UUID.randomUUID(),name,x,y,z);
+    }
+    /** A client move packet through the real network handler, as if it came from the player's game. */
+    private static void packet(ServerPlayerEntity p,double y,boolean ground){
+        p.networkHandler.syncWithPlayerPosition();
+        p.networkHandler.onPlayerMove(new net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket.PositionAndOnGround(p.getX(),y,p.getZ(),ground,false));
+        require(p.getY()==y && p.isOnGround()==ground,"Move packet not accepted at "+y+": "+p.getEntityPos());
     }
     private static void require(boolean c,String why){if(!c)throw new AssertionError(why);}
 }

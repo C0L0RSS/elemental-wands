@@ -49,7 +49,9 @@ public final class UpdraftServerSmoke implements ModInitializer {
             p.damage(p.getEntityWorld(),p.getDamageSources().magic(),2);require(p.getHealth()==18,"Updraft granted combat immunity");p.setHealth(20);
             double top=100;Vec3d v=p.getVelocity();p.setPosition(.5,100,.5);
             for(int i=0;i<70;i++) {
-                p.setVelocity(v);p.move(MovementType.SELF,v);top=Math.max(top,p.getY());if(p.isOnGround())break;
+                p.setVelocity(v);p.move(MovementType.SELF,v);top=Math.max(top,p.getY());
+                if(i==0)packet(p,p.getY(),false); // The client reports its first airborne tick.
+                if(p.isOnGround())break;
                 v=new Vec3d(v.x*.91,(v.y-.08)*.98,v.z*.91);
             }
             require(top>109.8 && top<110.2,"Wrong apex: "+top);
@@ -82,14 +84,27 @@ public final class UpdraftServerSmoke implements ModInitializer {
             p.handleFallDamage(6,1,p.getDamageSources().fall());
             require(p.getHealth()==20 && UpdraftManager.protectedFall(p),"A landing before lift-off ended protection");}
         if(t==218){require(UpdraftManager.protectedFall(p),"Ground contact before lift-off ended protection");
-            p.move(MovementType.SELF,new Vec3d(0,2,0));p.move(MovementType.SELF,new Vec3d(0,-3,0));
-            require(p.isOnGround() && p.getY()==100,"Lift-off fixture did not land");}
-        if(t==224){require(!UpdraftManager.protectedFall(p),"Ground contact after lift-off retained protection");reset();require(UpdraftManager.cast(p),"World exit setup failed");
+            // Before the client applies the launch it may step up or jump; neither is the launch.
+            packet(p,100.5,true);packet(p,101.2,false);packet(p,100,true);}
+        if(t==224){require(UpdraftManager.protectedFall(p),"A step or jump before the launch counted as lift-off");
+            packet(p,102,false);packet(p,100,true);}
+        if(t==230){require(!UpdraftManager.protectedFall(p),"Ground contact after lift-off retained protection");
+            // A launch that never lifts off falls back to plain ground contact after LaunchLiftoff.WAIT.
+            reset();require(UpdraftManager.cast(p),"Timeout setup failed");p.setOnGround(true);}
+        if(t==230+LaunchLiftoff.WAIT-2)require(UpdraftManager.protectedFall(p),"Unlifted launch ended before its wait");
+        if(t==230+LaunchLiftoff.WAIT+6){require(!UpdraftManager.protectedFall(p),"Unlifted launch never ended");
+            reset();require(UpdraftManager.cast(p),"World exit setup failed");
             p.teleport(s.getWorld(net.minecraft.world.World.NETHER),.5,110,.5,Set.of(),0,0,true);require(!UpdraftManager.protectedFall(p),"World exit retained protection");}
-        if(t==230){
-            Files.writeString(Path.of("PRESSURE_PASSED.txt"),"Updraft server passed: purchase/fifth slot, deliberate input, midair launch and preserved X/Z, ~10-block arc, cooldown starts immediately and lasts exactly 160 ticks, fresh-wand protection, combat damage, safe first landing then ordinary fall damage, ceiling collision, dagger/dash combo, 75% base and chain impulses, protection through the launch packet race until real lift-off, ground/death/affinity/world cleanup. Native client physics checked separately.\n");s.stop(false);
+        if(t==230+LaunchLiftoff.WAIT+12){
+            Files.writeString(Path.of("PRESSURE_PASSED.txt"),"Updraft server passed: purchase/fifth slot, deliberate input, midair launch and preserved X/Z, ~10-block arc, cooldown starts immediately and lasts exactly 160 ticks, fresh-wand protection, combat damage, safe first landing then ordinary fall damage, ceiling collision, dagger/dash combo, 75% base and chain impulses, protection through the launch packet race until a real move packet lifts off (steps and jumps do not count), unlifted-launch timeout, ground/death/affinity/world cleanup. Native client physics checked separately.\n");s.stop(false);
         }
     }
     private void reset(){UpdraftManager.finish(p);GaleDaggers.cancel(p);p.setHealth(20);p.setAttached(EWAttachments.AFFINITY,"WIND");p.setAttached(EWAttachments.UPDRAFT_LAST_CAST,-1_000_000_000L);p.setStackInHand(Hand.MAIN_HAND,new ItemStack(ModItems.FRACTURED_WAND));p.setPosition(.5,100,.5);p.setVelocity(Vec3d.ZERO);p.setOnGround(false);}
+    /** A client move packet through the real network handler, as if it came from the player's game. */
+    private static void packet(ServerPlayerEntity p,double y,boolean ground){
+        p.networkHandler.syncWithPlayerPosition();
+        p.networkHandler.onPlayerMove(new net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket.PositionAndOnGround(p.getX(),y,p.getZ(),ground,false));
+        require(p.getY()==y && p.isOnGround()==ground,"Move packet not accepted at "+y+": "+p.getEntityPos());
+    }
     private static void require(boolean ok,String why){if(!ok)throw new AssertionError(why);}
 }

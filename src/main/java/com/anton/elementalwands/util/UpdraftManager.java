@@ -22,9 +22,6 @@ public final class UpdraftManager {
     public static final int COOLDOWN = 160;
     // Vanilla gravity/drag give an unobstructed rise of approximately ten blocks.
     public static final double UPWARD_SPEED = 1.343;
-    /** Rise that shows the client applied the launch, and how many ticks a flight waits for it. */
-    public static final double LIFTOFF = .4;
-    public static final int LIFTOFF_WAIT = 40;
     private static final class Flight {
         final ServerPlayerEntity player; final ServerWorld world; final long started;
         /** Lowest height since the cast; the caster has lifted off once they rise clear of it. */
@@ -41,13 +38,14 @@ public final class UpdraftManager {
                 var p = flight.player;
                 if (!valid(flight) || p.hasVehicle() || p.isGliding() || p.getAbilities().flying
                         || p.isTouchingWater() || p.isInLava() || p.isClimbing()
-                        || (flight.landed >= 0 && flight.world.getTime() > flight.landed + 2)
-                        || (!flight.lifted && flight.world.getTime() > flight.started + LIFTOFF_WAIT)) {
+                        || (flight.landed >= 0 && flight.world.getTime() > flight.landed + 2)) {
                     finish(p); continue;
                 }
                 // Until the client applies the launch it keeps reporting the caster on the ground,
-                // so only ground contact after a real lift-off is a landing. onGround may also precede
-                // the final movement/fall-damage packet: let its damage callback consume protection first.
+                // so only ground contact after lift-off is a landing (see LaunchLiftoff). A launch that
+                // never lifts falls back to plain ground contact. onGround may also precede the final
+                // movement/fall-damage packet: let its damage callback consume protection first.
+                if (!flight.lifted && flight.world.getTime() > flight.started + LaunchLiftoff.WAIT) flight.lifted = true;
                 if (flight.lifted && flight.landed < 0 && p.isOnGround()
                         && flight.world.raycast(new RaycastContext(p.getEntityPos(), p.getEntityPos().add(0,-.06,0),
                         RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.ANY, p)).getType() != HitResult.Type.MISS)
@@ -100,12 +98,12 @@ public final class UpdraftManager {
         var f = FLIGHTS.get(p.getUuid());
         return f != null && f.player == p && valid(f);
     }
-    /** Called after each server-side move of a player; records when the launch actually lifts them. */
-    public static void afterMove(ServerPlayerEntity p) {
+    /** An accepted move packet: its position and ground flag are the client's own. */
+    public static void acceptedMove(ServerPlayerEntity p) {
         var f = FLIGHTS.get(p.getUuid());
         if (f == null || f.player != p || f.lifted) return;
         f.floor = Math.min(f.floor, p.getY());
-        if (p.getY() > f.floor + LIFTOFF) f.lifted = true;
+        f.lifted = LaunchLiftoff.rose(p, f.floor);
     }
     /** A protected landing. One before lift-off is the launch packet race: absorb it and keep the flight. */
     public static void landing(ServerPlayerEntity p) {

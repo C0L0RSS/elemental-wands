@@ -60,11 +60,13 @@ public final class SpringbloomManager {
                 boolean ended=p.isRemoved() || !p.isAlive() || server.getPlayerManager().getPlayer(p.getUuid())!=p
                         || p.getEntityWorld()!=f.world || p.isSpectator() || p.hasVehicle() || p.isGliding()
                         || p.getAbilities().flying || p.isTouchingWater() || p.isInLava() || p.isClimbing()
-                        || (f.landed>=0 && f.world.getTime()>f.landed+2)
-                        || (!f.lifted && f.world.getTime()>f.launched+SpringbloomRules.LIFTOFF_WAIT);
+                        || (f.landed>=0 && f.world.getTime()>f.landed+2);
                 // Until the client applies the launch it keeps reporting the player on the ground,
-                // so only ground contact after a real lift-off is a landing. Consume real fall damage
-                // in the mixin; clear zero-distance landings after a short packet-order grace period.
+                // so only ground contact after lift-off is a landing (see LaunchLiftoff). A launch that
+                // never lifts (a low ceiling, a long stall) falls back to plain ground contact.
+                // Consume real fall damage in the mixin; clear zero-distance landings after a short
+                // packet-order grace period.
+                if(!f.lifted && f.world.getTime()>f.launched+LaunchLiftoff.WAIT)f.lifted=true;
                 if(!ended && f.lifted && f.landed<0 && p.isOnGround()
                         && f.world.raycast(new RaycastContext(p.getEntityPos(),p.getEntityPos().add(0,-.06,0),
                         RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.ANY,p)).getType()!=HitResult.Type.MISS)
@@ -169,11 +171,6 @@ public final class SpringbloomManager {
     }
     public static void afterMove(ServerPlayerEntity p,Vec3d before,Vec3d requested,boolean grounded) {
         if(requested.lengthSquared()>1E-8)MOTION.put(p,requested);
-        var flight=FLIGHTS.get(p.getUuid());
-        if(flight!=null && !flight.lifted) {
-            flight.floor=Math.min(flight.floor,p.getY());
-            if(p.getY()>flight.floor+SpringbloomRules.LIFTOFF)flight.lifted=true;
-        }
         if((!grounded && requested.y>=0) || !p.isAlive() || p.isSpectator() || p.hasVehicle() || p.isGliding()
                 || p.getAbilities().flying || HollowPurpleChargeManager.isCharging(p.getEntityWorld(),p)
                 || !GuardianArenaManager.canCast(p))return;
@@ -200,6 +197,13 @@ public final class SpringbloomManager {
             return;
         }
     }
+    /** An accepted move packet: its position and ground flag are the client's own. */
+    public static void acceptedMove(ServerPlayerEntity p) {
+        var flight=FLIGHTS.get(p.getUuid());
+        if(flight==null || flight.player!=p || flight.lifted)return;
+        flight.floor=Math.min(flight.floor,p.getY());
+        flight.lifted=LaunchLiftoff.rose(p,flight.floor);
+    }
     private static boolean live(Pad pad,ServerWorld world) {
         return pad.world==world && pad.expires>world.getTime() && world.getBlockState(pad.pos).isOf(ModSpellBlocks.SPRINGBLOOM)
                 && supported(world,pad.pos);
@@ -212,6 +216,7 @@ public final class SpringbloomManager {
         p.velocityModified=true;
         p.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(p));
         FLIGHTS.put(p.getUuid(),new Flight(p,world,world.getTime()));
+        UpdraftManager.finish(p); // This flight's protection replaces a pending Updraft's.
         // Clients draw the launch burst and the rider's falling leaves until they land.
         BlockNatureEvents.send(world,BlockNatureEvents.SPRING_LAUNCH,p.getId(),p.getEntityPos(),velocity,0);
         world.playSound(null,pad.pos,ModSounds.SPELL_NATURE_SPRINGBLOOM_LAUNCH,SoundCategory.PLAYERS,.85f,1f);

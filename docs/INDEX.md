@@ -97,7 +97,7 @@ not in its manager, look in the handler and in `util/WandLoadouts`.
 | Waylay Dash | `item/WindAbilityHandler`, `client/blockwind/DashFx` | [Spells](reference/spells.md#wind) |
 | Zephyr Strike | `item/WindAbilityHandler`, `util/ZephyrStrikeManager`, `item/ZephyrWingsItem`, `mixin/ScreenHandlerMixin` (keeps the borrowed wings out of chests), `client/blockwind/ZephyrFx` | [Spells](reference/spells.md#wind) |
 | Gale Daggers | `item/WindAbilityHandler`, `util/GaleDaggers`, `entity/GaleDaggerEntity`, `client/renderer/GaleDaggerRenderer`, `client/blockwind/DaggerFx` | [Spells](reference/spells.md#wind) |
-| Updraft | `util/UpdraftManager`, `mixin/UpdraftFallMixin`, `mixin/SpringbloomMovementMixin` (lift-off), `client/blockwind/UpdraftFx` | [Spells](reference/spells.md#wind) |
+| Updraft | `util/UpdraftManager`, `mixin/UpdraftFallMixin`, `util/LaunchLiftoff`, `mixin/LaunchLiftoffMixin`, `client/blockwind/UpdraftFx` | [Spells](reference/spells.md#wind) |
 | Block-wind visuals shared by all Wind spells | `client/blockwind/BlockWindEffects`, `BlockWindKit`, `BlockWindMesh`, `util/BlockWindEvents`; study in `art/wind/blockwind/` | [Spells](reference/spells.md#wind), [Art](reference/art-and-assets.md) |
 
 ### Stone
@@ -117,7 +117,7 @@ not in its manager, look in the handler and in `util/WandLoadouts`.
 | Seed and the mark it leaves | `item/NatureAbilityHandler`, `entity/SeedProjectileEntity`, `util/NatureCombat`, `client/renderer/NatureSeedRenderer`, `client/SeedMarkClientEffects` | [Spells](reference/spells.md#nature) |
 | Thornbite (thorn_lash) | `item/NatureAbilityHandler`, `entity/ThornLashEntity`, `util/ThornLashRules`, `client/renderer/ThornLashRenderer`, `ThornbiteVisual` | [Spells](reference/spells.md#nature) |
 | Sentry Bloom flowers (tendril_bloom): throwing, shooting, collecting, breaking | `item/NatureAbilityHandler`, `util/FlowerTurretManager`, `util/WandLoadouts` (routes the break and collect clicks), `entity/SentryBloomEntity`, `entity/SentryBloomPodEntity`, `block/NatureSeedlingBlock`, `registry/ModSpellBlocks` (the stem block's settings), `client/renderer/SentryBloomRenderer`, `SentryBloomPodRenderer` | [Spells](reference/spells.md#nature) |
-| Springbloom | `util/SpringbloomManager`, `SpringbloomRules`, `SpringbloomFootprint`, `entity/SpringbloomEntity`, `block/SpringbloomBlock`, `mixin/SpringbloomFallMixin`, `mixin/SpringbloomMovementMixin`, `client/renderer/SpringbloomRenderer` | [Spells](reference/spells.md#nature) |
+| Springbloom | `util/SpringbloomManager`, `SpringbloomRules`, `SpringbloomFootprint`, `entity/SpringbloomEntity`, `block/SpringbloomBlock`, `mixin/SpringbloomFallMixin`, `mixin/SpringbloomMovementMixin`, `util/LaunchLiftoff`, `mixin/LaunchLiftoffMixin`, `client/renderer/SpringbloomRenderer` | [Spells](reference/spells.md#nature) |
 | Full Bloom (overgrowth) | `item/NatureAbilityHandler`, `util/FullBloomManager` | [Spells](reference/spells.md#nature) |
 | Block-nature visuals shared by all Nature spells | `client/blocknature/BlockNatureEffects`, `BlockNatureKit`, `BlockNatureMesh`, `NatureFx`, `util/BlockNatureEvents`, `client/renderer/NatureMeshes`; study in `art/nature/blocknature/` | [Spells](reference/spells.md#nature), [Art](reference/art-and-assets.md) |
 

@@ -234,10 +234,12 @@ Accepted for now; fix when the feature is next touched.
 
 - **Pyre King:** a player who only circles a pillar is hooked off it but can run clear of
   the Overhead that follows.
-- **Launch fall protection in water or on climbables:** an Updraft cast on a ladder, vines or
-  scaffolding or in water, or a Springbloom run-in launch from water or vines at the pad's
-  edge, ends its flight before the client applies the launch, so that flight lands
-  unprotected.
+- **Launch fall protection, edge cases:** an Updraft cast on a ladder, vines or scaffolding or
+  in water, or a Springbloom run-in launch from water or vines at the pad's edge, can end its
+  flight if the server still sees the player there at tick end, before the client applies the
+  launch; that flight then lands unprotected. An Updraft cast mid-way up a Springbloom arc can
+  count the arc's own rise as lift-off; if the payload arrives about nine ticks late and the
+  arc lands on a ledge first, the Updraft landing is unprotected.
 - **Dragon's Pyre over slabs:** its flames sit in the block above a bottom slab or deep snow,
   so over them they float half a block up.
 - **Storm aerie:** an operator `/ew summit start` on a slot a gong call has reserved takes

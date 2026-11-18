@@ -138,7 +138,9 @@ Looks and balance that only a person playing can judge.
 - **Springbloom and Updraft fall damage:** a launch sometimes landed with full fall damage,
   seen in the Pyre King fight (fixed November 18: protection now lasts until the player has
   actually lifted off). Check in a heavy fight that no launch landing hurts, and that a later
-  ordinary fall still does.
+  ordinary fall still does. Still open: a run-in launch from water at the pad's edge or from
+  inside vines or scaffolding ends the flight before the client applies the launch, so that
+  flight lands unprotected.
 - **Thornbite:** attack feel, silhouette and balance.
 - **Space:** escape options after the Blink nerf; Gravity Well and Astral Double balance
   and feel.

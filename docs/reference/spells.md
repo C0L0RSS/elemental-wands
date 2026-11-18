@@ -110,8 +110,7 @@ The caster remains free to attack, fire prepared daggers and use Waylay Dash.
 Updraft grants fall protection only until the first landing, without slowing the
 fall or reducing combat damage. It follows Springbloom's lift-off rule: ground contact
 is a landing only after the launch has lifted the caster, a protected hit before lift-off
-is absorbed without ending the flight, and a launch that cannot lift falls back to plain
-ground contact. Walls and ceilings retain normal collision.
+is absorbed without ending the flight, and a launch that cannot lift ends on the ground. Walls and ceilings retain normal collision.
 Water/lava contact, climbing, mounting, flight/gliding, death, affinity/world exit,
 disconnect and encounter exclusion end its transient flight state. Putting away
 the wand does not remove the current jump's safe landing. Twenty cloud puffs
@@ -373,11 +372,12 @@ landing after lift-off. Vanilla handles a move packet's position before its grou
 the packet that sets off a launch marks the rider grounded again, and so does every later
 packet until the client applies the launch. Lift-off is therefore read only from accepted
 move packets (`LaunchLiftoffMixin`, after vanilla's `setMovement`): one that reports the
-rider airborne and higher above the lowest point since the launch than a vanilla jump can
-reach (`LaunchLiftoff`). Steps, jumps, server-side moves and rejected moves do not count.
-A protected hit before lift-off is absorbed without ending the flight. A launch that has
-not lifted after `LaunchLiftoff.WAIT` ticks, as under a low ceiling, falls back to plain
-ground contact. Once lifted, the server still tolerates the client ground flag arriving
+rider airborne and higher than a vanilla jump from their last footing can reach
+(`LaunchLiftoff`), measured from the lowest point instead while they fall. Steps, a single
+ordinary jump, server-side moves and rejected moves do not count; Jump Boost can. A
+protected hit before lift-off is absorbed without ending the flight. A launch that has not
+lifted after `LaunchLiftoff.WAIT` ticks, as under a low ceiling, ends while the player is
+on the ground, or else at their next landing. Once lifted, the server still tolerates the client ground flag arriving
 before landing damage. A Springbloom launch replaces a pending Updraft's protection.
 Falling leaves mark protected flight. Death, disconnect, world changes, flight,
 vehicles, fluids and climbing end the flight state. Pad expiry, breaking, support

@@ -24,7 +24,7 @@ public final class UpdraftManager {
     public static final double UPWARD_SPEED = 1.343;
     private static final class Flight {
         final ServerPlayerEntity player; final ServerWorld world; final long started;
-        /** Lowest height since the cast; the caster has lifted off once they rise clear of it. */
+        /** Height lift-off is measured from (see LaunchLiftoff.floor). */
         double floor;
         boolean lifted;
         long landed = -1;
@@ -38,12 +38,13 @@ public final class UpdraftManager {
                 var p = flight.player;
                 if (!valid(flight) || p.hasVehicle() || p.isGliding() || p.getAbilities().flying
                         || p.isTouchingWater() || p.isInLava() || p.isClimbing()
-                        || (flight.landed >= 0 && flight.world.getTime() > flight.landed + 2)) {
+                        || (flight.landed >= 0 && flight.world.getTime() > flight.landed + 2)
+                        || (!flight.lifted && flight.world.getTime() > flight.started + LaunchLiftoff.WAIT && p.isOnGround())) {
                     finish(p); continue;
                 }
                 // Until the client applies the launch it keeps reporting the caster on the ground,
                 // so only ground contact after lift-off is a landing (see LaunchLiftoff). A launch that
-                // never lifts falls back to plain ground contact. onGround may also precede the final
+                // never lifts ends on the ground, or at its next landing. onGround may also precede the final
                 // movement/fall-damage packet: let its damage callback consume protection first.
                 if (!flight.lifted && flight.world.getTime() > flight.started + LaunchLiftoff.WAIT) flight.lifted = true;
                 if (flight.lifted && flight.landed < 0 && p.isOnGround()
@@ -102,7 +103,7 @@ public final class UpdraftManager {
     public static void acceptedMove(ServerPlayerEntity p) {
         var f = FLIGHTS.get(p.getUuid());
         if (f == null || f.player != p || f.lifted) return;
-        f.floor = Math.min(f.floor, p.getY());
+        f.floor = LaunchLiftoff.floor(p, f.floor);
         f.lifted = LaunchLiftoff.rose(p, f.floor);
     }
     /** A protected landing. One before lift-off is the launch packet race: absorb it and keep the flight. */

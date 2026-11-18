@@ -84,12 +84,14 @@ public final class UpdraftServerSmoke implements ModInitializer {
             p.handleFallDamage(6,1,p.getDamageSources().fall());
             require(p.getHealth()==20 && UpdraftManager.protectedFall(p),"A landing before lift-off ended protection");}
         if(t==218){require(UpdraftManager.protectedFall(p),"Ground contact before lift-off ended protection");
-            // Before the client applies the launch it may step up or jump; neither is the launch.
-            packet(p,100.5,true);packet(p,101.2,false);packet(p,100,true);}
+            // Before the client applies the launch it may step up, then jump to a full vanilla apex and
+            // land with a fall hit; none of that is the launch.
+            packet(p,100.5,true);packet(p,101.5,false);packet(p,101.75,false);packet(p,101,false);
+            packet(p,100.5,true);require(p.getHealth()==20,"Pre-launch jump landing hurt");packet(p,100,true);}
         if(t==224){require(UpdraftManager.protectedFall(p),"A step or jump before the launch counted as lift-off");
             packet(p,102,false);packet(p,100,true);}
         if(t==230){require(!UpdraftManager.protectedFall(p),"Ground contact after lift-off retained protection");
-            // A launch that never lifts off falls back to plain ground contact after LaunchLiftoff.WAIT.
+            // A launch that never lifts off ends on the ground after LaunchLiftoff.WAIT.
             reset();require(UpdraftManager.cast(p),"Timeout setup failed");p.setOnGround(true);}
         if(t==230+LaunchLiftoff.WAIT-2)require(UpdraftManager.protectedFall(p),"Unlifted launch ended before its wait");
         if(t==230+LaunchLiftoff.WAIT+6){require(!UpdraftManager.protectedFall(p),"Unlifted launch never ended");

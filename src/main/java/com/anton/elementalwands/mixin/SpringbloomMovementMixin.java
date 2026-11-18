@@ -18,7 +18,10 @@ public abstract class SpringbloomMovementMixin {
     }
     @Inject(method="move",at=@At("RETURN"))
     private void after(MovementType type,Vec3d movement,CallbackInfo ci) {
-        if((Object)this instanceof ServerPlayerEntity p && elementalwands$beforeSpringMove!=null)
+        if((Object)this instanceof ServerPlayerEntity p && elementalwands$beforeSpringMove!=null) {
             SpringbloomManager.afterMove(p,elementalwands$beforeSpringMove,movement,elementalwands$springGrounded);
+            // Updraft's landing check needs the same per-move view of when a launch really lifts off.
+            com.anton.elementalwands.util.UpdraftManager.afterMove(p);
+        }
     }
 }

@@ -77,11 +77,17 @@ public final class UpdraftServerSmoke implements ModInitializer {
         }
         if(t==204){require(GaleDaggers.fire(p),"Could not fire after Updraft/dash");p.setAttached(EWAttachments.AFFINITY,"FIRE");require(!UpdraftManager.protectedFall(p),"Affinity exit retained protection");}
         if(t==208){reset();require(UpdraftManager.cast(p),"Death setup failed");p.setHealth(0);require(!UpdraftManager.protectedFall(p),"Death retained protection");}
-        if(t==211){reset();require(UpdraftManager.cast(p),"Ground cleanup setup failed");p.setOnGround(true);}
-        if(t==218){require(!UpdraftManager.protectedFall(p),"Ground contact retained protection");reset();require(UpdraftManager.cast(p),"World exit setup failed");
+        if(t==211){reset();require(UpdraftManager.cast(p),"Ground cleanup setup failed");p.setOnGround(true);
+            // Until the client applies the launch it still reports the caster grounded, and may land a short fall.
+            p.handleFallDamage(6,1,p.getDamageSources().fall());
+            require(p.getHealth()==20 && UpdraftManager.protectedFall(p),"A landing before lift-off ended protection");}
+        if(t==218){require(UpdraftManager.protectedFall(p),"Ground contact before lift-off ended protection");
+            p.move(MovementType.SELF,new Vec3d(0,2,0));p.move(MovementType.SELF,new Vec3d(0,-3,0));
+            require(p.isOnGround() && p.getY()==100,"Lift-off fixture did not land");}
+        if(t==224){require(!UpdraftManager.protectedFall(p),"Ground contact after lift-off retained protection");reset();require(UpdraftManager.cast(p),"World exit setup failed");
             p.teleport(s.getWorld(net.minecraft.world.World.NETHER),.5,110,.5,Set.of(),0,0,true);require(!UpdraftManager.protectedFall(p),"World exit retained protection");}
-        if(t==224){
-            Files.writeString(Path.of("PRESSURE_PASSED.txt"),"Updraft server passed: purchase/fifth slot, deliberate input, midair launch and preserved X/Z, ~10-block arc, cooldown starts immediately and lasts exactly 160 ticks, fresh-wand protection, combat damage, safe first landing then ordinary fall damage, ceiling collision, dagger/dash combo, 75% base and chain impulses, ground/death/affinity/world cleanup. Native client physics checked separately.\n");s.stop(false);
+        if(t==230){
+            Files.writeString(Path.of("PRESSURE_PASSED.txt"),"Updraft server passed: purchase/fifth slot, deliberate input, midair launch and preserved X/Z, ~10-block arc, cooldown starts immediately and lasts exactly 160 ticks, fresh-wand protection, combat damage, safe first landing then ordinary fall damage, ceiling collision, dagger/dash combo, 75% base and chain impulses, protection through the launch packet race until real lift-off, ground/death/affinity/world cleanup. Native client physics checked separately.\n");s.stop(false);
         }
     }
     private void reset(){UpdraftManager.finish(p);GaleDaggers.cancel(p);p.setHealth(20);p.setAttached(EWAttachments.AFFINITY,"WIND");p.setAttached(EWAttachments.UPDRAFT_LAST_CAST,-1_000_000_000L);p.setStackInHand(Hand.MAIN_HAND,new ItemStack(ModItems.FRACTURED_WAND));p.setPosition(.5,100,.5);p.setVelocity(Vec3d.ZERO);p.setOnGround(false);}

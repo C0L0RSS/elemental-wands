@@ -28,8 +28,11 @@ public final class SpringbloomManager {
         final ServerPlayerEntity player;
         final ServerWorld world;
         final long launched;
+        /** Lowest height since the launch; the rider has lifted off once they rise clear of it. */
+        double floor;
+        boolean lifted;
         long landed=-1;
-        Flight(ServerPlayerEntity player,ServerWorld world,long launched){this.player=player;this.world=world;this.launched=launched;}
+        Flight(ServerPlayerEntity player,ServerWorld world,long launched){this.player=player;this.world=world;this.launched=launched;floor=player.getY();}
     }
     private static final Map<ServerPlayerEntity,Vec3d> MOTION = new WeakHashMap<>();
     public static Vec3d motion(ServerPlayerEntity p) { return MOTION.getOrDefault(p,p.getVelocity()); }
@@ -57,11 +60,12 @@ public final class SpringbloomManager {
                 boolean ended=p.isRemoved() || !p.isAlive() || server.getPlayerManager().getPlayer(p.getUuid())!=p
                         || p.getEntityWorld()!=f.world || p.isSpectator() || p.hasVehicle() || p.isGliding()
                         || p.getAbilities().flying || p.isTouchingWater() || p.isInLava() || p.isClimbing()
-                        || (f.landed>=0 && f.world.getTime()>f.landed+2);
-                // Client onGround can arrive before its landing position/fall-damage packet.
-                // Consume real fall damage in the mixin; clear zero-distance landings only
-                // after physical contact and a short packet-order grace period.
-                if(!ended && f.landed<0 && f.world.getTime()>f.launched+2 && p.isOnGround()
+                        || (f.landed>=0 && f.world.getTime()>f.landed+2)
+                        || (!f.lifted && f.world.getTime()>f.launched+SpringbloomRules.LIFTOFF_WAIT);
+                // Until the client applies the launch it keeps reporting the player on the ground,
+                // so only ground contact after a real lift-off is a landing. Consume real fall damage
+                // in the mixin; clear zero-distance landings after a short packet-order grace period.
+                if(!ended && f.lifted && f.landed<0 && p.isOnGround()
                         && f.world.raycast(new RaycastContext(p.getEntityPos(),p.getEntityPos().add(0,-.06,0),
                         RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.ANY,p)).getType()!=HitResult.Type.MISS)
                     f.landed=f.world.getTime();
@@ -165,6 +169,11 @@ public final class SpringbloomManager {
     }
     public static void afterMove(ServerPlayerEntity p,Vec3d before,Vec3d requested,boolean grounded) {
         if(requested.lengthSquared()>1E-8)MOTION.put(p,requested);
+        var flight=FLIGHTS.get(p.getUuid());
+        if(flight!=null && !flight.lifted) {
+            flight.floor=Math.min(flight.floor,p.getY());
+            if(p.getY()>flight.floor+SpringbloomRules.LIFTOFF)flight.lifted=true;
+        }
         if((!grounded && requested.y>=0) || !p.isAlive() || p.isSpectator() || p.hasVehicle() || p.isGliding()
                 || p.getAbilities().flying || HollowPurpleChargeManager.isCharging(p.getEntityWorld(),p)
                 || !GuardianArenaManager.canCast(p))return;
@@ -196,6 +205,7 @@ public final class SpringbloomManager {
                 && supported(world,pad.pos);
     }
     private static void launch(ServerPlayerEntity p,ServerWorld world,Pad pad,Vec3d velocity) {
+        // The move packet that set off this launch marks the player grounded again once it is handled.
         p.fallDistance=0; p.setOnGround(false);
         p.setAttached(EWAttachments.SPRINGBLOOM_FLIGHT,true);
         p.setVelocity(velocity);
@@ -215,6 +225,11 @@ public final class SpringbloomManager {
     public static boolean protectedFall(ServerPlayerEntity p) {
         var flight=FLIGHTS.get(p.getUuid());
         return flight!=null && flight.player==p && flight.world==p.getEntityWorld();
+    }
+    /** A protected landing. One before lift-off is the launch packet race: absorb it and keep the flight. */
+    public static void landing(ServerPlayerEntity p) {
+        var flight=FLIGHTS.get(p.getUuid());
+        if(flight==null || flight.lifted)finishLanding(p); else p.fallDistance=0;
     }
     public static void finishLanding(ServerPlayerEntity p) { FLIGHTS.remove(p.getUuid()); p.setAttached(EWAttachments.SPRINGBLOOM_FLIGHT,false); p.fallDistance=0; }
     public static boolean tryBreakAimed(ServerPlayerEntity p) {

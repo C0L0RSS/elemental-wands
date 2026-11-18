@@ -72,7 +72,20 @@ public final class SpringbloomServerSmoke implements ModInitializer {
                     && Math.abs(enemy.getVelocity().z)<.01,"Run-in did not launch along facing: "+enemy.getVelocity());
             require(SpringbloomManager.protectedFall(enemy),"Run-in launch did not grant fall protection");
             enemy.setPlayerInput(net.minecraft.util.PlayerInput.DEFAULT);enemy.setSprinting(false);enemy.setVelocity(0,0,0);
+            // The launch packet race: the packet that sets off a launch reports the player grounded, and later
+            // ones do too until the client applies the launch. That contact, or a landing hit, is not the landing.
+            owner.setHealth(20);owner.setPosition(.5,125,.5);owner.setOnGround(false);owner.fallDistance=25;
+            owner.move(MovementType.SELF,new Vec3d(0,-30,0));require(SpringbloomManager.protectedFall(owner),"Owner catch fixture failed");
+            owner.setPosition(.5,100,-3);owner.setOnGround(true);owner.setVelocity(0,0,0);
+            owner.handleFallDamage(6,1,owner.getDamageSources().fall());
+            require(owner.getHealth()==20 && SpringbloomManager.protectedFall(owner),"A landing before lift-off ended protection");
         }
+        if(t==59){
+            require(SpringbloomManager.protectedFall(owner),"Ground contact before lift-off ended protection");
+            owner.move(MovementType.SELF,new Vec3d(0,2,0));owner.move(MovementType.SELF,new Vec3d(0,-3,0));
+            require(owner.isOnGround() && owner.getY()==100,"Owner lift-off fixture did not land");
+        }
+        if(t==63)require(!SpringbloomManager.protectedFall(owner),"Ground contact after lift-off kept protection");
         if(t==55){
             enemy.setPosition(-2,100,.5);enemy.setOnGround(true);enemy.setVelocity(.28,0,0);
             enemy.move(MovementType.SELF,new Vec3d(2,0,0));require(enemy.getY()==100 && enemy.getX()<-.4,"Could walk onto pad");
@@ -156,7 +169,7 @@ public final class SpringbloomServerSmoke implements ModInitializer {
         }
         if(t==F+L+16){
 
-            Files.writeString(Path.of("HUB_PASSED.txt"),"Springbloom server passed: five Nature spells, ownership/purchase/equip, thrown pod planting, player-owned cooldown, hostile high-fall catch, rim catch, ~15-block apex/~21-block travel, run-in launch along facing, protected landing then ordinary fall damage, no side activation without movement input, destruction, support/ceiling checks, exact lifetime expiry, orphan and affinity cleanup, thrown pod through forest floor cover, grass/fern/leaf-litter placement, tall-plant restoration, canopy/fluid/growth rejection, partial placement beside obstacles, obstacle preservation, clipped collision, partial high-fall catch, and live footprint updates. Client physics needs its separate native fixture.\n");server.stop(false);}
+            Files.writeString(Path.of("HUB_PASSED.txt"),"Springbloom server passed: five Nature spells, ownership/purchase/equip, thrown pod planting, player-owned cooldown, hostile high-fall catch, rim catch, ~15-block apex/~21-block travel, run-in launch along facing, protection through the launch packet race until real lift-off, protected landing then ordinary fall damage, landing after lift-off, no side activation without movement input, destruction, support/ceiling checks, exact lifetime expiry, orphan and affinity cleanup, thrown pod through forest floor cover, grass/fern/leaf-litter placement, tall-plant restoration, canopy/fluid/growth rejection, partial placement beside obstacles, obstacle preservation, clipped collision, partial high-fall catch, and live footprint updates. Client physics needs its separate native fixture.\n");server.stop(false);}
     }
     private static final int L=SpringbloomRules.LIFETIME,C=SpringbloomRules.COOLDOWN,F=64+L+11;
     private int pods(){return owner.getEntityWorld().getEntitiesByClass(SpringbloomEntity.class,new Box(-30,90,-30,30,140,30),e->!e.open()&&!e.isRemoved()).size();}

@@ -135,6 +135,10 @@ Looks and balance that only a person playing can judge.
   recoil and wilt poses, and the block-nature effects.
 - **Springbloom:** the September 29 run-in launch, 8-second pad, 6-second cooldown and
   flatter arc.
+- **Springbloom and Updraft fall damage:** a launch sometimes landed with full fall damage,
+  seen in the Pyre King fight (fixed November 18: protection now lasts until the player has
+  actually lifted off). Check in a heavy fight that no launch landing hurts, and that a later
+  ordinary fall still does.
 - **Thornbite:** attack feel, silhouette and balance.
 - **Space:** escape options after the Blink nerf; Gravity Well and Astral Double balance
   and feel.

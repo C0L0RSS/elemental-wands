@@ -13,6 +13,9 @@ public final class SpringbloomRules {
     public static final double RUN_SPEED = .28, WALK_SPEED = .216;
     /** How close to its edge a grounded player must press to set it off. */
     public static final double CONTACT = .08;
+    /** Rise that shows the client applied a launch, and how many ticks a flight waits for it. */
+    public static final double LIFTOFF = .4;
+    public static final int LIFTOFF_WAIT = 40;
     public static Vec3d launch(Vec3d incoming) {
         double speed = incoming.horizontalLength();
         if (speed < .015) return new Vec3d(0, UPWARD_SPEED, 0);

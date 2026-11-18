@@ -108,14 +108,19 @@ fresh press, so holding its input does not automatically launch again.
 
 The caster remains free to attack, fire prepared daggers and use Waylay Dash.
 Updraft grants fall protection only until the first landing, without slowing the
-fall or reducing combat damage. Walls and ceilings retain normal collision.
+fall or reducing combat damage. Ground contact counts as that landing only after the
+caster has actually risen 0.4 blocks: until the client applies the launch, its movement
+packets still report the caster on the ground (see Springbloom). A launch that never
+lifts the caster, as under a low ceiling, ends after 40 ticks. Walls and ceilings retain
+normal collision.
 Water/lava contact, climbing, mounting, flight/gliding, death, affinity/world exit,
 disconnect and encounter exclusion end its transient flight state. Putting away
 the wand does not remove the current jump's safe landing. Twenty cloud puffs
 roll out from the launch point near the floor (or at the feet for midair casts)
 while a double coil winds up the launch column; a small soft puff marks the safe
 landing. Owners: `UpdraftManager`,
-`UpdraftFallMixin`, and the vertical-only `UpdraftLaunchPayload`; the owning client
+`UpdraftFallMixin`, `SpringbloomMovementMixin` (which reports each move for lift-off), and
+the vertical-only `UpdraftLaunchPayload`; the owning client
 preserves its live X/Z velocity rather than receiving stale server components.
 
 Gale Daggers (`gale_daggers`, 500 Flux) prepares three pearl-white daggers above
@@ -366,7 +371,13 @@ can also break an aimed pad with a wand. The 120-tick throw cooldown is keyed to
 player as well as the casting wand, survives death/reconnects, and is not refunded
 for failed placement. Each caster can have one active pad. There is no caster-order
 or ground-touch chain restriction. Fall protection ends after the next actual
-landing; the server tolerates the client ground flag arriving before landing damage.
+landing, and a landing counts only after the rider has risen 0.4 blocks above the lowest
+point since the launch. Vanilla handles a move packet's position before its ground flag, so
+the packet that sets off a launch marks the rider grounded again, and so does every later
+packet until the client applies the launch; counting that as a landing let a frame hitch end
+protection before the rider left the pad. A protected hit before lift-off is absorbed without ending
+the flight; a launch that never lifts the rider ends after 40 ticks. Once lifted, the server
+still tolerates the client ground flag arriving before landing damage.
 Falling leaves mark protected flight. Death, disconnect, world changes, flight,
 vehicles, fluids and climbing end the flight state. Pad expiry, breaking, support
 loss and owner exit restore only that pad's tracked placement. Scheduled checks

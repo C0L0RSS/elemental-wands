@@ -97,7 +97,7 @@ not in its manager, look in the handler and in `util/WandLoadouts`.
 | Waylay Dash | `item/WindAbilityHandler`, `client/blockwind/DashFx` | [Spells](reference/spells.md#wind) |
 | Zephyr Strike | `item/WindAbilityHandler`, `util/ZephyrStrikeManager`, `item/ZephyrWingsItem`, `mixin/ScreenHandlerMixin` (keeps the borrowed wings out of chests), `client/blockwind/ZephyrFx` | [Spells](reference/spells.md#wind) |
 | Gale Daggers | `item/WindAbilityHandler`, `util/GaleDaggers`, `entity/GaleDaggerEntity`, `client/renderer/GaleDaggerRenderer`, `client/blockwind/DaggerFx` | [Spells](reference/spells.md#wind) |
-| Updraft | `util/UpdraftManager`, `mixin/UpdraftFallMixin`, `client/blockwind/UpdraftFx` | [Spells](reference/spells.md#wind) |
+| Updraft | `util/UpdraftManager`, `mixin/UpdraftFallMixin`, `mixin/SpringbloomMovementMixin` (lift-off), `client/blockwind/UpdraftFx` | [Spells](reference/spells.md#wind) |
 | Block-wind visuals shared by all Wind spells | `client/blockwind/BlockWindEffects`, `BlockWindKit`, `BlockWindMesh`, `util/BlockWindEvents`; study in `art/wind/blockwind/` | [Spells](reference/spells.md#wind), [Art](reference/art-and-assets.md) |
 
 ### Stone

@@ -110,15 +110,16 @@ The caster remains free to attack, fire prepared daggers and use Waylay Dash.
 Updraft grants fall protection only until the first landing, without slowing the
 fall or reducing combat damage. It follows Springbloom's lift-off rule: ground contact
 is a landing only after the launch has lifted the caster, a protected hit before lift-off
-is absorbed without ending the flight, and a launch that cannot lift ends on the ground. Walls and ceilings retain normal collision.
+is absorbed without ending the flight, and a launch that cannot lift ends on the ground or
+at its next landing. Walls and ceilings retain normal collision.
 Water/lava contact, climbing, mounting, flight/gliding, death, affinity/world exit,
 disconnect and encounter exclusion end its transient flight state. Putting away
 the wand does not remove the current jump's safe landing. Twenty cloud puffs
 roll out from the launch point near the floor (or at the feet for midair casts)
 while a double coil winds up the launch column; a small soft puff marks the safe
 landing. Owners: `UpdraftManager`,
-`UpdraftFallMixin`, `LaunchLiftoff` with `LaunchLiftoffMixin`, and the vertical-only `UpdraftLaunchPayload`; the owning client
-preserves its live X/Z velocity rather than receiving stale server components.
+`UpdraftFallMixin`, `LaunchLiftoff` with `LaunchLiftoffMixin`, and the vertical-only
+`UpdraftLaunchPayload`; the owning client preserves its live X/Z velocity rather than receiving stale server components.
 
 Gale Daggers (`gale_daggers`, 500 Flux) prepares three pearl-white daggers above
 and beside the head, with the center higher and all tips facing forward. Press

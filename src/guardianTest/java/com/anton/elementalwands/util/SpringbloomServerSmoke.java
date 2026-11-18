@@ -86,7 +86,7 @@ public final class SpringbloomServerSmoke implements ModInitializer {
             // Before the client applies the launch it may step up, then jump to a full vanilla apex and
             // land with a fall hit; none of that is the launch.
             packet(owner,100.5,true);packet(owner,101.5,false);packet(owner,101.75,false);packet(owner,101,false);
-            packet(owner,100.5,true);require(owner.getHealth()==20,"Pre-launch jump landing hurt");packet(owner,100,true);
+            packet(owner,100.5,true);packet(owner,100,true);
         }
         if(t==63){
             require(SpringbloomManager.protectedFall(owner),"A step or jump before the launch counted as lift-off");

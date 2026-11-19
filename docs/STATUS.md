@@ -135,6 +135,10 @@ Looks and balance that only a person playing can judge.
   recoil and wilt poses, and the block-nature effects.
 - **Springbloom:** the September 29 run-in launch, 8-second pad, 6-second cooldown and
   flatter arc.
+- **Springbloom and Updraft fall damage:** a launch sometimes landed with full fall damage,
+  seen in the Pyre King fight (fixed November 18: protection now lasts until the player has
+  actually lifted off). Check in a heavy fight that no launch landing hurts, and that a later
+  ordinary fall still does.
 - **Thornbite:** attack feel, silhouette and balance.
 - **Space:** escape options after the Blink nerf; Gravity Well and Astral Double balance
   and feel.
@@ -230,6 +234,12 @@ Accepted for now; fix when the feature is next touched.
 
 - **Pyre King:** a player who only circles a pillar is hooked off it but can run clear of
   the Overhead that follows.
+- **Launch fall protection, edge cases:** an Updraft cast on a ladder, vines or scaffolding or
+  in water, or a Springbloom run-in launch from water or vines at the pad's edge, can end its
+  flight if the server still sees the player there at tick end, before the client applies the
+  launch; that flight then lands unprotected. An Updraft cast mid-way up a Springbloom arc can
+  count the arc's own rise as lift-off; if the payload arrives about nine ticks late and the
+  arc lands on a ledge first, the Updraft landing is unprotected.
 - **Dragon's Pyre over slabs:** its flames sit in the block above a bottom slab or deep snow,
   so over them they float half a block up.
 - **Storm aerie:** an operator `/ew summit start` on a slot a gong call has reserved takes

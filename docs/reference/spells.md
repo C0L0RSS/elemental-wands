@@ -108,15 +108,18 @@ fresh press, so holding its input does not automatically launch again.
 
 The caster remains free to attack, fire prepared daggers and use Waylay Dash.
 Updraft grants fall protection only until the first landing, without slowing the
-fall or reducing combat damage. Walls and ceilings retain normal collision.
+fall or reducing combat damage. It follows Springbloom's lift-off rule: ground contact
+is a landing only after the launch has lifted the caster, a protected hit before lift-off
+is absorbed without ending the flight, and a launch that cannot lift ends on the ground or
+at its next landing. Walls and ceilings retain normal collision.
 Water/lava contact, climbing, mounting, flight/gliding, death, affinity/world exit,
 disconnect and encounter exclusion end its transient flight state. Putting away
 the wand does not remove the current jump's safe landing. Twenty cloud puffs
 roll out from the launch point near the floor (or at the feet for midair casts)
 while a double coil winds up the launch column; a small soft puff marks the safe
 landing. Owners: `UpdraftManager`,
-`UpdraftFallMixin`, and the vertical-only `UpdraftLaunchPayload`; the owning client
-preserves its live X/Z velocity rather than receiving stale server components.
+`UpdraftFallMixin`, `LaunchLiftoff` with `LaunchLiftoffMixin`, and the vertical-only
+`UpdraftLaunchPayload`; the owning client preserves its live X/Z velocity rather than receiving stale server components.
 
 Gale Daggers (`gale_daggers`, 500 Flux) prepares three pearl-white daggers above
 and beside the head, with the center higher and all tips facing forward. Press
@@ -366,7 +369,17 @@ can also break an aimed pad with a wand. The 120-tick throw cooldown is keyed to
 player as well as the casting wand, survives death/reconnects, and is not refunded
 for failed placement. Each caster can have one active pad. There is no caster-order
 or ground-touch chain restriction. Fall protection ends after the next actual
-landing; the server tolerates the client ground flag arriving before landing damage.
+landing after lift-off. Vanilla handles a move packet's position before its ground flag, so
+the packet that sets off a launch marks the rider grounded again, and so does every later
+packet until the client applies the launch. Lift-off is therefore read only from accepted
+move packets (`LaunchLiftoffMixin`, after vanilla's `setMovement`): one that reports the
+rider airborne and higher than a vanilla jump from their last footing can reach
+(`LaunchLiftoff`), measured from the lowest point instead while they fall. Steps, a single
+ordinary jump, server-side moves and rejected moves do not count; Jump Boost can. A
+protected hit before lift-off is absorbed without ending the flight. A launch that has not
+lifted after `LaunchLiftoff.WAIT` ticks, as under a low ceiling, ends while the player is
+on the ground, or else at their next landing. Once lifted, the server still tolerates the client ground flag arriving
+before landing damage. A Springbloom launch replaces a pending Updraft's protection.
 Falling leaves mark protected flight. Death, disconnect, world changes, flight,
 vehicles, fluids and climbing end the flight state. Pad expiry, breaking, support
 loss and owner exit restore only that pad's tracked placement. Scheduled checks

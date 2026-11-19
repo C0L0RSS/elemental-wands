@@ -171,7 +171,7 @@ Things one player cannot show.
   else arrive over the block-fire, block-wind, block-space and block-nature events. None has
   been seen from a second client.
 - **3D wand:** another player's affinity colors on their wand.
-- **Pyre King:** a co-op fight.
+- **Pyre King** needs a co-op playtest of the view after one player falls.
 - **Spells with a second player:** how Gravity Well, Astral Double, Gale Daggers and
   Thornbite feel in multiplayer, and chaining Springbloom launches between players.
 - **Storm Roc:** a co-op fight, the aerie call with a party, and the intro with several
@@ -254,8 +254,8 @@ Accepted for now; fix when the feature is next touched.
 
 ## Not built yet
 
-- **Pyre King:** a death clip, a hit reaction, a reward, spectating for a fallen player and
-  his own sounds; his warnings are particles. The full list, with the planned moves that
+- **Pyre King** still needs a death clip, a hit reaction, a reward and his own sounds.
+  His warnings are particles. The full list, with the planned moves that
   were left out, is in [Pyre King](reference/pyre-king.md#not-built-yet).
 - **Storm Roc:** the phase-change cinematic (a short in-engine stand-in plays) and a death
   (it vanishes).

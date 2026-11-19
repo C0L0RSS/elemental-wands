@@ -459,9 +459,9 @@ and a bolt never stack. Costs are compared after armor, so a smaller hit first n
 discounts a larger one. Values live in `StormRocRules`.
 
 A defeated, disconnected or departed challenger cannot rejoin the current attempt. Defeated
-players spectate with belongings kept; a wipe, reset or the Roc's defeat releases the group
-for a retry. Original game modes are journalled before the fight and restored after an
-interruption, server restart or later login. Runtime bosses, hurtboxes and effects do not
+players keep their belongings and can fly around their own summit with the Roc's health
+bar visible. A wipe, reset or victory releases the group. Original game modes are journalled
+before the fight and restored after an interruption, server restart or later login. Runtime bosses, hurtboxes and effects do not
 save, and ending the encounter removes hazards and tornado slowdown. Temporary chunk
 tickets keep the summit and all perches ticking independently of player simulation distance;
 they are removed when the fight ends and are never serialized.

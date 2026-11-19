@@ -414,12 +414,7 @@ final class GuardianBossCombat {
     }
 
     private void updateBar(List<ServerPlayerEntity> players) {
-        var viewers=new ArrayList<>(players);
-        if(guardian.getEntityWorld() instanceof ServerWorld world)
-            viewers.addAll(world.getPlayers(p -> GuardianArenaManager.spectatorViewer(guardian,p)));
-        for (ServerPlayerEntity previous : new ArrayList<>(bar.getPlayers())) if (!viewers.contains(previous)) bar.removePlayer(previous);
-        for (ServerPlayerEntity player : viewers) bar.addPlayer(player);
-        bar.setPercent(MathHelper.clamp(guardian.getHealth()/Math.max(1, guardian.getMaxHealth()), 0, 1));
+        BossHealthBar.update(bar, guardian, players, p -> GuardianArenaManager.spectatorViewer(guardian, p));
     }
 
     private void begin(ServerWorld world, Attack attack, ServerPlayerEntity player, long now, boolean rehearsal) {

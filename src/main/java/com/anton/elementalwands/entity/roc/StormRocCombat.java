@@ -3,11 +3,13 @@ package com.anton.elementalwands.entity.roc;
 import static com.anton.elementalwands.entity.roc.StormRocRules.*;
 
 import com.anton.elementalwands.data.WizardAffinity;
+import com.anton.elementalwands.entity.BossHealthBar;
 import com.anton.elementalwands.entity.roc.StormRocBrain.Call;
 import com.anton.elementalwands.entity.roc.StormRocBrain.Reaches;
 import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.registry.ModSpellBlocks;
 import com.anton.elementalwands.summit.StormSummit;
+import com.anton.elementalwands.summit.StormRocEncounter;
 import com.anton.elementalwands.summit.StormSummitLayout;
 import com.anton.elementalwands.util.SpellCombat;
 import com.anton.elementalwands.util.TemporaryBlockManager;
@@ -351,9 +353,8 @@ final class StormRocCombat {
     }
 
     private void trackPlayers(List<ServerPlayerEntity> players) {
-        for (var p : new HashSet<>(bar.getPlayers())) if (!players.contains(p)) bar.removePlayer(p);
+        BossHealthBar.update(bar, boss, players, p -> StormRocEncounter.spectatorViewer(boss, p));
         for (var p : players) {
-            bar.addPlayer(p);
             UUID id = p.getUuid();
             Vec3d before = previous.put(id, p.getEntityPos());
             Vec3d delta = before == null ? Vec3d.ZERO : flat(p.getEntityPos().subtract(before));
@@ -367,7 +368,6 @@ final class StormRocCombat {
             boolean away = stage == Stage.BRAWL && horizontal(p.getEntityPos(), boss.getEntityPos()) > RANGED_DISTANCE;
             awayFor.put(id, away ? awayFor.getOrDefault(id, 0) + 1 : 0);
         }
-        bar.setPercent(Math.clamp(boss.getHealth() / boss.getMaxHealth(), 0, 1));
     }
 
     // ------------------------------------------------------------------ stages

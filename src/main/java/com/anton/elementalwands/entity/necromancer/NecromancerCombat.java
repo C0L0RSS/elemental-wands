@@ -1,7 +1,9 @@
 package com.anton.elementalwands.entity.necromancer;
 
 import com.anton.elementalwands.ElementalWandsMod;
+import com.anton.elementalwands.crypt.HollowCryptManager;
 import com.anton.elementalwands.crypt.HollowCryptRealm;
+import com.anton.elementalwands.entity.BossHealthBar;
 import com.anton.elementalwands.entity.AstralDoubleEntity;
 import com.anton.elementalwands.entity.undead.HollowArcherEntity;
 import com.anton.elementalwands.entity.undead.HollowBruteEntity;
@@ -1971,9 +1973,7 @@ final class NecromancerCombat {
     }
 
     private void updateBar(List<ServerPlayerEntity> players) {
-        for (ServerPlayerEntity previous : new ArrayList<>(bar.getPlayers())) if (!players.contains(previous)) bar.removePlayer(previous);
-        for (ServerPlayerEntity player : players) bar.addPlayer(player);
-        bar.setPercent(MathHelper.clamp(boss.getHealth() / Math.max(1, boss.getMaxHealth()), 0, 1));
+        BossHealthBar.update(bar, boss, players, p -> HollowCryptManager.spectatorViewer(boss, p));
     }
 
     private void prune() {

@@ -135,7 +135,8 @@ not in its manager, look in the handler and in `util/WandLoadouts`.
 ## Bosses, mobs and their realms
 
 Shared by every boss: `entity/WandBoss` (how spells treat a boss), `entity/BossFightLog`
-(the operator fight log), `mixin/BossRealmDeathMixin` (nothing drops in a realm), and the
+(the operator fight log), `entity/BossHealthBar` (health for fighters and fallen spectators),
+`mixin/BossRealmDeathMixin` (nothing drops in a realm), and the
 cinematic plumbing: `client/BossIntroCamera`, `client/IntroClip`, and the hooks that give a
 scene the camera, HUD, input, fog and light, `mixin/IntroCameraMixin`, `IntroGameRendererMixin`,
 `IntroHudMixin`, `IntroInputMixin`, `IntroLookMixin`, `IntroFogMixin`, `IntroLightmapMixin`.
@@ -194,7 +195,7 @@ scene the camera, HUD, input, fog and light, `mixin/IntroCameraMixin`, `IntroGam
 | Fight log for tuning (`/ew summit log on`) | `entity/roc/StormRocFightLog`, `entity/BossFightLog` | [Storm Summit](reference/storm-summit.md#visiting) |
 | Poses, hurtboxes, flight path | `entity/roc/StormRocPose`, `RocBodyPartEntity`, `RocApproach` | [Storm Summit](reference/storm-summit.md#phase-one) |
 | How tornadoes, lightning strikes and warning circles are drawn | `client/renderer/RocEffectRenderer`, `entity/roc/RocEffectEntity` (what the server sends; damage stays in the fight loop); tornado texture `art/roc_effects/build_tornado_texture.py` | [Storm Summit](reference/storm-summit.md#phase-one) |
-| Fight roster and lifecycle | `summit/StormRocEncounter` | [Storm Summit](reference/storm-summit.md) |
+| Fight roster, spectating and release | `summit/StormRocEncounter` | [Storm Summit](reference/storm-summit.md) |
 | Storm Summit realm | `summit/StormSummit`, `StormSummitManager`, `StormSummitLayout` (generated), `SummitRelicBlock`; layout `art/storm_summit/build_layout.py` | [Storm Summit](reference/storm-summit.md#the-realm) |
 | Aerie and gong: who is called and which fight slot they get | `summit/StormAerie`, `StormAerieLayout` (generated), `StormGongBlock`, `StormGongBlockEntity`, `world/StormAerieStructure`, `client/renderer/StormGongRenderer`; layout `art/storm_aerie/build_layout.py` | [Storm Summit](reference/storm-summit.md#the-aerie) |
 | Where called players land on the summit | `summit/StormSummit` (the arrival point), `summit/StormRocIntro` (carries them up) | [Storm Summit](reference/storm-summit.md#the-realm) |
@@ -214,8 +215,8 @@ scene the camera, HUD, input, fog and light, `mixin/IntroCameraMixin`, `IntroGam
 | His fire on the floor | `block/PyreKingFireBlock` | [Pyre King](reference/pyre-king.md#the-fight) |
 | Intro cinematic | `entity/pyreking/PyreKingIntro`, `PyreKingIntroTrack`, `client/PyreKingIntroClient`; scene `art/pyre_king/intro/build_intro.py` | [Pyre King](reference/pyre-king.md#the-intro) |
 | Model, renderer, blade fire and chains | `client/model/PyreKingModel`, `client/renderer/PyreKingRenderer`, `PyreKingEffectsLayer` | [Pyre King](reference/pyre-king.md#blade-fire-and-chains) |
-| Burned Gate (the way in) | `hall/PyreGate`, `PyreSealBlock`, `PyreGateVeilBlock`, `PyreGateLayout` (generated), `world/PyreGateStructure`; layout `art/pyre_gate/build_layout.py` | [Pyre King](reference/pyre-king.md#the-burned-gate) |
-| Burned Throne Hall realm | `hall/PyreHall`, `PyreHallManager`, `client/PyreSeaHaze`, `mixin/PyreSeaFogColorMixin`, `mixin/NaveFogMixin`, `command/HallCommands`; layout `art/pyre_hall/build_layout.py` | [Pyre King](reference/pyre-king.md#the-burned-throne-hall) |
+| Burned Gate, fight roster, spectating and return | `hall/PyreGate`, `PyreHallManager`, `PyreSealBlock`, `PyreGateVeilBlock`, `PyreGateLayout` (generated), `world/PyreGateStructure`; layout `art/pyre_gate/build_layout.py` | [Pyre King](reference/pyre-king.md#the-burned-gate) |
+| Burned Throne Hall realm and command-started fights | `hall/PyreHall`, `PyreHallManager`, `PyreGate`, `client/PyreSeaHaze`, `mixin/PyreSeaFogColorMixin`, `mixin/NaveFogMixin`, `command/HallCommands`; layout `art/pyre_hall/build_layout.py` | [Pyre King](reference/pyre-king.md#the-burned-throne-hall) |
 | Operator commands | `command/PyreKingCommands` | [Pyre King](reference/pyre-king.md#commands) |
 | Art source and exporter | `art/pyre_king/build_art.py` | [Pyre King](reference/pyre-king.md#ownership) |
 

@@ -1,5 +1,7 @@
 package com.anton.elementalwands.client;
 
+import com.anton.elementalwands.arena.GuardianArenaManager;
+import com.anton.elementalwands.arena.GuardianNaveSmokeMod;
 import com.anton.elementalwands.data.EWAttachments;
 import com.anton.elementalwands.entity.pyreking.PyreKingEntity;
 import com.anton.elementalwands.entity.pyreking.PyreKingIntro;
@@ -20,6 +22,9 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.util.ScreenshotRecorder;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.registry.RegistryKeys;
@@ -48,8 +53,8 @@ import org.lwjgl.glfw.GLFW;
 /**
  * The Burned Gate in a fresh normal world, through the game itself: finds the nearest one in the Nether as /locate
  * does, checks that its bridge can be walked from the shore to the seal, and takes pictures of it. Then a Survival
- * player touches the seal twice, is taken to the hall, wins, and is sent back before the gate; touches it again,
- * dies in the hall, and wakes before the gate with their belongings, the king gone and the gate cold. Hidden
+ * player and an Adventure teammate enter twice. Each watches the other fight after a death, once through a win
+ * and once through a wipe. Both return to the gate in their original modes with belongings kept. Hidden
  * window, muted before any world loads.
  */
 public final class PyreGateSmoke implements ClientModInitializer {
@@ -70,6 +75,8 @@ public final class PyreGateSmoke implements ClientModInitializer {
     private volatile Direction facing;
     private volatile boolean located, checked, lit, burning, inHall, skipped, judged;
     private volatile int killedAt;
+    private final UUID teammate = UUID.randomUUID();
+    private boolean checkedSpectator;
 
     public void onInitializeClient() { ClientTickEvents.END_CLIENT_TICK.register(this::tick); }
 
@@ -133,6 +140,7 @@ public final class PyreGateSmoke implements ClientModInitializer {
                         run(server, p, "gamerule doMobSpawning false");
                         run(server, p, "kill @e[type=!minecraft:player,distance=..160]");
                         survival(p);
+                        GuardianNaveSmokeMod.joinInAdventure(p, teammate, "PyreTeammate");
                     });
                     if (t == 20) onServer(server, () -> {
                         var p = player(server, uuid);
@@ -161,13 +169,18 @@ public final class PyreGateSmoke implements ClientModInitializer {
                         require(p.getEntityWorld().getRegistryKey() == PyreHall.WORLD && PyreKingIntro.watching(p), "The player should be in the hall, held by his intro");
                         inHall = true;
                     });
-                    if (t == 30 + PyreKingIntro.SKIP_AFTER + 20) onServer(server, () -> { PyreKingIntro.skip(player(server, uuid)); skipped = true; });
+                    if (t == 30 + PyreKingIntro.SKIP_AFTER + 20) onServer(server, () -> { skipParty(server, uuid); skipped = true; });
                     if (t == 30 + PyreKingIntro.SKIP_AFTER + 50) onServer(server, () -> {
                         var p = player(server, uuid);
                         ServerWorld realm = (ServerWorld) p.getEntityWorld();
                         var kings = realm.getEntitiesByClass(PyreKingEntity.class, PyreHall.footprint(PyreHall.nearestCentre(p.getEntityPos())), e -> e.isAlive());
                         require(inHall && skipped && kings.size() == 1 && !kings.get(0).inIntro(), "After the skip one Pyre King should be fighting; found " + kings.size());
-                        kings.get(0).kill(realm);
+                        player(server, teammate).kill(realm);
+                    });
+                    if (t == 110) onServer(server, () -> GuardianNaveSmokeMod.respawn(server, player(server, teammate)));
+                    if (t == 130) onServer(server, () -> {
+                        var king = watching(server, teammate, uuid);
+                        king.kill(server.getWorld(PyreHall.WORLD));
                         killedAt = server.getTicks();
                     });
                     if (t > 700) throw new AssertionError("The hall never sent the victor home");
@@ -176,8 +189,9 @@ public final class PyreGateSmoke implements ClientModInitializer {
                         var p = player(server, uuid);
                         int after = server.getTicks() - killedAt;
                         require(after >= 195, "Sent home only " + after + " ticks after he died");
+                        requireHome(server, teammate, GameMode.ADVENTURE);
                         require(p.getEntityPos().distanceTo(Vec3d.ofBottomCenter(stand)) < 1.5, "The victor should stand before the gate at " + stand.toShortString() + ", not at " + fmt(p.getEntityPos()));
-                        wonNote = "after a win the player stood before the gate " + after / 20.0 + " s later";
+                        wonNote = "the fallen teammate spectated, then returned in Adventure alongside the victor " + after / 20.0 + " s after the win";
                     }); }
                     if (!wonNote.isEmpty()) { judged = false; next(); }
                 }
@@ -188,25 +202,39 @@ public final class PyreGateSmoke implements ClientModInitializer {
                         ServerWorld world = (ServerWorld) p.getEntityWorld();
                         require(!PyreGate.active(world, seal) && !world.getBlockState(seal).get(PyreSealBlock.LIT), "The gate should be cold again after the fight");
                         p.getInventory().insertStack(new ItemStack(Items.DIAMOND, 3));
+                        p.setExperienceLevel(7);
                         touch(p);
                     });
                     if (t == 100) onServer(server, () -> touch(player(server, uuid)));
                     if (t > 600) throw new AssertionError("The gate never took the player to the hall a second time");
                     if (t > 100 && hall) next();
                 }
-                case 6 -> { // they fall in the hall, and wake before the gate with what they carried; he is gone
+                case 6 -> { // the player watches until their teammate dies, then both go home
                     int t = ++scene;
-                    if (t == 30 + PyreKingIntro.SKIP_AFTER + 20) onServer(server, () -> PyreKingIntro.skip(player(server, uuid)));
+                    if (t == 30 + PyreKingIntro.SKIP_AFTER + 20) onServer(server, () -> skipParty(server, uuid));
                     if (t == 30 + PyreKingIntro.SKIP_AFTER + 50) onServer(server, () -> {
                         var p = player(server, uuid);
                         require(p.getEntityWorld().getRegistryKey() == PyreHall.WORLD, "The player should be in the hall for the second fight");
                         p.kill((ServerWorld) p.getEntityWorld());
                         killedAt = -server.getTicks();
                     });
+                    if (!checkedSpectator && killedAt < 0 && hall && c.player.isSpectator()) {
+                        checkedSpectator = true;
+                        onServer(server, () -> {
+                            watching(server, uuid, teammate);
+                            var p = player(server, uuid);
+                            require(p.getInventory().count(Items.DIAMOND) == 3 && p.experienceLevel == 7, "Spectator lost inventory or XP");
+                            var partner = player(server, teammate);
+                            partner.kill(partner.getEntityWorld());
+                            GuardianNaveSmokeMod.respawn(server, partner);
+                        });
+                    }
                     if (t > 900) throw new AssertionError("The fallen player never woke before the gate");
-                    if (killedAt >= 0 || !nether || c.player.isDead()) return;
+                    if (!checkedSpectator || !nether || c.player.isDead()) return;
                     if (!judged) { judged = true; onServer(server, () -> {
                         var p = player(server, uuid);
+                        requireHome(server, uuid, GameMode.SURVIVAL);
+                        requireHome(server, teammate, GameMode.ADVENTURE);
                         require(p.getEntityPos().distanceTo(Vec3d.ofBottomCenter(stand)) < 1.5, "The fallen player should wake before the gate, not at " + fmt(p.getEntityPos()));
                         require(p.getInventory().count(Items.DIAMOND) == 3, "The fallen player should keep what they carried");
                         ServerWorld realm = server.getWorld(PyreHall.WORLD);
@@ -214,7 +242,7 @@ public final class PyreGateSmoke implements ClientModInitializer {
                         for (int slot = 0; slot < PyreHall.SLOTS; slot++)
                             kings += realm.getEntitiesByClass(PyreKingEntity.class, PyreHall.footprint(new BlockPos(slot * PyreHall.SLOT_SPACING, PyreHall.SURFACE_Y, 0)), e -> e.isAlive()).size();
                         require(kings == 0 && !PyreGate.active(p.getEntityWorld(), seal), "After a wipe the Pyre King should be gone and the gate free; " + kings + " king(s) remain");
-                        fellNote = "a player who fell in the hall woke before the gate with their belongings, and the king was gone";
+                        fellNote = "the fallen player watched until the last fighter died, then both returned with their modes restored and the king gone";
                     }); }
                     if (fellNote.isEmpty()) return;
                     Files.writeString(Path.of("PYRE_GATE_PASSED.txt"), "In a fresh normal world the nearest Burned Gate was " + found + ". " + walk
@@ -229,6 +257,41 @@ public final class PyreGateSmoke implements ClientModInitializer {
             e.printStackTrace();
             done = true; c.scheduleStop();
         }
+    }
+
+    private void skipParty(MinecraftServer server, UUID leader) {
+        var host = player(server, leader);
+        var partner = player(server, teammate);
+        require(PyreKingIntro.watching(partner), "The Adventure teammate missed the intro");
+        // This fixture controls the order of deaths while the King's real combat keeps running.
+        for (var fighter : java.util.List.of(host, partner))
+            fighter.addStatusEffect(new StatusEffectInstance(StatusEffects.RESISTANCE, 400, 4, false, false));
+        partner.onTeleportationDone();
+        PyreKingIntro.skip(partner);
+        PyreKingIntro.skip(host);
+    }
+
+    private PyreKingEntity watching(MinecraftServer server, UUID fallen, UUID standing) {
+        var spectator = player(server, fallen);
+        var fighter = player(server, standing);
+        var hall = server.getWorld(PyreHall.WORLD);
+        var centre = PyreHall.nearestCentre(fighter.getEntityPos());
+        require(fighter.isAlive() && !fighter.isSpectator() && fighter.getEntityWorld() == hall, "Lost the remaining fighter");
+        require(spectator.isAlive() && spectator.isSpectator() && spectator.getEntityWorld() == hall
+                && PyreHall.footprint(centre).contains(spectator.getEntityPos()), "Fallen player did not return to their fight as a spectator");
+        var kings = hall.getEntitiesByClass(PyreKingEntity.class, PyreHall.footprint(centre), Entity::isAlive);
+        require(kings.size() == 1 && PyreGate.spectatorViewer(kings.getFirst(), spectator), "Spectator lost their boss bar");
+        require(!kings.getFirst().eligible(spectator) && !GuardianArenaManager.canCast(spectator), "Spectator can still fight");
+        require(GuardianArenaManager.canTeleport(spectator, hall, fighter.getEntityPos())
+                && !GuardianArenaManager.canTeleport(spectator, hall, fighter.getEntityPos().add(PyreHall.SLOT_SPACING, 0, 0)),
+                "Spectator travel does not respect the fight slot");
+        return kings.getFirst();
+    }
+
+    private void requireHome(MinecraftServer server, UUID id, GameMode mode) {
+        var p = player(server, id);
+        require(p.getEntityWorld().getRegistryKey() == World.NETHER && p.getEntityPos().distanceTo(Vec3d.ofBottomCenter(stand)) < 2
+                && p.interactionManager.getGameMode() == mode && !PyreGate.held(id), "Player did not return to the gate in " + mode);
     }
 
     /** Finds the nearest gate from the Nether's origin and stands the player before it. */

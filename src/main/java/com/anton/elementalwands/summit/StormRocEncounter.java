@@ -65,6 +65,10 @@ public final class StormRocEncounter {
     }
     public static boolean activeAt(BlockPos centre) { return fights.containsKey(centre); }
     public static boolean enrolled(PlayerEntity player) { return of(player) != null; }
+    public static boolean spectatorViewer(StormRocEntity boss, ServerPlayerEntity player) {
+        Fight fight = of(player);
+        return fight != null && fight.boss == boss && !fight.standing.contains(player.getUuid());
+    }
     private static Fight of(PlayerEntity player) {
         for (Fight fight : fights.values()) if (fight.roster.contains(player.getUuid())) return fight;
         return null;
@@ -148,6 +152,7 @@ public final class StormRocEncounter {
     }
     private static void spectate(ServerPlayerEntity player, Fight fight) {
         player.changeGameMode(GameMode.SPECTATOR);
+        player.setCameraEntity(player);
         StormSummitManager.transfer(player, player.getEntityWorld().getServer().getWorld(StormSummit.WORLD), StormSummit.arrival(fight.centre), StormSummit.ARRIVAL_YAW, 0);
     }
     /** Encounter falls eliminate immediately without a death screen or inventory loss. */
@@ -188,7 +193,9 @@ public final class StormRocEncounter {
             if (fight.boss.isRemoved() || !fight.boss.isAlive()) { end(server, fight, "Storm Roc encounter interrupted. You may retry.", false); continue; }
             for (UUID id : fight.roster) {
                 ServerPlayerEntity player = server.getPlayerManager().getPlayer(id);
-                if (player != null && player.isAlive() && !fight.standing.contains(id) && (!StormSummitManager.inRealm(player) || !player.isSpectator())) spectate(player, fight);
+                if (player != null && player.isAlive() && player.networkHandler.player == player && !fight.standing.contains(id)
+                        && (!player.isSpectator() || player.getEntityWorld() != server.getWorld(StormSummit.WORLD)
+                        || !StormSummit.footprint(fight.centre).contains(player.getEntityPos()))) spectate(player, fight);
             }
         }
         // Offline recovery records survive stops/crashes and are applied on the next login.

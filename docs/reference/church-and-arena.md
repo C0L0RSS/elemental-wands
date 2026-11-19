@@ -255,9 +255,10 @@ rewards go beside its open grave.
   also after quitting from the death screen or a restart before respawning. The crypt handles
   only a death in the realm or in a fight; a return point alone never pulls a later death
   elsewhere back to the graveyard.
-  A fallen fighter respawns as a spectator above their own clearing. They cannot leave it or
-  teleport away, and get their game mode back when the fight ends. Disconnecting also counts
-  as falling; rejoining mid-fight puts the player back as a spectator.
+  A fallen fighter respawns as a spectator above their own clearing and sees the Necromancer's
+  health bar. Spectator flight and teleports stay within that clearing. Their original game
+  mode returns when the fight ends. Disconnecting counts as falling, and rejoining mid-fight
+  puts the player back as a spectator.
 - **Wipe:** when nobody is left standing (dead, disconnected or gone), the boss and its army
   vanish. Everyone is sent back to where they entered and the slot's layout is rebuilt. The
   group may walk into the veil again straight away; a fight's end releases only the players in

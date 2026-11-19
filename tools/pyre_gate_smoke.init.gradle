@@ -1,4 +1,4 @@
-// The Burned Gate in a fresh normal world: the nearest one in the Nether found as /locate does, its road walked, pictures taken; then a Survival player touches the seal, wins and is sent back, touches it again, falls and wakes before the gate. Hidden, muted window.
+// The Burned Gate in a fresh normal world, including two-player fights through a victory and a wipe. Hidden, muted window.
 // ./gradlew -I tools/pyre_gate_smoke.init.gradle runClient -PhubClientAssets="$HOME/.lunarclient/shared/assets"
 allprojects {
     plugins.withId('fabric-loom') {

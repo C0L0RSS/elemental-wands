@@ -376,6 +376,11 @@ public final class HollowCryptManager {
         return null;
     }
 
+    public static boolean spectatorViewer(NecromancerEntity boss, ServerPlayerEntity player) {
+        Fight fight = rosterOf(player);
+        return fight != null && boss.getUuidAsString().equals(fight.boss) && !fight.standing.contains(player.getUuidAsString());
+    }
+
     private static void eliminate(ServerPlayerEntity player, String message) {
         Fight fight = fightOf(player);
         if (fight == null) return;

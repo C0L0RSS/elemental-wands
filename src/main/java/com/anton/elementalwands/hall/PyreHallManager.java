@@ -6,6 +6,7 @@ import com.anton.elementalwands.entity.pyreking.PyreKingEntity;
 import com.anton.elementalwands.registry.ModEntities;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.annotations.SerializedName;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -51,6 +52,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.WorldSavePath;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.GameMode;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.World;
 import org.slf4j.Logger;
@@ -80,8 +82,10 @@ public final class PyreHallManager {
         List<Integer> built = new ArrayList<>();
         /** Where each player entered from; leaving always sends them back here. */
         Map<String, Point> returns = new LinkedHashMap<>();
-        /** Players who came in through a Burned Gate: whoever of them no party holds is sent back to it. */
-        List<String> gated = new ArrayList<>();
+        /** Unreleased party members. Keep the save key used when only gates could admit a party. */
+        @SerializedName("gated") Set<String> enrolled = new LinkedHashSet<>();
+        /** Admission modes, saved before the hall can turn a fallen fighter into a spectator. */
+        Map<String, String> modes = new LinkedHashMap<>();
     }
 
     private static final class Build {
@@ -154,11 +158,15 @@ public final class PyreHallManager {
     /**
      * Every player teleport (spells, pearls, commands, portals) stays on the walled floor and never
      * crosses into or out of the hall; only the hall's own moves (enter, leave, the edge rescue) do.
-     * Creative and spectating players are free.
+     * Fallen fighters can roam their own slot. Other spectators and Creative players are free.
      */
     public static boolean canTeleport(PlayerEntity player, ServerWorld destination, Vec3d target) {
         if (internalTeleport) return true;
-        if (player.isCreative() || player.isSpectator()) return true;
+        if (player.isSpectator()) {
+            BlockPos slot = PyreGate.spectatorSlot(player.getUuid());
+            return slot == null || destination.getRegistryKey() == PyreHall.WORLD && PyreHall.footprint(slot).contains(target);
+        }
+        if (player.isCreative()) return true;
         boolean from = inRealm(player), to = destination.getRegistryKey() == PyreHall.WORLD;
         if (!from && !to) return true;
         return from && to && PyreHall.inPlay(PyreHall.nearestCentre(player.getEntityPos()), target, .4);
@@ -166,9 +174,40 @@ public final class PyreHallManager {
 
     // ------------------------------------------------------------------ what the Burned Gate uses
 
-    /** Ways back and who came through a gate, to change and then {@link #persist}; null while storage is unavailable. */
-    static Map<String, Point> savedReturns() { return state == null ? null : state.returns; }
-    static List<String> savedGated() { return state == null ? null : state.gated; }
+    static Set<String> enrolled() { return state == null ? null : state.enrolled; }
+
+    /** Gate parties share a return point. A command party keeps the individual points recorded on entry. */
+    static boolean recordParty(List<ServerPlayerEntity> group, Point gate) {
+        Map<String, Point> previousReturns = new LinkedHashMap<>(state.returns);
+        for (ServerPlayerEntity player : group) {
+            String id = player.getUuidAsString();
+            if (gate != null) state.returns.put(id, gate);
+            state.enrolled.add(id);
+            state.modes.put(id, player.interactionManager.getGameMode().getId());
+        }
+        if (persist()) return true;
+        group.forEach(p -> forgetEntry(p.getUuidAsString()));
+        state.returns = previousReturns;
+        return false;
+    }
+
+    static void forgetEntry(String id) {
+        state.returns.remove(id);
+        forgetEnrollment(id);
+    }
+
+    static void withdraw(ServerPlayerEntity player) {
+        // Persist the operator's chosen mode before retiring recovery. Keep their original /ew hall leave destination.
+        player.getEntityWorld().getServer().getPlayerManager().saveAllPlayerData();
+        forgetEnrollment(player.getUuidAsString());
+        persist();
+    }
+
+    private static void forgetEnrollment(String id) {
+        state.enrolled.remove(id);
+        state.modes.remove(id);
+    }
+
     static BlockPos slotCentre(int slot) { refreshGeneration(); return PyreHall.centre(state.generation, slot); }
     /** Lays the slot out unless it is ready or already being laid out. */
     static void raise(ServerWorld realm, int slot) { if (!ready(slot)) build(realm, slot); }
@@ -185,7 +224,7 @@ public final class PyreHallManager {
         if (king == null) return null;
         Vec3d at = PyreHall.king(centre);
         king.refreshPositionAndAngles(at.x, at.y, at.z, PyreHall.KING_YAW, 0);
-        realm.spawnEntity(king);
+        if (!realm.spawnEntity(king)) return null;
         king.beginIntro(realm, centre, watchers);
         return king;
     }
@@ -193,6 +232,7 @@ public final class PyreHallManager {
     // ------------------------------------------------------------------ commands
 
     public static String enter(ServerPlayerEntity player, int slot) {
+        if (PyreGate.held(player.getUuid())) return "Leave your current fight before entering another hall.";
         ServerWorld realm = realm(player.getEntityWorld().getServer());
         if (realm == null) return "The Burned Throne Hall dimension is not loaded.";
         if (state == null) return "Burned Throne Hall storage is unavailable; see the server log.";
@@ -214,6 +254,7 @@ public final class PyreHallManager {
     public static String leave(ServerPlayerEntity player) {
         if (!inRealm(player)) return "You are not in the Burned Throne Hall.";
         if (state == null) return "Burned Throne Hall storage is unavailable; see the server log.";
+        PyreGate.leave(player.getUuid());
         return sendHome(player) ? "Returned to where you entered." : "No return point was recorded; sent to world spawn.";
     }
 
@@ -227,11 +268,14 @@ public final class PyreHallManager {
         return out.toString();
     }
 
-    /** Removes any Pyre King in the slot and stands a new one on his mark in his guard. He has no fight. */
+    /** Stand a new king on his mark. Survival and Adventure visitors form the party for this fight. */
     public static String summon(ServerPlayerEntity player) {
         if (!inRealm(player)) return "Enter the hall first with /ew hall enter.";
+        if (state == null) return "Burned Throne Hall storage is unavailable; see the server log.";
         ServerWorld realm = (ServerWorld) player.getEntityWorld();
         BlockPos centre = PyreHall.nearestCentre(player.getEntityPos());
+        String refusal = PyreGate.commandStartRefusal(centre);
+        if (refusal != null) return refusal;
         List<PyreKingEntity> old = realm.getEntitiesByClass(PyreKingEntity.class, PyreHall.footprint(centre), e -> true);
         old.forEach(Entity::discard);
         PyreKingEntity king = ModEntities.PYRE_KING.create(realm, SpawnReason.COMMAND);
@@ -240,9 +284,10 @@ public final class PyreHallManager {
         king.refreshPositionAndAngles(at.x, at.y, at.z, PyreHall.KING_YAW, 0);
         king.setBodyYaw(PyreHall.KING_YAW);
         king.setHeadYaw(PyreHall.KING_YAW);
-        realm.spawnEntity(king);
+        if (!realm.spawnEntity(king)) return "Could not spawn the Pyre King.";
+        if (!PyreGate.startInHall(realm, slotAt(centre), centre, king)) return "Could not save the party's return information.";
         return "The Pyre King stands before his throne" + (old.isEmpty() ? "" : " (replaced " + old.size() + ")")
-                + ". He fights anyone in Survival or Adventure who comes near; /ew pyreking calm stops him.";
+                + ". /ew pyreking calm stops him.";
     }
 
     /**
@@ -251,10 +296,15 @@ public final class PyreHallManager {
      */
     public static String intro(ServerPlayerEntity player) {
         if (!inRealm(player)) return "Enter the hall first with /ew hall enter.";
+        if (state == null) return "Burned Throne Hall storage is unavailable; see the server log.";
         ServerWorld realm = (ServerWorld) player.getEntityWorld();
         BlockPos centre = PyreHall.nearestCentre(player.getEntityPos());
+        String refusal = PyreGate.commandStartRefusal(centre);
+        if (refusal != null) return refusal;
         List<ServerPlayerEntity> watchers = realm.getPlayers(p -> p.isAlive() && !p.isSpectator() && PyreHall.footprint(centre).contains(p.getEntityPos()));
-        if (wake(realm, centre, watchers) == null) return "Could not create the Pyre King.";
+        PyreKingEntity king = wake(realm, centre, watchers);
+        if (king == null) return "Could not create the Pyre King.";
+        if (!PyreGate.startInHall(realm, slotAt(centre), centre, king)) return "Could not save the party's return information.";
         return "The Pyre King sits on his throne and his intro plays for " + watchers.size() + (watchers.size() == 1 ? " player" : " players")
                 + ". Hold Sneak to skip it; the fight follows.";
     }
@@ -286,8 +336,8 @@ public final class PyreHallManager {
     }
 
     /**
-     * Sends home everyone in the slot who came in through the hall and is standing in it (alive and connected). As in
-     * the other realms, anyone without a recorded way back, such as an operator who teleported in, is left alone.
+     * Send online visitors with recorded entry points home. The party's remaining members use
+     * encounter recovery, including the world-spawn fallback for a member who teleported into the hall.
      */
     private static void release(MinecraftServer server, ServerWorld realm, BlockPos centre) {
         for (ServerPlayerEntity player : realm.getPlayers(p -> PyreHall.footprint(centre).contains(p.getEntityPos()))) {
@@ -302,10 +352,19 @@ public final class PyreHallManager {
         transfer(player, realm, PyreHall.arrival(PyreHall.centre(state.generation, slot)), PyreHall.ARRIVAL_YAW, 0);
     }
 
+    static void spectate(ServerPlayerEntity player, ServerWorld realm, BlockPos centre) {
+        boolean newlySpectating = player.changeGameMode(GameMode.SPECTATOR);
+        player.setCameraEntity(player);
+        transfer(player, realm, PyreHall.arrival(centre).add(0, 12, 0), PyreHall.ARRIVAL_YAW, 22);
+        if (newlySpectating) player.sendMessage(Text.literal("You are watching the fight. The hall will return you when it ends."), false);
+    }
+
     /** Back to the recorded entry point, or world spawn. */
     static boolean sendHome(ServerPlayerEntity player) {
         MinecraftServer server = player.getEntityWorld().getServer();
         String id = player.getUuidAsString();
+        String mode = state.modes.get(id);
+        if (mode != null) player.setCameraEntity(player);
         Point point = state.returns.get(id);
         ServerWorld world = point == null ? null : server.getWorld(RegistryKey.of(RegistryKeys.WORLD, Identifier.of(point.dimension())));
         boolean recorded = world != null && world.getRegistryKey() != PyreHall.WORLD;
@@ -317,11 +376,11 @@ public final class PyreHallManager {
             int y = spawn.getTopY(Heightmap.Type.MOTION_BLOCKING, pos.getX(), pos.getZ());
             transfer(player, spawn, new Vec3d(pos.getX() + .5, y, pos.getZ() + .5), server.getSpawnPoint().yaw(), 0);
         }
-        // Save where they now stand before retiring the record: a crash in between repeats the trip
+        if (mode != null) player.changeGameMode(GameMode.byId(mode, GameMode.SURVIVAL));
+        // Save their position and restored mode before retiring the record: a crash in between repeats the trip
         // home instead of leaving them in the hall with no way back.
         server.getPlayerManager().saveAllPlayerData();
-        state.returns.remove(id);
-        state.gated.remove(id);
+        forgetEntry(id);
         persist();
         return recorded;
     }
@@ -490,7 +549,8 @@ public final class PyreHallManager {
             state = Files.exists(path) ? JSON.fromJson(Files.readString(path), State.class) : new State();
             if (state == null || state.version != 1 || state.built == null || state.returns == null || state.layout == null)
                 throw new IOException("Invalid Burned Throne Hall record");
-            if (state.gated == null) state.gated = new ArrayList<>();      // records from before the Burned Gate
+            if (state.enrolled == null) state.enrolled = new LinkedHashSet<>();
+            if (state.modes == null) state.modes = new LinkedHashMap<>();
             persist();
         } catch (Exception e) {
             state = null;

@@ -142,7 +142,7 @@ public final class StormSummitManager {
         }
         if (StormRocEncounter.activeAt(StormSummit.centre(state.generation, slot))) return "That summit has a sealed fight in progress.";
         if (ready(slot)) {
-            arrive(player, realm, slot);
+            arrive(player, realm, slot, 0);
             return "Entered summit slot " + slot + ". /ew summit leave takes you back.";
         }
         Build build = build(realm, slot);
@@ -190,8 +190,9 @@ public final class StormSummitManager {
 
     // ------------------------------------------------------------------ moving players
 
-    private static void arrive(ServerPlayerEntity player, ServerWorld realm, int slot) {
-        transfer(player, realm, StormSummit.arrival(StormSummit.centre(state.generation, slot)), StormSummit.ARRIVAL_YAW, 0);
+    /** Onto the summit at a place in the arrival line, facing the Roc's home spire. */
+    private static void arrive(ServerPlayerEntity player, ServerWorld realm, int slot, double place) {
+        transfer(player, realm, StormSummit.arrival(StormSummit.centre(state.generation, slot), place), StormSummit.ARRIVAL_YAW + StormSummit.lineTurn(place), 0);
     }
 
     /** Back to the recorded entry point (an aerie's for a called player), or world spawn. */
@@ -292,10 +293,11 @@ public final class StormSummitManager {
             it.remove();
             if (!state.built.contains(build.slot)) state.built.add(build.slot);
             persist();
+            int place = 0;
             for (UUID id : build.waiting) {
                 ServerPlayerEntity player = server.getPlayerManager().getPlayer(id);
                 if (player == null || !player.isAlive()) continue;
-                arrive(player, realm, build.slot);
+                arrive(player, realm, build.slot, StormSummit.linePlace(place++, build.waiting.size()));
                 player.sendMessage(Text.literal("The wind carries you up to the Storm Summit."), true);
             }
         }

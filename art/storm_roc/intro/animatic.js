@@ -374,11 +374,19 @@ function bolt(from, to, seed, wiggle, branches) {
 
 // ---------- State ----------
 const ELEMENTS = {fire: [224, 132, 44], nature: [127, 211, 107], wind: [170, 225, 255], stone: [188, 199, 195], space: [178, 157, 255]};
-const SHOTS = [['1 · quiet', 0], ['2 · caw', 'caw'], ['3 · snatch', 'snatch'], ['4 · carried', 'grip', 8], ['5 · reveal', 'look_up'], ['6 · clouds', 'cloud'],
+let SHOTS = [['1 · quiet', 0], ['2 · caw', 'caw'], ['3 · snatch', 'snatch'], ['4 · carried', 'grip', 8], ['5 · reveal', 'look_up'], ['6 · clouds', 'cloud'],
   ['7 · struggle', 'summit'], ['8 · throw', 'throw'], ['9 · landing', 'ground'], ['10 · hand back', 'back']];
-const SHOT_NAMES = ['quiet', 'caw', 'snatch', 'carried off', 'the reveal', 'storm clouds', 'the struggle', 'the throw', 'the landing', 'hand back'];
+let SHOT_NAMES = ['quiet', 'caw', 'snatch', 'carried off', 'the reveal', 'storm clouds', 'the struggle', 'the throw', 'the landing', 'hand back'];
 const state = {tick: 0, playing: true, speed: 1, mode: 'scene', bars: true, cues: true, element: 'wind', skin: 'steve', orbit: {yaw: rad(35), pitch: rad(12), dist: 9}};
-let track, roc, player, playerSlim, gong, skins = {}, progs = {}, meshes = {}, scenery = {};
+let track, roc, player, playerSlim, gong, nature, skins = {}, progs = {}, meshes = {}, scenery = {};
+/** An element's landing plugs in here from its own script (track.landing.script, written by
+ * art/storm_roc/intro/<element>_landing.py), which sets any of: load(json, image) to fetch its
+ * props; solids(s, t, view) returning solid-layout geometry to draw lit and opaque; translucent(s,
+ * t, view) to draw its own clouds and light; hud(t, s, w, h) to draw over the frame. view holds
+ * tip (the wand's tip), mats and model (the posed player's bones), and in translucent also eye,
+ * right, up, vp, fog and fogRange. Its track columns all reach s by name. Nature's landing is
+ * built into this file instead (track.nature). */
+const LANDING = {};
 
 async function load() {
   const bust = '?v=' + Date.now();
@@ -399,6 +407,21 @@ async function load() {
   skins = {steve: texture(steve), alex: texture(alex)};
   gong = {model: bakeModel(gGeo), tex: texture(gTex)};
   track = trackData;
+  if (track.nature) { // an element's own landing (art/storm_roc/intro/nature_landing.py): its props and shots
+    const m = await json('springbloom.json');
+    nature = {pad: m.springbloom_pad, wilt: m.springbloom_wilt, pod: m.springbloom_pod};
+    progs.glow = program(PUFF_VS, GLOW_FS); meshes.glow = vao(progs.glow, [['centre', 3], ['corner', 2], ['col', 4]], 9);
+    SHOTS = track.nature.shots; SHOT_NAMES = track.nature.shot_names;
+    state.element = 'nature'; $('#element').value = 'nature';
+  }
+  if (track.landing) {
+    await new Promise((ok, no) => { const el = document.createElement('script'); el.src = track.landing.script + bust; el.onload = ok;
+      el.onerror = () => no(Error(track.landing.script + ' did not load')); document.head.append(el); });
+    progs.glow = program(PUFF_VS, GLOW_FS); meshes.glow = vao(progs.glow, [['centre', 3], ['corner', 2], ['col', 4]], 9);
+    if (track.landing.shots) { SHOTS = track.landing.shots; SHOT_NAMES = track.landing.shot_names; }
+    state.element = track.landing.element; $('#element').value = state.element;
+    if (LANDING.load) await LANDING.load(json, image);
+  }
   for (const [half, build] of [[0, () => buildAerie()], [1, () => buildSummit(track.summit)]]) {
     const m = vao(progs.solid, [['pos', 3], ['normal', 3], ['col', 4]], 10); upload(m, build()); scenery[half] = m;
   }
@@ -431,6 +454,7 @@ function sample(t) {
   const out = {half: T.half[a], eye: pick('eye'), yaw: angle('yaw'), pitch: pick('pitch'), roll: pick('roll'), fov: pick('fov'), roc: place('roc'), player: place('player'),
     pov: T.pov[a], hand: pick('hand'), rocHead: pick('roc_head')};
   for (const k of ['white', 'dim', 'shade', 'beat', 'wand', 'dark', 'bars', 'flash']) out[k] = pick(k);
+  for (const k of Object.keys(T)) if (!(k in out) && k !== 'roc_head') out[k] = pick(k);  // a landing's own columns
   return out;
 }
 const dot4 = (a, b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2] + a[3]*b[3];
@@ -481,7 +505,7 @@ function draw() {
   const dimSky = c => scale(c, (1 - .5 * s.dim) * (1 + 1.2 * s.flash));
   gl.uniform3fv(progs.sky.u.zenith, dimSky(look.zenith)); gl.uniform3fv(progs.sky.u.horizon, dimSky(half === 0 ? mix3(look.horizon, fog, smooth((eye[1] - track.aerie.cloud_base) / 5)) : look.horizon));
   gl.uniform3fv(progs.sky.u.ground, look.ground); gl.uniform1f(progs.sky.u.seaY, track.summit.cloud_y); gl.uniform1i(progs.sky.u.sea, half);
-  gl.uniform1f(progs.sky.u.time, t / 20); gl.uniform3fv(progs.sky.u.fog, fog);
+  gl.uniform1f(progs.sky.u.time, fxTime(t) / 20); gl.uniform3fv(progs.sky.u.fog, fog);
   gl.drawArrays(gl.TRIANGLES, 0, 6);
   gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.disable(gl.CULL_FACE);
 
@@ -527,6 +551,16 @@ function draw() {
   box(wd, [-.035, -.035, -.06], [.035, .035, .62], [.33, .22, .13], wm); box(wd, [-.06, -.06, .58], [.06, .06, .72], el, wm);
   gl.useProgram(solid.p); upload(meshes.solid, wd, gl.DYNAMIC_DRAW); gl.bindVertexArray(meshes.solid.va); gl.drawArrays(gl.TRIANGLES, 0, wd.length / 10);
   }
+  const natTip = M.apply(M.mul(wand, M.mul(M.t(...pup.model.bones[pup.model.index.get('wand')].pivot), M.rx(rad(-70)))), [0, 0, .72]);
+  const landView = {tip: natTip, mats: pMats, model: pup.model};
+  if (nature && half === 1) {
+    const nd = natureSolids(s, t, natTip);
+    gl.useProgram(solid.p); upload(meshes.solid, nd, gl.DYNAMIC_DRAW); gl.bindVertexArray(meshes.solid.va); gl.drawArrays(gl.TRIANGLES, 0, nd.length / 10);
+  }
+  if (LANDING.solids && half === 1) {
+    const ld = LANDING.solids(s, t, landView);
+    if (ld && ld.length) { gl.useProgram(solid.p); upload(meshes.solid, ld, gl.DYNAMIC_DRAW); gl.bindVertexArray(meshes.solid.va); gl.drawArrays(gl.TRIANGLES, 0, ld.length / 10); }
+  }
 
   // Translucent: the storm cap, clouds, lightning, the wand's flash.
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
@@ -534,6 +568,11 @@ function draw() {
   if (half === 1) { gl.uniform1f(solid.u.light, 1 + 2 * s.flash); gl.bindVertexArray(scenery.cap.va); gl.drawArrays(gl.TRIANGLES, 0, scenery.cap.count / 10); }
   drawPuffs(half, eye, right, up, vp, fog, fogRange, s, t);
   drawLightning(t, half, eye, vp, fog);
+  if (nature && half === 1) { natureSnow(s, eye, right, up, vp, fog, fogRange); natureTrail(s, t, eye); natureGlow(s, t, natTip, eye, right, up, vp); }
+  if (LANDING.translucent && half === 1) {
+    LANDING.translucent(s, t, {...landView, eye, right, up, vp, fog, fogRange});
+    gl.useProgram(solid.p); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); gl.enable(gl.BLEND);
+  }
   if (s.wand > .02) { // the shock: a burst of the element's light where the wand hits the talon
     const prog = progs.puff, d = [], size = .6 + 3.2 * s.wand;
     for (const [k, c] of [[1, el.map(v => Math.min(1, v * 1.4))], [.45, [1, 1, 1]]])
@@ -553,7 +592,7 @@ function drawPuffs(half, eye, right, up, vp, fog, fogRange, s, t) {
   const list = PUFFS[half];
   const sorted = list.map(p => ({p, d: Math.hypot(...sub(p.c, eye))})).filter(x => x.d < 900).sort((a, b) => b.d - a.d);
   const data = [];
-  const drift = half === 1 ? [t / 20 * 2.2, 0, t / 20 * 1.0] : [t / 20 * 3, -t / 20 * 4, 0];
+  const ft = fxTime(t), drift = half === 1 ? [ft / 20 * 2.2, 0, ft / 20 * 1.0] : [ft / 20 * 3, -ft / 20 * 4, 0];
   const lift = half === 0 ? [0, track.aerie.cloud_base - 30, 0] : [0, 0, 0];
   for (const {p} of sorted) {
     const c = add(add(p.c, drift), lift), col = scale(p.col, 1 + 1.6 * s.flash);
@@ -568,8 +607,9 @@ function drawPuffs(half, eye, right, up, vp, fog, fogRange, s, t) {
 function drawLightning(t, half, eye, vp, fog) {
   const data = [];
   for (const e of scenery.bolts) {
-    if (e.half !== half || t < e.tick || t > e.tick + 6 || !e.lines.length) continue;
-    const age = t - e.tick, a = (1 - age / 6) * (age % 2 < 1 ? 1 : .55);
+    const age = fxAge(t, e.tick);
+    if (e.half !== half || age < 0 || age > 6 || !e.lines.length) continue;
+    const a = (1 - age / 6) * (age % 2 < 1 ? 1 : .55);
     const width = e.kind === 'bolt' ? .9 : .07;
     for (const line of e.lines) for (let i = 0; i < line.length - 1; i++) {
       const p = line[i], q = line[i + 1], d = norm(sub(q, p)), side = norm(cross(d, norm(sub(eye, p)))), o = scale(side, width);
@@ -616,7 +656,316 @@ function invert(m) {
 }
 const mix = (a, b, s) => a + (b - a) * s;
 
-/** Snow, the white-out, the wing shadow and lightning, the wand's flash, letterbox and title, as the client draws them. */
+// ---------- An element's landing: the Springbloom, the vine, the slide (nature_landing.py) ----------
+/** A track column at a fractional tick, ignoring cuts. */
+function colAt(k, t) {
+  const C = track.ticks[k], n = C.length - 1, a = clamp(Math.floor(t), 0, n), b = Math.min(n, a + 1), f = clamp(t - a, 0, 1);
+  return typeof C[a] === 'number' ? C[a] + (C[b] - C[a]) * f : lerp(C[a], C[b], f);
+}
+/** Effects age on the story clock, so they slow down with the slow motion. */
+const fxTime = t => track && track.ticks.n_clock ? colAt('n_clock', t) : t;
+const fxAge = (t, tick) => fxTime(t) - fxTime(tick);
+const backEase = s => 1 + 2.70158 * Math.pow(s - 1, 3) + 1.70158 * Math.pow(s - 1, 2);
+const CORNERS = [[-1,-1],[1,-1],[1,1],[-1,-1],[1,1],[-1,1]];
+const GLOW_FS = `#version 300 es
+precision highp float; in vec2 vC; in vec4 vCol; in vec3 vPos; out vec4 color; uniform float opacity; uniform vec3 eye;
+void main(){ float r = length(vC); if (r > 1.) discard; float a = pow(1. - r, 2.2) * opacity * smoothstep(.6, 3.5, distance(vPos, eye)); color = vec4(vCol.rgb * a, a); }`;
+/** A mesh in the solid layout (pos, normal, rgba) moved by m (normals by n) into data. */
+function placeMesh(data, src, m, n) {
+  for (let i = 0; i < src.length; i += 10) {
+    data.push(...M.apply(m, [src[i], src[i + 1], src[i + 2]]), ...norm(M.dir(n || m, [src[i + 3], src[i + 4], src[i + 5]])), src[i + 6], src[i + 7], src[i + 8], src[i + 9]);
+  }
+}
+/** A frame at a whose +Z runs toward b. */
+function along(a, b) {
+  const d = norm(sub(b, a)); let x = cross([0, 1, 0], d); if (Math.hypot(...x) < .05) x = cross([1, 0, 0], d); x = norm(x); const y = cross(d, x);
+  return new Float32Array([...x, 0, ...y, 0, ...d, 0, ...a, 1]);
+}
+function beam(data, a, b, w, col) {
+  const len = Math.hypot(...sub(b, a)); if (len < 1e-4) return;
+  box(data, [-w / 2, -w / 2, -.01], [w / 2, w / 2, len + .01], col, along(a, b));
+}
+function leaf(data, a, b, w, col) {
+  const len = Math.hypot(...sub(b, a)); if (len < .01) return;
+  box(data, [-w / 2, -.012, 0], [w / 2, .012, len], col, along(a, b));
+}
+/** A flat disc on the snow, its radius by angle. */
+function fan(data, c, y, radius, col, n) {
+  for (let i = 0; i < n; i++) {
+    const a0 = i / n * Math.PI * 2, a1 = (i + 1) / n * Math.PI * 2, r0 = radius(a0), r1 = radius(a1);
+    for (const p of [[c[0], y, c[2]], [c[0] + Math.cos(a1) * r1, y, c[2] + Math.sin(a1) * r1], [c[0] + Math.cos(a0) * r0, y, c[2] + Math.sin(a0) * r0]]) data.push(...p, 0, 1, 0, ...col, 1);
+  }
+}
+const VINE = [[.47, .89, .19], [.18, .52, .1], [.19, .72, .13]];  // Thornbite's three strands
+/** Thornbite's braid at a grapple's scale: three strands from the wand's tip to the head, slack
+ * and whipping as it flies, pulled straight once it bites; thorns along it, and leaves that sprout
+ * up it from the bite toward the wand. */
+function vine(data, root, end, ft, taut, size, leafing) {
+  const L = Math.hypot(...sub(end, root)); if (L < .05) return;
+  const axis = norm(sub(end, root)); let side = cross(axis, [0, 1, 0]); if (Math.hypot(...side) < .1) side = [1, 0, 0]; side = norm(side); const up = norm(cross(side, axis));
+  const n = Math.max(28, Math.round(L * 7));
+  const P = (u, k) => {
+    const ph = u * Math.PI * (4 + L * .9) + k * Math.PI * 2 / 3, r = .043 * size * (.5 + .5 * Math.sin(Math.PI * Math.min(1, u * 3)));
+    const sag = (1 - taut) * Math.sin(Math.PI * u) * (.18 * size + .35 * Math.sin(u * 9 - ft * .8));
+    const sway = (1 - taut) * .2 * Math.sin(u * 7 + ft * .6) * Math.sin(Math.PI * u);
+    const thrum = taut * .025 * Math.sin(ft * 3.1 + u * 20) * Math.sin(Math.PI * u);  // humming under the strain
+    return add(add(lerp(root, end, u), scale(up, sag + thrum + Math.sin(ph) * r)), scale(side, Math.cos(ph) * r + sway));
+  };
+  for (let k = 0; k < 3; k++) for (let i = 0; i < n; i++) {
+    const u = i / n, a = P(u, k), b = P((i + 1) / n, k);
+    beam(data, a, b, (.043 - u * .012) * size, VINE[k]);
+    if (k === 1 && i % 5 === 2) beam(data, a, add(a, add(scale(side, (i % 2 ? 1 : -1) * .13 * size), scale(up, .06 * size))), .028 * size, [.13, .32, .07]);
+  }
+  for (let i = 2; i < n - 1; i += 3) {
+    const u = i / n, grow = clamp((leafing * 1.5 - (1 - u)) * 3, 0, 1); if (grow <= 0) continue;
+    const a = P(u, 0), sgn = i % 2 ? 1 : -1, g = backEase(grow);
+    leaf(data, a, add(a, add(add(scale(side, sgn * .3 * size * g), scale(up, .12 * size * g)), scale(axis, -.08 * size * g))), .13 * size * g, i % 4 < 2 ? VINE[0] : VINE[2]);
+  }
+}
+/** The flytrap on the vine's end: jaws open in flight, shut and half buried once it bites. */
+function trap(data, at, dir, open, size) {
+  const m = M.mul(along(at, add(at, dir)), M.s(size, size, size)), jaw = [.18, .52, .1], inner = [.78, .2, .24], tooth = [.95, .93, .8];
+  box(data, [-.1, -.1, -.22], [.1, .1, .02], [.15, .42, .08], m);
+  for (const sgn of [1, -1]) {
+    const j = M.mul(m, M.rx(-sgn * rad(open)));
+    box(data, [-.16, sgn > 0 ? 0 : -.06, 0], [.16, sgn > 0 ? .06 : 0, .34], jaw, j);
+    box(data, [-.13, sgn > 0 ? -.01 : 0, .02], [.13, sgn > 0 ? 0 : .01, .3], inner, j);
+    for (let i = 0; i < 4; i++) box(data, [-.15 + i * .1, sgn > 0 ? -.05 : 0, .3], [-.12 + i * .1, sgn > 0 ? 0 : .05, .38], tooth, j);
+  }
+}
+const PETALS = [[1, .55, .72], [1, .97, .92], [1, .84, .22], [.74, .56, 1], [1, .45, .36], [1, .66, .82]];
+/** Grass blades in a tuft at base, grown by e. */
+function tuft(data, base, a, e, i, ft) {
+  for (let j = 0; j < 3; j++) {
+    const h = (.26 + hash(i * 7 + j) * .34) * e, lean = (hash(i * 11 + j) - .5) * .6 + .12 * Math.sin(ft * .07 + i);
+    beam(data, add(base, [(j - 1) * .05, 0, (hash(i + j) - .5) * .08]), add(base, [Math.cos(a + j - 1) * lean * h, h, Math.sin(a + j - 1) * lean * h]), .045,
+      [[.3, .62, .16], [.42, .78, .2], [.24, .5, .12]][j]);
+  }
+}
+function flower(data, base, e, i, ft) {
+  const h = (.3 + hash(i * 2.3) * .38) * e, top = add(base, [.06 * Math.sin(ft * .08 + i), h, .06 * Math.cos(ft * .07 + i * 1.3)]);
+  beam(data, base, top, .035, [.25, .55, .14]);
+  leaf(data, add(base, [0, h * .35, 0]), add(base, [.14 * e * Math.cos(i), h * .5, .14 * e * Math.sin(i)]), .06 * e, VINE[0]);
+  const col = PETALS[i % PETALS.length], z = .08 * e, m = [M.t(...top), M.ry(hash(i) * 6.3 + ft * .01), M.rz(.3 * Math.sin(i))].reduce(M.mul);
+  for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) box(data, [dx * z * 1.15 - z * .7, -.014, dz * z * 1.15 - z * .7], [dx * z * 1.15 + z * .7, .014, dz * z * 1.15 + z * .7], col, m);
+  box(data, [-z * .5, -.01, -z * .5], [z * .5, .035, z * .5], [1, .8, .18], m);
+}
+/** Where the slide has your feet at story clock ft, and when it passed fraction v of its length. */
+function slidePoint(sl, ft) { const u = clamp((ft - sl.c0) / (sl.c1 - sl.c0), 0, 1); return lerp(sl.from, sl.to, 1 - Math.pow(1 - u, 3)); }
+function slidePassed(sl, v) { return sl.c0 + (1 - Math.cbrt(1 - clamp(v, 0, .9999))) * (sl.c1 - sl.c0); }
+/** The slide's mark: a green track through the snow behind you, grass and flowers springing up
+ * along it and spreading out round where you stop, snow sprayed off your feet, a few petals. */
+function slideField(data, sl, ft, ground) {
+  if (ft < sl.c0) return;
+  const dir = norm(sub(sl.to, sl.from)), side = norm(cross(dir, [0, 1, 0]));
+  const e = 1 - Math.pow(1 - clamp((ft - sl.c0) / (sl.c1 - sl.c0), 0, 1), 3), at = v => lerp(sl.from, sl.to, v);
+  const width = v => { const age = ft - slidePassed(sl, Math.max(0, v)); return (.3 + 1.2 * (1 - Math.exp(-age / 10))) * (.85 + .15 * Math.sin(v * 17)) * clamp((v + .12) / .1, 0, 1); };
+  for (let i = 0; i < 32; i++) {
+    const v0 = -.12 + (e + .12) * i / 32, v1 = -.12 + (e + .12) * (i + 1) / 32, a = at(v0), b = at(v1), wa = width(v0), wb = width(v1);
+    const q = [add(a, scale(side, -wa)), add(a, scale(side, wa)), add(b, scale(side, wb)), add(b, scale(side, -wb))].map(x => [x[0], ground + .02, x[2]]);
+    for (const k of [0, 2, 1, 0, 3, 2]) data.push(...q[k], 0, 1, 0, .36, .6, .21, 1);
+  }
+  const spread = 3.2 * (1 - Math.pow(1 - clamp((ft - sl.c1 + 3) / 34, 0, 1), 3));
+  if (spread > .1) fan(data, sl.to, ground + .021, a => spread * (.82 + .12 * Math.sin(a * 6 + 1) + .06 * Math.sin(a * 11)), [.36, .6, .21], 56);
+  for (let i = 0; i < 120; i++) {
+    const v = -.1 + 1.1 * hash(i * 2.37), off = (hash(i * 5.1) - .5) * 3; if (v > e) continue;
+    const g = clamp((ft - slidePassed(sl, Math.max(0, v)) - Math.abs(off) * 3) / 5, 0, 1); if (g <= 0) continue;
+    const base = add(at(v), scale(side, off)); base[1] = ground;
+    if (i % 4) tuft(data, base, hash(i) * 6.3, backEase(g), i, ft); else flower(data, base, backEase(g), i, ft);
+  }
+  for (let i = 0; i < 80; i++) {
+    const a = hash(i * 3.71 + 9) * Math.PI * 2, r = .9 + 2.4 * Math.sqrt(hash(i * 6.13 + 4)), g = clamp((spread - r) / .8, 0, 1); if (g <= 0) continue;
+    const base = [sl.to[0] + Math.cos(a) * r, ground, sl.to[2] + Math.sin(a) * r];
+    if (i % 3) tuft(data, base, a, backEase(g), i + 300, ft); else flower(data, base, backEase(g), i + 300, ft);
+  }
+  for (let k = 0; k < 36; k++) {  // snow sprayed out from your feet, less as you slow
+    const tk = sl.c0 + k * (sl.c1 - sl.c0) / 36, age = ft - tk; if (age < 0 || age > 22) continue;
+    const power = Math.pow(1 - k / 36, 1.5), origin = slidePoint(sl, tk), sec = age / 20;
+    for (let j = 0; j < 4; j++) {
+      const r = q => hash(k * 13.1 + j * 3.7 + q), sgn = j % 2 ? 1 : -1;
+      const vel = add(add(scale(side, sgn * (2 + 3 * r(1)) * power), scale(dir, (2 + 3 * r(2)) * power)), [0, (2 + 4 * r(3)) * power, 0]);
+      const p = add(origin, scale(vel, sec)); p[1] = Math.max(ground + .04, ground + .1 + vel[1] * sec - 5 * sec * sec);
+      const z = (.05 + .06 * r(4)) * (1 - age / 22); if (z < .005) continue;
+      box(data, [-z, -z * .8, -z], [z, z * .8, z], j % 3 ? [.93, .95, 1] : [.85, .88, .94], M.mul(M.t(...p), M.ry(r(5) * 6 + age * .2)));
+    }
+  }
+  for (let i = 0; i < 24; i++) {  // a few petals lifted off the new flowers, drifting
+    const age = ft - sl.c1 - hash(i * 4.4) * 16; if (age < 0) continue;
+    const z = .045 * clamp(age / 4, 0, 1) * (1 - smooth((age - 80) / 30)); if (z < .004) continue;
+    const p = [sl.to[0] + (hash(i * 1.9) - .5) * 5 + age * .012, ground + .2 + age * (.006 + .01 * hash(i * 2.6)) + .15 * Math.sin(age * .1 + i), sl.to[2] + (hash(i * 3.1) - .2) * 5];
+    box(data, [-z, -.01, -z * .6], [z, .01, z * .6], PETALS[i % PETALS.length], [M.t(...p), M.ry(age * .05 + i), M.rx(age * .06 + i)].reduce(M.mul));
+  }
+}
+function natureSolids(s, t, tip) {
+  const data = [], N = track.nature, pad = N.pad, ground = track.summit.arrival[1], ft = s.n_clock;
+  const burst = kind => N.bursts.find(b => b.kind === kind);
+  // The Springbloom: popping open, dipping under you and springing back past full; wilting later.
+  if (s.n_open > 0 && s.n_wilt < 1) {
+    const o = s.n_open, w = s.n_wilt, k = .35 + .65 * o, sq = s.n_squash, wide = 1 / Math.sqrt(Math.max(.3, sq));
+    const m = M.mul(M.t(pad[0], pad[1] - .25 * w, pad[2]), M.s(k * wide, Math.max(.02, o) * sq * (1 - .85 * w), k * wide));
+    placeMesh(data, w > 0 ? nature.wilt : nature.pad, m, M.id());
+  }
+  // Grass bursting up through the snow round it as it opens.
+  const grass = burst('grass'), ga = ft - grass.clock;
+  if (ga >= 0) for (let i = 0; i < 26; i++) {
+    const a = i / 26 * Math.PI * 2 + hash(i) * .3, r = 1.2 + 1.4 * hash(i * 2.1), g = clamp((ga - r * 1.2) / 3, 0, 1); if (g <= 0) continue;
+    const base = [pad[0] + Math.cos(a) * r, ground, pad[2] + Math.sin(a) * r];
+    if (i % 3) tuft(data, base, a, backEase(g) * (1 - .6 * s.n_wilt), i + 500, ft); else flower(data, base, backEase(g) * (1 - .6 * s.n_wilt), i + 500, ft);
+  }
+  // The pod, spinning down off the wand.
+  if (s.n_pod_on > .5) {
+    const spin = M.mul(M.ry(t * .55), M.rx(t * .8));
+    placeMesh(data, nature.pod, [M.t(...s.n_pod), spin, M.s(1.5, 1.5, 1.5)].reduce(M.mul), spin);
+  }
+  // Leaves spiralling in to the wand's tip as it charges.
+  if (s.n_glow > .12 && s.n_vine < .5) for (let k = 0; k < 10; k++) {
+    const ph = (ft * .05 + k / 10) % 1, r = .1 + 1.1 * (1 - ph), a = k * 2.4 + ft * .3 + ph * 5;
+    const c = add(tip, [Math.cos(a) * r, Math.sin(a * 1.3) * r * .45, Math.sin(a) * r]), z = .07 * s.n_glow * Math.sin(Math.PI * ph);
+    if (z > .004) box(data, [-z, -z * .2, -z * 1.7], [z, z * .2, z * 1.7], k % 2 ? VINE[0] : VINE[2], [M.t(...c), M.ry(a), M.rx(a * .7)].reduce(M.mul));
+  }
+  // The vine and its flytrap.
+  if (s.n_vine > .02) {
+    const size = 1.7 * Math.min(1, s.n_vine * 1.3), dir = norm(sub(s.n_tip, tip));
+    const bitten = s.n_taut > 0 || (t > track.beats.latch && t < track.beats.release + 1), head = bitten ? add(s.n_tip, [0, .12, 0]) : s.n_tip;
+    const neck = sub(head, scale(bitten ? [0, -1, 0] : dir, .2 * size));
+    vine(data, tip, neck, ft, s.n_taut, size, s.n_leaf);
+    trap(data, neck, bitten ? [dir[0] * .3, -1, dir[2] * .3] : dir, bitten ? 4 : 38, size * .9);
+  }
+  // The bite: roots splayed out into the snow, the snow cracked round it.
+  const bite = burst('bite'), ba = ft - bite.clock;
+  if (ba >= 0) {
+    const grow = 1 - Math.pow(1 - clamp(ba / 10, 0, 1), 3), a0 = bite.at;
+    for (let k = 0; k < 8; k++) {
+      const ang = k / 8 * Math.PI * 2 + hash(k) * .6, len = (1 + hash(k + 5) * 1.2) * grow;
+      let p = [a0[0], ground + .03, a0[2]];
+      for (let j = 0; j < 5; j++) {
+        const q = add(p, [Math.cos(ang + (hash(k * 4 + j) - .5) * .9) * len / 5, 0, Math.sin(ang + (hash(k * 4 + j) - .5) * .9) * len / 5]);
+        beam(data, p, q, .1 * (1 - j * .16), j % 2 ? [.24, .4, .11] : [.18, .52, .1]); p = q;
+      }
+    }
+  }
+  // The slide: the green track, the grass and the flowers, the spray.
+  slideField(data, N.slide, ft, ground);
+  // Kernels, leaves and snow chunks thrown out by each burst.
+  for (const b of N.bursts) {
+    const kind = BURSTS[b.kind]; if (!kind) continue;
+    const age = ft - b.clock; if (age < 0 || age > kind.life) continue;
+    const sec = age / 20;
+    for (let i = 0; i < kind.n; i++) {
+      const r = k => hash(b.clock * 1.37 + i * 7.1 + k * 3.3), a = r(0) * Math.PI * 2, out = kind.out[0] + r(1) * (kind.out[1] - kind.out[0]), upv = kind.up[0] + r(2) * (kind.up[1] - kind.up[0]);
+      const p = [b.at[0] + Math.cos(a) * (.2 + out * sec), Math.max(ground + .04, b.at[1] + upv * sec - kind.g * sec * sec / 2), b.at[2] + Math.sin(a) * (.2 + out * sec)];
+      const piece = kind.pieces[Math.floor(r(4) * kind.pieces.length)], fade = 1 - smooth((age - kind.life * .6) / (kind.life * .4)), z = piece.size * fade;
+      if (z < .005) continue;
+      const m = [M.t(...p), M.ry(a + age * .3 * (r(5) - .5)), M.rx(age * .25 * (r(6) - .5))].reduce(M.mul);
+      box(data, [-z, -z * piece.flat, -z * .7], [z, z * piece.flat, z * .7], piece.col, m);
+    }
+  }
+  return data;
+}
+const KERNEL = {col: [1, .8, .15], size: .05, flat: 1}, GOLD = {col: [.93, .61, .08], size: .045, flat: 1}, LEAF = {col: [.47, .89, .19], size: .11, flat: .2},
+  DARK_LEAF = {col: [.19, .72, .13], size: .1, flat: .2}, SNOW = {col: [.93, .95, 1], size: .07, flat: .8}, CHUNK = {col: [.85, .88, .94], size: .13, flat: .8},
+  PINK = {col: [1, .55, .72], size: .08, flat: .15}, CREAM = {col: [1, .97, .92], size: .08, flat: .15};
+const BURSTS = {
+  pollen: {n: 40, life: 36, out: [1.2, 3.6], up: [3, 6.5], g: 9, pieces: [KERNEL, KERNEL, GOLD, LEAF, DARK_LEAF, PINK]},
+  bounce: {n: 30, life: 32, out: [2, 5], up: [2, 5], g: 9, pieces: [KERNEL, GOLD, LEAF, LEAF, DARK_LEAF, PINK, CREAM]},
+  launch: {n: 40, life: 34, out: [.5, 2], up: [8, 14], g: 14, pieces: [KERNEL, GOLD, LEAF, PINK]},
+  bite: {n: 34, life: 30, out: [1, 3.4], up: [2, 6], g: 10, pieces: [SNOW, SNOW, CHUNK, LEAF]},
+};
+/** Soft clouds: the snow ring the landing blows out, the puff where the vine bites, the bounce's pollen. */
+function natureSnow(s, eye, right, up, vp, fog, fogRange) {
+  const prog = progs.puff, ground = track.summit.arrival[1], ft = s.n_clock;
+  gl.useProgram(prog.p); gl.uniformMatrix4fv(prog.u.viewProj, false, vp); gl.uniform3fv(prog.u.right, right); gl.uniform3fv(prog.u.up, up);
+  gl.uniform3fv(prog.u.eye, eye); gl.uniform3fv(prog.u.fog, fog); gl.uniform2fv(prog.u.fogRange, fogRange);
+  for (const b of track.nature.bursts) {
+    const ring = {bite: [12, 34, 2.4, .8], bounce: [16, 30, 3.2, .7], launch: [8, 20, 1.4, .55]}[b.kind]; if (!ring) continue;
+    const age = ft - b.clock; if (age < 0 || age > ring[1]) continue;
+    const d = [], spread = 1 - Math.exp(-age / 6);
+    for (let i = 0; i < ring[0]; i++) {
+      const a = i / ring[0] * Math.PI * 2 + hash(i + b.clock) * .4, r = .4 + ring[2] * spread * (.75 + .5 * hash(i * 3 + b.clock));
+      const c = [b.at[0] + Math.cos(a) * r, ground + .3 + ring[3] * .4 * spread * hash(i * 5), b.at[2] + Math.sin(a) * r];
+      const col = b.kind === 'bounce' || b.kind === 'launch' ? [1, .92, .55] : [.96, .97, 1];
+      for (const [x, y] of CORNERS) d.push(...c, x, y, ...col, ring[3] * (.6 + .9 * spread));
+    }
+    gl.uniform1f(prog.u.opacity, (b.kind === 'bounce' || b.kind === 'launch' ? .4 : .7) * (1 - smooth(age / ring[1])));
+    upload(meshes.puff, d, gl.DYNAMIC_DRAW); gl.bindVertexArray(meshes.puff.va); gl.drawArrays(gl.TRIANGLES, 0, d.length / 9);
+  }
+  const sl = track.nature.slide, d = [];
+  for (let k = 0; k < 10; k++) {
+    const tk = sl.c0 + k * (sl.c1 - sl.c0) / 10, age = ft - tk; if (age < 0 || age > 30) continue;
+    const p = slidePoint(sl, tk), power = 1 - k / 16, size = (.3 + .7 * (1 - Math.exp(-age / 6))) * power * (1 - age / 30);
+    for (const sgn of [-1, 1]) for (const [x, y] of CORNERS) d.push(p[0] + sgn * (.4 + age * .03), ground + .25 + age * .012, p[2] + hash(k) * .3, x, y, 1, 1, 1, size);
+  }
+  if (d.length) { gl.uniform1f(prog.u.opacity, .35); upload(meshes.puff, d, gl.DYNAMIC_DRAW); gl.bindVertexArray(meshes.puff.va); gl.drawArrays(gl.TRIANGLES, 0, d.length / 9); }
+}
+/** The wand's light trail through the pitch, the shot and the flip. */
+function natureTrail(s, t, eye) {
+  if (s.n_trail < .02) return;
+  // Carried along with you, so it trails the wand's swing, not your fall.
+  const here = s.player.pos, pts = [];
+  for (let k = 0; k <= 16; k++) pts.push(add(sub(colAt('n_wtip', t - k * .5), colAt('player', t - k * .5).slice(0, 3)), here));
+  const data = [];
+  for (let k = 0; k < 16; k++) {
+    const p = pts[k], q = pts[k + 1], d = sub(q, p); if (Math.hypot(...d) < 1e-3) continue;
+    const side = norm(cross(norm(d), norm(sub(eye, p)))), w0 = .16 * (1 - k / 16), w1 = .16 * (1 - (k + 1) / 16), a = s.n_trail * (1 - k / 16);
+    quad(data, sub(p, scale(side, w0)), add(p, scale(side, w0)), add(q, scale(side, w1)), sub(q, scale(side, w1)), [.55, 1, .4, a * .85]);
+    quad(data, sub(p, scale(side, w0 * .35)), add(p, scale(side, w0 * .35)), add(q, scale(side, w1 * .35)), sub(q, scale(side, w1 * .35)), [1, 1, .85, a * .7]);
+  }
+  if (!data.length) return;
+  const prog = progs.solid;
+  gl.useProgram(prog.p); gl.uniform1i(prog.u.flat_, 1); gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+  upload(meshes.solid, data, gl.DYNAMIC_DRAW); gl.bindVertexArray(meshes.solid.va); gl.drawArrays(gl.TRIANGLES, 0, data.length / 10);
+  gl.uniform1i(prog.u.flat_, 0); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+}
+/** Light: the wand's charge, the pod's pollen trail, pulses up the taut vine, shock rings. */
+function natureGlow(s, t, tip, eye, right, up, vp) {
+  const d = [], N = track.nature, ft = s.n_clock, ground = track.summit.arrival[1];
+  const spr = (p, col, size, k) => { if (k > .003) for (const [x, y] of CORNERS) d.push(...p, x, y, col[0] * k, col[1] * k, col[2] * k, size); };
+  const GREEN = [.5, 1, .35], WHITE = [1, 1, .88], GOLDEN = [1, .82, .3];
+  if (s.n_glow > .02) {
+    const f = 1 + .12 * Math.sin(ft * 1.9) + .08 * Math.sin(ft * 3.3);
+    spr(tip, GREEN, (.25 + 1.1 * s.n_glow) * f, .9 * s.n_glow); spr(tip, WHITE, (.1 + .35 * s.n_glow) * f, s.n_glow);
+  }
+  for (let k = 1; k <= 14; k++) { const tt = t - k * .5; if (colAt('n_pod_on', tt) < .5) continue; spr(colAt('n_pod', tt), GOLDEN, .45 * (1 - k / 15), .7 * (1 - k / 15)); }
+  if (s.n_pod_on > .5) { spr(s.n_pod, GREEN, .9, .8); spr(s.n_pod, WHITE, .3, .7); }
+  if (s.n_vine > .02 && s.n_taut > .2) for (let k = 0; k < 4; k++) { const u = 1 - ((ft * .11 + k / 4) % 1); spr(lerp(s.n_tip, tip, 1 - u), GREEN, .45, s.n_taut * Math.sin(Math.PI * u)); }
+  for (const b of N.bursts) {
+    const ring = {bounce: [6, 3.5, 32, .6], bite: [6, 3, 26, .7], launch: [6, 3.2, 30, .7]}[b.kind]; if (!ring) continue;
+    const age = ft - b.clock; if (age < 0 || age > ring[0]) continue;
+    const u = age / ring[0], r = ring[1] * (1 - Math.pow(1 - u, 2)), k = (1 - u) * (1 - u);
+    for (let i = 0; i < ring[2]; i++) { const a = i / ring[2] * Math.PI * 2; spr([b.at[0] + Math.cos(a) * r, ground + .2, b.at[2] + Math.sin(a) * r], [.65, 1, .5], ring[3], .6 * k); }
+  }
+  if (s.n_bt > .02) for (let i = 0; i < 60; i++) {  // pollen hanging in the air through the bullet time
+    const c = add(s.player.pos, [(hash(i) - .5) * 9, (hash(i + 40) - .35) * 6 + Math.sin(ft * .05 + i) * .2, (hash(i + 120) - .5) * 9]);
+    spr(c, i % 3 ? GOLDEN : GREEN, .07 + .05 * hash(i + 7), .7 * s.n_bt);
+  }
+  if (!d.length) return;
+  const prog = progs.glow;
+  gl.useProgram(prog.p); gl.uniformMatrix4fv(prog.u.viewProj, false, vp); gl.uniform3fv(prog.u.right, right); gl.uniform3fv(prog.u.up, up); gl.uniform1f(prog.u.opacity, 1); gl.uniform3fv(prog.u.eye, eye);
+  gl.blendFunc(gl.ONE, gl.ONE);
+  upload(meshes.glow, d, gl.DYNAMIC_DRAW); gl.bindVertexArray(meshes.glow.va); gl.drawArrays(gl.TRIANGLES, 0, d.length / 9);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+}
+/** Over the frame: the bullet time's dark edges, speed lines, the bite's flash. */
+function natureHud(t, s, w, h) {
+  if (s.n_bt > .01) {
+    const g = ctx.createRadialGradient(w / 2, h / 2, h * .3, w / 2, h / 2, Math.hypot(w, h) * .55);
+    g.addColorStop(0, 'rgba(6,22,10,0)'); g.addColorStop(1, `rgba(6,22,10,${.65 * s.n_bt})`);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = `rgba(150,235,140,${.05 * s.n_bt})`; ctx.fillRect(0, 0, w, h);
+  }
+  if (s.n_speed > .01) {
+    ctx.strokeStyle = `rgba(255,255,255,${.38 * s.n_speed})`; ctx.lineWidth = Math.max(1, h * .0022);
+    ctx.beginPath();
+    const R = Math.hypot(w, h) / 2;
+    for (let i = 0; i < 110; i++) {
+      const a = hash(i * 1.3) * Math.PI * 2, ph = (hash(i * 2.7) + t * .08 * (.6 + hash(i * 3.1))) % 1;
+      const r0 = R * (.4 + .6 * ph), len = R * (.08 + .18 * hash(i * 4.3)) * s.n_speed;
+      ctx.moveTo(w / 2 + Math.cos(a) * r0, h / 2 + Math.sin(a) * r0); ctx.lineTo(w / 2 + Math.cos(a) * (r0 + len), h / 2 + Math.sin(a) * (r0 + len));
+    }
+    ctx.stroke();
+  }
+  if (s.n_impact > .01) { ctx.fillStyle = `rgba(240,255,232,${.8 * s.n_impact * s.n_impact})`; ctx.fillRect(0, 0, w, h); }
+}
 function drawHud(t, s, w, h) {
   const b = track.beats;
   ctx.clearRect(0, 0, w, h);
@@ -641,6 +990,8 @@ function drawHud(t, s, w, h) {
     if (s.white > 0) { ctx.fillStyle = `rgba(232,236,242,${s.white})`; ctx.fillRect(0, 0, w, h); }
     if (s.flash > 0) { ctx.fillStyle = `rgba(214,228,255,${.35 * s.flash * (s.half === 0 && t > b.cloud ? 1.6 : 1)})`; ctx.fillRect(0, 0, w, h); }
     if (s.wand > 0) { const c = ELEMENTS[state.element]; ctx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${.3 * s.wand})`; ctx.fillRect(0, 0, w, h); }
+    if (nature && s.half === 1) natureHud(t, s, w, h);
+    if (LANDING.hud && s.half === 1) LANDING.hud(t, s, w, h);
     if (state.bars) { const bar = Math.round(h * .11 * s.bars); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, bar); ctx.fillRect(0, h - bar, w, bar); }
     const fade = 8, enter = smooth((t - b.title) / fade), title = enter * (1 - smooth((t - (b.title_end - fade)) / fade));
     if (title > 0) {

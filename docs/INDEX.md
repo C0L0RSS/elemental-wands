@@ -29,9 +29,9 @@ its row in the same task. Use backticks here only for files, folders and classes
 | `util/` | Spell managers and rules, progression, loadouts, temporary blocks, visual event channels |
 | `entity/` | Spell projectiles and the Guardian; `entity/necromancer/`, `entity/undead/`, `entity/roc/`, `entity/pyreking/` hold the other bosses and mobs |
 | `block/` | Temporary spell blocks and boss blocks |
-| `client/` | Controls, HUD, screens, intro cameras; `client/renderer/`, `client/model/`, `client/particle/`, `client/overlay/`, `client/screen/`, `client/wand/`, and one 3D effects package per element: `client/blockfire/`, `client/blockwind/`, `client/blocknature/`, `client/blockspace/` |
+| `client/` | Controls, HUD, screens, intro cameras; `client/renderer/`, `client/model/`, `client/particle/`, `client/overlay/`, `client/screen/`, `client/wand/`, `client/roclanding/` (the Storm Roc intro's element landings), and one 3D effects package per element: `client/blockfire/`, `client/blockwind/`, `client/blocknature/`, `client/blockspace/` |
 | `network/` | Client requests and server state sync |
-| `party/` | Parties and ally protection |
+| `party/` | Parties, ally protection, and where a party is set down together |
 | `command/` | The operator and party commands |
 | `arena/` | Guardian fight lifecycle and the Shattered Nave realm |
 | `church/` | Guardian church: placement, ritual, loot, recovery |
@@ -59,6 +59,7 @@ its row in the same task. Use backticks here only for files, folders and classes
 | Client copy of synced player data | `client/ClientPlayerData` | [Progression](reference/progression-and-controls.md) |
 | Packets and state sync | `network/ModNetworking` | [Progression](reference/progression-and-controls.md#implementation-boundaries) |
 | Parties and ally protection | `party/PartyManager`, `PartyStore`, `WandAllies`, `WandExplosionBehavior`, `command/PartyCommands` | [Progression](reference/progression-and-controls.md#parties) |
+| A party side by side at a boss's arrival and on the way home | `party/PartyLine`; used by `crypt/HollowCryptManager`, `hall/PyreGate`, `hall/PyreHallManager`, `summit/StormAerie` (the summit's own line is `summit/StormSummit`, the nave's `arena/GuardianArenaManager`) | [Progression](reference/progression-and-controls.md#parties) |
 | 3D wand model and glass core | `client/wand/WandMesh`, `WandRenderer`, `WandItemModel`; source `art/wand/design.json`, exporter `tools/prepare_wand_assets.py` | [Wand rendering](reference/wand-rendering.md) |
 | Temporary blocks and their restoration | `util/TemporaryBlockManager` | [Spells](reference/spells.md#shared-rules) |
 | Cast effects from the wand tip; first-person fade | `util/SpellCastVisuals`, `client/renderer/SpellViewClearance` | [Spells](reference/spells.md#shared-rules) |
@@ -197,8 +198,9 @@ scene the camera, HUD, input, fog and light, `mixin/IntroCameraMixin`, `IntroGam
 | Fight roster and lifecycle | `summit/StormRocEncounter` | [Storm Summit](reference/storm-summit.md) |
 | Storm Summit realm | `summit/StormSummit`, `StormSummitManager`, `StormSummitLayout` (generated), `SummitRelicBlock`; layout `art/storm_summit/build_layout.py` | [Storm Summit](reference/storm-summit.md#the-realm) |
 | Aerie and gong: who is called and which fight slot they get | `summit/StormAerie`, `StormAerieLayout` (generated), `StormGongBlock`, `StormGongBlockEntity`, `world/StormAerieStructure`, `client/renderer/StormGongRenderer`; layout `art/storm_aerie/build_layout.py` | [Storm Summit](reference/storm-summit.md#the-aerie) |
-| Where called players land on the summit | `summit/StormSummit` (the arrival point), `summit/StormRocIntro` (carries them up) | [Storm Summit](reference/storm-summit.md#the-realm) |
+| Where called players land on the summit | `summit/StormSummit` (the arrival and the party's line), `summit/StormRocIntro` (carries them up) | [Storm Summit](reference/storm-summit.md#the-realm) |
 | Intro cinematic (the snatch), in place of the loading screen | `summit/StormRocIntro`, `StormRocIntroTrack`, `client/StormRocIntroClient`, `client/StormRocIntroPuppets`, `mixin/StormRocIntroLoadingMixin`, `mixin/StormRocIntroHideMixin`; scene `art/storm_roc/intro/build_intro.py` | [Storm Summit](reference/storm-summit.md) |
+| Intro landings, one per element | `client/StormRocLandingEffects`, `client/roclanding/`; scenes `art/storm_roc/intro/<element>_landing.py`, installed by `art/storm_roc/intro/install_landings.py` | [Storm Summit](reference/storm-summit.md) |
 | The Roc's model, renderer, crackle and gaze | `client/model/StormRocModel`, `client/renderer/StormRocRenderer`, `StormRocCrackleLayer`, `client/StormRocMotion` | [Storm Summit](reference/storm-summit.md#authoring) |
 | Cloud sea and phase-two storm sky and rain | `client/SummitCloudEffects`, `client/SummitStormClient`, `mixin/SummitStormRainMixin`, `mixin/SummitStormWeatherMixin` | [Storm Summit](reference/storm-summit.md#phase-change-and-phase-two) |
 | Operator commands | `command/SummitCommands` | [Storm Summit](reference/storm-summit.md#visiting) |

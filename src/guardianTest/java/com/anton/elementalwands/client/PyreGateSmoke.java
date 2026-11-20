@@ -66,6 +66,8 @@ public final class PyreGateSmoke implements ClientModInitializer {
     private boolean started, done;
     private int ticks, scene, stage;
     private volatile String serverFailure, found = "", walk = "", wonNote = "", fellNote = "";
+    /** Where a party of four would stand back before the gate and on arriving in the hall. */
+    private final java.util.List<String> lines = new java.util.concurrent.CopyOnWriteArrayList<>();
     private volatile BlockPos seal, stand;
     private volatile Direction facing;
     private volatile boolean located, checked, lit, burning, inHall, skipped, judged;
@@ -159,6 +161,8 @@ public final class PyreGateSmoke implements ClientModInitializer {
                     if (t == 30) onServer(server, () -> {
                         var p = player(server, uuid);
                         require(p.getEntityWorld().getRegistryKey() == PyreHall.WORLD && PyreKingIntro.watching(p), "The player should be in the hall, held by his intro");
+                        lines.add(com.anton.elementalwands.party.PartyLineCheck.require(p.getEntityWorld(), PyreHall.arrival(PyreHall.nearestCentre(p.getEntityPos())),
+                                PyreHall.ARRIVAL_YAW, "hall arrival"));
                         inHall = true;
                     });
                     if (t == 30 + PyreKingIntro.SKIP_AFTER + 20) onServer(server, () -> { PyreKingIntro.skip(player(server, uuid)); skipped = true; });
@@ -219,7 +223,8 @@ public final class PyreGateSmoke implements ClientModInitializer {
                     if (fellNote.isEmpty()) return;
                     Files.writeString(Path.of("PYRE_GATE_PASSED.txt"), "In a fresh normal world the nearest Burned Gate was " + found + ". " + walk
                             + " A Survival player touched the seal twice (it lit, and the fire in the arch blazed) and was taken to the hall, held by his intro; "
-                            + wonNote + "; touching it again, " + fellNote + ". " + (VIEWS.length + 2) + " screenshots in screenshots/.\n");
+                            + wonNote + "; touching it again, " + fellNote + ". " + (VIEWS.length + 2) + " screenshots in screenshots/.\n"
+                            + String.join("\n", lines) + "\n");
                     done = true; c.scheduleStop();
                 }
                 default -> {}
@@ -258,6 +263,9 @@ public final class PyreGateSmoke implements ClientModInitializer {
         require(seal != null, "No seal near the stand point " + stand.toShortString());
         facing = world.getBlockState(seal).get(PyreSealBlock.FACING);
         require(cell(0, PyreGateLayout.STAND[1], PyreGateLayout.STAND[2]).equals(stand), "The stand point is not where the seal's facing puts it");
+        // As PyreGate.stand sets it: facing the seal.
+        lines.add(com.anton.elementalwands.party.PartyLineCheck.require(world, Vec3d.ofBottomCenter(stand),
+                facing.getOpposite().getPositiveHorizontalDegrees(), "before the gate"));
         require(world.getBlockState(seal.offset(facing.getOpposite(), PyreGateLayout.VEIL_BEHIND)).isOf(ModBlocks.PYRE_GATE_VEIL), "No fire in the arch behind the seal");
         int veils = 0, chains = 0;
         for (int x = -4; x <= 4; x++) for (int y = 1; y <= 11; y++) {

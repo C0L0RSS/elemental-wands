@@ -207,7 +207,7 @@ public final class StormRocEncounter {
         StormSummitManager.persist();
     }
     /**
-     * Retires a fight and gathers its challengers at the arrival point, except that a lost aerie
+     * Retires a fight and gathers its challengers in the arrival line, except that a lost aerie
      * fight sends everyone still on its summit back to the aerie (on their next login if the server
      * is stopping). A won aerie fight's victors wait for {@link StormAerie#homecoming}.
      */
@@ -219,12 +219,16 @@ public final class StormRocEncounter {
         fight.boss.discard();
         announce(server, fight, message);
         boolean home = fight.site != null && !won && !stopping && StormSummitManager.savedReturns() != null;
+        int place = 0;
         for (UUID id : fight.roster) {
             ServerPlayerEntity player = server.getPlayerManager().getPlayer(id);
             if (player != null) {
                 boolean here = player.isAlive() && StormSummitManager.inRealm(player);
                 if (here && home && StormSummit.nearestCentre(player.getEntityPos()).equals(fight.centre)) StormSummitManager.sendHome(player);
-                else if (here) StormSummitManager.transfer(player, server.getWorld(StormSummit.WORLD), StormSummit.arrival(fight.centre), StormSummit.ARRIVAL_YAW, 0);
+                else if (here) {
+                    double at = StormSummit.linePlace(place++, fight.roster.size());
+                    StormSummitManager.transfer(player, server.getWorld(StormSummit.WORLD), StormSummit.arrival(fight.centre, at), StormSummit.ARRIVAL_YAW + StormSummit.lineTurn(at), 0);
+                }
                 restore(player);
             }
         }

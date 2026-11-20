@@ -298,6 +298,12 @@ public final class PyreHallManager {
 
     // ------------------------------------------------------------------ moving players
 
+    /** A party into the hall together: side by side at the arrival, facing the throne ({@link com.anton.elementalwands.party.PartyLine}). */
+    static void arriveAll(List<ServerPlayerEntity> party, ServerWorld realm, int slot) {
+        List<Vec3d> line = com.anton.elementalwands.party.PartyLine.spots(realm, PyreHall.arrival(PyreHall.centre(state.generation, slot)), PyreHall.ARRIVAL_YAW, party.size());
+        for (int i = 0; i < party.size(); i++) transfer(party.get(i), realm, line.get(i), PyreHall.ARRIVAL_YAW, 0);
+    }
+
     static void arrive(ServerPlayerEntity player, ServerWorld realm, int slot) {
         transfer(player, realm, PyreHall.arrival(PyreHall.centre(state.generation, slot)), PyreHall.ARRIVAL_YAW, 0);
     }
@@ -406,12 +412,13 @@ public final class PyreHallManager {
             it.remove();
             if (!state.built.contains(build.slot)) state.built.add(build.slot);
             persist();
+            List<ServerPlayerEntity> arriving = new java.util.ArrayList<>();
             for (UUID id : build.waiting) {
                 ServerPlayerEntity player = server.getPlayerManager().getPlayer(id);
-                if (player == null || !player.isAlive()) continue;
-                arrive(player, realm, build.slot);
-                player.sendMessage(Text.literal("You enter the Burned Throne Hall."), true);
+                if (player != null && player.isAlive()) arriving.add(player);
             }
+            arriveAll(arriving, realm, build.slot);
+            for (ServerPlayerEntity player : arriving) player.sendMessage(Text.literal("You enter the Burned Throne Hall."), true);
         }
         // Anyone off the walled floor (over the wall, under the floor, into the lava) is set back at the arrival.
         for (ServerPlayerEntity player : realm.getPlayers()) {

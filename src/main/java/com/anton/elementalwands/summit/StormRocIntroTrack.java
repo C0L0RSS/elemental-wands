@@ -23,10 +23,17 @@ import org.joml.Quaternionf;
  * strikes and sound cues. art/storm_roc/intro/build_intro.py writes it from the same performance as
  * both actors' clips; its "conventions" entry describes the frames. Samples between ticks are
  * interpolated, except across a cut, where a shot holds until it ends.
+ *
+ * <p>Each element has its own version of the scene from the throw on: its own landing, written by
+ * art/storm_roc/intro/&lt;element&gt;_landing.py with its own clips. Its track adds that landing's
+ * columns (read by name with {@link #column} and {@link #points}) and its "landing" facts. A player
+ * with no element gets the plain crash.
  */
 public final class StormRocIntroTrack {
     public static final String RESOURCE = "/assets/elementalwands/cinematics/storm_roc_intro.json";
-    private static StormRocIntroTrack loaded;
+    /** The elements with a landing of their own, by WizardAffinity's lower-case name. */
+    public static final List<String> LANDINGS = List.of("fire", "wind", "stone", "nature", "space");
+    private static final Map<String, StormRocIntroTrack> LOADED = new HashMap<>();
 
     /** A lightning strike: a bolt from the summit's cap, a sheet lighting the cloud, or sparks round the Roc's head. */
     public record Lightning(int tick, int half, String kind, Vec3d at) {}
@@ -43,9 +50,16 @@ public final class StormRocIntroTrack {
     private final List<String> povHides = new ArrayList<>();
     private final double cloudBase;
     private final Vec3d arrival, homePerch;
+    private final String landing;
+    private final JsonObject ticks, facts;
+    private final Map<String, float[]> columns = new HashMap<>();
+    private final Map<String, float[][]> pointColumns = new HashMap<>();
 
-    private StormRocIntroTrack(JsonObject json) {
+    private StormRocIntroTrack(String landing, JsonObject json) {
+        this.landing = landing;
         JsonObject t = json.getAsJsonObject("ticks");
+        ticks = t;
+        facts = json.has("landing") ? json.getAsJsonObject("landing") : json.has("nature") ? json.getAsJsonObject("nature") : new JsonObject();
         half = ints(t.getAsJsonArray("half"));
         pov = ints(t.getAsJsonArray("pov"));
         eye = rows(t.getAsJsonArray("eye"));
@@ -86,18 +100,60 @@ public final class StormRocIntroTrack {
         homePerch = vec(summit.getAsJsonArray("home_perch"));
     }
 
-    /** The script in the mod's jar; the server and the client read the same file. */
-    public static StormRocIntroTrack get() {
-        if (loaded == null) {
-            try (InputStream in = StormRocIntroTrack.class.getResourceAsStream(RESOURCE)) {
-                if (in == null) throw new IllegalStateException("Missing " + RESOURCE);
-                loaded = new StormRocIntroTrack(JsonParser.parseReader(new InputStreamReader(in, StandardCharsets.UTF_8)).getAsJsonObject());
+    /** The plain scene, with the crash landing; the server and the client read the same file. */
+    public static StormRocIntroTrack get() { return get(""); }
+
+    /** The scene with this element's landing ("" or an unknown name: the plain crash). */
+    public static synchronized StormRocIntroTrack get(String landing) {
+        String key = landing != null && LANDINGS.contains(landing) ? landing : "";
+        return LOADED.computeIfAbsent(key, k -> {
+            String resource = resource(k);
+            try (InputStream in = StormRocIntroTrack.class.getResourceAsStream(resource)) {
+                if (in == null) throw new IllegalStateException("Missing " + resource);
+                return new StormRocIntroTrack(k, JsonParser.parseReader(new InputStreamReader(in, StandardCharsets.UTF_8)).getAsJsonObject());
             } catch (java.io.IOException e) {
-                throw new IllegalStateException("Could not read " + RESOURCE, e);
+                throw new IllegalStateException("Could not read " + resource, e);
             }
-        }
-        return loaded;
+        });
     }
+
+    /** The track's file in the jar; the clips follow the same naming (see client.StormRocIntroPuppets). */
+    public static String resource(String landing) {
+        return landing.isEmpty() ? RESOURCE : "/assets/elementalwands/cinematics/storm_roc_intro_" + landing + ".json";
+    }
+
+    /** The landing for a player of this element, or "" for the plain crash. */
+    public static String landingFor(com.anton.elementalwands.data.WizardAffinity affinity) {
+        String name = affinity.name().toLowerCase(java.util.Locale.ROOT);
+        return LANDINGS.contains(name) ? name : "";
+    }
+
+    /** The longest of every version's length, for limits that hold whoever is in the call. */
+    public static int longest() {
+        int most = get().length();
+        for (String l : LANDINGS) most = Math.max(most, get(l).length());
+        return most;
+    }
+
+    /** This version's element, or "" for the plain crash. */
+    public String landing() { return landing; }
+    /** The landing's own facts (places, bursts, its slide...), as its bake wrote them; empty for the plain crash. */
+    public JsonObject facts() { return facts; }
+
+    /** A landing's per-tick number column at time t (0 if the track has none by that name). */
+    public float column(String name, double t) {
+        float[] values = columns.computeIfAbsent(name, k -> ticks.has(k) ? values(ticks.getAsJsonArray(k)) : null);
+        return values == null ? 0 : value(values, t);
+    }
+
+    /** A landing's per-tick point column at time t, in the summit's frame (the origin if there is none). */
+    public Vec3d points(String name, double t) {
+        float[][] rows = pointColumns.computeIfAbsent(name, k -> ticks.has(k) ? rows(ticks.getAsJsonArray(k)) : null);
+        return rows == null ? Vec3d.ZERO : point(rows, t);
+    }
+
+    /** Whether this track has a column by that name. */
+    public boolean hasColumn(String name) { return ticks.has(name); }
 
     public int length() { return eye.length - 1; }
     public int beat(String name) {
@@ -105,6 +161,7 @@ public final class StormRocIntroTrack {
         if (tick == null) throw new IllegalArgumentException("No beat " + name + " in " + RESOURCE);
         return tick;
     }
+    public boolean hasBeat(String name) { return beats.containsKey(name); }
     public List<Lightning> lightning() { return lightning; }
     public List<Cue> cues() { return cues; }
     /** The player model's bones hidden while the camera is in their eyes. */

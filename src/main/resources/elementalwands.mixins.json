@@ -48,6 +48,7 @@
     "SummitStormWeatherMixin",
     "SummitStormRainMixin",
     "ClientChunkProgressAccessor",
+    "EquipmentModelLoaderAccessor",
     "StormRocIntroLoadingMixin",
     "StormRocIntroHideMixin"
   ]

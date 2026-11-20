@@ -25,6 +25,15 @@ CLOUD_Y = -36          # top of the sea of clouds; a fall past it is death
 BOTTOM = -50           # lowest authored block, well inside the cloud
 OPEN_R = 22            # the middle stays bare rock: no boulders or ruins
 ARRIVAL = (0, 1, 32)   # the party lands south of the centre, facing the home spire
+# A called party lands in a line across the arrival (summit.StormSummit.arrival: up to eight
+# places of two blocks either side), and each player's intro plays across their own place, its
+# cameras low over the rock, so no boulder or remains stand in this box around it (x from, x to,
+# z from, z to).
+LINE_CLEAR = (ARRIVAL[0] - 22, ARRIVAL[0] + 22, ARRIVAL[2] - 10, ARRIVAL[2] + 10)
+
+
+def in_line(x, z):
+    return LINE_CLEAR[0] < x < LINE_CLEAR[1] and LINE_CLEAR[2] < z < LINE_CLEAR[3]
 SEED = 0x5707
 ROC_SCALE = 1.25      # the Roc is drawn at 1.25x the art study: a 34-block wingspan
 
@@ -295,6 +304,8 @@ def build_summit(seed=SEED):
         rx, rz = rng.uniform(1.3, 2.8), rng.uniform(1.2, 2.4)
         height = rng.choices((1, 2, 3), (5, 4, 2))[0]
         turn = rng.uniform(0, math.pi)
+        if in_line(bx, bz):
+            continue  # drawn all the same, so the rest of the summit is laid out as before
         for x in range(round(bx) - 4, round(bx) + 5):
             for z in range(round(bz) - 4, round(bz) + 5):
                 u = ((x - bx) * math.cos(turn) + (z - bz) * math.sin(turn)) / rx
@@ -462,7 +473,8 @@ def remains(lay, rng, rim, cracks, tops, obstacles, avoid):
     placed = set()
 
     def free(x, z):
-        return tops.get((x, z)) == 0 and (x, z) not in obstacles and (x, z) not in placed and lay.get(x, 1, z) is None
+        return (tops.get((x, z)) == 0 and (x, z) not in obstacles and (x, z) not in placed and lay.get(x, 1, z) is None
+                and not in_line(x, z))
 
     def put(x, z, state):
         if free(x, z):

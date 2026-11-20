@@ -24,6 +24,8 @@ Videos, browser previews and workshop clips waiting for the developer's approval
 - **Storm Roc opening summon:** the `roc_intro_client_smoke` video, which runs on through
   the summon.
 - **Storm Roc intro (the snatch):** the in-game video.
+- **Storm Roc landings:** the in-game video of each element's landing
+  (`roc_intro_client_smoke -ProcIntroElement=<element> -ProcIntroVideo`).
 - **Guardian intro (the zombie):** the in-game video of the retimed intro.
 - **Pyre King:** the Haul and Snare clips and the Chain Scythe's bowed chain in the workshop.
 - **Necromancer:** the remaining workshop clips, including the standalone dragged-soul
@@ -175,7 +177,10 @@ Things one player cannot show.
 - **Spells with a second player:** how Gravity Well, Astral Double, Gale Daggers and
   Thornbite feel in multiplayer, and chaining Springbloom launches between players.
 - **Storm Roc:** a co-op fight, the aerie call with a party, and the intro with several
-  watchers.
+  watchers: each should land in their own place in the line, two blocks apart, and see the
+  others standing there once their own scene ends.
+- **Every boss with a party:** arriving (crypt, hall, nave, summit) and going home (gong,
+  seal, crypt court) side by side, nobody inside anyone else, at real worldgen sites.
 - **Necromancer:** a co-op fight with `/ew necromancer log on`, including the November 4
   siege hordes at duo size; whether two players are now pressed hard enough (likelier
   strings, shorter rests, and strings that turn on the other player); the transformation cinematic's skip with several watchers; spectating
@@ -236,9 +241,10 @@ Accepted for now; fix when the feature is next touched.
   the called players into an operator fight with no rewards. A broken reward chest only
   comes back after the next win there. On jagged peaks an aerie can sit on a shoulder below
   taller spires that are too narrow to level.
-- **Storm Roc intro:** sounds are vanilla stand-ins; the wand is not drawn in the puppet's
-  hand; lightning bolts in chunks the client has not loaded do not draw; at short view
-  distances the landing shot may build its terrain just after the cut.
+- **Storm Roc intro:** sounds are vanilla stand-ins; lightning bolts in chunks the client has
+  not loaded do not draw; at short view distances the landing shot may build its terrain just
+  after the cut. A party all start the scene on the striker's spot at the aerie (each sees only
+  their own copy).
 - **Storm Roc `stuck` clip:** the head shake after it rips free (about 5.4 s) has keys that
   overlap by up to 0.04 s, so a few tiny moves are skipped. Left as it is.
 - **Graveyards:** ones generated before the mausoleum keep the old headstone, whose rewards

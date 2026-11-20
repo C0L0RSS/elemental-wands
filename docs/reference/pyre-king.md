@@ -469,8 +469,8 @@ same day, through the intro and the fight: "really good".
     the same gate is fighting, when all eight slots are busy, and for a player held by
     another boss's fight.
 - **How a fight ends.**
-  - **A win:** ten seconds after he dies the hall sends everyone back to stand before the
-    gate.
+  - **A win:** ten seconds after he dies the hall sends everyone back to stand side by side
+    before the gate (`party/PartyLine`, recorded when the seal is touched).
   - **A fall:** a player who dies in the hall keeps their belongings and, on respawning,
     wakes before the gate. They are out of that fight; there is no spectating yet.
   - **A wipe:** when nobody of the party is left standing in his slot he is removed, his
@@ -532,7 +532,7 @@ players reach it by [the Burned Gate](#the-burned-gate); operators also by `/ew 
   breaches. The roof is gone; its ribs still arc toward a broken ring 62 up, hung with
   chains and lanterns.
 - **Gate and throne:** players arrive at (0, 1, 33), just inside the south gate, facing
-  north. The king stands at the centre facing them. Behind him, in an apse in the north
+  north; a party arrives side by side there (`party/PartyLine`). The king stands at the centre facing them. Behind him, in an apse in the north
   wall, a gold-edged throne stands on a dais under a broken round window. Its seat is one
   block high, three wide and two deep between arms one block higher, so that he can sit in
   it for his intro (resized Nov 11; it was five wide and two high). Two braziers and

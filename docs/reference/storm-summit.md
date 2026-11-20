@@ -20,7 +20,9 @@ Each slot holds one copy of the mountaintop:
 
 - **The summit:** a round summit of flat, weathered rock about 107–123 blocks across, with
   one narrow promontory. The middle 44 blocks are bare. Fissures, lightning scars and snow
-  drifts vary the surface; low boulders and a few lip crags stand toward the rim.
+  drifts vary the surface; low boulders and a few lip crags stand toward the rim. No boulder,
+  bone or feather stands across the arrival, where a called party lands in a line and each
+  player's intro films low over the rock (`LINE_CLEAR` in the layout builder).
 - **The cliffs:** under the rim, a short sheer drop gives way to a buttressed flank that
   meets the clouds 36 blocks down (y=64, `StormSummit.CLOUD_Y`).
 - **The spires:** six of them, 22–29 blocks off the rim at summit height. Their capstones
@@ -93,11 +95,11 @@ Striking the gong (`StormAerie`):
   each player (below). If all eight slots are busy: "The Storm Roc is fighting elsewhere."
 - **The fight:** it starts once everyone has landed (or skipped), with exactly the players who
   came. A player whose scene never reports back is sent home after its length plus 30 seconds.
-- **Afterwards:** a loss, a reset or an interruption sends everyone back to the stand point
-  in front of the gong. A win keeps them safe on the empty summit for 10 seconds, then sends
+- **Afterwards:** a loss, a reset or an interruption sends everyone back to stand side by
+  side in front of the gong, facing it (`party/PartyLine`, recorded when the gong calls them). A win keeps them safe on the empty summit for 10 seconds, then sends
   them home. Anyone who died up there and respawned elsewhere is sent to the aerie as well.
 
-**The intro** (`summit/StormRocIntro`, `client/StormRocIntroClient`), about 31 seconds, held
+**The intro** (`summit/StormRocIntro`, `client/StormRocIntroClient`), 31 to 38 seconds by element, held
 Sneak skips it. Each player sees their own copy, played by their own client on its own clock;
 teammates are hidden until they land. While it plays the server holds them still, and they
 can't be hurt, cast, attack, or use items or blocks.
@@ -105,23 +107,59 @@ can't be hurt, cast, attack, or use items or blocks.
   out from there in first person: the storm gathers, a caw, the talons, carried up spiralling,
   a look up at its face as it screams, then into the storm cloud.
 - Inside the cloud the client draws an opaque storm cloud over the screen and tells the server
-  (`storm_roc_intro_cloud`); only then does the server move the player into the realm, at the
-  arrival, already facing where the scene ends. The client skips the vanilla loading screen for
+  (`storm_roc_intro_cloud`); only then does the server move the player into the realm, at their
+  place in the arrival line, already facing where the scene ends. The client skips the vanilla loading screen for
   that one move (`mixin/StormRocIntroLoadingMixin`; vanilla still tracks the loading and
   confirms it), and the scene waits on its hold beat until the summit has loaded and drawn.
   Vanilla only builds the chunk sections its camera sees, so while the cloud covers the screen
-  the camera waits in the player's eyes at the arrival, where vanilla's own loading and the
+  the camera waits in the player's eyes at their place, where vanilla's own loading and the
   scene's checks look. Once those pass, it moves to where the struggle opens for half a second,
   so that view is built too.
-- Then third person over the summit: the struggle in its talon, the wand's shock in the
-  player's element's colour, the throw, and the landing. Then a 3.2-second insert of the Roc
+- Then third person over the summit: wide on the Roc beating over the cloud sea, gliding in
+  until the player fills the frame fighting in its talon, the wand's shock in the player's
+  element's colour, the throw, and the landing. Each element lands its own way (below); a player
+  with no element crashes into the snow and rolls. The elements end the same way: over the
+  player's shoulder, their head coming up to glare at the Roc as it comes down. Then a 3.2-second insert of the Roc
   coming down onto its home spire, with its name low in the frame under its feet, so the title
   never covers its head. Last, the camera glides back into the player's eyes. The client reports
   `storm_roc_intro_landed` and the fight starts when everyone has.
+- **The landings.** The server picks the player's element when the gong calls them and tells
+  their client, which plays that element's track and clips (`StormRocIntroTrack.get(landing)`).
+  The landing's effects are drawn each frame by `client/StormRocLandingEffects` and one
+  `client/roclanding/<Element>Landing` per element; they only draw, as the track already moves
+  the camera and both actors. Its sounds are the element's spell sounds.
+  - **Fire:** out of the tumble belly down, a Flamethrower jet from the wand brakes the fall
+    like a thruster and swings them upright to face the spire; a few blocks up they cut it and
+    land a Fire Leap: the blast, a ring of fire rolling out over the snow, a skid back.
+  - **Wind:** chained Waylay Dashes zigzag them down through the air, each leaving a ring and a
+    cloud wake; the last, a chained dash, comes in slow motion, flattens into a skim over the
+    snow, and they pivot into a skid.
+  - **Stone:** Gathered Mass tears rocks and earth out of the summit and packs them round the
+    player into one big boulder, its chunks the game's own stone (stone, andesite, tuff,
+    cobblestone, granite, deepslate, diorite, calcite) and dirt. Time slows as the snow breaks
+    open, so the rocks are seen streaming up, each trailing snow and grit. The boulder crashes
+    onto the arrival, cracks and breaks apart as they push up out of it.
+  - **Nature:** a Springbloom pod pitched into the snow bounces them high; a moment of bullet
+    time; a Thornbite vine bites the snow and swings them down into a slide that leaves a track
+    of grass and flowers.
+  - **Space:** they fall head first without slowing; just above the snow a Blink Rift folds them
+    away, their momentum blasts the snow where they would have hit, and they step out of a
+    second rift a few blocks aside, walking, straightening a cuff and their collar.
 - The Roc and the player are drawn straight into the world each frame (`client/StormRocIntroPuppets`,
   GeckoLib object renderers), not as entities, so they draw while the summit's chunks load. The
-  player wears their own skin, wide or slim. The scene's Roc stays perched until the fight's
-  own appears.
+  player wears their own skin, wide or slim, and the armour they had on as the gong called them:
+  the game's own armour models and textures (dyes, trims and glint included), each part drawn on
+  its bone. They hold their wand (`client/wand/WandRenderer`, in their element's colours) laid
+  along the bake's wand line, so its glass sits on the tip every spell is cast from. The scene's
+  Roc stays perched until the fight's own appears.
+- **A party** lands side by side, two blocks apart like the Guardian's, up to eight places either
+  side of the arrival in the order the gong called them (`StormSummit.linePlace`; a bigger
+  party shares the ends). The line bends about the Roc's home perch, so everyone in it faces the
+  Roc. Each player's summit scene is the same scene turned about that perch to their place
+  (`StormSummit.turned`, sent with the start as `summitTurn`): camera, both actors, lightning and
+  landing all move with it, so nobody lands in anyone else, and the scene's Roc still ends on
+  the fight's perch. The landings draw in the summit's unturned frame and are turned as they are
+  emitted. Teammates stay hidden until each has landed, then stand in their places.
 - A skip before the summit still goes through the cloud: the screen covers, the player is moved,
   and the view is handed back once the summit has loaded. A skip later hands back at once, with
   a glide from a shot near the player or a cut from one out over the clouds.
@@ -572,7 +610,7 @@ fight's victors go home to its [rewards](#the-aerie) after 10 seconds.
   two's storm ceiling and scud.
 - **`--check`:** detects drift in all of these.
 
-`StormSummit` holds the realm's own numbers: surface height, slot spacing and arrival.
+`StormSummit` holds the realm's own numbers: surface height, slot spacing, and the arrival and its line.
 
 `art/storm_roc/intro/build_intro.py` authors the intro from one set of beats (see its docstring):
 
@@ -582,8 +620,20 @@ fight's victors go home to its [rewards](#the-aerie) after 10 seconds.
   `.local-previews/storm-roc-intro/` (launch entry `storm-roc-intro-preview`, port 8396). The
   scene is authored at half its playing speed (`PACE`); everything the game reads is in its own ticks.
 - **`--install`:** writes `geckolib/models/storm_roc_intro*.geo.json`, the two clips under
-  `geckolib/animations/`, `cinematics/storm_roc_intro.json` and the cloud cover's texture.
+  `geckolib/animations/`, `cinematics/storm_roc_intro.json`, the cloud cover's texture and the
+  landings' soft sprites (`storm_roc_intro_puff.png`, `storm_roc_intro_glow.png`).
 - **`--check`:** detects drift in all of these.
+
+Each element's landing has its own script, `art/storm_roc/intro/<element>_landing.py`, which
+reuses `build_intro.py` up to the throw and authors the rest in story time (its slow motion
+stretches story time against the camera's). Its browser effects are `landing_<element>.js`
+(Nature's are in `animatic.js`), the source the game's `client/roclanding` classes are ported
+from. Run a script alone to write its animatic to `.local-previews/storm-roc-intro-<element>/`.
+`art/storm_roc/intro/install_landings.py [element…]` installs each element's track
+(`cinematics/storm_roc_intro_<element>.json`, with the landing's own columns and facts) and both
+clips (`storm_roc_intro{,_player}_<element>.animation.json`); `--check` detects drift. The
+models are `build_intro.py`'s, shared. Java has no posed bones, so anything a landing's effects
+attach to (the wand's tip, a hand) is baked as a column.
 
 `tools/summit_client_smoke.init.gradle` is the native check. It enters a slot, photographs
 seven viewpoints into `build/summit-client-smoke/screenshots/`, counts the remains, tries to

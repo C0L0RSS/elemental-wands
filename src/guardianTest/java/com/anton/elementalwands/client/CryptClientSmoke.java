@@ -39,6 +39,8 @@ public final class CryptClientSmoke implements ClientModInitializer {
     private volatile boolean serverStep;
     private Vec3d home;
     private volatile BlockPos door, graveyard;
+    /** Where a party of four would stand at the crypt's arrival and back in the court. */
+    private final java.util.List<String> lines = new java.util.concurrent.CopyOnWriteArrayList<>();
     private volatile net.minecraft.util.math.Direction doorFacing;
     private volatile Vec3d doorEye;
     private volatile Vec3d rewardView;
@@ -92,6 +94,7 @@ public final class CryptClientSmoke implements ClientModInitializer {
                         for (int x = 50; x < 120; x++) for (int y = 1; y < 40; y++)
                             if (realm.getBlockState(centre.add(x, y, 3)).isOf(Blocks.DARK_OAK_WOOD)) wood++;
                         require(wood > 20, "Forest missing beyond the rim (" + wood + " wood blocks on the sample line)");
+                        lines.add(com.anton.elementalwands.party.PartyLineCheck.require(realm, HollowCryptRealm.arrival(centre), HollowCryptRealm.ARRIVAL_YAW, "crypt arrival"));
                     });
                     if (scene < 45) look(c, 180, 0); else if (scene < 60) look(c, 200, -40); else look(c, 110, -8);
                     if (scene == 40) shot(c, "crypt-arrival.png");
@@ -255,6 +258,9 @@ public final class CryptClientSmoke implements ClientModInitializer {
                     if (scene == 62) onServer(server, () -> {
                         Vec3d court = Vec3d.ofBottomCenter(door.offset(doorFacing, 6).down());
                         player(server, uuid).networkHandler.requestTeleport(court.x, court.y, court.z, 0, 0);
+                        // As HollowCryptManager.enterVeil sets the court: a doorway party comes back out here, facing the door.
+                        lines.add(com.anton.elementalwands.party.PartyLineCheck.require(player(server, uuid).getEntityWorld(), court,
+                                doorFacing.getOpposite().getPositiveHorizontalDegrees(), "crypt court"));
                     });
                     if (scene == 75) {
                         shot(c, "crypt-mausoleum.png");
@@ -370,7 +376,8 @@ public final class CryptClientSmoke implements ClientModInitializer {
                             + "spell teleport limits, survival block protection, reset restoration, return, /locate, graveyard placement, withered woods, "
                             + "unbreakable mausoleum, door hint, walk-in veil ritual, "
                             + "wipe (boss vanishes, return to the court with items, XP and game mode), second ritual before the wiped fight ends (it keeps the player; standing in the veil seals no second fight), victory return, "
-                            + "reward chests with bones and loot, one spell book per victor. Screenshots: crypt-*.png. Human Lunar review pending.\n");
+                            + "reward chests with bones and loot, one spell book per victor. Screenshots: crypt-*.png. Human Lunar review pending.\n"
+                            + String.join("\n", lines) + "\n");
                     done = true; c.scheduleStop();
                 }
                 default -> {}

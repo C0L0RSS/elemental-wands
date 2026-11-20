@@ -137,6 +137,10 @@ Looks and balance that only a person playing can judge.
   recoil and wilt poses, and the block-nature effects.
 - **Springbloom:** the September 29 run-in launch, 8-second pad, 6-second cooldown and
   flatter arc.
+- **Springbloom and Updraft fall damage:** a launch sometimes landed with full fall damage,
+  seen in the Pyre King fight (fixed November 18: protection now lasts until the player has
+  actually lifted off). Check in a heavy fight that no launch landing hurts, and that a later
+  ordinary fall still does.
 - **Thornbite:** attack feel, silhouette and balance.
 - **Space:** escape options after the Blink nerf; Gravity Well and Astral Double balance
   and feel.
@@ -173,7 +177,7 @@ Things one player cannot show.
   else arrive over the block-fire, block-wind, block-space and block-nature events. None has
   been seen from a second client.
 - **3D wand:** another player's affinity colors on their wand.
-- **Pyre King:** a co-op fight.
+- **Pyre King** needs a co-op playtest of the view after one player falls.
 - **Spells with a second player:** how Gravity Well, Astral Double, Gale Daggers and
   Thornbite feel in multiplayer, and chaining Springbloom launches between players.
 - **Storm Roc:** a co-op fight, the aerie call with a party, and the intro with several
@@ -235,6 +239,12 @@ Accepted for now; fix when the feature is next touched.
 
 - **Pyre King:** a player who only circles a pillar is hooked off it but can run clear of
   the Overhead that follows.
+- **Launch fall protection, edge cases:** an Updraft cast on a ladder, vines or scaffolding or
+  in water, or a Springbloom run-in launch from water or vines at the pad's edge, can end its
+  flight if the server still sees the player there at tick end, before the client applies the
+  launch; that flight then lands unprotected. An Updraft cast mid-way up a Springbloom arc can
+  count the arc's own rise as lift-off; if the payload arrives about nine ticks late and the
+  arc lands on a ledge first, the Updraft landing is unprotected.
 - **Dragon's Pyre over slabs:** its flames sit in the block above a bottom slab or deep snow,
   so over them they float half a block up.
 - **Storm aerie:** an operator `/ew summit start` on a slot a gong call has reserved takes
@@ -260,8 +270,8 @@ Accepted for now; fix when the feature is next touched.
 
 ## Not built yet
 
-- **Pyre King:** a death clip, a hit reaction, a reward, spectating for a fallen player and
-  his own sounds; his warnings are particles. The full list, with the planned moves that
+- **Pyre King** still needs a death clip, a hit reaction, a reward and his own sounds.
+  His warnings are particles. The full list, with the planned moves that
   were left out, is in [Pyre King](reference/pyre-king.md#not-built-yet).
 - **Storm Roc:** the phase-change cinematic (a short in-engine stand-in plays) and a death
   (it vanishes).

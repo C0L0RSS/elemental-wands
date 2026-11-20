@@ -6,6 +6,8 @@ use [current guides](../README.md) for today’s behavior and [status](../STATUS
 for outstanding verification. Detailed historical reports are optional background.
 
 - [2026-11-19 — Storm Roc: every wand lands its own way](2026-11-19-storm-roc-landings.md)
+- [2026-11-18 — Spectating boss fights](2026-11-18-boss-spectating.md)
+- [2026-11-18 — Springbloom and Updraft landings no longer hurt](2026-11-18-launch-fall-damage.md)
 - [2026-11-17 — Storm Roc: a hunter's brain](2026-11-17-storm-roc-brain.md)
 - [2026-11-17 — Fire: Dragon's Pyre follows the ground, and crouching casts](2026-11-17-pyre-ground-and-crouch-cast.md)
 - [2026-11-16 — Hollow Necromancer: a smarter fight](2026-11-16-necromancer-ai.md)

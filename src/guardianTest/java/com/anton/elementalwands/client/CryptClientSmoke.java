@@ -1,5 +1,7 @@
 package com.anton.elementalwands.client;
 
+import com.anton.elementalwands.arena.GuardianArenaManager;
+import com.anton.elementalwands.arena.GuardianNaveSmokeMod;
 import com.anton.elementalwands.crypt.HollowCryptManager;
 import com.anton.elementalwands.crypt.HollowCryptRealm;
 import com.anton.elementalwands.crypt.MausoleumVeilBlock;
@@ -45,6 +47,7 @@ public final class CryptClientSmoke implements ClientModInitializer {
     private volatile Vec3d doorEye;
     private volatile Vec3d rewardView;
     private int risen, waited;
+    private final UUID teammate = UUID.randomUUID();
 
     public void onInitializeClient() { ClientTickEvents.END_CLIENT_TICK.register(this::tick); }
 
@@ -322,7 +325,9 @@ public final class CryptClientSmoke implements ClientModInitializer {
                 case 9 -> { // a victory: try again straight away, while the wiped fight is still ending, and win
                     if (scene == 0) onServer(server, () -> {
                         require(standing(HollowCryptManager.status()) == 0, "A fight is still standing before the second ritual: " + HollowCryptManager.status());
-                        enterVeil(player(server, uuid));
+                        var p = player(server, uuid);
+                        GuardianNaveSmokeMod.joinInAdventure(p, teammate, "CryptTeammate");
+                        enterVeil(p);
                     });
                     // Standing in the veil while the slot is laid out touches it every tick: that must seal one fight only.
                     if (scene == 15) onServer(server, () -> {
@@ -335,24 +340,41 @@ public final class CryptClientSmoke implements ClientModInitializer {
                         require(scene < 400, "Second ritual did not take the player in");
                         return;
                     }
-                    // The boss can't die during its intro in a real fight, so the forced victory waits for it to end.
+                    // The second fighter falls once the intro ends, then watches the first one win.
                     if (++risen == VICTORY_AT) onServer(server, () -> {
+                        var partner = player(server, teammate);
+                        require(partner.getEntityWorld().getRegistryKey() == HollowCryptRealm.WORLD, "Teammate missed the ritual");
+                        partner.onTeleportationDone();
+                        partner.kill(partner.getEntityWorld());
+                        GuardianNaveSmokeMod.respawn(server, partner);
+                    });
+                    if (risen == VICTORY_AT + 10) onServer(server, () -> {
                         var p = player(server, uuid);
                         var realm = server.getWorld(HollowCryptRealm.WORLD);
                         var bosses = realm.getEntitiesByClass(NecromancerEntity.class, p.getBoundingBox().expand(60), e -> e.isAlive());
                         require(bosses.size() == 1, "Second ritual raised " + bosses.size() + " bosses");
                         var boss = bosses.get(0);
+                        var watcher = player(server, teammate);
+                        require(watcher.isSpectator() && watcher.getEntityWorld() == realm && p.isAlive() && !p.isSpectator()
+                                && HollowCryptRealm.footprint(HollowCryptRealm.nearestCentre(p.getEntityPos())).contains(watcher.getEntityPos()),
+                                "The fallen teammate did not spectate the surviving player's fight");
+                        require(HollowCryptManager.spectatorViewer(boss, watcher) && !GuardianArenaManager.canCast(watcher),
+                                "The fallen teammate lost the boss bar or can still cast");
                         // The death event commits the victory; the corpse is removed at once.
                         net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.AFTER_DEATH.invoker().afterDeath(boss, realm.getDamageSources().generic());
                         boss.discard();
                     });
-                    if (risen > VICTORY_AT) next();
+                    if (risen > VICTORY_AT + 10) next();
                 }
                 case 10 -> { // home again, with reward chests at the grave and a spell book to claim
                     if (inRealm) { require(++waited < 400, "Victory did not send the player home"); return; }
                     if (++scene == 20) onServer(server, () -> {
                         var p = player(server, uuid);
                         var world = server.getOverworld();
+                        var watcher = player(server, teammate);
+                        require(watcher.getEntityWorld() == world && watcher.getBlockPos().isWithinDistance(door, 24)
+                                && watcher.interactionManager.getGameMode() == GameMode.ADVENTURE,
+                                "The fallen teammate did not return to the graveyard in Adventure");
                         java.util.List<BlockPos> chests = new java.util.ArrayList<>();
                         for (BlockPos q : BlockPos.iterate(door.add(-8, -6, -8), door.add(8, 0, 8)))
                             if (world.getBlockEntity(q) instanceof net.minecraft.block.entity.ChestBlockEntity chest && !chest.isEmpty()) chests.add(q.toImmutable());
@@ -375,7 +397,7 @@ public final class CryptClientSmoke implements ClientModInitializer {
                     Files.writeString(Path.of("CRYPT_PASSED.txt"), "Hollow Crypt native client passed: slot build, layout spot checks, arrival, summon at circle, siege on an exported bough perch and back, wall pull-back, "
                             + "spell teleport limits, survival block protection, reset restoration, return, /locate, graveyard placement, withered woods, "
                             + "unbreakable mausoleum, door hint, walk-in veil ritual, "
-                            + "wipe (boss vanishes, return to the court with items, XP and game mode), second ritual before the wiped fight ends (it keeps the player; standing in the veil seals no second fight), victory return, "
+                            + "wipe (boss vanishes, return to the court with items, XP and game mode), second ritual before the wiped fight ends (it keeps the player; standing in the veil seals no second fight), an Adventure teammate respawning as a spectator and returning with the victor, "
                             + "reward chests with bones and loot, one spell book per victor. Screenshots: crypt-*.png. Human Lunar review pending.\n"
                             + String.join("\n", lines) + "\n");
                     done = true; c.scheduleStop();

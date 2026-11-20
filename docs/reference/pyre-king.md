@@ -14,7 +14,8 @@ his health and timings are first guesses.
 ## Commands
 
 Summon him with `/summon elementalwands:pyre_king`, or in his hall with `/ew hall summon`.
-He fights any Survival or Adventure player who comes within 34 blocks.
+He engages within 34 blocks. In a party encounter, he fights the players admitted at the
+start. A standalone summon can fight any nearby Survival or Adventure player.
 
 | Command (operators only) | Effect |
 | --- | --- |
@@ -253,9 +254,9 @@ These are particles sent by the server.
 - With nobody eligible nearby for 10 s he resets: full health, phase one, back on his mark.
 - He stays within 36 blocks of where he started.
 - When he dies he burns away where he stands. He has no death clip and gives no reward.
-- Ten seconds after he dies, the hall sends everyone in his slot back to where they entered,
-  as the other bosses' realms do (the developer, Nov 11). Anyone with no recorded way back,
-  such as an operator who teleported in, is left alone.
+- Ten seconds after he dies, the hall sends the party and visitors with a recorded entry
+  point home. A party member who teleported directly into the hall returns to world spawn.
+  An observer who teleported in stays there.
 
 ## The intro
 
@@ -468,16 +469,16 @@ same day, through the intro and the fight: "really good".
   - It refuses on Peaceful, for Creative and spectating players, while another party from
     the same gate is fighting, when all eight slots are busy, and for a player held by
     another boss's fight.
-- **How a fight ends.**
-  - **A win:** ten seconds after he dies the hall sends everyone back to stand side by side
-    before the gate (`party/PartyLine`, recorded when the seal is touched).
-  - **A fall:** a player who dies in the hall keeps their belongings and, on respawning,
-    wakes before the gate. They are out of that fight; there is no spectating yet.
-  - **A wipe:** when nobody of the party is left standing in his slot he is removed, his
-    fires go out, and the gate can be touched again.
-  - **A crash, stop or relog in the hall:** the player is sent back to the gate when they
-    are next online. Ways back and who came through a gate are saved in
-    `elementalwands/pyre-hall.json`.
+- **Falling in a gate fight.** Respawn while a teammate is still standing to watch from
+  above the hall floor. You keep your inventory and XP, see the King's health bar, and can
+  fly around your party's slot. Disconnecting also counts as falling. Rejoining during the
+  fight lets you watch. Use `/ew hall leave` to return to the gate early.
+- **Returning to the gate.** When the last fighter falls, the King vanishes, his fires go
+  out and the gate releases the party. On victory, fighters and spectators return together
+  after ten seconds, side by side before the gate (`party/PartyLine`, recorded when the
+  seal is touched). Each gets their original game mode back. Anyone still offline or on the
+  death screen returns on login or respawn. The hall saves the gate and each player's game
+  mode before departure so it can also bring them back after a server restart.
 - The seal and the fire in the arch stay lit while a party of that gate is on its way or
   fighting, and go cold when it is over. A lit seal checks every 2 s that something still
   holds it lit, so a restart never leaves one burning.
@@ -494,8 +495,8 @@ same day, through the intro and the fight: "really good".
   the gate's platform. `/place structure` works only where a shore fits.
 - **Not protected:** the seal, the fire and nothing else is unbreakable. The gate's stone and
   the bridge can be mined like any other structure. Ghasts cannot break the blackstone.
-- **Not built:** a hint when a player looks at the seal, sounds of its own (it borrows
-  vanilla ones), rewards at the gate, and spectating for the fallen.
+- The gate still has vanilla sounds. A hint when looking at the seal and rewards at the gate
+  are planned.
 
 `art/pyre_gate/build_layout.py` authors it: the template, the seal's and the fire's block
 states, models and textures, and `hall/PyreGateLayout.java`. `--install` writes them and
@@ -569,9 +570,14 @@ covers the sea where far chunks are missing.
 
 - Survival players can't break or place blocks; mining one never even starts. Explosions and
   Hollow Purple destroy nothing and start no fires.
-- Ten seconds after the Pyre King dies, everyone in his slot is sent back to where they
-  entered (`PyreHallManager.victory`). The wait is not saved: after a restart in those ten
-  seconds, `/ew hall leave` takes a player home.
+- A restart during the ten-second victory wait returns party members on login. Other
+  visitors can use `/ew hall leave`.
+- Starting the King with `/ew hall summon` or `/ew pyreking intro` takes the Survival
+  and Adventure players already in that hall as the party. Fallen members spectate just
+  as they do in a gate fight. Late arrivals can watch from the hall. The King targets
+  the standing party members. An operator in a command-started
+  party can switch to Creative to step out and inspect the hall. A slot reserved by an
+  arriving gate party or still releasing its victors refuses either start command.
 - A Survival player who leaves the walled floor is set back at the arrival. Teleports can't
   cross into or out of the hall, and must land on the floor.
 - The pillars are scenery (the developer's choice, Nov 11). A Survival player who lands on
@@ -633,5 +639,4 @@ the floor's rim are faint: most of the hall's brightness is the ambient light.
 - **The Snare's turn and its recall are the game's, not the clips'.** He turns on his
   target up to 36° a tick while the clip plays straight ahead, and a throw that catches
   nobody is blended back to his guard in a quarter of a second.
-- **Around the fight:** a reward, spectating for a fallen player, and the hall's per-block
-  floor protection.
+- The hall still needs a reward and per-block floor protection.

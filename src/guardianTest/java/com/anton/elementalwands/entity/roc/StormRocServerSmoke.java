@@ -288,12 +288,16 @@ public final class StormRocServerSmoke implements ModInitializer {
                     require(target.isSpectator()&&StormSummitManager.inRealm(target),"Defeated respawn did not return as spectator");
                     require(target.experienceLevel==17&&target.getEquippedStack(EquipmentSlot.CHEST).isOf(Items.DIAMOND_CHESTPLATE),"Realm death lost inventory/experience");
                     require(!StormRocEncounter.canCast(target),"Respawned player rejoined fight");
+                    require(StormRocEncounter.spectatorViewer(managed, target), "Fallen challenger lost the Roc's health bar");
+                    target.setPosition(StormSummit.arrival(StormSummit.centre(0, 0)));
                     ServerPlayConnectionEvents.DISCONNECT.invoker().onPlayDisconnect(dodge.networkHandler,server);next();
                 }
             }
             case 13 -> {
                 if(elapsed==3){
                     require(dodge.isSpectator()&&!StormRocEncounter.canCast(dodge),"Disconnect allowed roster readmission");
+                    require(StormSummit.footprint(StormSummit.centre(0, 1)).contains(target.getEntityPos()),
+                            "A spectator left their summit on foot");
                     require(StormRocEncounter.activeAt(StormSummit.centre(0,1)),"One disconnect wiped remaining challenger");
                     ServerPlayConnectionEvents.DISCONNECT.invoker().onPlayDisconnect(outsider.networkHandler,server);next();
                 }

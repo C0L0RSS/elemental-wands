@@ -7,6 +7,7 @@ import com.anton.elementalwands.entity.pyreking.PyreKingEntity;
 import com.anton.elementalwands.registry.ModBlocks;
 import com.anton.elementalwands.summit.StormRocEncounter;
 import com.anton.elementalwands.summit.StormSummitManager;
+import com.anton.elementalwands.party.PartyLine;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -187,14 +188,19 @@ public final class PyreGate {
 
     /**
      * The confirmed touch: reserves a free slot of the hall (laying it out if needed) and records everyone's way back
-     * before anyone moves. The chains then burn for a moment; {@link #tick} takes the party.
+     * before anyone moves: side by side before the seal, so a party comes back in a line rather than on one spot
+     * ({@link PartyLine}). The chains then burn for a moment; {@link #tick} takes the party.
      */
     private static String open(ServerPlayerEntity toucher, ServerWorld world, BlockPos seal, Direction facing, String site, List<ServerPlayerEntity> group) {
         MinecraftServer server = world.getServer();
         ServerWorld realm = server.getWorld(PyreHall.WORLD);
         int slot = freeSlot(realm);
         if (slot < 0) return "The Pyre King is fighting elsewhere. Try again soon.";
-        if (!PyreHallManager.recordParty(group, stand(world, seal, facing)))
+        Point home = stand(world, seal, facing);
+        List<Point> homes = new ArrayList<>();
+        for (Vec3d at : PartyLine.spots(world, new Vec3d(home.x(), home.y(), home.z()), home.yaw(), group.size()))
+            homes.add(new Point(home.dimension(), at.x, at.y, at.z, home.yaw(), home.pitch()));
+        if (!PyreHallManager.recordParty(group, homes))
             return "The seal is cold. (Could not record your way back.)";
         Gate gate = new Gate(site, world.getRegistryKey(), seal.toImmutable(), server.getTicks());
         Fight fight = new Fight(gate, slot, PyreHallManager.slotCentre(slot));
@@ -397,7 +403,7 @@ public final class PyreGate {
         sound(world, gate.seal, SoundEvents.ENTITY_GENERIC_EXPLODE.value(), 2f, .7f);
         List<ServerPlayerEntity> party = new ArrayList<>();
         for (UUID id : fight.roster) party.add(server.getPlayerManager().getPlayer(id));
-        for (ServerPlayerEntity p : party) PyreHallManager.arrive(p, realm, fight.slot);
+        PyreHallManager.arriveAll(party, realm, fight.slot);
         fight.king = PyreHallManager.wake(realm, fight.centre, party);
         if (fight.king == null) {
             for (ServerPlayerEntity p : party) home(p, "The Pyre King does not wake. The gate lets you go.");

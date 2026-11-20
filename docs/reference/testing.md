@@ -73,7 +73,7 @@ client runners use `runClient`. Run only the suites relevant to the change.
 | Hollow Crypt realm | — | `crypt_client_smoke` | Also photographs the siege perch views. `-PintroVideo` records his intro; `-PtransformVideo` records the transformation and skips the other crypt checks |
 | Storm Roc | `roc_server_smoke` | `roc_client_smoke` | Run the server fixture first. The client saves screenshots, not video |
 | Storm Summit realm | — | `summit_client_smoke` | |
-| Storm aerie and intro | `aerie_server_smoke` | `aerie_client_smoke`, `roc_intro_client_smoke` | `-PaerieSeed` (default 12345), `-PaerieGongs="label@x,y,z;…"`; for the intro `-ProcIntroGong=x,y,z`, `-ProcIntroVideo`, `-ProcIntroEvery`, `-ProcIntroViewDistance`, `-ProcIntroSkipAt=<beat>` |
+| Storm aerie and intro | `aerie_server_smoke` | `aerie_client_smoke`, `roc_intro_client_smoke` | `-PaerieSeed` (default 12345), `-PaerieGongs="label@x,y,z;…"`; for the intro `-ProcIntroGong=x,y,z` (or `locate`, the nearest aerie to spawn), `-ProcIntroElement=<element>` (its landing; default none), `-ProcIntroPlace=<n>` (the lone player takes place n in the arrival line, as a party member would; the scene must end at their own view), `-ProcIntroArmour=true` (a mixed armour set for the scene's player to wear), `-ProcIntroVideo`, `-ProcIntroEvery`, `-ProcIntroViewDistance`, `-ProcIntroSkipAt=<beat>` |
 | Pyre King | `checkPyreKing` (in the build) | `pyre_king_client_smoke`, `pyre_king_fight_smoke`, `pyre_king_intro_smoke` | `-PpyreFightRecord`, `-PpyreFightRecordCase=<name>[,<name>]`, `-PpyreIntroVideo`, `-PpyreIntroEvery=<ticks>`. See [Pyre King](pyre-king.md#verification) |
 | Burned Gate | — | `pyre_gate_smoke` | Uses a fresh normal world |
 | Burned Throne Hall | — | `pyre_hall_client_smoke` | |

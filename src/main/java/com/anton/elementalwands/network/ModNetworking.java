@@ -378,11 +378,14 @@ public final class ModNetworking {
      * (the aerie half of the scene is laid out from there), and the summit slot's centre (the other
      * half); active=false ends it.
      */
-    public record StormRocIntroPayload(boolean active, net.minecraft.util.math.Vec3d aerie, float aerieYaw, BlockPos summit) implements CustomPayload {
+    /** Starts (or ends) the Storm Roc intro on a client; landing names the element's version of the scene ("" for the plain crash). */
+    /** Starts (or ends) the Storm Roc intro: where it begins at the aerie, the summit slot, the turn that puts its summit half at this player's place in the arrival line, and the landing it plays. */
+    public record StormRocIntroPayload(boolean active, net.minecraft.util.math.Vec3d aerie, float aerieYaw, BlockPos summit, float summitTurn, String landing) implements CustomPayload {
         public static final Id<StormRocIntroPayload> ID = new Id<>(Identifier.of(ElementalWandsMod.MOD_ID,"storm_roc_intro"));
         public static final PacketCodec<RegistryByteBuf,StormRocIntroPayload> CODEC = PacketCodec.tuple(
                 PacketCodecs.BOOLEAN,StormRocIntroPayload::active,net.minecraft.util.math.Vec3d.PACKET_CODEC,StormRocIntroPayload::aerie,
-                PacketCodecs.FLOAT,StormRocIntroPayload::aerieYaw,BlockPos.PACKET_CODEC,StormRocIntroPayload::summit,StormRocIntroPayload::new);
+                PacketCodecs.FLOAT,StormRocIntroPayload::aerieYaw,BlockPos.PACKET_CODEC,StormRocIntroPayload::summit,
+                PacketCodecs.FLOAT,StormRocIntroPayload::summitTurn,PacketCodecs.STRING,StormRocIntroPayload::landing,StormRocIntroPayload::new);
         @Override public Id<? extends CustomPayload> getId() { return ID; }
     }
     public record StormRocIntroSkipPayload() implements CustomPayload {

@@ -110,6 +110,17 @@ sword/bow PvP and physical terrain obstruction remain Minecraft behavior.
 `PartyStore` writes membership atomically before publishing changes; failed writes
 must not partially change live membership, and corrupt data must be preserved.
 
+Wherever a boss takes a group in or sends it back, it sets them down side by side, two
+blocks apart across the way they face, up to eight places either side of the middle, so
+nobody lands inside anyone else: into the Shattered Nave, the Hollow Crypt, the Burned Throne
+Hall and onto the Storm Summit, and home before the Storm Roc's gong, the Pyre King's seal
+and the crypt's court. `party/PartyLine` checks each spot is clear ground level with the
+point (a floor, room for the body, no fluid, fire or powder snow, nothing in the way from the
+point); a spot that isn't moves to the nearest that is, a row behind or in front if need be.
+The point itself, the boss's own arrival or stand, is used as it is. The Guardian's group goes
+home to where each of them stood at the church, and the summit's line is its own (see
+[Storm Summit](storm-summit.md)).
+
 For commands and historical verification, see the
 [party report](../archive/reports/parties-2026-09-12.md). For applicable runners,
 see [testing](testing.md).

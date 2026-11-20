@@ -51,9 +51,40 @@ public final class StormSummit {
         return new BlockPos((generation * SLOTS + slot) * SLOT_SPACING, SURFACE_Y, 0);
     }
 
-    public static Vec3d arrival(BlockPos centre) {
+    public static Vec3d arrival(BlockPos centre) { return arrival(centre, 0); }
+
+    /**
+     * A called party lands side by side, two blocks apart like the Guardian's, up to eight places
+     * either side of the arrival (a bigger party shares the ends). The line bends about the Roc's
+     * home perch: each place is the arrival turned about the home spire by {@link #lineTurn}, so
+     * everyone in it faces the Roc, and a player's intro is the whole summit scene turned with
+     * them. The layout keeps the ground across the line clear (art/storm_summit/build_layout.py).
+     */
+    public static final double LINE_SPACING = com.anton.elementalwands.party.PartyLine.SPACING;
+    public static final int LINE_REACH = com.anton.elementalwands.party.PartyLine.REACH;
+    private static final double PIVOT_X = StormSummitLayout.PERCHES[0][0] + .5, PIVOT_Z = StormSummitLayout.PERCHES[0][2] + .5;
+    private static final double LINE_RADIUS = Math.hypot(StormSummitLayout.ARRIVAL[0] + .5 - PIVOT_X, StormSummitLayout.ARRIVAL[2] + .5 - PIVOT_Z);
+
+    /** Where the i-th of n players stands in the line, in places from its middle (0 for one alone). */
+    public static double linePlace(int i, int n) { return com.anton.elementalwands.party.PartyLine.place(i, n); }
+
+    /** The yaw in degrees that turns the summit about the home perch to bring the arrival to a place in the line (positive places to the right). */
+    public static float lineTurn(double place) { return (float) Math.toDegrees(-place * LINE_SPACING / LINE_RADIUS); }
+
+    /**
+     * A point given in a slot's own frame (blocks from its centre, y from its surface), turned
+     * about the home perch by that yaw, in the world. A Minecraft yaw: a view's yaw in the slot's
+     * frame plus the turn is its yaw in the world.
+     */
+    public static Vec3d turned(BlockPos centre, Vec3d local, float turn) {
+        double a = Math.toRadians(turn), c = Math.cos(a), s = Math.sin(a), x = local.x - PIVOT_X, z = local.z - PIVOT_Z;
+        return new Vec3d(centre.getX() + PIVOT_X + x * c - z * s, centre.getY() + local.y, centre.getZ() + PIVOT_Z + x * s + z * c);
+    }
+
+    /** A place in the line at the arrival: the feet's position. Its facing is {@link #ARRIVAL_YAW} plus its {@link #lineTurn}. */
+    public static Vec3d arrival(BlockPos centre, double place) {
         int[] a = StormSummitLayout.ARRIVAL;
-        return new Vec3d(centre.getX() + a[0] + .5, SURFACE_Y + a[1], centre.getZ() + a[2] + .5);
+        return turned(centre, new Vec3d(a[0] + .5, a[1], a[2] + .5), lineTurn(place));
     }
 
     public static Identifier tile(int i, int j) { return Identifier.of(ElementalWandsMod.MOD_ID, "storm_summit/summit_" + i + "_" + j); }

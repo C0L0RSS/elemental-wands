@@ -22,8 +22,8 @@ import net.minecraft.world.BlockRenderView;
  */
 public final class BlockWindMesh {
     public static final Identifier ATLAS = Identifier.of("elementalwands", "textures/misc/blockwind.png");
-    static final RenderLayer SOLID = RenderLayer.getEntityCutoutNoCull(ATLAS);
-    static final RenderLayer AIR = RenderLayer.getEntityTranslucent(ATLAS);
+    public static final RenderLayer SOLID = RenderLayer.getEntityCutoutNoCull(ATLAS);
+    public static final RenderLayer AIR = RenderLayer.getEntityTranslucent(ATLAS);
     private static final int COLUMNS = 4, ROWS = 8;
     /** A frame never draws more than this many cubes, whatever is on screen. */
     private static final int MAX_CUBES = 6000;

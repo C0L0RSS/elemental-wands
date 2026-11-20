@@ -89,6 +89,7 @@ CHECKS = [
     ("py", "art/storm_roc/validate_runtime.py"),
     ("py", "art/roc_effects/build_tornado_texture.py", "--check"),
     ("py", "art/storm_roc/intro/build_intro.py", "--check"),
+    ("py", "art/storm_roc/intro/install_landings.py", "--check"),
     # Pyre King, hall and gate
     ("py", "art/pyre_king/build_art.py", "--check"),
     ("py", "art/pyre_king/intro/build_intro.py", "--check"),

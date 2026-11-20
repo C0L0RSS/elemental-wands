@@ -75,7 +75,11 @@ public final class StormRocIntroClient {
     private static Vec3d aerie = Vec3d.ZERO;
     private static float aerieYaw;
     private static BlockPos summit = BlockPos.ORIGIN;
+    /** How far this player's summit scene is turned about the home perch: their place in the arrival line. */
+    private static float summitTurn;
     private static boolean hudWasHidden;
+    /** The element's landing the server chose for this scene ("" for the plain crash). */
+    private static String landing = "";
     private static final Random RANDOM = Random.create();
 
     private StormRocIntroClient() {}
@@ -83,7 +87,7 @@ public final class StormRocIntroClient {
     public static void init() {
         ClientPlayNetworking.registerGlobalReceiver(ModNetworking.StormRocIntroPayload.ID, (payload, context) -> {
             if (!payload.active()) { stop(context.client()); return; }
-            start(context.client(), payload.aerie(), payload.aerieYaw(), payload.summit());
+            start(context.client(), payload.aerie(), payload.aerieYaw(), payload.summit(), payload.summitTurn(), payload.landing());
         });
         // Clicks during the scene would swing, use or cast at nothing: drained before vanilla handles input.
         ClientTickEvents.START_CLIENT_TICK.register(client -> {
@@ -101,20 +105,23 @@ public final class StormRocIntroClient {
             if (active && !finished) client.getSoundManager().play(PositionedSoundInstance.master(ModSounds.CINEMATIC_STORM_ROC_INTRO_STORM_BED, .7f, .5f));
         });
         StormRocIntroPuppets.init();
+        StormRocLandingEffects.init();
     }
 
-    private static void start(MinecraftClient client, Vec3d at, float yaw, BlockPos centre) {
-        StormRocIntroTrack.get();
+    private static void start(MinecraftClient client, Vec3d at, float yaw, BlockPos centre, float turn, String element) {
+        landing = element;
+        StormRocIntroTrack.get(landing);
         active = true;
         finished = skipped = skippedOverSummit = cutBack = coveredSent = landedSent = holding = false;
         hold = heldFor = readyFor = inRealmFor = sinceSkip = ticks = nextCue = nextFlash = 0;
         backFrom = -1;
         time = lastTime = 0;
-        aerie = at; aerieYaw = yaw; summit = centre;
+        aerie = at; aerieYaw = yaw; summit = centre; summitTurn = turn;
         armed = false;
         handoff = 0;
         hudWasHidden = client.options.hudHidden;
-        StormRocIntroPuppets.capture(client);
+        StormRocIntroPuppets.capture(client, landing);
+        StormRocLandingEffects.start(landing);
     }
 
     private static void stop(MinecraftClient client) {
@@ -129,7 +136,7 @@ public final class StormRocIntroClient {
 
     // ------------------------------------------------------------------ the clock
 
-    private static StormRocIntroTrack track() { return StormRocIntroTrack.get(); }
+    static StormRocIntroTrack track() { return StormRocIntroTrack.get(landing); }
 
     private static void tick(MinecraftClient client) {
         if (!active) { if (handoff > 0) handoff--; return; }
@@ -211,8 +218,9 @@ public final class StormRocIntroClient {
     static String waitingFor(MinecraftClient client) {
         if (!inRealm(client) || client.getNetworkHandler() == null) return "the move into the realm";
         if (((ClientChunkProgressAccessor) client.getNetworkHandler()).elementalwands$chunkLoadProgress() != null) return "vanilla's chunk loading";
-        Vec3d arrival = StormSummit.arrival(summit);
-        if (client.player.getEntityPos().squaredDistanceTo(arrival) > 16) return "the player at the arrival (at " + client.player.getEntityPos() + ")";
+        StormRocIntroTrack track = track();
+        Vec3d arrival = place(1, track.arrival());
+        if (client.player.getEntityPos().squaredDistanceTo(arrival) > 16) return "the player at their place at the arrival (at " + client.player.getEntityPos() + ")";
         // What vanilla loads and builds: the client's render distance, capped by the server's.
         int view = client.options.getClampedViewDistance();
         int reach = Math.min(2, Math.max(0, view - 1));
@@ -221,7 +229,6 @@ public final class StormRocIntroClient {
             if (!client.world.isChunkLoaded(cx + x, cz + z)) return "chunk " + (cx + x) + "," + (cz + z) + " near the arrival";
         // What the summit's shots look at: where you land, the middle of the summit, the home spire;
         // each only if the client's view distance reaches it at all.
-        StormRocIntroTrack track = track();
         for (Vec3d at : new Vec3d[]{arrival, place(1, Vec3d.ZERO).add(.5, 1, .5), place(1, track.homePerch()).add(0, -1, 0)}) {
             BlockPos pos = BlockPos.ofFloored(at);
             if (Math.max(Math.abs((pos.getX() >> 4) - cx), Math.abs((pos.getZ() >> 4) - cz)) > view - 1) continue;
@@ -302,15 +309,24 @@ public final class StormRocIntroClient {
         return (float)MathHelper.lerp(handBack(tickDelta), track().fov(time(tickDelta)), fov);
     }
 
-    /** A point in the scene's frame for this half, in the world. */
+    /** A point in the scene's frame for this half, in the world. The summit's is turned to this player's place in the line. */
     static Vec3d place(int half, Vec3d local) {
-        if (half == 1) return new Vec3d(summit.getX() + local.x, summit.getY() + local.y, summit.getZ() + local.z);
+        if (half == 1) return StormSummit.turned(summit, local, summitTurn);
         double yaw = Math.toRadians(aerieYaw);
         Vec3d ahead = new Vec3d(-Math.sin(yaw), 0, Math.cos(yaw)), left = new Vec3d(Math.cos(yaw), 0, Math.sin(yaw));
         return aerie.add(left.multiply(local.x)).add(0, local.y, 0).add(ahead.multiply(local.z));
     }
 
-    static float frameYaw(int half) { return half == 1 ? 0 : aerieYaw; }
+    static float frameYaw(int half) { return half == 1 ? summitTurn : aerieYaw; }
+
+    /** The summit slot's centre, unturned: the origin landings draw from (they draw in the scene's frame, turned as they are emitted). */
+    static Vec3d summitOrigin() { return new Vec3d(summit.getX(), summit.getY(), summit.getZ()); }
+
+    /** A world point where it would be were the summit scene not turned (undoes place's turn about the home perch). */
+    static Vec3d unturn(Vec3d world) {
+        Vec3d local = world.subtract(summitOrigin());
+        return StormSummit.turned(summit, local, -summitTurn);
+    }
 
     /** A rotation in the scene's frame for this half, in the world. */
     static Quaternionf turn(int half, Quaternionf local) {
@@ -382,7 +398,10 @@ public final class StormRocIntroClient {
             case "fling" -> new Sound(ModSounds.CINEMATIC_STORM_ROC_INTRO_FLING, 1.5f, .6f);
             case "crash" -> new Sound(ModSounds.CINEMATIC_STORM_ROC_INTRO_CRASH, 1.2f, .7f);
             case "roc_lands" -> new Sound(ModSounds.CINEMATIC_STORM_ROC_INTRO_ROC_LANDS, 3f, .5f);
-            default -> null;
+            default -> {
+                var landing = StormRocLandingEffects.sound(cue.cue());
+                yield landing == null ? null : new Sound(landing.event(), landing.volume(), landing.pitch());
+            }
         };
         if (sound == null) return;
         client.getSoundManager().play(new PositionedSoundInstance(sound.event(), SoundCategory.HOSTILE, sound.volume(), sound.pitch(), RANDOM, at.x, at.y, at.z));
@@ -451,6 +470,7 @@ public final class StormRocIntroClient {
         if (flash > .01 && !skipped) context.fill(0, 0, w, h, alpha(.35 * flash) | 0xD6E4FF);
         double wand = track.wand(t) * (1 - back);
         if (wand > .01 && !skipped) context.fill(0, 0, w, h, alpha(.3 * wand) | StormRocIntroPuppets.elementColour());
+        if (!skipped && back < 1 && track.half(t) == 1 && drawnHalf(t) == 1) StormRocLandingEffects.hud(context, t, w, h, 1 - back);
         drawCover(context, delta);
         int bar = (int)Math.round(h * BARS * (skipped ? 1 - back : track.bars(t)));
         context.fill(0, 0, w, bar, 0xFF000000);

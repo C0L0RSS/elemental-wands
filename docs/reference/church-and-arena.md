@@ -239,7 +239,8 @@ Entry is free: walking into the veil seals every living non-Creative player with
 into a fight in a free slot. It records their return points first and blinds them for a moment
 on the way in. Anyone taken from the doorway (within 3.5 blocks of the veil's bottom-centre
 cell) returns to the court six blocks in front of it, facing the door, so they don't walk
-straight back in. Anyone already sealed into a fight or waiting for a slot to open stays with
+straight back in; a party taken from the doorway comes back out side by side there
+(`party/PartyLine`), and the group arrives in the crypt side by side too. Anyone already sealed into a fight or waiting for a slot to open stays with
 it, so standing in the veil or a second party member walking in while the slot is laid out
 starts no second fight. A refusal (such as a full crypt) repeats only after the player has
 stepped out of the veil for two seconds. A player who dies or disconnects before the slot opens

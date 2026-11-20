@@ -475,7 +475,8 @@ same day, through the intro and the fight: "really good".
   fight lets you watch. Use `/ew hall leave` to return to the gate early.
 - **Returning to the gate.** When the last fighter falls, the King vanishes, his fires go
   out and the gate releases the party. On victory, fighters and spectators return together
-  after ten seconds. Each gets their original game mode back. Anyone still offline or on the
+  after ten seconds, side by side before the gate (`party/PartyLine`, recorded when the
+  seal is touched). Each gets their original game mode back. Anyone still offline or on the
   death screen returns on login or respawn. The hall saves the gate and each player's game
   mode before departure so it can also bring them back after a server restart.
 - The seal and the fire in the arch stay lit while a party of that gate is on its way or
@@ -532,7 +533,7 @@ players reach it by [the Burned Gate](#the-burned-gate); operators also by `/ew 
   breaches. The roof is gone; its ribs still arc toward a broken ring 62 up, hung with
   chains and lanterns.
 - **Gate and throne:** players arrive at (0, 1, 33), just inside the south gate, facing
-  north. The king stands at the centre facing them. Behind him, in an apse in the north
+  north; a party arrives side by side there (`party/PartyLine`). The king stands at the centre facing them. Behind him, in an apse in the north
   wall, a gold-edged throne stands on a dais under a broken round window. Its seat is one
   block high, three wide and two deep between arms one block higher, so that he can sit in
   it for his intro (resized Nov 11; it was five wide and two high). Two braziers and

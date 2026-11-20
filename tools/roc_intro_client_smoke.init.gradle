@@ -2,6 +2,10 @@
 // and checks the move into the summit realm never shows the loading screen, the scene hands back and the fight starts.
 // Use a seed and gong anchor from tools/aerie_worldgen_smoke.init.gradle. -ProcIntroVideo saves a frame every
 // -ProcIntroEvery ticks (default 2) for a video; -ProcIntroSkipAt=<beat> holds Sneak from that beat of the scene to skip it.
+// -ProcIntroElement=<fire|wind|stone|nature|space|none> plays that element's landing (default none, the plain crash).
+// -ProcIntroGong=locate finds the nearest natural aerie from spawn instead of taking an anchor.
+// -ProcIntroPlace=<n> gives the lone player place n in the summit's arrival line (a party member's), turning their scene to it.
+// -ProcIntroArmour=true dresses them in a mixed armour set, which the scene's player must wear.
 // Screenshots: build/roc-intro-client-smoke/screenshots/
 // ./gradlew -I tools/roc_intro_client_smoke.init.gradle runClient -PaerieSeed=12345 -ProcIntroGong=x,y,z -PhubClientAssets="$HOME/.lunarclient/shared/assets" --offline
 allprojects {
@@ -18,6 +22,9 @@ allprojects {
         loom.runs.client.vmArg('-DrocIntro.every='+(project.findProperty('rocIntroEvery') ?: '2'))
         loom.runs.client.vmArg('-DrocIntro.viewDistance='+(project.findProperty('rocIntroViewDistance') ?: '12'))
         loom.runs.client.vmArg('-DrocIntro.skipAt='+(project.findProperty('rocIntroSkipAt') ?: ''))
+        loom.runs.client.vmArg('-DrocIntro.element='+(project.findProperty('rocIntroElement') ?: 'none'))
+        loom.runs.client.vmArg('-DrocIntro.place='+(project.findProperty('rocIntroPlace') ?: '0'))
+        loom.runs.client.vmArg('-DrocIntro.armour='+(project.findProperty('rocIntroArmour') ?: 'false'))
         tasks.register('rocIntroClientMetadata') {
             if (existingAssets) dependsOn generateDLIConfig
             doLast {

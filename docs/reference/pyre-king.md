@@ -14,7 +14,8 @@ his health and timings are first guesses.
 ## Commands
 
 Summon him with `/summon elementalwands:pyre_king`, or in his hall with `/ew hall summon`.
-He fights any Survival or Adventure player who comes within 34 blocks.
+He engages within 34 blocks. In a party encounter, he fights the players admitted at the
+start. A standalone summon can fight any nearby Survival or Adventure player.
 
 | Command (operators only) | Effect |
 | --- | --- |
@@ -253,18 +254,23 @@ These are particles sent by the server.
 - With nobody eligible nearby for 10 s he resets: full health, phase one, back on his mark.
 - He stays within 36 blocks of where he started.
 - When he dies he burns away where he stands. He has no death clip and gives no reward.
-- Ten seconds after he dies, the hall sends everyone in his slot back to where they entered,
-  as the other bosses' realms do (the developer, Nov 11). Anyone with no recorded way back,
-  such as an operator who teleported in, is left alone.
+- Ten seconds after he dies, the hall sends the party and visitors with a recorded entry
+  point home. A party member who teleported directly into the hall returns to world spawn.
+  An observer who teleported in stays there.
 
 ## The intro
 
-A 58-second cinematic opens his fight. The idea is the developer's (Nov 11): he sits slumped
+A 61-second cinematic opens his fight. The idea is the developer's (Nov 11): he sits slumped
 on his throne like a statue, bound by a web of chains strung through the dark hall, with his
 greatsword hanging point down on a chain high above and just in front of him. The chains
 burn through, the sword falls and drives into the dais, his hand closes on the hilt, the
-blade and then the hall take fire, and he rises. It is a first pass. The developer has not
-seen it yet, and asked for it to be long and unhurried, with no time limit.
+blade and then the hall take fire, and he rises. The developer asked for it to be long and
+unhurried, with no time limit. Having seen the first pass, they liked it overall but found his
+arms wacky (Nov 12), so his acting was reworked for natural weight and arm movement. They
+liked that, but the pull to the centre that ended the scene was the fight's quick Haul
+stretched to 26 blocks, and at that length he looked weightless. The scene now ends with its
+own clip, `intro_haul`, which shows him take the chain before he pulls and gives him weight.
+The developer approved the whole scene from the in-game video on Nov 12.
 
 Players start it at [the Burned Gate](#the-burned-gate): touching its seal is what sets the
 chains burning. Operators can also start it with `/ew pyreking intro`.
@@ -277,16 +283,23 @@ chains burning. Operators can also start it with `/ew pyreking intro`.
 | 18–22 | The shard in his chest pulses once. A link by the gate begins to glow. |
 | 22–30.5 | The web burns from the gate to the throne. What binds him goes last, from his feet up. |
 | 30.5–33.5 | The sword's chain parts; it falls for 1.4 s and drives into the dais. |
-| 33.5–40 | His fingers stir twice, his head lifts, he leans out and takes the hilt (38.8 s). |
+| 33.5–40 | His hand stirs twice at the wrist, his head lifts, he pulls himself forward and takes the hilt (38.8 s). |
 | 40–45.5 | Fire runs up the blade from his fist; the hall's fires catch in a wave from the throne. |
-| 45.5–53.5 | He hauls himself up on the sword, draws it and lifts it. His name shows from 50 s. |
-| 53.5–58 | A cut puts him 26 blocks up the hall; a Haul brings him to his mark, its line burning. |
+| 45.5–53.5 | He pushes up on his knee and the sword, tears it out of the dais and raises it in both hands. His name shows from 50 s. |
+| 53.5–56.5 | A cut puts him 26 blocks up the hall, seen close from his sword side. He slings the sword down the hall (54.6 s); it drives in by his mark. He winds the chain round his forearm, takes it in both fists, sinks back against it and heaves (56.2 s). |
+| 56.5–61 | From beside his mark, as the chain drags him off his feet: he lands 3 blocks short (57.3 s), ploughs to a stop on his heels and his left fist, stays down, wrenches the sword out (58.8 s) and rises. The line he flew burns. |
 
-- **Two clips are his acting.** `throned` is the statue (a 10 s loop in which only the
+- **Three clips are his acting.** `throned` is the statue (a 10 s loop in which only the
   hanging sword turns) and `awaken` is everything from the fall to his guard (23.5 s). Both
-  are played with him standing half a block in front of the seat. The sword is his own
-  sword bone throughout.
-- **`art/pyre_king/intro/build_intro.py` owns the rest,** on the same clock: 16 camera
+  are played with him standing half a block in front of the seat. `intro_haul` (7 s) is the
+  pull to his mark, played from 26 blocks up the hall. The sword is his own sword bone
+  throughout.
+- **`intro_haul` is made for exactly its distance.** Unlike the fight's Haul it is never
+  aimed or stretched, so it has no entry in `PyreKingAim`. Its travel is keyed as speed, so
+  he gathers way and loses it: nothing moves him for 2.75 s, he reaches 27 blocks a second
+  in the air, and the last 3 blocks are a skid. `PyreKingIntro` moves him along that travel
+  each tick, as the fight does for a Haul.
+- **`art/pyre_king/intro/build_intro.py` owns the rest,** on the same clock: 17 camera
   shots with hard cuts, the 25 chains (each one's two ends, when heat starts along it, when
   it parts and when it is ash), every fire and light block in the hall with the tick it
   catches, and per tick how dark the hall is, how much of his own glow shows and how far
@@ -295,7 +308,8 @@ chains burning. Operators can also start it with `/ew pyreking intro`.
 - **The server** (`PyreKingIntro`, ticked by him) runs the timeline. It holds every watcher
   where they stand, unhurt and unable to cast; puts out the hall's 293 fires and 92 light
   blocks and lights them again on their ticks; plays the sounds (vanilla, placeholders);
-  and starts the last Haul. When it ends he is on his mark and the fight starts.
+  and plays `intro_haul`, moving him as the clip does and throwing up stone and sparks where
+  he lands. When the scene ends he is on his mark and the fight starts.
 - **Each client** (`PyreKingIntroClient`) flies its camera along the track, letterboxes the
   screen, dims the hall's ambient light, and shows his name. `BossIntroCamera` shares the
   camera, HUD and input hooks with the other bosses' scenes.
@@ -338,8 +352,9 @@ Lunge and the Turning Cut leave him back where he stood when the clip ends.
 | Blade fire and chains | `client/renderer/PyreKingEffectsLayer` |
 
 The model, its 46 bones and its clips are the approved review candidate, installed
-unchanged. The Haul and Snare clips and the intro's two, `throned` and `awaken` (all Nov 11),
-are the exception: the developer has not yet reviewed them. Do not edit the installed files, `PyreKingClips.java` or
+unchanged. The intro's three clips (`throned`, `awaken` and `intro_haul`) were approved
+from the in-game video on Nov 12. The exceptions are the Haul and Snare clips (Nov 11),
+which the developer has not yet reviewed in the workshop. Do not edit the installed files, `PyreKingClips.java` or
 `pyre_king_tracks.json`; change the art sources and run
 `py -3 art/pyre_king/build_art.py --install`.
 
@@ -418,7 +433,8 @@ mesh later, in a deferred callback.
   the hall and `/ew pyreking intro` plays the whole scene through its own camera. It checks
   that the braziers are dark at the start and burning after, that he ends on his mark and
   fights, and that a second run, skipped, ends at once with the hall lit. It saves a still
-  at each beat, and with `-PpyreIntroVideo` a frame every other tick.
+  at each beat, and with `-PpyreIntroVideo` a frame every other tick (`-PpyreIntroEvery=1`
+  saves every tick, for judging a fast move).
 - `pyre_king_client_smoke.init.gradle` runs a hidden, muted client. It checks that he uses
   his GeckoLib renderer and that every clip in `PyreKingClips` is in the baked animation
   file. It then rehearses every clip and saves 56 screenshots to
@@ -453,16 +469,16 @@ same day, through the intro and the fight: "really good".
   - It refuses on Peaceful, for Creative and spectating players, while another party from
     the same gate is fighting, when all eight slots are busy, and for a player held by
     another boss's fight.
-- **How a fight ends.**
-  - **A win:** ten seconds after he dies the hall sends everyone back to stand before the
-    gate.
-  - **A fall:** a player who dies in the hall keeps their belongings and, on respawning,
-    wakes before the gate. They are out of that fight; there is no spectating yet.
-  - **A wipe:** when nobody of the party is left standing in his slot he is removed, his
-    fires go out, and the gate can be touched again.
-  - **A crash, stop or relog in the hall:** the player is sent back to the gate when they
-    are next online. Ways back and who came through a gate are saved in
-    `elementalwands/pyre-hall.json`.
+- **Falling in a gate fight.** Respawn while a teammate is still standing to watch from
+  above the hall floor. You keep your inventory and XP, see the King's health bar, and can
+  fly around your party's slot. Disconnecting also counts as falling. Rejoining during the
+  fight lets you watch. Use `/ew hall leave` to return to the gate early.
+- **Returning to the gate.** When the last fighter falls, the King vanishes, his fires go
+  out and the gate releases the party. On victory, fighters and spectators return together
+  after ten seconds, side by side before the gate (`party/PartyLine`, recorded when the
+  seal is touched). Each gets their original game mode back. Anyone still offline or on the
+  death screen returns on login or respawn. The hall saves the gate and each player's game
+  mode before departure so it can also bring them back after a server restart.
 - The seal and the fire in the arch stay lit while a party of that gate is on its way or
   fighting, and go cold when it is over. A lit seal checks every 2 s that something still
   holds it lit, so a restart never leaves one burning.
@@ -479,8 +495,8 @@ same day, through the intro and the fight: "really good".
   the gate's platform. `/place structure` works only where a shore fits.
 - **Not protected:** the seal, the fire and nothing else is unbreakable. The gate's stone and
   the bridge can be mined like any other structure. Ghasts cannot break the blackstone.
-- **Not built:** a hint when a player looks at the seal, sounds of its own (it borrows
-  vanilla ones), rewards at the gate, and spectating for the fallen.
+- The gate still has vanilla sounds. A hint when looking at the seal and rewards at the gate
+  are planned.
 
 `art/pyre_gate/build_layout.py` authors it: the template, the seal's and the fire's block
 states, models and textures, and `hall/PyreGateLayout.java`. `--install` writes them and
@@ -517,7 +533,7 @@ players reach it by [the Burned Gate](#the-burned-gate); operators also by `/ew 
   breaches. The roof is gone; its ribs still arc toward a broken ring 62 up, hung with
   chains and lanterns.
 - **Gate and throne:** players arrive at (0, 1, 33), just inside the south gate, facing
-  north. The king stands at the centre facing them. Behind him, in an apse in the north
+  north; a party arrives side by side there (`party/PartyLine`). The king stands at the centre facing them. Behind him, in an apse in the north
   wall, a gold-edged throne stands on a dais under a broken round window. Its seat is one
   block high, three wide and two deep between arms one block higher, so that he can sit in
   it for his intro (resized Nov 11; it was five wide and two high). Two braziers and
@@ -554,9 +570,14 @@ covers the sea where far chunks are missing.
 
 - Survival players can't break or place blocks; mining one never even starts. Explosions and
   Hollow Purple destroy nothing and start no fires.
-- Ten seconds after the Pyre King dies, everyone in his slot is sent back to where they
-  entered (`PyreHallManager.victory`). The wait is not saved: after a restart in those ten
-  seconds, `/ew hall leave` takes a player home.
+- A restart during the ten-second victory wait returns party members on login. Other
+  visitors can use `/ew hall leave`.
+- Starting the King with `/ew hall summon` or `/ew pyreking intro` takes the Survival
+  and Adventure players already in that hall as the party. Fallen members spectate just
+  as they do in a gate fight. Late arrivals can watch from the hall. The King targets
+  the standing party members. An operator in a command-started
+  party can switch to Creative to step out and inspect the hall. A slot reserved by an
+  arriving gate party or still releasing its victors refuses either start command.
 - A Survival player who leaves the walled floor is set back at the arrival. Teleports can't
   cross into or out of the hall, and must land on the floor.
 - The pillars are scenery (the developer's choice, Nov 11). A Survival player who lands on
@@ -618,5 +639,4 @@ the floor's rim are faint: most of the hall's brightness is the ambient light.
 - **The Snare's turn and its recall are the game's, not the clips'.** He turns on his
   target up to 36° a tick while the clip plays straight ahead, and a throw that catches
   nobody is blended back to his guard in a quarter of a second.
-- **Around the fight:** a reward, spectating for a fallen player, and the hall's per-block
-  floor protection.
+- The hall still needs a reward and per-block floor protection.

@@ -40,7 +40,7 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
     private final boolean mechanics = Boolean.getBoolean("necro.mechanics");
     private volatile UUID target;
     private volatile int warnAt = -1, eruptAt = -1;
-    private volatile boolean sawFireball, sawSoul, sawHarvest, sawGlow;
+    private volatile boolean sawFireball, sawHarvest, sawGlow;
     private volatile String serverFireballs = "not cast";
     private int mechanicsTick;
     private boolean sawDrain, sawDrainClear;
@@ -421,7 +421,7 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
 
     /**
      * Second-playtest mechanics from a side camera: a Soul Fire Rain volley, the colossus charge
-     * windup, a dodged Grave Dive, the soul split and a Soul Harvest, against a scripted player.
+     * windup, a dodged Grave Dive, the frenzy howl and a Soul Harvest, against a scripted player.
      */
     private void mechanicsScene(MinecraftClient c, int tick) throws Exception {
         var server = c.getServer();
@@ -474,6 +474,8 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
         if (t == 24) shot(c, "mechanics-rain-flight.png");
         if (t == 36) shot(c, "mechanics-rain-landing.png");
         if (t == 50) { require(sawFireball, "No Soul Fire Rain fireball reached the client (server: " + serverFireballs + ")"); server.execute(() -> ((NecromancerEntity)server.getOverworld().getEntity(bossId)).requestTransform()); }
+        // The transformation is a long cinematic: the scripted player skips it, as a watcher holding Sneak would.
+        if (t == 80) server.execute(() -> com.anton.elementalwands.entity.necromancer.NecromancerTransformScene.skip(server.getPlayerManager().getPlayer(target)));
         if (t > 50 && t < 230) lookAtBoss(c);
         // The charge windup: crouch, then the rocking coil.
         if (t == 230) cast(server, target, Action.RUSH);
@@ -511,26 +513,21 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
             shot(c, "mechanics-dive-stuck.png");
         }
         if (t == 470) require(warnAt > 0 && eruptAt > 0, "The dive never cracked the ground or erupted: warn " + warnAt + ", erupt " + eruptAt);
-        // The soul split: in fight mode, the soul tears out of the ribcage and hovers.
+        // The frenzy: in fight mode, it rears and howls, then crawls on with soul fire pouring off it.
         if (t == 475) server.execute(() -> {
             var b = (NecromancerEntity)server.getOverworld().getEntity(bossId);
             b.stopFight(); b.refreshPositionAndAngles(.5, floor, 4.5, 0, 0); b.setBodyYaw(0);
             server.getPlayerManager().getPlayer(target).networkHandler.requestTeleport(.5, floor, 16.5, 180, 0);
-            b.startFight(); b.requestSplit();
+            b.startFight(); b.requestFrenzy();
         });
         if (t > 475 && t < 560) lookAt(c, boss == null ? new net.minecraft.util.math.Vec3d(.5, floor + 2, 6) : boss.getEntityPos().add(0, 3, 2));
-        if (t == 490) shot(c, "mechanics-split-rear.png");
-        if (t == 500) shot(c, "mechanics-split-release.png");
-        for (var e : c.world.getEntities())
-            if (e instanceof com.anton.elementalwands.entity.necromancer.NecromancerSoulEntity) {
-                require((Object)c.getEntityRenderDispatcher().getRenderer(e) instanceof com.anton.elementalwands.client.renderer.NecromancerSoulRenderer, "Soul uses the wrong renderer");
-                sawSoul = true;
-                if (t == 520 || t == 545) {
-                    lookAt(c, e.getEntityPos());
-                    shot(c, "mechanics-soul-" + t + ".png");
-                }
-            }
-        if (t == 555) require(sawSoul && boss != null && boss.isSplit(), "The freed soul never reached the client");
+        if (t == 490) shot(c, "mechanics-frenzy-rear.png");
+        if (t == 500) shot(c, "mechanics-frenzy-howl.png");
+        if (t == 530) shot(c, "mechanics-frenzy-crawl.png");
+        if (t == 555) server.execute(() -> {
+            var b = (NecromancerEntity)server.getOverworld().getEntity(bossId);
+            if (!b.isFrenzied()) serverFailure = "The colossus never entered its frenzy: " + b.status();
+        });
         // Soul Harvest: souls claw out of the ground and drift toward the ribcage.
         if (t == 560) server.execute(() -> {
             var b = (NecromancerEntity)server.getOverworld().getEntity(bossId);
@@ -575,7 +572,7 @@ public final class NecromancerClientSmoke implements ClientModInitializer {
         if (t == 732) shot(c, "mechanics-night-bolts-late.png");
         if (t == 745) {
             require(sawGlow, "No soul light reached the client around a fireball");
-            Files.writeString(Path.of("NECRO_PASSED.txt"), "Hollow Necromancer second-playtest mechanics passed in the native client: model fireball rain, colossus charge crouch and coil, grave dive rear/plunge/tunnel/cracks/eruption/stuck, the soul split with the freed soul rendered, a soul harvest with rendered souls, and soul light (glow blocks and blue ground pools) under a night rain and skull volley; screenshots for visual review.\n");
+            Files.writeString(Path.of("NECRO_PASSED.txt"), "Hollow Necromancer second-playtest mechanics passed in the native client: model fireball rain, colossus charge crouch and coil, grave dive rear/plunge/tunnel/cracks/eruption/stuck, the frenzy howl, a soul harvest with rendered souls, and soul light (glow blocks and blue ground pools) under a night rain and skull volley; screenshots for visual review.\n");
             done = true; c.scheduleStop();
         }
     }

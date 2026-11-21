@@ -1,5 +1,7 @@
 package com.anton.elementalwands.client;
 
+import com.anton.elementalwands.arena.GuardianNaveSmokeMod;
+import com.anton.elementalwands.hall.PyreGate;
 import com.anton.elementalwands.data.EWAttachments;
 import com.anton.elementalwands.entity.pyreking.PyreKingEntity;
 import com.anton.elementalwands.hall.PyreHall;
@@ -73,11 +75,15 @@ public final class PyreHallClientSmoke implements ClientModInitializer {
     private volatile String pillarNote = "";
     private final java.util.List<String> seaNotes = new java.util.ArrayList<>();
     private volatile String serverFailure;
-    private volatile boolean entered, checked, home, summoned, won;
+    private volatile boolean entered, checked, home, summoned, checkingVictory;
     private volatile int wonAt;
     private volatile String victoryNote = "";
     private volatile String startDimension, lightNote = "";
     private volatile Vec3d start;
+    private final UUID teammate = UUID.randomUUID();
+    private final UUID lateVisitor = UUID.randomUUID();
+    private final UUID inspectingOperator = UUID.randomUUID();
+    private int summonedAt;
 
     public void onInitializeClient() { ClientTickEvents.END_CLIENT_TICK.register(this::tick); }
 
@@ -230,18 +236,42 @@ public final class PyreHallClientSmoke implements ClientModInitializer {
                 }
                 case 8 -> { // in again; the floor will not break; he dies, and ten seconds later the hall sends the player home
                     int t = ++scene;
-                    if (t == 1) onServer(server, () -> run(server, player(server, uuid), "ew hall enter"));
+                    if (t == 1) onServer(server, () -> {
+                        var p = player(server, uuid);
+                        GuardianNaveSmokeMod.joinInAdventure(p, teammate, "HallTeammate");
+                        GuardianNaveSmokeMod.joinInAdventure(p, lateVisitor, "HallVisitor");
+                        PyreHallManager.enter(player(server, teammate), 0);
+                        run(server, p, "ew hall enter");
+                    });
                     if (t > 900) throw new AssertionError("The victory check never finished");
                     if (t < 20) return;
-                    if (!won) {
+                    if (!checkingVictory) {
                         if (!inHall) return;
-                        if (!summoned) { summoned = true; onServer(server, () -> run(server, player(server, uuid), "ew hall summon")); return; }
-                        won = true;
+                        if (!summoned) {
+                            summoned = true;
+                            summonedAt = t;
+                            onServer(server, () -> {
+                                var p = player(server, uuid);
+                                p.changeGameMode(GameMode.SURVIVAL);
+                                GuardianNaveSmokeMod.joinInAdventure(p, inspectingOperator, "HallInspector");
+                                run(server, p, "ew hall summon");
+                                require(PyreGate.held(inspectingOperator), "Command party missed the Adventure operator");
+                                player(server, inspectingOperator).changeGameMode(GameMode.CREATIVE);
+                                PyreHallManager.enter(player(server, lateVisitor), 0);
+                                var partner = player(server, teammate);
+                                require(PyreGate.held(uuid) && PyreGate.held(teammate), "Hall summon missed the party");
+                                partner.onTeleportationDone();
+                                partner.kill(partner.getEntityWorld());
+                                GuardianNaveSmokeMod.respawn(server, partner);
+                            });
+                            return;
+                        }
+                        if (t - summonedAt < 10) return;
+                        checkingVictory = true;
                         onServer(server, () -> {
                             var p = player(server, uuid);
                             ServerWorld hall = (ServerWorld) p.getEntityWorld();
                             BlockPos centre = PyreHall.nearestCentre(p.getEntityPos());
-                            p.changeGameMode(GameMode.SURVIVAL);
                             BlockPos floor = PyreHall.cell(centre, 3, 0, 30);
                             var before = hall.getBlockState(floor);
                             require(!before.isAir(), "No floor block at layout 3,0,30 to try to break");
@@ -251,7 +281,22 @@ public final class PyreHallClientSmoke implements ClientModInitializer {
                             require(hall.getBlockState(floor).equals(before), "A Survival player broke the hall's floor: " + hall.getBlockState(floor));
                             var kings = hall.getEntitiesByClass(PyreKingEntity.class, PyreHall.footprint(centre), e -> e.isAlive());
                             require(kings.size() == 1, "Expected one Pyre King to defeat, found " + kings.size());
-                            kings.get(0).kill(hall);
+                            var watcher = player(server, teammate);
+                            require(watcher.getEntityWorld() == hall && watcher.isSpectator() && PyreGate.spectatorViewer(kings.getFirst(), watcher),
+                                    "Fallen teammate could not watch a command-started fight");
+                            var king = kings.getFirst();
+                            var inspector = player(server, inspectingOperator);
+                            require(inspector.isCreative() && inspector.getEntityWorld() == hall && !PyreGate.held(inspectingOperator)
+                                    && !king.eligible(inspector), "Switching to Creative did not release the operator for inspection");
+                            var visitor = player(server, lateVisitor);
+                            require(!PyreGate.held(lateVisitor) && visitor.getEntityWorld() == hall && !king.eligible(visitor)
+                                    && !king.damage(hall, hall.getDamageSources().playerAttack(visitor), 5),
+                                    "A late visitor fought the king outside the sealed party");
+                            king.kill(hall);
+                            require(PyreHallManager.summon(p).startsWith("Wait for the hall")
+                                    && PyreHallManager.intro(p).startsWith("Wait for the hall")
+                                    && hall.getEntitiesByClass(PyreKingEntity.class, PyreHall.footprint(centre), e -> e.isAlive()).isEmpty(),
+                                    "A command replaced the king during victory release");
                             wonAt = server.getTicks();
                         });
                         return;
@@ -268,7 +313,10 @@ public final class PyreHallClientSmoke implements ClientModInitializer {
                         String dimension = p.getEntityWorld().getRegistryKey().getValue().toString();
                         require(dimension.equals(startDimension) && p.getEntityPos().distanceTo(start) < 1,
                                 "After the win, sent to " + dimension + " " + fmt(p.getEntityPos()) + ", entered from " + startDimension + " " + fmt(start));
-                        victoryNote = "a Survival player could not start mining the floor; " + after / 20.0 + " s after the Pyre King died the hall sent the player back to where they entered";
+                        var partner = player(server, teammate);
+                        require(partner.getEntityWorld() == p.getEntityWorld() && partner.getEntityPos().distanceTo(start) < 2
+                                && partner.interactionManager.getGameMode() == GameMode.ADVENTURE, "The hall did not restore its spectator on victory");
+                        victoryNote = "a Survival player could not start mining the floor; a visitor outside the party could not hurt the King; a fallen Adventure teammate spectated the fight, and both returned " + after / 20.0 + " s after the Pyre King died";
                         home = true;
                     });
                     if (!home) return;

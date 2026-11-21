@@ -28,8 +28,11 @@ public final class SpringbloomManager {
         final ServerPlayerEntity player;
         final ServerWorld world;
         final long launched;
+        /** Height lift-off is measured from (see LaunchLiftoff.floor). */
+        double floor;
+        boolean lifted;
         long landed=-1;
-        Flight(ServerPlayerEntity player,ServerWorld world,long launched){this.player=player;this.world=world;this.launched=launched;}
+        Flight(ServerPlayerEntity player,ServerWorld world,long launched){this.player=player;this.world=world;this.launched=launched;floor=player.getY();}
     }
     private static final Map<ServerPlayerEntity,Vec3d> MOTION = new WeakHashMap<>();
     public static Vec3d motion(ServerPlayerEntity p) { return MOTION.getOrDefault(p,p.getVelocity()); }
@@ -57,11 +60,15 @@ public final class SpringbloomManager {
                 boolean ended=p.isRemoved() || !p.isAlive() || server.getPlayerManager().getPlayer(p.getUuid())!=p
                         || p.getEntityWorld()!=f.world || p.isSpectator() || p.hasVehicle() || p.isGliding()
                         || p.getAbilities().flying || p.isTouchingWater() || p.isInLava() || p.isClimbing()
-                        || (f.landed>=0 && f.world.getTime()>f.landed+2);
-                // Client onGround can arrive before its landing position/fall-damage packet.
-                // Consume real fall damage in the mixin; clear zero-distance landings only
-                // after physical contact and a short packet-order grace period.
-                if(!ended && f.landed<0 && f.world.getTime()>f.launched+2 && p.isOnGround()
+                        || (f.landed>=0 && f.world.getTime()>f.landed+2)
+                        || (!f.lifted && f.world.getTime()>f.launched+LaunchLiftoff.WAIT && p.isOnGround());
+                // Until the client applies the launch it keeps reporting the player on the ground,
+                // so only ground contact after lift-off is a landing (see LaunchLiftoff). A launch that
+                // never lifts (a low ceiling, a long stall) ends on the ground, or at its next landing.
+                // Consume real fall damage in the mixin; clear zero-distance landings after a short
+                // packet-order grace period.
+                if(!ended && !f.lifted && f.world.getTime()>f.launched+LaunchLiftoff.WAIT)f.lifted=true;
+                if(!ended && f.lifted && f.landed<0 && p.isOnGround()
                         && f.world.raycast(new RaycastContext(p.getEntityPos(),p.getEntityPos().add(0,-.06,0),
                         RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.ANY,p)).getType()!=HitResult.Type.MISS)
                     f.landed=f.world.getTime();
@@ -191,17 +198,26 @@ public final class SpringbloomManager {
             return;
         }
     }
+    /** An accepted move packet: its position and ground flag are the client's own. */
+    public static void acceptedMove(ServerPlayerEntity p) {
+        var flight=FLIGHTS.get(p.getUuid());
+        if(flight==null || flight.player!=p || flight.lifted)return;
+        flight.floor=LaunchLiftoff.floor(p,flight.floor);
+        flight.lifted=LaunchLiftoff.rose(p,flight.floor);
+    }
     private static boolean live(Pad pad,ServerWorld world) {
         return pad.world==world && pad.expires>world.getTime() && world.getBlockState(pad.pos).isOf(ModSpellBlocks.SPRINGBLOOM)
                 && supported(world,pad.pos);
     }
     private static void launch(ServerPlayerEntity p,ServerWorld world,Pad pad,Vec3d velocity) {
+        // The move packet that set off this launch marks the player grounded again once it is handled.
         p.fallDistance=0; p.setOnGround(false);
         p.setAttached(EWAttachments.SPRINGBLOOM_FLIGHT,true);
         p.setVelocity(velocity);
         p.velocityModified=true;
         p.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(p));
         FLIGHTS.put(p.getUuid(),new Flight(p,world,world.getTime()));
+        UpdraftManager.finish(p); // This flight's protection replaces a pending Updraft's.
         // Clients draw the launch burst and the rider's falling leaves until they land.
         BlockNatureEvents.send(world,BlockNatureEvents.SPRING_LAUNCH,p.getId(),p.getEntityPos(),velocity,0);
         world.playSound(null,pad.pos,ModSounds.SPELL_NATURE_SPRINGBLOOM_LAUNCH,SoundCategory.PLAYERS,.85f,1f);
@@ -215,6 +231,11 @@ public final class SpringbloomManager {
     public static boolean protectedFall(ServerPlayerEntity p) {
         var flight=FLIGHTS.get(p.getUuid());
         return flight!=null && flight.player==p && flight.world==p.getEntityWorld();
+    }
+    /** A protected landing. One before lift-off is the launch packet race: absorb it and keep the flight. */
+    public static void landing(ServerPlayerEntity p) {
+        var flight=FLIGHTS.get(p.getUuid());
+        if(flight==null || flight.lifted)finishLanding(p); else p.fallDistance=0;
     }
     public static void finishLanding(ServerPlayerEntity p) { FLIGHTS.remove(p.getUuid()); p.setAttached(EWAttachments.SPRINGBLOOM_FLIGHT,false); p.fallDistance=0; }
     public static boolean tryBreakAimed(ServerPlayerEntity p) {

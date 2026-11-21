@@ -11,6 +11,7 @@
     "PlayerEntityMixin",
     "SpringbloomMovementMixin",
     "SpringbloomFallMixin",
+    "LaunchLiftoffMixin",
     "UpdraftFallMixin",
     "FireLeapFallMixin",
     "ScreenHandlerMixin",
@@ -53,6 +54,7 @@
     "SummitStormWeatherMixin",
     "SummitStormRainMixin",
     "ClientChunkProgressAccessor",
+    "EquipmentModelLoaderAccessor",
     "StormRocIntroLoadingMixin",
     "StormRocIntroHideMixin"
   ]

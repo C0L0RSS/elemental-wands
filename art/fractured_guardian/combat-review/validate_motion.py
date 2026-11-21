@@ -16,7 +16,8 @@ P='animation.fractured_guardian.'
 LENGTHS=dict(idle=6,walk=2,awaken=4.2,slam=2.8,throw=3.6,beam=3.6,
             leap_launch=.7,leap_air=1.8,leap_land=2.2,intro=23.8,
             phase_change=3.2,slam_fast=2.25,throw_fast=2.35,fan=2.4,
-            slam_hold_10=3.3,slam_hold_16=3.6,slam_hold_22=3.9,core_pulse=3.8)
+            slam_hold_10=3.3,slam_hold_16=3.6,slam_hold_22=3.9,core_pulse=3.8,
+            sweep=3.2,scar=2.5)
 
 
 SECOND_PASS={'idle','walk','leap_launch','leap_air','leap_land','phase_change'}
@@ -96,7 +97,7 @@ def validate(baseline=None,first_pass=None):
                 reference=rig['sample'](slam['bones'][bone][kind],1.075)
                 for t in np.linspace(1.075,end,25):
                     assert np.max(abs(rig['sample'](keys,t)-reference))<.00002
-    for name,impact in [('slam',1.3),('slam_fast',1.05),('slam_hold_10',1.8),('slam_hold_16',2.1),('slam_hold_22',2.4),('leap_launch',.7),('leap_land',.3)]:
+    for name,impact in [('slam',1.3),('slam_fast',1.05),('slam_hold_10',1.8),('slam_hold_16',2.1),('slam_hold_22',2.4),('leap_launch',.7),('leap_land',.3),('scar',1.0),('scar',1.5)]:
         clip=clips[P+name];mats=rig['matrices'](clip,impact)
         for side in ('right','left'):
             lows=[]
@@ -113,13 +114,21 @@ def validate(baseline=None,first_pass=None):
             gap=max(gap,float(np.linalg.norm(x-y,axis=1).max()))
         assert gap<.025,(a,b,'chained pose seam',gap)
         report[a+'_to_'+b]={'maximum_vertex_gap':gap}
+    # The sweep's server hit (tick 30) needs the right arm pointing straight behind; at tick 29 it is at
+    # its right side and at tick 32 about 60 degrees left of front. Heading: degrees from front toward its right.
+    for t,expected in [(1.45,90),(1.5,180),(1.6,300)]:
+        mats=rig['matrices'](clips[P+'sweep'],t)
+        ends=[mats[b][:3,:3]@np.array(rig['bones'][b]['pivot'])+mats[b][:3,3] for b in ('right_upper_arm','right_hand')]
+        d=ends[1]-ends[0];heading=float(np.degrees(np.arctan2(-d[0],-d[2]))%360)
+        assert abs(heading-expected)<15,('sweep arm heading',t,heading)
+        report[f'sweep_arm_heading_{t}s']=round(heading,2)
     phase=clips[P+'phase_change']['bones']['torso']['rotation']
     assert rig['sample'](phase,1.48)[0]>17 and rig['sample'](phase,1.6)[0]<-21,'Shell heave must meet tick32'
     out=ROOT/'.local-previews/guardian-combat-review'
     out.mkdir(parents=True,exist_ok=True)
     (out/'motion-validation.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report,indent=2))
-    print('PASS: fixed lengths; continuous Euler branches; planted soles and original walk path; beam pivot; contact clocks; holds; fast remap; leap handoffs; phase burst.')
+    print('PASS: fixed lengths; continuous Euler branches; planted soles and original walk path; beam pivot; contact clocks; sweep arm heading; holds; fast remap; leap handoffs; phase burst.')
 
 
 if __name__=='__main__':

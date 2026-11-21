@@ -1,6 +1,7 @@
 package com.anton.elementalwands.entity.pyreking;
 
 import com.anton.elementalwands.entity.WandBoss;
+import com.anton.elementalwands.hall.PyreGate;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -256,9 +257,15 @@ public class PyreKingEntity extends PathAwareEntity implements GeoEntity, WandBo
     }
 
     @Override
+    public boolean eligible(ServerPlayerEntity player) {
+        return PyreGate.eligible(this, player);
+    }
+
+    @Override
     public boolean damage(ServerWorld world, DamageSource source, float amount) {
         if (source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY)) return super.damage(world, source, amount);
         Entity attacker = source.getAttacker();
+        if (attacker instanceof ServerPlayerEntity player && !eligible(player)) return false;   // fallen fighters and outsiders
         if (attacker == this || intro != null) return false;       // nothing reaches him while his intro plays
         if (source.isOf(DamageTypes.IN_WALL) || source.isOf(DamageTypes.DROWN) || source.isOf(DamageTypes.CRAMMING)) return false;
         if (combat.untouchable()) { combat.deflect(world); return false; }   // Unbound is a set piece; it cannot be burst down.
@@ -317,7 +324,7 @@ public class PyreKingEntity extends PathAwareEntity implements GeoEntity, WandBo
         }
         if (isAlive()) {
             if (intro != null) {
-                // The scene first (its last beat starts a Haul), then whatever move that left in hand.
+                // The scene first, then the review tick, which returns him to his idle when the scene's last clip ends.
                 if (!intro.tick()) intro = null;
                 else combat.tickReview(world);
             } else if (isBossAggressive()) combat.tick(world);

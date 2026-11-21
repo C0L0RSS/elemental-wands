@@ -37,7 +37,8 @@ of trusting a name or an old description.
 
 The standard build and asset commands are in [AGENTS.md](../../AGENTS.md#build-and-required-checks).
 `./gradlew build` includes `checkGuardianBeam`, `checkNecromancer`, `checkPyreKing`,
-`checkParties`, `checkStormRocGaze` and `checkDocs`; none is a live gameplay test.
+`checkPyreWave`, `checkParties`, `checkStormRocGaze`, `checkStormRocBrain` and `checkDocs`; none is a
+live gameplay test.
 Use `--offline` only when dependencies and assets are already cached.
 
 ## Selecting a fixture
@@ -64,7 +65,7 @@ client runners use `runClient`. Run only the suites relevant to the change.
 | Space void-glass visuals | — | `space_blockspace_client_smoke` | |
 | Space Gravity Well | `gravity_well_server_smoke` | `gravity_well_client_smoke` | `-PgravityRecord` |
 | Space Astral Double | `astral_double_server_smoke` | `astral_double_client_smoke` | `-PastralRecord` |
-| Guardian combat | `guardian_combat_smoke`, `guardian_shell_smoke`, `guardian_phase_smoke` | `guardian_floor_client_smoke` | The floor client takes `-PfloorClientAssets` and the visual switches `-PguardianPedestalVisual`, `-PguardianBurnVisual`, `-PnatureVisual` |
+| Guardian combat | `guardian_combat_smoke`, `guardian_scar_smoke`, `guardian_shell_smoke`, `guardian_phase_smoke` | `guardian_floor_client_smoke` | The floor client takes `-PfloorClientAssets` and the visual switches `-PguardianPedestalVisual`, `-PguardianBurnVisual`, `-PnatureVisual` |
 | Guardian cover, Nature, walls | `guardian_cover_smoke`, `guardian_nature_smoke`, `guardian_wall_smoke` | — | `guardian_nature_smoke -PnatureBalance` runs the Nature damage, mark and flower fixture on a flat world |
 | Church, Shattered Nave | `guardian_church_smoke`, `guardian_nave_smoke` | `nave_client_smoke` | Recovery pairs: `-PchurchRecovery`, `-PnaveRecovery`. `-PintroVideo` records the Guardian intro |
 | Hollow Necromancer | `necromancer_server_smoke` (robed fight, sieges), `necromancer_phase_smoke` (phase two) | `necromancer_client_smoke` | All flags are for the client runner: `-PnecroMechanics` for the phase-two mechanics against a scripted player; recording flags `-PnecroRecord`, `-PrushRecord`, `-PdrainRecord`, `-PsoulBoltRecord` |
@@ -72,8 +73,8 @@ client runners use `runClient`. Run only the suites relevant to the change.
 | Hollow Crypt realm | — | `crypt_client_smoke` | Also photographs the siege perch views. `-PintroVideo` records his intro; `-PtransformVideo` records the transformation and skips the other crypt checks |
 | Storm Roc | `roc_server_smoke` | `roc_client_smoke` | Run the server fixture first. The client saves screenshots, not video |
 | Storm Summit realm | — | `summit_client_smoke` | |
-| Storm aerie and intro | `aerie_server_smoke` | `aerie_client_smoke`, `roc_intro_client_smoke` | `-PaerieSeed` (default 12345), `-PaerieGongs="label@x,y,z;…"`; for the intro `-ProcIntroGong=x,y,z`, `-ProcIntroVideo`, `-ProcIntroEvery`, `-ProcIntroViewDistance`, `-ProcIntroSkipAt=<beat>` |
-| Pyre King | `checkPyreKing` (in the build) | `pyre_king_client_smoke`, `pyre_king_fight_smoke`, `pyre_king_intro_smoke` | `-PpyreFightRecord`, `-PpyreFightRecordCase=<name>[,<name>]`, `-PpyreIntroVideo`. See [Pyre King](pyre-king.md#verification) |
+| Storm aerie and intro | `aerie_server_smoke` | `aerie_client_smoke`, `roc_intro_client_smoke` | `-PaerieSeed` (default 12345), `-PaerieGongs="label@x,y,z;…"`; for the intro `-ProcIntroGong=x,y,z` (or `locate`, the nearest aerie to spawn), `-ProcIntroElement=<element>` (its landing; default none), `-ProcIntroPlace=<n>` (the lone player takes place n in the arrival line, as a party member would; the scene must end at their own view), `-ProcIntroArmour=true` (a mixed armour set for the scene's player to wear), `-ProcIntroVideo`, `-ProcIntroEvery`, `-ProcIntroViewDistance`, `-ProcIntroSkipAt=<beat>` |
+| Pyre King | `checkPyreKing` (in the build) | `pyre_king_client_smoke`, `pyre_king_fight_smoke`, `pyre_king_intro_smoke` | `-PpyreFightRecord`, `-PpyreFightRecordCase=<name>[,<name>]`, `-PpyreIntroVideo`, `-PpyreIntroEvery=<ticks>`. See [Pyre King](pyre-king.md#verification) |
 | Burned Gate | — | `pyre_gate_smoke` | Uses a fresh normal world |
 | First Wizard | `checkFirstWizard` (in the build) | `first_wizard_fight_smoke` | `-PwizardCases=a,b` runs only the cases whose names start with those (`free` adds the free fight); `-PwizardRun=<name>` gives the run its own folder, `build/first-wizard-fight-smoke-<name>/`, so several can run at once. `-PwizardRecord=case[:every],...` saves frames for clips and `-PwizardView=<side>` films the phase-two cases from one side of her. It does not overwrite old screenshots: clear the folder first. `-PwizardCases=change` runs the phase change's cinematic cases. See [First Wizard](first-wizard.md#the-fight) |
 | Burned Throne Hall | — | `pyre_hall_client_smoke` | |
@@ -264,7 +265,7 @@ earlier clip. Raw frames need not be kept once the video is verified.
 | `crypt_client_smoke -PintroVideo` (Necromancer intro) | 383 at 20 fps (19.15 s) | `build/crypt-client-smoke/screenshots/intro-video-%03d.png`, from 000 | `build/crypt-client-smoke/CRYPT_PASSED.txt` |
 | `crypt_client_smoke -PtransformVideo` (transformation) | about 692 at 20 fps; the receipt gives the count | `build/crypt-client-smoke/screenshots/transform-video-%03d.png`, from 000 | `build/crypt-client-smoke/CRYPT_PASSED.txt` |
 | `roc_intro_client_smoke -ProcIntroVideo` (Roc intro and opening summon) | one frame every `-ProcIntroEvery` ticks (default 2, so 10 fps) | `build/roc-intro-client-smoke/screenshots/roc-intro-video-%04d.png` | `build/roc-intro-client-smoke/ROC_INTRO_CLIENT_PASSED.txt` |
-| `pyre_king_intro_smoke -PpyreIntroVideo` | one frame every other tick (10 fps) | `build/pyre-king-intro-smoke/screenshots/intro-%05d.png`; check the first number | `build/pyre-king-intro-smoke/PYRE_KING_INTRO_PASSED.txt` |
+| `pyre_king_intro_smoke -PpyreIntroVideo` | one frame every other tick (10 fps); every tick (20 fps) with `-PpyreIntroEvery=1` | `build/pyre-king-intro-smoke/screenshots/intro-%05d.png`; check the first number | `build/pyre-king-intro-smoke/PYRE_KING_INTRO_PASSED.txt` |
 | `pyre_king_fight_smoke -PpyreFightRecord` | one frame every other tick of the free fight (10 fps) | `build/pyre-king-fight-smoke/screenshots/record-%05d.png`; check the first number | `build/pyre-king-fight-smoke/PYRE_KING_FIGHT_PASSED.txt` |
 | `pyre_king_fight_smoke -PpyreFightRecordCase=<name>[,<name>]` | one frame every other tick of those cases (10 fps) | `build/pyre-king-fight-smoke/screenshots/case-<name>-%05d.png` | same |
 
@@ -289,7 +290,9 @@ screenshots under `build/roc-client-smoke/screenshots/`; it records no video. In
 perch, spire hop and landing for rock contact, then lightning, the dive warning and
 impact, the stuck opening, every ground move and the takeoff, then phase two: the charge
 bolt, the storm from the sky and the ground, the tornadoes, the chain smash and live
-ground. The camera and challenger are scripted.
+ground, then the Raptor Strike's shadow and the low pass (its lane, then its lightning
+reaching the challenger). The camera and challenger are scripted. The client turns the Roc's
+fight log on, so `build/roc-client-smoke/logs/storm-roc-fight-*.txt` records what it chose.
 
 ## Evidence retention
 

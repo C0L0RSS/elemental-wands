@@ -28,6 +28,28 @@ import software.bernie.geckolib.renderer.GeoObjectRenderer;
 import software.bernie.geckolib.renderer.base.GeoRenderState;
 import software.bernie.geckolib.renderer.base.RenderModelPositioner;
 import software.bernie.geckolib.renderer.layer.AutoGlowingGeoLayer;
+import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
+import software.bernie.geckolib.cache.object.GeoBone;
+import software.bernie.geckolib.util.RenderUtil;
+import com.anton.elementalwands.client.wand.WandMesh;
+import com.anton.elementalwands.client.wand.WandRenderer;
+import com.anton.elementalwands.mixin.EquipmentModelLoaderAccessor;
+import java.util.ArrayList;
+import net.minecraft.client.model.Model;
+import net.minecraft.client.model.ModelPart;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.entity.equipment.EquipmentModel;
+import net.minecraft.client.render.entity.equipment.EquipmentRenderer;
+import net.minecraft.client.render.entity.feature.ArmorFeatureRenderer;
+import net.minecraft.client.render.entity.model.EntityModelLayer;
+import net.minecraft.client.render.entity.model.LoadedEntityModels;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.EquippableComponent;
+import net.minecraft.entity.EquipmentSlot;
+import net.minecraft.item.ItemDisplayContext;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.Atlases;
+import net.minecraft.util.Unit;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 /**
@@ -35,11 +57,13 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * rather than as entities: entities only draw once the chunk under them has been built, and the
  * scene goes on while the summit loads. Each is placed by the track and posed from its own baked
  * clip at the scene's time ({@link IntroClip}). The Roc is drawn nearly black, as dark as the track
- * says, with its eyes still glowing; the player wears their own skin, wide or slim.
+ * says, with its eyes still glowing; the player wears their own skin, wide or slim, and the armour
+ * they have on (the game's own armour models, textures, dyes, trims and glint, each part on its
+ * bone), and holds their own wand in their element's colours, laid as the bake lays it so its tip
+ * is where the spells start.
  */
 public final class StormRocIntroPuppets {
-    private static final String ROC_CLIP = "/assets/elementalwands/geckolib/animations/storm_roc_intro.animation.json";
-    private static final String PLAYER_CLIP = "/assets/elementalwands/geckolib/animations/storm_roc_intro_player.animation.json";
+    private static final String CLIPS = "/assets/elementalwands/geckolib/animations/";
     private static final DataTicket<Double> TIME = DataTicket.create("elementalwands_intro_time", Double.class);
     private static final DataTicket<Boolean> POV = DataTicket.create("elementalwands_intro_pov", Boolean.class);
     private static final int FULL_BRIGHT = LightmapTextureManager.MAX_LIGHT_COORDINATE;
@@ -55,11 +79,17 @@ public final class StormRocIntroPuppets {
 
     private static final Puppet ROC = new Puppet(), PLAYER = new Puppet();
     private static IntroClip rocClip, playerClip;
+    /** Each version's clips ("" the plain crash, else an element's landing), loaded once. */
+    private static final Map<String, IntroClip[]> CLIP_SETS = new java.util.HashMap<>();
     private static RocRenderer rocRenderer;
     private static PlayerRenderer playerRenderer;
     private static Identifier skin = DefaultSkinHelper.getSteve().body().texturePath();
     private static boolean slim;
     private static int element = 0xEEEDE7;
+    /** The player's wand core (WandMesh's element index). */
+    private static int wandElement = 0;
+    /** What the player wears, taken with their skin: one stack per {@link #ARMOUR} slot. */
+    private static final ItemStack[] worn = {ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY};
 
     private StormRocIntroPuppets() {}
 
@@ -74,11 +104,16 @@ public final class StormRocIntroPuppets {
         });
     }
 
-    /** At the scene's start: the player's own skin and arms, and their wand's colour. */
-    static void capture(MinecraftClient client) {
-        if (rocClip == null) {
-            rocClip = IntroClip.load(ROC_CLIP, "animation.storm_roc.intro");
-            playerClip = IntroClip.load(PLAYER_CLIP, "animation.storm_roc_intro_player.intro");
+    /** At the scene's start: this version's clips, the player's own skin, arms and armour, and their wand's colour. */
+    static void capture(MinecraftClient client, String landing) {
+        IntroClip[] clips = CLIP_SETS.computeIfAbsent(landing, l -> {
+            String suffix = l.isEmpty() ? "" : "_" + l;
+            return new IntroClip[]{IntroClip.load(CLIPS + "storm_roc_intro" + suffix + ".animation.json", "animation.storm_roc.intro"),
+                    IntroClip.load(CLIPS + "storm_roc_intro_player" + suffix + ".animation.json", "animation.storm_roc_intro_player.intro")};
+        });
+        rocClip = clips[0];
+        playerClip = clips[1];
+        if (rocRenderer == null) {
             rocRenderer = new RocRenderer();
             playerRenderer = new PlayerRenderer();
         }
@@ -87,6 +122,9 @@ public final class StormRocIntroPuppets {
             skin = textures.body().texturePath();
             slim = textures.model() == PlayerSkinType.SLIM;
         }
+        for (int i = 0; i < ARMOUR.length; i++)
+            worn[i] = client.player == null ? ItemStack.EMPTY : client.player.getEquippedStack(ARMOUR[i]).copy();
+        wandElement = WandMesh.element(ClientPlayerData.getAffinity().name());
         element = switch (ClientPlayerData.getAffinity()) {
             case FIRE -> 0xE0842C;
             case NATURE -> 0x7FD36B;
@@ -111,7 +149,7 @@ public final class StormRocIntroPuppets {
     }
 
     private static void draw(MatrixStack matrices, OrderedRenderCommandQueue queue, CameraRenderState camera, float delta) {
-        StormRocIntroTrack track = StormRocIntroTrack.get();
+        StormRocIntroTrack track = StormRocIntroClient.track();
         double t = StormRocIntroClient.time(delta);
         // Once over, or skipped in the realm, the Roc waits on its perch where the fight's own will appear.
         if (StormRocIntroClient.finished() || StormRocIntroClient.skipped() && StormRocIntroClient.drawnHalf(t) == 1) t = track.length();
@@ -190,7 +228,7 @@ public final class StormRocIntroPuppets {
 
         /** Near black in the storm, lightning lifting it for a moment. */
         @Override public int getRenderColor(Puppet puppet, Void related, float delta) {
-            StormRocIntroTrack track = StormRocIntroTrack.get();
+            StormRocIntroTrack track = StormRocIntroClient.track();
             float dark = track.dark(time), lift = track.flash(time) * .5f;
             float v = Math.clamp(1 - dark + lift, .06f, 1);
             int c = Math.round(v * 255);
@@ -201,6 +239,114 @@ public final class StormRocIntroPuppets {
     }
 
     // ------------------------------------------------------------------ the player
+
+    /**
+     * The bake's wand (build_intro.py and every landing): from the wand locator's pivot, turned -70
+     * degrees about X, pointing along +Z with its tip 0.72 out, where the spells' baked tips are.
+     * The game's wand mesh runs along its own +Y; it's laid along that line with the top of its
+     * glass on the tip.
+     */
+    private static final float WAND_TIP = .72f, WAND_SCALE = 1.1f;
+    private static final WandRenderer WAND = new WandRenderer();
+
+    /** Into a bone's frame as GeckoLib draws it this frame: its parents' moves, then its own (in model space, posed). */
+    private static void toBone(MatrixStack matrices, GeoBone bone) {
+        var chain = new ArrayList<GeoBone>();
+        for (GeoBone b = bone; b != null; b = b.getParent()) chain.add(b);
+        for (int i = chain.size() - 1; i >= 0; i--) RenderUtil.prepMatrixForBone(matrices, chain.get(i));
+    }
+
+    /** Not scaled away (the bones hidden while the camera is in the player's eyes are). */
+    private static boolean shown(GeoBone bone) {
+        for (GeoBone b = bone; b != null; b = b.getParent())
+            if (b.getScaleX() == 0 || b.getScaleY() == 0 || b.getScaleZ() == 0) return false;
+        return true;
+    }
+
+    private static void submitWand(BakedGeoModel model, MatrixStack matrices, OrderedRenderCommandQueue queue, int light, int overlay) {
+        GeoBone wand = model.getBone("wand").orElse(null);
+        if (wand == null) return;
+        matrices.push();
+        toBone(matrices, wand);
+        RenderUtil.translateToPivotPoint(matrices, wand);
+        matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(-70));
+        // The glass's top (headY + the glass's half-size, scaled) on the tip.
+        float top = (WandMesh.DATA.headY() + .89f * WandMesh.DATA.headScale()) * WandMesh.DATA.scale() * WAND_SCALE;
+        matrices.translate(0, 0, WAND_TIP - top);
+        matrices.scale(WAND_SCALE, WAND_SCALE, WAND_SCALE);
+        matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(90));
+        // Undo the item's own placement (WandMesh.transform), leaving the mesh's +Y along the line.
+        matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(-WandMesh.DATA.rotationZ()));
+        matrices.translate(-.5, -.5, -.5);
+        var client = MinecraftClient.getInstance();
+        double seconds = client.world == null ? 0 : (client.world.getTime() + client.getRenderTickCounter().getTickProgress(false)) / 20.0;
+        WAND.render(new WandRenderer.State(wandElement, seconds, null), ItemDisplayContext.NONE, matrices, queue, light, overlay, false, 0);
+        matrices.pop();
+    }
+
+    // ------------------------------------------------------------------ the player's armour
+
+    private static final EquipmentSlot[] ARMOUR = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
+    /** The game's armour model for each slot, as the player renderer's own (wide or slim). */
+    private static final String[] ARMOUR_LAYERS = {"helmet", "chestplate", "leggings", "boots"};
+    /** Each model's parts; the puppet's bones are named and placed as they are. */
+    private static final String[] PARTS = {"head", "body", "right_arm", "left_arm", "right_leg", "left_leg"};
+
+    /** One part of an armour model, drawn by itself on its bone. */
+    private record Piece(String bone, Model<Object> model) {}
+    private static List<List<Piece>> pieces;
+    private static LoadedEntityModels piecesFrom;
+    private static boolean piecesSlim;
+    private static EquipmentRenderer equipment;
+
+    /** Each slot's pieces, rebuilt when the game's models reload or the skin's arms change. */
+    private static List<List<Piece>> pieces(MinecraftClient client) {
+        LoadedEntityModels models = client.getLoadedEntityModels();
+        if (pieces != null && piecesFrom == models && piecesSlim == slim) return pieces;
+        pieces = new ArrayList<>();
+        for (String layer : ARMOUR_LAYERS) {
+            ModelPart root = models.getModelPart(new EntityModelLayer(Identifier.ofVanilla(slim ? "player_slim" : "player"), layer));
+            List<Piece> list = new ArrayList<>();
+            for (String name : PARTS) {
+                if (!root.hasChild(name)) continue;
+                ModelPart part = root.getChild(name);
+                if (part.traverse().stream().allMatch(ModelPart::isEmpty)) continue;
+                list.add(new Piece(name, new Model<>(part, RenderLayer::getArmorCutoutNoCull) {}));
+            }
+            pieces.add(list);
+        }
+        var loader = ((EquipmentModelLoaderAccessor) client.getEntityRenderDispatcher()).elementalwands$equipmentModelLoader();
+        equipment = new EquipmentRenderer(loader, client.getAtlasManager().getAtlasTexture(Atlases.ARMOR_TRIMS));
+        piecesFrom = models;
+        piecesSlim = slim;
+        return pieces;
+    }
+
+    /**
+     * The player's armour, each part of each piece on its own bone. The game models armour y down
+     * from the neck with x mirrored, so on a bone's frame it is drawn turned that way and raised to
+     * the neck; its parts' own pivots are then the bones'.
+     */
+    private static void submitArmour(BakedGeoModel model, MatrixStack matrices, OrderedRenderCommandQueue queue, int light) {
+        List<List<Piece>> all = null;
+        for (int i = 0; i < ARMOUR.length; i++) {
+            ItemStack stack = worn[i];
+            EquippableComponent equippable = stack.get(DataComponentTypes.EQUIPPABLE);
+            if (equippable == null || equippable.assetId().isEmpty() || !ArmorFeatureRenderer.hasModel(stack, ARMOUR[i])) continue;
+            if (all == null) all = pieces(MinecraftClient.getInstance());
+            var layer = ARMOUR[i] == EquipmentSlot.LEGS ? EquipmentModel.LayerType.HUMANOID_LEGGINGS : EquipmentModel.LayerType.HUMANOID;
+            for (Piece piece : all.get(i)) {
+                GeoBone bone = model.getBone(piece.bone()).orElse(null);
+                if (bone == null || !shown(bone)) continue;
+                matrices.push();
+                toBone(matrices, bone);
+                matrices.translate(0, 1.5, 0);
+                matrices.scale(-1, -1, 1);
+                equipment.render(layer, equippable.assetId().get(), piece.model(), Unit.INSTANCE, stack, matrices, queue, light, 0);
+                matrices.pop();
+            }
+        }
+    }
 
     private static final class PlayerRenderer extends GeoObjectRenderer<Puppet, Void, GeoRenderState> {
         private double time;
@@ -217,7 +363,19 @@ public final class StormRocIntroPuppets {
                 @Override public void setCustomAnimations(AnimationState<Puppet> state) {
                     Double t = state.renderState().getGeckolibData(TIME);
                     Boolean inEyes = state.renderState().getGeckolibData(POV);
-                    if (t != null) pose(this, playerClip, t, inEyes != null && inEyes ? StormRocIntroTrack.get().povHides() : List.of());
+                    if (t != null) pose(this, playerClip, t, inEyes != null && inEyes ? StormRocIntroClient.track().povHides() : List.of());
+                }
+            });
+            // Their armour, and the wand in the right hand (not while the camera is in their eyes, where the arms are hidden).
+            withRenderLayer(renderer -> new GeoRenderLayer<>(renderer) {
+                @Override public void submitRenderTask(GeoRenderState state, MatrixStack matrices, BakedGeoModel model, OrderedRenderCommandQueue queue,
+                        CameraRenderState camera, int light, int overlay, int colour, boolean rendered) {
+                    if (!rendered) return;
+                    // GeckoLib poses the mesh later, when it draws; pose it now to read this frame's bones.
+                    getGeoModel().handleAnimations(renderer.createAnimationState(state));
+                    submitArmour(model, matrices, queue, light);
+                    Boolean inEyes = state.getGeckolibData(POV);
+                    if (inEyes == null || !inEyes) submitWand(model, matrices, queue, light, overlay);
                 }
             });
         }

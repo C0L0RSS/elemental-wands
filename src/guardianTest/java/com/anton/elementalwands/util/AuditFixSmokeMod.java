@@ -50,6 +50,8 @@ public final class AuditFixSmokeMod implements ModInitializer {
             EquipmentRecoveryChecks.run(server,player);
             checkNatureOwnership(world,new BlockPos(-25,ground,0));
             checkMeteor(world,new BlockPos(25,ground,0));
+            checkMeteorRoof(world,new BlockPos(25,ground,25));
+            checkMeteorArenaLid(server.getWorld(com.anton.elementalwands.crypt.HollowCryptRealm.WORLD));
             flame=player.getBlockPos().east(16);
             TemporaryBlockManager.placeTemporaryBlocks(world,List.of(flame),ModSpellBlocks.INFERNO_FLAME.getDefaultState(),12,s->s.isAir());
             TitanDomeManager.startDome(world,player);
@@ -109,7 +111,7 @@ public final class AuditFixSmokeMod implements ModInitializer {
             require(!HollowPurpleChargeManager.isCharging(world,player),"Death retained a charging session");
             require(player.getAttributeValue(net.minecraft.entity.attribute.EntityAttributes.MOVEMENT_SPEED)>0,"Death retained movement lock");
             require(com.anton.elementalwands.item.AbstractWandItem.getUltimateCharge(committedWand)==0,"Death refunded charge");
-            Files.writeString(Path.of("AUDIT_PASSED.txt"),"Meteor preserves occupied spawn block entity and contents; Nature ownership transfer; Titan expired flame cleanup; Zephyr/Titan serialized equipment recovery and idempotence; committed Hollow Purple slot swap, movement/item/blink lock, final aim, exact release, no refund and death cleanup.\n");
+            Files.writeString(Path.of("AUDIT_PASSED.txt"),"Meteor preserves occupied spawn block entity and contents, starts above an overworld roof and under an arena's barrier lid; Nature ownership transfer; Titan expired flame cleanup; Zephyr/Titan serialized equipment recovery and idempotence; committed Hollow Purple slot swap, movement/item/blink lock, final aim, exact release, no refund and death cleanup.\n");
             System.out.println("AUDIT FIX RUNTIME CHECKS PASSED");server.stop(false);
         }
     }
@@ -144,6 +146,34 @@ public final class AuditFixSmokeMod implements ModInitializer {
             falling.tick();falling.discard();
         }
         require(world.getBlockEntity(spawn)==chest && chest.getStack(0).getCount()==7,"Meteor's first tick changed spawn chest");
+    }
+    /** Outside the boss arenas a roof still shelters what is under it: the meteor starts above the roof. */
+    private void checkMeteorRoof(ServerWorld world,BlockPos target) throws Exception {
+        BlockPos roof=target.up(10);
+        world.setBlockState(roof,Blocks.STONE.getDefaultState(),3);
+        require(meteorStartHeight(world,target)==35,"Meteor started under an overworld roof");
+        world.setBlockState(roof,Blocks.AIR.getDefaultState(),3);
+    }
+    /** In a boss arena the meteor starts just under the barrier lid, never on the open air above it. */
+    private void checkMeteorArenaLid(ServerWorld crypt) throws Exception {
+        require(crypt!=null,"Hollow Crypt world is not loaded");
+        // Between two fight slots, so no layout work touches it.
+        int x=512,z=512;crypt.getChunk(x>>4,z>>4);
+        BlockPos target=new BlockPos(x,crypt.getTopY(Heightmap.Type.MOTION_BLOCKING,x,z),z);
+        for(int y=1;y<=35;y++)require(crypt.getBlockState(target.up(y)).isAir(),"Crypt fixture column is not open");
+        BlockPos lid=target.up(31);
+        crypt.setBlockState(lid,Blocks.BARRIER.getDefaultState(),3);
+        int start=meteorStartHeight(crypt,target);
+        require(start==30,"Meteor did not start just under the arena's barrier lid: "+start);
+        crypt.setBlockState(lid,Blocks.AIR.getDefaultState(),3);
+    }
+    /** Spawns a harmless meteor over the target and returns how many blocks above it the meteor started. */
+    private int meteorStartHeight(ServerWorld world,BlockPos target) throws Exception {
+        var meteor=MeteorManager.spawnMeteor(world,player,Vec3d.ofBottomCenter(target),35,0);
+        var meteors=MeteorManager.class.getDeclaredField("METEORS");meteors.setAccessible(true);((Map<?,?>)meteors.get(null)).clear();
+        int start=(int)Math.round(meteor.getY()-target.getY());
+        meteor.discard();
+        return start;
     }
     private static void require(boolean ok,String message){if(!ok)throw new AssertionError(message);}
 }

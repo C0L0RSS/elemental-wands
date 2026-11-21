@@ -806,21 +806,24 @@ def third_person(scene, t):
         root, r = scene.player(t)
         chest = root + r@CHEST
         (_, rr), w = scene.roc_world(t)
-        # Low, out to its right and ahead: you flat in its talon under it, its head out ahead of you
-        # looking where it flies; drifting round to the front, and in closer for the wand strike.
-        # Offsets are in its frame (+X its left, +Z ahead).
-        offset = curve(t, [(SUMMIT, 'io', [-9.0, -2.0, 6.0]), (SUMMIT + 22, 'io', [-8.0, -2.4, 9.0]), (FREE - 6, 'io', [-4.0, -2.6, 11.0]),
-                           (STRIKE - 2, 'io', [-3.8, -1.2, 7.0]), (THROW, 'io', [-5.0, -1.8, 8.5])])[0]
+        # Offsets in its frame (+X its left, +Y its up, +Z ahead). The cut lands wide off its right
+        # flank and below: the whole bird beating over the cloud sea, you hanging in its talon. Then
+        # one slow glide in, ahead of you and under its wing, until you fill the frame fighting it;
+        # close on the wand arm wrenching free and the strike; easing back as it whips round and shrieks.
+        offset = curve(t, [(SUMMIT, 'io', [-19.0, -6.0, 2.0]), (SUMMIT + 16, 'io', [-16.0, -6.5, 5.0]), (SUMMIT + 36, 'io', [-6.5, -3.6, 4.0]),
+                           (FREE - 4, 'io', [-4.2, -2.8, 3.0]), (STRIKE - 2, 'io', [-3.5, -2.0, 3.4]), (THROW, 'io', [-5.0, -1.8, 7.0])])[0]
         offset = offset + [.25*math.sin(t*.21), .2*math.sin(t*.17 + 1), .25*math.sin(t*.13 + 2)]
         eye = chest + rr@offset
-        target = mix(chest + rr@np.array([0, .3, 0]), w['eyes'], .38)
+        wide = 1 - ramp(t, SUMMIT + 12, SUMMIT + 34)
+        target = mix(chest + rr@np.array([0, .3, 0]), w['eyes'], .12 + .2*wide)
+        target = mix(target, w['body'], .55*wide)  # the whole bird while wide
         target = mix(target, scene.hand(t), .45*pulse(t, FREE + 2, STRIKE - 3, STRIKE - 1, STRIKE + 2))
         target = mix(target, w['eyes'], .3*ramp(t, STRIKE + 1, SHRIEK + 2))  # toward it as it whips round and shrieks
         yaw, pitch = look(eye, target)
         hit = 1.6*kick(t, STRIKE, 1, 4, 2.4) + .8*kick(t, SHRIEK, 1, 4, 2.0)
-        sh = shake(t, 7, 1.4 + 1.6*abs(hit))
-        fov = 62 - 6*pulse(t, FREE, STRIKE - 3, STRIKE, STRIKE + 6) + 10*math.exp(-max(0, t - STRIKE)/5)*(t >= STRIKE)
-        return eye, yaw + sh[0], pitch + sh[1] + 3*hit, sh[2]*2.2 + 8*math.sin(t*.05), float(fov)
+        sh = shake(t, 7, (1.4 + 1.6*abs(hit))*(1 - .5*wide))
+        fov = 54 + 8*(1 - wide) - 6*pulse(t, FREE, STRIKE - 3, STRIKE, STRIKE + 6) + 10*math.exp(-max(0, t - STRIKE)/5)*(t >= STRIKE)
+        return eye, yaw + sh[0], pitch + sh[1] + 3*hit, sh[2]*2.2 + (3 + 5*(1 - wide))*math.sin(t*.05), float(fov)
     if t < GROUND:
         # Behind you as you tumble away from it down the length of the summit; for the first few
         # ticks beside you, so it letting go is in shot.
@@ -1057,6 +1060,43 @@ def cloud_texture():
     return out.getvalue()
 
 
+def sprite_textures():
+    """The soft sprites an element's landing draws in the game (client.roclanding.LandingMesh), as the
+    animatic's shaders shape them: four cloud puffs with a noisy edge, lit from above, in a 2x2
+    sheet; and a glow fading out from its centre. PNG bytes by name."""
+    from io import BytesIO
+    from PIL import Image
+    def png(img):
+        out = BytesIO(); Image.fromarray(img, 'RGBA').save(out, 'PNG'); return out.getvalue()
+    def h(x, y): return np.modf(np.sin(x*127.1 + y*311.7)*43758.5453)[0] % 1
+    def noise(x, y):
+        i, j = np.floor(x), np.floor(y); f, g = x - i, y - j
+        f, g = f*f*(3 - 2*f), g*g*(3 - 2*g)
+        a, b, c, d = h(i, j), h(i + 1, j), h(i, j + 1), h(i + 1, j + 1)
+        return (a + (b - a)*f) + ((c + (d - c)*f) - (a + (b - a)*f))*g
+    n = 64
+    sheet = np.zeros((2*n, 2*n, 4), np.uint8)
+    y, x = np.mgrid[0:n, 0:n]
+    cx, cy = (x + .5)/n*2 - 1, 1 - (y + .5)/n*2
+    r = np.hypot(cx, cy)
+    for cell in range(4):
+        seed = 1.7 + cell*2.3
+        k = noise(cx*3 + seed, cy*3 + seed)*.5 + noise(cx*7 - seed, cy*7 - seed)*.25
+        e = np.clip((1 - (r + k*.45 - .2))/(1 - .35), 0, 1)
+        alpha = e*e*(3 - 2*e)
+        shade = np.clip(.72 + .33*np.clip(cy*.5 + .5 + k*.3, 0, 1), 0, 1)
+        tile = np.zeros((n, n, 4), np.uint8)
+        tile[..., :3] = (shade*255).round().astype(np.uint8)[..., None]
+        tile[..., 3] = (alpha*255).round().astype(np.uint8)
+        oy, ox = (cell >> 1)*n, (cell & 1)*n
+        sheet[oy:oy + n, ox:ox + n] = tile
+    glow = np.clip(1 - r, 0, 1)**2.2
+    light = np.zeros((n, n, 4), np.uint8)
+    light[..., :3] = (glow*255).round().astype(np.uint8)[..., None]
+    light[..., 3] = (glow*255).round().astype(np.uint8)
+    return {'storm_roc_intro_puff.png': png(sheet), 'storm_roc_intro_glow.png': png(light)}
+
+
 def animatic():
     """Copies what the browser animatic loads into its local preview folder."""
     PREVIEW.mkdir(parents=True, exist_ok=True)
@@ -1092,6 +1132,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     scene, files, runtime = outputs()
     images = {ASSETS/'textures/misc/storm_roc_intro_cloud.png': cloud_texture()}
+    images.update({ASSETS/'textures/misc'/name: data for name, data in sprite_textures().items()})
     if args.check:
         stale = [p for p, text in {**files, **runtime}.items() if not p.exists() or p.read_text() != text]
         stale += [p for p, data in images.items() if not p.exists() or p.read_bytes() != data]

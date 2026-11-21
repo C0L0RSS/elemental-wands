@@ -69,7 +69,7 @@ public final class GuardianPhaseSmokeMod implements ModInitializer {
         if(tick==360) {
             reset(); target.setPosition(.5,ground,10.5);
             standing.setPosition(40.5,ground,.5);jumping.setPosition(-39.5,ground+1.1,.5);
-            boss.testAttack(target,GuardianCombatRules.Attack.SHOCKWAVE);waveCount=0;hits=0;
+            boss.testAttack(target,GuardianCombatRules.Attack.SLAM);waveCount=0;hits=0;
         }
         if(tick>360 && tick<=530) {
             standing.setPosition(40.5,ground,.5);standing.setVelocity(Vec3d.ZERO);
@@ -78,31 +78,33 @@ public final class GuardianPhaseSmokeMod implements ModInitializer {
             // Damage happened during the world's tick before this callback; health is reset below.
             require(jumping.getHealth()==20,"Jumping player hit by low wave");
         }
-        if(tick==522) {
-            require(waveCount==3,"Triple slam emitted "+waveCount+" waves");
-            require(boss.getWaveTime(0,0)>=26 || boss.getWaveTime(0,1)>=26,"Last wave disappeared with attack recovery");
+        // The rehearsed slam lasts 56 ticks; its phase-two wave runs 47 ticks from the impact at 26.
+        if(tick==422) {
+            require(waveCount==1,"Phase-two rehearsed slam emitted "+waveCount+" waves");
+            require(boss.getWaveTime(0,0)>=26 || boss.getWaveTime(0,1)>=26,"The wave disappeared with the slam's recovery");
         }
         if(tick==530) {
-            require(hits==3,"Standing player at 40 blocks received "+hits+" wave hits");
-            report.append("Three independent wide waves hit a grounded player 40 blocks away three times; airborne player avoids all three. Last wave survives action recovery.\n");
+            require(waveCount==1,"Phase-two rehearsed slam emitted "+waveCount+" waves by the end of the window");
+            require(hits==1,"Standing player at 40 blocks received "+hits+" wave hits");
+            report.append("A phase-two slam sends one wide wave that hits a grounded player 40 blocks away once; the airborne player avoids it. The wave outlives the slam's recovery.\n");
         }
         if(tick==540) {reset();target.setPosition(.5,ground,20.5);boss.testAttack(target,GuardianCombatRules.Attack.THROW);}
         if(tick>540 && tick<690) {
             for(var rock:world.getEntitiesByClass(GuardianRockEntity.class,boss.getBoundingBox().expand(70),r->r.getVelocity().lengthSquared()>.001))launched.add(rock.getUuid());
         }
         if(tick==690) {
-            require(launched.size()==3,"Volley released "+launched.size()+" rocks");
-            report.append("Production volley releases exactly three physical projectiles.\n");
+            require(launched.size()==1,"Phase-two rehearsed throw released "+launched.size()+" rocks");
+            report.append("A phase-two rehearsed throw releases exactly one physical rock.\n");
         }
         if(tick==700) {reset();target.setPosition(.5,ground,20.5);boss.testAttack(target,GuardianCombatRules.Attack.LEAP);waveCount=0;}
         if(tick>700 && tick<880)countWaves();
         if(tick==880) {
-            require(waveCount==3,"Phase-two leap/follow-up emitted "+waveCount+" waves: "+boss.leapStatus());
+            require(waveCount==2,"Phase-two rehearsed leap emitted "+waveCount+" waves (two expected, no follow-up slam): "+boss.leapStatus());
             require(!boss.hasNoGravity() && boss.getY()<ground+.1,"Leap chain left unsafe gravity/position");
             boss.stopReview();
             require(boss.getWaveTime(0,0)<0 && boss.getWaveTime(0,1)<0 && !boss.isHoldingRock(),"Stop left visible hazards");
             require(world.getEntitiesByClass(GuardianRockEntity.class,boss.getBoundingBox().expand(90),r->r.isAlive()).isEmpty(),"Stop left projectiles");
-            report.append("Leap stays committed, lands safely and adds its third wave through a follow-up slam; stop cleans hazards.\n");
+            report.append("A phase-two rehearsed leap lands safely with its two waves and no follow-up slam; stop cleans hazards.\n");
             Files.writeString(Path.of("PHASE_PASSED.txt"),report);System.out.println("GUARDIAN PHASE PASSED\n"+report);server.stop(false);
         }
         if(tick>950)throw new AssertionError("Phase fixture timed out");

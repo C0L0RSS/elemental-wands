@@ -158,6 +158,17 @@ public final class ModEntities {
                                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
                                                         Identifier.of(ElementalWandsMod.MOD_ID, "guardian_rock"))));
 
+        // One column of the Scar's spike wall: solid to players, never saved.
+        public static final EntityType<com.anton.elementalwands.entity.GuardianSpikeEntity> GUARDIAN_SPIKE = Registry.register(
+                        Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "guardian_spike"),
+                        FabricEntityTypeBuilder.<com.anton.elementalwands.entity.GuardianSpikeEntity>create(SpawnGroup.MISC,
+                                        com.anton.elementalwands.entity.GuardianSpikeEntity::new)
+                                        .dimensions(EntityDimensions.fixed((float)com.anton.elementalwands.entity.GuardianScarRules.WIDTH,
+                                                        (float)com.anton.elementalwands.entity.GuardianScarRules.HEIGHT))
+                                        .trackRangeBlocks(96).trackedUpdateRate(20).disableSaving()
+                                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE,
+                                                        Identifier.of(ElementalWandsMod.MOD_ID, "guardian_spike"))));
+
         // Core-sized provisional hitbox; the long hands reach beyond it.
         // Summon-only boss; its encounter controller disables aggression in Peaceful.
         public static final EntityType<FracturedGuardianEntity> FRACTURED_GUARDIAN = Registry.register(
@@ -318,13 +329,6 @@ public final class ModEntities {
                         com.anton.elementalwands.entity.necromancer.HarvestSoulEntity::new)
                         .dimensions(EntityDimensions.fixed(.7f, .9f)).trackRangeBlocks(96).trackedUpdateRate(1).disableSaving()
                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "harvest_soul"))));
-
-        public static final EntityType<com.anton.elementalwands.entity.necromancer.NecromancerSoulEntity> NECROMANCER_SOUL = Registry.register(
-                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "necromancer_soul"),
-                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.necromancer.NecromancerSoulEntity>create(SpawnGroup.MISC,
-                        com.anton.elementalwands.entity.necromancer.NecromancerSoulEntity::new)
-                        .dimensions(EntityDimensions.fixed(1.1f, 1.1f)).trackRangeBlocks(128).trackedUpdateRate(1).disableSaving()
-                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "necromancer_soul"))));
 
         // The Necromancer's intro cinematic: the zombie whose soul is torn out, and the souls that build him.
         public static final EntityType<com.anton.elementalwands.entity.necromancer.IntroZombieEntity> INTRO_ZOMBIE = Registry.register(

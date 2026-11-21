@@ -1,4 +1,4 @@
-"""Phase transition, retimed and delayed physical attacks, the fan and the core pulse; original clips remain intact."""
+"""Phase transition, retimed and delayed physical attacks, the fan, the core pulse, the sweep and the scar; original clips remain intact."""
 import argparse,json,math,runpy,copy
 from pathlib import Path
 import numpy as np
@@ -80,9 +80,28 @@ for i in range(round(PULSE_SECONDS/.0125)+1):
 assert pulse_lowest>-.08,pulse_lowest
 clips['animation.fractured_guardian.core_pulse']={'loop':False,'animation_length':PULSE_SECONDS,'bones':pulse_bones}
 print('Core pulse floor clearance:',pulse_lowest)
+# Phase-two step two. Sweep: a turning backhand for players beside or behind it; the server hits at
+# tick 30, when the right arm points straight back. Scar: hands meet the floor at tick 20 and wrench the
+# spike walls up at tick 30. Legs stay planted in both; floor clearance is held like the other clips.
+STEP_TWO={'sweep':3.2,'scar':2.5}
+step_two_lowest={}
+for clip_name,seconds in STEP_TWO.items():
+ clip_bones={};clip_lowest=999
+ for i in range(round(seconds/.0125)+1):
+  t=round(i*.0125,4);p=heavy['pose'](clip_name,t,rig);mats=rig['transforms'](p)
+  for b,channels in p.items():
+   for name,value in channels.items():clip_bones.setdefault(b,{}).setdefault(name,{})[str(t)]=[round(float(v),5) for v in value]
+  for c in rig['mesh']:
+   m=mats[c['bone']];v=np.array(c['vertices'])@m[:3,:3].T+m[:3,3];clip_lowest=min(clip_lowest,float(v[:,1].min()))
+ assert clip_lowest>-.08,(clip_name,clip_lowest)
+ clips['animation.fractured_guardian.'+clip_name]={'loop':False,'animation_length':seconds,'bones':clip_bones}
+ step_two_lowest[clip_name]=clip_lowest
+ print(clip_name.capitalize(),'floor clearance:',clip_lowest)
 outputs={'phase.animation.json':{'format_version':'1.8.0','animations':clips},
  'motion-validation.json':{'samples':257,'minimum_vertex':lowest,'phase_seconds':3.2,'slam_impact_tick':21,'throw_release_tick':29,
- 'slam_apex_seconds':APEX,'slam_holds':list(HOLDS),'core_pulse_seconds':PULSE_SECONDS,'core_pulse_minimum_vertex':pulse_lowest}}
+ 'slam_apex_seconds':APEX,'slam_holds':list(HOLDS),'core_pulse_seconds':PULSE_SECONDS,'core_pulse_minimum_vertex':pulse_lowest,
+ 'sweep_seconds':STEP_TWO['sweep'],'sweep_hit_tick':30,'sweep_minimum_vertex':step_two_lowest['sweep'],
+ 'scar_seconds':STEP_TWO['scar'],'scar_contact_tick':20,'scar_erupt_tick':30,'scar_minimum_vertex':step_two_lowest['scar']}}
 for name,data in outputs.items():
  text=json.dumps(data,indent=2)+'\n';path=HERE/name
  if args.check:assert path.read_text()==text,f'Stale Guardian phase output: {path}'

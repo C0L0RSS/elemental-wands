@@ -86,7 +86,7 @@ def idle(t):
 # the pelvis drops and turns over every step, the chest counter-turns about its own spine and
 # drops into each footfall, the head holds on the target, and the sword rides part of the
 # chest's motion a beat late and settles after each footfall.
-from rig import fk, REST, REST_ANG, RAD, rx, ry, rz, euler_of, gecko_from, rot_between, Solver
+from rig import fk, REST, REST_ANG, RAD, rx, ry, rz, euler_of, gecko_from, rot_between, axis_rot, Solver
 
 
 def _corners(c):
@@ -432,6 +432,7 @@ ARM = {side: tuple(baked_point(BY[side+b]['pivot']) for b in ('_upper_arm', '_fo
 ELBOWS = np.radians(np.arange(-180, 180, 10))     # elbow round its circle; 0 = rig.Solver's own
 ROLLS = np.radians(np.arange(-180, 180, 15))      # extra roll about the blade; 0 = sword_n
 RELAX = .15                                       # s a fist takes to ease into or out of its grip
+ELBOW_BLEND = .3                                  # s a free elbow takes to ease into its grip's (elbow_into_grip)
 EDGE_SLACK = 15                                   # deg the roll may still lack as a blow starts
 
 
@@ -543,8 +544,12 @@ def arm_options(spec, side):
     upper = S+UPPER_BALLS[:, None, None]*(E-S)                  # (balls, elbows, 3)
     fore = E+FORE_BALLS[:, None, None]*(point-E)
     sunk = (_sunk(upper, body_boxes(spec, HEAD))**2).sum(0)+(_sunk(fore, body_boxes(spec, TRUNK))**2).sum(0)
+    # A clip may say which way a gripping elbow should rather point (elbow_pref {side: vec}),
+    # as a body at rest lets its elbows hang: each degree off it costs as much as one of wrist.
+    pref = spec.get('elbow_pref', {}).get(side)
+    off = 0. if pref is None else np.degrees(np.arccos(np.clip(rows(E-S-np.dot(E-S, n)[:, None]*n)@unit(np.asarray(pref, float)), -1, 1)))
     cost = (twist**2+bend**2+60*np.maximum(0, abs(twist)-80)**2+30*np.maximum(0, bend-75)**2
-            + (.3*np.degrees(ELBOWS)**2+2e5*inside+2e5*sunk
+            + (.3*np.degrees(ELBOWS)**2+2e5*inside+2e5*sunk+off**2
                + 50*np.maximum(0, raised-(130 if side == 'right' else 100))**2)[:, None])
     return Q, cost, (np.einsum('ji,njk->nik', Rt, Ru), np.einsum('nji,njk->nik', Ru, Rf))
 
@@ -639,7 +644,7 @@ def easy_wrists(length, rate=20):
             return plan[('grip', side, t)]
 
         def clip(t, settle=True):
-            spec = pose(t); spec.pop('edge_lock', None)
+            spec = pose(t); spec.pop('edge_lock', None); spec.pop('elbow_pref', None)
             if not plan: build()
             i = t*rate; a, b = math.floor(i), math.ceil(i); ta, tb = round(a/rate, 4), round(b/rate, 4)
 
@@ -657,7 +662,7 @@ def easy_wrists(length, rate=20):
             wrists = {}
             for side in ('right', 'left') if settle else ():
                 if grips(spec, side): continue
-                Q = np.eye(3)
+                Q = np.asarray(spec.get('wrist', {}).get(side, np.eye(3)), float)
                 for ts, tq, takes in plan[('switch', side)]:
                     d = ts-t if takes else t-ts
                     if not -1e-6 <= d < RELAX: continue
@@ -668,10 +673,21 @@ def easy_wrists(length, rate=20):
             if wrists: spec['wrist'] = wrists
             # A clip may say where a free arm's elbow points (free_elbow {side: vec}); near a
             # grip change it blends into the planned elbow.
-            hints, free = {}, spec.pop('free_elbow', {})
+            # With elbow_into_grip, a free elbow instead eases over ELBOW_BLEND s straight into the
+            # elbow planned at the grip, so the arm does not swing as the fist closes or opens.
+            hints, free = {}, spec.pop('free_elbow', {}); into = spec.pop('elbow_into_grip', False)
             for side in ('right', 'left'):
                 th = planned(side); g = None if grips(spec, side) else free.get(side)
-                if th is not None:
+                if into and g is not None:
+                    h = unit(g)
+                    for ts, tq, takes in plan[('switch', side)]:
+                        d = ts-t if takes else t-ts
+                        if not -1e-6 <= d < ELBOW_BLEND: continue
+                        q = round((math.ceil(ts*rate-1e-6) if takes else math.floor(ts*rate+1e-6))/rate, 4)
+                        u, w = elbow_circle(pose(q), side)[-2:]; tg = plan[(side, q)]
+                        h = slerp(h, math.cos(tg)*u+math.sin(tg)*w, SHAPES['ease'](1-d/ELBOW_BLEND))
+                    hints[side] = h
+                elif th is not None:
                     u, w = elbow_circle(spec, side)[-2:]; h = math.cos(th)*u+math.sin(th)*w
                     if g is not None:
                         k = plan.get(('held', side, ta), 0.)*(1-(i-a))+plan.get(('held', side, tb), 0.)*(i-a)
@@ -1709,14 +1725,25 @@ SEAT_FRONT, SEAT_TOP, ARM_TOP = .5, 1., 2.
 SEAT_HIP = np.array([0., 1.33, 1.37])                 # his hip joints, seated: thighs along the seat
 SEAT_PELVIS = SEAT_HIP-np.array([0., 2.06, .06])
 SEAT_FEET = {'right': np.array([.80, .31, .2]), 'left': np.array([-.74, .31, -.05])}   # the left leg slid out
-ARMREST = {'right': np.array([1.85, 2.22, .9]), 'left': np.array([-1.85, 2.22, .9])}
-LAP = np.array([-.42, 1.72, .85])                     # his left hand, fallen into his lap
+# His right forearm lies along the arm of the throne (top at ARM_TOP, 1.5-2.5 out), the elbow
+# at its back and the hand at its front, drooping over the edge; his left hand lies on his
+# thigh with that elbow hanging at his side. Where each hand rests is its wrist.
+ARMREST = {'right': np.array([1.72, 2.24, .74]), 'left': np.array([-1.72, 2.24, .6])}
+LAP = np.array([-.62, 1.84, .7])
+REST_ELBOW = {'right': (.55, -.45, .7), 'left': (-.35, -1, .35)}
 SWORD_DROP = np.array([.35, 0., -1.75])               # where the point enters the floor
 SWORD_HUNG = 34.                                       # the pommel's height while it hangs
 SWORD_SUNK = 3.67                                      # pommel to the floor along the blade, once it has struck
 STUCK_LEAN = 16.                                       # deg the hilt leans back toward him
 FALL, STRUCK = .5, 1.9                                 # awaken: the chain parts, the point strikes
 TWIST, TWIST_PERIOD = 8., 10.                          # deg and s: the hanging sword turns on its chain
+
+
+def _wrist(side, flex=0., roll=0.):
+    """A free fist's turn against its forearm: flex (deg; + lets the hand droop palm-down) about
+    the elbow's own hinge, then roll about the forearm."""
+    s0, e0, h0 = ARM[side]; a = unit(h0-e0); n = unit(np.cross(unit(e0-s0), a))
+    return axis_rot(a, roll*RAD)@axis_rot(n, flex*RAD)
 
 
 def _hung(t):
@@ -1739,15 +1766,30 @@ STUCK_P, STUCK_D = _leaning(STUCK_LEAN)
 _SX = unit(np.cross(STUCK_D, [0., 0., 1.]))
 STUCK_N = math.cos(283*RAD)*_SX+math.sin(283*RAD)*np.cross(STUCK_D, _SX)
 STUCK_GRIP = STUCK_P+GRIP['right']*STUCK_D
+DROOP = {'right': 35., 'left': 10.}                    # deg each resting hand hangs at the wrist
+
+
+def PUSH(pelvis_pos, pelvis_rot, ankle, side='left'):
+    """Where his hand pushes on his thigh just above the knee, for this pelvis and ankle: the
+    knee found as rig.Solver finds it, then up the thigh and onto its top."""
+    W = fk({'pelvis': (tuple(pelvis_rot), tuple(np.array(pelvis_pos)*[-16, 16, 16]))})
+    h0, k0, a0 = (baked_point(BY[side+b]['pivot']) for b in ('_thigh', '_shin', '_foot'))
+    line = unit(a0-h0); rest = (k0-h0)-np.dot(k0-h0, line)*line
+    hip = pivot_world(W, side+'_thigh')
+    knee = Solver.two_bone(hip, np.asarray(ankle, float), np.linalg.norm(k0-h0), np.linalg.norm(a0-k0), W['pelvis'][:3, :3]@rest)
+    return knee+.3*unit(hip-knee)+np.array([-.08, .38, 0])
 
 
 def _slumped(t=0.):
     """The statue: slid down in the seat and leaning back into the throne, his head fallen
-    forward and to his right, his right hand on the arm of the throne and his left in his lap."""
+    forward and to his right, his right forearm along the arm of the throne with the hand
+    hanging over its end, his left hand on his thigh."""
     P, D, N = _hung(t)
     return {'pelvis_pos': SEAT_PELVIS, 'pelvis_rot': (-28, 0, 0), 'torso_rot': (14, -4, 3), 'neck_rot': (22, 6, -4),
             'head_rot': (26, 8, -6), 'sword_p': P, 'sword_d': D, 'sword_n': N, 'hands': 'none',
-            'free_hands': {'right': ARMREST['right'], 'left': LAP}, 'free_elbow': {'right': (.8, -.3, .6), 'left': (-.7, -.3, .5)},
+            'free_hands': {'right': ARMREST['right'], 'left': LAP},
+            'elbow_hint': {side: unit(v) for side, v in REST_ELBOW.items()},
+            'wrist': {side: _wrist(side, DROOP[side]) for side in ('right', 'left')},
             'feet': dict(SEAT_FEET), 'extra': {}, 'hinge': True}
 
 
@@ -1758,79 +1800,288 @@ def throned(t):
 
 
 AWAKEN = 23.5
-GRASP = 8.8                  # his hand closes on the hilt
+GRASP = 8.8                  # his right hand closes on the hilt
+TAKES = 20.4                 # his left hand joins it as the blade swings up
+HANG = np.array([-1.15, 1.54, -.5])   # his left hand hanging at his side once he is up
+WRENCH = 19.45, 19.75        # he tears the blade out of the dais
+RAISED, RAISED_D = np.array([.6, 4.15, -.8]), unit((.1, 1, .25))   # then holds it upright before his right shoulder, in both fists
+# (searched: of the raised holds tried, the one both wrists are easiest in)
 
 
 def _awaken(t):
     """awaken's pose at t, before the wrists are planned."""
-    twitch = curve([(0, 0), (4.5, 0), (4.62, 1, 'out'), (4.8, 0), (5.1, 0), (5.2, .7, 'out'), (5.45, 0)])
-    pelvis_pos = curve([(0, SEAT_PELVIS), (6.5, SEAT_PELVIS), (8.4, SEAT_PELVIS+(0, .03, -.16)), (15.5, SEAT_PELVIS+(0, .03, -.16)),
-                        (16.6, (0, -.62, .75), 'in'), (17.8, (0, -.14, .28)), (18.6, (0, -.03, .13), 'out'), (19.3, (0, 0, .1)),
-                        (21., (0, 0, 0)), (AWAKEN, (0, 0, 0))])
-    pelvis_rot = curve([(0, (-28, 0, 0)), (5.3, (-28, 0, 0)), (6.3, (-24, 0, 0)), (8.4, (8, -6, 0)), (10., (8, -6, 0)), (10.8, (6, -5, 0), 'out'),
-                        (15.5, (6, -5, 0)), (16.6, (24, -4, 0), 'in'), (17.8, (16, -2, 0)), (18.6, (6, 0, 0), 'out'), (21., (0, 0, 0))])
-    torso = curve([(0, (14, -4, 3)), (5.3, (14, -4, 3)), (6.3, (12, -2, 2)), (8.4, (16, -14, 0)), (10., (16, -14, 0)), (10.8, (12, -12, 0), 'out'),
-                   (15.5, (12, -12, 0)), (16.6, (22, -8, 0), 'in'), (17.8, (18, -6, 0)), (18.6, (10, -4, 0), 'out'), (19.3, (8, -4, 0)),
-                   (19.65, (0, -2, 0), 'in'), (20.6, (-8, 4, 0), 'out'), (21.2, (-8, 4, 0)), (22.4, (0, 0, 0)), (AWAKEN, (0, 0, 0))])
-    neck = curve([(0, (22, 6, -4)), (5.3, (22, 6, -4)), (6.3, (8, 2, -1)), (8.4, (6, 6, 0)), (10., (6, 6, 0)), (10.8, (-2, 4, 0), 'out'),
-                  (15.5, (0, 4, 0)), (16.6, (8, 2, 0)), (18.6, (4, 0, 0)), (19.3, (4, 0, 0)), (20.6, (-6, 0, 0), 'out'), (22.4, (0, 0, 0))])
-    head = curve([(0, (26, 8, -6)), (5.3, (26, 8, -6)), (6.3, (10, 4, -2)), (8.4, (8, 8, 0)), (10., (8, 8, 0)), (10.8, (-4, 6, 0), 'out'),
-                  (15.5, (-2, 6, 0)), (16.6, (10, 2, 0)), (18.6, (6, 0, 0)), (19.3, (6, 0, 0)), (20.6, (-10, 0, 0), 'out'), (21.2, (-10, 0, 0)),
+    S0 = SEAT_PELVIS
+    # The body. Every move starts in the hips or the chest and the head and arms follow it.
+    pelvis_pos = curve([(0, S0), (6.3, S0), (7.3, S0+(0, .01, -.06)), (8.4, S0+(0, .03, -.16)), (15.5, S0+(0, .03, -.16)),
+                        (16.3, S0+(0, .03, -.3)), (16.9, (0, -.6, .72), 'in'), (17.8, (0, -.14, .28)), (18.6, (0, -.03, .13), 'out'),
+                        (19.3, (0, -.02, .1)), (WRENCH[0], (0, -.14, .12)), (WRENCH[1], (0, .03, .08), 'out'), (20.05, (0, 0, .06)),
+                        (20.2, (-.05, 0, .05)), (20.45, (-.05, 0, .04)), (20.75, (0, 0, .02)), (21.4, (0, 0, 0))])
+    pelvis_rot = curve([(0, (-28, 0, 0)), (5.3, (-28, 0, 0)), (6.3, (-25, 0, 0)), (7.3, (-12, -3, 0)), (8.4, (8, -6, 0)),
+                        (8.8, (9, -6, 0)), (9.3, (8, -6, 0)), (10., (8, -6, 0)), (10.8, (6, -5, 0), 'out'), (15.5, (6, -5, 0)),
+                        (16.3, (10, -4, 0)), (16.9, (22, -4, 0), 'in'), (17.8, (16, -2, 0)), (18.6, (6, 0, 0), 'out'),
+                        (19.3, (6, 0, 0)), (WRENCH[0], (10, 0, 0)), (WRENCH[1], (0, 0, 0), 'out'), (21., (0, 0, 0))])
+    torso = curve([(0, (14, -4, 3)), (5.3, (14, -4, 3)), (6.3, (11, -2, 2)), (7.3, (20, -8, 1)), (8.4, (16, -14, 0)),
+                   (8.8, (17, -14, 0)), (9.3, (16, -14, 0)), (10., (16, -14, 0)), (10.8, (12, -12, 0), 'out'), (15.5, (12, -12, 0)),
+                   (16.3, (16, -10, 0)), (16.9, (22, -8, 0), 'in'), (17.8, (18, -6, 0)), (18.6, (10, -4, 0), 'out'), (19.3, (10, -3, 0)),
+                   (WRENCH[0], (16, -2, 0)), (WRENCH[1], (-2, 0, 0), 'out'), (20.6, (-8, 4, 0), 'out'), (21.2, (-8, 4, 0)),
+                   (22.4, (0, 0, 0)), (AWAKEN, (0, 0, 0))])
+    # The neck leads and the head follows a beat behind; both settle past where they stop.
+    neck = curve([(0, (22, 6, -4)), (5.3, (22, 6, -4)), (6.1, (8, 2, -1), 'out'), (6.5, (9, 2, -1)), (7.3, (10, 4, 0)), (8.4, (6, 6, 0)),
+                  (10., (6, 6, 0)), (10.6, (9, 5, 0)), (11.4, (-2, 4, 0), 'out'), (15.5, (0, 4, 0)), (16.3, (4, 3, 0)), (16.9, (6, 2, 0)),
+                  (18.6, (4, 0, 0)), (19.3, (4, 0, 0)), (WRENCH[0], (8, 0, 0)), (WRENCH[1], (0, 0, 0)), (20.6, (-6, 0, 0), 'out'),
                   (22.4, (0, 0, 0))])
+    head = curve([(0, (26, 8, -6)), (5.45, (26, 8, -6)), (6.35, (8, 3, -1), 'out'), (6.7, (10, 4, -2)), (7.3, (12, 6, 0)), (8.4, (8, 8, 0)),
+                  (10., (8, 8, 0)), (10.7, (14, 6, 0)), (11.5, (-4, 6, 0), 'out'), (15.5, (-2, 6, 0)), (16.3, (4, 4, 0)), (16.9, (8, 2, 0)),
+                  (18.6, (6, 0, 0)), (19.3, (6, 0, 0)), (WRENCH[0], (12, 0, 0)), (WRENCH[1], (2, 0, 0)), (20.6, (-10, 0, 0), 'out'),
+                  (21.2, (-10, 0, 0)), (22.4, (0, 0, 0))])
     # The sword: hanging, falling as a dropped thing does, striking, shivering as it leans back
-    # toward him; then, in his fist, drawn out along itself and lifted point first into a
-    # high guard, held, and brought down into his guard.
+    # toward him; then torn out along itself in both fists, swung up point first into a high
+    # guard, held, and brought down into his guard, where it dips once with its weight.
     home = GUARD_P+GRIP['right']*GUARD_D
-    fist = curve([(19.3, STUCK_GRIP), (19.65, STUCK_GRIP-1.1*STUCK_D, 'in'), (20., (.55, 3.9, -.75)), (20.6, (.8, 4.2, -.3), 'out'),
-                  (21.2, (.8, 4.2, -.3)), (22.4, home), (AWAKEN, home)])
-    held = ncurve([(19.3, STUCK_D), (19.65, STUCK_D), (20., (.1, -.2, -.97)), (20.6, (.15, .93, -.33), 'out'), (21.2, (.15, .93, -.33)),
-                   (22.4, GUARD_D), (AWAKEN, GUARD_D)])
+    fist = curve([(WRENCH[0], STUCK_GRIP), (WRENCH[1], STUCK_GRIP-1.0*STUCK_D, 'out'), (20.15, (.55, 3.9, -.85)),
+                  (20.6, RAISED, 'out'), (21.2, RAISED), (22.25, home+(0, -.06, 0)), (22.7, home), (AWAKEN, home)])
+    held = ncurve([(WRENCH[0], STUCK_D), (WRENCH[1], STUCK_D), (20.15, (.1, -.2, -.97)), (20.6, RAISED_D, 'out'),
+                   (21.2, RAISED_D), (22.25, GUARD_D), (AWAKEN, GUARD_D)])
     if t < FALL: P, D, N = _hung(t)
     elif t < STRUCK:
         P, D, N = _hung(t); P = P-np.array([0, (SWORD_HUNG-SWORD_SUNK)*((t-FALL)/(STRUCK-FALL))**2, 0])
-    elif t < 19.3:
+    elif t < WRENCH[0]:
         tau = t-STRUCK; lean = STUCK_LEAN*(1-math.exp(-9*tau)*math.cos(24*tau))
         P, D = _leaning(lean); N = slerp(_hung(STRUCK)[2], STUCK_N, _ramp(t, STRUCK, STRUCK+.3))
     else:
-        D = held(t); P = fist(t)-GRIP['right']*D; N = slerp(STUCK_N, _turned_n(D), _ramp(t, 19.4, 20.2))
-    hands = 'none' if t < GRASP else 'right' if t < 21.6 else 'both'
-    lift = float(twitch(t))
-    right = curve([(0, ARMREST['right']), (6.5, ARMREST['right']), (7.3, (1.55, 2.7, .45)), (8.3, (.6, 2.86, -.6)), (GRASP, STUCK_GRIP, 'out')])
-    grip_left = fist(21.6)-GRIP['right']*held(21.6)+GRIP['left']*held(21.6)
-    left = curve([(0, LAP), (15.5, LAP), (16.2, ARMREST['left']), (18., ARMREST['left']), (19., (-1.05, 2.3, .1)), (20.6, (-1.25, 2.7, -.25), 'out'),
-                  (21.2, (-1.2, 2.7, -.3)), (21.6, grip_left, 'in')])
-    # His feet stay where they lay until he is up; then each takes one step into his stance.
-    step_r, step_l = curve([(0, 0), (19.3, 0), (19.75, 1)]), curve([(0, 0), (20.3, 0), (20.75, 1)])
-    up_r = curve([(0, 0), (19.3, 0), (19.5, .16, 'out'), (19.75, 0, 'in')])
-    up_l = curve([(0, 0), (20.3, 0), (20.5, .16, 'out'), (20.75, 0, 'in')])
+        D = held(t); P = fist(t)-GRIP['right']*D; N = slerp(STUCK_N, _turned_n(D), _ramp(t, WRENCH[1], 20.4))
+    hands = 'none' if t < GRASP else 'right' if t < TAKES else 'both'
+    # The right hand: it stirs twice on the arm of the throne, then, as he pulls himself forward,
+    # slides to its end, lifts away with the wrist trailing, opens toward the hilt and closes on it.
+    right = curve([(0, ARMREST['right']), (4.5, ARMREST['right']), (4.6, ARMREST['right']+(0, .03, 0), 'out'), (4.85, ARMREST['right']),
+                   (6.4, ARMREST['right']), (7.2, ARMREST['right']+(0, -.02, -.2)), (7.65, (1.45, 2.58, .1), 'out'),
+                   (8.25, (.72, 2.84, -.62)), (GRASP, STUCK_GRIP, 'out')])
+    right_flex = curve([(0, DROOP['right']), (4.5, DROOP['right']), (4.6, 10, 'out'), (4.85, DROOP['right']), (5.1, DROOP['right']),
+                        (5.2, 18, 'out'), (5.5, 28), (6.4, 28), (6.7, 0), (7.2, 0), (7.6, 28), (8.25, -14), (GRASP, -6)])
+    right_elbow = dcurve([(0, REST_ELBOW['right']), (6.4, REST_ELBOW['right']), (7.3, (.5, -.8, .3)), (8.3, (-.55, -.6, -.6))])
+    # The left hand: it slides down his thigh to his knee and pushes on it as he rises, then
+    # lets go as he straightens, to hang at his side, swinging a little and settling. It swings
+    # back for balance as he tears the blade out, and comes up to take the grip as the blade
+    # swings up. (The knee moves with the legs, so where it is is worked out below, from them.)
+    took = fist(TAKES)+(GRIP['left']-GRIP['right'])*held(TAKES)
+    left = curve([(18.3, HANG), (18.65, HANG+(0, .02, -.08)), (19.1, HANG),
+                  (WRENCH[0], HANG+(0, 0, .05)), (19.75, HANG+(-.1, .22, .22), 'out'), (TAKES, took)])
+    left_flex = curve([(0, DROOP['left']), (15.4, DROOP['left']), (16.2, 25), (17.8, 25), (18.05, 35), (18.3, 12),
+                       (19.75, 18), (TAKES, -5)])
+    left_elbow = dcurve([(0, REST_ELBOW['left']), (15.4, REST_ELBOW['left']), (16.2, (-1, -.2, .3)), (17.8, (-1, -.3, .4)),
+                         (18.3, (-.15, -.1, 1)), (19.75, (-.15, -.1, 1)), (TAKES, (-.6, -.6, .3))])
+    # His feet stay where they lay until he rises: the left draws back under him first, and once
+    # he is up the right steps into his stance as the sword goes up.
+    draw_l = curve([(0, 0), (15.9, 0), (16.4, 1)])
+    lift_l = curve([(0, 0), (15.9, 0), (16.1, .1, 'out'), (16.4, 0, 'in')])
+    step_r = curve([(0, 0), (20.05, 0), (20.45, 1)])
+    up_r = curve([(0, 0), (20.05, 0), (20.22, .18, 'out'), (20.45, 0, 'in')])
     feet = {'right': SEAT_FEET['right']+(ANKLE['right']-SEAT_FEET['right'])*float(step_r(t))+np.array([0, float(up_r(t)), 0]),
-            'left': SEAT_FEET['left']+(ANKLE['left']-SEAT_FEET['left'])*float(step_l(t))+np.array([0, float(up_l(t)), 0])}
+            'left': SEAT_FEET['left']+(ANKLE['left']-SEAT_FEET['left'])*float(draw_l(t))+np.array([0, float(lift_l(t)), 0])}
     # Once the blade burns he breathes, and the heat lifts his cloth.
     breath = _ramp(t, 10., 11.5)*math.sin(2*math.pi*(t-10.)/3.2)
     stir = _ramp(t, 10., 10.8)                    # a statue's cloth hangs dead still
     heat = curve([(0, 0), (10., 0), (10.7, 1.3, 'out'), (12.5, .5), (15.5, .4), (17.8, .9), (20.6, 1.2), (22.5, 0)])
-    swing = curve([(0, 0), (15.5, 0), (16.6, .5), (18.6, 0), (19.65, -.3), (20.6, .6, 'hit'), (22.4, 0)])
+    swing = curve([(0, 0), (15.5, 0), (16.9, .5), (18.6, 0), (WRENCH[0], -.2), (WRENCH[1], .4, 'hit'), (20.6, .6), (22.4, 0)])
+    if t < 18.3:
+        brace = PUSH(pelvis_pos(t), pelvis_rot(t), feet['left']) if t > 15.4 else LAP
+        slide, free = _ramp(t, 15.4, 16.2), _ramp(t, 17.8, 18.3)
+        left_at = (1-slide)*LAP+slide*brace+np.array([0, .06, 0])*math.sin(math.pi*slide)
+        left_at = (1-free)*left_at+free*HANG+np.array([0, .1, -.1])*math.sin(math.pi*free)
+    else: left_at = left(t)
     spec = {'pelvis_pos': pelvis_pos(t), 'pelvis_rot': pelvis_rot(t), 'torso_rot': torso(t)+np.array([-1.5*breath, 0, 0]),
             'neck_rot': neck(t), 'head_rot': head(t), 'sword_p': P, 'sword_d': D, 'sword_n': N, 'hands': hands,
-            'free_hands': {'right': right(t)+np.array([0, .07*lift, -.03*lift]), 'left': left(t)},
-            'free_elbow': {'right': (.8, -.3, .6), 'left': (-.7, -.3, .5)}, 'feet': feet,
+            'free_hands': {'right': right(t), 'left': left_at},
+            'wrist': {'right': _wrist('right', float(right_flex(t))), 'left': _wrist('left', float(left_flex(t)))},
+            'free_elbow': {'right': right_elbow(t), 'left': left_elbow(t)}, 'feet': feet,
             'extra': {name: (tuple(np.array(deg)*stir), px) for name, (deg, px) in cloth(t, swing=float(swing(t)), lift=float(heat(t))).items()},
-            'hinge': True}
-    if GRASP <= t < 19.4: spec['edge_lock'] = 1.      # a blade that stands in stone does not roll in his fist
+            'hinge': True, 'elbow_into_grip': True}
+    # Gripping elbows hang down and a little out, as a weight-bearing arm's do, until he lifts it.
+    if t < WRENCH[1]: spec['elbow_pref'] = {'right': (.45, -1, .1), 'left': (-.45, -1, .2)}
+    if GRASP <= t < WRENCH[1]: spec['edge_lock'] = 1.      # a blade that stands in stone does not roll in his fist
     return spec
 
 
 @easy_wrists(AWAKEN)
 def awaken(t):
     """The sword falls (0.5 s) and drives into the floor in front of him (1.9 s), shivering.
-    At 4.5 s the fingers of his right hand stir, twice; at 5.3 s his head lifts toward it. From
-    6.5 s he leans out of the throne and reaches, and at 8.8 s his fist closes on the hilt. The
-    game lights the blade at 10 s: his head comes up, he breathes, the heat lifts his cloth.
-    At 15.5 s his left hand finds the arm of the throne and he hauls himself up on the sword,
-    standing by 19.3 s. He draws the blade out along itself and lifts it point first into a
-    high guard (20.6 s), holds it there, and brings it down into his guard, both hands on it
-    from 21.6 s, settled at 22.4 s."""
+    At 4.5 and 5.1 s the hand hanging over the arm of the throne stirs at the wrist; at 5.3 s
+    his head lifts toward the sword, the neck leading. From 6.4 s he pulls himself forward,
+    his hand sliding along the arm of the throne, then lifts it away and reaches; at 8.8 s his
+    fist closes on the hilt. The game lights the blade at 10 s: his head follows the fire down
+    it and comes up, he breathes, the heat lifts his cloth. From 15.4 s his left hand slides
+    to his knee; he leans over his feet and pushes up on knee and sword, standing by 18.6 s,
+    and his left hand lets go to hang at his side. He tears the blade out of the floor
+    (19.45-19.75 s), swings it up point first, his left hand taking the grip at 20.4 s, steps
+    into his stance, holds it high by his right ear, and brings it down into his guard
+    (22.25 s), where it dips once and settles."""
     return _awaken(t)
+
+
+# ---------------------------------------------------------------- the intro's last move: the long haul
+# How his intro brings him from the throne's end of the hall to his mark at its centre. The
+# fight's Haul did this at first, stretched to twice its reach, and at that length he flew like
+# a thing with no weight (the developer, Nov 12: show the weight, and show him take the chain
+# before he pulls). So the scene has its own clip, made for exactly this distance and never
+# stretched. He steps into a long low sling; the sword drives into the floor past his mark;
+# he winds the chain round his forearm, takes it in both fists and sinks back against it until
+# it holds him; then he heaves, and the chain takes him. He is slow to start and slow to stop:
+# he lands short of the sword and ploughs the rest of the way on his heels and his left fist,
+# stays down a moment, then takes the hilt, wrenches the blade out and rises.
+IH_RUN = 26.                                        # how far up the hall from his mark he starts
+IH_WIND, IH_THROW, IH_STICK = .8, 1.12, 1.5         # the blade is back at his hip; it leaves his hand; it drives in
+IH_WRAP, IH_GRAB = 1.62, 2.05                       # he winds the chain round his forearm; both fists have it
+IH_TAUT, IH_HEAVE, IH_OFF = 2.4, 2.7, 2.95          # he has sunk back against it; he heaves; his feet leave the floor
+IH_TOUCH, IH_STOP = 3.8, 4.3                        # his feet strike, short of the sword; he has ploughed to a stop
+IH_TAKE, IH_TEAR = 4.95, 5.3                        # his fist closes on the hilt; the blade comes out
+IH_LEN = 7.
+IH_G = 20.                                          # blocks/s^2 he rises and falls by in the air
+IH_D = unit((0., -.62, -.78))                       # the stuck blade: thrown long and flat, it stands leaning back at him
+IH_FLOOR = np.array([1.3, 0., -IH_RUN-2.6])         # where it enters the floor
+IH_STUCK = IH_FLOOR-2.6*IH_D                        # its pommel
+PELVIS0 = np.array([0., 2., .0625])
+
+
+def _ih_travel():
+    """How far the chain has brought him. Speed is keyed, so he gathers way and loses it as a
+    heavy thing does: dragged a block before his feet leave the floor, 27 blocks a second in
+    the air, and half of that killed where he lands, the rest ploughed off over 3 blocks."""
+    speed = curve([(IH_HEAVE+.05, 0), (IH_OFF, 12, 'in'), (IH_OFF+.2, 30), (IH_TOUCH-.15, 30), (IH_TOUCH, 26), (IH_TOUCH+.02, 15, 'linear'),
+                   (IH_STOP, 0, 'linear')])
+    ts = np.arange(0, IH_LEN+.0025, .0025); z = np.cumsum([float(speed(s)) for s in ts]); z *= IH_RUN/z[-1]
+    return lambda t: np.array([0., 0., -float(np.interp(t, ts, z))])
+
+
+TRAVEL['intro_haul'] = _ih_travel()
+
+
+def _legs(spec, local):
+    """Ankles placed in the pelvis's own frame ({side: offset from where they rest}), for a body
+    in the air: where they are, and the pelvis's turn."""
+    W = fk({'pelvis': (tuple(spec['pelvis_rot']), tuple(np.array(spec['pelvis_pos'])*[-16, 16, 16]))})
+    return {side: (W['pelvis']@np.r_[ANKLE[side]+np.asarray(local[side], float), 1])[:3] for side in ('right', 'left')}, W['pelvis'][:3, :3]
+
+
+@easy_wrists(IH_LEN)
+def intro_haul(t):
+    """From 26 blocks up the hall. He sinks back over his right leg with the blade low behind
+    his hip (0.8 s), steps into the throw and slings it long and flat (1.12 s); it drives into
+    the floor past his mark at 1.5 s. He winds the chain once round his right forearm, takes
+    it in both fists (2.05 s), steps back and sinks against it until it holds his weight
+    (2.4 s). At 2.7 s he heaves, and it drags him off his feet (2.95 s): he flies low with
+    the chain held in to his chest and strikes the floor at 3.8 s, 3 blocks short, ploughing
+    on to a stop at his mark (4.3 s) on both heels and his left fist. He stays down, takes the
+    hilt (4.95 s), wrenches the blade out (5.3 s) and rises with it, slowly, into his guard
+    (6.7 s)."""
+    off = TRAVEL['intro_haul'](t); end = np.array([0., 0., -IH_RUN])
+    air = IH_TOUCH-IH_OFF; vy = IH_G*air/2
+    # The body. shift is his pelvis from its rest place, as it would be had the chain not moved him.
+    ground = curve([(0, (0, 0, 0)), (IH_WIND, (0, -.55, .3), 'out'), (IH_WIND+.1, (0, -.58, .32)), (IH_THROW, (0, -.5, -.5), 'hit'),
+                    (IH_THROW+.25, (0, -.42, -.6), 'out'), (IH_STICK+.1, (0, -.15, -.35)), (IH_GRAB, (0, -.2, -.25)),
+                    (IH_TAUT, (0, -.72, .42), 'out'), (IH_HEAVE, (0, -.8, .48)), (IH_OFF, (0, -.35, -.7), 'in')])
+    after = curve([(IH_TOUCH, (0, -.35, -.2)), (IH_TOUCH+.14, (0, -1.05, -.2), 'out'), (IH_STOP, (0, -.98, -.15)), (IH_TAKE, (0, -.92, -.15)),
+                   (IH_TEAR, (0, -.8, -.05)), (IH_TEAR+.25, (0, -.74, -.05)), (IH_TEAR+1.2, (0, -.1, 0)), (IH_LEN-.3, (0, 0, 0))])
+    if t < IH_OFF: shift = ground(t)
+    elif t < IH_TOUCH:
+        tau = t-IH_OFF; shift = np.array([0, -.35+vy*tau-IH_G/2*tau*tau, -.7+.5*tau/air])
+    else: shift = after(t)
+    lean = float(curve([(0, 0), (IH_WIND, 8, 'out'), (IH_THROW, 10, 'hit'), (IH_STICK, 4), (IH_GRAB, 2), (IH_TAUT, -10, 'out'), (IH_HEAVE, -13),
+                        (IH_OFF, 30, 'in'), (IH_OFF+.3, 44), (IH_TOUCH-.24, 34), (IH_TOUCH-.05, -8), (IH_TOUCH, -14), (IH_TOUCH+.14, 20, 'out'), (IH_STOP, 26),
+                        (IH_TAKE, 24), (IH_TEAR, 16), (IH_TEAR+1.2, 4), (IH_LEN-.3, 0)])(t))
+    turn = float(curve([(0, 0), (IH_WIND, 12, 'out'), (IH_THROW, -12, 'hit'), (IH_STICK+.1, -4), (IH_GRAB, 8), (IH_HEAVE, 10), (IH_OFF, 0),
+                        (IH_STOP, 0), (IH_TAKE, -8), (IH_TEAR, 6), (IH_LEN-.3, 0)])(t))
+    torso = curve([(0, (0, 0, 0)), (IH_WIND, (22, 30, 0), 'out'), (IH_WIND+.1, (23, 32, 0)), (IH_THROW, (32, -28, 0), 'hit'),
+                   (IH_THROW+.25, (38, -34, 0), 'out'), (IH_STICK+.1, (14, -10, 0)), (IH_GRAB, (8, 14, 0)), (IH_TAUT, (-8, 12, 0), 'out'),
+                   (IH_HEAVE, (-11, 12, 0)), (IH_OFF, (22, -6, 0), 'in'), (IH_OFF+.3, (12, -10, 0)), (IH_TOUCH-.24, (8, -8, 0)), (IH_TOUCH, (8, 0, 0)),
+                   (IH_TOUCH+.14, (36, 0, 0), 'out'), (IH_STOP, (30, -4, 0)), (IH_TAKE, (30, -14, 0)), (IH_TEAR, (22, 8, 0)),
+                   (IH_TEAR+1.2, (5, 2, 0)), (IH_LEN-.3, (0, 0, 0))])(t)
+    # His head stays on where he is going; it drops as he lands and comes up last.
+    nod = float(curve([(0, 0), (IH_TOUCH, 0), (IH_TOUCH+.14, 34, 'out'), (IH_STOP+.25, 30), (IH_TAKE, 12), (IH_TEAR, 6), (IH_LEN-.3, 0)])(t))
+    head = np.array([nod-.7*(lean+torso[0]), -.7*(turn+torso[1]), 0])
+    spec = {'pelvis_pos': shift+off, 'pelvis_rot': (lean, turn, 0), 'torso_rot': torso, 'neck_rot': head*.4, 'head_rot': head*.6,
+            'hinge': True, 'elbow_into_grip': True}
+    # The sword: back low behind his right hip in both hands, slung, standing where it struck,
+    # then wrenched out and carried up into his guard.
+    home = GUARD_P+GRIP['right']*GUARD_D
+    fist = curve([(0, home), (.3, (.8, 2.1, -.45)), (IH_WIND, (.95, 1.3, .55), 'out'), (IH_WIND+.1, (.95, 1.28, .6)), (IH_WIND+.2, (.9, 1.2, -.55), 'in'),
+                  (IH_THROW, (.35, 1.75, -2.9), 'linear')])
+    held = ncurve([(0, GUARD_D), (.3, (.6, .2, -.77)), (IH_WIND, (.4, -.14, -.9), 'out'), (IH_WIND+.1, (.4, -.16, -.9)), (IH_WIND+.2, (.32, -.1, -.94), 'in'),
+                   (IH_THROW, (.1, .08, -.99), 'linear')])
+    P0 = fist(IH_THROW)-GRIP['right']*held(IH_THROW)
+    out = IH_STUCK-2.*IH_D                            # drawn back along its own line until the point is clear
+    carry_p, carry_d = end+np.array([.62, 1.8, -.7]), unit((.45, -.32, -.83))    # then carried low, the point skimming the floor
+    if t < IH_THROW: D = held(t); P = fist(t)-GRIP['right']*D
+    elif t < IH_STICK:                               # long and flat, a little above the line
+        f = (t-IH_THROW)/(IH_STICK-IH_THROW); P = P0+(IH_STUCK-P0)*f+np.array([0, 1.6, 0])*math.sin(math.pi*f)
+        D = slerp(held(IH_THROW), IH_D, _ramp(t, IH_THROW+.2, IH_STICK))
+    else:
+        P = curve([(IH_STICK, IH_STUCK), (IH_TEAR-.22, IH_STUCK), (IH_TEAR-.06, IH_STUCK-.25*IH_D), (IH_TEAR+.2, out, 'out'),
+                   (IH_TEAR+.7, carry_p), (IH_TEAR+.95, carry_p+np.array([0, -.06, 0])), (IH_LEN-.3, end+GUARD_P)])(t)
+        D = ncurve([(IH_STICK, IH_D), (IH_TEAR+.2, IH_D), (IH_TEAR+.7, carry_d), (IH_TEAR+.95, carry_d), (IH_LEN-.3, GUARD_D)])(t)
+        if t < IH_STICK+.3:                          # it shivers where it struck
+            tau = t-IH_STICK; D = unit(D+np.array([.18*math.exp(-11*tau)*math.sin(38*tau), 0, 0]))
+    spec.update({'sword_p': P, 'sword_d': D, 'sword_n': _turned_n(D),
+                 'hands': 'both' if t < .34 else 'right' if t < IH_THROW else 'none' if t < IH_TAKE else 'right' if t < IH_TEAR+1.22 else 'both'})
+    # The hands, each from where his pelvis is (so they rise and fall with him), until he lands.
+    wind = _ramp(t, IH_WRAP, IH_WRAP+.08)*(1-_ramp(t, IH_GRAB-.12, IH_GRAB-.04))      # a turn and a half of the forearm
+    a = 3*math.pi*(t-IH_WRAP)/(IH_GRAB-.08-IH_WRAP)
+    circle = .14*wind*np.array([math.cos(a)-1, math.sin(a), 0])
+    grip_r = IH_STUCK+GRIP['right']*IH_D-end         # the hilt, from where he stops
+    rest0 = fist(IH_THROW)-ground(IH_THROW)
+    right = curve([(IH_THROW, rest0), (IH_THROW+.22, (-.05, 2.1, -2.2), 'out'), (IH_STICK, (.4, 2.5, -1.7)), (IH_WRAP, (.42, 2.55, -1.5)),
+                   (IH_GRAB, (.42, 2.5, -1.2)), (IH_TAUT, (.45, 2.72, -1.5), 'out'), (IH_HEAVE, (.45, 2.78, -1.55)),
+                   (IH_OFF, (.8, 1.75, .1)), (IH_OFF+.35, (.55, 2.3, -.8)), (IH_TOUCH-.3, (.5, 2.4, -.95)),
+                   (IH_TOUCH, (1.0, 2.5, -.7))])
+    left = curve([(.34, fist(.34)+(GRIP['left']-GRIP['right'])*held(.34)-ground(.34)), (IH_WIND, (-.6, 3.2, -1.7), 'out'), (IH_WIND+.1, (-.6, 3.2, -1.75)),
+                  (IH_THROW+.08, (-1.35, 2.2, .45)), (IH_STICK, (-1.1, 2.0, -.2)), (IH_GRAB-.12, (.1, 2.55, -1.85), 'out'),
+                  (IH_GRAB, (.12, 2.47, -1.95)), (IH_TAUT, (.1, 2.66, -1.95), 'out'), (IH_HEAVE, (.1, 2.72, -2.0)),
+                  (IH_OFF, (.35, 1.9, -.5), 'in'), (IH_OFF+.3, (-1.2, 2.2, .6), 'out'), (IH_TOUCH-.2, (-1.3, 2.5, .1)), (IH_TOUCH, (-1.0, 1.8, -.6))])
+    if t < .34: hands = {'right': home, 'left': home}
+    elif t < IH_THROW: hands = {'right': fist(t), 'left': shift+left(t)}
+    elif t < IH_TOUCH: hands = {'right': shift+right(t)+circle, 'left': shift+left(t)}
+    else:                                            # down: the right braced over his knee and then to the hilt, the left on the floor
+        fist_l = np.array([-.8, .3, -1.05])
+        hands = {'right': curve([(IH_TOUCH, after(IH_TOUCH)+right(IH_TOUCH)), (IH_TOUCH+.16, (1.3, 1.2, -.75), 'out'), (IH_STOP+.2, (1.3, 1.25, -.7)),
+                                 (IH_TAKE-.08, grip_r+np.array([.08, .12, .1]), 'ease'), (IH_TAKE, grip_r)])(t),
+                 'left': curve([(IH_TOUCH, after(IH_TOUCH)+left(IH_TOUCH)), (IH_TOUCH+.16, fist_l, 'out'), (IH_TEAR+.1, fist_l),
+                                (IH_TEAR+.55, (-.9, 1.3, -.5)), (IH_TEAR+1.22, P+GRIP['left']*D-off, 'in')])(t)}
+    spec['free_hands'] = {s: np.asarray(v, float)+off for s, v in hands.items()}
+    down = IH_TOUCH <= t < IH_TEAR+.1
+    spec['free_elbow'] = {'right': (.8, -.3, .6) if t >= IH_TOUCH else (1, -.5, .3), 'left': (-.7, .2, .5) if down else (-1, -.5, .3)}
+    spec['wrist'] = {'right': _wrist('right', 10), 'left': _wrist('left', -30 if down else 10)}
+    # The feet. He steps his left foot into the throw, steps his right back as he takes the
+    # strain, trails them in the air, throws them out ahead to land, and gathers them as he rises.
+    stride, brace = np.array([-.8, .3125, -.8]), np.array([.9, .3125, .6])
+    step = lambda s, a, b, h: h*math.sin(math.pi*_ramp(s, a, b))
+    if t < IH_OFF:
+        f = SHAPES['ease'](_ramp(t, IH_WIND+.02, IH_THROW-.04)); g = SHAPES['ease'](_ramp(t, IH_GRAB+.02, IH_TAUT-.08))
+        feet = {'left': ANKLE['left']+(stride-ANKLE['left'])*f+np.array([0, step(t, IH_WIND+.02, IH_THROW-.04, .3), 0]),
+                'right': ANKLE['right']+(brace-ANKLE['right'])*g+np.array([0, step(t, IH_GRAB+.02, IH_TAUT-.08, .16), 0])}
+        spec['feet'] = {s: v+off for s, v in feet.items()}
+        tip = 30*_ramp(t, IH_HEAVE+.12, IH_OFF)       # up on his toes as it takes him
+        spec['foot_r'] = {s: rx(-tip*RAD) for s in ('right', 'left')}
+    elif t < IH_TOUCH:
+        k = (t-IH_OFF)/air
+        c = curve([(0, ((0, .1, .5), (0, .2, 1.0))), (.3, ((0, .5, .9), (0, .75, .7))), (.7, ((0, .6, .5), (0, .8, .6))),
+                   (.9, ((0, .3, -.6), (0, .45, .2))), (1, ((.1, 0, -.55), (-.1, .05, .45)))])
+        r, l = c(k); spec['feet'], R = _legs(spec, {'right': r, 'left': l})
+        f = _ramp(t, IH_OFF, IH_OFF+.1)
+        start = {'right': brace+TRAVEL['intro_haul'](IH_OFF), 'left': stride+TRAVEL['intro_haul'](IH_OFF)}
+        spec['feet'] = {s: (1-f)*start[s]+f*spec['feet'][s] for s in ('right', 'left')}
+        toes = float(curve([(0, 30), (.7, 30), (1, -12)])(k))
+        spec['foot_r'] = {s: R@rx(-lean*RAD)@rx(toes*RAD) for s in ('right', 'left')}
+    else:
+        landed = {'right': np.array([.95, .3125, -.8]), 'left': np.array([-.95, .3125, .55])}
+        f = SHAPES['ease'](_ramp(t, IH_TEAR+.35, IH_LEN-.45))
+        feet = {s: landed[s]+(ANKLE[s]-landed[s])*f+np.array([0, step(t, IH_TEAR+.35, IH_LEN-.45, .12) if s == 'left' else 0, 0]) for s in ('right', 'left')}
+        spec['feet'] = {s: v+off for s, v in feet.items()}
+    # The cloth is thrown back as he goes forward, streams in the air and slaps down over him.
+    swing = curve([(0, 0), (IH_WIND, -.3), (IH_THROW, .7, 'hit'), (IH_STICK, .1), (IH_TAUT, -.45), (IH_HEAVE, -.45), (IH_OFF, 1., 'hit'),
+                   (IH_OFF+.4, 1.5), (IH_TOUCH, 1.2), (IH_TOUCH+.14, -.9, 'hit'), (IH_STOP+.3, .25), (IH_TAKE, 0), (IH_TEAR+.1, .4), (IH_LEN, 0)])
+    lift = curve([(0, 0), (IH_OFF, 0), (IH_OFF+.3, .8), (IH_TOUCH, 1.3), (IH_TOUCH+.2, .4), (IH_STOP+.5, 0)])
+    spec['extra'] = cloth(t, swing=float(swing(t)), lift=float(lift(t)))
+    if IH_THROW <= t < IH_TAKE+.1: spec['hidden'] = ['hanging_wrist_chain']
+    return spec
 
 
 # ---------------------------------------------------------------- Unbound
@@ -1939,9 +2190,11 @@ BLOWS = {'royal_cut': ((.9, 1.3), (1.75, 2.2)), 'turning_cut': ((.68, .85),), 'c
          'zip': ((1.24, 1.62),), 'lunge': ((1.54, 1.92),), 'unbound': ((.5, .66),)}
 ATTACKS = ('royal_cut', 'royal_cut_three', 'kingsguard_thrust', 'turning_cut', 'cast_reel', 'chain_scythe_low',
            'chain_scythe_high', 'zip', 'hook', 'overhead_sentence', 'lunge', 'drag_down', 'unbound', 'haul', 'snare')
+# Clips the game also needs tracks for (build_art.py writes them): the attacks, and the scene's own haul for its travel.
+TRACKED = ATTACKS+('intro_haul',)
 # While a fist holds the sword it must stay above the floor, except where the clip means it
 # to be in the floor: Unbound drives it in and later tears it out.
-BURIED = {'unbound': ((.6, 3.8),), 'awaken': ((GRASP, 19.8),)}
+BURIED = {'unbound': ((.6, 3.8),), 'awaken': ((GRASP, 19.8),), 'intro_haul': ((IH_TAKE, IH_TEAR+.2),)}
 
 
 # What check_edges holds each clip to (summary key: limit; 'lowest' keys are minimums).
@@ -2096,6 +2349,7 @@ CLIPS = {
     'unbound': (unbound, 4.3, False),
     'throned': (throned, TWIST_PERIOD, True),
     'awaken': (awaken, AWAKEN, False),
+    'intro_haul': (intro_haul, IH_LEN, False),
 }
 # Clips that end with him turned: degrees to his left, about his origin. The game turns his
 # body yaw by this much on the clip's last frame, as the next clip starts in his own frame.
@@ -2103,4 +2357,4 @@ END_TURN = {'turning_cut': TURN_END}
 # Clips that end with him somewhere else: his offset in blocks, in the frame he started in.
 # The game moves him there on the clip's last frame, and must stretch the flight to the real
 # distance to the sword.
-END_OFFSET = {'zip': ZIP_OFFSET, 'lunge': LUNGE_OFFSET, 'haul': HAUL_OFFSET}
+END_OFFSET = {'zip': ZIP_OFFSET, 'lunge': LUNGE_OFFSET, 'haul': HAUL_OFFSET, 'intro_haul': (0., 0., -IH_RUN)}

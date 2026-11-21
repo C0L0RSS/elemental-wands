@@ -8,9 +8,8 @@ package com.anton.elementalwands.entity.roc;
 public final class StormRocRules {
     private StormRocRules() {}
 
-    // Stage timing, in ticks. Easy and Hard lengthen or shorten only the air stretch.
-    /** Normal sees three calls, Easy three and an arrival, Hard two; see AIR_CYCLE. */
-    public static final int AIR_TICKS = 450, AIR_TICKS_EASY = 534, AIR_TICKS_HARD = 356;
+    // Stage timing, in ticks. How long an air stretch lasts is the Roc's own choice; see
+    // StormRocBrain.dives.
     public static final int DIVE_TICKS = 60, STUCK_TICKS = 120;
     /**
      * Its takeoff as the brawl ends: crouched, it turns onto its way out, and its feet leave the rock
@@ -37,6 +36,30 @@ public final class StormRocRules {
     public static final double RANDOM_RADIUS = 49;
     /** Aimed volleys never cover more than this many players; larger parties rotate through it. */
     public static final int AIMED_CAP = 4;
+    /**
+     * The cage call rings a challenger with small strikes CAGE_RING radii out, warned for
+     * CAGE_WARNING; the middle stays safe. The fork call's strikes fall at least FORK_GAP blocks
+     * past a large strike's radius apart along the runner's way.
+     */
+    public static final double CAGE_RING = 2.4, FORK_GAP = 1.5;
+    public static final int CAGE_WARNING = 26;
+    /** After a call, aimed small strikes hold off this long, so nothing lands in a cage's middle. */
+    public static final int CALL_HOLD = 45;
+    /** A neighbouring spire must be this much nearer the challengers to turn it back the way it came. */
+    public static final double HOP_MARGIN = 8;
+    /**
+     * The low pass. Crouched on its spire it turns onto a line through a challenger, then flies it:
+     * down to PASS_HEIGHT blocks over the rock by the rim, across the summit at PASS_SPEED blocks a
+     * tick (after gathering speed for PASS_RAMP ticks) and up onto the spire beyond. Lightning from
+     * its bill walks the line PASS_FRONT blocks ahead of it: the whole lane is marked as it leaves
+     * its spire, in circles of LANE_RADIUS every LANE_SPACING blocks, the first never sooner than
+     * LANE_WARNING. Each player is hit once, on the rock or jumping, and its body stays within
+     * spell reach the whole way across.
+     */
+    public static final double PASS_HEIGHT = 13, PASS_SPEED = 1.7, PASS_FRONT = 10, LANE_RADIUS = 3.5, LANE_SPACING = 4;
+    public static final int PASS_RAMP = 24, LANE_WARNING = 30;
+    /** How sharply it slows on its way up onto the far spire: higher brakes earlier and takes longer. */
+    public static final double PASS_BRAKE = 1.6;
 
     /**
      * Each spire visit lasts AIR_CYCLE: it settles from its landing, then CALL_AT into the visit it
@@ -51,7 +74,11 @@ public final class StormRocRules {
     public static final int AIR_CYCLE = 178, CALL_AT = 34, CALL_VOLLEY = 10, CALL_TICKS = 60, FLY_AT = 98, SPIRE_PUSH = 8, LAND_LEAD = 16, LAND_REACH = 9;
 
     // Tornadoes, the dive and shockwave rings.
-    public static final double DIVE_RADIUS = 14, TORNADO_RADIUS = 5;
+    /**
+     * The dive lands on its challengers, not on the summit's centre. From the middle of its circle
+     * a sprint gets out with half a second to spare and a walk does not.
+     */
+    public static final double DIVE_RADIUS = 12, TORNADO_RADIUS = 5;
     /** A tornado catches anyone inside this share of its radius; its winds drag from this multiple of it. */
     public static final double TORNADO_CATCH = .45, TORNADO_REACH = 1.8;
     /**
@@ -79,6 +106,7 @@ public final class StormRocRules {
     public static final float SWING_DAMAGE = 23.2f, BITE_DAMAGE = 31.25f, SCREAM_DAMAGE = 31.25f, WING_DAMAGE = 16.5f;
     public static final float POUNCE_DAMAGE = 35.9f, RING_DAMAGE = 16.5f, TORNADO_DAMAGE = 16.5f;
     public static final float STAMPEDE_DAMAGE = 31.25f, TORNADO_CHIP = 8, FOOT_DAMAGE = 14, CAW_DAMAGE = 31.25f;
+    public static final float LANE_DAMAGE = 31.25f, LANE_DAMAGE_TWO = 33.6f;
     /**
      * Roc hits skip vanilla's hurt cooldown, so a repeat bolt half a second later always lands in
      * full. Inside this shorter window a new hit only adds its excess over the largest recent one:
@@ -113,6 +141,12 @@ public final class StormRocRules {
      * BITE_LEAP_IMPACT and is done at BITE_LEAP_DURATION, where the standing bite uses its Action's.
      */
     public static final int BITE_LEAP = 43, BITE_LAND = 55, BITE_LEAP_IMPACT = 56, BITE_LEAP_DURATION = 88;
+    /**
+     * It chooses between the standing bite and the leap at BITE_DECIDE, where the two clips part.
+     * The leap's aim follows on through its crouch and locks at BITE_LEAP_LOCK, as long before its
+     * bite as the standing bite's.
+     */
+    public static final int BITE_DECIDE = 24, BITE_LEAP_LOCK = 36;
     /** How far beyond the standing bite's reach its prey must be for it to leap. */
     public static final double BITE_LEAP_MIN = 2;
     /**
@@ -127,9 +161,13 @@ public final class StormRocRules {
      */
     public static final int WING_LIFT = 17, WING_APEX = 35, WING_DROP = 41;
     public static final double WING_HEIGHT = 9, WING_CRUSH = 5;
-    /** Hitting it from beyond this distance draws a stampede at that player. */
-    public static final double RANGED_DISTANCE = 22;
-    public static final int RANGED_MEMORY = 160, STAMPEDE_COOLDOWN = 160;
+    /**
+     * A player who hits it from beyond this distance, or stays beyond it for KEPT_AWAY ticks, is
+     * keeping away, and draws the Thunder Charge and the Raptor Strike. The charge is offered from
+     * CHARGE_MIN blocks.
+     */
+    public static final double RANGED_DISTANCE = 22, CHARGE_MIN = 16;
+    public static final int RANGED_MEMORY = 160, STAMPEDE_COOLDOWN = 160, KEPT_AWAY = 100;
     /**
      * The Thunder Charge launches on the Action's impact and runs at STAMPEDE_SPEED blocks a tick,
      * its stride's pace, for as long as the charge lasts, trampling anyone within
@@ -144,7 +182,7 @@ public final class StormRocRules {
     public static final int STAMPEDE_RUN_AT = 53, STAMPEDE_STRIDE = 9, STAMPEDE_MAX_RUN = 90, STAMPEDE_SKID_TICKS = 16, STAMPEDE_AFTER = 38;
     public static final double STAMPEDE_HALF_WIDTH = 4.5, STAMPEDE_SKID = 5, STAMPEDE_SPEED = .77, STAMPEDE_COMMIT = 15, STAMPEDE_PAST = 8;
     public static final float STAMPEDE_TURN = 2;
-    /** It pounces at a target this far away, or after this many attacks in one spot. */
+    /** The Raptor Strike is likeliest at a target this far away, or after this many attacks in one spot. */
     public static final double POUNCE_FAR = 26;
     public static final int ACTIONS_BEFORE_POUNCE = 4;
     /**
@@ -153,13 +191,37 @@ public final class StormRocRules {
      * strike there on the Action's impact.
      */
     public static final int POUNCE_LAUNCH = 32;
-    public static final double POUNCE_HEIGHT = 4;
-    /** Degrees per tick it turns while winding up or flying between perches. */
-    public static final float TURN_RATE = 15, FLIGHT_TURN_RATE = 10;
+    public static final double POUNCE_HEIGHT = 4, POUNCE_RADIUS = 5;
+    /**
+     * Degrees per tick its body turns on the rock, resting or winding up: 80 a second, so a player
+     * who gets beside it is off its bill until it comes round, and only the Thunderclap answers
+     * them. In flight it turns faster.
+     */
+    public static final float TURN_RATE = 4, FLIGHT_TURN_RATE = 10;
+    /** Beyond this many degrees off its facing a player is beside or behind it. */
+    public static final double FRONT = 55;
+    /**
+     * Its aims run ahead of a runner by how far they will have gone when the hit lands, at most
+     * this many blocks, and stop following at the Action's lock: a straight line is hit, a sharp
+     * turn after the lock is the dodge.
+     */
+    public static final double LEAD_CAP = 8;
     /** A player's damage counts half as much toward being targeted after this many ticks. */
     public static final int THREAT_HALF_LIFE = 100;
-    /** Every fighter keeps this much weight, so a quieter player is still picked sometimes. */
-    public static final double THREAT_FLOOR = 30;
+    /** Nobody goes this long without being attacked, whatever the threat says. */
+    public static final int NEGLECT = 200;
+    /** Targeting weights beside threat (damage points): eating, standing still, and each second unattacked. */
+    public static final double HEALING_PRIORITY = 40, STILL_PRIORITY = 15, NEGLECT_PRIORITY = 4;
+    /** A player counts as standing still after this many ticks slower than STILL_SPEED blocks a tick. */
+    public static final int STILL_TICKS = 15;
+    public static final double STILL_SPEED = .05;
+    /** How long it remembers a spent dash, and a ring cleared by jumping. */
+    public static final int DASH_MEMORY = 30, JUMP_MEMORY = 300;
+    /**
+     * Its rest after a string, solo on Normal (1.25 s, after the last clip's own recovery), and the
+     * gap between two attacks of one string.
+     */
+    public static final int REST = 25, STRING_GAP = 4;
 
     public static final double LANDING_SHARE = .125, PHASE_GATE = .5;
     public static int health(int players) { return 2400 + Math.max(0, players - 1) * 1600; }
@@ -170,9 +232,6 @@ public final class StormRocRules {
      * From CHARGE_DESCENT it flies down onto the tallest spire, out past it and round (see RocApproach).
      */
     public static final int CHARGE_TICKS = 208, CHARGE_DESCENT = 120;
-    /** It comes down to the players more often. */
-    /** It dives from a spire, so a stretch runs on to the next perched moment after this. */
-    public static final int AIR_TICKS_TWO = 356, AIR_TICKS_TWO_EASY = 450, AIR_TICKS_TWO_HARD = 272;
     /** Larger strikes that hit harder: about 5 and 9 hearts against diamond. */
     public static final double SMALL_RADIUS_TWO = 3.5, LARGE_RADIUS_TWO = 7;
     public static final float SMALL_DAMAGE_TWO = 23.2f, LARGE_DAMAGE_TWO = 33.6f;
@@ -186,10 +245,12 @@ public final class StormRocRules {
     public static final int TORNADOES_TWO = 3;
     /**
      * The chain smash replaces the dive: SMASHES beak slams, each at a player. The first falls from
-     * the sky after FIRST_SMASH_WARNING; each later one rips free after SMASH_PAUSE and hops at most
-     * SMASH_HOP blocks, landing SMASH_WARNING after its circle appears. Only the last leaves it stuck.
+     * the sky after FIRST_SMASH_WARNING. Each later one's circle appears as the last slam lands; it
+     * stays buried for SMASH_PAUSE, then rips free and hops at most SMASH_HOP blocks over
+     * SMASH_WARNING, so a hop's circle warns for both: long enough to sprint out of from its middle.
+     * Only the last leaves it stuck.
      */
-    public static final int SMASHES = 4, FIRST_SMASH_WARNING = 40, SMASH_WARNING = 24, SMASH_PAUSE = 8;
+    public static final int SMASHES = 4, FIRST_SMASH_WARNING = 40, SMASH_WARNING = 24, SMASH_PAUSE = 14;
     public static final double SMASH_RADIUS = 8, SMASH_HOP = 25, SMASH_RING = 26;
     /** The first smash falls like the dive and is as deadly; the hops are about 6 hearts. */
     public static final float HOP_DAMAGE = 26.06f;
@@ -197,16 +258,17 @@ public final class StormRocRules {
     public enum Stage { IDLE, SUMMON, AIR, DIVE, SMASH, STUCK, BRAWL, TAKEOFF, CHARGE, COMPLETE }
 
     /**
-     * impact: the tick its hit lands. lock: the tick it stops turning to follow its target
-     * (swings aim where the target stood when chosen). duration includes recovery.
+     * impact: the tick its hit lands. lock: the tick it stops turning to follow its aim, which runs
+     * ahead of its target (sweeps aim once, when chosen). The bite's leap locks at BITE_LEAP_LOCK
+     * and the Raptor Strike as it launches. duration includes recovery.
      */
     public enum Action {
-        BITE("bite", 46, 24, 78),
+        BITE("bite", 46, 26, 78),
         SWING_LEFT("swing_left", 25, 16, 52),
         SWING_RIGHT("swing_right", 25, 16, 52),
-        SCREAM("scream", 32, 26, 58),
+        SCREAM("scream", 32, 14, 58),
         WING("wing", 52, 0, 80),
-        POUNCE("pounce", 52, 24, 80),
+        POUNCE("pounce", 52, 32, 80),
         // The Thunder Charge ends STAMPEDE_AFTER ticks after its skid starts; this is its longest run.
         STAMPEDE("stampede", 44, 36, STAMPEDE_RUN_AT + STAMPEDE_MAX_RUN + STAMPEDE_STRIDE + STAMPEDE_AFTER);
 

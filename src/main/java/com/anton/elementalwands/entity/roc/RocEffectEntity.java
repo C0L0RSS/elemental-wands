@@ -19,9 +19,11 @@ public final class RocEffectEntity extends Entity {
      * storm ceiling and its radius is the bolt's length. STORM draws nothing: it marks phase two's
      * storm at the summit's centre, which every challenger's client tracks wherever the Roc is.
      * SWEEP_WAVE is the Storm Sweep's crescent of crackles across the front at the effect's yaw;
-     * CLAP_WAVE the Thunderclap's ring of dust and crackles.
+     * CLAP_WAVE the Thunderclap's ring of dust and crackles. SHADOW is the Raptor Strike's shadow
+     * on the rock where it will land. LANE is one circle of the low pass's lane, facing the way the
+     * Roc flies it: it warns like a strike, then one bolt from the Roc's bill hits it.
      */
-    public enum Kind { SMALL_STRIKE, LARGE_STRIKE, TORNADO, DIVE_MARKER, SHOCKWAVE, SCREAM, DISTANT_BOLT, LIVE_GROUND, CHARGE_BOLT, STORM_BOLT, STORM, CALL_BOLT, SWEEP_WAVE, CLAP_WAVE }
+    public enum Kind { SMALL_STRIKE, LARGE_STRIKE, TORNADO, DIVE_MARKER, SHOCKWAVE, SCREAM, DISTANT_BOLT, LIVE_GROUND, CHARGE_BOLT, STORM_BOLT, STORM, CALL_BOLT, SWEEP_WAVE, CLAP_WAVE, SHADOW, LANE }
 
     private static final TrackedData<Integer> KIND = DataTracker.registerData(RocEffectEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Integer> DURATION = DataTracker.registerData(RocEffectEntity.class, TrackedDataHandlerRegistry.INTEGER);

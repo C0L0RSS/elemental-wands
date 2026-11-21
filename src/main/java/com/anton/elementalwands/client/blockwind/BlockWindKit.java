@@ -48,7 +48,7 @@ public final class BlockWindKit {
     // ---- Cubes ---------------------------------------------------------------------------------------
 
     /** One cube with full edge lengths along axes; alpha below 1 makes it a see-through air cube. */
-    static void cube(BlockWindMesh m, Vec3d p, double sx, double sy, double sz, int band, double seed, Vec3d[] axes, double alpha) {
+    public static void cube(BlockWindMesh m, Vec3d p, double sx, double sy, double sz, int band, double seed, Vec3d[] axes, double alpha) {
         if (alpha <= .02) return;
         int frame = Math.floorMod((int) Math.floor(m.time * FPS + rnd(seed + .77) * 4), 4);
         m.box(p, sx * .5, sy * .5, sz * .5, axes, band, frame, GLOW[band], Math.min(1, alpha), alpha < 1);

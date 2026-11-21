@@ -1,5 +1,6 @@
 package com.anton.elementalwands.client;
 
+import com.anton.elementalwands.entity.roc.RocEffectEntity;
 import com.anton.elementalwands.entity.roc.StormRocEntity;
 import com.anton.elementalwands.entity.roc.StormRocPose;
 import com.anton.elementalwands.entity.roc.StormRocRules;
@@ -92,6 +93,7 @@ public final class StormRocMotion {
         boolean aloft = flying && !(pose.equals("spire_flight") && roc.poseTicks(0) < StormRocRules.SPIRE_PUSH)
             || pose.equals("takeoff") && roc.poseTicks(0) >= StormRocRules.TAKEOFF_PUSH;
         Entity flightTarget = null;
+        boolean strafing = false;
         if (flying) {
             if (!s.wasFlying) {
                 s.flightTarget = -1;
@@ -99,6 +101,12 @@ public final class StormRocMotion {
                 s.nextFocus = now + (pose.equals("spire_flight") ? Math.max(8, SPIRE_LOOK - (long) roc.poseTicks(0)) : 8);
             }
             flightTarget = flightTarget(client, roc, s, now);
+            // On a low pass the server points its head at its lightning on the rock ahead: it keeps
+            // its head down on its lane rather than glancing at players.
+            if (roc.lookTarget() >= 0 && roc.getEntityWorld().getEntityById(roc.lookTarget()) instanceof RocEffectEntity lane && lane.isAlive()) {
+                flightTarget = lane;
+                strafing = true;
+            }
         }
         s.wasFlying = flying;
         // Gaze: perched and between brawl attacks it watches; in flight, now and then; never mid-attack.
@@ -118,7 +126,8 @@ public final class StormRocMotion {
             case "flight", "spire_flight" -> flightTarget != null ? 1 : 0;
             // The bite's windup keeps its head on its prey until the aim locks, then lets go
             // before the lunge, which bites where the server aimed.
-            case "bite", "bite_leap" -> roc.poseTicks(0) < StormRocRules.Action.BITE.lock ? 1 : 0;
+            case "bite" -> roc.poseTicks(0) < StormRocRules.Action.BITE.lock ? 1 : 0;
+            case "bite_leap" -> roc.poseTicks(0) < StormRocRules.BITE_LEAP_LOCK ? 1 : 0;
             // So does the Raptor Strike's stalk: its head stays on its prey until it coils to leap.
             case "pounce" -> roc.poseTicks(0) < StormRocRules.Action.POUNCE.lock ? 1 : 0;
             // Charging, its head leads it round after its prey; once its skid stops, its head whips
@@ -142,7 +151,7 @@ public final class StormRocMotion {
             float yaw = MathHelper.clamp((float) Math.toDegrees(Math.atan2(x, -z)), -80, 80);
             float pitch = MathHelper.clamp((float) Math.toDegrees(Math.atan2(d.y, Math.hypot(x, z))), flying ? -75 : -50, 35);
             float off = Math.max(Math.abs(yaw - s.yaw), Math.abs(pitch - s.pitch));
-            if (pose.startsWith("bite") || pose.equals("pounce") || pose.equals("stampede_run") || pose.equals("land")) {
+            if (strafing || pose.startsWith("bite") || pose.equals("pounce") || pose.equals("stampede_run") || pose.equals("land")) {
                 // Rearing up for the bite, stalking, charging or settling from a landing, its head is
                 // heavy: it follows its prey without snaps.
                 s.yaw += (yaw - s.yaw) * .3f;

@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import com.anton.elementalwands.party.PartyLine;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -289,10 +290,14 @@ public final class HollowCryptManager {
                 && rosterOf(p) == null && !pending(p.getUuid()));
         Fight fight = new Fight();
         fight.site = siteKey(here, site);
+        // Those taken from the doorway come back out to the court, side by side; the rest to where they stood.
+        List<ServerPlayerEntity> doorway = group.stream().filter(p -> entrance.court() != null
+                && p.getEntityPos().distanceTo(Vec3d.ofBottomCenter(site)) <= 3.5).toList();
+        List<Vec3d> court = entrance.court() == null ? List.of() : PartyLine.spots(here, entrance.court(), entrance.courtYaw(), doorway.size());
         for (ServerPlayerEntity p : group) {
-            boolean doorway = entrance.court() != null && p.getEntityPos().distanceTo(Vec3d.ofBottomCenter(site)) <= 3.5;
-            state.returns.put(p.getUuidAsString(), doorway ? new Point(here.getRegistryKey().getValue().toString(),
-                    entrance.court().x, entrance.court().y, entrance.court().z, entrance.courtYaw(), 0) : point(p));
+            int i = doorway.indexOf(p);
+            state.returns.put(p.getUuidAsString(), i >= 0 ? new Point(here.getRegistryKey().getValue().toString(),
+                    court.get(i).x, court.get(i).y, court.get(i).z, entrance.courtYaw(), 0) : point(p));
             if (!p.isCreative()) fight.roster.add(p.getUuidAsString());
         }
         fight.standing.addAll(fight.roster);
@@ -305,7 +310,7 @@ public final class HollowCryptManager {
         here.spawnParticles(ParticleTypes.SOUL, focus.x, focus.y, focus.z, 60, 1.5, .6, 1.5, .03);
         for (ServerPlayerEntity p : group) p.addStatusEffect(new StatusEffectInstance(StatusEffects.BLINDNESS, 50, 0, false, false));
         if (ready(slot)) {
-            group.forEach(p -> arrive(p, realm, slot));
+            arriveAll(group, realm, slot);
             risings.put(slot, here.getServer().getTicks() + RISE_DELAY);
         } else {
             Build build = build(realm, slot);
@@ -374,6 +379,11 @@ public final class HollowCryptManager {
         for (var entry : state.fights.entrySet())
             if (entry.getValue().roster.contains(player.getUuidAsString()) && !endings.containsKey(Integer.valueOf(entry.getKey()))) return entry.getValue();
         return null;
+    }
+
+    public static boolean spectatorViewer(NecromancerEntity boss, ServerPlayerEntity player) {
+        Fight fight = rosterOf(player);
+        return fight != null && boss.getUuidAsString().equals(fight.boss) && !fight.standing.contains(player.getUuidAsString());
     }
 
     private static void eliminate(ServerPlayerEntity player, String message) {
@@ -648,15 +658,17 @@ public final class HollowCryptManager {
         endings.remove(slot);
         Fight fight = state.fights.remove(String.valueOf(slot));
         if (fight == null) return;
+        List<ServerPlayerEntity> restored = new java.util.ArrayList<>();
         for (String id : fight.roster) {
             ServerPlayerEntity p = realm.getServer().getPlayerManager().getPlayer(UUID.fromString(id));
             if (p == null) continue;
             String mode = state.modes.remove(id);
             if (mode != null) {
                 p.changeGameMode(GameMode.byId(mode, GameMode.SURVIVAL));
-                arrive(p, realm, slot);
+                restored.add(p);
             }
         }
+        arriveAll(restored, realm, slot);
         persist();
     }
 
@@ -721,13 +733,13 @@ public final class HollowCryptManager {
             it.remove();
             if (!state.built.contains(build.slot)) state.built.add(build.slot);
             persist();
+            List<ServerPlayerEntity> arriving = new java.util.ArrayList<>();
             for (UUID id : build.waiting) {
                 ServerPlayerEntity player = server.getPlayerManager().getPlayer(id);
-                if (player != null && player.isAlive()) {
-                    arrive(player, realm, build.slot);
-                    player.sendMessage(Text.literal("The Hollow Crypt opens."), true);
-                }
+                if (player != null && player.isAlive()) arriving.add(player);
             }
+            arriveAll(arriving, realm, build.slot);
+            for (ServerPlayerEntity player : arriving) player.sendMessage(Text.literal("The Hollow Crypt opens."), true);
             if (build.ritual) risings.put(build.slot, server.getTicks() + RISE_DELAY);
         }
         tickReturns(server, realm);
@@ -785,6 +797,12 @@ public final class HollowCryptManager {
         Integer slot = slotOf(fight);
         for (ServerPlayerEntity p : members(fight, slot == null ? -1 : slot, server, slot == null ? null : realm(server)))
             p.sendMessage(Text.literal(message), false);
+    }
+
+    /** A party into the crypt together: side by side at the arrival ({@link PartyLine}). */
+    private static void arriveAll(List<ServerPlayerEntity> party, ServerWorld realm, int slot) {
+        List<Vec3d> line = PartyLine.spots(realm, HollowCryptRealm.arrival(HollowCryptRealm.centre(state.generation, slot)), HollowCryptRealm.ARRIVAL_YAW, party.size());
+        for (int i = 0; i < party.size(); i++) transfer(party.get(i), realm, line.get(i), HollowCryptRealm.ARRIVAL_YAW, 0);
     }
 
     private static void arrive(ServerPlayerEntity player, ServerWorld realm, int slot) {

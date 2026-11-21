@@ -1,7 +1,10 @@
 package com.anton.elementalwands.entity.necromancer;
 
+import com.anton.elementalwands.ElementalWandsMod;
 import java.util.UUID;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.attribute.EntityAttributes;
+import net.minecraft.util.Identifier;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.damage.DamageTypes;
 import net.minecraft.entity.mob.MobEntity;
@@ -14,6 +17,16 @@ import net.minecraft.server.world.ServerWorld;
  * Unbound (naturally spawned) copies share the class but skip every rule here.
  */
 public interface NecromancerMinion {
+    /** The siege's extra attack damage, as a share of the body's own. */
+    Identifier EMPOWERED = Identifier.of(ElementalWandsMod.MOD_ID, "necromancer_empowered");
+
+    /** The share of extra damage its caster gave it: nothing for a wild body, whatever potions it carries. */
+    static double empowered(MobEntity mob) {
+        var strength = mob.getAttributeInstance(EntityAttributes.ATTACK_DAMAGE);
+        var modifier = strength == null ? null : strength.getModifier(EMPOWERED);
+        return modifier == null ? 0 : modifier.value();
+    }
+
     State minionState();
 
     /** True while the rise clip plays: the body cannot act or be pushed. */

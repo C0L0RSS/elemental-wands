@@ -89,7 +89,6 @@ public class ElementalWandsMod implements ModInitializer {
         com.anton.elementalwands.end.EndEncounter.setBossFactory(com.anton.elementalwands.entity.firstwizard.FirstWizardEntity::forEncounter);
         com.anton.elementalwands.entity.firstwizard.FirstWizardChangeScene.init();
         FabricDefaultAttributeRegistry.register(ModEntities.HARVEST_SOUL, com.anton.elementalwands.entity.necromancer.HarvestSoulEntity.createAttributes().build());
-        FabricDefaultAttributeRegistry.register(ModEntities.NECROMANCER_SOUL, com.anton.elementalwands.entity.necromancer.NecromancerSoulEntity.createAttributes().build());
         FabricDefaultAttributeRegistry.register(ModEntities.INTRO_ZOMBIE, net.minecraft.entity.mob.ZombieEntity.createZombieAttributes().build());
         FabricDefaultAttributeRegistry.register(ModEntities.INTRO_SOUL, com.anton.elementalwands.entity.necromancer.IntroSoulEntity.createAttributes().build());
         FabricDefaultAttributeRegistry.register(ModEntities.TRANSFORM_SOUL, com.anton.elementalwands.entity.necromancer.TransformSoulEntity.createAttributes().build());
@@ -144,6 +143,7 @@ public class ElementalWandsMod implements ModInitializer {
         com.anton.elementalwands.end.EndTakeover.init();
         com.anton.elementalwands.entity.necromancer.NecromancerFightLog.init();
         com.anton.elementalwands.entity.GuardianFightLog.init();
+        com.anton.elementalwands.entity.roc.StormRocFightLog.init();
 
         // ── First-join starter kit ──────────────────────────────────────
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {

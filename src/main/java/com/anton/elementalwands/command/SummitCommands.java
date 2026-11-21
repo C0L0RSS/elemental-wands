@@ -1,5 +1,6 @@
 package com.anton.elementalwands.command;
 
+import com.anton.elementalwands.entity.roc.StormRocFightLog;
 import com.anton.elementalwands.summit.StormSummit;
 import com.anton.elementalwands.summit.StormSummitManager;
 import com.mojang.brigadier.CommandDispatcher;
@@ -15,6 +16,16 @@ public final class SummitCommands {
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         var slot = CommandManager.argument("slot", IntegerArgumentType.integer(0, StormSummit.SLOTS - 1));
         java.util.function.Predicate<ServerCommandSource> op = source -> source.hasPermissionLevel(2);
+        // Tuning: record the Roc's choices, hits and damage for fights that start from now.
+        var log = CommandManager.literal("log").requires(op);
+        for (boolean on : new boolean[]{true, false})
+            log.then(CommandManager.literal(on ? "on" : "off").executes(c -> {
+                StormRocFightLog.setEnabled(on);
+                return reply(c.getSource(), on
+                        ? "Storm Roc fight log on: fights that start from now record its choices, hits and damage, then write logs/storm-roc-fight-*.txt."
+                        : "Storm Roc fight log off.");
+            }));
+        dispatcher.register(CommandManager.literal("ew").then(CommandManager.literal("summit").then(log)));
         dispatcher.register(CommandManager.literal("ew").then(CommandManager.literal("summit")
                 .then(CommandManager.literal("enter").requires(op)
                         .executes(c -> reply(c.getSource(), StormSummitManager.enter(c.getSource().getPlayerOrThrow(), 0)))

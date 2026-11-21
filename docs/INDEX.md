@@ -29,9 +29,9 @@ its row in the same task. Use backticks here only for files, folders and classes
 | `util/` | Spell managers and rules, progression, loadouts, temporary blocks, visual event channels |
 | `entity/` | Spell projectiles and the Guardian; `entity/necromancer/`, `entity/undead/`, `entity/roc/`, `entity/pyreking/`, `entity/firstwizard/` (with its spells in `entity/firstwizard/spell/`) hold the other bosses and mobs |
 | `block/` | Temporary spell blocks and boss blocks |
-| `client/` | Controls, HUD, screens, intro cameras; `client/renderer/`, `client/model/`, `client/particle/`, `client/overlay/`, `client/screen/`, `client/wand/`, and one 3D effects package per element: `client/blockfire/`, `client/blockwind/`, `client/blocknature/`, `client/blockspace/`, and the First Wizard's ink in `client/blockink/` |
+| `client/` | Controls, HUD, screens, intro cameras; `client/renderer/`, `client/model/`, `client/particle/`, `client/overlay/`, `client/screen/`, `client/wand/`, `client/roclanding/` (the Storm Roc intro's element landings), and one 3D effects package per element: `client/blockfire/`, `client/blockwind/`, `client/blocknature/`, `client/blockspace/`, and the First Wizard's ink in `client/blockink/` |
 | `network/` | Client requests and server state sync |
-| `party/` | Parties and ally protection |
+| `party/` | Parties, ally protection, and where a party is set down together |
 | `command/` | The operator and party commands |
 | `arena/` | Guardian fight lifecycle and the Shattered Nave realm |
 | `church/` | Guardian church: placement, ritual, loot, recovery |
@@ -60,6 +60,7 @@ its row in the same task. Use backticks here only for files, folders and classes
 | Client copy of synced player data | `client/ClientPlayerData` | [Progression](reference/progression-and-controls.md) |
 | Packets and state sync | `network/ModNetworking` | [Progression](reference/progression-and-controls.md#implementation-boundaries) |
 | Parties and ally protection | `party/PartyManager`, `PartyStore`, `WandAllies`, `WandExplosionBehavior`, `command/PartyCommands` | [Progression](reference/progression-and-controls.md#parties) |
+| A party side by side at a boss's arrival and on the way home | `party/PartyLine`; used by `crypt/HollowCryptManager`, `hall/PyreGate`, `hall/PyreHallManager`, `summit/StormAerie` (the summit's own line is `summit/StormSummit`, the nave's `arena/GuardianArenaManager`) | [Progression](reference/progression-and-controls.md#parties) |
 | 3D wand model and glass core | `client/wand/WandMesh`, `WandRenderer`, `WandItemModel`; source `art/wand/design.json`, exporter `tools/prepare_wand_assets.py` | [Wand rendering](reference/wand-rendering.md) |
 | Temporary blocks and their restoration | `util/TemporaryBlockManager` | [Spells](reference/spells.md#shared-rules) |
 | Cast effects from the wand tip; first-person fade | `util/SpellCastVisuals`, `client/renderer/SpellViewClearance` | [Spells](reference/spells.md#shared-rules) |
@@ -83,7 +84,7 @@ not in its manager, look in the handler and in `util/WandLoadouts`.
 | Spell | Owners | Reference |
 | --- | --- | --- |
 | Fireball (inferno_wave) | `item/FireAbilityHandler`, `entity/InfernoWaveEntity`, `block/InfernoFlameBlock`, `client/blockfire/InfernoFx` | [Spells](reference/spells.md#fire) |
-| Dragon's Pyre (dragons_pyre) | `item/FireAbilityHandler`, `entity/PyreFrontEntity`, `block/PyreFlameBlock`, `block/PyreCoalsBlock`, `client/blockfire/PyreFx` | [Spells](reference/spells.md#fire) |
+| Dragon's Pyre (dragons_pyre) | `item/FireAbilityHandler`, `util/PyreWaveRules` (the ground path, shared with the client), `entity/PyreFrontEntity`, `block/PyreFlameBlock`, `block/PyreCoalsBlock`, `client/blockfire/PyreFx` | [Spells](reference/spells.md#fire) |
 | Meteor | `util/MeteorManager`, `client/renderer/FireMeteorRenderer`, `client/blockfire/MeteorFx` | [Spells](reference/spells.md#fire) |
 | Flamethrower (heat and overheat) | `util/FireBuildManager`, `FireBuildRules`, `client/blockfire/FlameFx` | [Spells](reference/spells.md#fire) |
 | Fire Leap (fire_hop) | `util/FireLeapManager`, `FireLeapRules`, `client/FireLeapClient`, `client/FireLeapPreview`, `mixin/FireLeapFallMixin`, `mixin/FireLeapMotionMixin`, `client/blockfire/LeapFx` | [Spells](reference/spells.md#fire) |
@@ -98,7 +99,7 @@ not in its manager, look in the handler and in `util/WandLoadouts`.
 | Waylay Dash | `item/WindAbilityHandler`, `client/blockwind/DashFx` | [Spells](reference/spells.md#wind) |
 | Zephyr Strike | `item/WindAbilityHandler`, `util/ZephyrStrikeManager`, `item/ZephyrWingsItem`, `mixin/ScreenHandlerMixin` (keeps the borrowed wings out of chests), `client/blockwind/ZephyrFx` | [Spells](reference/spells.md#wind) |
 | Gale Daggers | `item/WindAbilityHandler`, `util/GaleDaggers`, `entity/GaleDaggerEntity`, `client/renderer/GaleDaggerRenderer`, `client/blockwind/DaggerFx` | [Spells](reference/spells.md#wind) |
-| Updraft | `util/UpdraftManager`, `mixin/UpdraftFallMixin`, `client/blockwind/UpdraftFx` | [Spells](reference/spells.md#wind) |
+| Updraft | `util/UpdraftManager`, `mixin/UpdraftFallMixin`, `util/LaunchLiftoff`, `mixin/LaunchLiftoffMixin`, `client/blockwind/UpdraftFx` | [Spells](reference/spells.md#wind) |
 | Block-wind visuals shared by all Wind spells | `client/blockwind/BlockWindEffects`, `BlockWindKit`, `BlockWindMesh`, `util/BlockWindEvents`; study in `art/wind/blockwind/` | [Spells](reference/spells.md#wind), [Art](reference/art-and-assets.md) |
 
 ### Stone
@@ -118,7 +119,7 @@ not in its manager, look in the handler and in `util/WandLoadouts`.
 | Seed and the mark it leaves | `item/NatureAbilityHandler`, `entity/SeedProjectileEntity`, `util/NatureCombat`, `client/renderer/NatureSeedRenderer`, `client/SeedMarkClientEffects` | [Spells](reference/spells.md#nature) |
 | Thornbite (thorn_lash) | `item/NatureAbilityHandler`, `entity/ThornLashEntity`, `util/ThornLashRules`, `client/renderer/ThornLashRenderer`, `ThornbiteVisual` | [Spells](reference/spells.md#nature) |
 | Sentry Bloom flowers (tendril_bloom): throwing, shooting, collecting, breaking | `item/NatureAbilityHandler`, `util/FlowerTurretManager`, `util/WandLoadouts` (routes the break and collect clicks), `entity/SentryBloomEntity`, `entity/SentryBloomPodEntity`, `block/NatureSeedlingBlock`, `registry/ModSpellBlocks` (the stem block's settings), `client/renderer/SentryBloomRenderer`, `SentryBloomPodRenderer` | [Spells](reference/spells.md#nature) |
-| Springbloom | `util/SpringbloomManager`, `SpringbloomRules`, `SpringbloomFootprint`, `entity/SpringbloomEntity`, `block/SpringbloomBlock`, `mixin/SpringbloomFallMixin`, `mixin/SpringbloomMovementMixin`, `client/renderer/SpringbloomRenderer` | [Spells](reference/spells.md#nature) |
+| Springbloom | `util/SpringbloomManager`, `SpringbloomRules`, `SpringbloomFootprint`, `entity/SpringbloomEntity`, `block/SpringbloomBlock`, `mixin/SpringbloomFallMixin`, `mixin/SpringbloomMovementMixin`, `util/LaunchLiftoff`, `mixin/LaunchLiftoffMixin`, `client/renderer/SpringbloomRenderer` | [Spells](reference/spells.md#nature) |
 | Full Bloom (overgrowth) | `item/NatureAbilityHandler`, `util/FullBloomManager` | [Spells](reference/spells.md#nature) |
 | Block-nature visuals shared by all Nature spells | `client/blocknature/BlockNatureEffects`, `BlockNatureKit`, `BlockNatureMesh`, `NatureFx`, `util/BlockNatureEvents`, `client/renderer/NatureMeshes`; study in `art/nature/blocknature/` | [Spells](reference/spells.md#nature), [Art](reference/art-and-assets.md) |
 
@@ -136,7 +137,8 @@ not in its manager, look in the handler and in `util/WandLoadouts`.
 ## Bosses, mobs and their realms
 
 Shared by every boss: `entity/WandBoss` (how spells treat a boss), `entity/BossFightLog`
-(the operator fight log), `mixin/BossRealmDeathMixin` (nothing drops in a realm), and the
+(the operator fight log), `entity/BossHealthBar` (health for fighters and fallen spectators),
+`mixin/BossRealmDeathMixin` (nothing drops in a realm), and the
 cinematic plumbing: `client/BossIntroCamera`, `client/IntroClip`, and the hooks that give a
 scene the camera, HUD, input, fog and light, `mixin/IntroCameraMixin`, `IntroGameRendererMixin`,
 `IntroHudMixin`, `IntroInputMixin`, `IntroLookMixin`, `IntroFogMixin`, `IntroLightmapMixin`.
@@ -146,10 +148,12 @@ scene the camera, HUD, input, fog and light, `mixin/IntroCameraMixin`, `IntroGam
 | Feature | Owners | Reference |
 | --- | --- | --- |
 | Fight loop and state | `entity/FracturedGuardianEntity`, `entity/GuardianBossCombat` | [Guardian combat](reference/guardian-combat.md) |
-| Tuning and rules | `entity/GuardianCombatRules`, `GuardianPhaseRules`, `GuardianShellRules`, `GuardianPulseRules`, `GuardianVolleyRules`, `GuardianFanRules` | [Guardian combat](reference/guardian-combat.md#code-and-art-ownership) |
-| Beam, leap, thrown rock, shockwave and cover | `entity/GuardianBeamAttack`, `GuardianBeamGeometry`, `GuardianBeamTiming`, `GuardianLeapAttack`, `GuardianLeapRules`, `GuardianRockEntity`, `GuardianThrowSocket`, `GuardianWaveSurface`, `GuardianWallImpact` | [Guardian combat](reference/guardian-combat.md) |
+| The chooser, strings, tuning and rules | `entity/GuardianCombatRules`, `GuardianPhaseRules`, `GuardianShellRules` | [Guardian combat](reference/guardian-combat.md#how-it-chooses); why, in the [design notes](design/guardian.md) |
+| Airburst (cast and co-op back stones) | `entity/GuardianAirburstRules`, `GuardianFanRules`, `GuardianVolleyRules`, `GuardianRockEntity`, `client/renderer/GuardianFanVisual` | [Guardian combat](reference/guardian-combat.md#the-slam-the-leap-and-the-airburst) |
+| Sweep and Scar (spike walls) | `entity/GuardianSweepRules`, `GuardianScarRules`, `GuardianSpikeEntity`, `client/renderer/GuardianSpikeRenderer` | [Guardian combat](reference/guardian-combat.md#the-sweep-and-the-scar) |
+| Beam (rehearsal only), leap, thrown rock, slam wave and cover | `entity/GuardianBeamAttack`, `GuardianBeamGeometry`, `GuardianBeamTiming`, `GuardianLeapAttack`, `GuardianLeapRules`, `GuardianRockEntity`, `GuardianThrowSocket`, `GuardianWaveSurface`, `GuardianWallImpact` | [Guardian combat](reference/guardian-combat.md) |
 | Intro cinematic | `entity/GuardianIntro`, `GuardianIntroTrack`, `GuardianIntroZombieEntity`, `client/GuardianIntroClient` | [Church and arena](reference/church-and-arena.md#the-intro-the-zombie) |
-| Core pulse: its timing and pull strength, and the pull as each player's client applies it | `entity/GuardianPulseRules`, `client/GuardianPullClient` | [Guardian combat](reference/guardian-combat.md#delayed-slams-and-the-core-pulse) |
+| Core pulse: its timing and pull strength, and the pull as each player's client applies it | `entity/GuardianPulseRules`, `client/GuardianPullClient` | [Guardian combat](reference/guardian-combat.md#the-core-pulse) |
 | Model and drawn attacks | `client/model/FracturedGuardianModel`, `client/renderer/FracturedGuardianRenderer`, `GuardianBeamVisual`, `GuardianWaveVisual`, `GuardianFanVisual`, `GuardianLeapVisual`, `GuardianBurnVisual`, `GuardianUnstableVisual`, `GuardianHeldRockLayer`, `GuardianRockRenderer` | [Guardian combat](reference/guardian-combat.md#code-and-art-ownership) |
 | Fight admission, wipe, victory, recovery, and keeping players in the fight | `arena/GuardianArenaManager`, `GuardianArenaRules`, `GuardianArenaJournal`, `mixin/GuardianArenaPlayerMixin`, `mixin/GuardianArenaWorldMixin` | [Church and arena](reference/church-and-arena.md) |
 | Shattered Nave realm | `arena/ShatteredNave`, `ShatteredNaveShafts`, `client/NaveShaftEffects`, `mixin/NaveFogMixin` (fog here and in the Burned Throne Hall), `command/NaveCommands`; layout `art/guardian_nave/build_layout.py` | [Church and arena](reference/church-and-arena.md#the-shattered-nave) |
@@ -162,7 +166,8 @@ scene the camera, HUD, input, fog and light, `mixin/IntroCameraMixin`, `IntroGam
 | Feature | Owners | Reference |
 | --- | --- | --- |
 | Fight loop, state and tuning | `entity/necromancer/NecromancerEntity`, `NecromancerCombat`, `NecromancerRules` | [Necromancer combat](reference/necromancer-combat.md) |
-| His spells' entities, models and renderers | `entity/necromancer/SoulBoltEntity`, `SoulFireballEntity`, `GraspingHandEntity`, `HarvestSoulEntity`, `NecromancerSoulEntity` (the soul split); `client/model/SoulBoltModel`, `SoulFireballModel`, `GraspingHandModel`, `HarvestSoulModel`, `NecromancerSoulModel`; `client/renderer/SoulBoltRenderer`, `SoulFireballRenderer`, `GraspingHandRenderer`, `HarvestSoulRenderer`, `NecromancerSoulRenderer` | [Necromancer combat](reference/necromancer-combat.md) |
+| The chooser, what it reads, strings and the frenzy | `entity/necromancer/NecromancerRules`, `NecromancerCombat` | [Necromancer combat](reference/necromancer-combat.md#how-it-chooses); why, in the [design notes](design/necromancer.md) |
+| His spells' entities, models and renderers | `entity/necromancer/SoulBoltEntity`, `SoulFireballEntity`, `GraspingHandEntity`, `HarvestSoulEntity`; `client/model/SoulBoltModel`, `SoulFireballModel`, `GraspingHandModel`, `HarvestSoulModel`; `client/renderer/SoulBoltRenderer`, `SoulFireballRenderer`, `GraspingHandRenderer`, `HarvestSoulRenderer` | [Necromancer combat](reference/necromancer-combat.md) |
 | Siege minions | `entity/necromancer/NecromancerMinion` | [Necromancer combat](reference/necromancer-combat.md#sieges) |
 | Intro cinematic | `entity/necromancer/NecromancerIntro`, `IntroSoulEntity`, `IntroZombieEntity`, `client/NecromancerIntroClient` | [Necromancer combat](reference/necromancer-combat.md#intro-cinematic) |
 | Transformation cinematic | `entity/necromancer/NecromancerTransformScene`, `NecromancerTransformTrack`, `TransformSoulEntity`, `client/NecromancerTransformClient`; scene `art/hollow_necromancer/transform/build_scene.py` | [Necromancer combat](reference/necromancer-combat.md#phase-two-the-colossus) |
@@ -188,13 +193,16 @@ scene the camera, HUD, input, fog and light, `mixin/IntroCameraMixin`, `IntroGam
 | Feature | Owners | Reference |
 | --- | --- | --- |
 | Fight loop, state and tuning | `entity/roc/StormRocEntity`, `StormRocCombat`, `StormRocRules` | [Storm Summit](reference/storm-summit.md#phase-one) |
+| What it chooses: brawl attacks, strings, targets, calls, hops, low passes and when it dives | `entity/roc/StormRocBrain`; checked by `StormRocBrainContractTest` | [Storm Summit](reference/storm-summit.md#how-it-chooses-in-the-brawl) |
+| Fight log for tuning (`/ew summit log on`) | `entity/roc/StormRocFightLog`, `entity/BossFightLog` | [Storm Summit](reference/storm-summit.md#visiting) |
 | Poses, hurtboxes, flight path | `entity/roc/StormRocPose`, `RocBodyPartEntity`, `RocApproach` | [Storm Summit](reference/storm-summit.md#phase-one) |
 | How tornadoes, lightning strikes and warning circles are drawn | `client/renderer/RocEffectRenderer`, `entity/roc/RocEffectEntity` (what the server sends; damage stays in the fight loop); tornado texture `art/roc_effects/build_tornado_texture.py` | [Storm Summit](reference/storm-summit.md#phase-one) |
-| Fight roster and lifecycle | `summit/StormRocEncounter` | [Storm Summit](reference/storm-summit.md) |
+| Fight roster, spectating and release | `summit/StormRocEncounter` | [Storm Summit](reference/storm-summit.md) |
 | Storm Summit realm | `summit/StormSummit`, `StormSummitManager`, `StormSummitLayout` (generated), `SummitRelicBlock`; layout `art/storm_summit/build_layout.py` | [Storm Summit](reference/storm-summit.md#the-realm) |
 | Aerie and gong: who is called and which fight slot they get | `summit/StormAerie`, `StormAerieLayout` (generated), `StormGongBlock`, `StormGongBlockEntity`, `world/StormAerieStructure`, `client/renderer/StormGongRenderer`; layout `art/storm_aerie/build_layout.py` | [Storm Summit](reference/storm-summit.md#the-aerie) |
-| Where called players land on the summit | `summit/StormSummit` (the arrival point), `summit/StormRocIntro` (carries them up) | [Storm Summit](reference/storm-summit.md#the-realm) |
+| Where called players land on the summit | `summit/StormSummit` (the arrival and the party's line), `summit/StormRocIntro` (carries them up) | [Storm Summit](reference/storm-summit.md#the-realm) |
 | Intro cinematic (the snatch), in place of the loading screen | `summit/StormRocIntro`, `StormRocIntroTrack`, `client/StormRocIntroClient`, `client/StormRocIntroPuppets`, `mixin/StormRocIntroLoadingMixin`, `mixin/StormRocIntroHideMixin`; scene `art/storm_roc/intro/build_intro.py` | [Storm Summit](reference/storm-summit.md) |
+| Intro landings, one per element | `client/StormRocLandingEffects`, `client/roclanding/`; scenes `art/storm_roc/intro/<element>_landing.py`, installed by `art/storm_roc/intro/install_landings.py` | [Storm Summit](reference/storm-summit.md) |
 | The Roc's model, renderer, crackle and gaze | `client/model/StormRocModel`, `client/renderer/StormRocRenderer`, `StormRocCrackleLayer`, `client/StormRocMotion` | [Storm Summit](reference/storm-summit.md#authoring) |
 | Cloud sea and phase-two storm sky and rain | `client/SummitCloudEffects`, `client/SummitStormClient`, `mixin/SummitStormRainMixin`, `mixin/SummitStormWeatherMixin` | [Storm Summit](reference/storm-summit.md#phase-change-and-phase-two) |
 | Operator commands | `command/SummitCommands` | [Storm Summit](reference/storm-summit.md#visiting) |
@@ -210,8 +218,8 @@ scene the camera, HUD, input, fog and light, `mixin/IntroCameraMixin`, `IntroGam
 | His fire on the floor | `block/PyreKingFireBlock` | [Pyre King](reference/pyre-king.md#the-fight) |
 | Intro cinematic | `entity/pyreking/PyreKingIntro`, `PyreKingIntroTrack`, `client/PyreKingIntroClient`; scene `art/pyre_king/intro/build_intro.py` | [Pyre King](reference/pyre-king.md#the-intro) |
 | Model, renderer, blade fire and chains | `client/model/PyreKingModel`, `client/renderer/PyreKingRenderer`, `PyreKingEffectsLayer` | [Pyre King](reference/pyre-king.md#blade-fire-and-chains) |
-| Burned Gate (the way in) | `hall/PyreGate`, `PyreSealBlock`, `PyreGateVeilBlock`, `PyreGateLayout` (generated), `world/PyreGateStructure`; layout `art/pyre_gate/build_layout.py` | [Pyre King](reference/pyre-king.md#the-burned-gate) |
-| Burned Throne Hall realm | `hall/PyreHall`, `PyreHallManager`, `client/PyreSeaHaze`, `mixin/PyreSeaFogColorMixin`, `mixin/NaveFogMixin`, `command/HallCommands`; layout `art/pyre_hall/build_layout.py` | [Pyre King](reference/pyre-king.md#the-burned-throne-hall) |
+| Burned Gate, fight roster, spectating and return | `hall/PyreGate`, `PyreHallManager`, `PyreSealBlock`, `PyreGateVeilBlock`, `PyreGateLayout` (generated), `world/PyreGateStructure`; layout `art/pyre_gate/build_layout.py` | [Pyre King](reference/pyre-king.md#the-burned-gate) |
+| Burned Throne Hall realm and command-started fights | `hall/PyreHall`, `PyreHallManager`, `PyreGate`, `client/PyreSeaHaze`, `mixin/PyreSeaFogColorMixin`, `mixin/NaveFogMixin`, `command/HallCommands`; layout `art/pyre_hall/build_layout.py` | [Pyre King](reference/pyre-king.md#the-burned-throne-hall) |
 | Operator commands | `command/PyreKingCommands` | [Pyre King](reference/pyre-king.md#commands) |
 | Art source and exporter | `art/pyre_king/build_art.py` | [Pyre King](reference/pyre-king.md#ownership) |
 
@@ -251,7 +259,7 @@ scene the camera, HUD, input, fog and light, `mixin/IntroCameraMixin`, `IntroGam
 
 | What | Where | Reference |
 | --- | --- | --- |
-| Contract checks run by the build | `GuardianBeamContractTest`, `NecromancerContractTest`, `PyreKingContractTest`, `FirstWizardContractTest`, `PartyStoreTest`, `StormRocGazeContractTest`, wired in `build.gradle` | [Testing](reference/testing.md) |
+| Contract checks run by the build | `GuardianBeamContractTest`, `NecromancerContractTest`, `PyreKingContractTest`, `FirstWizardContractTest`, `PartyStoreTest`, `StormRocGazeContractTest`, `StormRocBrainContractTest`, wired in `build.gradle` | [Testing](reference/testing.md) |
 | Server and client fixtures | Helper classes under `src/guardianTest/java/`; runners in `tools/` named after the area and ending in smoke.init.gradle | [Testing](reference/testing.md#selecting-a-fixture) |
 | Asset and export checks | `tools/check_assets.py` | [Art](reference/art-and-assets.md) |
 | This index and the docs' links | `gradle/docs-check.gradle` | [Documentation rules](README.md) |

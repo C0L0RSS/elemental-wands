@@ -2,19 +2,27 @@ package com.anton.elementalwands.entity.necromancer;
 
 import com.anton.elementalwands.entity.necromancer.NecromancerRules.Action;
 import com.anton.elementalwands.entity.necromancer.NecromancerRules.Candidate;
+import com.anton.elementalwands.entity.necromancer.NecromancerRules.Read;
+import com.anton.elementalwands.entity.necromancer.NecromancerRules.Seen;
+import com.anton.elementalwands.entity.necromancer.NecromancerRules.Self;
 import com.anton.elementalwands.entity.necromancer.NecromancerRules.Stage;
+import com.anton.elementalwands.entity.necromancer.NecromancerRules.Tell;
+import com.anton.elementalwands.entity.necromancer.NecromancerRules.Temper;
 import com.anton.elementalwands.entity.necromancer.NecromancerRules.Wave;
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Predicate;
 
 /** Pure rule checks; run by the Gradle check task without launching Minecraft. */
 public final class NecromancerContractTest {
     public static void main(String[] args) {
         UUID a = new UUID(0, 1), b = new UUID(0, 2), c = new UUID(0, 3);
-        Map<Action, Long> ready = new EnumMap<>(Action.class);
+        Predicate<Action> all = action -> true;
+        Self calm = Self.CALM, wounded = new Self(true, false, false, true, false), hounded = new Self(false, true, false, true, false),
+                stale = new Self(false, false, true, true, false), crowded = new Self(false, false, false, false, false),
+                frenzy = new Self(true, false, false, true, true);
 
         require(NecromancerRules.health(1) == 800 && NecromancerRules.health(2) == 1300 && NecromancerRules.health(3) == 1800, "Party health scaling moved");
         require(NecromancerRules.threshold(300, 600) && !NecromancerRules.threshold(301, 600), "Half-health boundary moved");
@@ -53,6 +61,10 @@ public final class NecromancerContractTest {
                 && NecromancerRules.quickening(NecromancerRules.Undead.BRUTE) > NecromancerRules.quickening(NecromancerRules.Undead.ARCHER)
                 && NecromancerRules.quickening(NecromancerRules.Undead.ARCHER) > 0, "Siege quickening out of order");
         double crawler = 2.159 * Math.pow(.19 * (1 + NecromancerRules.quickening(NecromancerRules.Undead.CRAWLER)), 2) * 20;
+        // ...and hit harder than their wild kin, by a share: a buff, not a new monster. The horde's claws gain the most.
+        for (var kind : NecromancerRules.Undead.values())
+            require(NecromancerRules.empowerment(kind) > 0 && NecromancerRules.empowerment(kind) <= .5, "Siege damage buff out of range for " + kind);
+        require(NecromancerRules.empowerment(NecromancerRules.Undead.CRAWLER) > NecromancerRules.empowerment(NecromancerRules.Undead.BRUTE), "Siege damage buff out of order");
         require(crawler > 4.32 && crawler < 5.6 && crawler / com.anton.elementalwands.entity.undead.HollowUndeadClips.CRAWLER_STRIDE
                 <= com.anton.elementalwands.entity.undead.HollowUndeadEntity.MAX_WALK_PLAYBACK,
                 "Quickened crawlers can be walked away from, outrun a sprint or overrun their walk clip: " + crawler);
@@ -66,7 +78,7 @@ public final class NecromancerContractTest {
         // Soul light: real block light levels; a rain marker brightens to full in at most four light
         // changes; a glow outlives a tick's refresh (block ticks run before entities) but not much more.
         for (int level : new int[] {NecromancerRules.GLOW_FIREBALL, NecromancerRules.GLOW_BOLT, NecromancerRules.GLOW_HARVEST,
-                NecromancerRules.GLOW_SOUL, NecromancerRules.GLOW_IMPACT}) require(level >= 1 && level <= 15, "Soul light level out of range: " + level);
+                NecromancerRules.GLOW_IMPACT}) require(level >= 1 && level <= 15, "Soul light level out of range: " + level);
         int glowSteps = 0;
         for (int age = 0, last = 0; age <= NecromancerRules.RAIN_WARNING; age++) {
             int glow = NecromancerRules.rainGlow(age);
@@ -84,47 +96,121 @@ public final class NecromancerContractTest {
         for (int i = 0; i < 40; i++) healed += NecromancerRules.drainHeal(NecromancerRules.DRAIN_DAMAGE, 600, healed);
         require(Math.abs(healed - 600 * NecromancerRules.DRAIN_HEAL_SHARE) < 1e-3, "Drain heal exceeded its cap: " + healed);
 
-        // A close player triggers the escape before anything else.
-        var close = List.of(new Candidate(a, 3, true), new Candidate(b, 12, true));
-        require(NecromancerRules.choose(close, ready, 0, null, 0, 2) == Action.BLINK, "Close player did not trigger blink");
-        // Every two or three casts the caster shifts somewhere new.
-        var spread = List.of(new Candidate(a, 10, true), new Candidate(b, 14, true));
-        require(NecromancerRules.choose(spread, ready, 0, Action.DRAIN, 2, 2) == Action.SHIFT, "Caster did not reposition");
-        require(NecromancerRules.choose(spread, ready, 0, Action.DRAIN, 1, 2) != Action.SHIFT, "Caster repositioned too early");
-        // Otherwise spells rotate; no spell repeats while another is ready, and nothing raises an army in a duel.
-        require(NecromancerRules.choose(spread, ready, 0, Action.DRAIN, 0, 2) == Action.HANDS, "Spell rotation repeated");
-        require(NecromancerRules.choose(spread, ready, 0, null, 0, 2) == Action.DRAIN, "Drain lost priority");
-        require(NecromancerRules.choose(spread, ready, 0, Action.HANDS, 0, 2) == Action.DRAIN, "Rotation skipped drain");
-        ready.put(Action.DRAIN, 100L);
-        require(NecromancerRules.choose(spread, ready, 0, Action.HANDS, 0, 2) == Action.AMBUSH, "Ambush missing from the rotation");
-        ready.clear();
+        // On top of him: he blinks away, and a player he has just fled gets the burst. A memory, not a roll;
+        // each falls back on the other when it is not ready.
+        require(only(NecromancerRules.robedWeights(Read.at(3), calm, null, null, all)) == Action.BLINK, "Close player did not trigger blink");
+        require(only(NecromancerRules.robedWeights(Read.at(3, Tell.PRESSING), calm, null, null, all)) == Action.BURST, "A player who chased him down was not burst");
+        require(only(NecromancerRules.robedWeights(Read.at(3), calm, null, null, x -> x != Action.BLINK)) == Action.BURST, "No answer to a close player with blink spent");
+        require(only(NecromancerRules.robedWeights(Read.at(3, Tell.PRESSING), calm, null, null, x -> x != Action.BURST)) == Action.BLINK, "No answer to a pressing player with burst spent");
+        require(!NecromancerRules.robedWeights(Read.at(3), calm, null, null, x -> x != Action.BLINK && x != Action.BURST).isEmpty(), "Stood idle beside a player with both escapes spent");
+        // The slam is only chosen for a player inside it, so it cannot be baited from a step outside; and a player he
+        // has already fled who hangs there is fought like anyone at that range, not fled again.
+        var hanging = NecromancerRules.robedWeights(Read.at(4.2, Tell.PRESSING), calm, null, null, all);
+        require(!hanging.containsKey(Action.BURST) && !hanging.containsKey(Action.BLINK) && hanging.size() > 1, "A player just outside the slam drew it, or another blink");
+        require(only(NecromancerRules.robedWeights(Read.at(4.2), calm, null, null, all)) == Action.BLINK, "A player at the blink's edge was not blinked from");
+        require(!NecromancerRules.robedWeights(Read.at(4.2), calm, null, null, x -> x != Action.BLINK).containsKey(Action.BURST), "The slam was chosen for a player it cannot reach");
+        // The burst is smaller than the ambush's: a player a block from him who reacts in a quarter second sprints out.
+        require((Action.BURST.impact - 5) * .28 > NecromancerRules.BURST_RADIUS - 1 && NecromancerRules.BURST_RADIUS < NecromancerRules.AMBUSH_RADIUS
+                && Action.BURST.duration - Action.BURST.impact >= 20, "The burst cannot be stepped out of, or leaves no opening");
+        // Range decides the family: drain only up close, bolts the staple at range, and no move without a reason.
+        var mid = NecromancerRules.robedWeights(Read.at(8), calm, null, null, all);
+        var ranged = NecromancerRules.robedWeights(Read.at(16), calm, null, null, all);
+        require(mid.keySet().equals(java.util.Set.of(Action.BOLT, Action.HANDS, Action.AMBUSH, Action.DRAIN)), "Mid-range kit wrong: " + mid);
+        require(ranged.keySet().equals(java.util.Set.of(Action.BOLT, Action.HANDS, Action.AMBUSH)) && heaviest(ranged) == Action.BOLT, "Ranged kit wrong: " + ranged);
+        // What the player does tilts it. Standing still or eating draws the ambush, and eating cuts his rest short.
+        require(share(NecromancerRules.robedWeights(Read.at(12, Tell.STILL), calm, null, null, all), Action.AMBUSH) > .5, "A still player was not ambushed");
+        require(share(NecromancerRules.robedWeights(Read.at(12, Tell.HEALING), calm, null, null, all), Action.AMBUSH) > .5, "An eating player was not ambushed");
+        require(NecromancerRules.punishes(Read.at(12, Tell.HEALING)) && !NecromancerRules.punishes(Read.at(12, Tell.STILL)), "Only healing cuts the rest short");
+        // Hiding: only what needs no sight, and once they have stayed hidden he comes round the cover.
+        var lost = NecromancerRules.robedWeights(Read.unseen(12), calm, null, null, all);
+        var hiding = NecromancerRules.robedWeights(Read.unseen(12, Tell.HIDDEN), calm, null, null, all);
+        require(lost.keySet().equals(java.util.Set.of(Action.HANDS, Action.AMBUSH)), "Cast a sight-based spell without vision: " + lost);
+        require(hiding.keySet().equals(java.util.Set.of(Action.HANDS, Action.AMBUSH, Action.SHIFT)), "A hidden player did not draw him round: " + hiding);
+        require(heaviest(NecromancerRules.robedWeights(Read.at(12, Tell.BUNCHED), calm, null, null, all)) == Action.HANDS, "Players standing together did not draw the hands");
+        // A hovering player: nothing from the ground, only skulls.
+        require(only(NecromancerRules.robedWeights(Read.at(12, Tell.AIRBORNE), calm, null, null, all)) == Action.BOLT, "Cast a ground spell at a hovering player");
+        // He drains when wounded, and shifts for a reason: heavy fire, a stale spot, a player out of reach. Never straight after a move.
+        require(heaviest(NecromancerRules.robedWeights(Read.at(8), wounded, null, null, all)) == Action.DRAIN
+                && share(mid, Action.DRAIN) < .2, "Drain does not follow his wounds");
+        require(heaviest(NecromancerRules.robedWeights(Read.at(12), hounded, null, null, all)) == Action.SHIFT, "Heavy fire did not move him");
+        require(NecromancerRules.robedWeights(Read.at(12), stale, null, null, all).containsKey(Action.SHIFT)
+                && share(NecromancerRules.robedWeights(Read.at(12), stale, null, null, all), Action.SHIFT) < .25, "A stale spot should only nudge him to move");
+        require(NecromancerRules.robedWeights(Read.at(26), calm, null, null, all).containsKey(Action.SHIFT), "He did not close on a player beyond his hands");
+        for (Action move : new Action[]{Action.BLINK, Action.SHIFT})
+            require(!NecromancerRules.robedWeights(Read.at(12), hounded, move, null, all).containsKey(Action.SHIFT), "Two moves in a row after " + move);
+        // Never the same cast three times running, seldom twice; the bolt remains when it is all he has.
+        require(!NecromancerRules.robedWeights(Read.at(16), calm, Action.BOLT, Action.BOLT, all).containsKey(Action.BOLT), "A third bolt volley in a row");
+        require(share(NecromancerRules.robedWeights(Read.at(16), calm, Action.BOLT, null, all), Action.BOLT) < share(ranged, Action.BOLT), "A repeat is not made less likely");
+        require(only(NecromancerRules.robedWeights(Read.at(16), calm, Action.BOLT, Action.BOLT, x -> x == Action.BOLT)) == Action.BOLT, "No fallback spell");
+        require(NecromancerRules.robedWeights(Read.unseen(60), calm, null, null, all).isEmpty(), "Cast beyond the encounter");
+        for (double distance : new double[]{3, 8, 16, 26, 40}) for (Self self : new Self[]{calm, wounded, hounded, stale})
+            for (Action action : NecromancerRules.robedWeights(Read.at(distance, Tell.STILL, Tell.BUNCHED), self, null, null, all).keySet())
+                require(!action.colossusOnly(), "The robed caster used " + action);
         // Drain only starts on a close player, and a sprint (5.6 blocks a second) through its windup escapes the break range.
         require(!NecromancerRules.canTarget(Action.DRAIN, new Candidate(a, 12, true)) && NecromancerRules.canTarget(Action.DRAIN, new Candidate(a, 9, true)),
                 "Drain range moved");
         require(Action.DRAIN.impact >= 30 && NecromancerRules.DRAIN_BREAK_RANGE - NecromancerRules.DRAIN_RANGE < 5.6 * Action.DRAIN.impact / 20.0,
                 "Drain windup too short to step out of");
         require((Action.DRAIN.duration - Action.DRAIN.impact) / NecromancerRules.DRAIN_INTERVAL >= 5, "Drain lost its pulses");
-        // Ambush needs no vision but never lands on top of a close player; hands need no vision; drain and bolt do.
-        var hidden = List.of(new Candidate(a, 10, false));
-        ready.put(Action.HANDS, 100L); ready.put(Action.AMBUSH, 100L);
-        require(NecromancerRules.choose(hidden, ready, 0, null, 0, 2) == null, "Cast a sight-based spell without vision");
-        require(NecromancerRules.choose(hidden, ready, 100, null, 0, 2) == Action.HANDS, "Hands need no vision");
-        require(NecromancerRules.choose(hidden, ready, 100, Action.HANDS, 0, 2) == Action.AMBUSH, "Ambush needs no vision");
         require(!NecromancerRules.canTarget(Action.AMBUSH, new Candidate(a, 5, true)), "Ambushed a player already beside it");
-        // Bolts remain the fallback even directly after a bolt.
-        ready.clear();
-        for (Action action : Action.values()) if (action != Action.BOLT) ready.put(action, 1000L);
-        require(NecromancerRules.choose(spread, ready, 0, Action.BOLT, 0, 2) == Action.BOLT, "No fallback spell");
-        require(NecromancerRules.choose(List.of(new Candidate(a, 40, true)), ready, 0, null, 0, 2) == null, "Bolt fired beyond range");
+        require(!NecromancerRules.canTarget(Action.BOLT, new Candidate(a, 40, true)), "Bolt fired beyond range");
 
-        // Target rotation: the least recently targeted eligible player, nearest breaking ties.
+        // Who it turns on: whoever it has left alone longest, nearest breaking ties; eating and standing still move a
+        // player up, and inside a string it turns on someone else.
         Map<UUID, Long> last = new HashMap<>();
-        var three = List.of(new Candidate(a, 9, true), new Candidate(b, 5, true), new Candidate(c, 7, true));
-        require(NecromancerRules.target(Action.BOLT, three, last).id().equals(b), "Tie did not prefer nearest");
-        last.put(b, 10L); last.put(c, 5L);
-        require(NecromancerRules.target(Action.BOLT, three, last).id().equals(a), "Rotation skipped the untargeted player");
-        last.put(a, 20L);
-        require(NecromancerRules.target(Action.BOLT, three, last).id().equals(c), "Rotation ignored oldest target");
+        var three = List.of(new Seen(a, Read.at(9)), new Seen(b, Read.at(5)), new Seen(c, Read.at(7)));
+        require(NecromancerRules.focus(three, last, 400, null).id().equals(b), "Tie did not prefer nearest");
+        last.put(b, 390L); last.put(c, 380L);
+        require(NecromancerRules.focus(three, last, 400, null).id().equals(a), "Rotation skipped the untargeted player");
+        last.put(a, 395L);
+        require(NecromancerRules.focus(three, last, 400, null).id().equals(c), "Rotation ignored oldest target");
+        require(NecromancerRules.focus(three, last, 400, c).id().equals(b), "A string did not turn on someone else");
+        require(NecromancerRules.focus(List.of(new Seen(a, Read.at(9))), last, 400, a).id().equals(a), "A lone player cannot be avoided");
+        var eater = List.of(new Seen(a, Read.at(9, Tell.HEALING)), new Seen(b, Read.at(5)), new Seen(c, Read.at(7)));
+        require(NecromancerRules.focus(eater, last, 400, null).id().equals(a), "An eating player was not picked out");
+        last.put(a, 400L); last.put(c, 400L - NecromancerRules.NEGLECT);
+        require(NecromancerRules.focus(eater, last, 400, null).id().equals(c), "A player left alone for ten seconds must come first");
+        var idler = List.of(new Seen(a, Read.at(9, Tell.HEALING, Tell.STILL)), new Seen(b, Read.at(5)), new Seen(c, Read.at(7)));
+        require(NecromancerRules.focus(idler, last, 400, null).id().equals(c), "Ten seconds alone must outrank a player both eating and standing still");
+        last.put(a, 400L - NecromancerRules.NEGLECT + 1);
+        require(NecromancerRules.focus(idler, last, 400, null).id().equals(c) && NecromancerRules.overdue(c, last, 400) && !NecromancerRules.overdue(a, last, 400),
+                "An overdue player lost their turn to one who is nearly overdue and eating");
+        // The frenzy's casts come back sooner; nothing else's cooldown moves.
+        for (Action action : Action.values()) {
+            require(NecromancerRules.recast(action, Temper.COLOSSUS) == action.duration + action.cooldown && NecromancerRules.recast(action, Temper.SECOND_DUEL) == action.duration + action.cooldown,
+                    action + " changed its cooldown outside the frenzy");
+            require(NecromancerRules.cooldown(action, Temper.COLOSSUS) == action.cooldown && NecromancerRules.cooldown(action, Temper.FRENZY) < action.cooldown
+                    && NecromancerRules.recast(action, Temper.FRENZY) == action.duration + NecromancerRules.cooldown(action, Temper.FRENZY), action + " keeps its full cooldown in the frenzy");
+            require(NecromancerRules.recast(action, Temper.FRENZY) < NecromancerRules.recast(action, Temper.COLOSSUS) && NecromancerRules.recast(action, Temper.FRENZY) > action.duration + action.cooldown / 2,
+                    action + " does not come back sooner, or comes back too soon, in the frenzy");
+        }
+
+        // Strings and rests. A move always goes straight into a cast; his openings never chain; the second duel and
+        // every extra player press harder, and no rest shrinks to nothing.
+        require(NecromancerRules.temper(Stage.DUEL_A, false, false) == Temper.FIRST_DUEL && NecromancerRules.temper(Stage.DUEL_B, false, false) == Temper.SECOND_DUEL
+                && NecromancerRules.temper(Stage.DONE, true, false) == Temper.COLOSSUS && NecromancerRules.temper(Stage.DONE, true, true) == Temper.FRENZY, "Tempers moved");
+        for (Temper temper : Temper.values()) {
+            require(NecromancerRules.chainChance(temper, Action.BLINK, 1) == 1 && NecromancerRules.chainChance(temper, Action.SHIFT, 1) == 1, "A move was not followed at once");
+            for (Action opening : new Action[]{Action.AMBUSH, Action.BURST, Action.DRAIN, Action.DIVE, Action.HARVEST})
+                require(NecromancerRules.chainChance(temper, opening, 4) == 0, opening + " leaves no opening in " + temper);
+            for (int players = 1; players <= 8; players++) {
+                require(NecromancerRules.chainChance(temper, Action.BOLT, players) <= .9, "Strings never end with " + players + " players");
+                require(NecromancerRules.rest(temper, players) >= 6 && NecromancerRules.rest(temper, players) <= NecromancerRules.RECOVERY_GAP, "Rest out of range");
+                if (players > 1) require(NecromancerRules.rest(temper, players) <= NecromancerRules.rest(temper, players - 1)
+                        && NecromancerRules.chainChance(temper, Action.BOLT, players) >= NecromancerRules.chainChance(temper, Action.BOLT, players - 1), "A bigger party got an easier pace");
+            }
+            require(temper.limit >= 2 && temper.limit <= 3, "String length moved");
+        }
+        require(NecromancerRules.chainChance(Temper.SECOND_DUEL, Action.BOLT, 1) > NecromancerRules.chainChance(Temper.FIRST_DUEL, Action.BOLT, 1)
+                && NecromancerRules.chainChance(Temper.FRENZY, Action.SWIPE, 1) > NecromancerRules.chainChance(Temper.COLOSSUS, Action.SWIPE, 1)
+                && NecromancerRules.rest(Temper.FRENZY, 1) < NecromancerRules.rest(Temper.COLOSSUS, 1)
+                && NecromancerRules.rest(Temper.FIRST_DUEL, 2) < NecromancerRules.rest(Temper.FIRST_DUEL, 1), "The fight does not get meaner");
+        // The roll covers every weight and nothing else.
+        var two = new java.util.EnumMap<Action, Double>(Action.class);
+        two.put(Action.BOLT, 1.0); two.put(Action.HANDS, 3.0);
+        require(NecromancerRules.pick(two, () -> 0) == Action.HANDS && NecromancerRules.pick(two, () -> .74) == Action.HANDS
+                && NecromancerRules.pick(two, () -> .76) == Action.BOLT && NecromancerRules.pick(two, () -> .999) == Action.BOLT
+                && NecromancerRules.pick(new java.util.EnumMap<Action, Double>(Action.class), () -> .5) == null, "Weighted pick wrong");
 
         // Every cast lands inside its own duration; bolts all leave before the cast ends.
         for (Action action : Action.values()) require(action.impact < action.duration, action + " impact after cast end");
@@ -139,6 +225,13 @@ public final class NecromancerContractTest {
         // After a half-second reaction, walking (0.2 blocks/tick) leaves a centred ring before it bites.
         require((Action.HANDS.impact - 10) * .2 > NecromancerRules.HANDS_RADIUS + .3, "Grasping hands cannot be escaped on foot");
         require(NecromancerRules.HANDS_RADIUS >= 4 && NecromancerRules.HANDS_DAMAGE >= 10, "Grasping hands lost their buff");
+        // A ring rises ahead of a moving player. Whether they walk (0.216 blocks a tick) or sprint (0.28), it starts
+        // with them outside it, so stopping or turning is safe, and running on does not get through before it closes.
+        for (boolean giant : new boolean[]{false, true}) for (double pace : new double[]{.216, .28}) {
+            double radius = NecromancerRules.handsRadius(giant), lead = Math.min(NecromancerRules.handsLead(giant) * pace, NecromancerRules.handsLeadMax(giant));
+            require(lead >= radius, "A led ring rises on top of a moving player");
+            require(lead + radius > Action.HANDS.impact * pace, "A player can run straight through a led ring");
+        }
         require(NecromancerRules.handsModels(NecromancerRules.HANDS_RADIUS) >= 10 && NecromancerRules.handsModels(1.7) == 6, "Hand models do not fill the ring");
         // Hands follow-up: the root lasts until the ambush that follows it has burst.
         require(NecromancerRules.ROOT_TICKS > Action.AMBUSH.impact, "A rooted player walks free before the follow-up ambush");
@@ -153,41 +246,48 @@ public final class NecromancerContractTest {
                 && NecromancerRules.EXPOSED_TICKS >= 100, "Siege timing out of order");
         require(NecromancerRules.BLINK_LEASH > NecromancerRules.MOVEMENT_RANGE && NecromancerRules.BLINK_LEASH < 44, "Blinks leave the crypt clearing");
 
-        // Colossus: robed spells never pick melee; the colossus never blinks or raises an army.
-        ready.clear();
-        var near = List.of(new Candidate(a, 3, true));
-        var far = List.of(new Candidate(a, 12, true));
-        require(NecromancerRules.choose(near, ready, 0, null, 0, 2) == Action.BLINK, "Robed form lost its blink");
-        require(NecromancerRules.chooseColossus(near, ready, 0, null, false) == Action.SWIPE, "Close player not swiped");
-        require(NecromancerRules.chooseColossus(near, ready, 0, Action.SWIPE, false) == Action.GRAB, "Swipe and grab do not alternate");
-        require(NecromancerRules.chooseColossus(List.of(new Candidate(a, 3, true), new Candidate(b, 12, true)), ready, 0, null, false) != Action.BLINK, "Colossus blinked");
-        // Standing off draws the Grave Dive first, sight or not; the rush follows it.
-        require(NecromancerRules.chooseColossus(far, ready, 0, null, false) == Action.DIVE, "Distant player not dived after");
-        require(NecromancerRules.chooseColossus(List.of(new Candidate(a, 30, false)), ready, 0, null, false) == Action.DIVE, "A hidden kiter escaped the dive");
+        // Colossus: no robed moves, no army. Within its arms it swipes or grabs; a player who jumped its last swipe
+        // gets the hand, unless the hand had them lately.
+        var reach = NecromancerRules.colossusWeights(Read.at(4), crowded, null, null, all);
+        require(heaviest(reach) == Action.SWIPE && reach.containsKey(Action.GRAB) && !reach.containsKey(Action.RUSH) && !reach.containsKey(Action.DIVE), "Arms' reach kit wrong: " + reach);
+        require(only(NecromancerRules.colossusWeights(Read.at(4, Tell.JUMPED), crowded, null, null, all)) == Action.GRAB, "A jumped swipe was not answered with the hand");
+        require(!NecromancerRules.colossusWeights(Read.at(4, Tell.JUMPED, Tell.HELD), crowded, null, null, all).containsKey(Action.GRAB), "Grabbed the same player again too soon");
+        require(heaviest(NecromancerRules.colossusWeights(Read.at(4), crowded, Action.SWIPE, Action.SWIPE, all)) != Action.SWIPE, "A third swipe in a row");
+        // Beyond its arms: the rush at mid range, the dive at range, and the dive only when nobody is in reach.
+        var mids = NecromancerRules.colossusWeights(Read.at(10), calm, null, null, all);
+        var fars = NecromancerRules.colossusWeights(Read.at(20), calm, null, null, all);
+        require(heaviest(mids) == Action.RUSH && heaviest(fars) == Action.DIVE && !fars.containsKey(Action.SWIPE), "Gap closers out of order: " + mids + " " + fars);
+        require(!NecromancerRules.colossusWeights(Read.at(20), crowded, null, null, all).containsKey(Action.DIVE), "Dived while a player stood within reach");
         require(!NecromancerRules.canTarget(Action.DIVE, new Candidate(a, 5, true)), "Dived at a player already within reach");
-        ready.put(Action.SWIPE, 1000L); ready.put(Action.GRAB, 1000L);
-        require(NecromancerRules.chooseColossus(List.of(new Candidate(a, 5, true), new Candidate(b, 12, true)), ready, 0, null, false) == Action.RUSH,
-                "Dived while a player stood within reach");
-        ready.clear(); ready.put(Action.DIVE, 1000L);
-        require(NecromancerRules.chooseColossus(far, ready, 0, null, false) == Action.RUSH, "Distant player not rushed");
-        require(NecromancerRules.chooseColossus(far, ready, 0, Action.RUSH, false) == Action.HARVEST, "Harvest missing from the rotation");
-        for (Action action : Action.values()) if (action.robedOnly())
-            require(NecromancerRules.chooseColossus(far, ready, 0, Action.RUSH, false) != action, "Colossus used " + action);
-        require(NecromancerRules.chooseColossus(List.of(new Candidate(a, 60, false)), ready, 0, null, false) == null, "Colossus cast beyond the encounter");
-        // With its soul out the body only fights: no bolts, hands, drain or harvest.
-        ready.clear();
-        for (double distance : new double[]{3, 5, 12, 20, 30})
-            for (Action previous : new Action[]{null, Action.SWIPE, Action.DIVE, Action.RUSH}) {
-                Action chosen = NecromancerRules.chooseColossus(List.of(new Candidate(a, distance, true)), ready, 0, previous, true);
-                require(chosen == null || !chosen.soulSpell(), "The body cast " + chosen + " while its soul was out");
-            }
-        ready.put(Action.DIVE, 1000L); ready.put(Action.RUSH, 1000L);
-        require(NecromancerRules.chooseColossus(far, ready, 0, null, true) == null, "The body cast a spell while its soul was out");
-        require(Action.BOLT.soulSpell() && Action.HANDS.soulSpell() && Action.DRAIN.soulSpell() && Action.HARVEST.soulSpell()
-                && !Action.SWIPE.soulSpell() && !Action.DIVE.soulSpell(), "Soul spells moved");
-        // The colossus keeps pace with a walking player (4.3 blocks/s) but not a sprint (5.6).
+        // Reads: backing away draws the rush; standing still, eating or hiding draws the dive.
+        require(share(NecromancerRules.colossusWeights(Read.at(12, Tell.RETREATING), calm, null, null, all), Action.RUSH) > share(mids, Action.RUSH), "A retreating player was not rushed");
+        require(heaviest(NecromancerRules.colossusWeights(Read.at(12, Tell.STILL), calm, null, null, all)) == Action.DIVE
+                && heaviest(NecromancerRules.colossusWeights(Read.at(12, Tell.HEALING), calm, null, null, all)) == Action.DIVE, "A still player was not dived under");
+        var hide = NecromancerRules.colossusWeights(Read.unseen(30), calm, null, null, all);
+        require(heaviest(hide) == Action.DIVE && !hide.containsKey(Action.RUSH) && !hide.containsKey(Action.BOLT), "A hidden kiter escaped the dive: " + hide);
+        require(!NecromancerRules.canTarget(Action.RUSH, new Candidate(a, 12, false)), "Rush targeted through cover");
+        // A hovering player: skulls, or the hand where it reaches; never a swing at the air.
+        require(only(NecromancerRules.colossusWeights(Read.at(12, Tell.AIRBORNE), calm, null, null, all)) == Action.BOLT, "Ground attack at a hovering player");
+        require(NecromancerRules.colossusWeights(Read.at(5, Tell.AIRBORNE), crowded, null, null, all).keySet().equals(java.util.Set.of(Action.BOLT, Action.GRAB)), "Hovering in reach is not grabbed");
+        // It harvests when wounded, not on a clock; in its frenzy it does not feed at all.
+        require(!mids.containsKey(Action.HARVEST) && NecromancerRules.colossusWeights(Read.at(10), wounded, null, null, all).containsKey(Action.HARVEST), "Harvest does not follow its wounds");
+        for (double distance : new double[]{3, 8, 12, 20, 30}) {
+            var mad = NecromancerRules.colossusWeights(Read.at(distance), frenzy, null, null, all);
+            require(!mad.isEmpty() && mad.keySet().stream().noneMatch(Action::feeds), "The frenzied colossus fed or stood idle at " + distance + ": " + mad);
+            for (Self self : new Self[]{calm, wounded, crowded, frenzy})
+                for (Action action : NecromancerRules.colossusWeights(Read.at(distance, Tell.STILL), self, null, null, all).keySet())
+                    require(!action.robedOnly(), "Colossus used " + action);
+        }
+        require(Action.DRAIN.feeds() && Action.HARVEST.feeds() && !Action.BOLT.feeds() && Action.BURST.robedOnly() && Action.BLINK.repositions()
+                && Action.SHIFT.repositions() && !Action.AMBUSH.repositions(), "Action families moved");
+        require(NecromancerRules.colossusWeights(Read.unseen(60), calm, null, null, all).isEmpty(), "Colossus cast beyond the encounter");
+        // The colossus keeps pace with a walking player (4.3 blocks/s) but not a sprint (5.6); its frenzy is faster and still short of one.
         double colossusPace = 2.159 * NecromancerRules.COLOSSUS_SPEED * NecromancerRules.COLOSSUS_SPEED * 20;
+        double frenzyPace = 2.159 * NecromancerRules.FRENZY_SPEED * NecromancerRules.FRENZY_SPEED * 20;
         require(colossusPace >= 4.3 && colossusPace < 5.6, "Colossus pace moved: " + colossusPace);
+        require(frenzyPace > colossusPace + .4 && frenzyPace < 5.6, "Frenzy pace moved: " + frenzyPace);
+        require(NecromancerRules.FRENZY_GATE == .25f && 0 < NecromancerRules.FRENZY_HOWL && NecromancerRules.FRENZY_HOWL < NecromancerRules.FRENZY_HOWL_END
+                && NecromancerRules.FRENZY_HOWL_END < NecromancerRules.FRENZY_TELL, "Frenzy clock out of order");
         // Grave Dive: tunnels faster than a sprint, a player already moving walks out of the crack ring,
         // the eruption hits hard, and a miss leaves a long opening. The whole dive fits its cast.
         require(NecromancerRules.DIVE_SPEED > .28 && NecromancerRules.DIVE_WARNING * .216 > NecromancerRules.DIVE_RADIUS + .3,
@@ -205,15 +305,6 @@ public final class NecromancerContractTest {
         // The call reads in order: scream, a second of glowing spots, then the souls, all inside the cast.
         require(Action.HARVEST.impact == NecromancerRules.HARVEST_SCREAM && NecromancerRules.HARVEST_GLOW >= 20
                 && Action.HARVEST.duration > NecromancerRules.HARVEST_SCREAM + NecromancerRules.HARVEST_GLOW, "Harvest call out of order");
-        // The caster inside: a knockdown within reach, a real collapse, and a soul out of melee but not out of range.
-        require(NecromancerRules.soulKnockdown(800) == 30 && NecromancerRules.soulKnockdown(1300) == 78 && NecromancerRules.soulKnockdown(300) == 30,
-                "Soul knockdown moved");
-        require(NecromancerRules.SPLIT_RELEASE < NecromancerRules.SPLIT_TELL && NecromancerRules.COLLAPSE_TICKS >= 80, "Split clock out of order");
-        // The blind body's marked arc leads its turn (at most ~9 ticks for a half turn) and lands after the turn.
-        require(180 / NecromancerRules.FLAIL_TURN < Action.SWIPE.impact && NecromancerRules.FLAIL_GAP_MIN >= 10
-                && NecromancerRules.FLAIL_GAP_MAX > NecromancerRules.FLAIL_GAP_MIN, "Blind swipes land before they turn or never rest");
-        require(NecromancerRules.SOUL_NEAR > NecromancerRules.SOUL_THREAT && NecromancerRules.SOUL_LOW >= 2.5 && NecromancerRules.SOUL_HIGH <= 6
-                && NecromancerRules.SOUL_FAR < NecromancerRules.BOLT_RANGE, "The soul hovers out of reach or on top of players");
         // Transformation clock: the body grows before the roar, and both finish inside the cinematic.
         require(0 < NecromancerRules.TRANSFORM_GROW && NecromancerRules.TRANSFORM_GROW < NecromancerRules.TRANSFORM_ROAR
                 && NecromancerRules.TRANSFORM_ROAR < NecromancerRules.TRANSFORM_TICKS, "Transformation clock out of order");
@@ -249,7 +340,6 @@ public final class NecromancerContractTest {
         require(NecromancerRules.RUSH_BITE < NecromancerRules.RUSH_THROW && NecromancerRules.RUSH_THROW < NecromancerRules.RUSH_RECOVER,
                 "Rush bite/throw/recovery out of order");
         require(Action.RUSH.duration >= NecromancerRules.RUSH_WARNING_MAX + NecromancerRules.RUSH_TRAVEL / 2, "Rush cast ends before it can run");
-        require(!NecromancerRules.canTarget(Action.RUSH, new Candidate(a, 12, false)), "Rush targeted through cover");
         require(NecromancerRules.boltCount(true) > NecromancerRules.boltCount(false) && NecromancerRules.handsRadius(true) > NecromancerRules.handsRadius(false), "Colossus spells are not stronger");
         require(Action.BOLT.impact + (NecromancerRules.boltCount(true) - 1) * NecromancerRules.boltInterval(true) < Action.BOLT.duration, "Colossus volley truncated");
         // Intro cinematic: the shots follow the plan's order, the soul lands in the staff on time, and everyone may skip.
@@ -275,8 +365,20 @@ public final class NecromancerContractTest {
                 && NecromancerIntro.ringProgress(NecromancerIntro.RING_END) == 1
                 && NecromancerIntro.ringProgress(NecromancerIntro.RING_END + 1) == 1,
                 "Arena lighting must reveal with the fire front and settle at normal brightness");
-        System.out.println("Necromancer checks passed: intro beats, torn soul path and skip window; scaling, stages and gates, solo/duo/party waves, reinforcements, quickening, soul fire rain, soul light, drain cap, drain windup and range, blink/shift/ambush priority, vision, target rotation, telegraph timing, hands buff and follow-up, sidestep window, siege timing, colossus priorities without an army, dive/rush/harvest choice, soul-split restrictions, colossus pace, grave dive, harvest, soul knockdown, one blind-swinging split, transformation clock, grab caps, jumpable swipe, random rush windup, timing and cover.");
+        System.out.println("Necromancer checks passed: intro beats, torn soul path and skip window; scaling, stages and gates, solo/duo/party waves, reinforcements, quickening and siege damage, soul fire rain, soul light, drain cap, drain windup and range; the robed chooser (blink or burst by memory, range families, still/eating/hidden/bunched/hovering reads, drain when wounded, shifts for a reason, no third repeat); who it turns on; strings and rests by temper and party; telegraph timing, hands buff, led rings and follow-up, sidestep window, siege timing; the colossus chooser (arms, the hand after a jumped swipe, rush and dive bands and reads, harvest when wounded, a frenzy that never feeds); colossus and frenzy pace, grave dive, harvest, transformation clock, grab caps, jumpable swipe, random rush windup, timing and cover.");
     }
 
     private static void require(boolean value, String reason) { if (!value) throw new AssertionError(reason); }
+
+    /** The one cast a set of weights allows, or null when it allows none or several. */
+    private static Action only(Map<Action, Double> weights) { return weights.size() == 1 ? weights.keySet().iterator().next() : null; }
+
+    private static Action heaviest(Map<Action, Double> weights) {
+        return weights.entrySet().stream().max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse(null);
+    }
+
+    private static double share(Map<Action, Double> weights, Action action) {
+        double total = weights.values().stream().mapToDouble(Double::doubleValue).sum();
+        return total <= 0 ? 0 : weights.getOrDefault(action, 0.0) / total;
+    }
 }

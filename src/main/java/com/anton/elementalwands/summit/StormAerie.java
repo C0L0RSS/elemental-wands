@@ -3,6 +3,7 @@ package com.anton.elementalwands.summit;
 import com.anton.elementalwands.arena.GuardianArenaManager;
 import com.anton.elementalwands.church.GuardianChurchLoot;
 import com.anton.elementalwands.crypt.HollowCryptManager;
+import com.anton.elementalwands.party.PartyLine;
 import com.anton.elementalwands.party.PartyManager;
 import com.anton.elementalwands.registry.ModBlocks;
 import com.anton.elementalwands.registry.ModItems;
@@ -251,7 +252,8 @@ public final class StormAerie {
 
     /**
      * The confirmed strike: reserves a free slot (raising it if needed) and records every member's way
-     * home before anyone moves. The call itself plays out in {@link #tick}.
+     * home before anyone moves: side by side before the gong, facing it, so a party comes home in a
+     * line rather than on one spot ({@link PartyLine}). The call itself plays out in {@link #tick}.
      */
     private static String call(ServerPlayerEntity ringer, ServerWorld world, Gong gong, String site, List<ServerPlayerEntity> group) {
         MinecraftServer server = world.getServer();
@@ -261,8 +263,11 @@ public final class StormAerie {
         var returns = StormSummitManager.savedReturns();
         var called = StormSummitManager.savedCalls();
         StormSummitManager.Point home = stand(world, gong);
-        for (ServerPlayerEntity p : group) {
-            returns.put(p.getUuidAsString(), home);
+        List<Vec3d> line = PartyLine.spots(world, new Vec3d(home.x(), home.y(), home.z()), home.yaw(), group.size());
+        for (int i = 0; i < group.size(); i++) {
+            ServerPlayerEntity p = group.get(i);
+            Vec3d at = line.get(i);
+            returns.put(p.getUuidAsString(), new StormSummitManager.Point(home.dimension(), at.x, at.y, at.z, home.yaw(), home.pitch()));
             if (!called.contains(p.getUuidAsString())) called.add(p.getUuidAsString());
         }
         if (!StormSummitManager.persist()) {

@@ -689,12 +689,12 @@ public final class GuardianArenaManager {
     }
 
     private static void arriveAll(List<ServerPlayerEntity> group, ServerWorld realm, int slot) {
-        for (int i = 0; i < group.size(); i++) arrive(group.get(i), realm, slot, i - (group.size() - 1) / 2.0);
+        for (int i = 0; i < group.size(); i++) arrive(group.get(i), realm, slot, com.anton.elementalwands.party.PartyLine.place(i, group.size()));
     }
 
     /** Players arrive side by side, two blocks apart, facing the seat. */
     private static void arrive(ServerPlayerEntity player, ServerWorld realm, int slot, double place) {
-        Vec3d at = ShatteredNave.arrival(ShatteredNave.centre(state.generation, slot)).add(Math.clamp(place, -8, 8) * 2, 0, 0);
+        Vec3d at = ShatteredNave.arrival(ShatteredNave.centre(state.generation, slot)).add(place * com.anton.elementalwands.party.PartyLine.SPACING, 0, 0);
         transfer(player, realm, at, ShatteredNave.ARRIVAL_YAW, 0);
     }
 

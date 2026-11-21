@@ -115,7 +115,8 @@ public final class StormSummitManager {
         });
         PlayerBlockBreakEvents.BEFORE.register((world, player, pos, blockState, entity) -> !restricted(player));
         UseBlockCallback.EVENT.register((player, world, hand, hit) ->
-                restricted(player) && player.getStackInHand(hand).getItem() instanceof BlockItem ? ActionResult.FAIL : ActionResult.PASS);
+                restricted(player) && (player.getStackInHand(hand).getItem() instanceof BlockItem
+                        || player.getStackInHand(hand).getItem() instanceof net.minecraft.item.BucketItem) ? ActionResult.FAIL : ActionResult.PASS);
     }
 
     public static boolean inRealm(PlayerEntity player) { return player.getEntityWorld().getRegistryKey() == StormSummit.WORLD; }

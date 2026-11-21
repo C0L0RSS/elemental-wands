@@ -53,7 +53,8 @@ task; `./gradlew checkDocs` fails when it names something that does not exist.
 | Churches, the Shattered Nave, the Hollow Crypt, recovery, rewards | [Church and arena](docs/reference/church-and-arena.md) |
 | Storm Roc's fight, summit realm and aerie | [Storm Summit](docs/reference/storm-summit.md) |
 | Pyre King's fight, body, clips, gate and hall | [Pyre King](docs/reference/pyre-king.md) |
-| Why a built boss is designed the way it is | Design notes: [Storm Roc](docs/design/storm-roc.md), [Pyre King](docs/design/pyre-king.md) |
+| The final boss's fight, its spells, and the End it takes over | [First Wizard](docs/reference/first-wizard.md) |
+| Why a built boss is designed the way it is | Design notes: [Storm Roc](docs/design/storm-roc.md), [Pyre King](docs/design/pyre-king.md), [First Wizard](docs/design/first-wizard.md) |
 | Test runners and verification boundaries | [Testing](docs/reference/testing.md) |
 | Viewing local review pages from another device | [Remote preview](docs/reference/remote-preview.md) |
 | What changed for players | [Release summaries](docs/releases/README.md) |
@@ -87,7 +88,7 @@ the testing guide before launching a fixture.
 ```
 
 Run `./gradlew build` after code changes. It includes the Guardian, Necromancer,
-Pyre King, party and Roc gaze contract checks and `checkDocs`; none of them launches a
+Pyre King, First Wizard, party and Roc gaze contract checks and `checkDocs`; none of them launches a
 live gameplay session.
 
 For changes to art, models, textures, effects, layouts or sounds, also run:
@@ -126,7 +127,7 @@ not been confirmed on that machine: confirm it when your task needs it, then rep
 | Home folder in a command | `$HOME` | `$env:USERPROFILE` |
 | SHA-256 of a file | `shasum -a 256 <file>` | `Get-FileHash <file>` |
 | Lunar mods folder | `~/.lunarclient/profiles/1.21/mods/fabric-1.21.10/` | `%USERPROFILE%\.lunarclient\profiles\lunar\1.21\mods\fabric-1.21.10\` (*unverified*) |
-| Minecraft assets for test clients | `$HOME/.lunarclient/shared/assets` | *unverified* |
+| Minecraft assets for test clients | `$HOME/.lunarclient/shared/assets` | `$env:USERPROFILE\.lunarclient\shared\assets` (has `indexes/27.json`) |
 | Viewing review pages from another device | not set up | [Remote preview](docs/reference/remote-preview.md) |
 
 Git does not carry these between the machines, so never assume the other one has them:

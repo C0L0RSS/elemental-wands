@@ -152,6 +152,16 @@ public final class ModSpellBlocks {
                     .pistonBehavior(PistonBehavior.BLOCK)
                     .dropsNothing());
 
+    /** The First Wizard's Stone Wall: unbreakable and blast-proof while it stands; it clears itself after a crash. */
+    public static final Block FIRST_WIZARD_WALL = register("first_wizard_wall", com.anton.elementalwands.block.FirstWizardWallBlock::new,
+            AbstractBlock.Settings.create()
+                    .mapColor(MapColor.STONE_GRAY)
+                    .strength(-1.0f, 3600000.0f)
+                    .allowsSpawning((state, world, pos, type) -> false)
+                    .sounds(BlockSoundGroup.DEEPSLATE)
+                    .pistonBehavior(PistonBehavior.BLOCK)
+                    .dropsNothing());
+
     /** Invisible, self-clearing light carried by the Necromancer's soul spells; see {@code SoulGlow}. */
     public static final Block SOUL_GLOW = register("soul_glow", com.anton.elementalwands.block.SoulGlowBlock::new,
             AbstractBlock.Settings.create()

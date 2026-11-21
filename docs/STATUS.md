@@ -27,6 +27,10 @@ Videos, browser previews and workshop clips waiting for the developer's approval
 - **Guardian intro (the zombie):** the in-game video of the retimed intro.
 - **Pyre King:** the Haul and Snare clips, the intro's `throned` and `awaken` clips, and the
   Chain Scythe's bowed chain in the workshop.
+- **First Wizard intro:** the stills (and, with `-PwizardIntroVideo`, the video) from
+  `first_wizard_intro_smoke`: whether the dragon's death reads as the pool killing it with
+  its own breath, whether the pour reads as the sky becoming the copy, the pool's look and
+  height, the 82.5 s pace and every camera move. A first pass nobody has watched in Lunar.
 - **Necromancer:** the remaining workshop clips, including the standalone dragged-soul
   clip, and the fireball and soul models (`.local-previews/soul-fire/`). Once approved they
   need installing and a client check.
@@ -38,6 +42,57 @@ Looks and balance that only a person playing can judge.
 ### Pyre King
 
 - His health is a first guess; damage is set for plain diamond to netherite armor.
+
+### First Wizard and the End
+
+Nobody has played any of it in Lunar. Everything below has only been seen in fixtures.
+
+- **The copy's look:** the plain skin with ink motes floating round it (tried at the
+  developer's request after the first coat of ink); whether the motes read as ink and not as
+  a Space spell, and are noticed at fight distance; whether it stays findable in the End's
+  light. The fixtures used the default skin on a dark test floor.
+- **Each of the ten spells:** whether its forming reads as a warning, its size (about two to
+  three times the player's), its colours cooling to purple and ink, and how its dodge feels:
+  the Fireball's sidestep, leaving the Meteor's circle, jumping Sky Shear's three crescents,
+  the Waylay Dash's line and wake, the Stone Wall behind you, the Faultline's sidestep and
+  throw, Thornbite's sidestep, breaking the Sentry Bloom before it delivers, Blink Rift's
+  pool, running or dashing out of the Gravity Well.
+- **The pace of the fight:** health (1000), the gaps between spells, how often each spell
+  and combination comes up, and damage against diamond to netherite armor. All first guesses.
+- **The change's cinematic** (built Nov 19, seen only in the fixture's stills and GIFs, by
+  day on a test floor): whether the arm's wrench, tear, fall and melt read with weight and
+  not as slapstick; whether the swelling reads as her flank bulging under the skin (boxes of
+  the torso's own skin with ink veins) rather than as an ink patch; whether the head's bend
+  reads as wrong in a good way while the face stays readable in phase two; whether 17 s is
+  the right length mid-fight; and how its shots frame her in the End's light with other
+  players nearby. Its sounds are vanilla placeholders.
+- **Phase two:** whether the torn body reads as a wounded copy floating with three huge
+  ink tentacles growing out of her left side (since Nov 20 spread apart, one low, one at
+  shoulder height, one rearing over her, as the developer asked on Nov 19; seen so far only
+  in the fixture's clips, and from close behind her left one still coils over another; at
+  some points of their slow crawl the shoulder-height one's and the weapon's hooks close into
+  rings seen from her front left), and
+  not as rods, a cage, glass or a Space spell; whether her body stays readable beside them;
+  whether the tentacles' part in each move (since Nov 20: throwing her into the Leap and
+  slapping down round its landing, gripping the floor like an octopus's arms and heaving,
+  weaving and feeding the orb through the Flame's and Hollow Purple's long holds,
+  counterweight and clearance for the Slam and Sweep, flaring for the spells; seen only in
+  the fixture's clips) reads as one body at fight speed and distance; whether the gripping
+  arms' curled tips read from a player's height across the floor, and whether the three arms
+  crossing close by her flank in those holds look like a knot from her left or front left;
+  whether the
+  textured floor marks read from across the arena at night; how it drifts, and each move's
+  tell and dodge: jumping the change's full sweep and the Sweep, sidestepping the Slam,
+  leaving the Leap's circle, getting behind the Flame, leaving Hollow Purple's lane. Its
+  numbers (the flame's 8 twice a second, the finisher's 28 and 12-block orb, its 25 s wait)
+  are first guesses, and bottling the flame's cloud has not been tried by hand.
+- **The island:** the arena's floor, kerb and broken pillars, the arrival spot, the way
+  home's basin at the centre and the four gateways after a win.
+- **The portal:** arriving from a stronghold, being refused (and set beside the portal, clear
+  of its lava) while another party fights, and where a fallen player wakes beside the portal.
+- **An existing world's End:** a survival world with builds on the main island being held
+  and then forced, the dragon egg set down beside the arrival, and a player living on the
+  outer islands left alone. The fixture used a fresh world with planted blocks.
 
 ### Storm Roc
 
@@ -139,6 +194,14 @@ Looks and balance that only a person playing can judge.
 
 Things one player cannot show.
 
+- **First Wizard:** a party member arriving through the portal mid-fight and joining (the
+  boss grows and keeps its share of health), a non-member being refused, how it shares its
+  attention between players, the Sentry Bloom taking turns, and the Stone Wall against two
+  players. The change's cinematic with two watchers: one skipping alone (view back, still
+  held, until the other skips or it ends), one arriving through the portal mid-way, and one
+  logging out mid-way (the fixture covers these with one player made to leave or join the
+  fight, not a second client).
+
 - **Other players' spell effects:** Fire, Wind, Space and Nature effects cast by someone
   else arrive over the block-fire, block-wind, block-space and block-nature events. None has
   been seen from a second client.
@@ -167,6 +230,11 @@ Things one player cannot show.
 
 Automated work an agent can do without the developer.
 
+- **First Wizard fight fixture:** `shear-jump` failed once in three complete runs (one of
+  three timed jumps landed late) and passes when the Sky Shear cases run alone. The
+  spell did not change between runs; the case's jump is timed through the client and
+  slips when the whole fixture is running. Make the case independent of that delay.
+
 - No fixture has run on a dedicated server since the Nature rework; the November 10–11 runs
   were hosted in a singleplayer world on the Windows machine.
 - The party fixture's restart half was not run after the Nature rework.
@@ -182,14 +250,32 @@ Automated work an agent can do without the developer.
 - Wand-tip cast particles have had no native-client check (right and left hand, first and
   third person, wide FOV).
 - The Astral Double tuning against the Necromancer has had no client check.
-- `tools/check_assets.py` has not had a full run on the Windows machine since the
-  structure files and the Pyre King's model were made to come out the same on every
-  machine (November 12). Run it there once; a failure means a generator still depends on
-  the machine.
+- `tools/check_assets.py` had its first full run on the Windows machine on November 18,
+  with the working files converted to LF. Thirteen checks failed there, none of them for
+  files changed that day, so each still depends on the machine and needs looking into:
+  `tools/validate_remaining_vfx_assets.py`, `tools/prepare_fire_assets.py`,
+  `tools/prepare_wand_assets.py`, `tools/prepare_guardian_assets.py`,
+  `art/fractured_guardian/phase/build_phase.py`, `art/fractured_guardian/intro/build_intro.py`,
+  `art/hollow_necromancer/v2/build_art.py`, `art/hollow_necromancer/transform/build_scene.py`,
+  `art/hollow_necromancer/grasping_hands/build_preview.py` (its `--check` also rewrites its six
+  candidate files with CRLF line endings), `art/storm_summit/build_layout.py`,
+  `art/storm_roc_mod/build_mod.py`, `art/storm_roc/build_runtime.py` and
+  `art/pyre_king/build_art.py`. Do not regenerate that art on the PC to make them pass.
 
 ## Known gaps
 
 Accepted for now; fix when the feature is next touched.
+
+- **The End is open to everyone.** The five-shard key (`EndGate.mayEnter`) lets every player
+  through because Wand Shards are not in the game. Any Survival player who enters the End
+  starts the final fight.
+- **Buckets in the boss realms:** the nave, crypt, hall and summit refuse a bucket through
+  the block use, which a normal client also refuses, so it never pours. Unlike the End they
+  have no check on the item use itself, so a modified client that sends only that could pour.
+- **First Wizard:** a Gravity Well's burst does nothing to a player the Meteor of the same
+  combination has just hit (the hurt cooldown swallows it). A raised shield that stops one
+  of the Sentry Bloom's light seeds is knocked aside like one that stopped a heavy spell.
+  The Stone Wall always goes behind its target, never between two players.
 
 - **Pyre King:** a player who only circles a pillar is hooked off it but can run clear of
   the Overhead that follows.
@@ -214,6 +300,10 @@ Accepted for now; fix when the feature is next touched.
 - **Sounds elsewhere:** bosses, mobs, cutscenes and world cues still use vanilla sounds.
 
 ## Not built yet
+
+- **First Wizard:** spectating for a fallen player, a hint at the portal while a fight runs,
+  a death, rewards and its own sounds. The full lists are in
+  [First Wizard](reference/first-wizard.md).
 
 - **Pyre King:** a death clip, a hit reaction, a reward, spectating for a fallen player and
   his own sounds; his warnings are particles. The full list, with the planned moves that

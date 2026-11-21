@@ -1,0 +1,57 @@
+// The First Wizard's intro in a disposable integrated world: /ew end begin with the real boss, the full scene through its own camera, a wipe, the short scene skipped,
+// /ew end intro full cut short by a reset, the boss removed mid-scene, and a win; hidden, muted window.
+// ./gradlew -I tools/first_wizard_intro_smoke.init.gradle runClient -x downloadAssets -PhubClientAssets="$HOME/.lunarclient/shared/assets" [-PwizardIntroVideo]
+allprojects {
+    plugins.withId('fabric-loom') {
+        def smokeRoot=layout.buildDirectory.dir('first-wizard-intro-smoke').get().asFile
+        // Optional existing cache for offline verification (for example Lunar shared/assets).
+        def existingAssets=project.findProperty('hubClientAssets')
+        if (existingAssets) {
+            loom.runs.client.vmArg('-Dfabric.dli.config='+new File(smokeRoot,'launch.cfg').absolutePath)
+        }
+        tasks.register('firstWizardIntroMetadata') {
+            if (existingAssets) dependsOn generateDLIConfig
+            doLast {
+                def metadata=new File(smokeRoot,'metadata')
+                metadata.mkdirs()
+                new File(metadata,'fabric.mod.json').text='''{
+  "schemaVersion": 1, "id": "first_wizard_intro_smoke", "version": "1.0.0", "environment": "client",
+  "entrypoints": {"client": ["com.anton.elementalwands.client.FirstWizardIntroSmoke"]},
+  "depends": {"elementalwands": "*"}
+}'''
+                // Muted from the first frame: the fixture also sets master volume to zero before it loads a world.
+                def options=new File(smokeRoot,'options.txt')
+                def lines=options.exists() ? options.readLines().findAll { !it.startsWith('soundCategory_master:') && !it.startsWith('narrator:') && !it.startsWith('onboardAccessibility:') } : []
+                options.text=(lines+['soundCategory_master:0.0','narrator:0','onboardAccessibility:false']).join('\n')+'\n'
+                new File(smokeRoot,'FIRST_WIZARD_INTRO_PASSED.txt').delete()
+                new File(smokeRoot,'FIRST_WIZARD_INTRO_FAILED.txt').delete()
+                if (existingAssets) {
+                    def assets=file(existingAssets)
+                    if (!new File(assets,'indexes/27.json').exists()) throw new GradleException('Existing asset cache needs indexes/27.json')
+                    def launch=file('.gradle/loom-cache/launch.cfg').text
+                    launch=launch.replaceAll(/(?m)(\t--assetIndex\r?\n)\t[^\r\n]+/, { match, prefix -> prefix+'\t27' })
+                    launch=launch.replaceAll(/(?m)(\t--assetsDir\r?\n)\t[^\r\n]+/, { match, prefix -> prefix+'\t'+assets.absolutePath })
+                    new File(smokeRoot,'launch.cfg').text=launch
+                }
+            }
+        }
+        // -PwizardIntroVideo: also save a frame every other tick (screenshots/intro-*.png), for a review clip.
+        if (project.hasProperty('wizardIntroVideo')) loom.runs.client.vmArg('-DwizardIntroEvery=2')
+        tasks.register('firstWizardIntroJar',Jar) {
+            dependsOn guardianTestClasses, firstWizardIntroMetadata
+            archiveFileName='first-wizard-intro-smoke.jar'
+            destinationDirectory=smokeRoot
+            from sourceSets.guardianTest.output
+            from new File(smokeRoot,'metadata')
+        }
+        loom.runs.client.runDir('build/first-wizard-intro-smoke')
+        loom.runs.client.vmArg('-Dfabric.addMods='+new File(smokeRoot,'first-wizard-intro-smoke.jar').absolutePath)
+        tasks.named('runClient') {
+            dependsOn firstWizardIntroJar
+            doLast {
+                if (!new File(smokeRoot,'FIRST_WIZARD_INTRO_PASSED.txt').exists() || new File(smokeRoot,'FIRST_WIZARD_INTRO_FAILED.txt').exists())
+                    throw new GradleException('First Wizard intro check failed; inspect build/first-wizard-intro-smoke/logs/latest.log')
+            }
+        }
+    }
+}

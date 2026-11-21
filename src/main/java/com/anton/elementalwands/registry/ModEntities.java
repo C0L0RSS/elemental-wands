@@ -260,6 +260,29 @@ public final class ModEntities {
                         .dimensions(EntityDimensions.fixed(1.6f, 5f)).trackRangeBlocks(128).trackedUpdateRate(1)
                         .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "pyre_king"))));
 
+        // The final boss: a player-sized copy made of ink, and what clients draw of its spells.
+        public static final EntityType<com.anton.elementalwands.entity.firstwizard.FirstWizardEntity> FIRST_WIZARD = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "first_wizard"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.firstwizard.FirstWizardEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.firstwizard.FirstWizardEntity::new)
+                        .dimensions(EntityDimensions.fixed(.6f, 1.8f).withEyeHeight(1.62f)).trackRangeBlocks(128).trackedUpdateRate(1)
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "first_wizard"))));
+
+        public static final EntityType<com.anton.elementalwands.entity.firstwizard.FirstWizardEffectEntity> FIRST_WIZARD_EFFECT = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "first_wizard_effect"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.firstwizard.FirstWizardEffectEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.firstwizard.FirstWizardEffectEntity::new)
+                        .dimensions(EntityDimensions.fixed(.1f, .1f)).trackRangeBlocks(128).trackedUpdateRate(1).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "first_wizard_effect"))));
+
+        // The First Wizard's Sentry Bloom: a flower players break; its rules are SentryBloomSpell's.
+        public static final EntityType<com.anton.elementalwands.entity.firstwizard.InkBloomEntity> FIRST_WIZARD_BLOOM = Registry.register(
+                Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "first_wizard_bloom"),
+                FabricEntityTypeBuilder.<com.anton.elementalwands.entity.firstwizard.InkBloomEntity>create(SpawnGroup.MISC,
+                        com.anton.elementalwands.entity.firstwizard.InkBloomEntity::new)
+                        .dimensions(EntityDimensions.fixed(1.6f, 6.1f)).trackRangeBlocks(128).trackedUpdateRate(2).disableSaving()
+                        .build(RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "first_wizard_bloom"))));
+
         // Small stooped caster; summon-only until its crypt exists.
         public static final EntityType<com.anton.elementalwands.entity.necromancer.NecromancerEntity> HOLLOW_NECROMANCER = Registry.register(
                 Registries.ENTITY_TYPE, Identifier.of(ElementalWandsMod.MOD_ID, "hollow_necromancer"),

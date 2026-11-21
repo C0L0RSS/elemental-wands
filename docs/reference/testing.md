@@ -75,7 +75,10 @@ client runners use `runClient`. Run only the suites relevant to the change.
 | Storm aerie and intro | `aerie_server_smoke` | `aerie_client_smoke`, `roc_intro_client_smoke` | `-PaerieSeed` (default 12345), `-PaerieGongs="label@x,y,z;…"`; for the intro `-ProcIntroGong=x,y,z`, `-ProcIntroVideo`, `-ProcIntroEvery`, `-ProcIntroViewDistance`, `-ProcIntroSkipAt=<beat>` |
 | Pyre King | `checkPyreKing` (in the build) | `pyre_king_client_smoke`, `pyre_king_fight_smoke`, `pyre_king_intro_smoke` | `-PpyreFightRecord`, `-PpyreFightRecordCase=<name>[,<name>]`, `-PpyreIntroVideo`. See [Pyre King](pyre-king.md#verification) |
 | Burned Gate | — | `pyre_gate_smoke` | Uses a fresh normal world |
+| First Wizard | `checkFirstWizard` (in the build) | `first_wizard_fight_smoke` | `-PwizardCases=a,b` runs only the cases whose names start with those (`free` adds the free fight); `-PwizardRun=<name>` gives the run its own folder, `build/first-wizard-fight-smoke-<name>/`, so several can run at once. `-PwizardRecord=case[:every],...` saves frames for clips and `-PwizardView=<side>` films the phase-two cases from one side of her. It does not overwrite old screenshots: clear the folder first. `-PwizardCases=change` runs the phase change's cinematic cases. See [First Wizard](first-wizard.md#the-fight) |
 | Burned Throne Hall | — | `pyre_hall_client_smoke` | |
+| First Wizard intro | — | `first_wizard_intro_smoke` | `-PwizardIntroVideo` also saves a frame every other tick. Takes about four minutes. See [the intro](first-wizard.md#the-intro) |
+| The End takeover | — | `integrated_fixture_host` | `-PfixtureMain=com.anton.elementalwands.end.EndTakeoverSmoke -PfixtureReceipt=END`; it has no dedicated runner. See [the End](first-wizard.md#the-end) |
 | Worldgen, locate | `guardian_church_worldgen_smoke`, `guardian_church_locate_smoke`, `aerie_worldgen_smoke` | — | `guardian_church_locate_smoke` also checks where the locate teleport links land at a church, a graveyard and an aerie. `-PaerieSeed` for the aerie runner. Terrain fit still needs a human look |
 | Parties, audit regressions | `party_server_smoke`, `audit_fixes_smoke` | — | Restart pair: `-PpartyResume` |
 

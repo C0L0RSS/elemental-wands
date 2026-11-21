@@ -27,9 +27,9 @@ its row in the same task. Use backticks here only for files, folders and classes
 | `item/` | The wand item and one ability handler per element |
 | `data/` | Player attachments, affinities, the spell catalog, levels |
 | `util/` | Spell managers and rules, progression, loadouts, temporary blocks, visual event channels |
-| `entity/` | Spell projectiles and the Guardian; `entity/necromancer/`, `entity/undead/`, `entity/roc/`, `entity/pyreking/` hold the other bosses and mobs |
+| `entity/` | Spell projectiles and the Guardian; `entity/necromancer/`, `entity/undead/`, `entity/roc/`, `entity/pyreking/`, `entity/firstwizard/` (with its spells in `entity/firstwizard/spell/`) hold the other bosses and mobs |
 | `block/` | Temporary spell blocks and boss blocks |
-| `client/` | Controls, HUD, screens, intro cameras; `client/renderer/`, `client/model/`, `client/particle/`, `client/overlay/`, `client/screen/`, `client/wand/`, and one 3D effects package per element: `client/blockfire/`, `client/blockwind/`, `client/blocknature/`, `client/blockspace/` |
+| `client/` | Controls, HUD, screens, intro cameras; `client/renderer/`, `client/model/`, `client/particle/`, `client/overlay/`, `client/screen/`, `client/wand/`, and one 3D effects package per element: `client/blockfire/`, `client/blockwind/`, `client/blocknature/`, `client/blockspace/`, and the First Wizard's ink in `client/blockink/` |
 | `network/` | Client requests and server state sync |
 | `party/` | Parties and ally protection |
 | `command/` | The operator and party commands |
@@ -38,6 +38,7 @@ its row in the same task. Use backticks here only for files, folders and classes
 | `crypt/` | Hollow Crypt realm, mausoleum and rewards |
 | `summit/` | Storm Summit realm, aerie, gong, Roc encounter and intro |
 | `hall/` | Burned Throne Hall realm and the Burned Gate |
+| `end/` | The End takeover: no dragon fight, the main island as the First Wizard's arena, its portal rules and encounter |
 | `world/` | World generation structures and locate arrival points |
 | `registry/` | Item, block, entity, particle and sound registration |
 | `mixin/` | Minecraft hooks, named after the feature they serve |
@@ -214,6 +215,31 @@ scene the camera, HUD, input, fog and light, `mixin/IntroCameraMixin`, `IntroGam
 | Operator commands | `command/PyreKingCommands` | [Pyre King](reference/pyre-king.md#commands) |
 | Art source and exporter | `art/pyre_king/build_art.py` | [Pyre King](reference/pyre-king.md#ownership) |
 
+### The First Wizard (final boss) and the End
+
+| Feature | Owners | Reference |
+| --- | --- | --- |
+| Fight loop, state, moves, chooser and tuning | `entity/firstwizard/FirstWizardEntity`, `FirstWizardCombat`, `FirstWizardRules`, `Arena` | [First Wizard](reference/first-wizard.md#the-fight) |
+| The spell framework: how a boss spell is written and registered | `entity/firstwizard/spell/BossSpell` (the recipe is in its Javadoc), `Cast`, `Casting`, `Lingering`, `Timing`, `GroundZone`, `BossSpells` | [First Wizard](reference/first-wizard.md#the-fight) |
+| Fire: Fireball, Meteor | `entity/firstwizard/spell/FireballSpell`, `MeteorSpell`, `client/blockink/FireballFx`, `MeteorFx` | [First Wizard](reference/first-wizard.md#the-fight) |
+| Wind: Sky Shear, Waylay Dash | `entity/firstwizard/spell/SkyShearSpell`, `WaylayDashSpell`, `client/blockink/SkyShearFx`, `WaylayDashFx`, `WindInk` | [First Wizard](reference/first-wizard.md#the-fight) |
+| Stone: Stone Wall, Faultline | `entity/firstwizard/spell/StoneWallSpell`, `FaultlineSpell`, `block/FirstWizardWallBlock`, `client/blockink/StoneFx`; textures `art/first_wizard/build_stone.py` | [First Wizard](reference/first-wizard.md#the-fight) |
+| Nature: Thornbite, Sentry Bloom and its flower | `entity/firstwizard/spell/ThornbiteSpell`, `SentryBloomSpell`, `entity/firstwizard/InkBloomEntity`, `client/blockink/ThornbiteFx`, `SentryBloomFx`, `NatureInk`, `client/renderer/InkBloomRenderer` | [First Wizard](reference/first-wizard.md#the-fight) |
+| Space: Blink Rift, Gravity Well | `entity/firstwizard/spell/BlinkRiftSpell`, `GravityWellSpell`, `client/blockink/BlinkRiftFx`, `GravityWellFx` | [First Wizard](reference/first-wizard.md#the-fight) |
+| Phase two: the change at half health, the ink moves (Slam, Sweep, Leap, Flame, Hollow Purple) and their geometry | `entity/firstwizard/spell/PhaseChange`, `SlamSpell`, `SweepSpell`, `LeapSpell`, `FlameSpell`, `HollowPurpleSpell`, `Tendrils` | [First Wizard](reference/first-wizard.md#phase-two) |
+| The change's cinematic at half health: the arm falling off, the swelling, the bent head, the burst; its camera, watchers and skip | `entity/firstwizard/spell/PhaseChange`, `entity/firstwizard/FirstWizardChangeScene`, `FirstWizardChangeTrack`, `client/FirstWizardChangeClient`, `client/blockink/ChangeFx`, `WizardBody`, `client/renderer/FirstWizardRenderer`; script `art/first_wizard/change/build_change.py`; veins layer `art/first_wizard/build_ink.py` | [First Wizard](reference/first-wizard.md#phase-two) |
+| Phase two's look: the floating torn body, its tentacles (at rest and in every move) and wound, the moves' marks, the flame, the orb | `client/blockink/WizardBody`, `TendrilFx`, `TendrilRest`, `TendrilMoves`, `TendrilCurve`, `TendrilRig`, `InkMovesFx`, `FloorDecal`, `HollowPurpleFx`, `client/renderer/FirstWizardRenderer`; wound layers `art/first_wizard/build_ink.py`; floor marks `art/first_wizard/floor_ink/` | [First Wizard](reference/first-wizard.md#phase-two) |
+| Dragon's breath from the flame's cloud | `entity/firstwizard/spell/FlameSpell`, `mixin/InkBreathBottleMixin` | [First Wizard](reference/first-wizard.md#phase-two) |
+| What the server sends for clients to draw | `entity/firstwizard/FirstWizardEffectEntity`, `client/blockink/InkDrawers` (one drawer per effect kind), `InkDrawer` | [First Wizard](reference/first-wizard.md#the-fight) |
+| The copy's look: the plain skin and the ink motes round it | `client/renderer/FirstWizardRenderer`, `client/blockink/CopyFx` | [First Wizard](reference/first-wizard.md#the-fight) |
+| Ink drawing: meshes, atlas and the shared kit | `client/blockink/InkEffects`, `InkFrame`, `AtlasMesh`, `InkKit`; atlas and wound layers `art/first_wizard/build_ink.py` | [First Wizard](reference/first-wizard.md#the-fight), [Art](reference/art-and-assets.md) |
+| No dragon fight; the End's spikes and crystals removed | `end/EndTakeover`, `mixin/EndDragonFightMixin` | [First Wizard](reference/first-wizard.md#the-end) |
+| The arena on the main island: geometry, laying out, protection, way home and gateways | `end/EndArena`, `EndArenaManager`, `mixin/EndArenaExplosionMixin`, `mixin/EndArenaSpawnMixin`; layout `art/end_island/build_layout.py` | [First Wizard](reference/first-wizard.md#the-end) |
+| Portal rules: the shard key, arrival, who may enter during a fight, ways back | `end/EndGate`, `mixin/EndPortalArrivalMixin` | [First Wizard](reference/first-wizard.md#the-end) |
+| Encounter: roster, late party members, falls, wipe, victory, recovery | `end/EndEncounter`, `end/EndFighter` (what it needs from the boss) | [First Wizard](reference/first-wizard.md#the-end) |
+| The intro (the dragon's death, the condensing) and the pool over the island | `end/EndIntro`, `EndIntroTrack`, `EndSky`, `client/FirstWizardIntroClient`, `FirstWizardIntroDragon`, `client/blockink/EndSkyFx`, `CopyForming`; script `art/first_wizard/intro/build_intro.py` | [First Wizard](reference/first-wizard.md#the-intro) |
+| Operator commands | `command/FirstWizardCommands`, `command/EndCommands` | [First Wizard](reference/first-wizard.md) |
+
 ## World generation
 
 | Feature | Owners | Reference |
@@ -225,7 +251,7 @@ scene the camera, HUD, input, fog and light, `mixin/IntroCameraMixin`, `IntroGam
 
 | What | Where | Reference |
 | --- | --- | --- |
-| Contract checks run by the build | `GuardianBeamContractTest`, `NecromancerContractTest`, `PyreKingContractTest`, `PartyStoreTest`, `StormRocGazeContractTest`, wired in `build.gradle` | [Testing](reference/testing.md) |
+| Contract checks run by the build | `GuardianBeamContractTest`, `NecromancerContractTest`, `PyreKingContractTest`, `FirstWizardContractTest`, `PartyStoreTest`, `StormRocGazeContractTest`, wired in `build.gradle` | [Testing](reference/testing.md) |
 | Server and client fixtures | Helper classes under `src/guardianTest/java/`; runners in `tools/` named after the area and ending in smoke.init.gradle | [Testing](reference/testing.md#selecting-a-fixture) |
 | Asset and export checks | `tools/check_assets.py` | [Art](reference/art-and-assets.md) |
 | This index and the docs' links | `gradle/docs-check.gradle` | [Documentation rules](README.md) |

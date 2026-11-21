@@ -108,7 +108,8 @@ public class HollowPurpleOrbEntity extends ProjectileEntity {
 
     private void erasePath(ServerWorld world, Vec3d center) {
         if (HollowCryptRealm.keepsTerrain(world) || com.anton.elementalwands.arena.ShatteredNave.keepsTerrain(world)
-                || com.anton.elementalwands.summit.StormSummit.keepsTerrain(world) || com.anton.elementalwands.hall.PyreHall.keepsTerrain(world)) {
+                || com.anton.elementalwands.summit.StormSummit.keepsTerrain(world) || com.anton.elementalwands.hall.PyreHall.keepsTerrain(world)
+                || com.anton.elementalwands.end.EndArenaManager.keepsTerrain(world, center)) {
             return;
         }
         int minX = MathHelper.floor(center.x - ORB_RADIUS);

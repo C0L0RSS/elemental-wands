@@ -6,8 +6,8 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 
 /**
- * Whichever boss cinematic currently owns this client's camera: a boss intro or the Necromancer's
- * transformation. Each keeps its own scene (they are edited separately); the camera, HUD, input,
+ * Whichever boss cinematic currently owns this client's camera: a boss intro, the Necromancer's
+ * transformation or the First Wizard's change. Each keeps its own scene (they are edited separately); the camera, HUD, input,
  * lens and light hooks ask here. Only one plays at a time, since a player can be in only one
  * realm's fight and the transformation comes long after the intro.
  */
@@ -22,13 +22,14 @@ public final class BossIntroCamera {
     /** The player is held by a cinematic: no walking, jumping or sneaking. */
     public static boolean frozen() {
         return GuardianIntroClient.frozen() || NecromancerIntroClient.frozen() || NecromancerTransformClient.frozen() || StormRocIntroClient.frozen()
-                || PyreKingIntroClient.frozen();
+                || PyreKingIntroClient.frozen() || FirstWizardIntroClient.frozen() || FirstWizardChangeClient.frozen();
     }
 
     /** A cinematic owns the camera: HUD, hand, bobbing and block outline stay hidden. */
     public static boolean cinematic() {
         return GuardianIntroClient.cinematic() || NecromancerIntroClient.cinematic() || NecromancerTransformClient.cinematic()
-                || StormRocIntroClient.cinematic() || PyreKingIntroClient.cinematic();
+                || StormRocIntroClient.cinematic() || PyreKingIntroClient.cinematic() || FirstWizardIntroClient.cinematic()
+                || FirstWizardChangeClient.cinematic();
     }
 
     /** Where the camera looks this frame, or null when the player's own view applies. */
@@ -36,6 +37,8 @@ public final class BossIntroCamera {
         if (GuardianIntroClient.frozen()) return GuardianIntroClient.pose(tickDelta);
         if (StormRocIntroClient.frozen()) return StormRocIntroClient.pose(tickDelta);
         if (PyreKingIntroClient.frozen()) return PyreKingIntroClient.pose(tickDelta);
+        if (FirstWizardIntroClient.frozen()) return FirstWizardIntroClient.pose(tickDelta);
+        if (FirstWizardChangeClient.frozen()) return FirstWizardChangeClient.pose(tickDelta);
         if (NecromancerTransformClient.frozen()) return NecromancerTransformClient.pose(tickDelta);
         NecromancerIntroClient.Pose pose = NecromancerIntroClient.pose(tickDelta);
         return pose == null ? null : new Pose(pose.pos(), pose.yaw(), pose.pitch());
@@ -45,6 +48,8 @@ public final class BossIntroCamera {
         if (GuardianIntroClient.frozen()) return GuardianIntroClient.fov(fov, tickDelta);
         if (StormRocIntroClient.frozen()) return StormRocIntroClient.fov(fov, tickDelta);
         if (PyreKingIntroClient.frozen()) return PyreKingIntroClient.fov(fov, tickDelta);
+        if (FirstWizardIntroClient.frozen()) return FirstWizardIntroClient.fov(fov, tickDelta);
+        if (FirstWizardChangeClient.frozen()) return FirstWizardChangeClient.fov(fov, tickDelta);
         if (NecromancerTransformClient.frozen()) return NecromancerTransformClient.fov(fov, tickDelta);
         return NecromancerIntroClient.fov(fov, tickDelta);
     }
@@ -63,6 +68,8 @@ public final class BossIntroCamera {
         if (GuardianIntroClient.cinematic()) GuardianIntroClient.drawCinematic(context, counter);
         else if (StormRocIntroClient.cinematic()) StormRocIntroClient.drawCinematic(context, counter);
         else if (PyreKingIntroClient.cinematic()) PyreKingIntroClient.drawCinematic(context, counter);
+        else if (FirstWizardIntroClient.cinematic()) FirstWizardIntroClient.drawCinematic(context, counter);
+        else if (FirstWizardChangeClient.cinematic()) FirstWizardChangeClient.drawCinematic(context, counter);
         else if (NecromancerTransformClient.cinematic()) NecromancerTransformClient.drawCinematic(context, counter);
         else NecromancerIntroClient.drawCinematic(context, counter);
     }
@@ -71,6 +78,8 @@ public final class BossIntroCamera {
         GuardianIntroClient.drawWaiting(context);
         StormRocIntroClient.drawWaiting(context);
         PyreKingIntroClient.drawWaiting(context);
+        FirstWizardIntroClient.drawWaiting(context);
+        FirstWizardChangeClient.drawWaiting(context);
         NecromancerIntroClient.drawWaiting(context);
         NecromancerTransformClient.drawWaiting(context);
     }

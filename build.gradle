@@ -92,6 +92,13 @@ tasks.register('checkPyreKing', JavaExec) {
 }
 check.dependsOn checkPyreKing
 
+tasks.register('checkFirstWizard', JavaExec) {
+    dependsOn guardianTestClasses
+    classpath = sourceSets.guardianTest.runtimeClasspath
+    mainClass = 'com.anton.elementalwands.entity.firstwizard.FirstWizardContractTest'
+}
+check.dependsOn checkFirstWizard
+
 tasks.register('checkParties', JavaExec) {
     dependsOn guardianTestClasses
     classpath = sourceSets.guardianTest.runtimeClasspath

@@ -84,6 +84,10 @@ public class ElementalWandsMod implements ModInitializer {
         FabricDefaultAttributeRegistry.register(ModEntities.ROC_BODY_PART, com.anton.elementalwands.entity.roc.RocBodyPartEntity.createAttributes().build());
         FabricDefaultAttributeRegistry.register(ModEntities.HOLLOW_NECROMANCER, com.anton.elementalwands.entity.necromancer.NecromancerEntity.createAttributes().build());
         FabricDefaultAttributeRegistry.register(ModEntities.PYRE_KING, com.anton.elementalwands.entity.pyreking.PyreKingEntity.createAttributes().build());
+        FabricDefaultAttributeRegistry.register(ModEntities.FIRST_WIZARD, com.anton.elementalwands.entity.firstwizard.FirstWizardEntity.createAttributes().build());
+        FabricDefaultAttributeRegistry.register(ModEntities.FIRST_WIZARD_BLOOM, com.anton.elementalwands.entity.firstwizard.InkBloomEntity.createAttributes().build());
+        com.anton.elementalwands.end.EndEncounter.setBossFactory(com.anton.elementalwands.entity.firstwizard.FirstWizardEntity::forEncounter);
+        com.anton.elementalwands.entity.firstwizard.FirstWizardChangeScene.init();
         FabricDefaultAttributeRegistry.register(ModEntities.HARVEST_SOUL, com.anton.elementalwands.entity.necromancer.HarvestSoulEntity.createAttributes().build());
         FabricDefaultAttributeRegistry.register(ModEntities.NECROMANCER_SOUL, com.anton.elementalwands.entity.necromancer.NecromancerSoulEntity.createAttributes().build());
         FabricDefaultAttributeRegistry.register(ModEntities.INTRO_ZOMBIE, net.minecraft.entity.mob.ZombieEntity.createZombieAttributes().build());
@@ -137,6 +141,7 @@ public class ElementalWandsMod implements ModInitializer {
         com.anton.elementalwands.crypt.HollowCryptManager.init();
         com.anton.elementalwands.summit.StormSummitManager.init();
         com.anton.elementalwands.hall.PyreHallManager.init();
+        com.anton.elementalwands.end.EndTakeover.init();
         com.anton.elementalwands.entity.necromancer.NecromancerFightLog.init();
         com.anton.elementalwands.entity.GuardianFightLog.init();
 
@@ -172,10 +177,12 @@ public class ElementalWandsMod implements ModInitializer {
             GuardianCommands.register(dispatcher);
             com.anton.elementalwands.command.NecromancerCommands.register(dispatcher);
             com.anton.elementalwands.command.PyreKingCommands.register(dispatcher);
+            com.anton.elementalwands.command.FirstWizardCommands.register(dispatcher);
             com.anton.elementalwands.command.CryptCommands.register(dispatcher);
             com.anton.elementalwands.command.NaveCommands.register(dispatcher);
             com.anton.elementalwands.command.SummitCommands.register(dispatcher);
             com.anton.elementalwands.command.HallCommands.register(dispatcher);
+            com.anton.elementalwands.command.EndCommands.register(dispatcher);
             com.anton.elementalwands.command.PartyCommands.register(dispatcher);
             dispatcher.register(
                 CommandManager.literal("ew")

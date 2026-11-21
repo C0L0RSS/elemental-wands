@@ -25,7 +25,12 @@
     "LocateArrivalMixin",
     "SpellBurnDamageMixin",
     "SpellRegenerationMixin",
-    "BossRealmDeathMixin"
+    "BossRealmDeathMixin",
+    "EndDragonFightMixin",
+    "EndPortalArrivalMixin",
+    "EndArenaExplosionMixin",
+    "EndArenaSpawnMixin",
+    "InkBreathBottleMixin"
   ],
   "injectors": {
     "defaultRequire": 1

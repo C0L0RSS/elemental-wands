@@ -31,6 +31,10 @@ Pillars:
 
 - **Decided:** each of the five shardbearer bosses drops a Wand Shard. A shard both
   raises the player's power cap and counts toward the key to the final boss.
+- **Decided (Nov 18):** the five shards are the key to the End itself. The End portal
+  refuses a player without all five, so elytra, shulker boxes and end cities come after
+  the five shardbearers and the final boss. The End has no dragon fight; see the
+  [First Wizard's design notes](design/first-wizard.md#the-end-belongs-to-this-boss).
 - **Proposed:** shards gate the higher element levels (levels run 1–6 today). XP still
   fills levels, but only boss victories raise the ceiling. "Fully upgraded" means all
   five shards and maximum levels.
@@ -65,8 +69,8 @@ Pillars:
 | Nature (life turned to death) | Hollow Necromancer | Graveyards, Hollow Crypt | 1 | Built |
 | Wind | Storm Roc | Mountain peaks, a sky realm above the clouds | 2 | Built with its aerie and intro; phase cinematic and death to come |
 | Fire | Pyre King | The Nether, behind the Burned Gate | 3 | Built with his hall, gate and intro; death, reward and his own sounds to come |
-| Space | New | The End or the deep dark | 4 | Open |
-| — | Final: the wizard who tried to hold all five | Opened by all five shards | 5 | Open |
+| Space | New | The deep dark (proposed; the End now belongs to the final boss) | 4 | Open |
+| — | Final: the First Wizard, who tried to hold all five | The End, opened by all five shards | 5 | Being built: the End takeover and both phases; the intro to come. [Design notes](design/first-wizard.md) |
 
 Tuning and playtests still owed for the built bosses are in [status](STATUS.md), not in this table.
 
@@ -205,7 +209,7 @@ With infusion, a standout pairing can still become a hand-made signature spell l
 
 ## Open questions
 
-- Boss concepts for the Space slot and the final boss.
+- A boss concept for the Space slot.
 - Whether one element per shardbearer is the right frame.
 - What crystals do.
 - The exact level cap per shard.

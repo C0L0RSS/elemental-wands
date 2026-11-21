@@ -205,12 +205,13 @@ public final class GuardianArenaManager {
      * Every player teleport (spells, pearls, commands, portals, spectator jumps) stays inside the
      * walled floor and never crosses into or out of the nave; only the nave's own moves do that.
      * Fallen players watching a fight may roam the slot but not leave it. The Storm Summit, the
-     * Hollow Crypt and the Burned Throne Hall apply their own rules first.
+     * Hollow Crypt, the Burned Throne Hall and the End's arena apply their own rules first.
      */
     public static boolean canTeleport(PlayerEntity player, ServerWorld destination, Vec3d target) {
         if (!com.anton.elementalwands.summit.StormRocEncounter.canTeleport(player, destination, target)) return false;
         if (!com.anton.elementalwands.crypt.HollowCryptManager.canTeleport(player, destination, target)) return false;
         if (!com.anton.elementalwands.hall.PyreHallManager.canTeleport(player, destination, target)) return false;
+        if (!com.anton.elementalwands.end.EndEncounter.canTeleport(player, destination, target)) return false;
         if (internalTeleport) return true;
         boolean from = inRealm(player), to = destination.getRegistryKey() == ShatteredNave.WORLD;
         if (state != null && state.modes.containsKey(player.getUuidAsString()) && from)

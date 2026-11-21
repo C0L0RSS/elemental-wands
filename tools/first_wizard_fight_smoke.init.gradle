@@ -1,0 +1,64 @@
+// The First Wizard's phase-one fight in a disposable integrated world: each built spell against a standing player (the Fireball's hit, a sidestep, its burning ground; Blink Rift), then a free fight through startFight to its death; hidden, muted window.
+// ./gradlew -I tools/first_wizard_fight_smoke.init.gradle runClient -x downloadAssets -PhubClientAssets="$HOME/.lunarclient/shared/assets"
+allprojects {
+    plugins.withId('fabric-loom') {
+        // -PwizardRun=<name> gives the run its own directory, so several can run at once; -PwizardCases=a,b runs only those cases ("free" for the free fight).
+        def runName='first-wizard-fight-smoke'+(project.findProperty('wizardRun') ? '-'+project.findProperty('wizardRun') : '')
+        def smokeRoot=layout.buildDirectory.dir(runName).get().asFile
+        if (project.findProperty('wizardCases')) loom.runs.client.vmArg('-Dwizard.cases='+project.findProperty('wizardCases'))
+        // -PwizardRecord=case[:every],... saves a frame every tick (or every n ticks) of those cases, as rec-<case>-<tick>.png, for clips.
+        if (project.findProperty('wizardRecord')) loom.runs.client.vmArg('-Dwizard.record='+project.findProperty('wizardRecord'))
+        // -PwizardPose=<Name> draws phase two's tentacles at rest with TendrilPose<Name> (a design study), not the game's own.
+        if (project.findProperty('wizardPose')) loom.runs.client.vmArg('-Dwizard.pose='+project.findProperty('wizardPose'))
+        // -PwizardOrbit=<blocks> sets the phase-drift case's camera distance (5.2 by default); wider, the camera also rises.
+        if (project.findProperty('wizardOrbit')) loom.runs.client.vmArg('-Dwizard.orbit='+project.findProperty('wizardOrbit'))
+        // -PwizardView=<side> films the phase-two cases from one side of her (left, behind, right, front, front-left, behind-left).
+        if (project.findProperty('wizardView')) loom.runs.client.vmArg('-Dwizard.view='+project.findProperty('wizardView'))
+        // Optional existing cache for offline verification (for example Lunar shared/assets).
+        def existingAssets=project.findProperty('hubClientAssets')
+        if (existingAssets) {
+            loom.runs.client.vmArg('-Dfabric.dli.config='+new File(smokeRoot,'launch.cfg').absolutePath)
+        }
+        tasks.register('firstWizardFightMetadata') {
+            if (existingAssets) dependsOn generateDLIConfig
+            doLast {
+                def metadata=new File(smokeRoot,'metadata')
+                metadata.mkdirs()
+                new File(metadata,'fabric.mod.json').text='''{
+  "schemaVersion": 1, "id": "first_wizard_fight_smoke", "version": "1.0.0", "environment": "client",
+  "entrypoints": {"client": ["com.anton.elementalwands.client.FirstWizardFightSmoke"]},
+  "depends": {"elementalwands": "*"}
+}'''
+                // A fresh run directory starts muted, with no first-launch accessibility screen (it would turn the narrator on).
+                def options=new File(smokeRoot,'options.txt')
+                if (!options.exists()) options.text='onboardAccessibility:false\nnarrator:0\nsoundCategory_master:0.0\n'
+                new File(smokeRoot,'FIRST_WIZARD_FIGHT_PASSED.txt').delete()
+                new File(smokeRoot,'FIRST_WIZARD_FIGHT_FAILED.txt').delete()
+                if (existingAssets) {
+                    def assets=file(existingAssets)
+                    if (!new File(assets,'indexes/27.json').exists()) throw new GradleException('Existing asset cache needs indexes/27.json')
+                    def launch=file('.gradle/loom-cache/launch.cfg').text
+                    launch=launch.replaceAll(/(?m)(\t--assetIndex\r?\n)\t[^\r\n]+/, { match, prefix -> prefix+'\t27' })
+                    launch=launch.replaceAll(/(?m)(\t--assetsDir\r?\n)\t[^\r\n]+/, { match, prefix -> prefix+'\t'+assets.absolutePath })
+                    new File(smokeRoot,'launch.cfg').text=launch
+                }
+            }
+        }
+        tasks.register('firstWizardFightJar',Jar) {
+            dependsOn guardianTestClasses, firstWizardFightMetadata
+            archiveFileName='first-wizard-fight-smoke.jar'
+            destinationDirectory=smokeRoot
+            from sourceSets.guardianTest.output
+            from new File(smokeRoot,'metadata')
+        }
+        loom.runs.client.runDir('build/'+runName)
+        loom.runs.client.vmArg('-Dfabric.addMods='+new File(smokeRoot,'first-wizard-fight-smoke.jar').absolutePath)
+        tasks.named('runClient') {
+            dependsOn firstWizardFightJar
+            doLast {
+                if (!new File(smokeRoot,'FIRST_WIZARD_FIGHT_PASSED.txt').exists() || new File(smokeRoot,'FIRST_WIZARD_FIGHT_FAILED.txt').exists())
+                    throw new GradleException('First Wizard fight check failed; inspect build/'+runName+'/logs/latest.log')
+            }
+        }
+    }
+}

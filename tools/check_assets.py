@@ -94,6 +94,22 @@ CHECKS = [
     ("py", "art/pyre_king/intro/build_intro.py", "--check"),
     ("py", "art/pyre_hall/build_layout.py", "--check"),
     ("py", "art/pyre_gate/build_layout.py", "--check"),
+    # The First Wizard
+    ("py", "art/first_wizard/build_ink.py", "--check"),
+    ("same", "art/first_wizard/ink.png", MISC + "first_wizard_ink.png"),
+    ("py", "art/first_wizard/floor_ink/build_floor_ink.py", "--check"),
+    ("same", "art/first_wizard/floor_ink/first_wizard_floor_strip.png", MISC + "first_wizard_floor_strip.png"),
+    ("same", "art/first_wizard/floor_ink/first_wizard_floor_strip_glow.png", MISC + "first_wizard_floor_strip_glow.png"),
+    ("same", "art/first_wizard/floor_ink/first_wizard_floor_cap.png", MISC + "first_wizard_floor_cap.png"),
+    ("same", "art/first_wizard/floor_ink/first_wizard_floor_cap_glow.png", MISC + "first_wizard_floor_cap_glow.png"),
+    ("same", "art/first_wizard/floor_ink/first_wizard_floor_pool.png", MISC + "first_wizard_floor_pool.png"),
+    ("same", "art/first_wizard/floor_ink/first_wizard_floor_pool_glow.png", MISC + "first_wizard_floor_pool_glow.png"),
+    ("py", "art/first_wizard/build_stone.py", "--check"),
+    ("same", "art/first_wizard/stone.png", MISC + "first_wizard_stone.png"),
+    ("py", "art/first_wizard/intro/build_intro.py", "--check"),
+    ("py", "art/first_wizard/change/build_change.py", "--check"),
+    # First Wizard, the End's island
+    ("py", "art/end_island/build_layout.py", "--check"),
     # Sound
     ("py", "tools/build_sounds.py", "--check"),
 ]

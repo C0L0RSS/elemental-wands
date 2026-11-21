@@ -124,6 +124,9 @@ public class ElementalWandsClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.ROC_BODY_PART, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.HOLLOW_NECROMANCER, com.anton.elementalwands.client.renderer.NecromancerRenderer::new);
         EntityRendererRegistry.register(ModEntities.PYRE_KING, com.anton.elementalwands.client.renderer.PyreKingRenderer::new);
+        EntityRendererRegistry.register(ModEntities.FIRST_WIZARD, com.anton.elementalwands.client.renderer.FirstWizardRenderer::new);
+        EntityRendererRegistry.register(ModEntities.FIRST_WIZARD_EFFECT, EmptyEntityRenderer::new);
+        EntityRendererRegistry.register(ModEntities.FIRST_WIZARD_BLOOM, com.anton.elementalwands.client.renderer.InkBloomRenderer::new);
         EntityRendererRegistry.register(ModEntities.SOUL_BOLT, com.anton.elementalwands.client.renderer.SoulBoltRenderer::new);
         EntityRendererRegistry.register(ModEntities.GRASPING_HAND, com.anton.elementalwands.client.renderer.GraspingHandRenderer::new);
         EntityRendererRegistry.register(ModEntities.SOUL_FIREBALL, com.anton.elementalwands.client.renderer.SoulFireballRenderer::new);
@@ -138,6 +141,8 @@ public class ElementalWandsClient implements ClientModInitializer {
         com.anton.elementalwands.client.GuardianIntroClient.init();
         com.anton.elementalwands.client.StormRocIntroClient.init();
         com.anton.elementalwands.client.PyreKingIntroClient.init();
+        com.anton.elementalwands.client.FirstWizardIntroClient.init();
+        com.anton.elementalwands.client.FirstWizardChangeClient.init();
         com.anton.elementalwands.client.GuardianPullClient.init();
         EntityRendererRegistry.register(ModEntities.HOLLOW_CRAWLER, context -> new com.anton.elementalwands.client.renderer.HollowUndeadRenderer<>(context, "hollow_crawler", .6f));
         EntityRendererRegistry.register(ModEntities.HOLLOW_ARCHER, context -> new com.anton.elementalwands.client.renderer.HollowUndeadRenderer<>(context, "hollow_archer", .4f));
@@ -184,7 +189,11 @@ public class ElementalWandsClient implements ClientModInitializer {
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             com.anton.elementalwands.client.WandWelcome.reset();
             ClientPlayerData.reset(); com.anton.elementalwands.client.WandControls.clear();
+            com.anton.elementalwands.end.EndArenaManager.setClientGuarded(false);
         });
+        // The End arena's protection, so this client refuses the same block and bucket uses as the server.
+        ClientPlayNetworking.registerGlobalReceiver(com.anton.elementalwands.end.EndArenaManager.GuardPayload.ID,
+                (payload, context) -> com.anton.elementalwands.end.EndArenaManager.setClientGuarded(payload.guarded()));
         ClientPlayNetworking.registerGlobalReceiver(ModNetworking.SyncStoneClusterPayload.ID, (payload, context) -> {
             if (context.client().world != null) ClientPlayerData.setStoneCluster(payload.mass(),payload.remaining(),
                     payload.duration(),context.client().world.getTime());
@@ -215,6 +224,8 @@ public class ElementalWandsClient implements ClientModInitializer {
         com.anton.elementalwands.client.blockfire.BlockFireEffects.register();
         com.anton.elementalwands.client.blockwind.BlockWindEffects.register();
         com.anton.elementalwands.client.blockspace.BlockSpaceEffects.register();
+        com.anton.elementalwands.client.blockink.InkEffects.register();
+        com.anton.elementalwands.client.blockink.EndSkyFx.register();
         com.anton.elementalwands.client.blocknature.BlockNatureEffects.register();
         com.anton.elementalwands.client.NaveShaftEffects.register();
         com.anton.elementalwands.client.PyreSeaHaze.register();

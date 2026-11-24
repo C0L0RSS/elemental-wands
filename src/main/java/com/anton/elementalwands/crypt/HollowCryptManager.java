@@ -34,7 +34,6 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.block.entity.ChestBlockEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.effect.StatusEffectInstance;
@@ -60,6 +59,7 @@ import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.WorldSavePath;
+import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
@@ -182,7 +182,7 @@ public final class HollowCryptManager {
         UseBlockCallback.EVENT.register((player, world, hand, hit) -> {
             if (hand != Hand.MAIN_HAND || !(world instanceof ServerWorld server) || !(player instanceof ServerPlayerEntity caller)
                     || world.getRegistryKey() == HollowCryptRealm.WORLD || state == null) return ActionResult.PASS;
-            claimBook(caller, server, hit.getBlockPos());
+            if (claimBook(caller, server, hit)) return ActionResult.SUCCESS;
             BlockPos skull = headstone(world, hit.getBlockPos());
             if (skull == null) return ActionResult.PASS;
             caller.sendMessage(Text.literal(ritual(caller, new Entrance(skull, new Vec3d(skull.getX() + .5, skull.getY() + .5, skull.getZ() + 1.5), null, 0))), true);
@@ -418,21 +418,26 @@ public final class HollowCryptManager {
         BlockPos skull = new BlockPos(Integer.parseInt(parts[1]), Integer.parseInt(parts[2]), Integer.parseInt(parts[3]));
         Site site = state.sites.computeIfAbsent(fight.site, key -> new Site());
         boolean first = site.chests.isEmpty();
-        if (first) HollowCryptRewards.place(world, skull).forEach(pos -> site.chests.add(pos.asLong()));
+        HollowCryptRewards.place(world, skull, site.chests);
         for (String id : fight.roster) if (!site.victors.contains(id)) site.victors.add(id);
         if (site.chests.isEmpty()) return "";
         return first ? " Reward chests wait at the graveyard." : " Open the graveyard's chests to claim your spell book.";
     }
 
-    private static void claimBook(ServerPlayerEntity player, ServerWorld world, BlockPos pos) {
-        if (!(world.getBlockEntity(pos) instanceof ChestBlockEntity)) return;
+    private static boolean claimBook(ServerPlayerEntity player, ServerWorld world, BlockHitResult hit) {
         for (var entry : state.sites.entrySet()) {
             Site site = entry.getValue();
-            if (!site.chests.contains(pos.asLong()) || !entry.getKey().startsWith(world.getRegistryKey().getValue() + "|")) continue;
-            if (site.victors.contains(player.getUuidAsString()))
-                SpellBooks.claim(player, "graveyard:" + entry.getKey(), "Your Hollow Crypt spell book is in your inventory. Right-click it for a free Basic or Technique spell.");
-            return;
+            if (!site.victors.contains(player.getUuidAsString()) || !entry.getKey().startsWith(world.getRegistryKey().getValue() + "|")) continue;
+            for (long recorded : site.chests) {
+                BlockPos cell = BlockPos.fromLong(recorded);
+                if (!SpellBooks.targetsChest(hit, cell)) continue;
+                String[] parts = entry.getKey().split("\\|");
+                BlockPos skull = new BlockPos(Integer.parseInt(parts[1]), Integer.parseInt(parts[2]), Integer.parseInt(parts[3]));
+                return SpellBooks.recoverChest(world, hit, cell, HollowCryptRewards.chestState(skull, cell),
+                        () -> SpellBooks.claim(player, "graveyard:" + entry.getKey(), "Your Hollow Crypt spell book is in your inventory. Right-click it for a free Basic or Technique spell."));
+            }
         }
+        return false;
     }
 
     /** Each tick: rise, drop the fallen, detect a wipe or a lost boss, and finish ended fights. */
@@ -559,29 +564,35 @@ public final class HollowCryptManager {
     // ------------------------------------------------------------------ moving players
 
     /** Back to the recorded entry point (or world spawn), restoring any game mode the crypt changed. */
-    private static boolean sendHome(ServerPlayerEntity player) {
+    private static String sendHome(ServerPlayerEntity player) {
         MinecraftServer server = player.getEntityWorld().getServer();
         String id = player.getUuidAsString();
         Point point = state.returns.get(id);
         ServerWorld world = point == null ? null : server.getWorld(RegistryKey.of(RegistryKeys.WORLD, Identifier.of(point.dimension())));
-        if (world != null && world.getRegistryKey() != HollowCryptRealm.WORLD) {
-            transfer(player, world, new Vec3d(point.x(), point.y(), point.z()), point.yaw(), point.pitch());
+        Vec3d destination = world == null || world.getRegistryKey() == HollowCryptRealm.WORLD ? null
+                : new Vec3d(point.x(), point.y(), point.z());
+        boolean moved;
+        if (destination != null) {
+            moved = transfer(player, world, destination, point.yaw(), point.pitch());
         } else {
-            world = null;
             ServerWorld spawn = server.getSpawnWorld();
             BlockPos pos = server.getSpawnPoint().getPos();
             spawn.getChunk(pos.getX() >> 4, pos.getZ() >> 4);
             int y = spawn.getTopY(Heightmap.Type.MOTION_BLOCKING, pos.getX(), pos.getZ());
-            transfer(player, spawn, new Vec3d(pos.getX() + .5, y, pos.getZ() + .5), server.getSpawnPoint().yaw(), 0);
+            moved = transfer(player, spawn, new Vec3d(pos.getX() + .5, y, pos.getZ() + .5), server.getSpawnPoint().yaw(), 0);
         }
-        String mode = state.modes.remove(id);
+        if (!moved) return "The return teleport failed. Your return record is still available.";
+        String mode = state.modes.get(id);
         if (mode != null) {
             player.setCameraEntity(player);
             player.changeGameMode(GameMode.byId(mode, GameMode.SURVIVAL));
         }
+        // The player file must reflect the trip and original game mode before the journal forgets either.
+        server.getPlayerManager().saveAllPlayerData();
+        state.modes.remove(id);
         state.returns.remove(id);
         persist();
-        return world != null;
+        return destination != null ? "Returned to where you entered." : "Your return point was unavailable; sent to world spawn.";
     }
 
     // ------------------------------------------------------------------ commands
@@ -612,7 +623,7 @@ public final class HollowCryptManager {
             fight.roster.remove(player.getUuidAsString());
             persist();
         }
-        return sendHome(player) ? "Returned to where you entered." : "No return point was recorded; sent to world spawn.";
+        return sendHome(player);
     }
 
     /** Operator summon: the survival players already in the slot become the fight's sealed party. */
@@ -809,14 +820,15 @@ public final class HollowCryptManager {
         transfer(player, realm, HollowCryptRealm.arrival(HollowCryptRealm.centre(state.generation, slot)), HollowCryptRealm.ARRIVAL_YAW, 0);
     }
 
-    private static void transfer(ServerPlayerEntity player, ServerWorld world, Vec3d pos, float yaw, float pitch) {
+    private static boolean transfer(ServerPlayerEntity player, ServerWorld world, Vec3d pos, float yaw, float pitch) {
         player.stopRiding();
         internalTeleport = true;
-        try { player.teleport(world, pos.x, pos.y, pos.z, Set.of(), yaw, pitch, true); }
+        try { if (!player.teleport(world, pos.x, pos.y, pos.z, Set.of(), yaw, pitch, true)) return false; }
         finally { internalTeleport = false; }
         player.setVelocity(Vec3d.ZERO);
         player.fallDistance = 0;
         player.velocityModified = true;
+        return true;
     }
 
     // ------------------------------------------------------------------ storage

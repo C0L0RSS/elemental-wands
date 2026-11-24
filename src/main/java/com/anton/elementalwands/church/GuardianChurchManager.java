@@ -2,6 +2,8 @@ package com.anton.elementalwands.church;
 
 import com.anton.elementalwands.arena.GuardianArenaManager;
 import com.anton.elementalwands.entity.FracturedGuardianEntity;
+import com.anton.elementalwands.party.PartyLine;
+import com.anton.elementalwands.util.SpellBooks;
 import com.anton.elementalwands.registry.*;
 import com.anton.elementalwands.registry.ModSounds;
 import com.google.gson.*;
@@ -94,9 +96,14 @@ public final class GuardianChurchManager {
             }
             Site s=siteAt(world,hit.getBlockPos());
             if(s!=null && s.phase==Phase.RESTORED && hand==Hand.MAIN_HAND && s.rewardPlayers!=null
-                    && s.rewardPlayers.contains(p.getUuidAsString()) && world.getBlockEntity(hit.getBlockPos()) instanceof ChestBlockEntity
-                    && (hit.getBlockPos().equals(s.at(-5,-1,35)) || hit.getBlockPos().equals(s.at(5,-1,35))))
-                com.anton.elementalwands.util.SpellBooks.claim(p,s.token);
+                    && s.rewardPlayers.contains(p.getUuidAsString())) {
+                for (int x:new int[]{-5,5}) {
+                    BlockPos cell=s.at(x,-1,35);
+                    if (SpellBooks.targetsChest(hit,cell) && SpellBooks.recoverChest(sw,hit,cell,
+                            ChurchLayout.state(true,new BlockPos(x,-1,35),s.rotation,s.layoutVersion),() -> SpellBooks.claim(p,s.token)))
+                        return ActionResult.SUCCESS;
+                }
+            }
             if (s!=null && hit.getBlockPos().equals(s.offering()) && world.getBlockEntity(hit.getBlockPos()) instanceof ChestBlockEntity chest) {
                 com.anton.elementalwands.util.WandGuide.removeLegacyBooks(chest);
                 if (hand==Hand.MAIN_HAND && s.phase==Phase.RUINED) p.sendMessage(Text.literal("Place the Guardian Heart on the pedestal before the statue when your group is ready."), false);
@@ -148,6 +155,19 @@ public final class GuardianChurchManager {
     private static Site siteAt(World world,BlockPos pos) {
         if (state==null || world.getRegistryKey()!=World.OVERWORLD) return null;
         for (Site s:state.sites) if (s.contains(pos)) return s;
+        return null;
+    }
+    /** A ruined wall or patch of floor may have become solid while its visitors were in the nave. */
+    public static Vec3d naveReturn(ServerWorld world,Vec3d recorded) {
+        Site s=siteAt(world,BlockPos.ofFloored(recorded));
+        if (s==null || s.phase!=Phase.RESTORING && s.phase!=Phase.RESTORED) return recorded;
+        // During the rebuild even a currently open cell can be walled up next tick.
+        if (s.phase==Phase.RESTORED && PartyLine.canStand(world,recorded)) return recorded;
+        BlockPos entrance=ChurchLayout.at(s.anchor(),s.rotation,ChurchLayout.ARRIVAL);
+        for (BlockPos cell:BlockPos.iterateOutwards(entrance,4,3,4)) {
+            Vec3d spot=Vec3d.ofBottomCenter(cell);
+            if (world.getWorldBorder().contains(cell) && PartyLine.canStand(world,spot)) return spot;
+        }
         return null;
     }
     /** Both the bowl and its carved column are a forgiving, single ritual target. */

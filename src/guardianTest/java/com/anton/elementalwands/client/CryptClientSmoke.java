@@ -360,6 +360,7 @@ public final class CryptClientSmoke implements ClientModInitializer {
                                 "The fallen teammate did not spectate the surviving player's fight");
                         require(HollowCryptManager.spectatorViewer(boss, watcher) && !GuardianArenaManager.canCast(watcher),
                                 "The fallen teammate lost the boss bar or can still cast");
+                        server.getPlayerManager().saveAllPlayerData();
                         // The death event commits the victory; the corpse is removed at once.
                         net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.AFTER_DEATH.invoker().afterDeath(boss, realm.getDamageSources().generic());
                         boss.discard();
@@ -375,6 +376,7 @@ public final class CryptClientSmoke implements ClientModInitializer {
                         require(watcher.getEntityWorld() == world && watcher.getBlockPos().isWithinDistance(door, 24)
                                 && watcher.interactionManager.getGameMode() == GameMode.ADVENTURE,
                                 "The fallen teammate did not return to the graveyard in Adventure");
+                        GuardianNaveSmokeMod.assertSavedReturn(server, watcher);
                         java.util.List<BlockPos> chests = new java.util.ArrayList<>();
                         for (BlockPos q : BlockPos.iterate(door.add(-8, -6, -8), door.add(8, 0, 8)))
                             if (world.getBlockEntity(q) instanceof net.minecraft.block.entity.ChestBlockEntity chest && !chest.isEmpty()) chests.add(q.toImmutable());
@@ -387,6 +389,14 @@ public final class CryptClientSmoke implements ClientModInitializer {
                         net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.invoker().interact(p, world, net.minecraft.util.Hand.MAIN_HAND, hit);
                         net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.invoker().interact(p, world, net.minecraft.util.Hand.MAIN_HAND, hit);
                         require(p.getInventory().count(com.anton.elementalwands.registry.ModItems.SECONDARY_SPELL_BOOK) == 1, "Victor did not receive exactly one spell book");
+                        BlockPos missing = chests.get(1);
+                        world.breakBlock(missing, false);
+                        var floorHit = new net.minecraft.util.hit.BlockHitResult(Vec3d.ofCenter(missing.down()), net.minecraft.util.math.Direction.UP, missing.down(), false);
+                        net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.invoker().interact(watcher, world, net.minecraft.util.Hand.MAIN_HAND, floorHit);
+                        net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.invoker().interact(watcher, world, net.minecraft.util.Hand.MAIN_HAND, floorHit);
+                        require(watcher.getInventory().count(com.anton.elementalwands.registry.ModItems.SECONDARY_SPELL_BOOK) == 1
+                                        && world.getBlockEntity(missing) instanceof net.minecraft.block.entity.ChestBlockEntity restored && restored.isEmpty(),
+                                "Claiming a missing Crypt chest did not restore it empty and grant exactly one personal book");
                         p.networkHandler.requestTeleport(chests.get(0).getX() + .5 + 4, chests.get(0).getY() + 3, chests.get(0).getZ() + .5 + 4, 0, 0);
                         rewardView = Vec3d.ofCenter(chests.get(0));
                     });

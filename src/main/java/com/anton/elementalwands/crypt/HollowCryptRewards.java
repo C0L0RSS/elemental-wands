@@ -51,28 +51,27 @@ final class HollowCryptRewards {
         return List.of(floor.offset(side, 3), floor.offset(side, -3));
     }
 
-    /** Places and fills the chests. Returns the positions that hold a reward chest. */
-    static List<BlockPos> place(ServerWorld world, BlockPos skull) {
+    static BlockState chestState(BlockPos skull, BlockPos pos) {
+        // Both layouts offset the chests farther sideways than forward, so each faces the aisle.
+        Direction facing = Direction.getFacing(skull.getX() - pos.getX(), 0, skull.getZ() - pos.getZ());
+        return Blocks.CHEST.getDefaultState().with(ChestBlock.FACING, facing);
+    }
+
+    /** Reserve the cells on the first victory. Later victories replace a missing chest empty. */
+    static void place(ServerWorld world, BlockPos skull, List<Long> cells) {
         world.getChunk(skull.getX() >> 4, skull.getZ() >> 4);
-        List<BlockPos> placed = new ArrayList<>();
-        List<BlockPos> spots = chestSpots(world, skull);
-        if (spots.isEmpty()) return placed;
-        // The first chest lies on this side of the second.
-        Direction side = Direction.getFacing(spots.get(0).getX() - spots.get(1).getX(), 0, spots.get(0).getZ() - spots.get(1).getZ());
-        for (int i = 0; i < spots.size(); i++) {
-            BlockPos pos = spots.get(i);
+        boolean first = cells.isEmpty();
+        if (first) for (BlockPos spot : chestSpots(world, skull)) cells.add(spot.asLong());
+        for (int i = 0; i < cells.size(); i++) {
+            BlockPos pos = BlockPos.fromLong(cells.get(i));
             BlockState here = world.getBlockState(pos);
-            if (!here.isAir() && !here.isReplaceable()) continue;
-            // Each chest faces the steps (or grave) between them.
-            Direction facing = i == 0 ? side.getOpposite() : side;
-            world.setBlockState(pos, Blocks.CHEST.getDefaultState().with(ChestBlock.FACING, facing));
-            if (!(world.getBlockEntity(pos) instanceof ChestBlockEntity chest)) continue;
+            if (!here.isAir() && !(first && here.isReplaceable())) continue;
+            world.setBlockState(pos, chestState(skull, pos));
+            if (!first || !(world.getBlockEntity(pos) instanceof ChestBlockEntity chest)) continue;
             List<ItemStack> contents = contents(world, skull, i == 0 ? -1 : 1);
             for (int slot = 0; slot < contents.size(); slot++) chest.setStack(slot, contents.get(slot));
             chest.markDirty();
-            placed.add(pos.toImmutable());
         }
-        return placed;
     }
 
     /** Church treasure plus a handful of bones in the empty slots; seeded by the graveyard. */

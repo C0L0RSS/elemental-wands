@@ -73,17 +73,22 @@ public final class PartyLine {
     static boolean fits(World world, Vec3d at, Vec3d spot, List<Vec3d> taken) {
         for (Vec3d other : taken)
             if (Math.hypot(other.x - spot.x, other.z - spot.z) < APART) return false;
+        if (!canStand(world, spot)) return false;
+        // In the same open space as the point: nothing in the way at chest height.
+        Vec3d from = at.add(0, 1.2, 0), to = spot.add(0, 1.2, 0);
+        return from.squaredDistanceTo(to) < 1e-6 || world.raycast(new RaycastContext(from, to, RaycastContext.ShapeType.COLLIDER,
+                RaycastContext.FluidHandling.NONE, ShapeContext.absent())).getType() == HitResult.Type.MISS;
+    }
+
+    /** Enough room for a standing player with dry, safe ground under their feet. */
+    public static boolean canStand(World world, Vec3d spot) {
         Box body = new Box(spot.x - .3, spot.y + .01, spot.z - .3, spot.x + .3, spot.y + 1.8, spot.z + .3);
         if (!world.isSpaceEmpty(body) || world.containsFluid(body.expand(.2, 0, .2))) return false;
         if (world.getStatesInBox(body.expand(.2, 0, .2)).anyMatch(PartyLine::harmful)) return false;
         // A floor right under the feet, and not one that burns.
         if (world.isSpaceEmpty(new Box(spot.x - .15, spot.y - .25, spot.z - .15, spot.x + .15, spot.y - .01, spot.z + .15))) return false;
         BlockState floor = world.getBlockState(BlockPos.ofFloored(spot.x, spot.y - .1, spot.z));
-        if (floor.isOf(Blocks.MAGMA_BLOCK) || floor.isIn(BlockTags.CAMPFIRES) || floor.isIn(BlockTags.FIRE)) return false;
-        // In the same open space as the point: nothing in the way at chest height.
-        Vec3d from = at.add(0, 1.2, 0), to = spot.add(0, 1.2, 0);
-        return from.squaredDistanceTo(to) < 1e-6 || world.raycast(new RaycastContext(from, to, RaycastContext.ShapeType.COLLIDER,
-                RaycastContext.FluidHandling.NONE, ShapeContext.absent())).getType() == HitResult.Type.MISS;
+        return !floor.isOf(Blocks.MAGMA_BLOCK) && !floor.isIn(BlockTags.CAMPFIRES) && !floor.isIn(BlockTags.FIRE);
     }
 
     private static boolean harmful(BlockState state) {

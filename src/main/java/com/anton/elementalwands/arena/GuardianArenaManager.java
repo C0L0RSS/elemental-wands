@@ -662,29 +662,35 @@ public final class GuardianArenaManager {
     // ------------------------------------------------------------------ moving players
 
     /** Back to the recorded entry point (or world spawn), restoring any game mode the nave changed. */
-    private static boolean sendHome(ServerPlayerEntity player) {
+    private static String sendHome(ServerPlayerEntity player) {
         MinecraftServer server = player.getEntityWorld().getServer();
         String id = player.getUuidAsString();
         Point point = state.returns.get(id);
         ServerWorld world = point == null ? null : server.getWorld(RegistryKey.of(RegistryKeys.WORLD, Identifier.of(point.dimension())));
-        if (world != null && world.getRegistryKey() != ShatteredNave.WORLD) {
-            transfer(player, world, new Vec3d(point.x(), point.y(), point.z()), point.yaw(), point.pitch());
+        Vec3d destination = world == null || world.getRegistryKey() == ShatteredNave.WORLD ? null
+                : GuardianChurchManager.naveReturn(world, new Vec3d(point.x(), point.y(), point.z()));
+        boolean moved;
+        if (destination != null) {
+            moved = transfer(player, world, destination, point.yaw(), point.pitch());
         } else {
-            world = null;
             ServerWorld spawn = server.getSpawnWorld();
             BlockPos pos = server.getSpawnPoint().getPos();
             spawn.getChunk(pos.getX() >> 4, pos.getZ() >> 4);
             int y = spawn.getTopY(Heightmap.Type.MOTION_BLOCKING, pos.getX(), pos.getZ());
-            transfer(player, spawn, new Vec3d(pos.getX() + .5, y, pos.getZ() + .5), server.getSpawnPoint().yaw(), 0);
+            moved = transfer(player, spawn, new Vec3d(pos.getX() + .5, y, pos.getZ() + .5), server.getSpawnPoint().yaw(), 0);
         }
-        String mode = state.modes.remove(id);
+        if (!moved) return "The return teleport failed. Your return record is still available.";
+        String mode = state.modes.get(id);
         if (mode != null) {
             player.setCameraEntity(player);
             player.changeGameMode(GameMode.byId(mode, GameMode.SURVIVAL));
         }
+        // The player file must reflect the trip and original game mode before the journal forgets either.
+        server.getPlayerManager().saveAllPlayerData();
+        state.modes.remove(id);
         state.returns.remove(id);
         persist();
-        return world != null;
+        return destination != null ? "Returned to where you entered." : "Your return point was unavailable; sent to world spawn.";
     }
 
     private static void arriveAll(List<ServerPlayerEntity> group, ServerWorld realm, int slot) {
@@ -697,14 +703,15 @@ public final class GuardianArenaManager {
         transfer(player, realm, at, ShatteredNave.ARRIVAL_YAW, 0);
     }
 
-    private static void transfer(ServerPlayerEntity player, ServerWorld world, Vec3d pos, float yaw, float pitch) {
+    private static boolean transfer(ServerPlayerEntity player, ServerWorld world, Vec3d pos, float yaw, float pitch) {
         player.stopRiding();
         internalTeleport = true;
-        try { player.teleport(world, pos.x, pos.y, pos.z, Set.of(), yaw, pitch, true); }
+        try { if (!player.teleport(world, pos.x, pos.y, pos.z, Set.of(), yaw, pitch, true)) return false; }
         finally { internalTeleport = false; }
         player.setVelocity(Vec3d.ZERO);
         player.fallDistance = 0;
         player.velocityModified = true;
+        return true;
     }
 
     // ------------------------------------------------------------------ commands
@@ -736,7 +743,7 @@ public final class GuardianArenaManager {
             persist();
         }
         cancelEncounterEffects(player);
-        return sendHome(player) ? "Returned to where you entered." : "No return point was recorded; sent to world spawn.";
+        return sendHome(player);
     }
 
     /** Operator summon: the survival players already in the slot become the fight's sealed party. */

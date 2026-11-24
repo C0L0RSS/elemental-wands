@@ -164,6 +164,7 @@ public final class GuardianNaveSmokeMod implements ModInitializer {
             require(!GuardianArenaManager.canTeleport(second, nave, Vec3d.of(centre).add(400, 20, 0)), "A spectator can leave the slot");
             require(GuardianArenaManager.canTeleport(second, nave, Vec3d.of(centre).add(20, 20, 20)), "A spectator cannot move within the slot");
             require(GuardianArenaManager.spectatorViewer(guardian, second), "A spectator cannot see the Guardian's health");
+            server.getPlayerManager().saveAllPlayerData();
             float health = guardian.getHealth();
             guardian.damage(nave, nave.getDamageSources().playerAttack(second), 5);
             require(guardian.getHealth() == health, "A spectator damaged the Guardian");
@@ -176,6 +177,7 @@ public final class GuardianNaveSmokeMod implements ModInitializer {
             second = server.getPlayerManager().getPlayer(second.getUuid());
             require(first.getEntityWorld() == world && first.getEntityPos().distanceTo(new Vec3d(.5, ground, .5)) < 1, "The victor was not sent back to the church");
             require(second.getEntityWorld() == world && second.interactionManager.getGameMode() == GameMode.ADVENTURE, "The spectator did not get Adventure mode back");
+            assertSavedReturn(server, second);
             ritual(first);
             stage = 6;
         }
@@ -367,6 +369,19 @@ public final class GuardianNaveSmokeMod implements ModInitializer {
         server.getPlayerManager().getPlayerList().add(player);
         world.onPlayerConnected(player);
         return player;
+    }
+
+    /** Check the actual player save immediately after the return, before the next autosave. */
+    public static void assertSavedReturn(MinecraftServer server, ServerPlayerEntity player) {
+        var path = server.getSavePath(net.minecraft.util.WorldSavePath.PLAYERDATA).resolve(player.getUuidAsString() + ".dat");
+        try {
+            var saved = net.minecraft.nbt.NbtIo.readCompressed(path, net.minecraft.nbt.NbtSizeTracker.ofUnlimitedBytes());
+            require(player.getEntityWorld().getRegistryKey().getValue().toString().equals(saved.getString("Dimension", ""))
+                            && player.interactionManager.getGameMode().getIndex() == saved.getInt("playerGameType", -1),
+                    "Return completed with the old dimension or game mode still on disk");
+        } catch (java.io.IOException e) {
+            throw new AssertionError("Returned player has no readable save", e);
+        }
     }
 
     private static void require(boolean condition, String message) { if (!condition) throw new AssertionError(message); }

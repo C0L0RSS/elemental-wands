@@ -205,16 +205,16 @@ Things one player cannot show.
 
 Automated work an agent can do without the developer.
 
-- No fixture has run on a dedicated server since the Nature rework; the November 10–11 runs
-  were hosted in a singleplayer world on the Windows machine.
+- Verify the Nature rework on a dedicated server. The local Windows runs used a
+  singleplayer host.
+- Run the Nave and church recovery fixtures across a dedicated-server restart. Check that
+  returned players keep their game mode and that a recovered reward chest stays empty.
 - The party fixture's restart half was not run after the Nature rework.
 - The Thornbite heal buff inside Full Bloom has no fixture.
 - Springbloom's launch and flight leaves are in no client fixture, and its revised arc has
   no fresh native-client measurement (the server fixture checks about a 15-block apex and
   21-block travel).
 - The client fixtures do not press collect or break on a flower.
-- The hub and progression regression checks have not been rerun since the free-slot and
-  cooldown changes.
 - Wand-tip cast particles have had no native-client check (right and left hand, first and
   third person, wide FOV).
 - The Astral Double tuning against the Necromancer has had no client check.

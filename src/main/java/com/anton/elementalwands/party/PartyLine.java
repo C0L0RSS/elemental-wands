@@ -83,8 +83,11 @@ public final class PartyLine {
     /** Enough room for a standing player with dry, safe ground under their feet. */
     public static boolean canStand(World world, Vec3d spot) {
         Box body = new Box(spot.x - .3, spot.y + .01, spot.z - .3, spot.x + .3, spot.y + 1.8, spot.z + .3);
-        if (!world.isSpaceEmpty(body) || world.containsFluid(body.expand(.2, 0, .2))) return false;
-        if (world.getStatesInBox(body.expand(.2, 0, .2)).anyMatch(PartyLine::harmful)) return false;
+        // Reading the destination loads its blocks before collision checks, which skip unloaded chunks.
+        // A returning player may be the first person back at a church since the server restarted.
+        Box surrounding = body.expand(.2, 0, .2);
+        if (world.getStatesInBox(surrounding).anyMatch(PartyLine::harmful)
+                || world.containsFluid(surrounding) || !world.isSpaceEmpty(body)) return false;
         // A floor right under the feet, and not one that burns.
         if (world.isSpaceEmpty(new Box(spot.x - .15, spot.y - .25, spot.z - .15, spot.x + .15, spot.y - .01, spot.z + .15))) return false;
         BlockState floor = world.getBlockState(BlockPos.ofFloored(spot.x, spot.y - .1, spot.z));

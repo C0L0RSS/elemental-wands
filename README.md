@@ -64,15 +64,15 @@ reservoir and require full charge to cast.
 
 | Element | Basic spells | Techniques | Ultimate |
 | --- | --- | --- | --- |
-| Fire | Inferno Wave, Flamethrower | Dragon's Pyre, Fire Leap, Flashover | Meteor |
-| Wind | Sky Shear | Waylay Dash | Zephyr Strike |
-| Stone | Gathered Mass | Stone Wall | Titan Dome |
+| Fire | Fireball, Flamethrower | Dragon's Pyre, Fire Leap, Flashover | Meteor |
+| Wind | Sky Shear | Waylay Dash, Gale Daggers, Updraft | Zephyr Strike |
+| Stone | Gathered Mass | Stone Wall, Faultline, Juggernaut | Titan Dome |
 | Nature | Seed, Thornbite | Sentry Bloom, Springbloom | Full Bloom |
-| Space | Singularity Bolt | Blink Rift | Hollow Purple |
+| Space | Singularity Bolt | Blink Rift, Astral Double, Gravity Well | Hollow Purple |
 
 ### Fire
 
-Send an **Inferno Wave** forward or channel **Flamethrower**, managing its heat as
+Launch a **Fireball** or channel **Flamethrower**, managing its heat as
 damage builds. **Dragon's Pyre** sends a ground-following wall of fire.
 **Fire Leap** lets you aim a leap and land with a shockwave, while **Flashover**
 plants sticky embers on enemies or surfaces for alternate-input detonation.
@@ -84,6 +84,8 @@ plants sticky embers on enemies or surfaces for alternate-input detonation.
 with stronger hits up close. **Waylay Dash**
 provides two independently recovering dash charges. **Zephyr Strike** temporarily
 grants wings, launches you into the air, and delivers a landing impact.
+**Gale Daggers** readies three aimed shots. **Updraft** launches you from the ground
+or midair and protects the landing.
 
 ### Stone
 
@@ -91,6 +93,8 @@ Aim toward nearby ground with **Gathered Mass** to build a stone reserve, then
 throw it outward. **Stone Wall** raises cover that can be recast nearby to shatter
 forward. **Titan Dome** creates a temporary stone enclosure with its own combat
 and equipment effects.
+**Faultline** sends a wave of spikes that launches enemies. Hold **Juggernaut** to
+build speed for a charge or a running leap.
 
 ### Nature
 
@@ -105,6 +109,8 @@ shield, your spells quicken and each of your flowers grows a second head.
 
 **Singularity Bolt** launches a black star with limited aim assistance.
 **Blink Rift** teleports you a short distance along your aim.
+**Astral Double** creates a copy that echoes your shots and can swap places with you.
+**Gravity Well** pulls enemies together and can be collapsed early for damage.
 **Hollow Purple** commits you to a charged release: you can keep aiming while
 charging, but cannot move or use other items.
 
@@ -140,7 +146,8 @@ instance folder. GeckoLib is bundled with the mod.
 
 ## Development
 
-Build the mod or launch a development client from the project root:
+Building from source requires a **JDK 21** with `javac`. Point `JAVA_HOME` at
+the JDK and run the Gradle wrapper from the project root.
 
 ```sh
 ./gradlew build

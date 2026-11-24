@@ -50,7 +50,7 @@ its row in the same task. Use backticks here only for files, folders and classes
 | Wand item, shared cooldowns and ultimate charge, the fractured beam (no affinity) | `item/UniversalWandItem`, `item/AbstractWandItem` | [Spells](reference/spells.md#shared-rules) |
 | Spell catalog: names, saved IDs, prices, categories, and the cooldown and reach text the hub shows (written by hand there, so change it with the spell) | `data/WandSpells` | [Progression](reference/progression-and-controls.md) |
 | Affinity and saved player state | `data/WizardAffinity`, `data/EWAttachments`, `data/ElementProgress` | [Progression](reference/progression-and-controls.md) |
-| Loadouts, slot validation, combat lock | `util/WandLoadouts` | [Progression](reference/progression-and-controls.md) |
+| Loadouts, clearing a slot, combat and cinematic cast locks | `util/WandLoadouts`, `data/WandSpells` | [Progression](reference/progression-and-controls.md) |
 | Flux, purchases, levels, XP, spell books | `util/WandProgression`, `data/ElementLevels`, `util/SpellBooks`, `item/SpellBookItem` | [Progression](reference/progression-and-controls.md) |
 | Damage attribution and XP from hits | `util/SpellCombat` | [Spells](reference/spells.md#shared-rules) |
 | Key bindings and held input | `client/WandControls`, `mixin/WandKeyboardMixin`, `mixin/WandMouseMixin` | [Progression](reference/progression-and-controls.md) |
@@ -63,7 +63,7 @@ its row in the same task. Use backticks here only for files, folders and classes
 | 3D wand model and glass core | `client/wand/WandMesh`, `WandRenderer`, `WandItemModel`; source `art/wand/design.json`, exporter `tools/prepare_wand_assets.py` | [Wand rendering](reference/wand-rendering.md) |
 | Temporary blocks and their restoration | `util/TemporaryBlockManager` | [Spells](reference/spells.md#shared-rules) |
 | Cast effects from the wand tip; first-person fade | `util/SpellCastVisuals`, `client/renderer/SpellViewClearance` | [Spells](reference/spells.md#shared-rules) |
-| Aim raycasts and beam particles shared by spells | `util/WandUtils` | [Spells](reference/spells.md#shared-rules) |
+| Aim raycasts, beam particles, and boss-realm terrain checks shared by spells | `util/WandUtils` | [Spells](reference/spells.md#shared-rules) |
 | Spell regeneration, burn damage credit, fire from wand explosions | `util/SpellBuffs`, `mixin/SpellRegenerationMixin`, `mixin/SpellBurnDamageMixin`, `mixin/WandExplosionFireMixin` | [Spells](reference/spells.md#shared-rules) |
 | Particle types and their factories | `registry/ModParticles`, `client/particle/ModParticleFactories`, `ElementalBillboardParticle`, `ElementalParticleFactory` and one factory class per element | [Art](reference/art-and-assets.md) |
 | Retiring the old guide books from inventories | `util/WandGuide` | [Progression](reference/progression-and-controls.md) |
@@ -107,7 +107,7 @@ not in its manager, look in the handler and in `util/WandLoadouts`.
 | --- | --- | --- |
 | Gathered Mass | `item/StoneAbilityHandler`, `util/StoneClusterManager`, `StoneClusterRules`, `entity/StoneClusterEntity`, `client/renderer/StoneClusterRenderer` | [Spells](reference/spells.md#stone) |
 | Stone Wall | `item/StoneAbilityHandler`, `block/StoneWallBlock` | [Spells](reference/spells.md#stone) |
-| Titan Dome | `item/StoneAbilityHandler`, `util/TitanDomeManager` | [Spells](reference/spells.md#stone) |
+| Titan Dome and its loaned equipment | `item/StoneAbilityHandler`, `util/TitanDomeManager`, `mixin/ScreenHandlerMixin`, `mixin/TitanGearDropMixin` | [Spells](reference/spells.md#stone) |
 | Faultline | `util/FaultlineManager`, `entity/FaultlineSpikeEntity`, `client/renderer/FaultlineSpikeRenderer`, `block/StoneSpikeBlock` | [Spells](reference/spells.md#stone) |
 | Juggernaut (stone_charge) | `util/StoneChargeManager`, `StoneTechniqueRules`, `mixin/StoneMotionMixin`, `mixin/StoneStaggerMixin`, `mixin/StoneDamageMixin` | [Spells](reference/spells.md#stone) |
 
@@ -173,7 +173,7 @@ scene the camera, HUD, input, fog and light, `mixin/IntroCameraMixin`, `IntroGam
 | Life Drain visuals | `client/NecromancerDrainEffects`, `client/NecromancerDrainSocket`, `client/overlay/NecromancerDrainOverlay` | [Necromancer combat](reference/necromancer-combat.md#art-and-verification) |
 | Soul light | `util/SoulGlow`, `block/SoulGlowBlock`, `client/renderer/SoulLightPool`; texture `tools/prepare_soul_light.py` | [Necromancer combat](reference/necromancer-combat.md#soul-light) |
 | Model and renderer | `client/model/NecromancerModel`, `client/renderer/NecromancerRenderer` | [Necromancer combat](reference/necromancer-combat.md#art-and-verification) |
-| Hollow Crypt realm, fight flow and rewards | `crypt/HollowCryptManager`, `HollowCryptRealm`, `HollowCryptPerches`, `HollowCryptRewards`; layout `art/hollow_crypt/build_layout.py` | [Church and arena](reference/church-and-arena.md#hollow-crypt-realm) |
+| Hollow Crypt realm, fight flow and rewards | `crypt/HollowCryptManager`, `HollowCryptRealm`, `HollowCryptPerches`, `HollowCryptRewards`, `util/SpellBooks` (personal book claims shared with churches); layout `art/hollow_crypt/build_layout.py` | [Church and arena](reference/church-and-arena.md#hollow-crypt-realm) |
 | Graveyard and mausoleum entry | `world/HollowGraveyardStructure`, `world/GraveyardBlight`, `crypt/MausoleumArchBlock`, `MausoleumVeilBlock`, `MausoleumWindowBlock`, `MausoleumModel`, `client/MausoleumHint` | [Church and arena](reference/church-and-arena.md#hollow-crypt-realm) |
 | Operator commands and fight log | `command/NecromancerCommands`, `command/CryptCommands`, `entity/necromancer/NecromancerFightLog` | [Necromancer combat](reference/necromancer-combat.md#art-and-verification) |
 | Art source and exporter | `art/hollow_necromancer/v2/build_art.py` | [Necromancer combat](reference/necromancer-combat.md#art-and-verification) |

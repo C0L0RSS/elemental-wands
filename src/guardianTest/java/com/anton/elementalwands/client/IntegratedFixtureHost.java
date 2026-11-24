@@ -8,6 +8,9 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.screen.world.BackupPromptScreen;
+import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.input.KeyInput;
 import net.minecraft.resource.DataConfiguration;
 import net.minecraft.resource.featuretoggle.FeatureFlags;
 import net.minecraft.util.math.BlockPos;
@@ -31,7 +34,7 @@ public final class IntegratedFixtureHost implements ClientModInitializer {
     private static final String WORLD_NAME = System.getProperty("ew.fixture.world");
     private static final boolean RESUME = Boolean.getBoolean("ew.fixture.resume");
     private int ticks, left;
-    private boolean started, joined, done;
+    private boolean started, joined, done, backedUp;
     public void onInitializeClient() {
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
             if (WORLDGEN_SEED != null || RESUME) return;
@@ -70,6 +73,16 @@ public final class IntegratedFixtureHost implements ClientModInitializer {
                     new GeneratorOptions(worldgen ? Long.parseLong(WORLDGEN_SEED) : 813L, worldgen, false),
                     worldgen ? WorldPresets::createDemoOptions : WorldPresets::createTestOptions, null);
             return;
+        }
+        if (RESUME && !joined && !backedUp && c.currentScreen instanceof BackupPromptScreen prompt) {
+            for (var child : prompt.children()) {
+                if (child instanceof ButtonWidget button && button.active
+                        && button.getMessage().equals(BackupPromptScreen.CONFIRM_BUTTON_TEXT)) {
+                    backedUp = true;
+                    button.onPress(new KeyInput(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, 0, 0));
+                    break;
+                }
+            }
         }
         if (c.world != null) joined = true;
         // The fixture stops the server when it finishes; a world lost without a receipt is a failure.

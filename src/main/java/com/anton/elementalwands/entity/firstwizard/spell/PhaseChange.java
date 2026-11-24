@@ -33,9 +33,7 @@ import net.minecraft.util.math.Vec3d;
  *       lifts off the floor from {@link #LIFT_FROM} to {@link #LIFTED}; the weapon rises at {@link #RISE}. The camera
  *       heads back to the players at {@link #RETURN}. The camera and the body are baked on this clock by
  *       art/first_wizard/change/build_change.py ({@link com.anton.elementalwands.entity.firstwizard.FirstWizardChangeTrack}).</li>
- *   <li>{@link #TELL}, once control has returned: the free tentacle lowers to the floor at full reach, its reach is
- *       ringed in ink, and the violet ripple runs from the shoulder to its tip ({@link #RIPPLE_FROM} to
- *       {@link #RIPPLE_TO}).</li>
+ *   <li>{@link #TELL}, once control has returned: three tendrils wind into a low whip for the opening sweep.</li>
  *   <li>{@link #SWEEP_FROM}: it sweeps a full circle low across the floor round the copy in {@link #SWEEP} ticks: a
  *       medium hit to every body whose feet are below {@link Tendrils#CLEAR} as it passes (jump it), from under its
  *       arch out to {@link Tendrils#REACH}.</li>

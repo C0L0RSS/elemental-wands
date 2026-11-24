@@ -5,16 +5,12 @@ import static com.anton.elementalwands.client.blockfire.BlockFireKit.*;
 import com.anton.elementalwands.entity.firstwizard.FirstWizardEffectEntity;
 import com.anton.elementalwands.entity.firstwizard.spell.FaultlineSpell;
 import com.anton.elementalwands.entity.firstwizard.spell.StoneWallSpell;
+import net.minecraft.entity.Entity;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 
-/**
- * The First Wizard's Stone spells, drawn from their effect entities: the ink line a Stone Wall rises from, the ink
- * running off it while it stands and the stone falling as ink when it crumbles (the wall itself is real blocks), and
- * Faultline's shape in ink and its wave of spikes. Stone is the player's Stone look from the boss's stone atlas
- * ({@code art/first_wizard/build_stone.py}); everything cools from it through the ink atlas's purples to black.
- */
+/** A lintel above the caster splits into the future wall. Faultline tips three teeth down the wave heading. */
 final class StoneFx {
     private StoneFx() {}
 
@@ -34,7 +30,7 @@ final class StoneFx {
 
     // ── Stone Wall ───────────────────────────────────────────────────────────
 
-    /** {@link StoneWallSpell#KIND}: stage 0 the ink line, 1 standing, 2 crumbling. Its position is the line's middle; dir is half the line. */
+    /** {@link StoneWallSpell#KIND}: stage 0 the airborne lintel, 1 standing, 2 crumbling. Its position is the line's middle; dir is half the line. */
     static void wall(InkFrame f, FirstWizardEffectEntity e) {
         float delta = f.delta();
         Vec3d c = e.getLerpedPos(delta);
@@ -48,26 +44,20 @@ final class StoneFx {
         switch (e.stage()) {
             case 0 -> {
                 double formed = e.formed(delta);
-                // Ink runs out from the middle to both ends in the first two thirds; stone takes it in the last half.
-                double run = reach * smoothstep(formed / .65), stone = smoothstep((formed - .45) / .55);
-                strip(f, c, along, across, run, StoneWallSpell.HALF_THICK + .15, 1, t, seed, axes);
-                int chips = (int) Math.ceil(run * 2 * 1.4);
-                for (int i = 0; i < chips && stone > 0; i++) {
-                    double u = (rnd(seed + i * 1.7) * 2 - 1) * run, v = (rnd(seed + i * 2.3) * 2 - 1) * StoneWallSpell.HALF_THICK * .8;
-                    double s = (.22 + .3 * rnd(seed + i * 3.1)) * stone, lift = s * .5 * (.4 + .6 * stone) + .02;
-                    Vec3d p = c.add(along.multiply(u)).add(across.multiply(v)).add(0, lift, 0);
-                    f.stone().box(p, s * .5, s * .5, s * .5, rotate(axes, UP, rnd(seed + i) * TAU), rnd(seed + i * 4.3) < .6 ? SPIKE : VEINED, 0, GLOW, 1);
-                }
-                // Beads of ink lifting off the line just before it rises.
-                if (f.embers() && formed > .6) for (int i = 0; i < 10; i++) {
-                    double u = (rnd(seed + i * 5.9) * 2 - 1) * run, k = fract(t * 1.8 + rnd(seed + i * 6.7));
-                    Vec3d p = c.add(along.multiply(u)).add(0, .1 + k * 1.2 * formed, 0);
-                    InkKit.cube(f.ink(), p, .14 * Math.sin(k * Math.PI), i % 3 == 0 ? InkKit.RIM : InkKit.GLOSS, seed + i, tumble(seed + i, t, 3));
+                Entity owner = f.world().getEntityById(e.ownerId());
+                if (owner == null) return;
+                // A miniature lintel assembles across the wand. The two end blocks fly to the real wall's ends.
+                Vec3d above = owner.getLerpedPos(delta).add(0, 2.8, 0);
+                double lift = smoothstep(formed / .24), send = smoothstep((formed - .35) / .65);
+                for (int part = -2; part <= 2; part++) {
+                    Vec3d held = above.add(along.multiply(part * .64)).add(0, .4 * lift, 0);
+                    Vec3d dst = c.add(along.multiply(part * reach * .5)).add(0, 2.7, 0);
+                    Vec3d block = held.lerp(dst, send).add(0, Math.sin(Math.PI * send), 0);
+                    cooling(f, block, .64 * lift, (.8 + .23 * Math.abs(part)) * lift, .55 * lift, VEINED, 0, seed + part, axes);
                 }
             }
             case 1 -> {
                 double age = e.stageAge(delta) / 20;
-                strip(f, c, along, across, reach, StoneWallSpell.HALF_THICK + .6, 1, t, seed, axes);
                 // It bursts up: chips of stone and ink thrown off both faces as the rows rise.
                 if (age < 1.2) for (int side = -1; side <= 1; side += 2) {
                     for (int i = 0; i < 9; i++) {
@@ -86,8 +76,6 @@ final class StoneFx {
             }
             default -> {
                 double age = e.stageAge(delta) / 20, every = StoneWallSpell.CRUMBLE_EVERY / 20.0;
-                double drain = smoothstep((age - (StoneWallSpell.HEIGHT - 1) * every - .3) / .9);
-                strip(f, c, along, across, reach, StoneWallSpell.HALF_THICK + .6, 1 - drain, t, seed, axes);
                 // Each row falls as it goes, top first, its stone cooling into ink on the way down, and splats.
                 for (int row = 0; row < StoneWallSpell.HEIGHT; row++) {
                     double fell = age - row * every;
@@ -101,27 +89,6 @@ final class StoneFx {
                         rubble(f, start, c.y, fell, across.multiply(side), k, axes);
                     }
                 }
-            }
-        }
-    }
-
-    /** A strip of ink on the floor along the line, `run` each way from the middle and `half` each side, a violet rim at its sides. */
-    private static void strip(InkFrame f, Vec3d c, Vec3d along, Vec3d across, double run, double half, double fill, double t, double seed, Vec3d[] axes) {
-        if (run < .1 || fill <= .02) return;
-        double cell = .7, w = half * fill;
-        int n = (int) Math.ceil(run / cell), m = Math.max(1, (int) Math.ceil(w / cell));
-        for (int i = -n; i <= n; i++) {
-            double u = i * cell;
-            if (Math.abs(u) > run) continue;
-            // Ragged where the ink is still running, at the two ends.
-            double ragged = w * (.82 + .18 * noise(u * .9 + seed + t * .4));
-            for (int j = -m; j <= m; j++) {
-                double v = j * cell * w / (m * cell);
-                if (Math.abs(v) > ragged) continue;
-                boolean rim = Math.abs(j) == m;
-                double k = seed + i * 7.1 + j * 13.3;
-                Vec3d p = c.add(along.multiply(u)).add(across.multiply(v)).add(0, .02 + .01 * Math.sin(t * 3 + i + j), 0);
-                InkKit.cube(f.ink(), p, cell * 1.08, rim ? .07 : .05, cell * 1.08, rim ? InkKit.RIM : rnd(k) < .22 ? InkKit.GLOSS : InkKit.INK, k, axes, 1);
             }
         }
     }
@@ -162,7 +129,7 @@ final class StoneFx {
 
     // ── Faultline ────────────────────────────────────────────────────────────
 
-    /** {@link FaultlineSpell#KIND}: stage 0 the ink shape forming, 1 the wave. Its position is the origin; dir runs to the end. */
+    /** {@link FaultlineSpell#KIND}: stage 0 the teeth tilting forward, 1 the wave. Its position is the origin; dir runs to the end. */
     static void faultline(InkFrame f, FirstWizardEffectEntity e) {
         float delta = f.delta();
         Vec3d o = e.getLerpedPos(delta);
@@ -176,15 +143,17 @@ final class StoneFx {
         if (e.stage() == 0) {
             double formed = e.formed(delta), age = e.age(delta);
             boolean locked = age >= FaultlineSpell.TIMING.aimLock();
-            // Ink runs out from the copy, showing the whole shape by two thirds of the way in.
-            double run = length * smoothstep(formed / .66);
-            shape(f, o, dir, across, run, locked, formed, t, seed, axes);
+            // Three raised stone teeth tilt down the real heading. Their dark stone flashes at the lock.
+            for (int tooth = -1; tooth <= 1; tooth++) {
+                double k = smoothstep(formed / .45);
+                Vec3d p = o.add(dir.multiply(.8 + (1 - Math.abs(tooth)) * .65)).add(across.multiply(tooth * 1.1))
+                        .add(0, 1.65 + .6 * k, 0);
+                Vec3d[] toothAxes = basis(UP.multiply(1 - .85 * k).add(dir.multiply(.4 + k)));
+                cooling(f, p, .46 * k, 1.8 * k, .46 * k, SPIKE, locked ? .48 : 0, seed + tooth, toothAxes);
+            }
             return;
         }
         double age = e.stageAge(delta), front = Math.min(length, (age + 1) * FaultlineSpell.SPEED);
-        // The ink of the shape stays under the wave, draining after it.
-        double drain = smoothstep((age - length / FaultlineSpell.SPEED - 6) / 16);
-        if (drain < 1) shapeEdges(f, o, dir, across, length, 1 - drain, t, seed, axes);
         int floorY = (int) Math.floor(o.y + 1e-6);
         for (int lane = 0; lane < FaultlineSpell.LANES; lane++) {
             double end = FaultlineSpell.laneEnd(FaultlineSpell.solid(f.world()), o, dir, lane, length, at -> !f.world().getBlockState(BlockPos.ofFloored(at.x, floorY - 1, at.z)).isAir());
@@ -207,43 +176,6 @@ final class StoneFx {
             double side = (i / 6.0) * 2 - 1, s = .6 + .3 * rnd(seed + i + Math.floor(age));
             Vec3d p = o.add(dir.multiply(front + .4)).add(across.multiply(side * FaultlineSpell.half(front))).add(0, .4 + .3 * fract(age * .5 + i * .3), 0);
             f.stone().box(p, s * .5, s * .35, s * .5, tumble(seed + i, t, 2), DUST, 0, GLOW, 1);
-        }
-    }
-
-    /** The forming shape: ink along both edges and down the middle, ink veins along the lanes; violet once its aim locks. */
-    private static void shape(InkFrame f, Vec3d o, Vec3d dir, Vec3d across, double run, boolean locked, double formed, double t, double seed, Vec3d[] axes) {
-        shapeEdges(f, o, dir, across, run, 1, t, seed, axes);
-        // Veins of ink along every other lane, cracking open toward the release.
-        for (int lane = 1; lane < FaultlineSpell.LANES - 1; lane += 2) {
-            for (double a = 1.2; a <= run; a += 1.4) {
-                Vec3d p = FaultlineSpell.lanePoint(o, dir, lane, a).add(0, .025, 0);
-                double k = seed + lane * 17 + a * 3.1;
-                double s = .38 + .2 * rnd(k);
-                if (formed > .55) f.stone().box(p.add(0, .01, 0), s * .7, .03, s * .7, rotate(axes, UP, rnd(k) * TAU), CRACK, 0, .8, 1);
-                else InkKit.cube(f.ink(), p, s, .04, s * .6, InkKit.INK, k, axes, 1);
-            }
-        }
-        // Once locked, the edges flare violet: from here a sidestep dodges it.
-        if (locked && f.embers()) for (int i = 0; i < 16; i++) {
-            double a = fract(t * .9 + i / 16.0) * run, side = i % 2 == 0 ? 1 : -1;
-            Vec3d p = o.add(dir.multiply(a)).add(across.multiply(side * FaultlineSpell.half(a))).add(0, .15 + .2 * rnd(seed + i), 0);
-            InkKit.cube(f.ink(), p, .2, InkKit.VIOLET, seed + i, tumble(seed + i, t, 3));
-        }
-    }
-
-    /** The two edges of the shape and its middle line, in ink with a violet rim. */
-    private static void shapeEdges(InkFrame f, Vec3d o, Vec3d dir, Vec3d across, double run, double fill, double t, double seed, Vec3d[] axes) {
-        if (run < .2 || fill <= .02) return;
-        for (double a = .4; a <= run; a += .55) {
-            double h = FaultlineSpell.half(a), k = seed + a * 3.7;
-            for (int side = -1; side <= 1; side += 2) {
-                Vec3d p = o.add(dir.multiply(a)).add(across.multiply(side * (h - .2))).add(0, .03, 0);
-                InkKit.cube(f.ink(), p, .62 * fill, .07, .62 * fill, InkKit.RIM, k + side, axes, 1);
-                Vec3d in = o.add(dir.multiply(a)).add(across.multiply(side * (h - .75))).add(0, .025, 0);
-                InkKit.cube(f.ink(), in, .55 * fill, .05, .6 * fill, rnd(k + side * 2) < .3 ? InkKit.GLOSS : InkKit.INK, k + side * 5, axes, 1);
-            }
-            Vec3d mid = o.add(dir.multiply(a)).add(across.multiply((noise(a * .7 + seed) - .5) * .5)).add(0, .025, 0);
-            InkKit.cube(f.ink(), mid, .4 * fill, .05, .6 * fill, InkKit.INK, k + 9, axes, 1);
         }
     }
 

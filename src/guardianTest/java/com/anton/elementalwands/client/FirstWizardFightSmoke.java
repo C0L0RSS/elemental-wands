@@ -68,6 +68,7 @@ public final class FirstWizardFightSmoke implements ClientModInitializer {
      */
     private static final List<String> ONLY = java.util.Arrays.stream(System.getProperty("wizard.cases", "").split(","))
             .map(String::trim).filter(name -> !name.isEmpty()).toList();
+    private static final boolean SHOWCASE = "showcase".equals(System.getProperty("wizard.view", ""));
     private static final boolean FREE_FIGHT = ONLY.isEmpty() || ONLY.contains("free");
     /**
      * {@code -PwizardRecord=case[:every],...} ({@code wizard.record}): saves a frame of those cases every tick, or every
@@ -82,6 +83,7 @@ public final class FirstWizardFightSmoke implements ClientModInitializer {
             // The same, seen close up: the ink rising off the wand arm and the ball forming over its head.
             new Case("fireball-close", FirstWizardRules.Move.FIREBALL, 0, -14, 60, 4, 10, 16, 22, 26),
             new Case("fireball-sidestep", FirstWizardRules.Move.FIREBALL, 0, -14, 70, 28, 36),
+            new Case("fireball-interrupt", FirstWizardRules.Move.FIREBALL, 0, -14, 58),
             new Case("fireball-ground", FirstWizardRules.Move.FIREBALL, 0, -14, 170, 45, 60, 90, 130),
             // Meteor and Gravity Well (FirstWizardFireSpaceCases): the forming, the mark, the fall, the impact; the well pulling and its burst.
             new Case("meteor-hit", FirstWizardRules.Move.METEOR, 0, -14, 200, 8, 16, 26, 45, 75, 89, 93, 112),
@@ -146,6 +148,7 @@ public final class FirstWizardFightSmoke implements ClientModInitializer {
             new Case("flame-behind", null, 0, -10, 140, 34, 48, 60, 80, 100),
             new Case("flame-bottle", FirstWizardRules.Move.FLAME, 0, -5, 150, 70, 100, 125),
             new Case("purple-gate", null, 0, -20, 1100),
+            new Case("purple-interrupt", FirstWizardRules.Move.HOLLOW_PURPLE, 0, -20, 95),
             new Case("purple-hit", FirstWizardRules.Move.HOLLOW_PURPLE, 0, -20, 120, 6, 20, 35, 47, 52, 60, 62, 66, 72, 80),
             new Case("purple-dodge", FirstWizardRules.Move.HOLLOW_PURPLE, 0, -20, 110, 48, 64, 75),
             // A spell from the human hand in phase two: the tentacles flare round it as it forms and recoil as it is thrown.
@@ -165,6 +168,7 @@ public final class FirstWizardFightSmoke implements ClientModInitializer {
     // What the server thread measured in the case in hand.
     private final List<Float> wounds = java.util.Collections.synchronizedList(new ArrayList<>());
     private volatile boolean stepped, movedIn;
+    private double castPeak;
     private volatile Vec3d landing, poolAt, groundAt, startedAt;
     private volatile int poolSeenAt = -1, groundEndedAt = -1, lateBurns;
     private volatile boolean movedBeforeRelease;
@@ -235,6 +239,7 @@ public final class FirstWizardFightSmoke implements ClientModInitializer {
                     poolSeenAt = groundEndedAt = -1; lateBurns = 0;
                     FirstWizardEntity k = wizard(server);
                     startedAt = k.getEntityPos();
+                    castPeak = 0;
                     if (scene.move != null && !k.testMove(server.getPlayerManager().getPlayer(uuid), scene.move)) serverFailure = scene.name + ": the spell would not cast";
                     if (FirstWizardPhaseTwoCases.mine(scene.name)) FirstWizardPhaseTwoCases.start(server, server.getPlayerManager().getPlayer(uuid), k, scene.name);
                     if (FirstWizardChangeCases.mine(scene.name)) FirstWizardChangeCases.start(server, server.getPlayerManager().getPlayer(uuid), k, scene.name);
@@ -270,8 +275,11 @@ public final class FirstWizardFightSmoke implements ClientModInitializer {
         boolean wounded = p.getHealth() < p.getMaxHealth();
         if (wounded) { wounds.add(p.getMaxHealth() - p.getHealth()); p.setHealth(p.getMaxHealth()); }
         double age = k.castAge(0);
+        castPeak = Math.max(castPeak, k.getY() - startedAt.y);
         FirstWizardEffectEntity ground = effect(server, FireballSpell.GROUND_KIND), pool = effect(server, BlinkRiftSpell.POOL_KIND);
         if (ground != null && groundAt == null) groundAt = ground.getEntityPos();
+        if (scene.name.endsWith("-interrupt") && age >= BossSpells.get(scene.move).timing().aimLock() - 1)
+            k.stop();
         switch (scene.name) {
             // Struck, then well clear of the burning ground, so the hit stands alone.
             case "fireball-hit", "fireball-close" -> { if (!wounds.isEmpty() && !movedIn) { movedIn = true; place(server, uuid, 9, -14); } }
@@ -323,6 +331,32 @@ public final class FirstWizardFightSmoke implements ClientModInitializer {
                 if (scene.name.equals("phase-body") && t > 30) follow(server, k.getEntityPos(), p.getEntityPos()); if (FirstWizardPhaseTwoCases.mine(scene.name)) FirstWizardPhaseTwoCases.during(server, p, k, wounds, scene.name, t, home(), (x, z) -> place(server, uuid, x, z));
                 if (FirstWizardChangeCases.mine(scene.name)) FirstWizardChangeCases.during(server, p, k, wounds, scene.name, t, home(), (x, z) -> place(server, uuid, x, z)); }
         }
+        if (SHOWCASE && scene.move != null) showcase(server, scene, t, k);
+    }
+
+    /** Hold on the caster through the tell, then follow travelling bodies and reveal distant impacts. */
+    private void showcase(MinecraftServer server, Case scene, int tick, FirstWizardEntity boss) {
+        Vec3d at = home().add(0, 2.45, -.5);
+        Vec3d offset = new Vec3d(6.4, 2.0, -5.8);
+        switch (scene.move) {
+            case FIREBALL -> { at = home().add(0, 3.5, -.25); offset = new Vec3d(6.4, .65, -6.2); }
+            case HOLLOW_PURPLE -> { at = home().add(0, 4.1, -.45); offset = new Vec3d(8.0, .95, -7.6); }
+            case SLAM, SWEEP -> { at = home().add(0, 2.25, -2.5); offset = new Vec3d(8.2, 3.1, -4.7); }
+            case WAYLAY_DASH, BLINK_RIFT, LEAP -> {
+                Vec3d track = boss.getEntityPos().subtract(home()).multiply(1, 0, 1);
+                at = at.add(track.multiply(.87));
+                offset = new Vec3d(8.3, 2.0, -4.5);
+            }
+            case FLAME, FAULTLINE, THORNBITE -> { at = home().add(0, 2.25, -1.35); offset = new Vec3d(7.1, 2.7, -5.2); }
+            case METEOR, STONE_WALL, SENTRY_BLOOM, GRAVITY_WELL -> {
+                double pan = Math.clamp((tick - 32) / 18.0, 0, 1);
+                pan *= pan * (3 - 2 * pan);
+                at = at.add(0, 0, scene.z * pan * .72);
+                offset = offset.add(5 * pan, 3 * pan, 3 * pan);
+            }
+            default -> {}
+        }
+        aim(camera(server), at.add(offset), offset.negate());
     }
 
     private void sidestep(MinecraftServer server, UUID uuid, double age) {
@@ -337,7 +371,17 @@ public final class FirstWizardFightSmoke implements ClientModInitializer {
         for (float w : hurt) dealt += w;
         List<String> notes = new ArrayList<>();
         Vec3d home = home();
+        if (scene.move == FirstWizardRules.Move.FIREBALL || scene.move == FirstWizardRules.Move.HOLLOW_PURPLE) {
+            notes.add(String.format(Locale.ROOT, "clone rose %.2f blocks", castPeak));
+            double minimum = scene.move == FirstWizardRules.Move.FIREBALL ? 1.1 : 1.6;
+            if (castPeak < minimum || Math.abs(k.getY() - startedAt.y) > .12)
+                fail(scene, "the casting body should rise and return to its starting height");
+        }
         switch (scene.name) {
+            case "fireball-interrupt", "purple-interrupt" -> {
+                if (!hurt.isEmpty() || effect(server, scene.move.id) != null || !k.castMove().isEmpty())
+                    fail(scene, "stopping the airborne cast should clear its orb and prevent a hit");
+            }
             case "fireball-hit", "fireball-close" -> {
                 notes.add("wounds " + hurt);
                 if (hurt.isEmpty() || Math.abs(hurt.getFirst() - FirstWizardRules.HEAVY) > .01f) fail(scene, "a player standing still should take one heavy hit (" + FirstWizardRules.HEAVY + "); took " + hurt);
@@ -503,6 +547,7 @@ public final class FirstWizardFightSmoke implements ClientModInitializer {
         String body = String.join("\n", report) + "\n";
         Files.writeString(Path.of("FIRST_WIZARD_FIGHT_REPORT.txt"), body + (failures.isEmpty() ? "" : "\nFAILURES\n" + String.join("\n", failures) + "\n"));
         String ran = "cases " + CASES.stream().map(Case::name).toList() + (FREE_FIGHT ? " and the free fight through startFight to its death" : "; no free fight")
+                + (Boolean.getBoolean("wizard.tornCasts") ? " (torn elemental rehearsals)" : "")
                 + (ONLY.isEmpty() ? "" : " (a filtered run: " + ONLY + ")");
         if (failures.isEmpty()) Files.writeString(Path.of("FIRST_WIZARD_FIGHT_PASSED.txt"), "First Wizard fight passed: " + ran + ". "
                 + "Screenshots are not a Lunar look; human review pending.\n\n" + body);
@@ -582,9 +627,12 @@ public final class FirstWizardFightSmoke implements ClientModInitializer {
         if (fight) { place(server, uuid, 0, -15); watch(server, 0, -15); return; }
         Case scene = CASES.get(next);
         // The cases made for looking at (and recording) phase two are lit by day; everything else stays at midnight.
-        server.getOverworld().setTimeOfDay(FirstWizardPhaseTwoCases.lit(scene.name) || FirstWizardChangeCases.lit(scene.name) ? 6000 : 18000);
+        server.getOverworld().setTimeOfDay(SHOWCASE || FirstWizardPhaseTwoCases.lit(scene.name) || FirstWizardChangeCases.lit(scene.name) ? 6000 : 18000);
         place(server, uuid, scene.x, scene.z);
-        if (FirstWizardPhaseTwoCases.mine(scene.name) && !FirstWizardPhaseTwoCases.fromPhaseOne(scene.name)) k.phaseTwoNow();
+        boolean tornCast = Boolean.getBoolean("wizard.tornCasts") && scene.move != null && scene.move.spell();
+        if (tornCast || (FirstWizardPhaseTwoCases.mine(scene.name) && !FirstWizardPhaseTwoCases.fromPhaseOne(scene.name)))
+            k.phaseTwoNow();
+        if (SHOWCASE && scene.move != null) { showcase(server, scene, 0, k); return; }
         Vec3d[] two = FirstWizardPhaseTwoCases.mine(scene.name) ? FirstWizardPhaseTwoCases.camera(scene.name, home())
                 : FirstWizardChangeCases.mine(scene.name) ? FirstWizardChangeCases.camera(scene.name, home()) : null;
         if (two != null) { aim(camera(server), two[0], two[1]); return; }

@@ -8,13 +8,7 @@ import com.anton.elementalwands.entity.firstwizard.spell.GravityWellSpell;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.Vec3d;
 
-/**
- * The First Wizard's Gravity Well: a dark orb of Space's colour forming out of ink over the copy's head and lobbed in
- * an arc; where it lands, a well that lies flat on the floor. Its edge is a low segmented ring at the pull's reach,
- * a spiral of flat pieces runs in across the floor (Space's colour at the edge, cooling to purple and ink as they near
- * the middle), a dashed ring marks the burst, and a small ink core hovers low over a pool. The buildup speeds the
- * spiral and lights the burst ring; the burst throws a ring of ink out to it. Nothing is tall, so bodies stay visible.
- */
+/** A lobbed orb opens into a floating core that draws airborne fragments inward before the burst. */
 final class GravityWellFx {
     private GravityWellFx() {}
 
@@ -89,52 +83,19 @@ final class GravityWellFx {
         if (stage == 2) { burst(f, c, e.stageAge(delta) / 20, R, seed, t); return; }
         double speed = 1 + build * 2.5;
 
-        // A pool under the core and the core itself: ink hovering low, a violet rim, swelling in the buildup.
-        InkKit.pool(f.ink(), c.add(0, .01, 0), 2.2, open, t, seed);
-        Vec3d core = c.add(0, .9 + .15 * Math.sin(t * 3 + seed), 0);
-        InkKit.blob(f.ink(), core, (.45 + .35 * build) * open, InkKit.INK, build > .5 && fract(t * 6) < .5 ? InkKit.MAGENTA : InkKit.RIM, seed, t * speed);
-
-        // The edge of the pull: a low segmented ring of ink with a violet top, turning slowly.
-        int segments = 44;
-        double edge = R * open;
-        for (int i = 0; i < segments; i++) {
-            if (i % 4 == 3) continue;
-            double a = i * TAU / segments + t * .25;
-            Vec3d p = c.add(Math.cos(a) * edge, 0, Math.sin(a) * edge);
-            if (InkKit.floorBelow(f.world(), p.add(0, .5, 0)) < c.y - 1) continue;
-            Vec3d[] axes = yawAxes(a + Math.PI / 2);
-            InkKit.cube(f.ink(), p.add(0, .06, 0), 1.2, .12, .4, InkKit.INK, seed + i, axes, 1);
-            InkKit.cube(f.ink(), p.add(0, .15, 0), 1.1, .07, .2, InkKit.VIOLET, seed + i, axes, 1);
-        }
-
-        // The spiral running in across the floor: Space's rim colour at the edge, cooling to purple and ink inward.
-        int count = f.embers() ? 72 : 36;
+        Vec3d core = c.add(0, 1.35 + .65 * build, 0);
+        InkKit.blob(f.ink(), core, (.65 + .7 * build) * open, InkKit.DEEP, build > .5 ? InkKit.VIOLET : InkKit.RIM, seed, t);
+        // Debris rises inward from throughout the pull. It winds tighter around the brightening core before the burst.
+        int count = f.embers() ? 42 : 24;
         for (int i = 0; i < count; i++) {
-            double period = 2.4 / speed, u = fract(t / period + i / (double) count + rnd(seed + i) * .3);
-            double arm = (i % 3) * TAU / 3 + rnd(seed + i * 2.1) * .5;
-            double rr = edge * (1 - u) * (.92 + .1 * rnd(seed + i * 3.1));
-            if (rr < .8) continue;
-            double a = arm + u * 2.6 + t * .3 * speed;
-            Vec3d p = c.add(Math.cos(a) * rr, .07 + .05 * u, Math.sin(a) * rr);
-            Vec3d[] axes = yawAxes(a + Math.PI / 2 + .5);
-            double s = .5 * (1 - u * .5);
-            if (u < .22) f.space().box(p, s * .5, .025, s * .3, axes, BlockSpaceKit.RIM, 0, 1, 1);
-            else InkKit.cube(f.ink(), p, s, .05, s * .6, InkKit.cool((u - .22) / .78), seed + i, axes, 1);
-        }
-
-        // Where it bursts: a dashed ring, purple while it pulls, flashing magenta and raised in the buildup.
-        double burst = GravityWellSpell.BURST;
-        int dashes = (int) Math.ceil(TAU * burst / .5);
-        for (int i = 0; i < dashes; i += 2) {
-            double a = i * TAU / dashes - t * .4 * speed;
-            Vec3d p = c.add(Math.cos(a) * burst, .08 + build * .25, Math.sin(a) * burst);
-            int row = build > 0 ? (fract(t * (3 + build * 5)) < .5 ? InkKit.MAGENTA : InkKit.VIOLET) : InkKit.PURPLE;
-            InkKit.cube(f.ink(), p, .45, .08 + build * .2, .2, row, seed + 50 + i, yawAxes(a + Math.PI / 2), 1);
-        }
-        // In the buildup, ink rises off the burst ring and runs in to the core.
-        if (build > 0) for (int i = 0; i < 10; i++) {
-            double a = i * TAU / 10 + seed;
-            InkKit.strand(f.ink(), c.add(Math.cos(a) * burst, .1, Math.sin(a) * burst), core, t * speed, 3, .22, seed + i * 9);
+            double u = fract(age / 2.4 + build * .8 + i / (double) count);
+            double r = R * open * (1 - u);
+            double a = rnd(seed + i) * TAU + u * 2.8;
+            double h = .65 + 2.0 * u + .45 * Math.sin(a);
+            Vec3d p = c.add(Math.cos(a) * r, h, Math.sin(a) * r);
+            double size = (.28 + .23 * rnd(seed + i * 3)) * Math.sin(Math.PI * u);
+            InkKit.cube(f.ink(), p, size, size, size * 1.5,
+                    u > .65 || build > .65 ? InkKit.VIOLET : InkKit.RIM, seed + i, tumble(seed + i, t, speed), 1);
         }
     }
 

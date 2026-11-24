@@ -246,8 +246,13 @@ Wand in the skin owner's main hand.
   is plainly seen. Ink, not Space's stars or glass.
 - **It stays findable.** The skin is never lit below block light 10, so the copy reads at
   midnight, and the violet motes are drawn full-bright.
-- **Poses are a player's:** it walks with its steps, raises its wand arm overhead while a
-  spell forms and swings it at the release.
+- **Spell materials.** Six painted faces supply the boss's 16-pixel textures. Orange hooks travel up Fire,
+  pale streaks travel across Wind, and leaf veins and split slate hold still on moving Nature and Stone
+  pieces. Dark graphite picks out the linked ink arms. Violet facets tie the Space spells to the same ink.
+- **Cast poses.** The grounded copy shifts its weight before it throws. It tips back as it
+  lobs a Meteor, steps into Faultline and turns a shoulder through each Sky Shear cut.
+  The feet counterbalance the stroke and the gaze stays close to the target. The stance
+  mirrors with the owner's casting hand until the left arm tears away.
 
 **Free between spells** (`FirstWizardCombat`). It holds a middle distance from its target
 (7 to 15 blocks): it walks in when further, backs off when nearer, and strafes between,
@@ -316,9 +321,9 @@ lingering ground (8) about 2. Spell hits use `first_wizard_spell`, which a raise
 stops (and is knocked aside for 3 s); lingering ground uses `first_wizard_ground`, which
 ignores shields. Neither is fire damage, so Fire Resistance does not help.
 
-**Fireball** (`entity/firstwizard/spell/FireballSpell`). Ink rises off the wand arm and gathers over the copy's
-head; for 1.2 s it swells into a ball 3 blocks across, taking fire's colour from a fifth of
-the way in. Its aim locks a quarter of a second before the throw, leading a moving target
+**Fireball** (`entity/firstwizard/spell/FireballSpell`). The copy rises and looks up as ink gathers above its head.
+In phase two the three tentacles spread low, then lift their tips outside the flame. The ball
+swells to 3 blocks across in 1.2 s, taking fire's colour from a fifth of the way in. Its aim locks a quarter of a second before the throw, leading a moving target
 by where they will be when it arrives. It flies at 16 blocks a second toward their feet and
 on past to the floor if they have stepped aside. The body it touches takes a heavy hit;
 anyone else within 2.5 of the burst a medium one. The burst leaves burning ground 5 blocks
@@ -329,16 +334,13 @@ blocks, so nothing spreads or is lit. Every tongue of the ball and its flight co
 same way, and it sheds ink as it flies.
 
 **Meteor** (`entity/firstwizard/spell/MeteorSpell`, drawn by `client/blockink/MeteorFx`). The
-copy raises its wand for a second while a knot of ink gathers over it; then a circle 9
-blocks in radius is marked on the floor where its target will be half a second on, and the
-ink is flung up to form a stepped ball of fire 16 blocks across (twice the player's) high
-over the mark. Half a second later it drops and falls for 3 s; the copy is free a moment after.
-After a Gravity Well (the combination) the circle is centred on the well instead. The mark
-is an ink ring with a violet edge, a dashed purple ring round the inner part, and a shadow
-of ink that fills in from the middle as the meteor nears; the edge flashes in the last half
-second. The impact is a heavy hit within 4.5 of the middle and a medium one out to the rim
-(a jump does not clear it), then the inner part burns for 4 s like the Fireball's ground.
-Dodge it by leaving the circle: from the middle at a sprint there is time to spare.
+copy throws a knot of fire skyward. In phase two two tentacles plant wide and the third
+slings the knot up as the clone snaps back. Watch where it throws, then
+move out of the falling cinders. They drift through the air around the locked impact point
+while the full meteor is still high overhead. The meteor is 16 blocks across and takes three
+seconds to fall. A Gravity Well combination puts it over the well. Impact deals a heavy
+hit within 4.5 blocks and a medium hit out to 9, then the inner area burns for 4 seconds.
+A sprint from the centre clears the blast.
 
 **Sky Shear** (`entity/firstwizard/spell/SkyShearSpell`, drawn by `client/blockink/SkyShearFx`).
 Three crescents of ink form stacked over the copy's head for 0.9 s, taking Wind's pale
@@ -359,40 +361,36 @@ jumped, one late jump would doom the next, and the hurt cooldown would swallow a
 **Waylay Dash** (`entity/firstwizard/spell/WaylayDashSpell`, drawn by
 `client/blockink/WaylayDashFx`). Its line is fixed as it begins: through its target and 10
 blocks past, 12 to 26 blocks long, ending inside the floor and short of anything solid. For
-half a second ink runs along the floor on that line, pale streaks of wind skimming it, while
-wind gathers behind the copy and cools to ink. Then it crosses the line in 0.4 s (moved a
-step a tick through `Cast.step`, so clients slide it) and ends facing back toward its target.
+half a second wind folds inward behind the copy along the fixed heading. Its wand draws back,
+then it crosses that distance in 0.4 s and ends facing back toward its target.
 Anyone it passes through takes a medium hit, once. Its path stays a low wall of churning
 wind and ink two blocks wide over a pool of ink, pale where it has just passed and cooling
 to black; it arms half a second after the dash starts and burns like lingering ground for
-3 s more (a `GroundZone` strip). **Step off the line during the tell**, and out of the wake
+3 s more (a `GroundZone` strip). **Sidestep as the wind gathers**, then leave the wake
 sideways: one step leaves it. It is also how the copy closes on a player who runs away.
 
-**Blink Rift** (`entity/firstwizard/spell/BlinkRiftSpell`). Ink pools at the arrival point for half a second
-(rings of Space's colour cooling to purple and black on it), while the copy stays where it
-is; then it sinks away into a pool there and rises in a column of ink at the arrival,
-which drains. Crowded, it goes to the spot on the floor furthest from everyone. Otherwise
-it goes round its target to the side at its middle distance; once Thornbite is built it
-goes behind them instead, 5 to 7 blocks past, to set Thornbite up. It does no damage.
+**Blink Rift** (`entity/firstwizard/spell/BlinkRiftSpell`). Three upright strips of ink fold
+shut at the arrival point over half a second. At release a column collapses where the copy
+stood and rises where it appears. When crowded the copy goes to the spot furthest from
+everyone. Otherwise it can blink 5 to 7 blocks behind its target to set up Thornbite. It does no damage.
 Clients snap it to the arrival rather than sliding it across the floor.
 
 **Gravity Well** (`entity/firstwizard/spell/GravityWellSpell`, drawn by
 `client/blockink/GravityWellFx`). A dark orb of Space's colour forms out of ink over the
 copy's head for 0.9 s and is lobbed in a one-second arc to where its target stood as it was
-thrown. Where it lands a well opens flat on the floor: a segmented ring at its 11-block
-reach, a spiral running in across the floor that cools from Space's colour to purple and
-ink, a dashed ring at the burst's edge and a low ink core. For 4 s it pulls everyone in
-reach toward its middle and does no damage; a 0.8 s buildup (still pulling) speeds the
-spiral and flashes the burst ring, then the middle bursts for a heavy hit within 5. The pull
+thrown. At the landing, fragments spiral through the air toward a hovering ink core from as far as
+11 blocks away. For 4 s it pulls everyone within reach. During the final 0.8 s the core
+rises, swells and brightens as the debris draws tight, then bursts for a heavy hit within
+5 blocks. Run or dash away from the core while it pulls. The pull
 is added on each player's own client to their movement, through the Guardian's pull
 payload, so input still counts: walking outward loses ground, sprinting outward gains a
 little, and a dash, blink or leap gets out easily. One well at a time.
 
 **Stone Wall** (`entity/firstwizard/spell/StoneWallSpell`, drawn by `client/blockink/StoneFx`;
-its block `block/FirstWizardWallBlock`). Ink runs out along a line on the floor for a second:
-across the line from the copy to its target, a few blocks behind where they are heading,
-about 27 long and kept inside the floor. Then a wall rises there a row a tick, 5 tall and 2
-thick: real blocks of the player's stone veined with ink and violet, which stop players,
+its block `block/FirstWizardWallBlock`). A small crossbar of stone assembles over the
+caster. Its stones fly apart and hang at chest height across the future wall, usually
+behind the target, for the remainder of the one-second windup. Then a wall rises there a row a tick, 5 tall and
+2 thick: real blocks of fractured slate veined with ink and violet, which stop players,
 their spells and the copy's own (its Fireball bursts on it). It fills only air, so the
 floor and anything a player placed are never replaced. A player on the line as it rises
 takes a medium hit and is set down on the nearer side. It stands 6 s, ink running down its
@@ -400,14 +398,13 @@ faces, then crumbles from the top into stone that cools to ink as it falls and s
 Players cannot mine or blow it up anywhere. Stopping the fight, the copy's death or removal
 and the server stopping take it down at once; after a crash each block clears itself, by a
 block tick saved with its chunk (a running wall holds its blocks in memory, so a newer wall
-on the same cells is never taken down by an older one's tick). Dodge it by getting across the line, or along it to an end,
-while the ink runs; then the Fireball that follows comes down the open lane.
+on the same cells is never taken down by an older one's tick). Pass the airborne stones
+or go around an end before the wall rises. Its follow-up Fireball travels down the open lane.
 
 **Faultline** (`entity/firstwizard/spell/FaultlineSpell`, drawn by `client/blockink/StoneFx`).
-Ink runs out from the copy toward its target for 0.9 s and shows the whole wave: its two
-edges and veins of ink between, 5 blocks wide at the copy and 12 by 50 blocks out, to the
-floor's edge. It follows the target until 0.3 s before the release, when its aim locks and
-the edges flare violet. Then the player's Faultline spikes, at boss size (about 2.4 blocks
+Three stone teeth rise in front of the wand and tilt toward the target. The teeth flash and
+hold their heading when the aim locks, 0.3 s before release. The wave widens from 5 blocks
+at the copy to 12 at its full reach. Then the player's Faultline spikes, at boss size (about 2.4 blocks
 tall), erupt down it at 30 blocks a second and cool to ink and sink. Anyone it reaches takes
 a medium hit once and is thrown about 7 blocks up; the fall from the throw does not hurt.
 A jump does not clear it; a sidestep after the lock does (from 10 blocks out a sprint from
@@ -416,7 +413,7 @@ the lanes it blocks. The copy is free 0.3 s after the release, and half the time
 Fireball at where the thrown player will land.
 
 **Thornbite** (`entity/firstwizard/spell/ThornbiteSpell`, drawn by `client/blockink/ThornbiteFx`).
-The player's stepped flytrap and braided vines at boss size, in the Nature kit's colours
+The player's stepped flytrap and braided vines at boss size, in the boss's painted leaf and petal colours
 (`NatureInk`, the frame's `nature` mesh). For 0.8 s it gathers out of ink over the copy's wand,
 just above and ahead of its head, and takes Nature's green as it grows into a mouth 3 blocks
 across, turning with the copy toward its target. Its aim locks 0.2 s before the lunge, on the
@@ -433,7 +430,7 @@ same 0.8 s of forming to turn and move.
 **Sentry Bloom** (`entity/firstwizard/spell/SentryBloomSpell`; the flower
 `entity/firstwizard/InkBloomEntity`, drawn by `client/renderer/InkBloomRenderer`; the rest by
 `client/blockink/SentryBloomFx`). A bud forms out of ink over the copy's head for 0.8 s; its
-spot is fixed at 0.5 s, when ink starts to pool there, ringed with green shoots, and the bud is
+spot is fixed at 0.5 s and the bud is
 lobbed there in a high arc: 9 to 13 blocks from the copy, off to one side of its target and as
 far from every player as the floor allows. A flower about 6 blocks tall unfurls there over
 1.5 s: the player's Sentry Bloom head mesh at about 3.4 times its size on a tall stem of the
@@ -472,7 +469,7 @@ that wait is one of the fight's leftovers, so stopping the fight clears it.
 At half health its left arm falls off, its left flank swells and bursts, and three tentacles
 come out of it (the developer's idea; reasons in the
 [design notes](../design/first-wizard.md#phase-two)). The face and the wand arm stay human:
-the human side casts, the ink side strikes. The wound is always her left and the wand is in
+the wand and the ink limbs cast together. The wound is always her left and the wand is in
 her right hand from the change on, whichever hand the skin's owner uses (the developer, Nov 19).
 
 **The change** (`spell/PhaseChange`, started by `FirstWizardCombat`), every time the fight
@@ -510,12 +507,10 @@ Lunar.
   One who leaves the fight (logs out, dies, goes to another world, stops being a fighter) is
   let go at once and never rejoins held; with nobody left fighting the copy is in phase two at
   once.
-- **Then the fight resumes,** a fifth of a second after control returns: the weapon lowers to
-  the floor at full reach, its reach is ringed in ink, and the violet ripple runs up it; then
-  the one set piece: it sweeps a full circle low across the floor round the copy in a second
+- **Then the fight resumes.** A fifth of a second after control returns, the three arms wind
+  into a whip on the copy's left and extend to full reach. The whip sweeps a full circle in a second
   and a half, 9 blocks out, starting on its left. Feet below 0.6 as it passes take a medium
-  hit: **jump it**. Under its arch (within 1.5) is safe, as under the Pyre King's chain. A
-  player standing where the circle starts and ends is passed twice and jumps twice.
+  hit: **jump it**. Under its arch (within 1.5) is safe, as under the Pyre King's chain. Each player can be hit once by the sweep.
 - Phase two begins when the sweep is done, 20 seconds after the change began. Cut short (the
   fight stopped or calmed, the copy removed, everyone gone, the server stopping) the
   cinematic lets everyone go first and the copy is in phase two at once, never between. A copy
@@ -527,8 +522,8 @@ Lunar.
 **The body.** Drawn by `client/renderer/FirstWizardRenderer` (the model, the torn arm, the
 swelling, the head, the wound's ink), `client/blockink/ChangeFx` (the ink at the shoulder, the
 strands, the melting arm's pool, the ink oozing from the swelling) and
-`client/blockink/TendrilFx` (the tentacles and the wound; their rest pose is `TendrilRest`, what each does in a move
-`TendrilMoves`), from `client/blockink/WizardBody`:
+`client/blockink/TendrilFx` (the tentacles and the wound, with `TendrilRest` for the floating pose,
+`TendrilMoves` for casts and `TendrilRecovery` for the movement between them), from `client/blockink/WizardBody`:
 during the change everything comes from the change's baked track
 (`FirstWizardChangeTrack`), on the change's synced clock, so everyone near sees the same body
 whether or not their camera is in the cinematic.
@@ -547,58 +542,40 @@ whether or not their camera is in the cinematic.
   `art/first_wizard/build_ink.py`, one per arm width). The rest of the skin stays plain; the
   motes float round it as in phase one.
 - **It floats** (the developer, Nov 18). Nothing carries it: it hovers 0.9 off the floor with
-  a slow bob, its legs hanging relaxed. The entity itself stays on the floor; its box grows
-  to 0.8 wide and 2.7 tall so it covers the floating body. It drifts rather than walks: the
+  a slow bob, its legs hanging relaxed. Its box grows to 0.8 wide and 2.7 tall to cover
+  the floating body. Leap, Fireball and Hollow Purple raise the attackable entity itself. It drifts rather than walks: the
   server eases it into and out of each move, at up to 5 blocks a second (its walk was 4.3),
   and it holds 3.5 to 8 from its target (7 to 15 in phase one). A sprint still outruns it.
-- **The tentacles: huge octopus arms from her left flank** (the developer, Nov 18 to 19). Three
-  of them, each eight to nine blocks long, about 0.4 thick where it leaves her left flank and
-  tapering to a point. They are drawn as smooth tubes, a ring of faces swept along each one's
-  curve and shaded round it, in the ink atlas's matte black with a violet line down the back
-  and a row of pale violet suckers along the underside. No joints, stars or glass.
-- **At rest they are spread apart** (the developer, Nov 19: "spread out instead of jumbled",
-  one bent up or down, a little thinner; the pose `client/blockink/TendrilRest` was chosen on
-  Nov 20 from three designs). They leave the wound together and part at once, like an
-  octopus's arms hovering in open water, each in a space of its own and never across her
-  torso or face seen from the front or her right:
-  - one hangs down in front of her left side, sweeps out low over the floor some five
-    blocks, and lifts its tip a little, curling it forward and back;
-  - one reaches out and back at shoulder height in a long S, its tip curling up behind her;
-  - the weapon rears up from her left shoulder, leaning forward, and hooks forward and in
-    high over her head like a scorpion's tail.
+- **The three ink limbs** grow out of the left flank. Each has eight overlapping square
+  charcoal-black links. They taper from 0.39 blocks across at the socket to 0.11 at
+  the tip, with narrow bands of wet ink at the joints.
+  At rest, one hangs low, one bends back at shoulder height, and the third hooks over the
+  head. The elbows and wrists sway on separate beats as the copy floats.
+- **Casting.** A violet glint runs outward along the joints and holds at the tip on release.
+  The floating copy can lean further than the grounded player. It draws up a leg under a
+  heavy windup and trails its feet through the release. The skin and the tentacles'
+  attachment share the same hip pivot, including during the change's full revolution.
+  The shoulder draws in first. The wrists and tips follow on separate beats, flexing even
+  when a tip holds a spell in place. Sky Shear sends three blades on separate beats with
+  a crosscut, a downward cut and a backhand. Waylay Dash pushes off on two limbs and
+  flares them to brake. Stone Wall hooks a crossbar and shoves it away. Faultline starts
+  under one lifted boot and travels down three striking fists. Thornbite opens two jaws
+  and darts a third limb between them. Sentry Bloom opens two petals as the clone flicks
+  the bud from an underhand cradle. Blink Rift pulls a seam apart and threads the third
+  limb through. Gravity Well winds two arms past one another at different heights as the
+  clone counter-turns, then its third arm drives the core forward.
+- **Timing and direction.** The client samples the joints from the current cast age,
+  including the partial tick. The aimed strikes use the server's cast direction or locked
+  endpoint. The opening sweep and the combat Sweep follow the same angle at contact that
+  the server uses to test a jump. The outlines, movement and lit joints draw at every
+  particle setting.
+- **Recovery.** After contact, the shoulder begins to unwind while the tips carry their
+  momentum. The arms settle over roughly a second. A follow-up cast picks them up where
+  they are in that motion. The client keeps the outgoing pose relative to the wound so
+  it follows the boss through turns and teleports.
 
-  Slow waves travel along each from the root to the tip, each at its own rhythm; the tips
-  quest, and each outer third slowly curls tighter and opens again. Each bends in plan as well
-  as in height, so no side sees a whole tentacle end on; from close behind her left the
-  shoulder-height one still folds into a coil in front of the weapon's stem. The fight
-  fixture's `-PwizardPose=<Name>` draws a design study (`TendrilPose<Name>`) instead.
-- **The whole body works in every move** (the developer, Nov 20: "I want the tentacles to be
-  a part of its attacks not just freeze"). Each tentacle springs from its rest pose into what
-  the move asks of it and back, on a spring of its own that overshoots a little and settles;
-  a move that follows straight on from another passes from one pose into the next. The blend
-  is of how each tentacle bends along its length (`TendrilCurve.blend`), so it sweeps from
-  one pose into a very different one instead of folding into a little loop near her. Nothing
-  holds still: a held pose keeps its waves, and through the long holds (the Flame's breath,
-  Hollow Purple's forming) the arms heave, sway and weave slowly and widely enough to read
-  from across the floor. An arm planted on the floor stays put in the world while she moves
-  or turns, apart from its deliberate re-grips (if she turns far from it, it lifts and plants
-  again, one at a time), throwing up a little ink where it strikes. They never cross her
-  front or dip below the floor. The moves are below; while the
-  human hand casts one of the ten spells they flare out and up round it, the weapon's tip
-  curling toward the gathering ink, recoil as it is thrown and spring back, and stream behind
-  her through a Waylay Dash.
-- One tentacle is the weapon. For a Slam it uncoils from its hook and rears, then whips down
-  along the line and lies there; for a Sweep it swings low round the arc, trailing behind its
-  tip. It then springs back into its hook. Every point comes from the move's own clock with
-  the partial tick, and the strike blends in and out on its own spring over whatever else the
-  weapon is doing, so nothing steps from tick to tick. Meanwhile the other two plant behind
-  her as counterweight for the Slam, leaning back as it rears and jolting as it lands, and
-  rise high out of the Sweep's path, turning back against the swing.
-- **The tell.** Before every tentacle attack a violet ripple runs from the shoulder to the tip,
-  swelling it as it goes.
-
-**How it chooses in phase two.** It keeps the ten spells, from its human hand; within 9 blocks
-they weigh 0.3 of their weight, so up close the tentacles dominate and at range it mostly casts.
+**How it chooses in phase two.** The copy still has all ten elemental spells. Within 9 blocks
+they carry 30% of their normal weight, so the ink moves come up more often in close combat.
 Its gaps are 0.65 of phase one's. Leap then Flame is a scripted follow-up (75%).
 
 | Move | Meant for (blocks) | Weight | Notes |
@@ -609,53 +586,29 @@ Its gaps are 0.65 of phase one's. Leap then Flame is a scripted follow-up (75%).
 | Flame | 0–7 | 2 | Mostly as the Leap's follow-up |
 | Hollow Purple | 6–60 | — | Only at or below a quarter of its health, and not within 25 s of the last. It is not weighed: once it may come and its target is in range, it is the next move |
 
-**The marks on the floor** of phase two (the change's ring, the Sweep's arc, the Slam's line,
-the Leap's circle) are flat decals laid just above the floor in the floor-ink textures: a strip
-repeated along the mark with a rounded cap at each open end, closed into a ring for a ring,
-and a pool of ink for the Leap's landing. Each has a glow layer of its violet rim and veins,
-drawn full-bright: faint while the mark only warns, then bright and pulsing once the strike is
-coming (the Slam's lock, the Sweep's swing, the Leap's last half second, the change's sweep).
+**Slam** (`spell/SlamSpell`). The clone arches back and lifts one leg as all three arms
+twist overhead into a hammer. **Step sideways** when it stops turning. The clone folds
+forward into the blow. The elbow leads
+the downswing, then the bound tips strike together along the locked heading, up to 12
+blocks out. The hammer recoils along that line and the strands peel apart.
 
-**Slam** (`spell/SlamSpell`). The weapon rises high over it while a line 12 long and 2 wide is
-marked in ink toward its target, following them no faster than the copy turns. At 0.7 s the
-aim locks and the line's edges flare violet; at 1.1 s the tentacle comes straight down along
-it: a heavy hit to every body on it. A jump does not clear it. **Sidestep after the lock**: a
-walk of a block and a half is enough. It lies there a moment, then draws back.
+**Sweep** (`spell/SweepSpell`). The clone winds its shoulders toward the wound while the
+arms tighten into a low whip. Its hips turn through the stroke and the legs swing across
+as counterweights. **Jump the moving braid** as it crosses you. It follows through past the
+arc and lifts as its strands separate. The normal
+swing covers 200 degrees over half a second. The change's opening swing travels the full
+circle. Both reach 9 blocks and pass above anyone within the 1.5-block inner arch.
 
-**Sweep** (`spell/SweepSpell`). The weapon draws back low on the wound's side while the ripple
-runs; at 0.7 s its arc is fixed and marked at its reach, 100° either side of the line to its
-target, and at 0.9 s it swings through the arc in half a second, 9 blocks out. A medium hit to
-feet below 0.6. **Jump it** (a jump started 1 to 7 ticks before it arrives clears it), or be
-out of its reach, behind it, or under its arch.
+**Leap** (`spell/LeapSpell`). All three tips plant around the copy as its body sinks. They
+push off, trail behind it, then open into a three-pronged claw as it descends. The tips
+land at the edge of the 3.5-block impact. **Move sideways as it launches** and keep
+moving through the descent. The landing deals a heavy hit, including to a jumping player.
 
-**Leap** (`spell/LeapSpell`). The tentacles throw her: two plant their tips on the floor behind
-and beside her and load like springs, bunching into an S as she sinks, while the weapon rears
-toward the landing, and the ripple runs along all three; at 0.5 s a circle 3.5 in radius is
-marked where its target will be when it lands (led by their movement, at most 18 away, on the
-floor), and at 0.8 s the planted two straighten and shove her off on an arc 3.5 high, their
-tips pinned a moment as she rises before they peel away. In the air all three stream behind
-her like a squid's arms, then swing forward, spread and reach down for the circle, and as she
-lands 0.8 s later they slap down round the pool's rim and spring back to rest: a heavy hit to
-every body in the circle, which a jump does not clear. **Leave the circle**: from its middle a
-walk is enough. It lands facing the way it flew.
-
-**Flame** (`spell/FlameSpell`). It roots itself: two tentacles reach wide and grip the floor
-round her as an octopus's arms do, one before her and one behind. Each rises from her flank
-into an elbow that heaves and sways, drops onto the floor, lies along it and curls its tip
-into a grip. They jolt at each of the breath's half-second burns, and twice in the breath
-each slips a little further out and grips again. The weapon arches high behind her head like
-a scorpion's tail, its sting aimed down the cone; while she breathes it weaves like a cobra's
-head, side to side and up and down, lags behind her as she turns, its sting flexing, and
-pumps forward into each burn. They rip free as the breath ends, tips first. Fire gathers in its human
-hand for half a second, then it breathes a cone of its own fire (the Fire kit's flame,
-orange at the base, purple at the tips, ink where smoke would be) 9 blocks long and 24° each
-side for 2.5 s. From the start of the cast to its end it turns at most 2° a tick after its
-target and cannot move. Standing in the cone costs 8 every half second (first_wizard_ground,
-which ignores shields): about 4 health a second in diamond or netherite against burning
-ground's 2, and the whole breath is no kill there. Only at a target within 10. **Get behind
-it**: a player who dodged the Leap's landing round behind it is never turned on; sprinting
-round it close in outruns the turn. Drawn by `client/blockink/InkMovesFx`, with the marks of
-the Slam, Sweep, Leap and the change.
+**Flame** (`spell/FlameSpell`). The upper limb bends its lit tip forward to form a nozzle.
+The other two open on either side of it. Fire gathers in the nozzle and streams from it
+in a 9-block cone, orange at its source with violet tips. The copy stays rooted and turns
+at most two degrees a tick. **Circle behind its shoulder** while it breathes. The cone
+deals 8 damage every half second for 2.5 s and ignores shields.
 
 **Dragon's breath.** When the breath ends it leaves a cloud of cooled breath 5 blocks out along
 the cone: a vanilla area effect cloud owned by the copy, radius 3, for 15 s, with dragon's
@@ -667,26 +620,21 @@ cleared with everything else the copy left (`Cast.adopt`).
 
 **Hollow Purple, the finisher** (`spell/HollowPurpleSpell`, drawn by
 `client/blockink/HollowPurpleFx`). Only at or below a quarter of its health, and not within
-25 s of the last. Two tentacles grip the floor wide, as the Flame's do, and strain harder as
-the orb grows: three times each slides further out and grips again, tighter, and their
-heaving quickens. The weapon climbs her left side, swaying, and feeds ink into the orb, broad
-violet swells running up it into the orb one after another; at the release all three take
-the recoil, flung and dragged back, and spring back. It holds its human hand out: a blue and a
-red star rise out of it, circle in and merge over three seconds into a purple orb with a heart
-of ink (the longest forming in the fight, and its longest opening). Meanwhile a lane is
-marked in ink from the copy to the floor's edge, 12 wide, turning after its target at most
-0.6° a tick. It locks 0.65 s before the release, its edges flaring violet. The orb leaves from
-before its hand at a third of its size, opens to 12 blocks across over its first 10 blocks
+25 s of the last. The copy rises slowly and turns its face up. Three open tentacles
+fan wide while separate blue and red stars spiral overhead. At fusion a stepped violet shell closes around the dark centre. Broken red and blue rings
+turn outside it. The copy pitches forward, carrying the orb out in front and down to the start of its roll.
+**Move across its aim as the stars meet.** The heading turns at most 0.6 degrees a tick
+and locks 0.65 s before release. The orb rolls out in front of the copy at a third of
+its full size and opens to 12 blocks across over its first 10 blocks
 (its heart twice the player's, its shell above the player's) and rolls down the lane at 14
 blocks a second (the player's flies at 26): 28 to every body it touches, once, a jump not
 clearing it (about 12 to 13 of 20 in diamond or netherite). It breaks no blocks, and collapses
 at the end of the lane. **Leave the lane**: far out, a sprint aside after the lock; close in,
 by circling out while it forms, which the lane is too slow to follow.
 
-Everything phase two does follows the fight's rules: hits are decided on the server through
-`Cast.hit` with `FirstWizardRules`' constants, every mark is on the floor, nothing staggers
-it, co-op target changes and `addParticipant` scaling hold, and what it leaves is cleared by
-`stopFight`, its death and the server stopping.
+The server resolves hits through `Cast.hit` using the damage in `FirstWizardRules`.
+The same co-op targeting and health scaling apply throughout phase two. Stopping the
+fight, killing the copy, or stopping the server clears its lingering spells.
 
 **Adding a spell.** The `BossSpell` interface's Javadoc says what a spell must do and how
 to add one: a class under `entity/firstwizard/spell/` with one line in `BossSpells`, a
@@ -706,17 +654,17 @@ for reuse.
 | The floor's geometry | `entity/firstwizard/Arena` |
 | What clients draw of a spell | `entity/firstwizard/FirstWizardEffectEntity` |
 | The spell interface and registry | `entity/firstwizard/spell/BossSpell`, `Cast`, `Casting`, `Lingering`, `Timing`, `BossSpells` |
-| Fireball, Blink Rift, lingering ground | `entity/firstwizard/spell/FireballSpell`, `BlinkRiftSpell`, `GroundZone` |
+| Fireball, cast levitation, Blink Rift, lingering ground | `entity/firstwizard/spell/FireballSpell`, `CastLevitation`, `BlinkRiftSpell`, `GroundZone` |
 | The copy's model and the wound's ink | `client/renderer/FirstWizardRenderer` |
 | Ink effects: meshes, primitives, drawers | `client/blockink/InkEffects`, `AtlasMesh`, `InkKit`, `InkDrawers`, `CopyFx`, `FireballFx`, `BlinkRiftFx` |
-| Marks on the floor (the change's ring, the Sweep's arc, the Slam's line, the Leap's circle) | `client/blockink/FloorDecal` (flat textured quads in the floor-ink textures, `art/first_wizard/floor_ink/`), drawn by `InkMovesFx` |
+| Painted elemental atlases and Sentry Bloom's grain | `art/first_wizard/materials/source.png`, `art/first_wizard/build_materials.py` (`--install`, `--check`) |
 | Ink atlas, the swelling's veins and the wound's textures | `art/first_wizard/build_ink.py` (`--install` writes the game's copies; `--check` verifies them) |
 | Stone Wall, Faultline; their drawer, block and stone atlas | `entity/firstwizard/spell/StoneWallSpell`, `FaultlineSpell`; `client/blockink/StoneFx`; `block/FirstWizardWallBlock`; `art/first_wizard/build_stone.py` (`--install`, `--check`) |
-| Thornbite, Sentry Bloom; the flower; their drawers and Nature's colours | `entity/firstwizard/spell/ThornbiteSpell`, `SentryBloomSpell`; `entity/firstwizard/InkBloomEntity`; `client/renderer/InkBloomRenderer`; `client/blockink/ThornbiteFx`, `SentryBloomFx`, `NatureInk` (the frame's `nature` mesh, the Nature kit's atlas) |
-| Sky Shear, Waylay Dash; their drawers and Wind's colours | `entity/firstwizard/spell/SkyShearSpell`, `WaylayDashSpell`; `client/blockink/SkyShearFx`, `WaylayDashFx`, `WindInk` (the frame's `wind` mesh, the Wind kit's atlas) |
+| Thornbite, Sentry Bloom; the flower; their drawers and Nature's colours | `entity/firstwizard/spell/ThornbiteSpell`, `SentryBloomSpell`; `entity/firstwizard/InkBloomEntity`; `client/renderer/InkBloomRenderer`; `client/blockink/ThornbiteFx`, `SentryBloomFx`, `NatureInk` (the frame's `nature` mesh with the boss's leaf texture) |
+| Sky Shear, Waylay Dash; their drawers and Wind's colours | `entity/firstwizard/spell/SkyShearSpell`, `WaylayDashSpell`; `client/blockink/SkyShearFx`, `WaylayDashFx`, `WindInk` (the frame's `wind` mesh with the boss's wind texture) |
 | The phase change, the ink moves and their geometry | `entity/firstwizard/spell/PhaseChange`, `SlamSpell`, `SweepSpell`, `LeapSpell`, `FlameSpell`, `HollowPurpleSpell`, `Tendrils` |
 | The change's cinematic: its script (camera and body), its watchers, the camera on each client | `art/first_wizard/change/build_change.py` (`--install` writes `cinematics/first_wizard_change.json`; `--check` detects drift); `entity/firstwizard/FirstWizardChangeTrack`, `FirstWizardChangeScene`; `client/FirstWizardChangeClient`, `client/BossIntroCamera` |
-| The changing and torn body, tentacles and wound; the moves' marks, flame and orb | `client/renderer/FirstWizardRenderer`; `client/blockink/WizardBody`, `ChangeFx`, `TendrilFx`, `TendrilRest`, `TendrilMoves`, `TendrilCurve`, `TendrilRig`, `InkMovesFx`, `HollowPurpleFx`; veins and wound layers `art/first_wizard/build_ink.py` |
+| The changing and torn body, tentacles and wound; impact debris, breath and orb | `client/renderer/FirstWizardRenderer`; `client/blockink/WizardCastPose`, `WizardBody`, `ChangeFx`, `TendrilFx`, `TendrilRest`, `TendrilMoves`, `TendrilRecovery`, `InkMovesFx`, `HollowPurpleFx`; veins and wound layers `art/first_wizard/build_ink.py` |
 | Bottling the flame's cloud | `mixin/InkBreathBottleMixin` |
 | Commands | `command/FirstWizardCommands` |
 
@@ -738,7 +686,9 @@ for reuse.
   camera above the floor and near her), its full sweep jumped at every bearing, each ink move's warning, dodge and armored damage, the Sweep held to vanilla's
   jump, the Flame's turn against a player behind it, Hollow Purple's lane against a sprint at
   every distance, its rarity (never above a quarter health or within 25 s), phase two's pace,
-  and every line, circle and lane on the floor.
+  and every line, circle and lane on the floor. `TendrilRecoveryContract` checks that a
+  second cast starts from the visible joints and that the skin and the ink socket agree
+  at different facings for every spell.
 - `first_wizard_fight_smoke.init.gradle` runs a hidden, muted client at midnight against an
   unarmored Survival player with 1000 health, on a round floor as wide as the End's: the
   Fireball's hit, a sidestep after its aim lock, its burning ground burning and ending,
@@ -766,8 +716,9 @@ for reuse.
   `-PwizardOrbit=<blocks>` widens the `phase-drift` case's turn round her (7.5 holds the whole
   rest pose of the tentacles and her body in frame). `-PwizardView=<side>` (left, behind,
   right, front, front-left, behind-left) films the phase-two cases from that side of her
-  instead, to review a move's motion from all round; `phase-fireball` casts a spell from the
-  human hand in phase two (its one heavy hit), for the tentacles' lighter touch.
+  instead. `-PwizardView=showcase` lights each selected attack and frames the casting body through release.
+  `-PwizardTornCasts` rehearses the selected elemental spell cases with the torn
+  body so the same gameplay checks can be run alongside a recording of its cast poses.
 - `py -3 art/first_wizard/build_ink.py --check` (also in `tools/check_assets.py`).
 - `py -3 art/first_wizard/build_stone.py --check` (also in `tools/check_assets.py`).
 - `py -3 art/first_wizard/change/build_change.py --check` (also in `tools/check_assets.py`);

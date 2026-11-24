@@ -54,10 +54,10 @@ Nobody has played any of it in Lunar. Everything below has only been seen in fix
   light. The fixtures used the default skin on a dark test floor.
 - **Each of the ten spells:** whether its forming reads as a warning, its size (about two to
   three times the player's), its colours cooling to purple and ink, and how its dodge feels:
-  the Fireball's sidestep, leaving the Meteor's circle, jumping Sky Shear's three crescents,
+  the Fireball's sidestep, moving out of Meteor's falling cinders, jumping Sky Shear's three crescents,
   the Waylay Dash's line and wake, the Stone Wall behind you, the Faultline's sidestep and
   throw, Thornbite's sidestep, breaking the Sentry Bloom before it delivers, Blink Rift's
-  pool, running or dashing out of the Gravity Well.
+  upright ink folds, running or dashing out of the Gravity Well.
 - **The pace of the fight:** health (1000), the gaps between spells, how often each spell
   and combination comes up, and damage against diamond to netherite armor. All first guesses.
 - **The change's cinematic** (built Nov 19, seen only in the fixture's stills and GIFs, by
@@ -67,26 +67,14 @@ Nobody has played any of it in Lunar. Everything below has only been seen in fix
   reads as wrong in a good way while the face stays readable in phase two; whether 17 s is
   the right length mid-fight; and how its shots frame her in the End's light with other
   players nearby. Its sounds are vanilla placeholders.
-- **Phase two:** whether the torn body reads as a wounded copy floating with three huge
-  ink tentacles growing out of her left side (since Nov 20 spread apart, one low, one at
-  shoulder height, one rearing over her, as the developer asked on Nov 19; seen so far only
-  in the fixture's clips, and from close behind her left one still coils over another; at
-  some points of their slow crawl the shoulder-height one's and the weapon's hooks close into
-  rings seen from her front left), and
-  not as rods, a cage, glass or a Space spell; whether her body stays readable beside them;
-  whether the tentacles' part in each move (since Nov 20: throwing her into the Leap and
-  slapping down round its landing, gripping the floor like an octopus's arms and heaving,
-  weaving and feeding the orb through the Flame's and Hollow Purple's long holds,
-  counterweight and clearance for the Slam and Sweep, flaring for the spells; seen only in
-  the fixture's clips) reads as one body at fight speed and distance; whether the gripping
-  arms' curled tips read from a player's height across the floor, and whether the three arms
-  crossing close by her flank in those holds look like a knot from her left or front left;
-  whether the
-  textured floor marks read from across the arena at night; how it drifts, and each move's
-  tell and dodge: jumping the change's full sweep and the Sweep, sidestepping the Slam,
-  leaving the Leap's circle, getting behind the Flame, leaving Hollow Purple's lane. Its
-  numbers (the flame's 8 twice a second, the finisher's 28 and 12-block orb, its 25 s wait)
-  are first guesses, and bottling the flame's cloud has not been tried by hand.
+- **Phase two:** play at fighter eye height in Lunar. Check that the graphite highlights separate the three black limbs
+  against the End sky and that players can recognize the raised
+  braided Slam, low sweeping whip, launching Leap, Flame nozzle and Hollow Purple lock
+  from the boss. Check whether the raised face and open arms distinguish Fireball's quick throw
+  from Hollow Purple's orbit and lock. Check the clone's weight shifts and unwinding arms at the start of a
+  follow-up cast, including a side view in the End.
+  Try dodging at close range and from the side, with reduced particles. Flame damage,
+  the finisher's reach and cooldown, and bottling the breath still need a human playtest.
 - **The island:** the arena's floor, kerb and broken pillars, the arrival spot, the way
   home's basin at the centre and the four gateways after a win.
 - **The portal:** arriving from a stronghold, being refused (and set beside the portal, clear

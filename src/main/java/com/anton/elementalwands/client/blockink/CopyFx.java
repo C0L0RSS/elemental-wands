@@ -4,7 +4,6 @@ import static com.anton.elementalwands.client.blockfire.BlockFireKit.*;
 
 import com.anton.elementalwands.entity.firstwizard.FirstWizardEntity;
 import net.minecraft.util.Arm;
-import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 
 /**
@@ -26,15 +25,11 @@ final class CopyFx {
         if (!f.near(feet, 96) || copy.isRemoved()) return;
         if (CopyForming.formed(copy, delta) < 1) return; // still being poured into shape: the intro's EndSkyFx draws its ink
         double seed = copy.getId() * 3.1, t = f.now();
-        double yaw = MathHelper.lerpAngleDegrees(delta, copy.lastBodyYaw, copy.bodyYaw) * MathHelper.RADIANS_PER_DEGREE;
-        Vec3d forward = new Vec3d(-Math.sin(yaw), 0, Math.cos(yaw)), right = new Vec3d(-Math.cos(yaw), 0, -Math.sin(yaw));
         boolean leftHanded = copy.getMainArm() == Arm.LEFT;
         double age = copy.castAge(delta);
         boolean forming = age >= 0 && age < copy.castRelease();
         double lift = WizardBody.lift(copy, delta);
         Vec3d body = feet.add(0, lift, 0);
-        // The wand hand: raised over its head while a spell forms, at its side otherwise.
-        Vec3d hand = body.add(right.multiply(leftHanded ? -.36 : .36)).add(0, forming ? 2.2 : .75, 0).add(forward.multiply(forming ? .1 : .15));
 
         // Motes: each rises from somewhere on the body, drifting outward and slowly round it, and shrinks away above it.
         int motes = f.embers() ? MOTES : MOTES / 3;
@@ -54,8 +49,9 @@ final class CopyFx {
         Vec3d focus = copy.focus();
         if (forming && focus != null) {
             double k = Math.min(1, age / 6);
+            Vec3d hand = WizardBody.castPoint(copy, delta, new Vec3d(leftHanded ? .36 : -.36, 2.2, .10));
             InkKit.strand(f.ink(), hand, focus, t, (int) Math.round(10 * k) + 2, .26, seed + 50);
-            InkKit.strand(f.ink(), body.add(0, 1.1, 0), focus, t + .3, 4, .14, seed + 70);
+            InkKit.strand(f.ink(), WizardBody.castPoint(copy, delta, new Vec3d(0, 1.1, 0)), focus, t + .3, 4, .14, seed + 70);
         }
         // The change's ink (the seam, the strands, the socket, the melting arm, the swelling), then phase two's tentacles.
         ChangeFx.draw(f, copy);

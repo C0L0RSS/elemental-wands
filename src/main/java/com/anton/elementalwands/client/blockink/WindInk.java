@@ -6,7 +6,7 @@ import static com.anton.elementalwands.client.blockfire.BlockFireKit.rnd;
 import net.minecraft.util.math.Vec3d;
 
 /**
- * Wind's colour for the First Wizard's Wind spells, drawn on the frame's {@code wind} mesh from the Wind kit's atlas
+ * Wind's colour for the First Wizard's Wind spells, drawn on the frame's {@code wind} mesh from the boss's wind atlas
  * (its rows are {@code BlockWindKit}'s: 0 gale, 1 cloud, 2 mist, 3 streak). Air is see-through below alpha 1; the gale
  * rim is solid. Every Wind spell cools from these rows into {@link InkKit#cool}.
  */

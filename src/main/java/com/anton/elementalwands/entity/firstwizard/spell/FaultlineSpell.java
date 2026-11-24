@@ -20,8 +20,8 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.BlockView;
 
 /**
- * Faultline: ink runs along the floor from the copy toward its target, showing the whole wave's shape; its aim locks a
- * quarter of a second before the release, and a wave of stone spikes runs down it to the floor's edge. Whoever it
+ * Faultline: three teeth tilt forward at the caster along the wave heading. The heading locks before the release,
+ * then a wave of stone spikes runs to the floor's edge. Whoever it
  * reaches takes a medium hit and is thrown high, for the copy to hit again (a follow-up in the rules); the fall from
  * that throw is forgiven.
  *

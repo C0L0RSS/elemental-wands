@@ -14,15 +14,13 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 
 /**
- * Leap (phase two): two tendrils plant their tips behind and beside it and load like springs while the third rears
- * toward the landing, a circle is marked on the floor where it will land (leading its target), and the planted two
- * shove it off; it comes down there, the three slapping down round the circle (drawn by the client's
- * {@code TendrilMoves}). Leave the circle. Often it then roots itself and breathes fire ({@link FlameSpell}, the
+ * Leap (phase two): the three tendrils push off and unfold around the locked landing spot on the descent.
+ * Move across its trajectory. Often it then roots itself and breathes fire ({@link FlameSpell}, the
  * scripted follow-up).
  *
  * <ul>
- *   <li>It winds up from 0; the ripple runs along all three tendrils; at the aim lock the circle ({@link #RADIUS}) is
- *       marked where its target will be when it lands, at most {@link #RANGE} from the copy and on the floor.</li>
+ *   <li>At the aim lock the server picks a landing within {@link #RANGE}, leading the target. The effect
+ *       carries the origin and landing to the client for the launch and catch poses.</li>
  *   <li>It launches at the release and flies {@link #FLIGHT} ticks on an arc {@link #HEIGHT} high, moved a step a tick
  *       ({@link Cast#step(Vec3d, double)}), so clients slide it.</li>
  *   <li>Landing: a heavy hit to every body in the circle; a jump does not clear it.</li>

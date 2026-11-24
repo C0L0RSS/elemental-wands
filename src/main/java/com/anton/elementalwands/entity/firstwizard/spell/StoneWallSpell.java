@@ -16,14 +16,13 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 
 /**
- * Stone Wall: ink runs along the floor on a line behind its target, then a wall of the copy's stone rises there, cuts
+ * Stone Wall: stones fly from above the caster across the wall's intended span. The wall rises there, cuts
  * off that way out for six seconds and crumbles into falling ink. The first half of the design's first combination
  * (the Fireball down the open lane follows; see {@code FirstWizardRules.FOLLOW_UPS}).
  *
  * <ul>
  *   <li><b>The line</b> is fixed at once: across the line from the copy to its target, {@link #BEHIND} blocks behind
- *       where the target is heading, {@link #LENGTH} long, clipped to the floor ({@link #line}). Ink runs along it for
- *       a second; that is the warning.</li>
+ *       where the target is heading, {@link #LENGTH} long, clipped to the floor ({@link #line}). The hovering stones show this span before it rises.</li>
  *   <li><b>It rises</b> a row a tick, {@link #HEIGHT} tall and two thick, as real blocks
  *       ({@code ModSpellBlocks.FIRST_WIZARD_WALL}) that stop players, their spells and the copy's own. It only fills
  *       air, so nothing of the floor or anything a player placed is replaced. A player on the line as it rises takes

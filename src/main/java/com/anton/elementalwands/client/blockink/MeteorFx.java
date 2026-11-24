@@ -10,12 +10,7 @@ import java.util.List;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.Vec3d;
 
-/**
- * The First Wizard's Meteor: a knot of ink over the raised wand, flung up to form a stepped ball of fire twice the
- * player's high over the mark; its fall with tongues streaming back that cool to purple tips and ink, shedding ink
- * where the player's sheds smoke; the impact. The mark is an ink ring at the rim with a violet edge and a shadow that
- * fills in from the middle as the meteor nears. All of the mark lies flat on the floor.
- */
+/** The overhead knot, falling meteor, aerial cinders and impact. The fire cools through violet to ink. */
 final class MeteorFx {
     private MeteorFx() {}
 
@@ -174,41 +169,19 @@ final class MeteorFx {
         InkKit.splash(f.ink(), c.add(0, 1.5, 0), c.y, age, f.embers() ? 26 : 10, 9, .5, seed + 40);
     }
 
-    /**
-     * {@link MeteorSpell#MARK_KIND}: an ink ring at the rim with a violet edge, a dashed purple ring round the inner
-     * part, and a shadow that fills in from the middle as the meteor nears; in the last half second the edge flashes.
-     * The ring first burns in fire's colour and cools to violet as the meteor forms.
-     */
-    static void mark(InkFrame f, FirstWizardEffectEntity e) {
-        float delta = f.delta();
-        Vec3d c = e.getLerpedPos(delta);
-        if (!f.near(c, 160)) return;
-        double seed = e.getId() * 9.1, t = f.now(), R = e.size();
-        double k = e.formed(delta), left = (1 - k) * e.form() / 20.0;
-        double appear = smoothstep(e.age(delta) / 6);
-        // The shadow: a pool of ink spreading from the middle to the rim as the meteor nears.
-        InkKit.pool(f.ink(), c.add(0, .01, 0), R * .98, .12 + .88 * Math.pow(k, 1.3), t, seed);
-        double flash = left < .6 ? .5 + .5 * Math.sin(t * TAU * 6) : 0;
-        int count = (int) Math.ceil(TAU * R / .62);
-        double heat = 1 - smoothstep(k / .25);
-        for (int i = 0; i < count; i++) {
-            double a = i * TAU / count + seed;
-            double rr = R * (.92 + .08 * appear);
-            Vec3d p = c.add(Math.cos(a) * rr, 0, Math.sin(a) * rr);
-            if (InkKit.floorBelow(f.world(), p.add(0, .5, 0)) < c.y - 1) continue;      // nothing over the void past the floor's edge
-            Vec3d[] axes = yawAxes(a + Math.PI / 2);
-            InkKit.cube(f.ink(), p.add(0, .06, 0), .7, .12, .5, InkKit.INK, seed + i, axes, 1);
-            int edge = flash > .5 ? InkKit.MAGENTA : InkKit.VIOLET;
-            if (heat > .05 && rnd(seed + i * 1.3) < heat) BlockFireKit.cube(f.fire(), p.add(0, .16, 0), .5, .14, .26, BlockFireKit.ORANGE, seed + i, axes);
-            else InkKit.cube(f.ink(), p.add(0, .15, 0), .64, .08, .22, i % 2 == 0 ? edge : InkKit.RIM, seed + i, axes, 1);
-        }
-        // The inner part, where it hits hardest: a dashed purple ring.
-        double inner = MeteorSpell.INNER;
-        int dashes = (int) Math.ceil(TAU * inner / .55);
-        for (int i = 0; i < dashes; i += 2) {
-            double a = i * TAU / dashes - t * .3;
-            Vec3d p = c.add(Math.cos(a) * inner, .08, Math.sin(a) * inner);
-            InkKit.cube(f.ink(), p, .5, .07, .2, flash > .5 ? InkKit.MAGENTA : InkKit.PURPLE, seed + 99 + i, yawAxes(a + Math.PI / 2), 1);
+    /** Cinders fall through the threatened air while the meteor is above a player's field of view. */
+    static void fallout(InkFrame f, FirstWizardEffectEntity e) {
+        Vec3d centre = e.getLerpedPos(f.delta());
+        if (!f.near(centre, 128)) return;
+        double k = e.formed(f.delta()), seed = e.getId() * 3.7;
+        for (int i = 0; i < 22; i++) {
+            double cycle = f.now() * .85 + rnd(seed + i);
+            double u = fract(cycle);
+            double key = seed + i * 7.1 + Math.floor(cycle) * 1.9;
+            double angle = rnd(key) * TAU, r = e.size() * Math.sqrt(rnd(key + 2));
+            Vec3d ember = centre.add(Math.cos(angle) * r, 1.0 + 5 * (1 - u), Math.sin(angle) * r);
+            double size = (.17 + .22 * k) * Math.sin(Math.PI * u);
+            BlockFireKit.cube(f.fire(), ember, size, size * 2.2, size, heat(3.4 - u), key, yawAxes(angle));
         }
     }
 }

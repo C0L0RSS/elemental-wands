@@ -10,12 +10,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 
-/**
- * The First Wizard's Sentry Bloom, apart from the flower itself ({@code InkBloomRenderer} draws that): the bud forming
- * over the copy's head out of ink and lobbed to its spot, the ink pooling where it will grow and lying under it, ink
- * running off its petals, its seeds, what it stored flowing into the copy, and its break. Nature's colours from the
- * Nature kit's atlas, cooling into ink.
- */
+/** The lobbed bud, petal drips, seeds, healing transfer and break. The living flower has its own renderer. */
 final class SentryBloomFx {
     private SentryBloomFx() {}
 
@@ -73,27 +68,18 @@ final class SentryBloomFx {
     }
 
     /**
-     * {@link SentryBloomSpell#GROUND_KIND}: ink pooling where the flower will grow, then lying under it with ink
+     * {@link SentryBloomSpell#GROUND_KIND}: ink
      * running off its petals; while it delivers, what it stored flowing in an arc into the copy; the heal round the
      * copy when it arrives; or the break, its petals torn off and its stored light falling dark.
      */
     static void ground(InkFrame f, FirstWizardEffectEntity e) {
         float delta = f.delta();
         Vec3d c = e.getLerpedPos(delta);
-        double seed = e.getId() * 5.9, t = f.now(), R = SentryBloomSpell.POOL_RADIUS;
+        double seed = e.getId() * 5.9, t = f.now();
         int stage = e.stage();
         double age = e.stageAge(delta);
         Entity owner = f.world().getEntityById(e.ownerId());
         if (f.near(c, 128)) {
-            double fill = switch (stage) {
-                case SentryBloomSpell.POOLING -> Math.pow(e.formed(delta), .6);
-                case SentryBloomSpell.WILTED -> 1 - smoothstep(age / SentryBloomSpell.WILT);
-                case SentryBloomSpell.BROKEN -> 1 - smoothstep((age - 6) / (SentryBloomSpell.BREAK - 6));
-                default -> 1;
-            };
-            InkKit.pool(f.ink(), c.add(0, .01, 0), R, fill, t, seed);
-            // While it pools, a ring of green shoots round its edge marks where it will stand, cooling to purple.
-            if (stage == SentryBloomSpell.POOLING) ring(f, c, R * fill, e.formed(delta), seed, t);
             InkBloomEntity flower = flower(f, c);
             if (flower != null && f.embers() && stage != SentryBloomSpell.BROKEN) drips(f, flower, c.y, delta, seed, t);
         }
@@ -105,17 +91,6 @@ final class SentryBloomFx {
     private static InkBloomEntity flower(InkFrame f, Vec3d c) {
         List<InkBloomEntity> found = f.world().getEntitiesByClass(InkBloomEntity.class, new Box(c, c).expand(1, 2, 1), x -> !x.isRemoved());
         return found.isEmpty() ? null : found.getFirst();
-    }
-
-    /** Green shoots round the pool's edge, pulsing up and cooling through purple as the bud nears. */
-    private static void ring(InkFrame f, Vec3d c, double r, double formed, double seed, double t) {
-        if (r < .3) return;
-        int count = (int) Math.ceil(r * 5);
-        for (int i = 0; i < count; i++) {
-            double a = i * TAU / count + seed, h = (.25 + .35 * Math.abs(Math.sin(t * 3 + i))) * formed;
-            Vec3d p = c.add(Math.cos(a) * r, h * .5, Math.sin(a) * r);
-            NatureInk.cooling(f, p, .16, h, .16, i % 2 == 0 ? NatureInk.LEAF : NatureInk.SAP, seed + i, yawAxes(a), formed * .6);
-        }
     }
 
     /** Ink running off the flower's petals to the floor. */

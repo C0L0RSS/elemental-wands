@@ -5,16 +5,13 @@
     py -3 art/first_wizard/build_stone.py --install   also write the game's copies under src/main/resources
     py -3 art/first_wizard/build_stone.py --check     write nothing; fail if any art or game copy differs
 
-The boss's stone is the player's Stone look (read from the player's own block textures, which
-tools/generate_stone_vfx_assets.py owns), stained and veined with the boss's ink: the mortar becomes black ink with
-violet glints, and ink runs down from the top of some courses. Its spells start in this stone and cool through the
-ink atlas's purples to black (client/blockink/StoneFx).
-
+The raised wall and Faultline spikes use the fractured-slate panel of materials/source.png.
+The flat fault cutout follows the player's fault mask. Ink settles into the painted fracture.
 Atlas (64 x 128, the block-fire kit's layout: eight 16-pixel rows, four identical frames each, since stone does not
 move; read by client/blockink):
-  0 wall       the player's Stone Wall
+  0 wall       painted slate masonry
   1 veined     the same, its mortar run with ink and violet: the boss's wall
-  2 spike      the player's Faultline spike stone
+  2 spike      split slate
   3 spike ink  the spike stone veined with ink and violet
   4 stained    the spike stone with ink soaking up from below, ragged
   5 dust       pale stone dust
@@ -23,7 +20,7 @@ move; read by client/blockink):
 
 Wall (16 x 16): row 1, the boss's Stone Wall block (textures/block/first_wizard_wall.png).
 
-Everything is integer arithmetic on a fixed hash over the player's PNGs, so both machines write the same bytes.
+The stone's painted values and ink accents are sampled deterministically.
 Requires Pillow and NumPy.
 """
 
@@ -34,10 +31,12 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+from build_materials import levels, paint
+
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[1]
 GAME = REPO / "src/main/resources/assets/elementalwands/textures"
-SOURCES = {name: GAME / f"block/{name}.png" for name in ("stone_wall", "stone_spike", "stone_fault")}
+FAULT = GAME / "block/stone_fault.png"
 OUTPUTS = {
     "stone.png": GAME / "misc/first_wizard_stone.png",
     "wall.png": GAME / "block/first_wizard_wall.png",
@@ -59,32 +58,16 @@ def rnd(*values):
     return (h ^ (h >> 16)) & 0xFFFF
 
 
-def load(name):
-    return np.array(Image.open(SOURCES[name]).convert("RGBA"), dtype=np.uint8)
-
-
 def luminance(tile):
     return (tile[:, :, 0].astype(int) + tile[:, :, 1].astype(int) + tile[:, :, 2].astype(int)) // 3
 
 
-def veined(tile, seed, mortar):
-    """Mortar (the darkest pixels) becomes ink, with a violet glint here and there; ink runs down a few columns."""
+def veined(tile, indices):
+    """Soak the fracture in charcoal. Violet only catches on a short lip of the cut."""
     out = tile.copy()
-    lum = luminance(tile)
-    for y in range(16):
-        for x in range(16):
-            if lum[y, x] <= mortar:
-                h = rnd(seed, x, y) % 16
-                out[y, x, :3] = LILAC if h == 0 else VIOLET if h < 3 else WET if h < 6 else INK
-    # Ink runs from the top edge of a few columns, as if poured over the course above; a violet bead at each tip.
-    for x in range(16):
-        if rnd(seed, x, 31) % 4:
-            continue
-        length = 2 + rnd(seed, x, 32) % 5
-        out[:length, x, :3] = INK
-        out[min(15, length), x, :3] = VIOLET
-        if length > 2:
-            out[1, x, :3] = WET
+    out[indices == 0, :3] = WET
+    lip = (indices == 0) & (np.roll(indices, 1, axis=1) >= 2)
+    out[lip, :3] = (88, 65, 111)
     return out
 
 
@@ -134,9 +117,17 @@ def cooling(tile):
 
 
 def build():
-    wall, spike, fault = load("stone_wall"), load("stone_spike"), load("stone_fault")
-    boss_wall = veined(wall, 1, 100)
-    rows = [wall, boss_wall, spike, veined(spike, 3, 98), stained(spike, 4), dust(spike), crack(fault), cooling(spike)]
+    slate = levels("stone")
+    # Two offset courses let a field of connected wall blocks read as masonry.
+    courses = slate.copy()
+    courses[8:] = np.roll(courses[8:], 6, axis=1)
+    courses[7] = np.minimum(courses[7], 1)
+    wall = paint(courses, "353641 555761 797d86 9197a0 b6bcc1")
+    spike = paint(slate, "3a3744 525260 777986 9498a0 babcc2")
+    boss_wall = veined(wall, courses)
+    with Image.open(FAULT) as source:
+        fault = np.array(source.convert("RGBA"), dtype=np.uint8)
+    rows = [wall, boss_wall, spike, veined(spike, slate), stained(spike, 4), dust(spike), crack(fault), cooling(spike)]
     atlas = np.zeros((128, 64, 4), dtype=np.uint8)
     for row, tile in enumerate(rows):
         for phase in range(4):

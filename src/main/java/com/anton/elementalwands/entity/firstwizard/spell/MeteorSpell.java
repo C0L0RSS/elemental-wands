@@ -15,16 +15,15 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 
 /**
- * Meteor: the copy raises its wand, marks a very large circle on the floor where its target is going, and a meteor
- * twice the player's forms high over the mark and falls for three seconds. Leave the circle.
+ * Meteor: the copy flings a knot above its target and a meteor twice the player's size forms there.
+ * Cinders drift through the threatened air during the fall.
  *
  * <ul>
- *   <li>A knot of ink gathers over its raised wand for a second. At the aim lock the circle ({@link #RADIUS}) is
- *       marked where the target will be half a second on, and the ink is flung up to form the meteor over it.</li>
+ *   <li>A knot of ink gathers over its raised wand for a second. At the aim lock the area ({@link #RADIUS}) is
+ *       fixed where the target will be half a second on, and the ink is flung up to form the meteor over it.</li>
  *   <li>After a Gravity Well (the design's combination) the circle is centred on the well instead, the previous
  *       cast's aim, so the meteor falls on everyone the well is pulling in.</li>
- *   <li>The meteor drops at the release and falls for {@link #FALL} ticks; the copy is free soon after. The mark's
- *       shadow fills in from the middle as it nears.</li>
+ *   <li>The meteor drops at the release and falls for {@link #FALL} ticks; the copy is free soon after.</li>
  *   <li>Impact: a heavy hit within {@link #INNER} of the middle, a medium one out to the rim, then burning ground
  *       over the inner part (a {@link GroundZone}) for {@link #GROUND_LIFE} ticks.</li>
  * </ul>

@@ -12,13 +12,11 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.Vec3d;
 
 /**
- * Slam (phase two): the free tendril rises high over the copy while a line is marked in ink on the floor toward its
- * target, then comes straight down along the line. Sidestep after the aim locks.
+ * Slam (phase two): three tendrils twist into a hammer and come down together along the locked heading. Sidestep after the aim locks.
  *
  * <ul>
  *   <li>The line runs from the copy {@link #LENGTH} blocks toward its target, {@link #HALF} each side (2 wide). It
- *       follows the target, turning at most {@link FirstWizardRules#AIM_TURN} a tick, until the aim lock, when its
- *       edges flare violet; the ripple runs up the tendril in the same moment.</li>
+ *       follows the target, turning at most {@link FirstWizardRules#AIM_TURN} a tick, until the aim lock. The effect carries that heading to the client.</li>
  *   <li>At the release the tendril lands along the line: a heavy hit to every body on it. A jump does not clear it
  *       (it comes down from above); a step of {@link #HALF} and a little to either side after the lock does.</li>
  *   <li>The tendril lies there a moment, then draws back.</li>

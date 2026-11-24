@@ -97,7 +97,7 @@ final class ChangeFx {
             double soak = smoothstep((t - PhaseChange.MELTED) / 40);
             double spread = smoothstep(melt / .7) * (1 - soak);
             if (spread > .01) {
-                f.floor().pool(centre, .2 + .38 * spread, seed % TAU, .15 * (1 - soak), Math.min(1, spread * 1.3) * (1 - soak));
+                InkKit.pool(m, centre, .2 + .38 * spread, Math.min(1, spread * 1.3) * (1 - soak), now, seed);
                 if (melt > .05 && melt < .95) {
                     // Ink beading over the arm as it gives way.
                     for (int i = 0; i < 6; i++) {

@@ -40,6 +40,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+from build_materials import levels
+
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[1]
 GAME = REPO / "src/main/resources/assets/elementalwands/textures"
@@ -52,12 +54,12 @@ for _model in ("wide", "slim"):
 
 ROWS = [
     # name, palette (dark to light), motion
-    ("ink", ["#09070d", "#0e0b14", "#130f1b", "#1a1424", "#2a1d3d"], "run"),
+    ("ink", ["#101016", "#19191f", "#23232b", "#30313a", "#3c3e48"], "run"),
     ("rim", ["#0a080f", "#110d18", "#4d2a8a", "#7a43d6", "#a273f2"], "rim"),
     ("violet", ["#8e4ae6", "#a462f2", "#b77cf8", "#cb9cfc", "#e4c8ff"], "rise"),
     ("purple", ["#4f1d8c", "#5f27a4", "#6f32b8", "#7f40c8", "#9558dc"], "rise"),
     ("deep", ["#1e0b3a", "#271047", "#311556", "#3c1b66", "#4b2580"], "rise"),
-    ("gloss", ["#07060a", "#0d0a12", "#15101d", "#5b4682", "#c4b0ec"], "run"),
+    ("gloss", ["#0c0c12", "#191821", "#262530", "#464456", "#777587"], "run"),
     ("mist", ["#120c1c", "#170f24", "#1d132e", "#3a2366", "#6a42b8"], "mist"),
     ("magenta", ["#7a1f52", "#922a66", "#a93a7c", "#bf4d93", "#d76bb0"], "rise"),
 ]
@@ -75,43 +77,14 @@ def rnd(*values):
 
 
 def pattern(row, name):
-    """A 16 x 16 grid of palette indices 0..4 for one row."""
-    grid = np.zeros((16, 16), dtype=np.uint8)
-    for y in range(16):
-        for x in range(16):
-            # Two octaves of blocky value noise from the hash: 4-pixel cells and 2-pixel cells.
-            coarse = rnd(row, x // 4, y // 4) % 5
-            fine = rnd(row + 50, x // 2, y // 2) % 3
-            grain = rnd(row + 99, x, y) % 7
-            value = coarse + fine - 1 + (1 if grain == 0 else 0) - (1 if grain == 1 else 0)
-            grid[y, x] = max(0, min(4, value))
-    if name in ("ink", "gloss", "rim", "mist"):
-        # Liquid, never glass: a dark body with the light shades only in runs down the face, no frames, no specks.
-        grid = np.minimum(grid, 2 if name in ("ink", "gloss") else 1)
-        for x in range(16):
-            if rnd(row, x, 3) % 3:
-                continue
-            top, length = rnd(row, x, 4) % 16, 2 + rnd(row, x, 5) % 4
-            for k in range(length):
-                grid[(top + k) % 16, x] = 3 if name in ("ink", "gloss") else 2
-            if name in ("ink", "gloss") and rnd(row, x, 6) % 2 == 0:
-                grid[(top + length) % 16, x] = 4 if name == "gloss" else 3
-    if name == "gloss":
-        # Wet highlights: a few short level streaks, as light lies on a liquid surface.
-        for i in range(3):
-            y, x0 = 2 + rnd(row, i, 8) % 12, rnd(row, i, 9) % 13
-            grid[y, x0:x0 + 3] = 3
-            grid[y, x0 + 1] = 4
+    """Broad painted sweeps on the links, with a narrow wet edge where the ink catches light."""
+    material = "space" if name in ("violet", "purple", "deep", "magenta") else "ink"
+    grid = np.roll(levels(material), (row * 2, row * 3), axis=(0, 1))
     if name == "rim":
-        # The violet rim is a meniscus along the top of each face, running down in drips of varied length.
-        grid[0, :] = 4
-        grid[1, :] = 3
-        for x in range(16):
-            for k in range(rnd(row, x, 10) % 5):
-                grid[2 + k, x] = 3 if k < 2 else 2
-    if name == "mist":
-        grid[0, :] = np.maximum(grid[0, :], 3)
-        grid[0, ::5] = 4
+        grid = np.minimum(grid, 1)
+        grid[0, :] = 3
+        grid[1, :] = 2
+        grid[2:, :] += (levels("ink")[2:, :] == 4).astype(np.uint8)
     return grid
 
 
@@ -176,7 +149,7 @@ def build_wound(slim, side="left"):
     for x0, width in (whole, front, back):
         for x in range(x0, x0 + width):
             for y in range(v + d, v + d + h):
-                wet = rnd(7, x, y) % 9 == 0
+                wet = levels("ink")[y % 16, x % 16] >= 3
                 coat[y, x, :3] = WET if wet else INK
                 coat[y, x, 3] = 252
     # Top and bottom of the torso on that half: ink too.

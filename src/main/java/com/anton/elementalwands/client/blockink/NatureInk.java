@@ -2,18 +2,17 @@ package com.anton.elementalwands.client.blockink;
 
 import static com.anton.elementalwands.client.blockfire.BlockFireKit.rnd;
 
-import com.anton.elementalwands.client.blocknature.BlockNatureMesh;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Vec3d;
 
 /**
- * Nature's colour for the First Wizard's Nature spells, drawn on the frame's {@code nature} mesh from the Nature kit's
+ * Nature's colour for the First Wizard's Nature spells, drawn on the frame's {@code nature} mesh from the boss's painted
  * atlas (its rows are {@code BlockNatureKit}'s: leaf, dark leaf, pink, violet, gold, bark, sap, cream). The pieces are
  * the kit's, at boss size: a three-box leaf, a stepped petal, a pollen kernel. Every Nature spell cools from these rows
  * into {@link InkKit#cool}.
  */
 final class NatureInk {
-    static final Identifier ATLAS = BlockNatureMesh.ATLAS;
+    static final Identifier ATLAS = Identifier.of("elementalwands", "textures/misc/first_wizard_nature.png");
     static final int LEAF = 0, DARKLEAF = 1, PINK = 2, VIOLET = 3, GOLD = 4, BARK = 5, SAP = 6, CREAM = 7;
     /** How much each row ignores the world's light: brighter than the player's kit, so a spell reads at midnight. */
     private static final double[] GLOW = {.5, .35, .7, .7, 1, .3, .9, .6};

@@ -14,7 +14,7 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 
 /**
- * Waylay Dash: ink runs along the floor on the line the copy will take while wind gathers behind it, then it crosses
+ * Waylay Dash: wind gathers behind the copy along its dash heading, then it crosses
  * that line in under half a second and leaves a low wall of churning wind and ink that burns for about 3 s. It is
  * also how the copy closes on a target that runs away.
  *

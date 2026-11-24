@@ -7,13 +7,7 @@ import com.anton.elementalwands.entity.firstwizard.spell.WaylayDashSpell;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.Vec3d;
 
-/**
- * The First Wizard's Waylay Dash, from one effect entity at the start of its line ({@code aux} is the end). The tell:
- * ink runs along the floor on the line, pale streaks of wind skimming it, while wind gathers behind the copy and cools
- * to ink as it arrives. The dash: streaks of wind trailing the copy. The wake: a low wall of churning wind and ink two
- * blocks wide over a pool of ink, pale where the copy has just passed and cooling through purple to black, no higher
- * than a player's waist and mostly see-through air, so nobody is hidden behind it.
- */
+/** Wind tightens behind the copy along the locked dash heading. The moving body leaves a churning, damaging wake. */
 final class WaylayDashFx {
     private WaylayDashFx() {}
 
@@ -29,7 +23,6 @@ final class WaylayDashFx {
         Entity owner = f.world().getEntityById(e.ownerId());
         if (e.stage() == 0) {
             double formed = e.formed(delta);
-            tell(f, from, dir, side, length * smoothstep(formed / .75), formed, seed, t);
             if (owner != null) gather(f, owner.getLerpedPos(delta), dir, side, formed, seed, t);
             return;
         }
@@ -40,8 +33,6 @@ final class WaylayDashFx {
         else if (sa >= dash + 6) reached = length;
         double remain = (WaylayDashSpell.WAKE_LIFE - sa) / 20;
         double fade = smoothstep(remain / .7);
-        // The tell's ink stays under the wake ahead of the copy until it arrives.
-        if (reached < length) tell(f, from.add(dir.multiply(reached)), dir, side, length - reached, 1, seed, t);
         wake(f, from, dir, side, length, reached, half, sa, fade, seed, t);
         if (owner != null && sa < dash + 5) streaks(f, owner.getLerpedPos(delta), dir, side, sa, seed, t);
         // The burst of air where it set off.
@@ -56,32 +47,6 @@ final class WaylayDashFx {
                 double r = .5 + 1.1 * open;
                 WindInk.air(f.wind(), at.add(radial.multiply(r)), .3, .3 * (1 - open) + .05, .3, open < .5 ? WindInk.GALE : WindInk.CLOUD, seed + i, axes, .8 * (1 - open));
             }
-        }
-    }
-
-    /** Ink running along the floor from a point for this many blocks, pale streaks of wind skimming toward its end. */
-    private static void tell(InkFrame f, Vec3d start, Vec3d dir, Vec3d side, double run, double formed, double seed, double t) {
-        if (run < .1) return;
-        Vec3d[] axes = WindInk.flat(dir);
-        double cell = .5;
-        int n = (int) Math.ceil(run / cell);
-        for (int i = 0; i < n; i++) {
-            double s = (i + .5) * cell, ahead = 1 - s / Math.max(run, 1e-3);
-            // Narrow at its running tip, a violet meniscus each side.
-            double w = .5 + .5 * smoothstep(ahead * 4);
-            Vec3d p = start.add(dir.multiply(s)).add(0, .02 + .01 * Math.sin(t * 4 + i), 0);
-            InkKit.cube(f.ink(), p, cell * 1.05, .04, w, rnd(seed + i * 3.3) < .2 ? InkKit.GLOSS : InkKit.INK, seed + i, axes, 1);
-            for (int edge = -1; edge <= 1; edge += 2)
-                InkKit.cube(f.ink(), p.add(side.multiply(edge * w * .5)).add(0, .01, 0), cell * 1.05, .06, .1, InkKit.PURPLE, seed + i + edge * 7, axes, 1);
-        }
-        // Streaks of wind run up the line toward its end as the colour takes it.
-        int streaks = 6;
-        for (int i = 0; i < streaks; i++) {
-            double u = fract(t * 1.4 + i / (double) streaks + rnd(seed + i) * .2);
-            double s = u * run, lane = (rnd(seed + i * 4.1) - .5) * .7;
-            Vec3d p = start.add(dir.multiply(s)).add(side.multiply(lane)).add(0, .12, 0);
-            double a = formed * Math.sin(u * Math.PI);
-            WindInk.air(f.wind(), p, 1.2, .07, .12, i % 2 == 0 ? WindInk.GALE : WindInk.STREAK, seed + i * 5, axes, .85 * a);
         }
     }
 

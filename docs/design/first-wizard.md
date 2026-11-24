@@ -2,7 +2,7 @@
 
 The sixth and last boss: the wizard who tried to hold all five elements, now a pool of
 living ink over the End that learns, copies and takes magic. This page records what the
-developer decided on November 17–18, 2026 and why. What is in the game is described in the
+developer decided during the design and visual reviews, and why. What is in the game is described in the
 [reference](../reference/first-wizard.md); what is still open is in [status](../STATUS.md).
 
 "First Wizard" is a working name. The developer has not named the boss.
@@ -76,12 +76,11 @@ Decided November 18.
   times was considered and rejected: "big ahh fire balls flying at you" would be too much
   without a clear warning.
 - **Bigger means wider and slower, never faster**, so that size buys a longer warning.
-- **Every spell forms in the open before it is released** (the developer's idea, Nov 18:
-  "the fireball maybe forming above the caster"). Ink rises off the wand arm, gathers above
-  the copy's head, takes the element's colour and becomes the spell. The longer it forms,
-  the bigger it ends up. The growing spell also marks where the boss is. Spells that are
-  not thrown form where they will appear: ink runs along the ground for Stone Wall and
-  Faultline, pools at Blink Rift's arrival point, and Meteor's shadow grows under it.
+- **Every spell forms in the open before release.** The rising ink over the wand gives
+  the player a place to look from the beginning of the windup. The November 24 direction
+  carries this through both phases. Players should recognize an attack and its heading
+  by watching the wizard. Local effects such as falling cinders can locate a danger that
+  persists after the caster has moved on.
 - **Every spell cools into ink.** It starts in its element's colour and cools to purple,
   then black, where the player's version turns to smoke or fades. For fire this was the
   developer's suggestion (Nov 18): "a custom fire where the tips of the fire is purple".
@@ -92,14 +91,14 @@ Decided November 18.
 | Spell | The player's | The boss's |
 | --- | --- | --- |
 | Fireball | A shot with 20 blocks of range | A slow fireball several blocks across that leaves burning ground |
-| Meteor | One marked blast | A very large marked circle with a long fall: leave the area |
+| Meteor | One marked blast | Falling cinders under a long meteor fall give time to leave the area |
 | Sky Shear | Three crescents in a fan | Wide crescents at ground height: jump them |
 | Waylay Dash | A short burst of movement | A dash across the arena that leaves a damaging wake |
 | Stone Wall | A small piece of cover | A tall wall across the arena that cuts off a way out and crumbles after a few seconds |
 | Faultline | A 20-block wave with almost no warning | A long wave with a real warning that throws a player high enough to be hit again |
 | Thornbite | A 4.5-block bite that heals the caster | A giant flytrap that lunges far and heals the boss if it bites |
 | Sentry Bloom | Small flowers that shoot and store healing | One towering flower that stores healing for the boss until it is broken |
-| Blink Rift | 10 blocks | Anywhere on the arena, with ink pooling at the arrival point first |
+| Blink Rift | 10 blocks | Anywhere on the arena, with ink folding upright at the arrival point |
 | Gravity Well | A 4-block pull | A pull over a large part of the arena: run or dash out |
 
 Three combinations to start with: Stone Wall then Fireball down the open lane; Gravity Well
@@ -143,26 +142,34 @@ legs. It uses them to move and as melee weapons.
   on the left side, and the tentacles burst out of it. The bulge bends the head the other
   way, away from the tentacles, "to give a more uncanny vibe", and the head stays bent
   through phase two.
-- **One style for the whole body** (the developer, Nov 19): the coils moved smoothly at
-  rest but went "flat and jittery" when attacking, and the marks they left on the floor
-  were blocky, with a texture that did not match the tentacles. Attacks must move with the
-  same smoothness as the rest pose, and the floor marks must be continuous, painted ink in
-  one texture. The developer asked for that texture to be generated with an image model.
-- **Tendril attacks:** a slam along a marked line, a low sweep to jump, and a leap with a
-  marked landing.
-- **The tentacles take part in every attack** (the developer, Nov 20, on seeing the spread
-  pose: "I like this a lot"). In the first attacks they drew in and held still for the
-  Leap, the Flame and Hollow Purple, and the two not striking idled through a Slam or Sweep.
-  The developer asked for the Leap "and other attacks" to be redesigned so "the tentacles
-  [are] a part of its attacks not just freeze". The whole body works in every move: the
-  tentacles throw her into the Leap and catch her landing, root her for the Flame, brace
-  Hollow Purple, and answer the human hand's spells.
+- **The tentacles are part of the spells.** The developer first asked on Nov 20 for every
+  arm to participate. On Nov 24 they asked for a new animation pass and a more cubic
+  Minecraft silhouette. Keep the copy, wound and three spread arms. Give the limbs
+  discrete square links and poses with a recognizable action, such as lifting, sweeping,
+  throwing, shutting a jaw, or opening around an overhead spell. Keep the arms slender beside
+  the copied player and black along their length. A narrow violet flash at the joints
+  carries the cast timing. The developer wanted all three arms involved in the melee
+  strikes and a smoother return from each cast. In Slam and Sweep, the arms wind round
+  each other to make one weapon. Let the tips finish the stroke before they drift apart.
+  In the next pass the developer wanted the copied player to act with the ink. The
+  shoulders commit to the swing, the legs counter its weight, and the head can keep
+  following the player as the body turns. The developer liked the braided Slam and Sweep.
+  Each other spell gets its own relationship between the body and three limbs. For Fireball
+  and Hollow Purple, leave open sky around the forming orb so the player can see the clone
+  looking up at it. Fireball rises quickly into a throw. The finisher hangs on the fusion.
+- **Textures at fight distance.** The developer asked for a cleaner look across the spells. Give each
+  material a broad pixel shape that survives on a moving cube. Keep the strongest colour on the
+  charged tip or the spell, so the clone's silhouette stays readable beneath it.
+- **Watch the boss to dodge.** The developer asked to remove the floor indicators on
+  Nov 24. Show where an attack is going in the set of the arm and the direction of release.
+  Players can jump a low sweep, sidestep a raised slam, or move across the trajectory
+  of a leap. Fire and other lingering hazards still show where they are active.
 - **The developer's combo:** the leap lands for heavy damage, then it roots itself and
   turns a flame on anyone still close. While it breathes it cannot move, which is the
   player's opening.
 - **The flame is the boss's own fire**, orange at the base with purple tips, cooling to
   ink. The cloud it leaves can be bottled as dragon's breath.
-- **Hollow Purple is the finisher**, cast from the human hand while the tendrils brace it.
+- **Hollow Purple is the finisher.** Its two colours meet above the clone's upturned face while the three arms hold open.
 
 ## The intro
 

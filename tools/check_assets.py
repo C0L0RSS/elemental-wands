@@ -96,6 +96,7 @@ CHECKS = [
     ("py", "art/pyre_hall/build_layout.py", "--check"),
     ("py", "art/pyre_gate/build_layout.py", "--check"),
     # The First Wizard
+    ("py", "art/first_wizard/build_materials.py", "--check"),
     ("py", "art/first_wizard/build_ink.py", "--check"),
     ("same", "art/first_wizard/ink.png", MISC + "first_wizard_ink.png"),
     ("py", "art/first_wizard/floor_ink/build_floor_ink.py", "--check"),

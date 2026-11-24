@@ -2,16 +2,11 @@ package com.anton.elementalwands.client.blockink;
 
 import static com.anton.elementalwands.client.blockfire.BlockFireKit.*;
 
-import com.anton.elementalwands.client.blockspace.BlockSpaceKit;
 import com.anton.elementalwands.entity.firstwizard.FirstWizardEffectEntity;
 import com.anton.elementalwands.entity.firstwizard.spell.BlinkRiftSpell;
 import net.minecraft.util.math.Vec3d;
 
-/**
- * The First Wizard's Blink Rift: ink pools at the arrival point (a ripple of Space's colour on it that cools to purple
- * and black), then a column of ink rises there as the copy arrives and drains away; where it left, the ink it was made
- * of runs down into a pool that sinks. Liquid all through: no slit, no glass, no stars.
- */
+/** Three upright folds announce the arrival. The copy leaves a collapsing ink column behind it. */
 final class BlinkRiftFx {
     private BlinkRiftFx() {}
 
@@ -22,14 +17,12 @@ final class BlinkRiftFx {
         if (!f.near(c, 128)) return;
         double seed = e.getId() * 11.3, t = f.now(), R = e.size();
         if (e.stage() == 0) {
-            double formed = e.formed(delta), fill = Math.pow(formed, .6);
-            InkKit.pool(f.ink(), c.add(0, .01, 0), R, fill, t, seed);
-            ripple(f, c, R * fill, formed, seed, t);
-            if (f.embers()) for (int i = 0; i < 5; i++) {
-                double u = fract(t * 1.6 + rnd(seed + i));
-                double a = rnd(seed + i * 2.2) * TAU, d = Math.sqrt(rnd(seed + i * 3.3)) * R * fill * .7;
-                InkKit.cube(f.ink(), c.add(Math.cos(a) * d, .05 + u * .35 * formed, Math.sin(a) * d), .16 * Math.sin(u * Math.PI) * formed,
-                        InkKit.GLOSS, seed + i, tumble(seed + i, t, 2));
+            double k = e.formed(delta);
+            // Fold upright strips of ink shut around the arrival, leaving the player's view of the copy open.
+            for (int i = 0; i < 3; i++) {
+                double a = i * TAU / 3 + k * 1.2;
+                Vec3d strip = c.add(Math.cos(a) * (.8 - .55 * k), 1.15, Math.sin(a) * (.8 - .55 * k));
+                InkKit.cube(f.ink(), strip, .24, .4 + 1.6 * k, .24, InkKit.RIM, seed + i, yawAxes(a), 1);
             }
             return;
         }
@@ -64,23 +57,4 @@ final class BlinkRiftFx {
         }
     }
 
-    /**
-     * Rings spreading across the pool: Space's colour (its kit's rim band) while the pool is new, cooling through
-     * purple to ink as it fills. Flat cubes on the surface only.
-     */
-    private static void ripple(InkFrame f, Vec3d c, double radius, double formed, double seed, double t) {
-        if (radius < .2) return;
-        for (int ring = 0; ring < 2; ring++) {
-            double u = fract(t * 1.2 + ring * .5), r = radius * (.25 + .75 * u);
-            int count = (int) Math.ceil(r * 9);
-            for (int i = 0; i < count; i++) {
-                double a = i * TAU / count + seed;
-                Vec3d p = c.add(Math.cos(a) * r, .08, Math.sin(a) * r);
-                double s = .14 * (1 - u * .6);
-                Vec3d[] axes = yawAxes(a);
-                if (formed < .35) f.space().box(p, s * .5, .02, s * .5, axes, BlockSpaceKit.RIM, 0, 1, 1);
-                else InkKit.cube(f.ink(), p, s, .04, s, InkKit.cool((formed - .35) / .65 * .75 + u * .25), seed + i, axes, 1);
-            }
-        }
-    }
 }

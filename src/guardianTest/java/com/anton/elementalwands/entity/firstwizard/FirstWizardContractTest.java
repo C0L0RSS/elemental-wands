@@ -43,6 +43,7 @@ public final class FirstWizardContractTest {
         NatureSpellsContract.run();
         // Phase two: the change, the five ink moves, the jump of the low sweeps, the finisher's rarity.
         InkMovesContract.run();
+        com.anton.elementalwands.client.blockink.TendrilRecoveryContract.run();
         System.out.println("First Wizard contract passed: " + BossSpells.ALL.size() + " spells built " + BossSpells.available());
     }
 

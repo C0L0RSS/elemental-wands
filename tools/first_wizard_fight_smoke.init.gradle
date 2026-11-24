@@ -8,11 +8,13 @@ allprojects {
         if (project.findProperty('wizardCases')) loom.runs.client.vmArg('-Dwizard.cases='+project.findProperty('wizardCases'))
         // -PwizardRecord=case[:every],... saves a frame every tick (or every n ticks) of those cases, as rec-<case>-<tick>.png, for clips.
         if (project.findProperty('wizardRecord')) loom.runs.client.vmArg('-Dwizard.record='+project.findProperty('wizardRecord'))
+        // Rehearse the selected elemental spells with the torn body and the same hit/dodge assertions.
+        if (project.hasProperty('wizardTornCasts')) loom.runs.client.vmArg('-Dwizard.tornCasts=true')
         // -PwizardPose=<Name> draws phase two's tentacles at rest with TendrilPose<Name> (a design study), not the game's own.
         if (project.findProperty('wizardPose')) loom.runs.client.vmArg('-Dwizard.pose='+project.findProperty('wizardPose'))
         // -PwizardOrbit=<blocks> sets the phase-drift case's camera distance (5.2 by default); wider, the camera also rises.
         if (project.findProperty('wizardOrbit')) loom.runs.client.vmArg('-Dwizard.orbit='+project.findProperty('wizardOrbit'))
-        // -PwizardView=<side> films the phase-two cases from one side of her (left, behind, right, front, front-left, behind-left).
+        // -PwizardView=<side> films the phase-two cases from one side. Use showcase for a lit, caster-focused angle on every spell.
         if (project.findProperty('wizardView')) loom.runs.client.vmArg('-Dwizard.view='+project.findProperty('wizardView'))
         // Optional existing cache for offline verification (for example Lunar shared/assets).
         def existingAssets=project.findProperty('hubClientAssets')

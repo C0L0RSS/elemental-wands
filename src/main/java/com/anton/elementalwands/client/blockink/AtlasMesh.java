@@ -88,33 +88,6 @@ public final class AtlasMesh {
         }
     }
 
-    /**
-     * One four-cornered face with its own corners, for swept surfaces (a tube): p are its corners in order round the
-     * face, u and v their texture coordinates within the atlas cell (0 to 1), and tone each corner's baked shade (1
-     * full, as the box faces bake theirs from their normals), so a curved surface shades smoothly. Drawn solid, or
-     * see-through below alpha 1; light is taken at its middle.
-     */
-    public void quad(Vec3d[] p, double[] u, double[] v, double[] tone, int row, int frame, double glow, double alpha) {
-        if (cubes >= MAX_CUBES * 4 || alpha <= .01) return;
-        cubes++;
-        boolean through = alpha < .995;
-        Quads out = through ? see : solid;
-        Vec3d mid = p[0].add(p[1]).add(p[2]).add(p[3]).multiply(.25);
-        double ox = mid.x - camera.x, oy = mid.y - camera.y, oz = mid.z - camera.z;
-        int light = light(mid, glow), a = (int) Math.round(Math.clamp(alpha, 0, 1) * 255);
-        float cu = frame / (float) COLUMNS, cv = row / (float) ROWS;
-        out.begin(ox * ox + oy * oy + oz * oz);
-        // A box's six faces fill one record; a lone face fills the rest of its record with nothing drawn (degenerate).
-        for (int f = 0; f < 6; f++) for (int i = 0; i < 4; i++) {
-            int k = f == 0 ? i : 0;
-            Vec3d at = f == 0 ? p[k] : p[0];
-            int g = (int) Math.round(Math.clamp(tone[k], 0, 1) * 255);
-            out.add((float) (at.x - camera.x), (float) (at.y - camera.y), (float) (at.z - camera.z),
-                    cu + (float) Math.clamp(u[k], 0, 1) / COLUMNS, cv + (float) (1 - Math.clamp(v[k], 0, 1)) / ROWS,
-                    (f == 0 ? a : 0) << 24 | g << 16 | g << 8 | g, light);
-        }
-    }
-
     private int light(Vec3d c, double glow) {
         if (glow >= 1 || world == null) return LightmapTextureManager.MAX_LIGHT_COORDINATE;
         int packed = WorldRenderer.getLightmapCoordinates(world, BlockPos.ofFloored(c));

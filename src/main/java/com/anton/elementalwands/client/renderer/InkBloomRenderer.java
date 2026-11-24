@@ -12,6 +12,7 @@ import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.state.EntityRenderState;
 import net.minecraft.client.render.state.CameraRenderState;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.RotationAxis;
 import net.minecraft.util.math.Vec3d;
 
@@ -26,7 +27,9 @@ import net.minecraft.util.math.Vec3d;
  * drawer drops them dark.</p>
  */
 public final class InkBloomRenderer extends EntityRenderer<InkBloomEntity, InkBloomRenderer.State> {
-    private static final RenderLayer GRAIN = RenderLayer.getEntityCutoutNoCull(NatureMeshes.TEXTURE);
+    private static final Identifier VEINS = Identifier.of("elementalwands", "textures/misc/first_wizard_bloom_grain.png");
+    private static final RenderLayer GRAIN = RenderLayer.getEntityCutoutNoCull(VEINS);
+    private static final RenderLayer PETALS = RenderLayer.getEntityTranslucent(VEINS);
     private static final int BEADS = 5;
     private static final int STEM = 0x2f9e1f, STEM_LIGHT = 0x41b82a, LEAF = 0x78e330, LEAF_DARK = 0x30b821;
     private static final int INK = 0x120d18, RIM = 0x7a45e0, GOLD = 0xffcc26, GOLD_CORE = 0xfff2a4, SOCKET = 0x1d1528;
@@ -35,7 +38,7 @@ public final class InkBloomRenderer extends EntityRenderer<InkBloomEntity, InkBl
             {{-1,-1,1},{1,-1,1},{1,1,1},{-1,1,1}}, {{1,-1,-1},{-1,-1,-1},{-1,1,-1},{1,1,-1}},
             {{-1,1,1},{1,1,1},{1,1,-1},{-1,1,-1}}, {{-1,-1,-1},{1,-1,-1},{1,-1,1},{-1,-1,1}}};
     private static final int[][] NORMALS = {{0,1},{0,-1},{2,1},{2,-1},{1,1},{1,-1}};
-    private static final float[] US = {0, .375f, .375f, 0}, VS = {.375f, .375f, 0, 0};
+    private static final float[] US = {0, 1, 1, 0}, VS = {1, 1, 0, 0};
 
     public static final class State extends EntityRenderState {
         float yaw, tilt, recoil, hurt, sinceStored, bodyYaw;
@@ -78,7 +81,7 @@ public final class InkBloomRenderer extends EntityRenderer<InkBloomEntity, InkBl
         matrices.translate(0, -.06f * kick * size, 0);
         matrices.scale((float) (size * (1 + .08f * kick)), (float) (size * (1 - .12f * kick)), (float) (size * (1 + .08f * kick)));
         float hurt = s.hurt;
-        queue.submitCustom(matrices, NatureMeshes.LAYER, (entry, out) -> NatureMeshes.draw(mesh, new Stain(out, headStain, hurt), entry, light, 1, -1, null, false));
+        queue.submitCustom(matrices, PETALS, (entry, out) -> NatureMeshes.draw(mesh, new Stain(out, headStain, hurt), entry, light, 1, -1, null, false));
         matrices.pop();
         super.render(s, matrices, queue, camera);
     }

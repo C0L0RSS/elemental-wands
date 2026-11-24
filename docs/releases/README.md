@@ -5,6 +5,7 @@ are not claims of public publication. Older entries describe what changed then;
 use [current guides](../README.md) for today’s behavior and [status](../STATUS.md)
 for outstanding verification. Detailed historical reports are optional background.
 
+- [2026-11-24 — The First Wizard casts with its tentacles](2026-11-24-first-wizard-casting.md)
 - [2026-11-19 — Storm Roc: every wand lands its own way](2026-11-19-storm-roc-landings.md)
 - [2026-11-18 — The final boss: the End and its two phases](2026-11-18-first-wizard.md)
 - [2026-11-18 — Spectating boss fights](2026-11-18-boss-spectating.md)

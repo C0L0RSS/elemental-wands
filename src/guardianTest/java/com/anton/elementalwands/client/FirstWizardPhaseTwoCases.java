@@ -58,7 +58,7 @@ final class FirstWizardPhaseTwoCases {
 
     static final List<String> NAMES = List.of("phase-look", "phase-drift", "phase-change", "phase-jump", "phase-body", "phase-death", "slam-hit", "slam-dodge",
             "sweep-stand", "sweep-jump", "leap-hit", "leap-dodge", "flame-hit", "flame-behind", "flame-bottle", "purple-gate",
-            "purple-hit", "purple-dodge", "phase-fireball");
+            "purple-hit", "purple-dodge", "purple-interrupt", "phase-fireball");
 
     static boolean mine(String name) { return NAMES.contains(name); }
     /** The cases recorded for the developer to watch: lit by day so the ink reads against the floor and sky. */
@@ -109,7 +109,7 @@ final class FirstWizardPhaseTwoCases {
     static Vec3d[] camera(String name, Vec3d home) {
         Vec3d eye, at;
         String view = System.getProperty("wizard.view", "");
-        if (!view.isEmpty() && !name.equals("purple-gate") && !name.equals("phase-body")) return view(name, view, home);
+        if (!view.isEmpty() && !view.equals("showcase") && !name.equals("purple-gate") && !name.equals("phase-body")) return view(name, view, home);
         switch (name) {
             // Close, from in front and to the wound's side (a right-handed copy facing -z: its left is -x... seen from -x, -z).
             case "phase-change", "phase-jump" -> { eye = home.add(-2.5, 2.4, -3.3); at = home.add(-.1, 1.6, -.3); }
@@ -179,8 +179,14 @@ final class FirstWizardPhaseTwoCases {
         double age = k.castAge(0);
         String move = k.moveName();
         if (!move.equals("free") && (moves.isEmpty() || !moves.getLast().equals(move))) moves.add(move);
-        // The body stays on the floor except in a leap's arc, and inside it.
-        if (!move.equals("leap") && Math.abs(at.y - floor) > .05) offFloor = true;
+        // Bound vertical travel during airborne moves and require ground contact again as soon as the cast ends.
+        double ceiling = switch (move) {
+            case "leap" -> LeapSpell.HEIGHT;
+            case "fireball" -> 1.35;
+            case "hollow_purple" -> 1.85;
+            default -> 0;
+        };
+        if (at.y < floor - .05 || at.y > floor + ceiling + .05) offFloor = true;
         if (k.arena() != null && k.arena().fromCentre(at) > k.arena().radius()) offFloor = true;
         highest = Math.max(highest, at.y - floor);
         if (changedAt < 0 && k.phase() == FirstWizardEntity.CHANGING) { changedAt = t; woundsAtChange = wounds.size(); }
@@ -295,7 +301,7 @@ final class FirstWizardPhaseTwoCases {
         var w = server.getOverworld();
         long heavy = count(hurt, FirstWizardRules.HEAVY), medium = count(hurt, FirstWizardRules.MEDIUM);
         notes.add("moves " + moves + ", wounds " + hurt + String.format(Locale.ROOT, ", highest %.2f", highest));
-        if (offFloor) fail.accept("its body left the floor outside a leap");
+        if (offFloor) fail.accept("its body left the arena or exceeded the height allowed for the current move");
         switch (name) {
             case "phase-change", "phase-jump" -> {
                 notes.add(String.format(Locale.ROOT, "change began at t%d, hurt during it %d, box %.2f tall, jumps %d (asked %d ahead)", changedAt, hurtDuring, boxHeight, jumps, jumpAsked));

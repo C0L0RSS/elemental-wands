@@ -26,7 +26,7 @@ import net.minecraft.world.RaycastContext;
  * leaves something players must answer.
  *
  * <ul>
- *   <li>A bud forms over the copy's head for 0.8 s; its spot is fixed at 0.5 s (ink pools there at once) and it is
+ *   <li>A bud forms over the copy's head for 0.8 s; its spot is fixed at 0.5 s and it is
  *       lobbed there: off to one side of the copy, well away from the players, on the floor.</li>
  *   <li>A flower about 6 blocks tall ({@link InkBloomEntity}) unfurls there over 1.5 s, then spits a seed every
  *       1.5 s at a player it has a clear line to, taking turns in co-op. Seeds fly straight at 12 blocks a second and
@@ -41,7 +41,7 @@ import net.minecraft.world.RaycastContext;
  * </ul>
  *
  * <p>Effect kinds: {@link #BUD_KIND} (stage 0 forming over the head, 1 lobbed from {@code aux} to the point in
- * {@code dir}); {@link #GROUND_KIND} at the spot (stage 0 ink pooling, 1 standing, 2 delivering from the head in
+ * {@code dir}); {@link #GROUND_KIND} at the spot (stage 0 awaiting the bud, 1 standing, 2 delivering from the head in
  * {@code aux}, 3 wilted, 4 broken; {@code size} is the share it held); {@link #SEED_KIND} (stage 0 flying from {@code
  * aux} at the velocity in {@code dir}, 1 burst where it stopped).</p>
  */

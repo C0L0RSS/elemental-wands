@@ -15,7 +15,7 @@ public final class InkDrawers {
             Map.entry(FireballSpell.KIND, FireballFx::ball),
             Map.entry(FireballSpell.GROUND_KIND, FireballFx::ground),
             Map.entry(com.anton.elementalwands.entity.firstwizard.spell.MeteorSpell.KIND, MeteorFx::ball),
-            Map.entry(com.anton.elementalwands.entity.firstwizard.spell.MeteorSpell.MARK_KIND, MeteorFx::mark),
+            Map.entry(com.anton.elementalwands.entity.firstwizard.spell.MeteorSpell.MARK_KIND, MeteorFx::fallout),
             Map.entry(com.anton.elementalwands.entity.firstwizard.spell.MeteorSpell.GROUND_KIND, FireballFx::ground),
             Map.entry(com.anton.elementalwands.entity.firstwizard.spell.GravityWellSpell.KIND, GravityWellFx::orb),
             Map.entry(com.anton.elementalwands.entity.firstwizard.spell.GravityWellSpell.WELL_KIND, GravityWellFx::well),
@@ -30,14 +30,11 @@ public final class InkDrawers {
             Map.entry(com.anton.elementalwands.entity.firstwizard.spell.SentryBloomSpell.SEED_KIND, SentryBloomFx::seed),
             Map.entry(BlinkRiftSpell.POOL_KIND, BlinkRiftFx::pool),
             Map.entry(BlinkRiftSpell.DEPART_KIND, BlinkRiftFx::depart),
-            // Phase two: the change's ring, the tendrils' marks, the flame, the finisher.
-            Map.entry(com.anton.elementalwands.entity.firstwizard.spell.PhaseChange.RING_KIND, InkMovesFx::phaseRing),
-            Map.entry(com.anton.elementalwands.entity.firstwizard.spell.SweepSpell.KIND, InkMovesFx::sweep),
+            // Phase two: contact effects, breath and orb. The limbs read their aim directly.
             Map.entry(com.anton.elementalwands.entity.firstwizard.spell.SlamSpell.KIND, InkMovesFx::slam),
             Map.entry(com.anton.elementalwands.entity.firstwizard.spell.LeapSpell.KIND, InkMovesFx::leap),
             Map.entry(com.anton.elementalwands.entity.firstwizard.spell.FlameSpell.KIND, InkMovesFx::flame),
-            Map.entry(com.anton.elementalwands.entity.firstwizard.spell.HollowPurpleSpell.KIND, HollowPurpleFx::orb),
-            Map.entry(com.anton.elementalwands.entity.firstwizard.spell.HollowPurpleSpell.LANE_KIND, HollowPurpleFx::lane));
+            Map.entry(com.anton.elementalwands.entity.firstwizard.spell.HollowPurpleSpell.KIND, HollowPurpleFx::orb));
 
     static InkDrawer get(String kind) { return BY_KIND.get(kind); }
 }

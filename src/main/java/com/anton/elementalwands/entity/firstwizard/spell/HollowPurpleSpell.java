@@ -15,17 +15,15 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 
 /**
- * Hollow Purple, the finisher (phase two, low health only; {@link FirstWizardRules#usable} holds when): two tendrils
- * grip the floor wide and strain as the orb grows while the third feeds ink into it (drawn by the client's
- * {@code TendrilMoves}), and from its human hand it forms the players' Hollow Purple, bigger, over three seconds (the
- * longest forming in the fight, and its longest opening), while a lane is marked in ink across the arena. The orb then
- * rolls down the lane. Leave the lane.
+ * Hollow Purple, the finisher (phase two, low health only; {@link FirstWizardRules#usable} holds when): the copy ascends beneath two orbiting
+ * stars with all three tendrils open. The stars fuse overhead and the copy pitches the orb into the lane. The orb forms over three seconds
+ * and the server resolves its rolling hit along the locked heading.
  *
  * <ul>
  *   <li>The lane runs from the copy to the floor's edge, {@link #RADIUS} each side. While the orb forms it turns after
  *       the target at most {@link #TURN} degrees a tick: slower than a player sprinting round it close in, so one near
  *       it can circle out; one far away has the orb's travel to step aside after the lock.</li>
- *   <li>The aim locks {@link #LOCK_LEAD} ticks before the release and the lane's edges flare violet.</li>
+ *   <li>The aim locks {@link #LOCK_LEAD} ticks before the release, as the two stars meet.</li>
  *   <li>The orb leaves from in front of the hand at a third of its size, opens to full size over its first
  *       {@link #GROW} blocks and rolls at {@link #SPEED} a tick to the end of the lane. A body it touches takes
  *       {@link FirstWizardRules#PURPLE}, once. A jump does not clear it. It breaks no blocks.</li>
@@ -46,7 +44,7 @@ public final class HollowPurpleSpell implements BossSpell {
     /** Degrees a tick the lane turns after its target while it forms. */
     public static final float TURN = .6f;
     /** Where the orb forms, over the copy's feet: before its human hand, raised. */
-    public static final double FORM_HEIGHT = 4.1;
+    public static final double FORM_HEIGHT = 5.6;
     /** How long the orb is drawn collapsing at the end of its lane. */
     public static final int COLLAPSE = 12;
 
@@ -55,6 +53,19 @@ public final class HollowPurpleSpell implements BossSpell {
 
     /** The orb's radius once its centre has travelled d blocks. */
     public static double radius(double d) { return RADIUS * Math.clamp(1 / 3.0 + (2 / 3.0) * d / GROW, 1 / 3.0, 1); }
+
+    static double levitation(double age) {
+        return 1.85 * CastLevitation.ease(age / 35) * (1 - CastLevitation.ease((age - TIMING.aimLock()) / (TIMING.free() - TIMING.aimLock())));
+    }
+
+    /** Carries the merged stars forward first, then down to the exact start of the roll. */
+    public static Vec3d formingCenter(Vec3d feet, double floor, Vec3d dir, double age) {
+        double fall = (age - TIMING.aimLock()) / LOCK_LEAD;
+        double ahead = START * CastLevitation.ease(fall * 1.6);
+        double down = CastLevitation.ease((fall - .24) / .76);
+        return new Vec3d(feet.x, (1 - down) * (feet.y + FORM_HEIGHT) + down * (floor + HEIGHT), feet.z)
+                .add(dir.multiply(ahead));
+    }
 
     /** The lane's far end from feet along dir: the floor's edge. */
     public static Vec3d end(Arena arena, Vec3d feet, Vec3d dir) {
@@ -79,15 +90,17 @@ public final class HollowPurpleSpell implements BossSpell {
     private static final class Form implements Casting {
         private final Cast cast;
         private final FirstWizardEffectEntity orb, lane;
+        private final CastLevitation lift;
         private Vec3d dir;
 
         Form(Cast cast) {
             this.cast = cast;
+            lift = new CastLevitation(cast);
             Vec3d feet = cast.boss().getEntityPos();
             Vec3d to = cast.target().getEntityPos().subtract(feet).multiply(1, 0, 1);
             dir = to.lengthSquared() < 1e-4 ? cast.boss().getRotationVector().multiply(1, 0, 1).normalize() : to.normalize();
             Vec3d over = new Vec3d(0, FORM_HEIGHT, 0);
-            orb = cast.effect(KIND, feet.add(over), TIMING.release(), TIMING.release() + 200).size(RADIUS).anchor(over);
+            orb = cast.effect(KIND, feet.add(over), TIMING.release(), TIMING.release() + 200).size(RADIUS).anchor(over).dir(dir).aux(new Vec3d(feet.x, cast.arena().floor(), feet.z));
             lane = cast.effect(LANE_KIND, feet, TIMING.aimLock(), TIMING.release() + 200).size(RADIUS).dir(dir).aux(end(cast.arena(), feet, dir));
             cast.focus(feet.add(over));
             sound(cast, feet, SoundEvents.BLOCK_BEACON_ACTIVATE, 2f, .5f);
@@ -95,6 +108,7 @@ public final class HollowPurpleSpell implements BossSpell {
         }
 
         @Override public void tick(int t) {
+            lift.height(levitation(t));
             ServerPlayerEntity target = cast.target();
             Vec3d feet = cast.boss().getEntityPos();
             if (t < TIMING.aimLock()) {
@@ -102,6 +116,7 @@ public final class HollowPurpleSpell implements BossSpell {
                 dir = Tendrils.dir(Tendrils.turn(Tendrils.angle(dir), want, Math.toRadians(TURN)));
                 cast.face(feet.add(dir), 180);
                 lane.dir(dir).aux(end(cast.arena(), feet, dir));
+                orb.dir(dir);
                 cast.focus(feet.add(0, FORM_HEIGHT, 0));
                 if (t % 20 == 0) sound(cast, feet, SoundEvents.BLOCK_BEACON_AMBIENT, 2f, .5f + t / 120f);
                 return;
@@ -112,8 +127,13 @@ public final class HollowPurpleSpell implements BossSpell {
                 cast.aim(end);
                 sound(cast, feet, SoundEvents.ENTITY_WARDEN_SONIC_CHARGE, 2f, .6f);
             }
+            if (t <= TIMING.release()) {
+                Vec3d center = formingCenter(feet, cast.arena().floor(), dir, t);
+                orb.anchor(center.subtract(feet));
+                cast.focus(center);
+            }
             if (t == TIMING.release()) {
-                Vec3d origin = feet.add(dir.multiply(START));
+                Vec3d origin = new Vec3d(feet.x, cast.arena().floor(), feet.z).add(dir.multiply(START));
                 double length = Math.max(0, end(cast.arena(), feet, dir).subtract(origin).horizontalLength());
                 orb.unanchor().aux(origin).dir(dir.multiply(SPEED)).stage(1);
                 orb.setPosition(origin.add(0, HEIGHT, 0));
@@ -128,6 +148,7 @@ public final class HollowPurpleSpell implements BossSpell {
         private boolean released;
 
         @Override public void cancel() {
+            lift.height(0);
             if (released) return;
             orb.discard();
             lane.discard();

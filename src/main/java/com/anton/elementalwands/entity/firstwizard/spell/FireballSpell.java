@@ -44,7 +44,7 @@ public final class FireballSpell implements BossSpell {
     public static final double GROUND_RADIUS = 2.5;
     public static final int GROUND_LIFE = 100;
     /** The ball's centre is this far over the copy's feet once formed (its underside just over the head). */
-    public static final double HEIGHT = 1.95 + RADIUS;
+    public static final double HEIGHT = 2.60 + RADIUS;
     /** A flight that has met nothing for this long bursts where it is. */
     public static final int MAX_FLIGHT = 80;
 
@@ -53,6 +53,14 @@ public final class FireballSpell implements BossSpell {
 
     /** The ball's radius while it forms, from a bead of ink to its full size. */
     public static double formingRadius(double formed) { return RADIUS * (.12 + .88 * Math.pow(Math.clamp(formed, 0, 1), .7)); }
+
+    public static double formingHeight(boolean torn, double formed) {
+        return HEIGHT - RADIUS + formingRadius(formed) + (torn ? FirstWizardRules.LIFT : 0);
+    }
+
+    static double levitation(double age) {
+        return 1.35 * CastLevitation.ease(age / 17) * (1 - CastLevitation.ease((age - TIMING.release()) / (TIMING.free() - TIMING.release())));
+    }
 
     /**
      * Where to throw: the point the ball should reach, given where it leaves, the target's feet now and its velocity
@@ -79,11 +87,14 @@ public final class FireballSpell implements BossSpell {
     private static final class Throw implements Casting {
         private final Cast cast;
         private final FirstWizardEffectEntity ball;
+        private final CastLevitation lift;
         private Vec3d aim;
+        private boolean released;
 
         Throw(Cast cast) {
             this.cast = cast;
-            Vec3d over = new Vec3d(0, HEIGHT, 0);
+            lift = new CastLevitation(cast);
+            Vec3d over = new Vec3d(0, formingHeight(cast.boss().torn(), 0), 0);
             ball = cast.effect(KIND, cast.boss().getEntityPos().add(over), TIMING.release(), TIMING.release() + MAX_FLIGHT + 20)
                     .size(RADIUS).anchor(over);
             cast.focus(cast.boss().getEntityPos().add(over));
@@ -92,8 +103,13 @@ public final class FireballSpell implements BossSpell {
 
         @Override public void tick(int t) {
             ServerPlayerEntity target = cast.target();
-            Vec3d launch = cast.boss().getEntityPos().add(0, HEIGHT, 0);
-            cast.focus(launch);
+            lift.height(levitation(t));
+            if (released) return;
+            Vec3d feetNow = cast.boss().getEntityPos();
+            Vec3d launch = feetNow.add(0, formingHeight(cast.boss().torn(), 1), 0);
+            Vec3d over = new Vec3d(0, formingHeight(cast.boss().torn(), (double) t / TIMING.release()), 0);
+            ball.anchor(over);
+            cast.focus(feetNow.add(over));
             if (t < TIMING.aimLock()) {
                 if (target != null) cast.face(target.getEntityPos(), FirstWizardRules.AIM_TURN);
             } else if (t == TIMING.aimLock()) {
@@ -107,9 +123,14 @@ public final class FireballSpell implements BossSpell {
                 Vec3d velocity = aim.subtract(launch).normalize().multiply(SPEED);
                 ball.unanchor().aux(launch).dir(velocity).stage(1);
                 cast.focus(null);
+                released = true;
                 cast.linger(new Flight(cast, ball, launch, velocity));
                 sound(cast, launch, SoundEvents.ENTITY_BLAZE_SHOOT, 2f, .5f);
             }
+        }
+        @Override public void cancel() {
+            lift.height(0);
+            if (!released) ball.discard();
         }
     }
 

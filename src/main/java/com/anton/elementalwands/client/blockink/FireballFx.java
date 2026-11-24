@@ -5,6 +5,7 @@ import static com.anton.elementalwands.client.blockfire.BlockFireKit.*;
 import com.anton.elementalwands.client.blockfire.BlockFireKit;
 import com.anton.elementalwands.entity.firstwizard.FirstWizardEffectEntity;
 import com.anton.elementalwands.entity.firstwizard.spell.FireballSpell;
+import com.anton.elementalwands.entity.firstwizard.FirstWizardEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.Vec3d;
 
@@ -22,9 +23,10 @@ final class FireballFx {
         switch (e.stage()) {
             case 0 -> {
                 Entity owner = f.world().getEntityById(e.ownerId());
-                Vec3d feet = owner != null ? owner.getLerpedPos(delta) : e.getLerpedPos(delta).subtract(0, FireballSpell.HEIGHT, 0);
                 double formed = e.formed(delta), r = FireballSpell.formingRadius(formed);
-                Vec3d c = feet.add(0, 1.95 + r, 0);
+                Vec3d c = owner instanceof FirstWizardEntity copy
+                        ? copy.getLerpedPos(delta).add(0, FireballSpell.formingHeight(copy.torn(), formed), 0)
+                        : e.getLerpedPos(delta);
                 if (!f.near(c, 160)) return;
                 // Ink gathers first; the element's colour takes it from a fifth of the way in.
                 double colour = smoothstep((formed - .18) / .55);

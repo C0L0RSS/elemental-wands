@@ -12,7 +12,7 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.Vec3d;
 
 /**
- * Sweep (phase two): the free tendril draws back low on its side, a violet ripple runs from the shoulder to its tip,
+ * Sweep (phase two): three tendrils wind together into a low whip, a violet ripple runs from the shoulder to its tip,
  * and it swings low across the floor in a wide arc in front of the copy. Jump it, as the Pyre King's low scythe and Sky
  * Shear are jumped, or be out of its reach.
  *

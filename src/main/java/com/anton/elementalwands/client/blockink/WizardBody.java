@@ -7,7 +7,6 @@ import com.anton.elementalwands.entity.firstwizard.FirstWizardChangeTrack;
 import com.anton.elementalwands.entity.firstwizard.FirstWizardEntity;
 import com.anton.elementalwands.entity.firstwizard.FirstWizardRules;
 import com.anton.elementalwands.entity.firstwizard.spell.FlameSpell;
-import com.anton.elementalwands.entity.firstwizard.spell.HollowPurpleSpell;
 import com.anton.elementalwands.entity.firstwizard.spell.LeapSpell;
 import com.anton.elementalwands.entity.firstwizard.spell.PhaseChange;
 import com.anton.elementalwands.entity.firstwizard.spell.SweepSpell;
@@ -20,7 +19,7 @@ import net.minecraft.util.math.Vec3d;
  * the arm is still on and how it is wrenched, where the torn arm lies, how far the flank has swollen, whether it has
  * burst, how far the head is bent, how high the raised body hangs, how it staggers, and where the wound is in the
  * world. During the change everything comes from its baked track ({@link FirstWizardChangeTrack}) on the change's
- * clock; after it, from phase two's rest. The entity itself stays on the floor; only what is drawn is raised.
+ * clock; after it, from phase two's rest. The phase-two hover is measured above the entity, including during airborne casts.
  *
  * <p>Points of the change's frame are in blocks: {@code x} her left, {@code y} up from her feet, {@code z} ahead of her.
  * The model's own points are pixels: x her left, y down from {@link #MODEL_TOP}, z back.</p>
@@ -89,7 +88,7 @@ public final class WizardBody {
 
     /**
      * How high the drawn body floats: it lifts off the floor late in the change; in phase two it hovers with a slow bob,
-     * sinks a little as it winds itself up for a leap or braces for the flame or the finisher, and dips as it lands.
+     * sinks a little as it winds itself up for a leap or braces for the flame, and dips as it lands.
      */
     public static double lift(FirstWizardEntity e, float delta) {
         if (!e.torn()) return 0;
@@ -98,17 +97,17 @@ public final class WizardBody {
         if (e.phase() == FirstWizardEntity.CHANGING) return (lift + bob) * value("lift", change(e, delta));
         String move = e.castMove();
         double age = e.castAge(delta);
-        if (age < 0) return lift + bob;
+        double hover = lift + bob;
+        if (age < 0) return hover;
         switch (move) {
             case "leap" -> {
                 // Sinks as it winds up; lands low and floats up again.
-                if (age < LeapSpell.TIMING.release()) return lift * (1 - .5 * smoothstep(age / LeapSpell.TIMING.release()));
-                double landed = age - LeapSpell.lands();
-                if (landed >= 0) return lift * (.4 + .6 * smoothstep(landed / 10)) + bob * smoothstep(landed / 10);
-                return lift;
+                double launch = age - LeapSpell.TIMING.release(), land = age - LeapSpell.lands();
+                double crouch = .50 * smoothstep(age / LeapSpell.TIMING.release()) * (1 - smoothstep(launch / 5));
+                double catchFall = .60 * smoothstep((land + 6) / 6) * (1 - smoothstep(land / 8));
+                return hover * (1 - crouch - catchFall);
             }
-            case "flame" -> { return lift * (1 - .3 * smoothstep(age / 6) * (1 - smoothstep((age - FlameSpell.ends()) / 6))); }
-            case "hollow_purple" -> { return lift * (1 - .25 * smoothstep(age / 10) * (1 - smoothstep((age - HollowPurpleSpell.TIMING.release()) / 6))); }
+            case "flame" -> { return hover * (1 - .3 * smoothstep(age / 6) * (1 - smoothstep((age - FlameSpell.ends()) / 6))); }
             default -> { return lift + bob; }
         }
     }
@@ -154,16 +153,18 @@ public final class WizardBody {
     /** Where the tendrils leave the wound, in the world. */
     public static Vec3d wound(FirstWizardEntity e, float delta) {
         double yaw = yaw(e, delta), back = staggerBack(e, delta);
-        Vec3d feet = e.getLerpedPos(delta).add(0, lift(e, delta), 0);
-        Vec3d at = feet.add(left(yaw).multiply(side(e) * WOUND_OUT)).add(0, WOUND_Y, 0);
+        Vec3d at = castPoint(e, delta, new Vec3d(side(e) * WOUND_OUT, WOUND_Y, 0));
         // Thrown back with the stagger, round its hips.
         return at.add(forward(yaw).multiply(-Math.sin(back) * (WOUND_Y - .75)));
     }
 
-    /** Where its human (wand) hand is, in the world: at its side, or held out before it while it casts a flame or the orb. */
+    /** A local skin or effect attachment after the whole-body cast and hover have been applied. */
+    static Vec3d castPoint(FirstWizardEntity e, float delta, Vec3d local) {
+        return place(e, delta, WizardCastPose.sample(e, delta).point(local)).add(0, lift(e, delta), 0);
+    }
+
+    /** The forward casting hand, carried with the posed skin. */
     public static Vec3d hand(FirstWizardEntity e, float delta) {
-        double yaw = yaw(e, delta);
-        Vec3d feet = e.getLerpedPos(delta).add(0, lift(e, delta), 0);
-        return feet.add(left(yaw).multiply(-side(e) * .38)).add(forward(yaw).multiply(.55)).add(0, 1.38, 0);
+        return castPoint(e, delta, new Vec3d(-side(e) * .38, 1.38, .55));
     }
 }

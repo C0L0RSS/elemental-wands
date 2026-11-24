@@ -1,9 +1,15 @@
 package com.anton.elementalwands.client.renderer;
 
 import com.anton.elementalwands.client.blockink.WizardBody;
+import com.anton.elementalwands.client.blockink.WizardCastPose;
 import com.anton.elementalwands.entity.firstwizard.FirstWizardEntity;
 import com.anton.elementalwands.entity.firstwizard.FirstWizardRules;
+import com.anton.elementalwands.entity.firstwizard.spell.MeteorSpell;
 import com.anton.elementalwands.entity.firstwizard.spell.PhaseChange;
+import com.anton.elementalwands.entity.firstwizard.spell.SkyShearSpell;
+import com.anton.elementalwands.entity.firstwizard.spell.SweepSpell;
+import com.google.common.collect.MapMaker;
+import java.util.Map;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.model.Dilation;
 import net.minecraft.client.model.ModelData;
@@ -130,7 +136,10 @@ public final class FirstWizardRenderer extends EntityRenderer<FirstWizardEntity,
     /** The player model's pose and what the change and the torn body add to it. */
     public static final class WizardState extends PlayerEntityRenderState {
         /** The arm is off (from the snap); the flank has burst (the torso is the wound); the arm is drawn torn off. */
-        public boolean armGone, burst, tornArm, handOut;
+        public boolean armGone, burst, tornArm;
+        public float wandWeight, wandPitch, wandRoll;
+        public WizardCastPose casting = WizardCastPose.REST;
+        public float facing;
         public float lift, back, sideways, trail, time;
         /** The arm while it is still on: the model's angles, and how far its pivot has come out of the socket (pixels). */
         public float wrenchPitch, wrenchYaw, wrenchRoll, gapX, gapY;
@@ -160,6 +169,7 @@ public final class FirstWizardRenderer extends EntityRenderer<FirstWizardEntity,
             for (ModelPart lump : lumps) lump.visible = false;
             com.anton.elementalwands.client.blockink.CopyForming.shape(this, s); // the intro's forming look
             if (!(s instanceof WizardState w)) return;
+            castPose(w);
             if (w.wrenched) {
                 // Wrenched at the shoulder, twitching, then sagging out of the socket.
                 leftArm.pitch = w.wrenchPitch; leftArm.yaw = w.wrenchYaw; leftArm.roll = w.wrenchRoll;
@@ -189,21 +199,100 @@ public final class FirstWizardRenderer extends EntityRenderer<FirstWizardEntity,
                 head.originX -= 1f * k;
                 head.originY += .5f * k;
             }
-            if (!w.burst) return;
-            // The torso's off half is gone: narrowed toward the wand arm (the wound layer inks the cut side).
-            body.xScale = .62f;
-            body.originX -= 1.52f;
-            jacket.visible = false;
-            // Floating: legs hanging relaxed, a little apart and back, drifting slowly.
-            float sway = (float) Math.sin(w.time * 1.6) * .07f;
-            leftLeg.pitch = w.trail * (.16f + sway);
-            rightLeg.pitch = w.trail * (.26f - sway);
-            leftLeg.roll = -w.trail * .05f;
-            rightLeg.roll = w.trail * .05f;
-            if (w.handOut) {
-                rightArm.pitch = -1.45f + head.pitch * .5f;
-                rightArm.yaw = head.yaw * .6f + .12f;
+            if (w.burst) {
+                body.xScale = .62f;
+                body.originX -= 1.52f;
+                jacket.visible = false;
+                float sway = (float) Math.sin(w.time * 1.6) * .07f;
+                leftLeg.pitch = w.trail * (.16f + sway);
+                rightLeg.pitch = w.trail * (.26f - sway);
+                leftLeg.roll = -w.trail * .05f;
+                rightLeg.roll = w.trail * .05f;
             }
+            WizardCastPose cast = w.casting;
+            if (cast == WizardCastPose.REST) return;
+            float lean = (float) Math.toRadians(cast.pitch()), bank = (float) Math.toRadians(cast.bank());
+            float turn = (float) Math.sin(Math.toRadians(cast.twist()));
+            // The gaze resists the shoulder turn; the hips and feet trail it, even through a full revolution.
+            head.yaw += .68f * turn;
+            head.pitch -= .40f * lean;
+            head.roll += .30f * bank;
+            float up = (float) cast.skyward();
+            head.pitch = MathHelper.lerp(up, head.pitch, -1.40f - lean);
+            head.roll *= 1 - .84f * up;
+            head.yaw *= 1 - .8f * up;
+            float hipTurn = .42f * turn;
+            step(leftLeg, (float) Math.toRadians(cast.leftLeg()), hipTurn, bank, -1);
+            step(rightLeg, (float) Math.toRadians(cast.rightLeg()), hipTurn, bank, 1);
+        }
+
+        private static void step(ModelPart leg, float pitch, float turn, float bank, int side) {
+            float x = leg.originX, z = leg.originZ;
+            leg.originX = x * MathHelper.cos(turn) + z * MathHelper.sin(turn);
+            leg.originZ = z * MathHelper.cos(turn) - x * MathHelper.sin(turn);
+            leg.originY -= .9f * Math.abs(MathHelper.sin(pitch));
+            leg.pitch += pitch;
+            leg.yaw += turn;
+            leg.roll += .42f * bank + side * .20f * Math.abs(MathHelper.sin(pitch));
+        }
+
+        private void castPose(WizardState w) {
+            boolean right = w.preferredArm == Arm.RIGHT;
+            ModelPart wand = right ? rightArm : leftArm;
+            ModelPart palm = right ? leftArm : rightArm;
+            float hand = right ? 1 : -1;
+            wand.pitch = (1 - w.wandWeight) * wand.pitch + w.wandPitch;
+            wand.roll = (1 - w.wandWeight) * wand.roll + w.wandRoll * hand;
+            if (!w.armGone) {
+                palm.pitch = (1 - w.wandWeight) * palm.pitch + w.wandPitch * .7f;
+                palm.roll = (1 - w.wandWeight) * palm.roll - w.wandRoll * hand * .85f;
+            }
+        }
+    }
+
+    /** The wand follows the strike closely and takes longer to lower, including across two queued spells. */
+    private static final class WandMotion {
+        private static final Map<FirstWizardEntity, WandMotion> COPIES = new MapMaker().weakKeys().makeMap();
+        private double lastTick = Double.NEGATIVE_INFINITY;
+        private float weight, pitch, roll;
+
+        void sample(WizardState w, FirstWizardRules.Move move, double tick, double age, double beat, boolean openingSweep) {
+            float load = move == null ? 0 : smooth((float) (age / 6));
+            float swing = smooth((float) ((age - beat + 3) / 5));
+            if (move == FirstWizardRules.Move.SWEEP)
+                swing = smooth((float) ((age - beat) / (openingSweep ? PhaseChange.SWEEP : SweepSpell.SWING)));
+            if (move == FirstWizardRules.Move.SKY_SHEAR) {
+                swing = 0;
+                for (int arm = 0; arm < SkyShearSpell.COUNT; arm++) {
+                    double stroke = age - SkyShearSpell.leaves(arm);
+                    swing += smooth((float) ((stroke + 3) / 5)) * (1 - smooth((float) ((stroke - 3) / 7)));
+                }
+            }
+            float aimPitch = move == null ? 0 : switch (move) {
+                case METEOR -> -1.25f - 1.8f * swing;
+                case STONE_WALL, SENTRY_BLOOM -> -.3f - 2.4f * swing;
+                case HOLLOW_PURPLE -> -1.25f - 1.8f * smooth((float) (age / 24)) + 1.95f * smooth((float) ((age - beat + 12) / 14));
+                case FIREBALL -> -1.15f - 1.9f * smooth((float) (age / 12)) + 2.35f * swing;
+                case FAULTLINE, SLAM -> -2.95f + 2.1f * swing;
+                case BLINK_RIFT -> -1.05f + .75f * swing;
+                case LEAP, WAYLAY_DASH -> .75f - 2.35f * swing;
+                case SWEEP, SKY_SHEAR, THORNBITE -> -1.5f + .55f * swing;
+                case FLAME, GRAVITY_WELL -> -1.6f;
+            };
+            float aimRoll = move == null ? 0 : switch (move) {
+                case SWEEP, SKY_SHEAR -> -1.35f + 2.15f * swing;
+                case FIREBALL -> -.6f + .5f * swing;
+                case HOLLOW_PURPLE -> -.7f - .3f * smooth((float) (age / 22)) + .8f * swing;
+                case STONE_WALL -> -.85f + .3f * swing;
+                case BLINK_RIFT -> .9f - 1.65f * swing;
+                default -> -.18f;
+            };
+            double dt = tick - lastTick;
+            float blend = dt < 0 || dt > 21 ? 1 : (float) -Math.expm1(-dt / (move == null ? 4.5 : 1.5));
+            lastTick = tick;
+            w.wandWeight = weight = MathHelper.lerp(blend, weight, load);
+            w.wandPitch = pitch = MathHelper.lerp(blend, pitch, load * aimPitch);
+            w.wandRoll = roll = MathHelper.lerp(blend, roll, load * aimRoll);
         }
     }
 
@@ -212,6 +301,8 @@ public final class FirstWizardRenderer extends EntityRenderer<FirstWizardEntity,
         s.armGone = WizardBody.armGone(e, delta);
         s.burst = WizardBody.burst(e, delta);
         s.lift = (float) WizardBody.lift(e, delta);
+        s.casting = WizardCastPose.sample(e, delta);
+        s.facing = (float) WizardBody.yaw(e, delta);
         s.back = (float) WizardBody.staggerBack(e, delta);
         s.sideways = (float) WizardBody.staggerSide(e, delta);
         s.trail = (float) Math.clamp(s.lift / FirstWizardRules.LIFT, 0, 1);
@@ -236,22 +327,27 @@ public final class FirstWizardRenderer extends EntityRenderer<FirstWizardEntity,
             s.flat = (float) WizardBody.value("flat", t);
             s.melt = (float) WizardBody.value("melt", t);
         }
-        String move = e.castMove();
-        double age = e.castAge(delta);
-        s.handOut = age >= 0 && (move.equals("flame") || move.equals("hollow_purple"));
+        boolean openingSweep = t >= PhaseChange.TELL;
+        FirstWizardRules.Move move = openingSweep ? FirstWizardRules.Move.SWEEP : FirstWizardRules.Move.byId(e.castMove());
+        double age = openingSweep ? t - PhaseChange.TELL : e.castAge(delta);
+        double beat = openingSweep ? PhaseChange.SWEEP_FROM - PhaseChange.TELL : e.castRelease();
+        if (move == FirstWizardRules.Move.METEOR) beat = MeteorSpell.TIMING.aimLock();
+        WandMotion.COPIES.computeIfAbsent(e, unused -> new WandMotion())
+                .sample(s, move, e.getEntityWorld().getTime() + (double) delta, age, beat, openingSweep);
     }
 
     /** Raises the drawn body and throws it back with the stagger, round its hips. */
     private static void raise(WizardState s, MatrixStack m) {
-        if (s.lift == 0 && s.back == 0) return;
         m.translate(0, s.lift, 0);
-        if (s.back == 0) return;
-        m.translate(0, .75, 0);
-        m.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-s.bodyYaw));
-        m.multiply(RotationAxis.POSITIVE_X.rotation(-s.back));
-        m.multiply(RotationAxis.POSITIVE_Z.rotation(s.sideways * .5f));
-        m.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(s.bodyYaw));
-        m.translate(0, -.75, 0);
+        if (s.back != 0) {
+            m.translate(0, .75, 0);
+            m.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-s.bodyYaw));
+            m.multiply(RotationAxis.POSITIVE_X.rotation(-s.back));
+            m.multiply(RotationAxis.POSITIVE_Z.rotation(s.sideways * .5f));
+            m.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(s.bodyYaw));
+            m.translate(0, -.75, 0);
+        }
+        s.casting.apply(m, s.facing);
     }
 
     private static SkinTextures skinOf(FirstWizardEntity e) {
@@ -272,14 +368,6 @@ public final class FirstWizardRenderer extends EntityRenderer<FirstWizardEntity,
         s.preferredArm = main;
         BipedEntityModel.ArmPose wand = BipedEntityModel.ArmPose.ITEM;
         s.handSwingProgress = 0;
-        double age = e.castAge(delta);
-        var cast = FirstWizardRules.Move.byId(e.castMove());
-        if (age >= 0 && cast != null && cast.spell()) {
-            int release = e.castRelease();
-            // Raised overhead while the spell forms; a swing down as it is released. (The ink moves are the tendrils'.)
-            if (age < release) wand = BipedEntityModel.ArmPose.THROW_SPEAR;
-            else s.handSwingProgress = (float) Math.clamp((age - release) / 6.0, 0, 1);
-        }
         s.rightArmPose = main == Arm.RIGHT ? wand : BipedEntityModel.ArmPose.EMPTY;
         s.leftArmPose = main == Arm.LEFT ? wand : BipedEntityModel.ArmPose.EMPTY;
     }

@@ -17,13 +17,13 @@ import net.minecraft.util.math.Vec3d;
 
 /**
  * Flame (phase two; the developer's combination: "a kind of leap to do heavy damage then a flame thrower ability"):
- * the copy digs its tendrils in and breathes a cone of its own fire from its human hand for a couple of seconds,
+ * the copy bends its upper tendril into a nozzle and breathes a cone of its own fire,
  * turning slowly after its target. While it breathes it cannot move, so a player who dodged the landing and got
  * behind it has a clear opening.
  *
  * <ul>
  *   <li>Only at a target within {@link #START_REACH}: whoever is still close. Usually it follows a Leap.</li>
- *   <li>Fire gathers in its hand for half a second; it then breathes for {@link #BREATH} ticks. From the start of the
+ *   <li>Fire gathers in the nozzle for half a second; it then breathes for {@link #BREATH} ticks. From the start of the
  *       cast to its end it turns at most {@link #TURN} degrees a tick, so a player behind it stays behind it and one
  *       who sprints round it outruns the cone.</li>
  *   <li>The cone reaches {@link #REACH} blocks and {@link #HALF_ANGLE} each side. Standing in it costs

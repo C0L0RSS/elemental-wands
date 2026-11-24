@@ -13,7 +13,7 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.Vec3d;
 
 /**
- * Blink Rift: ink pools at the arrival point for half a second, then the copy sinks away and rises there, anywhere on
+ * Blink Rift: upright folds of ink close at the arrival point for half a second, then the copy sinks away and rises there, anywhere on
  * the floor. The example of a spell that forms where it appears. It does no damage.
  *
  * <ul>

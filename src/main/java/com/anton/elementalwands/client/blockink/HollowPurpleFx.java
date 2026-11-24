@@ -11,10 +11,10 @@ import net.minecraft.util.math.Vec3d;
 
 /**
  * The copy's Hollow Purple, the finisher: the players' spell, bigger, in the boss's manner (it starts in its element's
- * colours and cools to ink). While it forms over three seconds a blue and a red star circle out of the human hand,
- * closing in as they rise, and merge into a purple orb with a heart of ink; rolling, the orb is a shell of purple plates
- * round that heart, two broken orbits of blue and red, and a wake that cools through purple to ink. Solid cubes only:
- * not Space's void glass. Its lane is ink on the floor with violet edges that flare at the aim lock.
+ * colours and cools to ink). While the three tendrils spread, two stars orbit
+ * above the rising copy and fuse at aim lock. A light seam crosses the stepped violet shell. Broken blue and red rings
+ * follow it down the lane, with a wake that cools through purple to ink. Solid cubes only:
+ * not Space's void glass.
  */
 final class HollowPurpleFx {
     private HollowPurpleFx() {}
@@ -30,29 +30,23 @@ final class HollowPurpleFx {
         if (e.stage() == 0) {
             Entity owner = f.world().getEntityById(e.ownerId());
             if (!(owner instanceof FirstWizardEntity copy)) return;
-            Vec3d hand = WizardBody.hand(copy, delta);
-            Vec3d c = copy.getLerpedPos(delta).add(0, HollowPurpleSpell.FORM_HEIGHT + WizardBody.lift(copy, delta), 0)
-                    .add(WizardBody.forward(WizardBody.yaw(copy, delta)).multiply(.6));
+            double age = e.age(delta), k = e.formed(delta);
+            Vec3d forward = e.dir().normalize();
+            Vec3d c = HollowPurpleSpell.formingCenter(copy.getLerpedPos(delta), e.auxPoint().y, forward, age);
             if (!f.near(c, 160)) return;
-            double k = e.formed(delta);
-            Vec3d right = WizardBody.left(WizardBody.yaw(copy, delta)).multiply(-1);
-            // Two stars rise out of the hand and circle in toward the orb's heart; they merge in the last fifth.
-            double merge = smoothstep((k - .78) / .22);
-            for (int s = -1; s <= 1; s += 2) {
-                double a = t * 3.2 + (s > 0 ? 0 : Math.PI), spread = lerp(2.6, .2, k) * (1 - merge);
-                Vec3d rise = hand.lerp(c, smoothstep(k / .3));
-                Vec3d at = rise.add(right.multiply(Math.cos(a) * spread)).add(0, Math.sin(a) * spread * .4, 0);
-                star(f, at, .28 + .22 * k, s > 0 ? BlockSpaceKit.BLUE : BlockSpaceKit.RED, seed + s, t);
-                for (int i = 1; i <= 4; i++) {
-                    double b = a - i * .22;
-                    Vec3d trail = rise.add(right.multiply(Math.cos(b) * spread)).add(0, Math.sin(b) * spread * .4, 0);
-                    InkKit.cube(f.ink(), trail, (.4 - i * .07) * (.6 + k * .4), i < 2 ? InkKit.VIOLET : i < 3 ? InkKit.PURPLE : InkKit.DEEP, seed + s * 10 + i, tumble(seed + i, t, 3));
-                }
+            Vec3d left = new Vec3d(forward.z, 0, -forward.x);
+            double lock = HollowPurpleSpell.TIMING.aimLock();
+            double merge = smoothstep((age - lock + 10) / 10);
+            for (int arm = 0; arm < 2; arm++) {
+                double side = arm == 0 ? 1 : -1;
+                double angle = 2.8 * smoothstep(age / lock);
+                double radius = side * (2.55 - .3 * k) * (1 - merge);
+                Vec3d at = c.add(left.multiply(radius * Math.cos(angle))).add(forward.multiply(radius * Math.sin(angle)))
+                        .add(0, (side * .85 * Math.sin(angle + .4) - .8 * (1 - k)) * (1 - merge), 0);
+                star(f, at, (.42 + .36 * k) * (1 - merge), arm == 0 ? BlockSpaceKit.BLUE : BlockSpaceKit.RED, seed + arm, t);
             }
             double r = R / 3 * smoothstep((k - .15) / .85);
-            if (r > .05) draw(f, c, r, null, seed, t, merge);
-            // Ink streams up from the hand into it.
-            InkKit.strand(f.ink(), hand, c, t, 8, .2 + .15 * k, seed + 30);
+            if (r > .05) draw(f, c, r, forward, seed, t, merge);
             return;
         }
         Vec3d c = e.getLerpedPos(delta);
@@ -79,61 +73,47 @@ final class HollowPurpleFx {
         }
     }
 
-    /** The orb: a heart of ink with a violet rim, a shell of purple plates, and a blue and a red orbit. */
+    /** Fit the corner-clipped courses together in one tilted shell. A single light seam marks the fusion. */
+    private static final double[] SHELL_SPANS = {.79, .75, .60, .36};
+
     private static void draw(InkFrame f, Vec3d c, double r, Vec3d dir, double seed, double t, double merged) {
-        InkKit.blob(f.ink(), c, r * .32, InkKit.INK, InkKit.GLOSS, seed, t);
-        InkKit.cube(f.ink(), c, r * .5, InkKit.DEEP, seed + 2, tumble(seed + 2, t, .8));
-        int plates = (int) Math.clamp(Math.round(r * 9), 10, 64);
-        for (int i = 0; i < plates; i++) {
-            Vec3d d = rotate(sphereDir(i, plates), UP, t * .7 + seed);
-            double fall = fract(t * .4 + rnd(seed + i));
-            Vec3d p = c.add(d.multiply(r * (1 - .35 * fall)));
-            int row = i % 5 == 0 ? InkKit.MAGENTA : i % 3 == 0 ? InkKit.VIOLET : i % 2 == 0 ? InkKit.PURPLE : InkKit.DEEP;
-            InkKit.cube(f.ink(), p, r * .16 * (1 - fall * .5), r * .05 + .04, r * .16 * (1 - fall * .5), row, seed + i, basis(d, rnd(seed + i) * TAU), 1);
+        if (r <= .01) return;
+        double body = r * (.37 + .63 * merged);
+        Vec3d[] shell = yawAxes(seed + t * .72);
+        shell[1] = rotate(UP, shell[0], .54);
+        shell[2] = shell[0].crossProduct(shell[1]);
+        double step = body * .235;
+        for (int tier = -3; tier <= 3; tier++) {
+            Vec3d at = c.add(shell[1].multiply(tier * step));
+            double span = body * SHELL_SPANS[Math.abs(tier)];
+            shellBand(f, at, span, step, InkKit.PURPLE, seed + tier, shell);
         }
-        if (merged < .5) return;
-        Vec3d axis = dir == null ? UP : UP.add(dir.multiply(.5)).normalize();
-        for (int s = -1; s <= 1; s += 2) {
-            Vec3d tilt = rotate(axis, dir == null ? X : dir, s * .5);
-            Vec3d u = tilt.crossProduct(X).lengthSquared() < 1e-4 ? Z : tilt.crossProduct(X).normalize(), v = tilt.crossProduct(u).normalize();
-            int n = 16;
-            for (int i = 0; i < n; i++) {
-                if (i % 4 == 3) continue;       // broken orbits
-                double a = i * TAU / n + s * t * 2;
-                Vec3d p = c.add(u.multiply(Math.cos(a) * r * .72)).add(v.multiply(Math.sin(a) * r * .72));
-                star(f, p, r * .09 + .08, s > 0 ? BlockSpaceKit.BLUE : BlockSpaceKit.RED, seed + s * 20 + i, t);
+        // A wafer just outside the equator catches the light. Its depth leaves the painted caps exposed.
+        shellBand(f, c, body * .806, step * .28, InkKit.VIOLET, seed, shell);
+        if (merged <= .01) return;
+        // Two inclined broken rings stay outside the shell. Short flat strokes preserve the gaps as they turn.
+        Vec3d axis = UP.add(dir.multiply(.45)).normalize();
+        for (int side = -1; side <= 1; side += 2) {
+            Vec3d tilt = rotate(axis, dir, side * .60);
+            Vec3d across = tilt.crossProduct(X).normalize(), along = tilt.crossProduct(across);
+            for (int i = 0; i < 12; i++) {
+                if (i % 4 == 3) continue;
+                double a = i * TAU / 12 + side * t * 1.65;
+                Vec3d ray = across.multiply(Math.cos(a)).add(along.multiply(Math.sin(a)));
+                Vec3d tangent = along.multiply(Math.cos(a)).subtract(across.multiply(Math.sin(a)));
+                Vec3d at = c.add(ray.multiply(body * .97));
+                f.space().box(at, body * .045 * merged, body * .17 * merged, body * .045 * merged,
+                        basis(tangent), side > 0 ? BlockSpaceKit.BLUE : BlockSpaceKit.RED, 0, 1, 1);
             }
         }
     }
 
-    /** {@link HollowPurpleSpell#LANE_KIND}: the lane across the arena, ink with violet edges that flare at the lock. */
-    static void lane(InkFrame f, FirstWizardEffectEntity e) {
-        float delta = f.delta();
-        Vec3d a = e.getLerpedPos(delta), b = e.auxPoint();
-        if (!f.near(a, 160)) return;
-        Entity owner = f.world().getEntityById(e.ownerId());
-        if (e.stage() == 0 && owner != null) a = owner.getLerpedPos(delta);
-        Vec3d dir = e.dir().multiply(1, 0, 1);
-        if (dir.lengthSquared() < 1e-6) return;
-        dir = dir.normalize();
-        if (e.stage() == 0) b = a.add(dir.multiply(b.subtract(a).horizontalLength()));
-        double half = e.size(), t = f.now(), formed = e.formed(delta), seed = e.getId();
-        double length = b.subtract(a).horizontalLength() * smoothstep(formed / .3);
-        boolean flare = e.stage() >= 1;
-        Vec3d side = new Vec3d(-dir.z, 0, dir.x);
-        Vec3d[] axes = yawAxes(Math.atan2(dir.x, dir.z));
-        // Past the orb, the lane drains away behind it.
-        double drained = e.stage() >= 2 ? e.stageAge(delta) * HollowPurpleSpell.SPEED - 2 : -1;
-        for (double s = 1.5; s < length; s += .7) {
-            if (s < drained) continue;
-            Vec3d mid = a.add(dir.multiply(s)).add(0, .02, 0);
-            int i = (int) (s / .7);
-            for (int e2 = -1; e2 <= 1; e2 += 2) {
-                int row = flare ? (i % 2 == 0 ? InkKit.VIOLET : InkKit.MAGENTA) : i % 3 == 2 ? InkKit.INK : InkKit.RIM;
-                InkKit.cube(f.ink(), mid.add(side.multiply(e2 * half)), .26, flare ? .12 : .07, .6, row, seed + i * 2 + e2, axes, 1);
-            }
-            // Dashes of ink across it, running along the lane toward the far end.
-            if ((i + (int) (t * 8)) % 4 == 0) InkKit.cube(f.ink(), mid, half * 1.4, .04, .3, InkKit.DEEP, seed + i, axes, 1);
+    private static void shellBand(InkFrame f, Vec3d center, double span, double height, int row,
+                                  double seed, Vec3d[] axes) {
+        InkKit.cube(f.ink(), center, 2 * span, height, span, row, seed, axes, 1);
+        for (int side = -1; side <= 1; side += 2) {
+            Vec3d cap = center.add(axes[2].multiply(side * span * .73));
+            InkKit.cube(f.ink(), cap, span * 1.42, height, span * .46, row, seed, axes, 1);
         }
     }
 }

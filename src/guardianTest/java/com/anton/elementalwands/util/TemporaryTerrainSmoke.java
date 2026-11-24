@@ -80,6 +80,9 @@ public final class TemporaryTerrainSmoke implements ModInitializer {
             require(TemporaryBlockManager.casterAt(world, TITAN).equals(caster.getUuid()), "Titan did not take terrain ownership");
             require(world.getBlockState(EDITED) == SETTLED_WALL && !TemporaryBlockManager.isTracked(world, EDITED),
                     "An external edit re-acquired a stale record when the previous state returned");
+            // Login loads chunks around the saved player before the fixture's JOIN handler runs.
+            // Save the observer away from the terrain so only our explicit request loads it on restart.
+            require(caster.teleport(world, 4000.5, 200, 4000.5, Set.of(), 0, 0, false), "Could not park the fixture player");
             server.saveAll(true, true, true);
             place(world, UNSAVED, ModSpellBlocks.INFERNO_FLAME.getDefaultState(), caster.getUuid());
             finish(server, "Saved active spell blocks, then halted with one additional unsaved placement.", true);
@@ -113,7 +116,7 @@ public final class TemporaryTerrainSmoke implements ModInitializer {
     }
 
     private static void prepare(ServerWorld world, ServerPlayerEntity caster) {
-        for (BlockPos pos : List.of(WALL, SPRING, SENTRY, EDITED, REJECTED, UNSAVED, INTERRUPTED_PLANT, ALTERED_PLANT, TITAN)) {
+        for (BlockPos pos : List.of(WALL, SPRING, SENTRY, EDITED, REJECTED, UNSAVED, INTERRUPTED_PLANT, STALE, ALTERED_PLANT, TITAN)) {
             world.setBlockState(pos.down(), Blocks.DIRT.getDefaultState());
             world.setBlockState(pos, GRASS);
         }
@@ -151,6 +154,7 @@ public final class TemporaryTerrainSmoke implements ModInitializer {
         world.setBlockState(INTERRUPTED_PLANT.up(), AIR, Block.NOTIFY_LISTENERS | Block.FORCE_STATE);
         TemporaryTerrain.put(getChunk(world, INTERRUPTED_PLANT), new TemporaryTerrain.Cell(
                 INTERRUPTED_PLANT.up().asLong(), UUID.randomUUID(), UPPER, AIR));
+        require(world.getBlockState(STALE) == GRASS, "Missing terrain for stale-record check");
         TemporaryTerrain.put(getChunk(world, STALE), new TemporaryTerrain.Cell(
                 STALE.asLong(), UUID.randomUUID(), AIR, SETTLED_WALL));
 

@@ -223,10 +223,9 @@ Automated work an agent can do without the developer.
 - Wand-tip cast particles have had no native-client check (right and left hand, first and
   third person, wide FOV).
 - The Astral Double tuning against the Necromancer has had no client check.
-- `tools/check_assets.py` has not had a full run on the Windows machine since the
-  structure files and the Pyre King's model were made to come out the same on every
-  machine (November 12). Run it there once; a failure means a generator still depends on
-  the machine. A run of only its Guardian checks there on November 13 found two such cases:
+- Resolve the Windows export differences reported by `tools/check_assets.py` for
+  Fire, wand and Guardian textures, boss models and cinematics, the summit sky,
+  and Grasping Hands preview candidates. Known reproduction details:
   - `tools/prepare_guardian_assets.py --check` calls the four Guardian body textures stale.
     Regenerated there, their pixels match the committed files exactly, but the last seven
     bytes of the compressed data differ (Pillow 13.0.0). The committed files were kept.

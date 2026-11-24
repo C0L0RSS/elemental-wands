@@ -71,6 +71,10 @@ allprojects {
         }
         tasks.named('runClient') {
             dependsOn fixtureHostJar
+            // The interruption fixture halts the live JVM. Keep OpenAL off Windows' physical audio driver.
+            def deliberateHalt = fixtureMain == 'com.anton.elementalwands.util.TemporaryTerrainSmoke' &&
+                    project.findProperty('fixturePhase') in ['prepare', 'interrupt', 'recover']
+            if (deliberateHalt && System.getProperty('os.name').startsWith('Windows')) environment 'ALSOFT_DRIVERS', 'null'
             doLast {
                 if (!new File(smokeRoot,receipt+'_PASSED.txt').exists() || new File(smokeRoot,receipt+'_FAILED.txt').exists())
                     throw new GradleException('Hosted fixture did not pass; inspect build/integrated-fixture-host/logs/latest.log')

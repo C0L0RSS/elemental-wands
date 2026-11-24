@@ -73,13 +73,20 @@ public final class PlaytestSystemsSmoke implements ModInitializer {
         require(caster.getZ() - start.z > 9.9, "Failed blink spent its cooldown or the clear lane was blocked");
 
         // The central eye ray misses this wall. The right edge of the body overlaps it.
-        for (int y = 200; y < 204; y++) world.setBlockState(new BlockPos(11, y, 3), Blocks.STONE.getDefaultState());
+        for (int y = 200; y < 204; y++) {
+            var pos = new BlockPos(11, y, 3);
+            world.setBlockState(pos, Blocks.STONE.getDefaultState());
+            require(world.getBlockState(pos).isOf(Blocks.STONE), "Could not stage the shoulder obstruction at " + pos);
+        }
+        var body = side.getBoundingBox();
         cast(world, side);
-        require(side.getZ() > 1.4 && side.getZ() < 2.71, "Blink failed to shorten for a shoulder obstruction");
+        require(side.getZ() > 1.4 && side.getZ() < 2.71, "Blink failed to shorten for a shoulder obstruction: body "
+                + body + ", destination " + side.getEntityPos());
 
         // An obstacle inside the diagonal's broad search box but well off the line must be ignored.
         world.setBlockState(new BlockPos(31, 200, 6), Blocks.STONE.getDefaultState());
         diagonal.setYaw(-45);
+        diagonal.setHeadYaw(-45);
         start = diagonal.getEntityPos();
         cast(world, diagonal);
         require(start.distanceTo(diagonal.getEntityPos()) > 9.9, "Clear diagonal was shortened");
@@ -88,6 +95,7 @@ public final class PlaytestSystemsSmoke implements ModInitializer {
     private static ServerPlayerEntity player(MinecraftServer server, String name, double x, double z) throws Exception {
         var player = GuardianNaveSmokeMod.player(server, UUID.randomUUID(), name, x, 200, z);
         player.setYaw(0);
+        player.setHeadYaw(0);
         player.setPitch(0);
         player.onTeleportationDone();
         return player;

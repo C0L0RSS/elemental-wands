@@ -99,7 +99,7 @@ public final class MeteorManager {
 
         // Construct the projectile directly: even the occupied-column fallback must
         // preserve block entities, inventories and neighboring blocks at the spawn cell.
-        double spawnY = inBossArena(world)
+        double spawnY = WandUtils.realmKeepsTerrain(world)
                 ? arenaSpawnY(world, targetPos, spawnHeight)
                 : findClearSpawnPos(world, BlockPos.ofFloored(targetPos), spawnHeight).getY();
         BlockPos spawnBlockPos = BlockPos.ofFloored(targetPos.x, spawnY, targetPos.z);
@@ -137,23 +137,12 @@ public final class MeteorManager {
     }
 
     /**
-     * The boss realms. Each is roofed by an invisible barrier lid with open air above it, so the
-     * usual spawn search finds that air, and the meteor bursts on the lid far above the fight.
-     */
-    static boolean inBossArena(World world) {
-        return com.anton.elementalwands.crypt.HollowCryptRealm.keepsTerrain(world)
-                || com.anton.elementalwands.arena.ShatteredNave.keepsTerrain(world)
-                || com.anton.elementalwands.summit.StormSummit.keepsTerrain(world)
-                || com.anton.elementalwands.hall.PyreHall.keepsTerrain(world);
-    }
-
-    /**
      * The point a cast aims the meteor at. In a boss arena a wall hit moves out beside the wall
      * and a ceiling hit moves just under the ceiling, so the meteor drops onto the fight instead
      * of starting inside the block. Everywhere else it is the hit itself.
      */
     public static Vec3d aimPoint(ServerWorld world, HitResult hit) {
-        if (!inBossArena(world) || hit.getType() != HitResult.Type.BLOCK || !(hit instanceof BlockHitResult block))
+        if (!WandUtils.realmKeepsTerrain(world) || hit.getType() != HitResult.Type.BLOCK || !(hit instanceof BlockHitResult block))
             return hit.getPos();
         EntityDimensions size = EntityType.FALLING_BLOCK.getDimensions();
         Direction side = block.getSide();

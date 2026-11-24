@@ -5,6 +5,10 @@ import com.anton.elementalwands.registry.ModItems;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.entity.ItemEntity;
+import net.minecraft.inventory.SimpleInventory;
+import net.minecraft.screen.GenericContainerScreenHandler;
+import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.storage.NbtReadView;
@@ -37,6 +41,24 @@ public final class EquipmentRecoveryChecks {
         player.equipStack(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));
         ItemStack wand = player.getMainHandStack().copy();
         TitanDomeManager.startDome(player.getEntityWorld(), player);
+        var borrowedSword = player.getMainHandStack().copy();
+        var storage = new SimpleInventory(27);
+        var menu = GenericContainerScreenHandler.createGeneric9x3(1, player.getInventory(), storage);
+        menu.onSlotClick(0, player.getInventory().getSelectedSlot(), SlotActionType.SWAP, player);
+        require(storage.getStack(0).isEmpty() && ItemStack.areEqual(borrowedSword, player.getMainHandStack()),
+                "Hotbar swap moved the borrowed sword into a chest");
+        require(!player.dropSelectedItem(false) && ItemStack.areEqual(borrowedSword, player.getMainHandStack()),
+                "Drop removed the borrowed sword");
+        storage.setStack(1, player.getEquippedStack(EquipmentSlot.HEAD).copy());
+        menu.onSlotClick(1, 0, SlotActionType.QUICK_MOVE, player);
+        require(storage.getStack(1).isEmpty() && count(player, Items.NETHERITE_HELMET) == 1,
+                "A saved chest returned an extra Titan helmet");
+        storage.setStack(2, new ItemStack(Items.NETHERITE_HELMET));
+        menu.onSlotClick(2, 0, SlotActionType.PICKUP, player);
+        require(menu.getCursorStack().isOf(Items.NETHERITE_HELMET), "Ordinary armor was treated as a loan");
+        var loose = new ItemEntity(player.getEntityWorld(), player.getX(), player.getY(), player.getZ(), borrowedSword);
+        player.getEntityWorld().spawnEntity(loose);
+        require(loose.isRemoved(), "Loose Titan sword survived entity load");
         saved = save(player);
         TitanDomeManager.cancelForEncounter(player);
         require(player.getAttached(EWAttachments.TITAN_GEAR) == null, "Titan normal completion retained receipt");

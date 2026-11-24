@@ -23,13 +23,22 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
+import net.minecraft.block.ShelfBlock;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.EquippableComponent;
 import net.minecraft.component.type.NbtComponent;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EquipmentSlot;
+import net.minecraft.entity.ItemEntity;
+import net.minecraft.entity.decoration.ArmorStandEntity;
+import net.minecraft.entity.decoration.ItemFrameEntity;
+import net.minecraft.entity.passive.AllayEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
@@ -37,6 +46,7 @@ import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.equipment.EquipmentAsset;
@@ -48,6 +58,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.util.Hand;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
@@ -145,6 +156,26 @@ public final class TitanDomeManager {
     }
 
     public static void init() {
+        ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> {
+            if (entity instanceof ItemEntity item && isMarkedTitanGear(item.getStack())) item.discard();
+        });
+        UseEntityCallback.EVENT.register((player, world, hand, entity, hit) -> {
+            boolean canTakeGear = entity instanceof ItemFrameEntity || entity instanceof ArmorStandEntity
+                    || entity instanceof AllayEntity;
+            return canTakeGear && isMarkedTitanGear(player.getStackInHand(hand)) ? ActionResult.FAIL : ActionResult.PASS;
+        });
+        UseBlockCallback.EVENT.register((player, world, hand, hit) -> {
+            var state = world.getBlockState(hit.getBlockPos());
+            // A powered shelf can swap several hotbar slots, even when used with an empty hand.
+            if (state.getBlock() instanceof ShelfBlock) {
+                for (int slot = 0; slot < PlayerInventory.HOTBAR_SIZE; slot++) {
+                    if (isMarkedTitanGear(player.getInventory().getStack(slot))) return ActionResult.FAIL;
+                }
+            }
+            if ((state.getBlock() instanceof ShelfBlock || state.isOf(Blocks.DECORATED_POT))
+                    && isMarkedTitanGear(player.getStackInHand(hand))) return ActionResult.FAIL;
+            return ActionResult.PASS;
+        });
         ServerTickEvents.END_WORLD_TICK.register(TitanDomeManager::tickWorld);
         ServerPlayerEvents.LEAVE.register(TitanDomeManager::finishForPlayer);
         ServerPlayerEvents.JOIN.register(TitanDomeManager::recoverSavedGear);
@@ -794,6 +825,9 @@ public final class TitanDomeManager {
     }
 
     private static void removeMarkedTitanGear(PlayerEntity player) {
+        if (isMarkedTitanGear(player.currentScreenHandler.getCursorStack())) {
+            player.currentScreenHandler.setCursorStack(ItemStack.EMPTY);
+        }
         for (int i = 0; i < player.getInventory().size(); i++) {
             ItemStack stack = player.getInventory().getStack(i);
             if (isMarkedTitanGear(stack)) {
@@ -816,11 +850,9 @@ public final class TitanDomeManager {
         }
     }
 
-    private static boolean isMarkedTitanGear(ItemStack stack) {
-        return stack != null && !stack.isEmpty()
-                && stack.getOrDefault(DataComponentTypes.CUSTOM_DATA, NbtComponent.DEFAULT)
-                        .copyNbt()
-                        .getBoolean(NBT_TITAN_GEAR, false);
+    public static boolean isMarkedTitanGear(ItemStack stack) {
+        NbtComponent data = stack.get(DataComponentTypes.CUSTOM_DATA);
+        return data != null && data.copyNbt().getBoolean(NBT_TITAN_GEAR, false);
     }
 
     private static boolean isMarkedTitanArmor(ItemStack stack) {

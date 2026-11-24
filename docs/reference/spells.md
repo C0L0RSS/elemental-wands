@@ -178,6 +178,9 @@ Stone Wall provides cover and can be recast nearby to shatter forward. A Guardia
 hit consumes the wall after it absorbs that hit; shared beam/wave/volley cover
 must protect against that same attack without shielding later attacks. Titan Dome
 owns temporary terrain, confinement, and equipment effects through its lifecycle.
+The dome lends you marked armor and a sword. Inventory clicks and the drop key
+keep them with you, and loose copies disappear. When the loan ends you get your
+original equipment back with its item data intact.
 The retired primary spike attack and Titan Aegis wall path remain retired.
 Faultline is a separately purchased Technique, not a replacement for Gathered Mass.
 
@@ -326,9 +329,9 @@ first head). A grown flower does not age, and a flower planted mid-bloom unfurls
 grows too. When the bloom ends each flower is one head again.
 
 The wave is harmless: Full Bloom is a blessing for the party, and Nature's damage comes from
-its flowers and its other spells. On grass blocks the wave leaves short grass and wild flowers
-behind, as bone meal would; that is the only thing Full Bloom places, and it places nothing on
-any other ground. Flower seeds give no ultimate charge while their owner blooms.
+its flowers and its other spells. Outside boss realms the wave leaves short grass and wild
+flowers on grass blocks where the caster has permission to build. The blessing and petal
+wave still work in protected areas. Flower seeds give no ultimate charge while their owner blooms.
 `FullBloomManager` owns it.
 
 The earlier ultimate, Overgrowth (a thrown acorn that grows a healing oak with a solid trunk
@@ -496,10 +499,11 @@ Owners: `GravityWellManager`, `GravityBombEntity`.
 Hollow Purple commits for its complete charge. The player can aim but cannot
 walk, blink, or use items; switching/dropping the wand does not cancel or refund
 it. Death, world exit, and encounter teardown clean it up without a refund.
-The orb erases blocks along its path except in the Hollow Crypt realm, where it
-leaves the terrain intact (as do explosions there; see `HollowCryptRealm.keepsTerrain`).
-Owners: `SpaceAbilityHandler`, `SingularityBoltEntity`,
-`HollowPurpleChargeManager`. Keep arena containment in all teleport paths.
+The orb can damage each eligible living target once. Dropped items, minecarts and
+other nonliving entities survive direct contact. Outside the four boss realms it
+tunnels through breakable terrain where the caster can build. Spawn protection,
+world borders and Fabric block-break vetoes apply to each block.
+`HollowPurpleChargeManager` owns the charge and `HollowPurpleOrbEntity` handles impact.
 
 All five Space spells are drawn client-side as "void glass": dark see-through glass pieces
 with a bright frame and stars inside, opaque void cores ringed by a corona that faces the

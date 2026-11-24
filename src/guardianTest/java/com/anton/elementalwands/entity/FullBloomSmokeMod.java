@@ -171,7 +171,20 @@ public final class FullBloomSmokeMod implements ModInitializer {
             require(!stranger.hasStatusEffect(StatusEffects.REGENERATION) && stranger.getAbsorptionAmount() == 0, "A stranger was blessed later");
             close(stranger.getHealth(), 20, "A stranger was hurt");
         }
+        if (tick == 560) {
+            stranger.changeGameMode(net.minecraft.world.GameMode.ADVENTURE);
+            stranger.setPosition(8.5, 100, 28.5);
+            for (BlockPos pos : BlockPos.iterate(4, 99, 24, 12, 99, 30)) {
+                world.setBlockState(pos, Blocks.GRASS_BLOCK.getDefaultState());
+                world.setBlockState(pos.up(), Blocks.AIR.getDefaultState());
+            }
+            FullBloomManager.cast(world, stranger);
+        }
         if (tick == 580) {
+            require(FullBloomManager.blessed(stranger), "Adventure caster lost the blessing");
+            for (BlockPos pos : BlockPos.iterate(4, 100, 24, 12, 100, 30)) {
+                require(world.isAir(pos), "Adventure caster planted vegetation at " + pos);
+            }
             // Planted at tick 30, the flower would have wilted by 510. Its twelve seconds grown did not count.
             var head = FlowerTurretManager.headAt(world, FLOWER);
             require(head != null && head.isAlive() && !head.wilting() && world.getBlockState(FLOWER).isOf(ModSpellBlocks.NATURE_SEEDLING),

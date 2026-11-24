@@ -15,6 +15,7 @@
     "UpdraftFallMixin",
     "FireLeapFallMixin",
     "ScreenHandlerMixin",
+    "TitanGearDropMixin",
     "GuardianArenaPlayerMixin",
     "GuardianArenaWorldMixin",
     "GuardianChurchExplosionMixin",

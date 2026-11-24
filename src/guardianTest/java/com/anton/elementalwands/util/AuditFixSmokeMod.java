@@ -2,11 +2,14 @@ package com.anton.elementalwands.util;
 
 import com.anton.elementalwands.registry.ModItems;
 import com.anton.elementalwands.registry.ModSpellBlocks;
+import com.anton.elementalwands.entity.HollowPurpleOrbEntity;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.ChestBlockEntity;
 import net.minecraft.entity.FallingBlockEntity;
+import net.minecraft.entity.ItemEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.server.MinecraftServer;
@@ -58,6 +61,7 @@ public final class AuditFixSmokeMod implements ModInitializer {
             fireChecks=new FireServerChecks(world,player);
         }
         if(fireChecks!=null)fireChecks.check(world,tick);
+        if(tick==65) checkPurpleProtection(world, new BlockPos(28, 150, 0));
         if(tick==75) {
             require(world.getBlockState(flame).isOf(ModSpellBlocks.TITAN_DOME),"Fixture failed to cover flame with Titan shell");
             var domes=TitanDomeManager.class.getDeclaredField("DOMES");domes.setAccessible(true);
@@ -114,6 +118,25 @@ public final class AuditFixSmokeMod implements ModInitializer {
             Files.writeString(Path.of("AUDIT_PASSED.txt"),"Meteor preserves occupied spawn block entity and contents, starts above an overworld roof and under an arena's barrier lid; Nature ownership transfer; Titan expired flame cleanup; Zephyr/Titan serialized equipment recovery and idempotence; committed Hollow Purple slot swap, movement/item/blink lock, final aim, exact release, no refund and death cleanup.\n");
             System.out.println("AUDIT FIX RUNTIME CHECKS PASSED");server.stop(false);
         }
+    }
+    private void checkPurpleProtection(ServerWorld world, BlockPos protectedPos) {
+        world.setBlockState(protectedPos, Blocks.CHEST.getDefaultState());
+        var chest = (ChestBlockEntity) world.getBlockEntity(protectedPos);
+        chest.setStack(0, new ItemStack(Items.EMERALD));
+        world.setBlockState(protectedPos.east(), Blocks.STONE.getDefaultState());
+        PlayerBlockBreakEvents.BEFORE.register((w, p, pos, state, entity) -> {
+            if (w != world || !pos.equals(protectedPos)) return true;
+            require(p == player && entity == chest, "Break veto received the wrong caster or container");
+            return false;
+        });
+        Vec3d origin = protectedPos.toCenterPos();
+        var loose = new ItemEntity(world, origin.x, origin.y + 1, origin.z, new ItemStack(Items.EMERALD));
+        world.spawnEntity(loose);
+        new HollowPurpleOrbEntity(world, player, origin, new Vec3d(1, 0, 0)).tick();
+        require(world.getBlockEntity(protectedPos) == chest && chest.getStack(0).isOf(Items.EMERALD),
+                "Hollow Purple erased a vetoed chest");
+        require(world.isAir(protectedPos.east()), "Hollow Purple skipped an unprotected block");
+        require(loose.isAlive(), "Hollow Purple erased a dropped item");
     }
     /** Overlapping temporary layers: an older lease may neither erase a newer one nor come back from under it. */
     private void checkNatureOwnership(ServerWorld world,BlockPos anchor) {

@@ -249,6 +249,8 @@ These are particles sent by the server.
 **Around the fight.**
 
 - A boss bar shows his health. Health is 600, plus 60% for each player after the first.
+- A Sentry Bloom seed leaves its owner's next hit available. Ordinary hits still
+  use the per-attacker recovery window.
 - In co-op he does not pick the same player twice running, and a flame marks his new target.
   A target he has chased for 6 s without starting a move loses its turn.
 - With nobody eligible nearby for 10 s he resets: full health, phase one, back on his mark.

@@ -2,6 +2,7 @@ package com.anton.elementalwands.entity.pyreking;
 
 import com.anton.elementalwands.entity.WandBoss;
 import com.anton.elementalwands.hall.PyreGate;
+import com.anton.elementalwands.util.SpellCombat;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -279,7 +280,8 @@ public class PyreKingEntity extends PathAwareEntity implements GeoEntity, WandBo
         float before = getHealth();
         boolean accepted = super.damage(world, source, amount);
         if (accepted) {
-            hurtWindows.put(key, new HurtWindow(previous == null ? now + 10 : previous.until(), lastDamageTaken));
+            if (!source.isIn(SpellCombat.NO_HURT_WINDOW))
+                hurtWindows.put(key, new HurtWindow(previous == null ? now + 10 : previous.until(), lastDamageTaken));
             combat.damaged(attacker, before - getHealth());
         }
         return accepted;

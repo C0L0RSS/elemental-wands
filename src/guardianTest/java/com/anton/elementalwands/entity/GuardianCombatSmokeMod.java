@@ -53,6 +53,11 @@ public final class GuardianCombatSmokeMod implements ModInitializer {
                 if(!world.getEntitiesByClass(GuardianSpikeEntity.class,new Box(-80,ground-5,-80,80,ground+80,80),e -> !e.isRemoved()).isEmpty())throw new AssertionError("Stopping left spikes behind");
                 if(Math.abs(results.get("SWEEP@4")-GuardianSweepRules.DAMAGE)>.01f||Math.abs(results.get("SCAR@15")-GuardianScarRules.ERUPT_DAMAGE)>.01f)
                     throw new AssertionError("The Sweep or the Scar's eruption dealt the wrong damage: "+results);
+                GuardianFightLog.setEnabled(true);
+                var log = guardian.combat().log();
+                log.begin(world.getTime(), 1);
+                guardian.setRemoved(net.minecraft.entity.Entity.RemovalReason.UNLOADED_TO_CHUNK);
+                if (log.active()) throw new AssertionError("Chunk unload left the Guardian fight log open");
                 Files.writeString(Path.of("COMBAT_PASSED.txt"),results.toString()+"\nBeam, throw, slam fists (3), slam wave only (8), leap and Airburst (12, grounded, rehearsal) all damaged stationary targets; the Sweep struck a target behind it and the Scar's eruption one who stepped onto a crack ("+spikesSeen+" spikes); gravity, projectile and spike cleanup verified.\n");server.stop(false);return;
             }
             next(world);

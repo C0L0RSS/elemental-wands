@@ -7,6 +7,9 @@ planned. Java owners below are under `src/main/java/com/anton/elementalwands/`.
 
 ## Encounter intent
 
+Removing or unloading the Guardian closes its fight log and clears the boss bar
+for everyone who was watching.
+
 The Guardian is the first shardbearer: the slow, heavy one, meant to take a new duo in full
 iron about ten tries on Normal (see the [roadmap](../ROADMAP.md)). A winning run should last
 about four minutes. It is never hurried and it cannot catch a player, so every hit is an area

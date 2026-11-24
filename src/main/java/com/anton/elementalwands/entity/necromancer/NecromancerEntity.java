@@ -99,6 +99,10 @@ public class NecromancerEntity extends PathAwareEntity implements GeoEntity, Wan
     /** Where the robed fight stands: a duel, a siege, or done (transformation pending or colossus). */
     public NecromancerRules.Stage stage() { return stage; }
     void setStage(NecromancerRules.Stage stage) { this.stage = stage; }
+    void resetToFirstDuel() {
+        phasePending = false;
+        stage = NecromancerRules.Stage.DUEL_A;
+    }
     /** The encounter's home: bound minions stay within reach of it, not of a perched caster. */
     net.minecraft.util.math.Vec3d anchor() { return combat.anchor(); }
     /** Entity id of the player held by the colossus hand; -1 when empty. */

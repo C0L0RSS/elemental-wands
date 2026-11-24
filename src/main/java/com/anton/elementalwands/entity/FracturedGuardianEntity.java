@@ -416,21 +416,14 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
         }
     }
 
-    @Override
-    public void remove(net.minecraft.entity.Entity.RemovalReason reason) {
-        if (getEntityWorld() instanceof ServerWorld) {
-            combat.finishLog("removed (" + reason.name().toLowerCase(java.util.Locale.ROOT) + ")");
-            combat.cancel();
-        }
-        super.remove(reason);
-    }
-
     /** Every removal passes here, including a chunk unload or a portal, which skip {@link #remove}. */
     @Override
     public void onRemove(net.minecraft.entity.Entity.RemovalReason reason) {
-        if (getEntityWorld() instanceof ServerWorld && intro != null) {
-            intro.cancel();
+        if (getEntityWorld() instanceof ServerWorld) {
+            if (intro != null) intro.cancel();
             intro = null;
+            combat.finishLog("removed (" + reason.name().toLowerCase(java.util.Locale.ROOT) + ")");
+            combat.cancel();
         }
         super.onRemove(reason);
     }

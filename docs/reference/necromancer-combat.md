@@ -77,6 +77,8 @@ shrinks mid-fight. Each duel holds at its gate (75%, then half health), so burst
 cannot skip a siege or the second phase; reaching the gate interrupts the current cast
 and starts the siege. The stage (`NecromancerRules.Stage`) and the encounter's home
 save with the boss; a siege saved mid-way restarts from its first wave.
+If the robed fight resets while a transformation is pending, the next challenger
+starts at Duel A with both sieges ahead.
 
 ### How it chooses
 

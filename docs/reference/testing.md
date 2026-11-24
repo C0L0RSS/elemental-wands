@@ -147,7 +147,7 @@ world instead, started muted, with the real player parked far away as a spectato
 ```
 
 `fixtureReceipt` is the prefix of the fixture's `*_PASSED.txt`; receipts land in
-`build/integrated-fixture-host/`. It creates a new ordinary world each run, in Survival,
+`build/integrated-fixture-host/`. By default it creates a fresh flat Survival world
 and clears the air around y=100 where flat-world fixtures stage their scenes. It cannot
 serve a restart pair or a fixture that depends on dedicated-server settings, and a pass is
 reported as a hosted run, not a dedicated-server run. A fixture hosted this way must not

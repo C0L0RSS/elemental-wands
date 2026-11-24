@@ -142,7 +142,9 @@ public final class StormAerieWorldgenSmoke implements ModInitializer {
         if (!gong.anchor().equals(expected) || gong.facing() != piece.getRotation().rotate(Direction.SOUTH))
             problems.add("gong " + gong + " differs from the piece's " + expected + " facing " + piece.getRotation().rotate(Direction.SOUTH));
         long strays = parts.stream().filter(p -> !gong.equals(StormAerie.gong(world, p))).count();
-        if (parts.size() != 11 || strays > 0) problems.add(parts.size() + " parts, " + strays + " not resolving to the anchor");
+        int expectedParts = StormAerieLayout.GONG_CELLS.length - 1; // Cell zero is the anchor.
+        if (parts.size() != expectedParts || strays > 0)
+            problems.add(parts.size() + " of " + expectedParts + " gong parts, " + strays + " not resolving to the anchor");
         if (!(world.getBlockEntity(gong.anchor()) instanceof StormGongBlockEntity)) problems.add("anchor " + gong.anchor().toShortString() + " has no gong block entity");
         int floor = origin.getY() + StormAerieLayout.FLOOR;
         double distance = Math.hypot(gong.anchor().getX() + .5 - from.x, gong.anchor().getZ() + .5 - from.z);

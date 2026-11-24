@@ -20,6 +20,7 @@ import java.util.UUID;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
@@ -311,7 +312,7 @@ public final class FlowerTurretManager {
             // A flower in Full Bloom does not age once it has unfurled.
             if (blooming && now - flower.plantTick > UNFURL_TICKS) flower.plantTick++;
             int age = now - flower.plantTick;
-            if (!state.isOf(ModSpellBlocks.NATURE_SEEDLING) || age >= LIFETIME || flower.head.isRemoved()
+            if (!TemporaryBlockManager.owns(world, flower.placement, flower.pos) || age >= LIFETIME || flower.head.isRemoved()
                     || owner == null || !owner.isAlive() || owner.isSpectator()) {
                 wilt(world, flower);
                 it.remove();
@@ -322,8 +323,8 @@ public final class FlowerTurretManager {
             boolean grown = blooming && stage == 3;
             if (grown != (flower.twin != null)) { if (grown) grow(world, flower, now); else shrink(world, flower); }
             if (state.get(NatureSeedlingBlock.STAGE) != stage || state.get(NatureSeedlingBlock.GROWN) != grown)
-                com.anton.elementalwands.arena.GuardianArenaManager.setTemporarySpellBlock(world, flower.pos,
-                        state.with(NatureSeedlingBlock.STAGE, stage).with(NatureSeedlingBlock.GROWN, grown));
+                TemporaryBlockManager.updateTemporaryBlock(world, flower.placement, flower.pos,
+                        state.with(NatureSeedlingBlock.STAGE, stage).with(NatureSeedlingBlock.GROWN, grown), Block.NOTIFY_ALL);
             // A flower holding health shows it: more hearts as it fills.
             if (flower.banked > 0 && Math.floorMod(now + flower.pos.hashCode(), HEART_TICKS) == 0)
                 world.spawnParticles(ParticleTypes.HEART, flower.pos.getX() + 0.5, flower.pos.getY() + (grown ? 2.0 : 1.2),

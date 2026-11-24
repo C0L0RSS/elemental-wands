@@ -19,6 +19,7 @@ import com.anton.elementalwands.util.TitanDomeManager;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.NbtComponent;
@@ -220,10 +221,8 @@ public final class StoneAbilityHandler {
             if (Math.abs(distanceSide) > blastHalfRight) continue;
             if (Math.abs(distanceVertical) > blastHalfUp) continue;
 
-            boolean damaged = com.anton.elementalwands.util.SpellCombat.damage(target, world, world.getDamageSources().playerAttack(caster), SHATTER_DAMAGE, caster, com.anton.elementalwands.data.WizardAffinity.STONE);
-            if (damaged) {
-                AbstractWandItem.onWandDamageDealt(caster, SHATTER_DAMAGE, com.anton.elementalwands.data.WizardAffinity.STONE);
-            }
+            com.anton.elementalwands.util.SpellCombat.damageAndReward(target, world,
+                    world.getDamageSources().playerAttack(caster), SHATTER_DAMAGE, caster, com.anton.elementalwands.data.WizardAffinity.STONE);
             target.addVelocity(
                     forward.x * SHATTER_HORIZONTAL_KNOCKBACK,
                     SHATTER_VERTICAL_KNOCKBACK,
@@ -234,7 +233,7 @@ public final class StoneAbilityHandler {
         ACTIVE_WALLS.remove(caster.getUuid());
         TemporaryBlockManager.restoreTemporaryBlocks(world, wall.placement);
 
-        AbstractWandItem.startCooldown(world, stack, "stone_wall", getSecondaryCooldownTicks(), true);
+        AbstractWandItem.startCooldown(world, caster, "stone_wall", getSecondaryCooldownTicks(), true);
 
         net.minecraft.util.math.random.Random random = world.getRandom();
         for (BlockPos pos : wall.blockPositions) {
@@ -314,7 +313,8 @@ public final class StoneAbilityHandler {
         for (BlockPos pos : wall.blockPositions) {
             BlockState state = world.getBlockState(pos);
             if (state.isOf(ModSpellBlocks.STONE_WALL)) {
-                world.setBlockState(pos, state.with(StoneWallBlock.SHATTER_READY, true), 3);
+                TemporaryBlockManager.updateTemporaryBlock(world, wall.placement, pos,
+                        state.with(StoneWallBlock.SHATTER_READY, true), Block.NOTIFY_ALL);
             }
         }
     }

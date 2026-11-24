@@ -28,9 +28,16 @@ final class GuardianChurchUpgradeChecks {
                 }
                 world.setBlockState(temporary.at(0,0,11),Blocks.CHISELED_STONE_BRICKS.getDefaultState());
             } finally { flag.setBoolean(null,false); }
+            check(!world.setBlockState(origin,Blocks.AIR.getDefaultState()),"Socket could be removed before discovery");
             GuardianChurchManager.discover(world,origin,world.getBlockState(origin));
             var s=GuardianChurchManager.sites().stream().filter(v -> v.anchor().equals(origin)).findFirst().orElseThrow();
             check(s.rotation==rotation,"Legacy rotation changed");
+            for(int x:new int[]{ChurchLayout.MIN_X,ChurchLayout.MAX_X})
+                for(int y:new int[]{ChurchLayout.MIN_Y,ChurchLayout.MAX_Y})
+                    for(int z:new int[]{ChurchLayout.MIN_Z,ChurchLayout.MAX_Z})
+                        check(GuardianChurchManager.protectedBlock(world,s.at(x,y,z)),"Missing protection at rotated church corner");
+            check(!GuardianChurchManager.protectedBlock(world,s.at(ChurchLayout.MIN_X-1,2,0)),"Ward extended beyond a rotated church edge");
+            check(!GuardianChurchManager.protectedBlock(world,s.at(0,ChurchLayout.MAX_Y+1,0)),"Ward extended above the church");
             var token=s.token;
             var old=(ChestBlockEntity)world.getBlockEntity(s.offering());
             old.setStack(4,new ItemStack(Items.DIAMOND,7));
@@ -90,6 +97,8 @@ final class GuardianChurchUpgradeChecks {
                     && world.getBlockState(s.socket().down()).isOf(ModBlocks.GUARDIAN_PEDESTAL)
                     && world.getBlockState(s.at(0,3,-4)).isOf(ModBlocks.GUARDIAN_CHEST_RUNE),"Partially saved upgrade left an unsupported bowl");
             s.phase=GuardianChurchManager.Phase.RESTORED;
+            check(!GuardianChurchManager.protectedBlock(world,s.at(0,0,11)),"Restored church still wards its facade");
+            check(GuardianChurchManager.protectedBlock(world,s.socket()),"Restored church socket lost its ward");
             check(!GuardianChurchManager.upgradePedestal(world,s),"Completed pedestal was upgraded again");
         }
         var finished=new GuardianChurchManager.Site();finished.phase=GuardianChurchManager.Phase.RESTORED;

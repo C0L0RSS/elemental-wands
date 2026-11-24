@@ -256,8 +256,7 @@ public final class StormAerieServerSmoke implements ModInitializer {
         Field storeField = PartyManager.class.getDeclaredField("store");
         storeField.setAccessible(true);
         PartyStore store = (PartyStore) storeField.get(PartyManager.get(server));
-        Map<UUID, String> members = new LinkedHashMap<>();
-        members.put(ringer, NAME_RINGER); members.put(near, NAME_NEAR); members.put(far, NAME_FAR);
+        var members = java.util.List.of(ringer, near, far);
         store.replace(null, new PartyStore.Party(UUID.randomUUID(), ringer, members));
         require(PartyManager.get(server).allied(ringer, far) && !PartyManager.get(server).allied(ringer, bystander), "Fixture party was not recorded");
         script();

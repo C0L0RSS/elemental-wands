@@ -3,6 +3,15 @@ package com.anton.elementalwands.mixin;
 import com.anton.elementalwands.util.SoulboundInventoryCarrier;
 import com.anton.elementalwands.util.TitanDomeManager;
 import com.anton.elementalwands.util.ZephyrStrikeManager;
+import com.anton.elementalwands.util.SpellCombat;
+import com.anton.elementalwands.data.WizardAffinity;
+import com.anton.elementalwands.registry.ModItems;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -25,19 +34,24 @@ public abstract class PlayerEntityMixin implements SoulboundInventoryCarrier {
             cir.setReturnValue(false);
     }
 
-    @org.spongepowered.asm.mixin.injection.Redirect(method="attack",at=@At(value="INVOKE",target="Lnet/minecraft/entity/Entity;sidedDamage(Lnet/minecraft/entity/damage/DamageSource;F)Z"))
-    private boolean ew$titanDamage(net.minecraft.entity.Entity target,net.minecraft.entity.damage.DamageSource source,float amount){
-        PlayerEntity player=(PlayerEntity)(Object)this;
-        if(player.getEntityWorld() instanceof net.minecraft.server.world.ServerWorld world && player.getMainHandStack().isOf(com.anton.elementalwands.registry.ModItems.TITAN_SWORD) && TitanDomeManager.hasActiveDome(player))
-            return com.anton.elementalwands.util.SpellCombat.damage(target,world,source,amount,player,com.anton.elementalwands.data.WizardAffinity.STONE);
-        return target.sidedDamage(source,amount);
+    @WrapOperation(method = "attack", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/Entity;sidedDamage(Lnet/minecraft/entity/damage/DamageSource;F)Z"))
+    private boolean ew$titanDamage(Entity target, DamageSource source, float amount, Operation<Boolean> original) {
+        PlayerEntity player = (PlayerEntity)(Object)this;
+        if (player.getEntityWorld() instanceof ServerWorld world && player.getMainHandStack().isOf(ModItems.TITAN_SWORD)
+                && TitanDomeManager.hasActiveDome(player)) {
+            return SpellCombat.damage(target, world, source, amount, player, WizardAffinity.STONE,
+                    (victim, spellSource, scaled) -> original.call(victim, spellSource, scaled));
+        }
+        return original.call(target, source, amount);
     }
-    @org.spongepowered.asm.mixin.injection.Redirect(method="attack",at=@At(value="INVOKE",target="Lnet/minecraft/entity/LivingEntity;damage(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/entity/damage/DamageSource;F)Z"))
-    private boolean ew$titanSweep(net.minecraft.entity.LivingEntity target,net.minecraft.server.world.ServerWorld world,net.minecraft.entity.damage.DamageSource source,float amount){
-        PlayerEntity player=(PlayerEntity)(Object)this;
-        if(player.getMainHandStack().isOf(com.anton.elementalwands.registry.ModItems.TITAN_SWORD) && TitanDomeManager.hasActiveDome(player))
-            return com.anton.elementalwands.util.SpellCombat.damage(target,world,source,amount,player,com.anton.elementalwands.data.WizardAffinity.STONE);
-        return target.damage(world,source,amount);
+    @WrapOperation(method = "attack", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/LivingEntity;damage(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/entity/damage/DamageSource;F)Z"))
+    private boolean ew$titanSweep(LivingEntity target, ServerWorld world, DamageSource source, float amount, Operation<Boolean> original) {
+        PlayerEntity player = (PlayerEntity)(Object)this;
+        if (player.getMainHandStack().isOf(ModItems.TITAN_SWORD) && TitanDomeManager.hasActiveDome(player)) {
+            return SpellCombat.damage(target, world, source, amount, player, WizardAffinity.STONE,
+                    (victim, spellSource, scaled) -> original.call(victim, world, spellSource, scaled));
+        }
+        return original.call(target, world, source, amount);
     }
 
     @Unique

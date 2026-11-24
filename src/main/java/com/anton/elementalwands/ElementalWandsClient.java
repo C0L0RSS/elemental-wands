@@ -143,6 +143,7 @@ public class ElementalWandsClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.HOLLOW_BRUTE, context -> new com.anton.elementalwands.client.renderer.HollowUndeadRenderer<>(context, "hollow_brute", .6f));
         com.anton.elementalwands.client.FireLeapClient.init();
         com.anton.elementalwands.client.FireLeapPreview.init();
+        com.anton.elementalwands.client.renderer.ThornbiteVisual.init();
         EntityRendererRegistry.register(ModEntities.FLASHOVER_EMBER, com.anton.elementalwands.client.renderer.EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.GUARDIAN_ROCK, com.anton.elementalwands.client.renderer.GuardianRockRenderer::new);
         EntityRendererRegistry.register(ModEntities.GUARDIAN_SPIKE, com.anton.elementalwands.client.renderer.GuardianSpikeRenderer::new);

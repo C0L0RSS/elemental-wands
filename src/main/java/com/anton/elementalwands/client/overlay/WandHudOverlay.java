@@ -8,22 +8,16 @@ import com.anton.elementalwands.client.screen.WandHudEditScreen;
 import com.anton.elementalwands.data.WandSpells;
 import com.anton.elementalwands.data.WizardAffinity;
 import com.anton.elementalwands.item.AbstractWandItem;
-import com.anton.elementalwands.item.FireAbilityHandler;
-import com.anton.elementalwands.item.NatureAbilityHandler;
-import com.anton.elementalwands.item.SpaceAbilityHandler;
-import com.anton.elementalwands.item.StoneAbilityHandler;
 import com.anton.elementalwands.item.WindAbilityHandler;
+import com.anton.elementalwands.util.WandCooldowns;
 
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.RenderTickCounter;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.NbtComponent;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 
@@ -70,8 +64,7 @@ public class WandHudOverlay implements HudRenderCallback {
         if (client.player == null || client.world == null) return;
         if (client.getDebugHud().shouldShowDebugHud()) return;
 
-        // Cooldowns live on the wand, so the row stays up whenever one is carried;
-        // the position editor previews the row even without a wand.
+        // The row stays up whenever a wand is carried; the editor previews it without one.
         boolean editing = client.currentScreen instanceof WandHudEditScreen;
         ItemStack stack = findWand(client.player);
         if (!editing && stack.isEmpty()) return;
@@ -110,15 +103,14 @@ public class WandHudOverlay implements HudRenderCallback {
         context.getMatrices().scale(HUD_SCALE, HUD_SCALE);
 
         if (isFractured) {
-            renderAbility(context, client, stack, AbstractWandItem.Ability.PRIMARY, 0,
-                slotCentersX[0], slotCenterY, primaryCooldownFor(affinity), theme, accentColor, true, affinity);
+            renderAbility(context, client, AbstractWandItem.Ability.PRIMARY, 0,
+                slotCentersX[0], slotCenterY, theme, accentColor, true);
         } else {
             for (int i = 0; i < drawn.size(); i++) {
                 int slot = drawn.get(i);
                 var spell = WandSpells.find(ClientPlayerData.loadout().get(slot));
                 if (spell.ultimate()) renderUltimateSlot(context, client, stack, slot, slotCentersX[i], slotCenterY, theme, accentColor, true);
-                else renderAbility(context, client, stack, spell.ability(), slot, slotCentersX[i], slotCenterY,
-                    spell.ability() == AbstractWandItem.Ability.PRIMARY ? primaryCooldownFor(affinity) : secondaryCooldownFor(affinity), theme, accentColor, true, affinity);
+                else renderAbility(context, client, spell.ability(), slot, slotCentersX[i], slotCenterY, theme, accentColor, true);
             }
         }
         if (affinity == WizardAffinity.FIRE && ClientPlayerData.loadout().contains("flamethrower")) {
@@ -136,7 +128,7 @@ public class WandHudOverlay implements HudRenderCallback {
         context.getMatrices().popMatrix();
     }
 
-    /** The wand whose stored cooldowns the row shows: the held one first, otherwise the first one carried. */
+    /** The wand whose ultimate charge the row shows. */
     private static ItemStack findWand(PlayerEntity player) {
         if (player.getMainHandStack().getItem() instanceof AbstractWandItem) return player.getMainHandStack();
         if (player.getOffHandStack().getItem() instanceof AbstractWandItem) return player.getOffHandStack();
@@ -171,24 +163,6 @@ public class WandHudOverlay implements HudRenderCallback {
             context.fill(notch,y+3,notch+1,y+4,0xB03B382D);
             context.fill(notch,y+6,notch+1,y+7,0xB03B382D);
         }
-    }
-
-    private static int primaryCooldownFor(WizardAffinity affinity) {
-        return switch (affinity) {
-            case STONE -> StoneAbilityHandler.getPrimaryCooldownTicks();
-            case SPACE -> SpaceAbilityHandler.getPrimaryCooldownTicks();
-            case NATURE -> NatureAbilityHandler.getPrimaryCooldownTicks();
-            default    -> AbstractWandItem.DEFAULT_PRIMARY_COOLDOWN_TICKS;
-        };
-    }
-
-    private static int secondaryCooldownFor(WizardAffinity affinity) {
-        return switch (affinity) {
-            case FIRE  -> FireAbilityHandler.getSecondaryCooldownTicks();
-            case SPACE -> SpaceAbilityHandler.getSecondaryCooldownTicks();
-            case NATURE -> NatureAbilityHandler.getSecondaryCooldownTicks();
-            default    -> AbstractWandItem.DEFAULT_SECONDARY_COOLDOWN_TICKS;
-        };
     }
 
     // -----------------------------------------------------------------------
@@ -267,73 +241,52 @@ public class WandHudOverlay implements HudRenderCallback {
     // Standard ability slot
     // -----------------------------------------------------------------------
 
-    private void renderAbility(DrawContext context, MinecraftClient client, ItemStack stack,
-            AbstractWandItem.Ability ability, int slotIndex, int x, int y, int maxCooldownTicks,
-            WandTheme theme, int accentColor, boolean isUnlocked, WizardAffinity affinity) {
+    private void renderAbility(DrawContext context, MinecraftClient client,
+            AbstractWandItem.Ability ability, int slotIndex, int x, int y,
+            WandTheme theme, int accentColor, boolean isUnlocked) {
         long now = client.world.getTime();
 
-        NbtCompound nbt = stack.getOrDefault(DataComponentTypes.CUSTOM_DATA, NbtComponent.DEFAULT).copyNbt();
+        var data = WandCooldowns.state(client.player);
         var selectedSpell = WandSpells.find(ClientPlayerData.loadout().get(slotIndex));
         String spellId = selectedSpell == null ? "" : selectedSpell.id();
 
-        // Each spell owns its cooldown; the stored duration is the recovery its last cast started.
-        long last    = nbt.getLong(AbstractWandItem.cooldownKey(spellId)).orElse(-1_000_000_000L);
-        long elapsed = now - last;
-
-        if (ClientPlayerData.getEntangleStacks(client.player.getId()) > 0) {
-            elapsed /= 2;
-        }
-
-        maxCooldownTicks = Math.max(maxCooldownTicks, nbt.getInt(AbstractWandItem.durationKey(spellId), 0));
-        long remaining  = maxCooldownTicks - elapsed;
+        boolean entangled = ClientPlayerData.getEntangleStacks(client.player.getId()) > 0;
+        long remaining = WandCooldowns.spellRemaining(data, spellId, now, 0, entangled);
         // A ready Basic still greys briefly while the shared Basic recovery runs.
         if (selectedSpell != null && selectedSpell.category() == WandSpells.Category.BASIC)
-            remaining = Math.max(remaining, AbstractWandItem.basicSharedRemaining(nbt, now, ClientPlayerData.getEntangleStacks(client.player.getId()) > 0));
+            remaining = Math.max(remaining, WandCooldowns.basicRemaining(data, now, entangled));
         if (spellId.equals("gathered_mass")) {
-            maxCooldownTicks = ClientPlayerData.stoneDuration();
-            remaining = ClientPlayerData.stoneRemaining(now);
+            remaining = Math.max(remaining, ClientPlayerData.stoneRemaining(now));
         }
-        if (selectedSpell != null && selectedSpell.id().equals("fire_hop")) {
-            remaining=ClientPlayerData.hopRemaining(now);maxCooldownTicks=com.anton.elementalwands.util.FireBuildRules.HOP_COOLDOWN;
-        } else if (selectedSpell != null && selectedSpell.id().equals("flashover")) {
-            remaining=ClientPlayerData.flashRemaining(now);maxCooldownTicks=ClientPlayerData.flashDuration();
-        } else if (selectedSpell != null && selectedSpell.id().equals("flamethrower")) {
-            remaining=ClientPlayerData.fireOverheated() ? (long)Math.ceil((ClientPlayerData.fireHeat()-com.anton.elementalwands.util.FireBuildRules.UNLOCK_HEAT)/com.anton.elementalwands.util.FireBuildRules.COOL_PER_TICK) : 0;
+        if (spellId.equals("fire_hop")) {
+            remaining = ClientPlayerData.hopRemaining(now);
+        } else if (spellId.equals("flashover")) {
+            remaining = ClientPlayerData.flashRemaining(now);
+        } else if (spellId.equals("flamethrower") && ClientPlayerData.fireOverheated()) {
+            long cool = (long)Math.ceil((ClientPlayerData.fireHeat()-com.anton.elementalwands.util.FireBuildRules.UNLOCK_HEAT)/com.anton.elementalwands.util.FireBuildRules.COOL_PER_TICK);
+            remaining = Math.max(remaining, cool);
         }
-        if (spellId.equals("faultline") || spellId.equals("stone_charge")) {
-            maxCooldownTicks = spellId.equals("faultline") ? com.anton.elementalwands.util.StoneTechniqueRules.FAULT_COOLDOWN
-                    : com.anton.elementalwands.util.StoneTechniqueRules.CHARGE_COOLDOWN;
-            remaining = maxCooldownTicks - elapsed;
-        }
-        boolean onCooldown = remaining > 0;
-
         if (spellId.equals("gale_daggers")) {
-            maxCooldownTicks = com.anton.elementalwands.util.GaleDaggers.COOLDOWN;
             long since = now - client.player.getAttachedOrElse(com.anton.elementalwands.data.EWAttachments.GALE_LAST_LAUNCH,-1_000_000_000L);
-            if(ClientPlayerData.getEntangleStacks(client.player.getId())>0)since/=2;
-            remaining = Math.max(remaining,maxCooldownTicks-since);onCooldown=remaining>0;
+            if (entangled) since /= 2;
+            remaining = Math.max(remaining, com.anton.elementalwands.util.GaleDaggers.COOLDOWN - since);
         }
         if (spellId.equals("updraft")) {
-            maxCooldownTicks = com.anton.elementalwands.util.UpdraftManager.COOLDOWN;
             long since = now - client.player.getAttachedOrElse(com.anton.elementalwands.data.EWAttachments.UPDRAFT_LAST_CAST,-1_000_000_000L);
-            if(ClientPlayerData.getEntangleStacks(client.player.getId())>0)since/=2;
-            remaining = Math.max(maxCooldownTicks-elapsed,maxCooldownTicks-since);onCooldown=remaining>0;
+            if (entangled) since /= 2;
+            remaining = Math.max(remaining, com.anton.elementalwands.util.UpdraftManager.COOLDOWN - since);
         }
         var astralState=client.player.getAttachedOrElse(com.anton.elementalwands.data.EWAttachments.ASTRAL_STATE,new net.minecraft.nbt.NbtCompound());
         if (spellId.equals("astral_double")) {
-            int itemRecovery=nbt.getInt(AbstractWandItem.durationKey(spellId),0);
-            maxCooldownTicks=Math.max(astralState.getInt("recovery",0),itemRecovery);
-            remaining=astralState.getBoolean("active",false) ? 0 : Math.max(Math.max(0,itemRecovery-elapsed),
-                    com.anton.elementalwands.util.AstralDoubleManager.remaining(astralState,now,ClientPlayerData.getEntangleStacks(client.player.getId())>0));
-            onCooldown=remaining>0;
+            remaining = astralState.getBoolean("active", false) ? 0 : Math.max(remaining,
+                    com.anton.elementalwands.util.AstralDoubleManager.remaining(astralState, now, entangled));
         }
         var gravityState=client.player.getAttachedOrElse(com.anton.elementalwands.data.EWAttachments.GRAVITY_STATE,new net.minecraft.nbt.NbtCompound());
         if (spellId.equals("gravity_well")) {
-            maxCooldownTicks=com.anton.elementalwands.util.GravityWellManager.COOLDOWN;
-            remaining=Math.max(maxCooldownTicks-elapsed,com.anton.elementalwands.util.GravityWellManager.remaining(
-                    gravityState,now,ClientPlayerData.getEntangleStacks(client.player.getId())>0));
-            onCooldown=!gravityState.getBoolean("active",false) && remaining>0;
+            remaining = gravityState.getBoolean("active", false) ? 0 : Math.max(remaining,
+                    com.anton.elementalwands.util.GravityWellManager.remaining(gravityState, now, entangled));
         }
+        boolean onCooldown = remaining > 0;
         boolean isWindSecondary = spellId.equals("waylay_dash");
         int windCharges          = 0;
         int windMaxCharges       = 0;
@@ -343,8 +296,8 @@ public class WandHudOverlay implements HudRenderCallback {
 
         if (isWindSecondary) {
             windMaxCharges    = WindAbilityHandler.getDashMaxCharges();
-            windCharges       = WindAbilityHandler.getDashCharges(stack);
-            windRechargeTicks = WindAbilityHandler.getDashRechargeTicks(stack);
+            windCharges       = WindAbilityHandler.getDashCharges(client.player);
+            windRechargeTicks = WindAbilityHandler.getDashRechargeTicks(client.player);
             windRechargeDuration = WindAbilityHandler.getDashRechargeDurationTicks();
             onCooldown        = windCharges <= 0;
             windPartial       = windCharges > 0 && windCharges < windMaxCharges;

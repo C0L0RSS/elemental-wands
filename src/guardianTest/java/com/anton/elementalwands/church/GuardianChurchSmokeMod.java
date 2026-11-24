@@ -53,6 +53,9 @@ public final class GuardianChurchSmokeMod implements ModInitializer {
                 check(!GuardianChurchManager.busy(),"Restart left the church active");
                 check(world.getBlockState(site.socket()).get(GuardianSocketBlock.RITUAL)==2,"Completed pedestal state lost on restart");
                 check(world.getBlockState(site.socket().down()).isOf(ModBlocks.GUARDIAN_PEDESTAL),"Completed pedestal support lost on restart");
+                var blocked=Vec3d.ofBottomCenter(site.at(6,-1,9));
+                var safeReturn=GuardianChurchManager.naveReturn(world,blocked);
+                check(safeReturn!=null && !safeReturn.equals(blocked),"Restart lost indexed church return protection");
                 Files.writeString(Path.of("CHURCH_RECOVERY_PASSED.txt"),"Completed church and collected loot survived restart without regeneration.\n");server.stop(false);
             }
             return;

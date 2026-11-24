@@ -10,6 +10,8 @@ Ruins generate in eligible new Overworld terrain; existing explored chunks are n
 retrofitted. Biome/terrain filtering means structure spacing is not a guaranteed
 distance between churches. Locating churches is incremental and cancellable so
 large searches do not block the server. Keep ticket cleanup and search timeouts.
+Each registered church is indexed in the chunks its rotated footprint touches.
+Block writes check nearby sites and also protect ritual sockets in newly generated churches.
 
 `/locate` reports a church or graveyard at a standing cell of its own template, with a real
 height, and its click-to-teleport link goes there rather than keeping the player's height

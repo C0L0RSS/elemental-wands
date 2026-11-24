@@ -4,8 +4,10 @@ import com.anton.elementalwands.party.WandAllies;
 
 import java.util.List;
 
+import com.anton.elementalwands.data.WizardAffinity;
 import com.anton.elementalwands.registry.ModEntities;
 import com.anton.elementalwands.registry.ModSounds;
+import com.anton.elementalwands.util.SpellCombat;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -150,15 +152,10 @@ public class SingularityBoltEntity extends ProjectileEntity {
     }
 
     private void applyImpact(ServerWorld world, Vec3d impactPos, Entity directHit) {
-        Entity owner = getOwner();
         float directDamage = DIRECT_DAMAGE * strength, splashDamage = SPLASH_DAMAGE * strength;
 
         if (directHit instanceof LivingEntity living && !protectsAlly(directHit)) {
-            DamageSource source = impactSource(world);
-            boolean damaged = damageWithoutKnockback(world, living, source, directDamage);
-            if (damaged) {
-                com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(owner, directDamage, com.anton.elementalwands.data.WizardAffinity.SPACE);
-            }
+            damageWithoutKnockback(world, living, impactSource(world), directDamage);
         }
 
         Box box = Box.of(impactPos, IMPACT_RADIUS * 2.0, IMPACT_RADIUS * 2.0, IMPACT_RADIUS * 2.0);
@@ -171,11 +168,7 @@ public class SingularityBoltEntity extends ProjectileEntity {
             }
 
             if (living != directHit) {
-                DamageSource splashSource = impactSource(world);
-                boolean damaged = damageWithoutKnockback(world, living, splashSource, splashDamage);
-                if (damaged) {
-                    com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(owner, splashDamage, com.anton.elementalwands.data.WizardAffinity.SPACE);
-                }
+                damageWithoutKnockback(world, living, impactSource(world), splashDamage);
             }
         }
 
@@ -186,17 +179,16 @@ public class SingularityBoltEntity extends ProjectileEntity {
                 ModSounds.SPELL_SPACE_SINGULARITY_BOLT_IMPACT, SoundCategory.PLAYERS, 0.82f, 1.0f);
     }
 
-    private static boolean damageWithoutKnockback(
+    private static void damageWithoutKnockback(
             ServerWorld world, LivingEntity target, DamageSource source, float amount) {
         Vec3d velocityBeforeDamage = target.getVelocity();
-        boolean damaged = com.anton.elementalwands.util.SpellCombat.damage(target,world,source,amount,source.getAttacker(),com.anton.elementalwands.data.WizardAffinity.SPACE);
+        SpellCombat.damageAndReward(target, world, source, amount, source.getAttacker(), WizardAffinity.SPACE);
         if (target.getVelocity().squaredDistanceTo(velocityBeforeDamage) > 1.0e-12) {
             // Projectile damage can apply vanilla knockback even when a shield blocks
             // all damage. Restore the exact incoming motion while preserving attribution.
             target.setVelocity(velocityBeforeDamage);
             target.velocityModified = true;
         }
-        return damaged;
     }
 
     private void applyCappedGuidance(ServerWorld world) {

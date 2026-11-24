@@ -19,15 +19,12 @@ public final class PartyManager {
     private final Map<UUID, String> names = new HashMap<>();
     private final Map<UUID, Integer> inviteCooldowns = new HashMap<>();
 
-    private PartyManager(MinecraftServer server) throws IOException {
+    private PartyManager(MinecraftServer server) {
         this.server = server;
         store = new PartyStore(server.getSavePath(WorldSavePath.ROOT).resolve("elementalwands/parties.json"));
     }
     public static void init() {
-        ServerLifecycleEvents.SERVER_STARTING.register(server -> {
-            try { SERVERS.put(server, new PartyManager(server)); }
-            catch (IOException e) { throw new IllegalStateException("Cannot safely load Elemental Wands parties", e); }
-        });
+        ServerLifecycleEvents.SERVER_STARTING.register(server -> SERVERS.put(server, new PartyManager(server)));
         ServerLifecycleEvents.SERVER_STOPPED.register(SERVERS::remove);
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             PartyManager manager = SERVERS.get(server);
@@ -39,14 +36,15 @@ public final class PartyManager {
         return Objects.requireNonNull(SERVERS.get(server), "Parties are not loaded");
     }
     public PartyStore.Party party(UUID player) { return store.party(player); }
+    public boolean available() { return store.available(); }
     public boolean allied(UUID first, UUID second) { return store.allied(first, second); }
     public void remember(ServerPlayerEntity player) { names.put(player.getUuid(), player.getName().getString()); }
     public String name(UUID uuid) {
         var online = server.getPlayerManager().getPlayer(uuid);
         if (online != null) { remember(online); return names.get(uuid); }
         if (names.containsKey(uuid)) return names.get(uuid);
-        var party = party(uuid);
-        return party == null ? null : party.members().get(uuid);
+        var cached = server.getApiServices().nameToIdCache().getByUuid(uuid);
+        return cached.map(net.minecraft.server.PlayerConfigEntry::name).orElseGet(() -> party(uuid) == null ? null : uuid.toString());
     }
     private void expireInvites() {
         invites.values().forEach(map -> map.values().removeIf(invite -> invite.expires <= server.getTicks()
@@ -58,7 +56,7 @@ public final class PartyManager {
     public void create(ServerPlayerEntity player) throws IOException {
         require(party(player.getUuid()) == null, "You are already in a party. Use /party leave first.");
         remember(player);
-        store.replace(null, new PartyStore.Party(UUID.randomUUID(), player.getUuid(), Map.of(player.getUuid(), name(player.getUuid()))));
+        store.replace(null, new PartyStore.Party(UUID.randomUUID(), player.getUuid(), List.of(player.getUuid())));
         tell(player, "Party created. Invite someone with /party invite <player>.");
     }
     public void invite(ServerPlayerEntity player, ServerPlayerEntity target) {
@@ -91,8 +89,8 @@ public final class PartyManager {
         var old = party(invite.leader);
         require(old.members().size() < PartyStore.MAX_MEMBERS, "That party is full (32 players).");
         remember(player);
-        var members = new LinkedHashMap<>(old.members());
-        members.put(player.getUuid(), name(player.getUuid()));
+        var members = new ArrayList<>(old.members());
+        members.add(player.getUuid());
         var next = new PartyStore.Party(old.id(), old.leader(), members);
         store.replace(old, next);
         invites.remove(player.getUuid());
@@ -105,9 +103,9 @@ public final class PartyManager {
     }
     public void leave(ServerPlayerEntity player) throws IOException {
         var old = member(player);
-        var members = new LinkedHashMap<>(old.members()); members.remove(player.getUuid());
+        var members = new ArrayList<>(old.members()); members.remove(player.getUuid());
         UUID nextLeader = old.leader().equals(player.getUuid()) && !members.isEmpty()
-                ? members.keySet().iterator().next() : old.leader();
+                ? members.getFirst() : old.leader();
         var next = members.isEmpty() ? null : new PartyStore.Party(old.id(), nextLeader, members);
         store.replace(old, next);
         expireInvites();
@@ -117,7 +115,7 @@ public final class PartyManager {
     public void kick(ServerPlayerEntity player, String targetName) throws IOException {
         var old = leader(player); UUID target = findMember(old, targetName);
         require(!target.equals(player.getUuid()), "Use /party leave to leave your own party.");
-        var members = new LinkedHashMap<>(old.members()); members.remove(target);
+        var members = new ArrayList<>(old.members()); members.remove(target);
         var next = new PartyStore.Party(old.id(), old.leader(), members);
         store.replace(old, next);
         var online = server.getPlayerManager().getPlayer(target);
@@ -141,7 +139,7 @@ public final class PartyManager {
             tell(player, "You are not in a party. /party create | invite <player> | accept [leader] | decline [leader]");
         } else {
             tell(player, "Party (" + party.members().size() + "/32), leader: " + name(party.leader()));
-            for (UUID member : party.members().keySet()) tell(player, name(member)
+            for (UUID member : party.members()) tell(player, name(member)
                     + (member.equals(party.leader()) ? " [leader]" : "")
                     + (server.getPlayerManager().getPlayer(member) == null ? " (offline)" : " (online)"));
             tell(player, "/party leave | invite <player> | kick <member> | transfer <member> | disband");
@@ -152,10 +150,10 @@ public final class PartyManager {
     }
     public List<String> memberNames(ServerPlayerEntity player) {
         var party = party(player.getUuid());
-        return party == null ? List.of() : party.members().keySet().stream().map(this::name).toList();
+        return party == null ? List.of() : party.members().stream().map(this::name).toList();
     }
     private UUID findMember(PartyStore.Party party, String target) {
-        return party.members().keySet().stream().filter(id -> target.equalsIgnoreCase(name(id))).findFirst()
+        return party.members().stream().filter(id -> target.equalsIgnoreCase(id.toString()) || target.equalsIgnoreCase(name(id))).findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("That player is not in your party."));
     }
     private PartyStore.Party member(ServerPlayerEntity player) {
@@ -167,7 +165,7 @@ public final class PartyManager {
     private static void require(boolean condition, String message) { if (!condition) throw new IllegalArgumentException(message); }
     private static void tell(ServerPlayerEntity player, String message) { player.sendMessage(Text.literal(message), false); }
     private void announce(PartyStore.Party party, String message) {
-        for (UUID id : party.members().keySet()) {
+        for (UUID id : party.members()) {
             var player = server.getPlayerManager().getPlayer(id); if (player != null) tell(player, message);
         }
     }

@@ -28,11 +28,13 @@ import net.minecraft.world.level.LevelInfo;
  */
 public final class IntegratedFixtureHost implements ClientModInitializer {
     private static final String WORLDGEN_SEED = System.getProperty("ew.fixture.worldgenSeed");
+    private static final String WORLD_NAME = System.getProperty("ew.fixture.world");
+    private static final boolean RESUME = Boolean.getBoolean("ew.fixture.resume");
     private int ticks, left;
     private boolean started, joined, done;
     public void onInitializeClient() {
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
-            if (WORLDGEN_SEED != null) return;
+            if (WORLDGEN_SEED != null || RESUME) return;
             var world = server.getOverworld();
             for (int x = -48; x <= 80; x++) for (int z = -24; z <= 48; z++) for (int y = 96; y <= 180; y++) {
                 BlockPos pos = new BlockPos(x, y, z);
@@ -51,8 +53,17 @@ public final class IntegratedFixtureHost implements ClientModInitializer {
         String receipt = System.getProperty("ew.fixture.receipt", "NATURE");
         if (!started) {
             started = true; c.options.pauseOnLostFocus = false;
+            var loader = c.createIntegratedServerLoader();
+            String name = WORLD_NAME == null ? "fixture-host-" + System.currentTimeMillis() : "fixture-host-" + WORLD_NAME;
+            if (RESUME) {
+                loader.start(name, c::scheduleStop);
+                return;
+            }
+            if (WORLD_NAME != null && Files.exists(c.runDirectory.toPath().resolve("saves").resolve(name))) {
+                throw new IllegalStateException("Choose a new disposable fixture world name: " + name);
+            }
             boolean worldgen = WORLDGEN_SEED != null;
-            c.createIntegratedServerLoader().createAndStart("fixture-host-" + System.currentTimeMillis(),
+            loader.createAndStart(name,
                     // Survival, as on the test server: a Creative attacker would damage invulnerable targets.
                     new LevelInfo("Server fixture host", GameMode.SURVIVAL, false, Difficulty.NORMAL, true,
                             new GameRules(FeatureFlags.DEFAULT_ENABLED_FEATURES), DataConfiguration.SAFE_MODE),

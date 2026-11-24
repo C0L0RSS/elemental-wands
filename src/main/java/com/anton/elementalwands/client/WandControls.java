@@ -260,16 +260,16 @@ public final class WandControls {
     /** Client-side repeat gate mirroring the server's per-spell cooldown check. */
     private static boolean spellReady(MinecraftClient client, WandSpells.Spell spell) {
         long now = client.world.getTime();
-        var data = client.player.getMainHandStack().getOrDefault(net.minecraft.component.DataComponentTypes.CUSTOM_DATA,
-                net.minecraft.component.type.NbtComponent.DEFAULT).copyNbt();
-        if (now - data.getLong("ew_last_global").orElse(-1000000000L) < 6) return false;
-        if (spell.id().equals("gathered_mass")) return ClientPlayerData.stoneRemaining(now) <= 0;
-        int duration = data.getInt(AbstractWandItem.durationKey(spell.id()), 0);
-        long elapsed = now - data.getLong(AbstractWandItem.cooldownKey(spell.id())).orElse(-1000000000L);
+        var data = com.anton.elementalwands.util.WandCooldowns.state(client.player);
+        if (com.anton.elementalwands.util.WandCooldowns.globalRemaining(data, now) > 0) return false;
         boolean entangled = ClientPlayerData.getEntangleStacks(client.player.getId()) > 0;
-        if (entangled) elapsed /= 2;
-        if (spell.category() == WandSpells.Category.BASIC && AbstractWandItem.basicSharedRemaining(data, now, entangled) > 0) return false;
-        return elapsed >= duration;
+        if (spell.id().equals("gathered_mass")) {
+            // Gathering uses the global tap and its own pull cadence.
+            return com.anton.elementalwands.util.WandCooldowns.spellRemaining(data, spell.id(), now, 0, entangled) == 0;
+        }
+        if (spell.category() == WandSpells.Category.BASIC
+                && com.anton.elementalwands.util.WandCooldowns.basicRemaining(data, now, entangled) > 0) return false;
+        return com.anton.elementalwands.util.WandCooldowns.spellRemaining(data, spell.id(), now, 0, entangled) == 0;
     }
     public static void open() {
         clear();

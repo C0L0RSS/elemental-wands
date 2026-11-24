@@ -109,6 +109,7 @@ public class UniversalWandItem extends AbstractWandItem {
     public void inventoryTick(ItemStack stack, ServerWorld world, Entity entity, EquipmentSlot slot) {
         super.inventoryTick(stack, world, entity, slot);
         if (!(entity instanceof PlayerEntity player)) return;
+        com.anton.elementalwands.util.WandCooldowns.migrateLegacy(player, stack, world.getTime());
         switch (EWAttachments.getAffinity(player)) {
             case FIRE  -> FireAbilityHandler.inventoryTick(stack, world, entity, slot);
             case WIND  -> WindAbilityHandler.inventoryTick(stack, world, entity, slot);

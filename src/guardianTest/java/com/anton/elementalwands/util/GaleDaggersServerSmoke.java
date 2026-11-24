@@ -46,8 +46,7 @@ public final class GaleDaggersServerSmoke implements ModInitializer {
             WandLoadouts.cast(owner,0);firstLaunch=owner.getEntityWorld().getTime();
             require(prepared()==2 && flying()==1,"Primary did not launch exactly one first dagger");
             require(GaleDaggers.remaining(owner)==240,"Cooldown not 12 seconds from first launch");
-            require(owner.getMainHandStack().getOrDefault(DataComponentTypes.CUSTOM_DATA,NbtComponent.DEFAULT).copyNbt()
-                    .getLong(AbstractWandItem.cooldownKey("sky_shear")).isEmpty(),"Primary also cast Sky Shear");
+            require(WandCooldowns.state(owner).getLong(WandCooldowns.cooldownKey("sky_shear")).isEmpty(),"Primary also cast Sky Shear");
             WandLoadouts.cast(owner,3);require(prepared()==2,"Repeated input duplicated volley");
         }
         if(t==37)require(prepared()==2,"Second dagger fired before three ticks");
@@ -91,7 +90,7 @@ public final class GaleDaggersServerSmoke implements ModInitializer {
         if(t==397){require(GaleDaggers.cast(owner),"Cooldown did not recover at 240 ticks");require(prepared()==3,"Recovered cast did not arm");GaleDaggers.cancel(owner);
             Files.writeString(Path.of("PRESSURE_PASSED.txt"),"Gale Daggers passed: purchase/equip, three prepared entities, deferred cooldown, primary replacement, held-input safety, 3-tick spacing, three 5-damage hits on one target, fresh per-shot aim, Wind XP, range/lifetime, item/affinity/death cleanup, solid cover, allies, fresh-wand cooldown protection and exact 240-tick recovery.\n");s.stop(false);}
     }
-    private void reset(){GaleDaggers.cancel(owner);owner.setAttached(EWAttachments.GALE_LAST_LAUNCH,-1_000_000_000L);owner.setStackInHand(Hand.MAIN_HAND,new ItemStack(ModItems.FRACTURED_WAND));owner.setYaw(0);owner.setPitch(0);target.setHealth(20);target.timeUntilRegen=0;}
+    private void reset(){GaleDaggers.cancel(owner);owner.setAttached(EWAttachments.GALE_LAST_LAUNCH,-1_000_000_000L);owner.removeAttached(EWAttachments.WAND_COOLDOWNS);owner.setStackInHand(Hand.MAIN_HAND,new ItemStack(ModItems.FRACTURED_WAND));owner.setYaw(0);owner.setPitch(0);target.setHealth(20);target.timeUntilRegen=0;}
     private List<GaleDaggerEntity> daggers(){return owner.getEntityWorld().getEntitiesByClass(GaleDaggerEntity.class,new Box(-70,90,-70,70,115,70),e->!e.isRemoved());}
     private long flying(){return daggers().stream().filter(GaleDaggerEntity::fired).count();}
     private long prepared(){return daggers().stream().filter(e->!e.fired()).count();}

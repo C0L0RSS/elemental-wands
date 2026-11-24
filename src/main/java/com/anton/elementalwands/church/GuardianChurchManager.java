@@ -7,6 +7,7 @@ import com.anton.elementalwands.util.SpellBooks;
 import com.anton.elementalwands.registry.*;
 import com.anton.elementalwands.registry.ModSounds;
 import com.google.gson.*;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import java.io.*;
 import java.nio.file.*;
 import java.nio.channels.FileChannel;
@@ -61,16 +62,14 @@ public final class GuardianChurchManager {
         transient int terrainCursor;
         public List<Long> forced=new ArrayList<>();
         transient int cursor;
+        private transient BlockBox bounds;
         public BlockPos anchor() { return new BlockPos(x,y,z); }
         /** Stable identity for the nave fight this church's ritual starts. */
         public String key() { return x+"|"+y+"|"+z; }
         public BlockPos at(int x,int y,int z) { return ChurchLayout.at(anchor(),rotation,new BlockPos(x,y,z)); }
-        boolean contains(BlockPos p) {
-            var q=p.subtract(anchor()).rotate(inverse(rotation));
-            return q.getX()>=ChurchLayout.MIN_X && q.getX()<=ChurchLayout.MAX_X && q.getY()>=ChurchLayout.MIN_Y && q.getY()<=ChurchLayout.MAX_Y && q.getZ()>=ChurchLayout.MIN_Z && q.getZ()<=ChurchLayout.MAX_Z;
-        }
     }
     private static final class State { int version=1; List<Site> sites=new ArrayList<>(); }
+    private static final Long2ObjectOpenHashMap<List<Site>> SITES_BY_CHUNK=new Long2ObjectOpenHashMap<>();
     private static State state;
     private static Path journal;
     private static boolean mutation;
@@ -83,7 +82,9 @@ public final class GuardianChurchManager {
     public static void init() {
         GuardianChurchLocator.init();
         ServerLifecycleEvents.SERVER_STARTED.register(GuardianChurchManager::load);
-        ServerLifecycleEvents.SERVER_STOPPED.register(server -> { state=null; journal=null; error=null; mutation=false; });
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+            SITES_BY_CHUNK.clear();state=null;journal=null;error=null;mutation=false;
+        });
         ServerTickEvents.END_SERVER_TICK.register(GuardianChurchManager::tick);
         PlayerBlockBreakEvents.BEFORE.register((world,player,pos,block,be) -> !protectedBlock(world,pos));
         UseBlockCallback.EVENT.register((player,world,hand,hit) -> {
@@ -116,7 +117,7 @@ public final class GuardianChurchManager {
         });
     }
     private static void load(MinecraftServer server) {
-        state=new State();error=null;
+        SITES_BY_CHUNK.clear();state=new State();error=null;
         journal=server.getSavePath(WorldSavePath.ROOT).resolve("elementalwands/guardian-churches.json");
         try {
             State loaded=Files.exists(journal)?JSON.fromJson(Files.readString(journal),State.class):new State();
@@ -124,6 +125,9 @@ public final class GuardianChurchManager {
             state=loaded;
             for (Site s:state.sites) {
                 if (s.phase==null || s.rotation==null || s.token==null || s.forced==null) throw new IOException("Invalid church site");
+                index(s);
+            }
+            for (Site s:state.sites) {
                 // A restart aborts combat, while an already committed victory finishes restoration.
                 if (s.phase==Phase.ACTIVE) { s.phase=Phase.RUINED; s.stocked=false; s.token=UUID.randomUUID().toString(); }
                 if (s.phase==Phase.BUILDING || s.phase==Phase.RESTORING) force(server.getOverworld(),s);
@@ -142,7 +146,7 @@ public final class GuardianChurchManager {
         } catch (IOException e) { error=e.getMessage();LOG.error("Could not save church state",e);return false; }
     }
     public static void discover(ServerWorld world,BlockPos pos,BlockState block) {
-        if (error!=null || state==null || world.getRegistryKey()!=World.OVERWORLD || state.sites.stream().anyMatch(s -> s.contains(pos))) return;
+        if (error!=null || state==null || world.getRegistryKey()!=World.OVERWORLD || siteAt(world,pos)!=null) return;
         Site s=new Site();s.x=pos.getX();s.y=pos.getY();s.z=pos.getZ();s.phase=Phase.RUINED;
         s.rotation=switch(block.get(Properties.HORIZONTAL_FACING)) { case EAST -> BlockRotation.CLOCKWISE_90;case SOUTH -> BlockRotation.CLOCKWISE_180;case WEST -> BlockRotation.COUNTERCLOCKWISE_90;default -> BlockRotation.NONE; };
         if(world.getBlockEntity(pos) instanceof GuardianSocketEntity socket && socket.layoutVersion>=2) {
@@ -150,11 +154,22 @@ public final class GuardianChurchManager {
             var origin=pos.add(new BlockPos(0,0,6).rotate(s.rotation));
             s.x=origin.getX();s.z=origin.getZ();
         }
-        state.sites.add(s);save();
+        state.sites.add(s);index(s);save();
+    }
+    private static void index(Site site) {
+        // A quarter turn keeps the footprint axis-aligned. The two rotated corners still span it.
+        var first=site.at(ChurchLayout.MIN_X,ChurchLayout.MIN_Y,ChurchLayout.MIN_Z);
+        var last=site.at(ChurchLayout.MAX_X,ChurchLayout.MAX_Y,ChurchLayout.MAX_Z);
+        var bounds=site.bounds=BlockBox.create(first,last);
+        for (int x=bounds.getMinX()>>4;x<=bounds.getMaxX()>>4;x++)
+            for (int z=bounds.getMinZ()>>4;z<=bounds.getMaxZ()>>4;z++)
+                SITES_BY_CHUNK.computeIfAbsent(ChunkPos.toLong(x,z),key -> new ArrayList<>()).add(site);
     }
     private static Site siteAt(World world,BlockPos pos) {
-        if (state==null || world.getRegistryKey()!=World.OVERWORLD) return null;
-        for (Site s:state.sites) if (s.contains(pos)) return s;
+        if (world.getRegistryKey()!=World.OVERWORLD) return null;
+        var candidates=SITES_BY_CHUNK.get(ChunkPos.toLong(pos));
+        if (candidates==null) return null;
+        for (Site s:candidates) if (s.bounds.contains(pos)) return s;
         return null;
     }
     /** A ruined wall or patch of floor may have become solid while its visitors were in the nave. */
@@ -179,9 +194,11 @@ public final class GuardianChurchManager {
     }
     public static boolean protectedBlock(World world,BlockPos pos) {
         if (mutation) return false;
-        if (world.getBlockState(pos).isOf(ModBlocks.GUARDIAN_SOCKET)) return true;
+        // Newly generated sockets are protected even before discovery and after restoration.
+        BlockState block=world.getBlockState(pos);
+        if (block.isOf(ModBlocks.GUARDIAN_SOCKET)) return true;
         Site s=siteAt(world,pos);
-        return s!=null && s.phase!=Phase.RESTORED && !vegetation(world.getBlockState(pos));
+        return s!=null && s.phase!=Phase.RESTORED && !vegetation(block);
     }
     private static boolean vegetation(BlockState block) {
         return block.isIn(net.minecraft.registry.tag.BlockTags.LOGS) || block.isIn(net.minecraft.registry.tag.BlockTags.LEAVES)
@@ -491,6 +508,7 @@ public final class GuardianChurchManager {
         }
         if (!world.getEntitiesByClass(net.minecraft.entity.LivingEntity.class,new Box(Vec3d.of(s.at(-16,-5,-10)),Vec3d.of(s.at(17,31,43))),e -> true).isEmpty()) return "Move players and animals out of the proposed build area first.";
         state.sites.add(s);if(!save()) {state.sites.remove(s);return "Could not save placement; nothing was built.";}
+        index(s);
         force(world,s);return "Building a ruined church nearby. Socket: "+coords(s.socket())+". Allow a few seconds; /ew guardian church locate reports this site.";
     }
     private static boolean natural(BlockState b) {

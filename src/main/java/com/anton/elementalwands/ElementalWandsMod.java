@@ -145,6 +145,8 @@ public class ElementalWandsMod implements ModInitializer {
             ServerPlayerEntity player = handler.getPlayer();
             server.execute(() -> {
                 com.anton.elementalwands.util.WandGuide.removeLegacyBooks(player.getInventory());
+                com.anton.elementalwands.util.WandCooldowns.migrateInventory(player, ItemStack.EMPTY);
+                if (playerHasWand(player)) player.setAttached(EWAttachments.STARTER_WAND_ISSUED, true);
                 ModNetworking.syncPlayerData(player);
                 EntangleTracker.syncPlayer(player);
                 ModNetworking.welcomeIfNeeded(player);
@@ -314,9 +316,10 @@ public class ElementalWandsMod implements ModInitializer {
         player.setAttached(EWAttachments.AFFINITY, newAffinity.name());
         com.anton.elementalwands.util.WandProgression.migrate(player);
 
-        // Give the player a wand if they don't already have one anywhere in inventory
-        if (!playerHasWand(player)) {
-            player.getInventory().insertStack(new ItemStack(ModItems.FRACTURED_WAND));
+        if (!player.getAttachedOrElse(EWAttachments.STARTER_WAND_ISSUED, false)) {
+            if (playerHasWand(player) || player.getInventory().insertStack(new ItemStack(ModItems.FRACTURED_WAND))) {
+                player.setAttached(EWAttachments.STARTER_WAND_ISSUED, true);
+            }
         }
 
         refreshProgression(player);

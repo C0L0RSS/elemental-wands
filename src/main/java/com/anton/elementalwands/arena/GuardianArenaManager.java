@@ -275,11 +275,15 @@ public final class GuardianArenaManager {
      * this is an ordinary block write.
      */
     public static boolean setTemporarySpellBlock(ServerWorld world, BlockPos pos, BlockState state) {
-        if (!ShatteredNave.keepsTerrain(world)) return world.setBlockState(pos, state, Block.NOTIFY_ALL);
+        return setTemporarySpellBlock(world, pos, state, Block.NOTIFY_ALL);
+    }
+
+    public static boolean setTemporarySpellBlock(ServerWorld world, BlockPos pos, BlockState state, int flags) {
+        if (!ShatteredNave.keepsTerrain(world)) return world.setBlockState(pos, state, flags);
         if (protectedBlock(world, pos) && (state.isAir() || !fightFloor(pos))) return false;
         SpellWrite previous = spellWrite;
         spellWrite = new SpellWrite(world, pos.toImmutable(), state);
-        try { return world.setBlockState(pos, state, Block.NOTIFY_ALL); }
+        try { return world.setBlockState(pos, state, flags); }
         finally { spellWrite = previous; }
     }
 

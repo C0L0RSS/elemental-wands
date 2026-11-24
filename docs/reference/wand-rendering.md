@@ -55,11 +55,10 @@ tracking clients; do not color every remote wand using the local player's state.
 Unheld world items are neutral quartz. GUI holder fallback and per-draw immutable
 state must not leak colors between successive items.
 
-Wand stacks carry cooldowns, ultimate charge and Waylay Dash recharge in custom
-data, and the dash recharge rewrites it every tick. `AbstractWandItem` turns off
-Fabric's component-update equip animation so the held wand stays still while
-that data changes. Without it the wand keeps dipping out of view until the
-recharge ends.
+Wand stacks carry ultimate charge in custom data. Spell cooldowns and Waylay
+Dash recharge are synchronized from the holder. `AbstractWandItem` suppresses
+Fabric's component-update equip animation so a charge update keeps the held
+wand steady.
 
 The old flat wand sprite remains a particle/fallback asset. The three new wand
 textures are separate from the established spell/HUD PNG count contract.

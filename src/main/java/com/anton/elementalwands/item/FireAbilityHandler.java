@@ -254,10 +254,8 @@ public final class FireAbilityHandler {
                             && distForward <= currentDistance + WAVE_FRONT_DEPTH
                             && Math.abs(side) <= WAVE_HALF_WIDTH
                             && path.covers(currentDistance, target.getEntityPos(), side)) {
-                        boolean damaged = com.anton.elementalwands.util.SpellCombat.damage(target, sw, sw.getDamageSources().playerAttack(caster), 6.0f, caster, com.anton.elementalwands.data.WizardAffinity.FIRE);
-                        if (damaged) {
-                            AbstractWandItem.onWandDamageDealt(caster, 6.0f, com.anton.elementalwands.data.WizardAffinity.FIRE);
-                        }
+                        com.anton.elementalwands.util.SpellCombat.damageAndReward(target, sw,
+                                sw.getDamageSources().playerAttack(caster), 6.0f, caster, com.anton.elementalwands.data.WizardAffinity.FIRE);
                         com.anton.elementalwands.util.SpellCombat.ignite(target,caster,5);
                         hitTargets.add(target.getUuid());
                         BlockFireEvents.send(sw, BlockFireEvents.PYRE_HIT,

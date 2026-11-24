@@ -4,6 +4,14 @@ import com.anton.elementalwands.client.wand.WandMesh;
 import com.anton.elementalwands.entity.ThornLashEntity;
 import com.anton.elementalwands.mixin.ThornbiteProjectionAccessor;
 import com.anton.elementalwands.util.ThornLashRules;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientWorldEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.*;
 import net.minecraft.client.render.command.OrderedRenderCommandQueue;
@@ -22,6 +30,45 @@ public final class ThornbiteVisual {
     // Match the approved seed/flower/root colors in art/nature/workshop/engine.js.
     // Neutral grain keeps the foliage and petals from being darkened by colored block textures.
     private static final RenderLayer GRAIN = RenderLayer.getEntityCutoutNoCull(NatureMeshes.TEXTURE);
+    private static final Int2ObjectOpenHashMap<List<ThornLashEntity>> BITES_BY_HOLDER = new Int2ObjectOpenHashMap<>();
+    private static final Map<ThornLashEntity, Integer> INDEXED_HOLDERS = new IdentityHashMap<>();
+
+    public static void init() {
+        ClientEntityEvents.ENTITY_LOAD.register((entity, world) -> {
+            if (entity instanceof ThornLashEntity lash) track(lash);
+        });
+        ClientEntityEvents.ENTITY_UNLOAD.register((entity, world) -> {
+            if (entity instanceof ThornLashEntity lash) untrack(lash);
+        });
+        ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE.register((client, world) -> clearTracking());
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> clearTracking());
+    }
+
+    /** The spawn and its tracked caster ID can arrive as separate packets. */
+    public static void track(ThornLashEntity lash) {
+        if (lash.isRemoved() || lash.getEntityWorld() != MinecraftClient.getInstance().world) return;
+        int holder = lash.casterEntityId();
+        Integer previous = INDEXED_HOLDERS.get(lash);
+        if (previous != null && previous == holder) return;
+        untrack(lash);
+        if (holder < 0) return;
+        INDEXED_HOLDERS.put(lash, holder);
+        BITES_BY_HOLDER.computeIfAbsent(holder, key -> new ArrayList<>()).add(lash);
+    }
+
+    private static void untrack(ThornLashEntity lash) {
+        Integer holder = INDEXED_HOLDERS.remove(lash);
+        if (holder == null) return;
+        List<ThornLashEntity> bites = BITES_BY_HOLDER.get(holder.intValue());
+        bites.removeIf(candidate -> candidate == lash);
+        if (bites.isEmpty()) BITES_BY_HOLDER.remove(holder.intValue());
+    }
+
+    private static void clearTracking() {
+        INDEXED_HOLDERS.clear();
+        BITES_BY_HOLDER.clear();
+    }
+
     public record Snapshot(Vec3d contact, Vec3d direction, float time, float biteTime, boolean healed) {
         public float retract() { return Math.clamp((time - biteTime - ThornLashRules.BITE_TICKS) / ThornLashRules.RETRACT_TICKS, 0, 1); }
         public float travel() { return Math.clamp(time / Math.max(.01f, biteTime), 0, 1) * (1 - retract()); }
@@ -32,8 +79,13 @@ public final class ThornbiteVisual {
         return new Snapshot(entity.tipPosition(entity.biteTime()), Vec3d.fromPolar(entity.getPitch(), entity.getYaw()), time, entity.biteTime(), entity.healed());
     }
     public static Snapshot forHolder(PlayerEntity player, float delta) {
-        for (var entity : player.getEntityWorld().getEntitiesByClass(ThornLashEntity.class, player.getBoundingBox().expand(10), e -> e.casterEntityId() == player.getId()))
-            if (entity.elapsed(delta) <= entity.biteTime() + ThornLashRules.BITE_TICKS + ThornLashRules.RETRACT_TICKS) return snapshot(entity, delta);
+        var bites = BITES_BY_HOLDER.get(player.getId());
+        if (bites == null || player.getEntityWorld() != MinecraftClient.getInstance().world) return null;
+        Box nearby = player.getBoundingBox().expand(10);
+        for (var entity : bites)
+            if (!entity.isRemoved() && entity.getBoundingBox().intersects(nearby)
+                    && entity.elapsed(delta) <= entity.biteTime() + ThornLashRules.BITE_TICKS + ThornLashRules.RETRACT_TICKS)
+                return snapshot(entity, delta);
         return null;
     }
 

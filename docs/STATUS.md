@@ -122,6 +122,11 @@ Looks and balance that only a person playing can judge.
 
 ### Spells
 
+- Decide which Guardian and Hollow Necromancer attacks a raised shield should
+  block, disable or bypass. [Playtest issue #32](https://github.com/C0L0RSS/elemental-wands/issues/32)
+- Decide what players should earn or work toward after buying an element's
+  spell store. [Progression suggestions in #54](https://github.com/C0L0RSS/elemental-wands/issues/54)
+
 - **Meteor in the boss arenas:** it used to burst on the invisible barrier lid over the
   Hollow Crypt and the Burned Throne Hall (fixed November 15). Check it lands on the floor
   in the Crypt, the Hall, the Shattered Nave and the Storm Summit. Outside the arenas it is

@@ -15,6 +15,7 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.util.math.Vec3d;
 
 import com.anton.elementalwands.entity.VacuumBladeEntity;
+import com.anton.elementalwands.data.EWAttachments;
 import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.util.BlockWindEvents;
 import com.anton.elementalwands.util.ZephyrStrikeManager;
@@ -35,6 +36,8 @@ public final class WindAbilityHandler {
     private static final String NBT_LAST_DASH_TICK = "LastDashTick";
     private static final String NBT_CHAIN_COUNT = "ChainCount";
     private static final String NBT_RECHARGE_TICKS = "RechargeTicks";
+    private static final String NBT_LAST_RECHARGE_TICK = "last_recharge_tick";
+    private static final NbtCompound EMPTY_DASH_STATE = new NbtCompound();
 
     private WindAbilityHandler() {}
 
@@ -54,24 +57,12 @@ public final class WindAbilityHandler {
         return DASH_RECHARGE_TICKS;
     }
 
-    public static int getDashCharges(ItemStack stack) {
-        NbtComponent nbtComponent = stack.getOrDefault(DataComponentTypes.CUSTOM_DATA, NbtComponent.DEFAULT);
-        NbtCompound data = nbtComponent.copyNbt();
-        if (!data.contains(NBT_DASH_CHARGES)) {
-            return DASH_MAX_CHARGES;
-        }
-
-        return clamp(data.getInt(NBT_DASH_CHARGES, DASH_MAX_CHARGES), 0, DASH_MAX_CHARGES);
+    public static int getDashCharges(PlayerEntity player) {
+        return dashCharges(dashData(player));
     }
 
-    public static int getDashRechargeTicks(ItemStack stack) {
-        NbtComponent nbtComponent = stack.getOrDefault(DataComponentTypes.CUSTOM_DATA, NbtComponent.DEFAULT);
-        NbtCompound data = nbtComponent.copyNbt();
-        if (!data.contains(NBT_RECHARGE_TICKS)) {
-            return 0;
-        }
-
-        return clamp(data.getInt(NBT_RECHARGE_TICKS, 0), 0, DASH_RECHARGE_TICKS);
+    public static int getDashRechargeTicks(PlayerEntity player) {
+        return rechargeTicks(dashData(player));
     }
 
     public static void castPrimary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
@@ -95,56 +86,40 @@ public final class WindAbilityHandler {
     }
 
     public static void inventoryTick(ItemStack stack, ServerWorld world, Entity entity, EquipmentSlot slot) {
-        NbtCompound data = getDashData(stack);
-        int charges = data.getInt(NBT_DASH_CHARGES, 0);
-        int rechargeTicks = data.getInt(NBT_RECHARGE_TICKS, 0);
-
-        // Initialize if new
-        if (!data.contains(NBT_DASH_CHARGES)) {
-            charges = DASH_MAX_CHARGES;
-            data.putInt(NBT_DASH_CHARGES, charges);
+        if (!(entity instanceof PlayerEntity player)) return;
+        migrateDash(player, stack, world.getTime());
+        var state = dashData(player);
+        long now = world.getTime();
+        int charges = dashCharges(state);
+        // Vanilla ticks every carried wand. A player recharges only once per tick.
+        if (charges >= DASH_MAX_CHARGES || state.getLong(NBT_LAST_RECHARGE_TICK, -1) == now) return;
+        var data = state.copy();
+        int progress = rechargeTicks(data) + 1;
+        if (progress >= DASH_RECHARGE_TICKS) {
+            charges++;
+            progress = 0;
         }
-
-        // Passive Recharge
-        if (charges < DASH_MAX_CHARGES) {
-            rechargeTicks++;
-            if (rechargeTicks >= DASH_RECHARGE_TICKS) { // 5 seconds
-                charges++;
-                rechargeTicks = 0;
-
-                // Play a subtle sound when a charge returns? Optional found sound.
-                // For now just logic.
-            }
-            data.putInt(NBT_DASH_CHARGES, charges);
-            data.putInt(NBT_RECHARGE_TICKS, rechargeTicks);
-            saveDashData(stack, data);
-        } else if (rechargeTicks > 0) {
-            // Reset ticks if full
-            data.putInt(NBT_RECHARGE_TICKS, 0);
-            saveDashData(stack, data);
-        }
-
+        data.putInt(NBT_DASH_CHARGES, charges);
+        data.putInt(NBT_RECHARGE_TICKS, progress);
+        data.putLong(NBT_LAST_RECHARGE_TICK, now);
+        player.setAttached(EWAttachments.WAYLAY_DASH, data);
     }
 
     public static void castSecondary(ServerWorld world, PlayerEntity caster, ItemStack stack) {
-        // Get or initialize dash data
         // Disable Waylay Dash during Zephyr Strike
         if (ZephyrStrikeManager.isActive(caster)) {
             return;
         }
 
-        NbtCompound data = getDashData(stack);
-
-        int charges = data.getInt(NBT_DASH_CHARGES, 0);
+        long currentTick = world.getTime();
+        for (int i = 0; i < caster.getInventory().size(); i++) {
+            migrateDash(caster, caster.getInventory().getStack(i), currentTick);
+        }
+        migrateDash(caster, stack, currentTick);
+        NbtCompound data = dashData(caster).copy();
+        int charges = dashCharges(data);
         long lastDashTick = data.getLong(NBT_LAST_DASH_TICK, 0L);
         int chainCount = data.getInt(NBT_CHAIN_COUNT, 0);
-        long currentTick = world.getTime();
-
-        // Initialize charges if first use
-        if (!data.contains(NBT_DASH_CHARGES)) {
-            charges = DASH_MAX_CHARGES;
-            data.putInt(NBT_DASH_CHARGES, charges);
-        }
 
         // Check if we have charges
         if (charges <= 0) {
@@ -185,7 +160,7 @@ public final class WindAbilityHandler {
         data.putInt(NBT_DASH_CHARGES, charges);
         data.putLong(NBT_LAST_DASH_TICK, currentTick);
         data.putInt(NBT_CHAIN_COUNT, chainCount);
-        saveDashData(stack, data);
+        caster.setAttached(EWAttachments.WAYLAY_DASH, data);
 
         // Sound and particles (more intense with chains)
         float pitch = 1.0f + (chainCount * 0.1f);
@@ -226,16 +201,45 @@ public final class WindAbilityHandler {
         BlockWindEvents.send(world, BlockWindEvents.ZEPHYR_LAUNCH, caster.getId(), caster.getEntityPos(), look, 0);
     }
 
-    private static NbtCompound getDashData(ItemStack stack) {
-        NbtComponent nbtComponent = stack.getOrDefault(DataComponentTypes.CUSTOM_DATA, NbtComponent.DEFAULT);
-        return nbtComponent.copyNbt();
+    private static NbtCompound dashData(PlayerEntity player) {
+        return player.getAttachedOrElse(EWAttachments.WAYLAY_DASH, EMPTY_DASH_STATE);
     }
 
-    private static int clamp(int value, int min, int max) {
-        return Math.max(min, Math.min(max, value));
+    private static int dashCharges(NbtCompound data) {
+        return Math.clamp(data.getInt(NBT_DASH_CHARGES, DASH_MAX_CHARGES), 0, DASH_MAX_CHARGES);
     }
 
-    private static void saveDashData(ItemStack stack, NbtCompound data) {
-        stack.set(DataComponentTypes.CUSTOM_DATA, NbtComponent.of(data));
+    private static int rechargeTicks(NbtCompound data) {
+        return Math.clamp(data.getInt(NBT_RECHARGE_TICKS, 0), 0, DASH_RECHARGE_TICKS - 1);
+    }
+
+    private static int ticksToFull(NbtCompound data) {
+        return Math.max(0, (DASH_MAX_CHARGES - dashCharges(data)) * DASH_RECHARGE_TICKS - rechargeTicks(data));
+    }
+
+    private static void migrateDash(PlayerEntity player, ItemStack stack, long now) {
+        if (!(stack.getItem() instanceof AbstractWandItem)) return;
+        var component = stack.get(DataComponentTypes.CUSTOM_DATA);
+        if (component == null) return;
+        var legacy = component.copyNbt();
+        if (!legacy.contains(NBT_DASH_CHARGES)) return;
+        var prior = dashData(player);
+        var merged = prior.copy();
+        if (ticksToFull(legacy) > ticksToFull(prior)) {
+            merged.putInt(NBT_DASH_CHARGES, dashCharges(legacy));
+            merged.putInt(NBT_RECHARGE_TICKS, rechargeTicks(legacy));
+        }
+        long legacyCast = legacy.getLong(NBT_LAST_DASH_TICK, 0);
+        if (legacyCast <= now && legacyCast > prior.getLong(NBT_LAST_DASH_TICK, 0)) {
+            merged.putLong(NBT_LAST_DASH_TICK, legacyCast);
+            merged.putInt(NBT_CHAIN_COUNT, legacy.getInt(NBT_CHAIN_COUNT, 0));
+        }
+        if (!merged.equals(prior)) player.setAttached(EWAttachments.WAYLAY_DASH, merged);
+        NbtComponent.set(DataComponentTypes.CUSTOM_DATA, stack, data -> {
+            data.remove(NBT_DASH_CHARGES);
+            data.remove(NBT_RECHARGE_TICKS);
+            data.remove(NBT_LAST_DASH_TICK);
+            data.remove(NBT_CHAIN_COUNT);
+        });
     }
 }

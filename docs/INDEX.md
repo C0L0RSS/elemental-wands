@@ -47,12 +47,12 @@ its row in the same task. Use backticks here only for files, folders and classes
 | Feature | Owners | Reference |
 | --- | --- | --- |
 | Cast dispatch: which code a slot press runs | `util/WandLoadouts` (its cast method sends many spells straight to their manager and the rest to the element handler) | [Progression](reference/progression-and-controls.md#implementation-boundaries) |
-| Wand item, shared cooldowns and ultimate charge, the fractured beam (no affinity) | `item/UniversalWandItem`, `item/AbstractWandItem` | [Spells](reference/spells.md#shared-rules) |
+| Wand item, player cooldowns, ultimate charge and the fractured beam (no affinity) | `item/UniversalWandItem`, `item/AbstractWandItem`, `util/WandCooldowns` | [Spells](reference/spells.md#shared-rules) |
 | Spell catalog: names, saved IDs, prices, categories, and the cooldown and reach text the hub shows (written by hand there, so change it with the spell) | `data/WandSpells` | [Progression](reference/progression-and-controls.md) |
 | Affinity and saved player state | `data/WizardAffinity`, `data/EWAttachments`, `data/ElementProgress` | [Progression](reference/progression-and-controls.md) |
 | Loadouts, clearing a slot, combat and cinematic cast locks | `util/WandLoadouts`, `data/WandSpells` | [Progression](reference/progression-and-controls.md) |
 | Flux, purchases, levels, XP, spell books | `util/WandProgression`, `data/ElementLevels`, `util/SpellBooks`, `item/SpellBookItem` | [Progression](reference/progression-and-controls.md) |
-| Damage attribution and XP from hits | `util/SpellCombat` | [Spells](reference/spells.md#shared-rules) |
+| Damage attribution, Flux, hit-based charge and XP | `util/SpellCombat` | [Spells](reference/spells.md#shared-rules) |
 | Key bindings and held input | `client/WandControls`, `mixin/WandKeyboardMixin`, `mixin/WandMouseMixin` | [Progression](reference/progression-and-controls.md) |
 | Wand hub screen (store, loadout, guide, controls) and the first-join welcome | `client/screen/WandHubScreen`, `client/WandWelcome` | [Progression](reference/progression-and-controls.md) |
 | Spell HUD and its position editor | `client/overlay/WandHudOverlay`, `client/WandHudLayout`, `client/screen/WandHudEditScreen`, `client/SpellIcons` | [Progression](reference/progression-and-controls.md) |
@@ -61,7 +61,7 @@ its row in the same task. Use backticks here only for files, folders and classes
 | Parties and ally protection | `party/PartyManager`, `PartyStore`, `WandAllies`, `WandExplosionBehavior`, `command/PartyCommands` | [Progression](reference/progression-and-controls.md#parties) |
 | A party side by side at a boss's arrival and on the way home | `party/PartyLine`; used by `crypt/HollowCryptManager`, `hall/PyreGate`, `hall/PyreHallManager`, `summit/StormAerie` (the summit's own line is `summit/StormSummit`, the nave's `arena/GuardianArenaManager`) | [Progression](reference/progression-and-controls.md#parties) |
 | 3D wand model and glass core | `client/wand/WandMesh`, `WandRenderer`, `WandItemModel`; source `art/wand/design.json`, exporter `tools/prepare_wand_assets.py` | [Wand rendering](reference/wand-rendering.md) |
-| Temporary blocks and their restoration | `util/TemporaryBlockManager` | [Spells](reference/spells.md#shared-rules) |
+| Temporary blocks, chunk ownership and restart recovery | `util/TemporaryBlockManager`, `util/TemporaryTerrain`, `mixin/TemporaryTerrainChunkMixin` | [Spells](reference/spells.md#shared-rules) |
 | Cast effects from the wand tip; first-person fade | `util/SpellCastVisuals`, `client/renderer/SpellViewClearance` | [Spells](reference/spells.md#shared-rules) |
 | Aim raycasts, beam particles, and boss-realm terrain checks shared by spells | `util/WandUtils` | [Spells](reference/spells.md#shared-rules) |
 | Spell regeneration, burn damage credit, fire from wand explosions | `util/SpellBuffs`, `mixin/SpellRegenerationMixin`, `mixin/SpellBurnDamageMixin`, `mixin/WandExplosionFireMixin` | [Spells](reference/spells.md#shared-rules) |
@@ -86,7 +86,7 @@ not in its manager, look in the handler and in `util/WandLoadouts`.
 | Dragon's Pyre (dragons_pyre) | `item/FireAbilityHandler`, `util/PyreWaveRules` (the ground path, shared with the client), `entity/PyreFrontEntity`, `block/PyreFlameBlock`, `block/PyreCoalsBlock`, `client/blockfire/PyreFx` | [Spells](reference/spells.md#fire) |
 | Meteor | `util/MeteorManager`, `client/renderer/FireMeteorRenderer`, `client/blockfire/MeteorFx` | [Spells](reference/spells.md#fire) |
 | Flamethrower (heat and overheat) | `util/FireBuildManager`, `FireBuildRules`, `client/blockfire/FlameFx` | [Spells](reference/spells.md#fire) |
-| Fire Leap (fire_hop) | `util/FireLeapManager`, `FireLeapRules`, `client/FireLeapClient`, `client/FireLeapPreview`, `mixin/FireLeapFallMixin`, `mixin/FireLeapMotionMixin`, `client/blockfire/LeapFx` | [Spells](reference/spells.md#fire) |
+| Fire Leap (fire_hop) | `util/FireLeapManager`, `FireLeapRules`, `client/FireLeapClient`, `client/FireLeapPreview`, `mixin/FireLeapTerrainMixin`, `mixin/FireLeapFallMixin`, `mixin/FireLeapMotionMixin`, `client/blockfire/LeapFx` | [Spells](reference/spells.md#fire) |
 | Flashover | `util/FlashoverManager`, `FlashoverRules`, `entity/FlashoverEmberEntity`, `client/blockfire/EmberFx` | [Spells](reference/spells.md#fire) |
 | Block-fire visuals shared by all Fire spells | `client/blockfire/BlockFireEffects`, `BlockFireKit`, `BlockFireMesh`, `util/BlockFireEvents`; study in `art/fire/blockfire/` | [Spells](reference/spells.md#fire), [Art](reference/art-and-assets.md) |
 
@@ -116,7 +116,7 @@ not in its manager, look in the handler and in `util/WandLoadouts`.
 | Spell | Owners | Reference |
 | --- | --- | --- |
 | Seed and the mark it leaves | `item/NatureAbilityHandler`, `entity/SeedProjectileEntity`, `util/NatureCombat`, `client/renderer/NatureSeedRenderer`, `client/SeedMarkClientEffects` | [Spells](reference/spells.md#nature) |
-| Thornbite (thorn_lash) | `item/NatureAbilityHandler`, `entity/ThornLashEntity`, `util/ThornLashRules`, `client/renderer/ThornLashRenderer`, `ThornbiteVisual` | [Spells](reference/spells.md#nature) |
+| Thornbite (thorn_lash) | `item/NatureAbilityHandler`, `entity/ThornLashEntity`, `util/ThornLashRules`, `client/renderer/ThornLashRenderer`, `ThornbiteVisual`, `mixin/ThornbiteTrackingMixin` | [Spells](reference/spells.md#nature) |
 | Sentry Bloom flowers (tendril_bloom): throwing, shooting, collecting, breaking | `item/NatureAbilityHandler`, `util/FlowerTurretManager`, `util/WandLoadouts` (routes the break and collect clicks), `entity/SentryBloomEntity`, `entity/SentryBloomPodEntity`, `block/NatureSeedlingBlock`, `registry/ModSpellBlocks` (the stem block's settings), `client/renderer/SentryBloomRenderer`, `SentryBloomPodRenderer` | [Spells](reference/spells.md#nature) |
 | Springbloom | `util/SpringbloomManager`, `SpringbloomRules`, `SpringbloomFootprint`, `entity/SpringbloomEntity`, `block/SpringbloomBlock`, `mixin/SpringbloomFallMixin`, `mixin/SpringbloomMovementMixin`, `util/LaunchLiftoff`, `mixin/LaunchLiftoffMixin`, `client/renderer/SpringbloomRenderer` | [Spells](reference/spells.md#nature) |
 | Full Bloom (overgrowth) | `item/NatureAbilityHandler`, `util/FullBloomManager` | [Spells](reference/spells.md#nature) |

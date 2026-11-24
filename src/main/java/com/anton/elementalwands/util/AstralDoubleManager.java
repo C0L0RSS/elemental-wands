@@ -11,7 +11,6 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.*;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileUtil;
-import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -31,11 +30,10 @@ public final class AstralDoubleManager {
     private static final class Cast {
         final ServerPlayerEntity player;
         final ServerWorld world;
-        final ItemStack wand;
         AstralOrbEntity orb;
         AstralDoubleEntity clone;
         long expires;
-        Cast(ServerPlayerEntity p) { player=p; world=p.getEntityWorld(); wand=p.getMainHandStack(); }
+        Cast(ServerPlayerEntity p) { player=p; world=p.getEntityWorld(); }
     }
     public static void init() {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
@@ -107,10 +105,7 @@ public final class AstralDoubleManager {
         if (state(p).getBoolean("active",false)) recover(p,COOLDOWN);
         long remaining=remaining(p);
         if (remaining>0) { AbstractWandItem.sendCooldownActionbar(p,"Astral Double",(int)remaining); return false; }
-        var itemData=p.getMainHandStack().getOrDefault(net.minecraft.component.DataComponentTypes.CUSTOM_DATA,
-                net.minecraft.component.type.NbtComponent.DEFAULT).copyNbt();
-        int itemRecovery=Math.max(1,itemData.getInt(AbstractWandItem.durationKey(ID),0));
-        if (!AbstractWandItem.canStartCooldown(world,p,p.getMainHandStack(),ID,itemRecovery)
+        if (!AbstractWandItem.canStartCooldown(world,p,p.getMainHandStack(),ID,1)
                 || !AbstractWandItem.tryStartCooldown(world,p,p.getMainHandStack(),ID,0)) return false;
         c=new Cast(p); c.orb=new AstralOrbEntity(world,p); CASTS.put(p.getUuid(),c);
         NbtCompound state=new NbtCompound();state.putBoolean("active",true);state.putLong("expires",0);p.setAttached(EWAttachments.ASTRAL_STATE,state);
@@ -139,7 +134,7 @@ public final class AstralDoubleManager {
         if (!CASTS.remove(c.player.getUuid(),c)) return;
         if (c.orb!=null) { poof(c.world,c.orb.getEntityPos()); c.orb.discard(); }
         if (c.clone!=null) { poof(c.world,c.clone.getEntityPos().add(0,1,0)); c.clone.discard(); }
-        AbstractWandItem.startCooldown(c.world,c.wand,ID,recovery,false);
+        AbstractWandItem.startCooldown(c.world,c.player,ID,recovery,false);
         recover(c.player,recovery);
     }
     private static void recover(ServerPlayerEntity p,int duration) {

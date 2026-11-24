@@ -4,11 +4,13 @@ import com.anton.elementalwands.network.ModNetworking;
 import com.anton.elementalwands.util.FireLeapRules;
 import java.util.*;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientWorldEvents;
 import net.fabricmc.fabric.api.client.networking.v1.*;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.MovementType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.World;
 
 /**
  * Flies the local caster along the server-committed arc with ordinary collision, so the camera
@@ -37,24 +39,36 @@ public final class FireLeapClient {
             if(own) { from=payload.from();to=payload.to();duration=ticks;step=0;flyer=client.player; }
         });
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if(client.world==null) { LANDINGS.clear();from=null;return; }
+            if(client.world==null || client.player==null) { clear();return; }
             // Respawn or a dimension change replaces the player object; never carry a leap across it.
             if(client.player!=flyer || !client.player.isAlive()) from=null;
             long now=client.world.getTime();LANDINGS.values().removeIf(landing -> landing.until<now);
         });
-        ClientPlayConnectionEvents.DISCONNECT.register((handler,client) -> { LANDINGS.clear();from=null; });
+        ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE.register((client,world) -> clear());
+        ClientPlayConnectionEvents.DISCONNECT.register((handler,client) -> clear());
     }
     public static boolean active() { return from!=null; }
     private static Vec3d aimPos,aimTarget;
+    private static PlayerEntity aimPlayer;
+    private static World aimWorld;
     private static float aimYaw,aimPitch;
     private static long aimTick=Long.MIN_VALUE;
+
+    private static void clear() {
+        LANDINGS.clear();
+        from=null;flyer=null;
+        aimPlayer=null;aimWorld=null;aimTarget=null;
+    }
+
     /** The current validated landing, or null. Recomputed only when the body, view or tick changes. */
     public static Vec3d aim(PlayerEntity player) {
-        long tick=player.getEntityWorld().getTime();
-        if(tick!=aimTick || !player.getEntityPos().equals(aimPos) || player.getYaw()!=aimYaw || player.getPitch()!=aimPitch) {
+        World world=player.getEntityWorld();
+        long tick=world.getTime();
+        if(player!=aimPlayer || world!=aimWorld || tick!=aimTick || !player.getEntityPos().equals(aimPos) || player.getYaw()!=aimYaw || player.getPitch()!=aimPitch) {
+            aimPlayer=player;aimWorld=world;
             aimTick=tick;aimPos=player.getEntityPos();aimYaw=player.getYaw();aimPitch=player.getPitch();
             Vec3d target=FireLeapRules.target(player);
-            aimTarget=target!=null && FireLeapRules.supported(player.getEntityWorld(),player,aimPos,1.5) ? target : null;
+            aimTarget=target!=null && FireLeapRules.supported(world,player,aimPos,1.5) ? target : null;
         }
         return aimTarget;
     }

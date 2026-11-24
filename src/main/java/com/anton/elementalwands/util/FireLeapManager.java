@@ -115,7 +115,7 @@ public final class FireLeapManager {
             if(distance-half>outer || distance+half<inner || target.getBoundingBox().minY>surface.y+FireLeapRules.WAVE_HEIGHT
                     || target.getBoundingBox().maxY<surface.y) continue;
             hits.add(target.getUuid());float damage=FireLeapRules.damage(distance);
-            if(com.anton.elementalwands.util.SpellCombat.damage(target,world,p.getDamageSources().playerAttack(p),damage,p,com.anton.elementalwands.data.WizardAffinity.FIRE)) AbstractWandItem.onWandDamageDealt(p,damage,1,WizardAffinity.FIRE);
+            SpellCombat.damageAndReward(target, world, p.getDamageSources().playerAttack(p), damage, p, WizardAffinity.FIRE, 1);
         }
         // Clients draw the moving crest from LEAP_LAND with these same surface and cover rules.
     }

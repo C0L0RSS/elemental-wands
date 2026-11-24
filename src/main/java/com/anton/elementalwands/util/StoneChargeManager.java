@@ -205,8 +205,7 @@ public final class StoneChargeManager {
             if(world.raycast(new RaycastContext(origin,target.getBoundingBox().getCenter(),RaycastContext.ShapeType.COLLIDER,
                     RaycastContext.FluidHandling.NONE,p)).getType()!=HitResult.Type.MISS)continue;
             float amount=StoneTechniqueRules.damage(power)*(target==direct?1:(float)(.65-.25*ahead/depth));
-            if(SpellCombat.damage(target,world,p.getDamageSources().playerAttack(p),amount,p,WizardAffinity.STONE)) {
-                AbstractWandItem.onWandDamageDealt(p,amount,WizardAffinity.STONE);
+            if(SpellCombat.damageAndReward(target,world,p.getDamageSources().playerAttack(p),amount,p,WizardAffinity.STONE)) {
                 if(!(target instanceof WandBoss)) {
                     target.addVelocity(direction.x*(.35+power),.12+power*.12,direction.z*(.35+power));target.velocityModified=true;
                 }
@@ -258,7 +257,7 @@ public final class StoneChargeManager {
         return broken;
     }
     private static void cooldown(Run run) {
-        AbstractWandItem.startCooldown(run.world,run.wand,StoneTechniqueRules.CHARGE,StoneTechniqueRules.CHARGE_COOLDOWN,false);
+        AbstractWandItem.startCooldown(run.world,run.player,StoneTechniqueRules.CHARGE,StoneTechniqueRules.CHARGE_COOLDOWN,false);
         READY.put(run.player.getUuid(),run.world.getServer().getTicks()+StoneTechniqueRules.CHARGE_COOLDOWN);
     }
     private static void finish(Run run) {

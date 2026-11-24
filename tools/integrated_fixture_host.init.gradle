@@ -4,14 +4,15 @@
 //   -PfixtureMain=com.anton.elementalwands.entity.NatureBalanceSmokeMod -PfixtureReceipt=NATURE \
 //   -PhubClientAssets="$HOME/.lunarclient/shared/assets"
 // Add -PfixtureWorldgenSeed=<seed> for a normal world with structures and untouched terrain.
-// A fixture that needs the flat test world, a restart or dedicated-server settings still needs
-// its own runner; a pass here is a pass of the fixture's assertions in an ordinary world.
+// A restart fixture can pass -PfixtureWorld=<name> and reopen it with -PfixtureResume.
+// Pass -PfixturePhase=<phase> to select the fixture's own setup or verification phase.
 allprojects {
     plugins.withId('fabric-loom') {
         def smokeRoot=layout.buildDirectory.dir('integrated-fixture-host').get().asFile
         def fixtureMain=project.findProperty('fixtureMain')
         def receipt=project.findProperty('fixtureReceipt') ?: 'NATURE'
         def existingAssets=project.findProperty('hubClientAssets')
+        def fixtureWorld=project.findProperty('fixtureWorld')
         if (existingAssets) {
             loom.runs.client.vmArg('-Dfabric.dli.config='+new File(smokeRoot,'launch.cfg').absolutePath)
         }
@@ -54,6 +55,17 @@ allprojects {
         loom.runs.client.runDir('build/integrated-fixture-host')
         loom.runs.client.vmArg('-Dfabric.addMods='+new File(smokeRoot,'integrated-fixture-host.jar').absolutePath)
         loom.runs.client.vmArg('-Dew.fixture.receipt='+receipt)
+        if (fixtureWorld) {
+            if (!(fixtureWorld ==~ /[a-zA-Z0-9_-]+/)) throw new GradleException('Invalid disposable fixture world name')
+            loom.runs.client.vmArg('-Dew.fixture.world='+fixtureWorld)
+        }
+        if (project.hasProperty('fixtureResume')) {
+            if (!fixtureWorld) throw new GradleException('Pass -PfixtureWorld when resuming a fixture')
+            loom.runs.client.vmArg('-Dew.fixture.resume=true')
+        }
+        if (project.hasProperty('fixturePhase')) {
+            loom.runs.client.vmArg('-Dew.fixture.phase='+project.property('fixturePhase'))
+        }
         if (project.hasProperty('fixtureWorldgenSeed')) {
             loom.runs.client.vmArg('-Dew.fixture.worldgenSeed='+Long.parseLong(project.property('fixtureWorldgenSeed').toString()))
         }

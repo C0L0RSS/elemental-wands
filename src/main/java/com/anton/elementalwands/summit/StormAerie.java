@@ -231,7 +231,7 @@ public final class StormAerie {
         var party = PartyManager.get(world.getServer()).party(ringer.getUuid());
         if (party == null) return group;
         Vec3d at = Vec3d.ofCenter(anchor);
-        for (UUID id : party.members().keySet()) {
+        for (UUID id : party.members()) {
             ServerPlayerEntity p = world.getServer().getPlayerManager().getPlayer(id);
             if (p == null || p == ringer || p.getEntityWorld() != world || p.squaredDistanceTo(at) > RADIUS * RADIUS) continue;
             if (p.isAlive() && !p.isCreative() && !p.isSpectator() && !StormRocEncounter.enrolled(p) && !pending(id) && !elsewhere(p)

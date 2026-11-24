@@ -1,7 +1,6 @@
 package com.anton.elementalwands.entity;
 
 import com.anton.elementalwands.data.WizardAffinity;
-import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.party.WandAllies;
 import com.anton.elementalwands.util.BlockSpaceEvents;
 import com.anton.elementalwands.util.SpellCombat;
@@ -186,9 +185,7 @@ public class HollowPurpleOrbEntity extends ProjectileEntity {
                 continue;
             }
 
-            if (SpellCombat.damage(living, world, source, MASSIVE_DAMAGE, owner, WizardAffinity.SPACE)) {
-                AbstractWandItem.onWandDamageDealt(owner, MASSIVE_DAMAGE, WizardAffinity.SPACE);
-            }
+            SpellCombat.damageAndReward(living, world, source, MASSIVE_DAMAGE, owner, WizardAffinity.SPACE);
             living.velocityModified = true;
             living.fallDistance = 0.0f;
             Vec3d targetCenter = living.getEntityPos().add(0.0, living.getHeight() * 0.5, 0.0);

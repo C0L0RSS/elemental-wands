@@ -14,7 +14,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 
-/** Server authority for loadouts: five free slots, any owned spell in any slot. Swapping never touches wand cooldown/charge NBT. */
+/** Server authority for loadouts: five free slots, any owned spell in any slot. */
 public final class WandLoadouts {
     private static final Map<UUID, Integer> COMBAT_UNTIL = new HashMap<>();
     public static void init() {

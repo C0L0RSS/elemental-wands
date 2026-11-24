@@ -75,7 +75,7 @@ public final class UpdraftServerSmoke implements ModInitializer {
             require(Math.abs(p.getVelocity().z-1.5)<1E-5 && Math.abs(p.getVelocity().y-1.343)<1E-5,"Dash base not 75% or erased lift: "+p.getVelocity());
             WindAbilityHandler.castSecondary(p.getEntityWorld(),p,p.getMainHandStack());
             require(Math.abs(p.getVelocity().z-3.375)<1E-5,"Chain bonus not scaled to 75%: "+p.getVelocity());
-            require(WindAbilityHandler.getDashCharges(p.getMainHandStack())==0,"Charge behavior changed");
+            require(WindAbilityHandler.getDashCharges(p)==0,"Charge behavior changed");
         }
         if(t==204){require(GaleDaggers.fire(p),"Could not fire after Updraft/dash");p.setAttached(EWAttachments.AFFINITY,"FIRE");require(!UpdraftManager.protectedFall(p),"Affinity exit retained protection");}
         if(t==208){reset();require(UpdraftManager.cast(p),"Death setup failed");p.setHealth(0);require(!UpdraftManager.protectedFall(p),"Death retained protection");}
@@ -101,7 +101,7 @@ public final class UpdraftServerSmoke implements ModInitializer {
             Files.writeString(Path.of("PRESSURE_PASSED.txt"),"Updraft server passed: purchase/fifth slot, deliberate input, midair launch and preserved X/Z, ~10-block arc, cooldown starts immediately and lasts exactly 160 ticks, fresh-wand protection, combat damage, safe first landing then ordinary fall damage, ceiling collision, dagger/dash combo, 75% base and chain impulses, protection through the launch packet race until a real move packet lifts off (steps and jumps do not count), unlifted-launch timeout, ground/death/affinity/world cleanup. Native client physics checked separately.\n");s.stop(false);
         }
     }
-    private void reset(){UpdraftManager.finish(p);GaleDaggers.cancel(p);p.setHealth(20);p.setAttached(EWAttachments.AFFINITY,"WIND");p.setAttached(EWAttachments.UPDRAFT_LAST_CAST,-1_000_000_000L);p.setStackInHand(Hand.MAIN_HAND,new ItemStack(ModItems.FRACTURED_WAND));p.setPosition(.5,100,.5);p.setVelocity(Vec3d.ZERO);p.setOnGround(false);}
+    private void reset(){UpdraftManager.finish(p);GaleDaggers.cancel(p);p.setHealth(20);p.setAttached(EWAttachments.AFFINITY,"WIND");p.setAttached(EWAttachments.UPDRAFT_LAST_CAST,-1_000_000_000L);p.removeAttached(EWAttachments.WAND_COOLDOWNS);p.setStackInHand(Hand.MAIN_HAND,new ItemStack(ModItems.FRACTURED_WAND));p.setPosition(.5,100,.5);p.setVelocity(Vec3d.ZERO);p.setOnGround(false);}
     /** A client move packet through the real network handler, as if it came from the player's game. */
     private static void packet(ServerPlayerEntity p,double y,boolean ground){
         p.networkHandler.syncWithPlayerPosition();

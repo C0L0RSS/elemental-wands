@@ -9,7 +9,6 @@ import com.anton.elementalwands.registry.*;
 import com.anton.elementalwands.registry.ModSounds;
 import java.util.*;
 import net.minecraft.block.*;
-import net.minecraft.block.enums.DoubleBlockHalf;
 import net.fabricmc.fabric.api.event.lifecycle.v1.*;
 import net.minecraft.network.packet.s2c.play.EntityVelocityUpdateS2CPacket;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -23,7 +22,7 @@ import net.minecraft.world.RaycastContext;
 /** Server owns casts, pad lifetime, landing qualification and damage protection. */
 public final class SpringbloomManager {
     private record Pad(ServerWorld world, BlockPos pos, UUID owner, long expires,
-                       TemporaryBlockManager.TemporaryPlacement placement, SpringbloomEntity visual, BlockState covered, BlockState upper) {}
+                       TemporaryBlockManager.TemporaryPlacement placement, SpringbloomEntity visual) {}
     private static final class Flight {
         final ServerPlayerEntity player;
         final ServerWorld world;
@@ -45,14 +44,15 @@ public final class SpringbloomManager {
                 int cells=openCells(pad.world,pad.pos);
                 if (pad.world.getTime()>=pad.expires || owner==null || !owner.isAlive() || owner.getEntityWorld()!=pad.world
                         || EWAttachments.getAffinity(owner)!=WizardAffinity.NATURE || !GuardianArenaManager.canCast(owner)
-                        || !pad.world.getBlockState(pad.pos).isOf(ModSpellBlocks.SPRINGBLOOM)
+                        || !TemporaryBlockManager.owns(pad.world,pad.placement,pad.pos)
                         || !supported(pad.world,pad.pos) || (cells&SpringbloomFootprint.CENTER)==0) {
                     restore(pad);
                     BlockNatureEvents.send(pad.world,BlockNatureEvents.SPRING_END,Vec3d.ofBottomCenter(pad.pos)); iterator.remove();
                 } else {
                     var state=pad.world.getBlockState(pad.pos);
                     if(state.get(SpringbloomBlock.OPEN_CELLS)!=cells)
-                        pad.world.setBlockState(pad.pos,state.with(SpringbloomBlock.OPEN_CELLS,cells),Block.NOTIFY_LISTENERS);
+                        TemporaryBlockManager.updateTemporaryBlock(pad.world,pad.placement,pad.pos,
+                                state.with(SpringbloomBlock.OPEN_CELLS,cells),Block.NOTIFY_LISTENERS);
                 }
             }
             FLIGHTS.entrySet().removeIf(entry -> {
@@ -131,11 +131,6 @@ public final class SpringbloomManager {
     private static void restore(Pad pad) {
         pad.visual.discard();
         TemporaryBlockManager.restoreTemporaryBlocks(pad.world,pad.placement);
-        // The lower half is restored by the shared tracker first. Never overwrite later edits.
-        if(pad.upper!=null && pad.world.getBlockState(pad.pos).equals(pad.covered)
-                && pad.world.getBlockState(pad.pos.up()).isAir() && !TemporaryBlockManager.isTracked(pad.world,pad.pos.up())
-                && pad.covered.canPlaceAt(pad.world,pad.pos))
-            GuardianArenaManager.setTemporarySpellBlock(pad.world,pad.pos.up(),pad.upper);
     }
     public static boolean plant(ServerPlayerEntity owner,BlockPos pos) {
         var world=owner.getEntityWorld();
@@ -143,27 +138,15 @@ public final class SpringbloomManager {
                 || TemporaryBlockManager.isTracked(world,pos) || world.getBlockState(pos).isOf(ModSpellBlocks.SPRINGBLOOM))return false;
         int cells=openCells(world,pos);
         if((cells&SpringbloomFootprint.CENTER)==0)return false;
-        BlockState covered=world.getBlockState(pos), upper=null;
-        if(covered.getBlock() instanceof TallPlantBlock && covered.get(TallPlantBlock.HALF)==DoubleBlockHalf.LOWER) {
-            var above=world.getBlockState(pos.up());
-            if(!above.isOf(covered.getBlock()) || above.get(TallPlantBlock.HALF)!=DoubleBlockHalf.UPPER)return false;
-            upper=above;
-            // Remove both halves without drops; setting the lower half first would break the upper.
-            world.setBlockState(pos.up(),Blocks.AIR.getDefaultState(),Block.NOTIFY_LISTENERS | Block.FORCE_STATE | Block.SKIP_DROPS);
-        }
+        BlockState covered=world.getBlockState(pos);
         var placement=TemporaryBlockManager.placeTrackedTemporaryBlocks(world,List.of(pos),ModSpellBlocks.SPRINGBLOOM.getDefaultState().with(SpringbloomBlock.OPEN_CELLS,cells),
-                // Manager restores multi-part plants together at tick 80; tracker is a fallback.
                 SpringbloomRules.LIFETIME+2,s->s.equals(covered),owner.getUuid());
-        if(placement.isEmpty()) {
-            if(upper!=null && world.getBlockState(pos).equals(covered) && world.getBlockState(pos.up()).isAir())
-                GuardianArenaManager.setTemporarySpellBlock(world,pos.up(),upper);
-            return false;
-        }
+        if(placement.isEmpty())return false;
         for(var it=PADS.iterator();it.hasNext();) {var old=it.next();if(old.owner.equals(owner.getUuid())) {
             restore(old);it.remove();
         }}
         var visual=new SpringbloomEntity(ModEntities.SPRINGBLOOM,world);visual.open(pos);world.spawnEntity(visual);
-        PADS.add(new Pad(world,pos.toImmutable(),owner.getUuid(),world.getTime()+SpringbloomRules.LIFETIME,placement,visual,covered,upper));
+        PADS.add(new Pad(world,pos.toImmutable(),owner.getUuid(),world.getTime()+SpringbloomRules.LIFETIME,placement,visual));
         world.playSound(null,pos,ModSounds.SPELL_NATURE_SPRINGBLOOM_LAND,SoundCategory.PLAYERS,.8f,1f);
         return true;
     }

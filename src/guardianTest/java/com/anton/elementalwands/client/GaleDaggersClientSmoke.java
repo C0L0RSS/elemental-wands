@@ -63,8 +63,8 @@ public final class GaleDaggersClientSmoke implements ClientModInitializer {
             if(t==88){c.options.setPerspective(Perspective.FIRST_PERSON);c.player.setYaw(0);c.player.setPitch(0);}
             if(t==90){GLFW.glfwFocusWindow(c.getWindow().getHandle());require(WandControls.input(true,0,GLFW.GLFW_PRESS),"Primary fire rejected");}
             if(t==114){
-                var nbt=c.player.getMainHandStack().getOrDefault(net.minecraft.component.DataComponentTypes.CUSTOM_DATA,net.minecraft.component.type.NbtComponent.DEFAULT).copyNbt();
-                require(nbt.getLong(com.anton.elementalwands.item.AbstractWandItem.cooldownKey("sky_shear")).isEmpty(),"Held volley press also fired Sky Shear");
+                var nbt=com.anton.elementalwands.util.WandCooldowns.state(c.player);
+                require(nbt.getLong(com.anton.elementalwands.util.WandCooldowns.cooldownKey("sky_shear")).isEmpty(),"Held volley press also fired Sky Shear");
                 WandControls.input(true,0,GLFW.GLFW_RELEASE);
             }
             if(t>=90&&t<=112 && count(c,true)>0)sawFlight=true;

@@ -10,7 +10,6 @@ import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.*;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -22,7 +21,7 @@ public final class GravityWellManager {
     public static final int COOLDOWN = 320, DURATION = 80;
     public static final double RADIUS = 4;
     public static final float DAMAGE = 6;
-    private record Cast(ServerPlayerEntity player, ServerWorld world, ItemStack wand, GravityBombEntity bomb, long launched) {}
+    private record Cast(ServerPlayerEntity player, ServerWorld world, GravityBombEntity bomb, long launched) {}
     private static final Map<UUID, Cast> CASTS = new HashMap<>();
 
     public static void init() {
@@ -89,7 +88,7 @@ public final class GravityWellManager {
         if (!AbstractWandItem.canStartCooldown(w, p, p.getMainHandStack(), ID, COOLDOWN)
                 || !AbstractWandItem.tryStartCooldown(w, p, p.getMainHandStack(), ID, 0)) return false;
         var bomb = new GravityBombEntity(w, p);
-        c = new Cast(p, w, p.getMainHandStack(), bomb, w.getTime()); CASTS.put(p.getUuid(), c);
+        c = new Cast(p, w, bomb, w.getTime()); CASTS.put(p.getUuid(), c);
         var data = state(p).copy(); data.putBoolean("active", true); data.putBoolean("collapsing", false); data.putLong("expires", 0);
         p.setAttached(EWAttachments.GRAVITY_STATE, data);
         if (!w.spawnEntity(bomb)) { finish(c, false); return false; }
@@ -117,7 +116,7 @@ public final class GravityWellManager {
     }
     public static void cancel(ServerPlayerEntity p) { Cast c = CASTS.get(p.getUuid()); if (c != null) finish(c, false); }
     private static void beginRecovery(Cast c) {
-        AbstractWandItem.startCooldown(c.world, c.wand, ID, COOLDOWN, false);
+        AbstractWandItem.startCooldown(c.world, c.player, ID, COOLDOWN, false);
         var data = state(c.player).copy(); data.putLong("impact", c.world.getTime());
         c.player.setAttached(EWAttachments.GRAVITY_STATE, data);
     }

@@ -18,6 +18,7 @@
     "TitanGearDropMixin",
     "GuardianArenaPlayerMixin",
     "GuardianArenaWorldMixin",
+    "TemporaryTerrainChunkMixin",
     "GuardianChurchExplosionMixin",
     "WandExplosionFireMixin",
     "GuardianChurchPistonMixin",
@@ -34,7 +35,9 @@
   },
   "client": [
     "FireLeapMotionMixin",
+    "FireLeapTerrainMixin",
     "ThornbiteProjectionAccessor",
+    "ThornbiteTrackingMixin",
     "ThornbiteVisibilityMixin",
     "WandMouseMixin",
     "WandKeyboardMixin",

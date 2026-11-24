@@ -6,7 +6,9 @@ Current code map reviewed September 17, 2026. Java paths below are relative to
 ## Player behavior
 
 H or `/ew hub` opens the native parchment hub. A new player chooses an affinity
-there; the server grants a wand. Each element keeps its own Flux, learned spells,
+there and receives one starter wand. A later affinity choice can deliver a pending
+first grant if the inventory was full. Storing a wand in a chest and switching
+elements cannot produce another. Each element keeps its own Flux, learned spells,
 loadout, and element XP. Switching or resetting affinity preserves that progress.
 The short Getting Started guide covers the basics; old generated lore books are
 retired by exact title/author, without removing ordinary player books.
@@ -48,8 +50,7 @@ consume the formed double.
 
 The HUD sits beside the hotbar, shows owned equipped spells without key labels,
 and hides empty slots. It stays up whenever a wand is anywhere in the inventory,
-held or not, reading cooldowns from the held wand first; it hides only when the
-player carries no wand. The hub marks Basic, Technique, and Ultimate spells with
+held or not, and reads the player's synchronized cooldowns. The hub marks Basic, Technique, and Ultimate spells with
 distinct colors in the spell list, selected details, and equipped slots.
 Controls > Move HUD permits dragging or arrow nudging;
 `config/elementalwands-hud.properties` stores the position.
@@ -93,7 +94,9 @@ the server's boss cinematic lock.
 `HubActionPayload` includes expected affinity to reject stale-screen purchases.
 Call `ModNetworking.syncPlayerData(player)` after progression/loadout changes.
 
-Cooldowns are stored on the wand per spell ID (`ew_cd_*`, `ew_cdd_*`). The
+Spell cooldowns, Basic recovery, the global tap and Waylay Dash recharge belong
+to the player and survive death, reconnecting and switching wands. When loading
+old saves, the server imports active timers from carried wands. The
 `AbstractWandItem.beginCast`/`endCast` context preserves identity through handlers
 that dispatch by ability category. Keep the six-tick global tap and ten-tick
 shared Basic recovery as well as individual timers. Entangle slows recovery.
@@ -101,20 +104,26 @@ Gale Daggers also persists its last launch on the player, with synchronized
 remaining recovery and a transient prepared count for input/HUD feedback.
 Updraft likewise persists and synchronizes its last cast on the player.
 Swapping slots does not erase cooldowns or the shared 100-point ultimate reservoir.
-`onWandDamageDealt` owns Flux/charge awards; Nature has explicit charge windows.
+`SpellCombat` measures the health a rewarded hit removes after mitigation.
+A fully absorbed or rejected hit earns no Flux or hit-based ultimate charge.
+Delayed damage credits its source element. Nature has explicit charge windows.
 
 ## Parties
 
 `/party` and `/ew party` provide create, invite, accept, decline, list, leave,
-kick, transfer, and disband. Membership persists per world; invitations expire
-and are not persisted. Parties are independent of vanilla scoreboard teams.
+kick, transfer, and disband. Membership persists by UUID per world, including
+players with Floodgate names. Kick and transfer also accept a member's UUID when
+their name is unavailable. Invitations expire and are kept only for the current
+session. Parties are independent of vanilla scoreboard teams.
 
 `party/WandAllies` protects the caster, party members, vanilla teammates, their
 pets, and Nature trees from harmful wand contacts. Delayed effects retain owner
 identity and resolve current allies. Respect PvP-disabled rules too. Ordinary
 sword/bow PvP and physical terrain obstruction remain Minecraft behavior.
 `PartyStore` writes membership atomically before publishing changes; failed writes
-must not partially change live membership, and corrupt data must be preserved.
+leave live membership intact. A damaged save disables parties for that session.
+The server logs the file path and preserves the file for repair. Restart after
+repairing it to reload membership.
 
 Wherever a boss takes a group in or sends it back, it sets them down side by side, two
 blocks apart across the way they face, up to eight places either side of the middle, so

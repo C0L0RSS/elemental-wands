@@ -194,7 +194,7 @@ public final class FullBloomSmokeMod implements ModInitializer {
         }
     }
     private int duration(String spell) {
-        return wand.getOrDefault(DataComponentTypes.CUSTOM_DATA, NbtComponent.DEFAULT).copyNbt().getInt(AbstractWandItem.durationKey(spell), 0);
+        return com.anton.elementalwands.util.WandCooldowns.spellDuration(com.anton.elementalwands.util.WandCooldowns.state(caster), spell, 0);
     }
     private static ZombieEntity zombie(ServerWorld world, double x, double z) {
         ZombieEntity zombie = new ZombieEntity(EntityType.ZOMBIE, world);

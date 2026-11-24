@@ -91,8 +91,9 @@ public final class UpdraftClientSmoke implements ClientModInitializer {
             if(t==111)key(GLFW.GLFW_KEY_Z,false);
             if(t==125){require(c.player.getAttachedOrElse(EWAttachments.GALE_PREPARED,0)==3,"Could not prepare combo daggers");server.execute(()->{
                 var p=server.getPlayerManager().getPlayer(uuid);p.setAttached(EWAttachments.UPDRAFT_LAST_CAST,-1_000_000_000L);
-                net.minecraft.component.type.NbtComponent.set(net.minecraft.component.DataComponentTypes.CUSTOM_DATA,p.getMainHandStack(),n->n.remove(com.anton.elementalwands.item.AbstractWandItem.cooldownKey("updraft")));
-                // Keep the prepared wand reference while resetting only this fixture cooldown.
+                var cooldowns = com.anton.elementalwands.util.WandCooldowns.state(p).copy();
+                cooldowns.remove(com.anton.elementalwands.util.WandCooldowns.cooldownKey("updraft"));
+                p.setAttached(EWAttachments.WAND_COOLDOWNS, cooldowns);
                 p.networkHandler.requestTeleport(.5,floor+16,.5,0,0);
             });}
             if(t==132){require(c.player.getVelocity().y<0&&!c.player.isOnGround(),"Airborne setup was not falling");key(GLFW.GLFW_KEY_V,true);c.options.forwardKey.setPressed(true);}

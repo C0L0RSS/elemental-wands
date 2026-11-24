@@ -148,13 +148,22 @@ world instead, started muted, with the real player parked far away as a spectato
 
 `fixtureReceipt` is the prefix of the fixture's `*_PASSED.txt`; receipts land in
 `build/integrated-fixture-host/`. By default it creates a fresh flat Survival world
-and clears the air around y=100 where flat-world fixtures stage their scenes. It cannot
-serve a restart pair or a fixture that depends on dedicated-server settings, and a pass is
-reported as a hosted run, not a dedicated-server run. A fixture hosted this way must not
+and clears the air around y=100 where flat-world fixtures stage their scenes.
+Use a dedicated runner for dedicated-server settings. A fixture hosted this way must not
 query the world for entities in the same tick it force-loads their chunk.
 
 For a world-generation fixture, pass `-PfixtureWorldgenSeed=12345` to generate
 normal terrain and structures at that seed and preserve the surface around spawn.
+
+For the Blink Rift and party command regression, use
+`com.anton.elementalwands.arena.PlaytestSystemsSmoke` with receipt `PLAYTEST_SYSTEMS`.
+Use a fresh named fixture world and `-PfixturePhase=prepareDamaged`, then reopen
+it with `-PfixtureResume -PfixturePhase=damaged` to check startup with a damaged party save.
+For temporary terrain recovery, use `com.anton.elementalwands.util.TemporaryTerrainSmoke`
+with receipt `TEMP_TERRAIN`. Pick a fresh disposable world with `-PfixtureWorld=<name>`
+and run `-PfixturePhase=prepare`. Launch again with the same world and `-PfixtureResume`
+for each of `interrupt`, `recover` and `verify`, in order. The fixture deliberately ends
+the disposable JVM before normal shutdown in its interruption phases.
 
 ## Test and recording handoff
 

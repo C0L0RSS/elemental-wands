@@ -146,8 +146,9 @@ instance folder. GeckoLib is bundled with the mod.
 
 ## Development
 
-Building from source requires a **JDK 21** with `javac`. Point `JAVA_HOME` at
-the JDK and run the Gradle wrapper from the project root.
+Run the Gradle wrapper from the project root with Java 17 or newer on your path
+or in `JAVA_HOME`. The wrapper selects a **JDK 21** for Loom and compilation,
+and downloads one on first use if needed. First-time provisioning requires internet access.
 
 ```sh
 ./gradlew build

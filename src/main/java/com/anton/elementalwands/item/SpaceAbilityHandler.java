@@ -1,5 +1,7 @@
 package com.anton.elementalwands.item;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import com.anton.elementalwands.entity.SingularityBoltEntity;
@@ -111,14 +113,18 @@ public final class SpaceAbilityHandler {
             maxDistance = Math.max(1.0, eyePos.distanceTo(blockHit.getPos()) - 0.6);
         }
 
+        Box body = caster.getBoundingBox();
+        Box search = body.stretch(direction.multiply(maxDistance)).stretch(0.0, 1.0, 0.0);
+        List<Box> obstacles = new ArrayList<>();
+        for (var shape : world.getBlockCollisions(caster, search)) obstacles.addAll(shape.getBoundingBoxes());
         for (double distance = maxDistance; distance >= 1.0; distance -= 0.5) {
             Vec3d candidate = feetPos.add(direction.multiply(distance));
-            if (isSafeTeleportLocation(world, caster, candidate)) {
+            if (isSafeTeleportLocation(world, caster, candidate, obstacles)) {
                 return Optional.of(candidate);
             }
 
             Vec3d raisedCandidate = candidate.add(0.0, 1.0, 0.0);
-            if (isSafeTeleportLocation(world, caster, raisedCandidate)) {
+            if (isSafeTeleportLocation(world, caster, raisedCandidate, obstacles)) {
                 return Optional.of(raisedCandidate);
             }
         }
@@ -126,7 +132,7 @@ public final class SpaceAbilityHandler {
         return Optional.empty();
     }
 
-    private static boolean isSafeTeleportLocation(ServerWorld world, PlayerEntity caster, Vec3d targetFeetPos) {
+    private static boolean isSafeTeleportLocation(ServerWorld world, PlayerEntity caster, Vec3d targetFeetPos, List<Box> obstacles) {
         if (!com.anton.elementalwands.arena.GuardianArenaManager.canTeleport(caster,world,targetFeetPos)) return false;
         double minY = world.getBottomY() + 1;
         double maxY = world.getTopYInclusive() - 2;
@@ -134,14 +140,9 @@ public final class SpaceAbilityHandler {
             return false;
         }
 
-        Box targetBox = caster.getBoundingBox().offset(targetFeetPos.subtract(caster.getEntityPos()));
-        if (!world.isSpaceEmpty(caster, targetBox)) {
-            return false;
-        }
-
-        // Allow blinking into air, but avoid teleporting to impossible NaN/overflow values.
-        return Double.isFinite(targetFeetPos.x)
-                && Double.isFinite(targetFeetPos.y)
-                && Double.isFinite(targetFeetPos.z);
+        Vec3d movement = targetFeetPos.subtract(caster.getEntityPos());
+        Box body = caster.getBoundingBox();
+        return Double.isFinite(movement.lengthSquared()) && !body.collides(movement, obstacles)
+                && world.isSpaceEmpty(caster, body.offset(movement));
     }
 }

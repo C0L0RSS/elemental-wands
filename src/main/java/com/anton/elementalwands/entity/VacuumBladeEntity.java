@@ -102,10 +102,8 @@ public class VacuumBladeEntity extends ProjectileEntity {
                 ? serverWorld.getDamageSources().thrown(this, livingOwner)
                 : serverWorld.getDamageSources().generic();
 
-        boolean damaged = com.anton.elementalwands.util.SpellCombat.damage(target,serverWorld,source,damage,owner,com.anton.elementalwands.data.WizardAffinity.WIND);
-        if (damaged) {
-            com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(owner, damage, com.anton.elementalwands.data.WizardAffinity.WIND);
-        }
+        boolean damaged = com.anton.elementalwands.util.SpellCombat.damageAndReward(target, serverWorld, source, damage,
+                owner, com.anton.elementalwands.data.WizardAffinity.WIND);
 
         // Respect resistance and rejected damage. A resistant boss must never bank upward impulses.
         if (damaged && target instanceof LivingEntity living) {

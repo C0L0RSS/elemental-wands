@@ -13,9 +13,10 @@ provide validation, cooldown/charge, attributed damage/XP, and allied protection
 Preserve all four when adding a spell. See [progression](progression-and-controls.md).
 
 Timed effects live in owning managers registered at common initialization.
-Temporary terrain uses `TemporaryBlockManager`: overlapping effects must restore
-prior ownership correctly, never turn another temporary layer into permanent
-terrain or overwrite unrelated later edits. Equipment loans must restore the
+Temporary terrain uses `TemporaryBlockManager`. Each affected chunk saves the
+original and placed block states together with the placement ID. On restart,
+chunks restore abandoned placements as they load. A replacement spell inherits the
+underlying terrain, and later edits release the cell from restoration. Equipment loans must restore the
 original item across death/reload without losing it or duplicating it.
 
 Cast particles leave the wand, not the caster's face. `util/SpellCastVisuals`
@@ -52,8 +53,11 @@ not add unintended damage.
 Spell ground fire is owned and temporary so it cannot bypass allied protection.
 
 Flamethrower is a held close-range cone with gradual damage ramp, heat, overheat,
-and release/timeout handling. Fire Leap is hold-to-aim/release-to-commit, with
+and release/timeout handling. Its visual stream stores a bounded history of aim samples.
+Fire Leap is hold-to-aim/release-to-commit, with
 terrain targeting, a validated full-body flight arc, and a jumpable landing wave.
+The client reuses grounded ring segments until their target, surface or viewing
+conditions change. Sparks animate between those updates.
 Targeting accepts horizon aim and reachable ledge tops within a 22-block
 horizontal cap. When the aimed arc is blocked, it pulls the landing back along
 the aim to the farthest clear leap. It keeps the elevation, cover, fluid, chunk
@@ -427,7 +431,9 @@ Singularity Bolt is a black star with limited initial aim assistance. It cannot
 retarget or U-turn and loses guidance through cover or invalid angles. Impact
 causes damage without restoring the retired pull/mobility-disruption mechanics.
 Blink Rift teleports up to 10 blocks along the caster's aim to the farthest safe
-spot, on a 10-second cooldown. It leaves no return point. The aim's pitch counts, by
+spot reachable by the caster's entire body on a straight path. A low obstacle or
+narrow opening can shorten the blink. A blocked cast spends no cooldown. A
+successful cast starts a 10-second cooldown and leaves no return point. The aim's pitch counts, by
 choice: it reaches up onto ledges, and aimed at the floor it lands only a block or two
 ahead.
 

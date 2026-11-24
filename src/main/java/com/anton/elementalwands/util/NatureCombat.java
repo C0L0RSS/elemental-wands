@@ -1,5 +1,6 @@
 package com.anton.elementalwands.util;
 
+import com.anton.elementalwands.data.WizardAffinity;
 import com.anton.elementalwands.item.AbstractWandItem;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -29,13 +30,9 @@ public final class NatureCombat {
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> HIT_CHARGE_WINDOW.clear());
     }
 
-    public static void lashDamageDealt(Entity owner, Entity target, float healthDamage) {
-        if (healthDamage > 0) reward(owner, healthDamage, HIT_CHARGE);
-        FlowerTurretManager.mark(owner, target);
-    }
-
-    public static void seedDamageDealt(Entity owner, Entity target) {
-        reward(owner, SEED_DAMAGE, HIT_CHARGE);
+    public static void directHit(Entity owner, Entity target, SpellCombat.DamageResult hit) {
+        if (!hit.accepted()) return;
+        if (hit.healthLost() > 0) rewardDirectHit(owner, hit);
         FlowerTurretManager.mark(owner, target);
     }
 
@@ -44,24 +41,22 @@ public final class NatureCombat {
      * number and pace, so they need no window). The health it took stays with the flower, for its
      * owner to collect (see {@link FlowerTurretManager#bank}).
      */
-    public static void flowerDamageDealt(Entity owner) {
+    public static void flowerDamageDealt(Entity owner, SpellCombat.DamageResult hit) {
         if (!(owner instanceof ServerPlayerEntity player)) return;
         // Grown flowers are Full Bloom's own doing, and an ultimate does not refill itself.
-        AbstractWandItem.onWandDamageDealt(player, FlowerTurretManager.DAMAGE,
-                player.getMainHandStack().getItem() instanceof AbstractWandItem && !FullBloomManager.blooming(player) ? FLOWER_CHARGE : 0,
-                com.anton.elementalwands.data.WizardAffinity.NATURE);
+        SpellCombat.rewardDamage(hit, player, WizardAffinity.NATURE,
+                FullBloomManager.blooming(player) ? 0 : FLOWER_CHARGE);
     }
 
-    private static void reward(Entity owner, float damage, int points) {
+    private static void rewardDirectHit(Entity owner, SpellCombat.DamageResult hit) {
         if (!(owner instanceof ServerPlayerEntity player)) return;
         int now = player.getEntityWorld().getServer().getTicks();
         int charge = 0;
         if (player.getMainHandStack().getItem() instanceof AbstractWandItem
                 && HIT_CHARGE_WINDOW.getOrDefault(player.getUuid(), Integer.MIN_VALUE) <= now) {
             HIT_CHARGE_WINDOW.put(player.getUuid(), now + INTERVAL);
-            charge = points;
+            charge = HIT_CHARGE;
         }
-        // Keep Arcane Flux for every accepted hit even when the charge window is closed.
-        AbstractWandItem.onWandDamageDealt(player, damage, charge, com.anton.elementalwands.data.WizardAffinity.NATURE);
+        SpellCombat.rewardDamage(hit, player, WizardAffinity.NATURE, charge);
     }
 }

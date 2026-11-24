@@ -153,6 +153,9 @@ serve a restart pair or a fixture that depends on dedicated-server settings, and
 reported as a hosted run, not a dedicated-server run. A fixture hosted this way must not
 query the world for entities in the same tick it force-loads their chunk.
 
+For a world-generation fixture, pass `-PfixtureWorldgenSeed=12345` to generate
+normal terrain and structures at that seed and preserve the surface around spawn.
+
 ## Test and recording handoff
 
 The delegation policy and standing user preference live in

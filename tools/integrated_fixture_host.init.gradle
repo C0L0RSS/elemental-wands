@@ -3,6 +3,7 @@
 // ./gradlew -I tools/integrated_fixture_host.init.gradle runClient -x downloadAssets \
 //   -PfixtureMain=com.anton.elementalwands.entity.NatureBalanceSmokeMod -PfixtureReceipt=NATURE \
 //   -PhubClientAssets="$HOME/.lunarclient/shared/assets"
+// Add -PfixtureWorldgenSeed=<seed> for a normal world with structures and untouched terrain.
 // A fixture that needs the flat test world, a restart or dedicated-server settings still needs
 // its own runner; a pass here is a pass of the fixture's assertions in an ordinary world.
 allprojects {
@@ -53,6 +54,9 @@ allprojects {
         loom.runs.client.runDir('build/integrated-fixture-host')
         loom.runs.client.vmArg('-Dfabric.addMods='+new File(smokeRoot,'integrated-fixture-host.jar').absolutePath)
         loom.runs.client.vmArg('-Dew.fixture.receipt='+receipt)
+        if (project.hasProperty('fixtureWorldgenSeed')) {
+            loom.runs.client.vmArg('-Dew.fixture.worldgenSeed='+Long.parseLong(project.property('fixtureWorldgenSeed').toString()))
+        }
         tasks.named('runClient') {
             dependsOn fixtureHostJar
             doLast {

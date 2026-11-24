@@ -27,10 +27,12 @@ import net.minecraft.world.level.LevelInfo;
  * fixtures' simulated players, and must not stand in their scene.
  */
 public final class IntegratedFixtureHost implements ClientModInitializer {
+    private static final String WORLDGEN_SEED = System.getProperty("ew.fixture.worldgenSeed");
     private int ticks, left;
     private boolean started, joined, done;
     public void onInitializeClient() {
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+            if (WORLDGEN_SEED != null) return;
             var world = server.getOverworld();
             for (int x = -48; x <= 80; x++) for (int z = -24; z <= 48; z++) for (int y = 96; y <= 180; y++) {
                 BlockPos pos = new BlockPos(x, y, z);
@@ -49,11 +51,13 @@ public final class IntegratedFixtureHost implements ClientModInitializer {
         String receipt = System.getProperty("ew.fixture.receipt", "NATURE");
         if (!started) {
             started = true; c.options.pauseOnLostFocus = false;
+            boolean worldgen = WORLDGEN_SEED != null;
             c.createIntegratedServerLoader().createAndStart("fixture-host-" + System.currentTimeMillis(),
                     // Survival, as on the test server: a Creative attacker would damage invulnerable targets.
                     new LevelInfo("Server fixture host", GameMode.SURVIVAL, false, Difficulty.NORMAL, true,
                             new GameRules(FeatureFlags.DEFAULT_ENABLED_FEATURES), DataConfiguration.SAFE_MODE),
-                    new GeneratorOptions(813L, false, false), WorldPresets::createTestOptions, null);
+                    new GeneratorOptions(worldgen ? Long.parseLong(WORLDGEN_SEED) : 813L, worldgen, false),
+                    worldgen ? WorldPresets::createDemoOptions : WorldPresets::createTestOptions, null);
             return;
         }
         if (c.world != null) joined = true;

@@ -28,12 +28,24 @@ public final class WandLoadouts {
         var affinity = EWAttachments.getAffinity(player);
         var ids = player.getAttachedOrElse(EWAttachments.WAND_LOADOUTS, Map.of()).get(affinity.name());
         var normalized = WandSpells.reconcile(affinity, ids, WandProgression.owned(player));
-        if (!normalized.equals(ids)) {
-            var saved = new HashMap<>(player.getAttachedOrElse(EWAttachments.WAND_LOADOUTS, Map.of()));
-            saved.put(affinity.name(), normalized);
-            player.setAttached(EWAttachments.WAND_LOADOUTS, Map.copyOf(saved));
-        }
+        if (!normalized.equals(ids)) save(player, affinity, normalized);
         return normalized;
+    }
+    private static void save(PlayerEntity player, WizardAffinity affinity, List<String> ids) {
+        var saved = new HashMap<>(player.getAttachedOrElse(EWAttachments.WAND_LOADOUTS, Map.of()));
+        saved.put(affinity.name(), List.copyOf(ids));
+        player.setAttached(EWAttachments.WAND_LOADOUTS, Map.copyOf(saved));
+    }
+    /** Receiving a spell may fill one slot. Reading a saved loadout never fills its gaps. */
+    static void equipNewSpells(PlayerEntity player, List<String> learned) {
+        var current = get(player);
+        var next = new java.util.ArrayList<>(current);
+        for (String id : learned) {
+            int slot = next.indexOf("");
+            if (slot < 0) break;
+            if (!next.contains(id)) next.set(slot, id);
+        }
+        if (!next.equals(current)) save(player, EWAttachments.getAffinity(player), next);
     }
     public static void markCombat(ServerPlayerEntity player) {
         COMBAT_UNTIL.put(player.getUuid(), player.getEntityWorld().getServer().getTicks() + 200);
@@ -51,25 +63,36 @@ public final class WandLoadouts {
         if (!affinity.name().equals(expectedAffinity)) return "Your affinity changed. Reopen the hub.";
         if (!(player.getMainHandStack().getItem() instanceof AbstractWandItem)) return "Hold your wand to change spells.";
         if (!canEdit(player)) return "You can change spells outside combat.";
-        var spell = WandSpells.find(id);
-        if (spell == null || !WandProgression.owns(player, spell)) return "Unlock this spell first.";
         if (slot < 0 || slot >= WandSpells.SLOT_COUNT) return "Choose a slot from 1 to " + WandSpells.SLOT_COUNT + ".";
         var current = get(player);
+        if ("".equals(id)) {
+            if (affinity == WizardAffinity.NONE) return "Choose an element to change your loadout.";
+            if (current.get(slot).isEmpty()) return "This slot is already empty.";
+            var next = new java.util.ArrayList<>(current);
+            next.set(slot, "");
+            save(player, affinity, next);
+            return "Cleared slot " + (slot + 1) + ".";
+        }
+        var spell = WandSpells.find(id);
+        if (spell == null || !WandProgression.owns(player, spell)) return "Unlock this spell first.";
         var next = WandSpells.equip(affinity, current, slot, id);
         if (next.equals(current)) return "This spell is already equipped or does not fit that slot.";
-        var saved = new HashMap<>(player.getAttachedOrElse(EWAttachments.WAND_LOADOUTS, Map.of()));
-        saved.put(affinity.name(), next);
-        player.setAttached(EWAttachments.WAND_LOADOUTS, Map.copyOf(saved));
+        save(player, affinity, next);
         return "Equipped " + spell.name() + " in slot " + (slot + 1) + ".";
     }
     public static void cast(ServerPlayerEntity player, int slot) { cast(player, slot, true); }
+    /** The same encounter gate applies to slot presses, held channels and aimed releases. */
+    static boolean canCast(ServerPlayerEntity player) {
+        return player.isAlive() && !player.isSpectator()
+                && com.anton.elementalwands.arena.GuardianArenaManager.canCast(player)
+                && !com.anton.elementalwands.entity.necromancer.NecromancerIntro.watching(player)
+                && !com.anton.elementalwands.entity.necromancer.NecromancerTransformScene.watching(player)
+                && !com.anton.elementalwands.entity.GuardianIntro.watching(player)
+                && !com.anton.elementalwands.summit.StormRocIntro.watching(player)
+                && !com.anton.elementalwands.entity.pyreking.PyreKingIntro.watching(player);
+    }
     public static void cast(ServerPlayerEntity player, int slot, boolean deliberate) {
-        if (!player.isAlive() || player.isSpectator() || !com.anton.elementalwands.arena.GuardianArenaManager.canCast(player)) return;
-        if (com.anton.elementalwands.entity.necromancer.NecromancerIntro.watching(player)
-                || com.anton.elementalwands.entity.necromancer.NecromancerTransformScene.watching(player)
-                || com.anton.elementalwands.entity.GuardianIntro.watching(player)
-                || com.anton.elementalwands.summit.StormRocIntro.watching(player)
-                || com.anton.elementalwands.entity.pyreking.PyreKingIntro.watching(player)) return; // Held by a boss intro.
+        if (!canCast(player)) return;
         ServerWorld world = player.getEntityWorld();
         if (HollowPurpleChargeManager.isCharging(world, player) || FireLeapManager.flying(player) || StoneChargeManager.active(player)) return;
         var stack = player.getMainHandStack();

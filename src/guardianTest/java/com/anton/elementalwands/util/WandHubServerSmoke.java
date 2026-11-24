@@ -116,6 +116,9 @@ public final class WandHubServerSmoke implements ModInitializer {
                 require(WandSpells.equip(element, ids, 5, ids.get(0)).equals(ids), "Out-of-range slot accepted");
             }
             require(wand.get(DataComponentTypes.CUSTOM_DATA).copyNbt().equals(original), "Equip reset cooldown or charge");
+            hub.invoke(null, player, new com.anton.elementalwands.network.ModNetworking.HubActionPayload("equip", "FIRE", 1, ""));
+            require(WandLoadouts.get(player).get(1).isEmpty() && WandProgression.owns(player, WandSpells.find("dragons_pyre")),
+                    "Clearing a slot refilled it or removed ownership");
             var equipped = WandLoadouts.get(player);
             for (String id : List.of("blink_rift", "missing")) WandLoadouts.equip(player, "FIRE", 0, id);
             WandLoadouts.equip(player, "SPACE", 1, "inferno_wave");
@@ -156,7 +159,7 @@ public final class WandHubServerSmoke implements ModInitializer {
             var castData = wand.get(DataComponentTypes.CUSTOM_DATA).copyNbt();
             require(castData.getLong(AbstractWandItem.cooldownKey("inferno_wave")).orElseThrow() == player.getEntityWorld().getTime(), "Slot 1 dispatched wrong spell");
             require(castData.getLong(AbstractWandItem.cooldownKey("dragons_pyre")).orElseThrow() == 678, "Inferno Wave cast touched Dragon's Pyre cooldown");
-            WandLoadouts.equip(player, "FIRE", 0, "inferno_wave");
+            WandLoadouts.equip(player, "FIRE", 0, "");
             require(WandLoadouts.get(player).equals(equipped), "Combat lock bypassed");
             require(com.anton.elementalwands.ElementalWandsMod.handleAffinitySet(player.getCommandSource(), WizardAffinity.NATURE) == 0,
                     "Element switching bypassed combat lock");
@@ -179,7 +182,7 @@ public final class WandHubServerSmoke implements ModInitializer {
         }
         if (tick == 235) {
             require(WandLoadouts.canEdit(player), "Combat lock did not expire");
-            WandLoadouts.equip(player, "FIRE", 0, "inferno_wave");
+            WandLoadouts.equip(player, "FIRE", 1, "dragons_pyre");
             require(WandLoadouts.get(player).equals(List.of("inferno_wave", "dragons_pyre", "meteor", "", "")), "Post-combat loadout changed");
             Files.writeString(Path.of("HUB_PASSED.txt"), "Legacy migration, element balances, permanent purchases, duplicate/stale purchase rejection, XP preservation, damage-source currency attribution, switch restrictions, unlock gates, invalid/stale payloads, cooldown/charge retention, category restrictions and Basic dispatch, player serialization, respawn persistence, interaction and combat lock checks passed.\n");
             server.stop(false);

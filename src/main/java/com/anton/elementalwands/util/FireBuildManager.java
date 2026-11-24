@@ -41,9 +41,8 @@ public final class FireBuildManager {
         return (int)Math.clamp(FireBuildRules.HOP_COOLDOWN-elapsed,0,FireBuildRules.HOP_COOLDOWN);
     }
     private static boolean canUse(ServerPlayerEntity player, String id) {
-        return player.isAlive() && !player.isSpectator() && !FireLeapManager.flying(player) && EWAttachments.getAffinity(player)==WizardAffinity.FIRE
+        return WandLoadouts.canCast(player) && !FireLeapManager.flying(player) && EWAttachments.getAffinity(player)==WizardAffinity.FIRE
                 && player.getMainHandStack().getItem() instanceof AbstractWandItem
-                && com.anton.elementalwands.arena.GuardianArenaManager.canCast(player)
                 && !HollowPurpleChargeManager.isCharging(player.getEntityWorld(),player)
                 && WandLoadouts.get(player).contains(id) && WandProgression.owns(player,WandSpells.find(id));
     }

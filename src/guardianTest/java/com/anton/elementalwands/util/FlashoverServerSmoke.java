@@ -28,6 +28,8 @@ public final class FlashoverServerSmoke implements ModInitializer {
             p.setYaw(0);p.setPitch(35);p.setAttached(EWAttachments.AFFINITY,"FIRE");p.setStackInHand(Hand.MAIN_HAND,new ItemStack(ModItems.FRACTURED_WAND));
             require(!FlashoverManager.toss(p),"Unowned spell could be cast");WandProgression.earn(p,WizardAffinity.FIRE,500);
             WandProgression.purchase(p,"FIRE","flashover");WandLoadouts.equip(p,"FIRE",1,"flashover");require(WandProgression.flux(p)==0,"Purchase price wrong");
+            WandProgression.earn(p,WizardAffinity.FIRE,500);
+            WandProgression.purchase(p,"FIRE","fire_hop");
             var team=s.getScoreboard().addTeam("flash_allies");team.setFriendlyFireAllowed(true);
             s.getScoreboard().addScoreHolderToTeam(p.getName().getString(),team);s.getScoreboard().addScoreHolderToTeam(ally.getName().getString(),team);
             covered=FireLeapServerCases.cow(p,.5,100,5.55);
@@ -45,6 +47,7 @@ public final class FlashoverServerSmoke implements ModInitializer {
         }
         if(t==112) {
             require(covered.getHealth()==200,"Cover fixture damaged target before detonation");
+            checkIntroLock();
             require(FlashoverManager.detonate(p),"Armed detonation failed");
             require(enemy.getHealth()==188,"First staggered blast should deal twelve: "+enemy.getHealth());
             require(ally.getHealth()==200 && p.getHealth()==200 && covered.getHealth()==200,"Explosion hit ally/caster/cover: "+ally.getHealth()+" / "+p.getHealth()+" / "+covered.getHealth());
@@ -77,6 +80,26 @@ public final class FlashoverServerSmoke implements ModInitializer {
             require(FlashoverRules.damage(3)==24 && FlashoverRules.damage(20)==24,"Stack damage cap wrong");
             require(WandProgression.owns(p,WandSpells.find("flashover")),"Ownership lost");
             Files.writeString(Path.of("HUB_PASSED.txt"),"Flashover passed: purchase/equip, toss physics, harmless placement, arming delay, cap, enemy melee/wand disarm, allied protection, cover, capped combined damage, cooldown persistence, range limit, unequip cleanup and 30-second expiry.\n");s.stop(false);
+        }
+    }
+    private void checkIntroLock() {
+        var world = p.getEntityWorld();
+        Vec3d target = new Vec3d(6.5, 100, .5);
+        require(WandLoadouts.get(p).contains("fire_hop") && FireLeapRules.validTarget(p, target), "Intro fixture lacks a reachable leap");
+        float yaw = p.getYaw(), pitch = p.getPitch();
+        var boss = new com.anton.elementalwands.entity.necromancer.NecromancerEntity(
+                com.anton.elementalwands.registry.ModEntities.HOLLOW_NECROMANCER, world);
+        boss.setPosition(.5, 100, 10.5);
+        world.spawnEntity(boss);
+        boss.beginIntro(List.of(p));
+        try {
+            require(!FireLeapManager.commit(p, target) && FireBuildManager.hopRemaining(p) == 0, "Intro allowed Fire Leap");
+            require(!FlashoverManager.detonate(p) && FlashoverManager.active(p).size() == 2, "Intro allowed Flashover");
+        } finally {
+            boss.stopFight();
+            boss.discard();
+            p.setYaw(yaw);
+            p.setPitch(pitch);
         }
     }
     private static ServerPlayerEntity player(MinecraftServer s,String name,double x,double y,double z)throws Exception {

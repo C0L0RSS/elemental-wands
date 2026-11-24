@@ -11,6 +11,7 @@ import com.anton.elementalwands.registry.ModSounds;
 import net.fabricmc.fabric.api.event.lifecycle.v1.*;
 import net.fabricmc.fabric.api.networking.v1.*;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.*;
 import net.minecraft.text.Text;
@@ -52,9 +53,9 @@ public final class FlashoverManager {
     }
     public static boolean equipped(ServerPlayerEntity p) { return EWAttachments.getAffinity(p)==WizardAffinity.FIRE && WandLoadouts.get(p).contains("flashover"); }
     private static boolean canUse(ServerPlayerEntity p) {
-        return equipped(p) && p.isAlive() && !p.isSpectator() && p.getMainHandStack().getItem() instanceof AbstractWandItem
+        return WandLoadouts.canCast(p) && equipped(p) && p.getMainHandStack().getItem() instanceof AbstractWandItem
                 && WandProgression.owns(p,WandSpells.find("flashover")) && !FireLeapManager.flying(p)
-                && !HollowPurpleChargeManager.isCharging(p.getEntityWorld(),p) && com.anton.elementalwands.arena.GuardianArenaManager.canCast(p);
+                && !HollowPurpleChargeManager.isCharging(p.getEntityWorld(),p);
     }
     private static List<FlashoverEmberEntity> embers(ServerPlayerEntity p) { return EMBERS.computeIfAbsent(p.getUuid(),id -> new ArrayList<>()); }
     public static List<FlashoverEmberEntity> active(ServerPlayerEntity p) { return embers(p).stream().filter(e -> !e.isRemoved() && e.getEntityWorld()==p.getEntityWorld()).toList(); }
@@ -130,12 +131,16 @@ public final class FlashoverManager {
         }
     }
     /** Let a wand's Basic button perform a deliberate close-range disarm, just like a melee hit. */
-    public static boolean tryDisarmAimed(ServerPlayerEntity p) {
+    public static FlashoverEmberEntity aimedEmber(PlayerEntity p) {
         Vec3d eye=p.getEyePos(),end=eye.add(p.getRotationVec(1).multiply(3.5));
         var hit=net.minecraft.entity.projectile.ProjectileUtil.raycast(p,eye,end,p.getBoundingBox().stretch(end.subtract(eye)).expand(1),
                 e -> e instanceof FlashoverEmberEntity && !e.isRemoved(),3.5*3.5);
-        if(hit==null || p.getEntityWorld().raycast(new RaycastContext(eye,hit.getPos(),RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p)).getType()!=HitResult.Type.MISS)return false;
-        return hit.getEntity().damage(p.getEntityWorld(),p.getDamageSources().playerAttack(p),1);
+        if(hit==null || p.getEntityWorld().raycast(new RaycastContext(eye,hit.getPos(),RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p)).getType()!=HitResult.Type.MISS)return null;
+        return (FlashoverEmberEntity) hit.getEntity();
+    }
+    public static boolean tryDisarmAimed(ServerPlayerEntity p) {
+        var ember = aimedEmber(p);
+        return ember != null && ember.damage(p.getEntityWorld(),p.getDamageSources().playerAttack(p),1);
     }
     public static boolean toss(ServerPlayerEntity p) {
         if(!canUse(p))return false;

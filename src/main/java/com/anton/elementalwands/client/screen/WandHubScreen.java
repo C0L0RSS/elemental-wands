@@ -136,8 +136,8 @@ public final class WandHubScreen extends Screen {
         } else {
             int slot = selectedSlot;
             boolean equipped = ClientPlayerData.loadout().get(slot).equals(spell.id());
-            button(equipped ? WandSpells.slotLabel(slot) + " equipped" : "Equip " + WandSpells.slotLabel(slot), 194, 202, 148, 20,
-                    () -> action("equip", slot, spell.id())).active = !equipped && ClientPlayerData.canEdit();
+            button((equipped ? "Clear " : "Equip ") + WandSpells.slotLabel(slot), 194, 202, 148, 20,
+                    () -> action("equip", slot, equipped ? "" : spell.id())).active = ClientPlayerData.canEdit();
         }
     }
 

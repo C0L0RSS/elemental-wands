@@ -14,10 +14,15 @@ retired by exact title/author, without removing ordinary player books.
 Loadouts have five free numbered slots. Any owned spell, including an ultimate,
 can occupy any slot; the same spell cannot occupy two slots. Categories remain
 store metadata, pricing, and spell-book eligibility, not slot restrictions.
-Purchases fill available empty positions without replacing chosen spells. Five is
+Select an equipped spell and its slot in the hub to clear the slot. The gap
+survives reopening the hub, switching elements and reconnecting. A newly learned
+spell fills the first available gap. Five is
 the minimum development target per element, not a cap on the learnable catalog.
 
 Default slot inputs are left mouse, right mouse, X, Z, V; Spell alternate is R.
+An empty slot passes its input to Minecraft unless it targets one of the
+close-range wand interactions below or releases prepared Gale Daggers.
+The alternate binding passes through when Flashover is unequipped.
 Bindings are editable in Controls and saved in
 `config/elementalwands-controls.properties`. Existing saved bindings can differ.
 Sneak + Use aimed at a block within reach performs ordinary block interaction (doors,
@@ -83,7 +88,8 @@ permission and must remain separate from normal progression.
 a held repeat, not a client-authorized spell. The server
 resolves the actual loadout and validates life, held item, ownership, affinity,
 arena rules, and committed actions. Fire Leap uses its dedicated aimed-release
-request; hold/release channels also require server validation.
+request. Aimed releases, held channels and Flashover detonation all check
+the server's boss cinematic lock.
 `HubActionPayload` includes expected affinity to reject stale-screen purchases.
 Call `ModNetworking.syncPlayerData(player)` after progression/loadout changes.
 

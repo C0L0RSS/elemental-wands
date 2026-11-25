@@ -29,8 +29,7 @@ start. A standalone summon can fight any nearby Survival or Adventure player.
 | `/ew pyreking stop` | He returns to his guard. |
 
 The moves are `royal_cut`, `royal_cut_three`, `thrust`, `turning_cut`, `overhead`,
-`scythe_low`, `scythe_high`, `cast`, `zip`, `hook`, `lunge`, `haul`, `snare`, `drag_down`
-and `unbound`. The clips are `idle`, `walk`, `run` and one per move; the
+`brand`, `cast`, `zip`, `hook`, `lunge`, `haul`, `snare`, `drag_down` and `unbound`. The clips are `idle`, `walk`, `run` and one per move; the
 [art README](../../art/pyre_king/README.md#clips) describes each.
 
 ## The fight
@@ -47,19 +46,17 @@ blow lands where and when it is drawn.
 - Each move names the moments its weapon can hit (its windows), how thick the weapon is, and
   a height rule:
   - a **cut** reaches down to the floor under the blade, and no deeper;
-  - a **low sweep** misses feet 0.6 or more above his floor (jump it);
-  - a **high sweep** misses a body under 1.55 tall (crouch);
-  - both sweeps are the Chain Scythe's, and it strikes only bodies that reach 5 blocks or more
-    from him, out where its blade swings. Closer in a player is under the chain (the
-    developer's second playtest, Nov 11: up close it was "impossible to dodge");
+  - a **low sweep** misses feet 0.6 or more above his floor (jump it). Only Unbound's chains
+    sweep low;
   - a **thrown sword** hits only where it really is.
 - **One mistake, one hit.** A combo is a run of blows less than 1.2 s apart. A player takes
   at most one heavy hit (24 or more) per combo.
 - **Shields.** A raised shield stops one blow and is knocked aside for 5 s, as by an axe.
-  The next blow of the string can still land. Fire on the floor ignores shields.
+  The next blow of the string can still land. Fire on the floor, the Pyre Brand's
+  included, ignores shields.
 - **Stone stops him** (the developer's choice, Nov 11). A pillar between him and a player
-  shelters them from his blade in hand, the Chain Scythe, the Cast's pull-back, the Hook
-  and the Snare. Unbound's chains and his lines of fire already stopped at stone.
+  shelters them from his blade in hand, the Cast's pull-back, the Hook and the Snare.
+  Unbound's chains and his fire on the floor stop at stone too.
 
 **Pace.** The clips are baked art, and each is played at its own tempo: a table in
 `PyreKingRules` says how fast each part of a clip runs. The server sweeps his blade by that
@@ -73,7 +70,8 @@ the pace of the fight is a change to that table; the clips are not baked again.
 - The Cast's wind-up plays 40% faster. He stood 2.2 s with the sword out; now 0.44 s.
 - The Zip and the Lunge cut 0.1 s after he lands (it was 0.22 s), and the wait before the
   chain takes him is cut.
-- The Haul, the Snare, Drag Down, Unbound and the intro's clips play as they were made.
+- The Haul, the Snare, the Pyre Brand, Drag Down, Unbound and the intro's clips play as they
+  were made.
 
 **Moves.** Times are seconds from the start of the move, as it plays. "Free" is when he may
 act again.
@@ -85,8 +83,7 @@ act again.
 | Thrust | 0.31 | 0.71–0.87 | 1.42 | Aim freezes at 0.31; he drives 2.4 forward, so it reaches about 8 |
 | Turning Cut | 0.22 | 0.61–0.77 | 1.32 | Cuts the half behind him and ends turned about |
 | Overhead | 0.22 | 0.62–0.78 | 1.33 | Aim freezes at 0.45; a line straight ahead, about 7.5 long |
-| Chain Scythe, low | 0.18 | 0.64–1.06 | 1.64 | Chain and blade round him from 5 to 14 out; jump, or step in under it |
-| Chain Scythe, high | 0.18 | 0.58–1.05 | 1.64 | The same at head height; crouch, or step in under it |
+| Pyre Brand | 0.1 | 1.7–3.5 (the floor burns) | 4.1 | Aim freezes at 0.5 and the floor shows. No blade strikes: a fan of floor from 2.6 to 12.6 out burns; see [below](#the-pyre-brand) |
 | Cast | 0.34 | 0.62–0.93 (throw), 1.43–1.7 (pull-back) | 2.0 | Aim freezes at 0.51 and leads a moving target, so the sword lands 0.42 s later. Two separate tests |
 | Zip | ring | 0.65–1.02 | 1.59 | Follows a Cast: the chain hauls him to the sword (he lands at 0.58) and he spins into a cut |
 | Hook | 0.44 | 0.74–1.06 | 2.19 | Aim freezes at 0.61. Catches and drags; the Overhead follows a catch |
@@ -97,7 +94,8 @@ act again.
 | Unbound | 1.2 | 1.62–1.95 | 4.3 | The phase change |
 
 - **Damage** (raw, Normal; armor and Protection reduce it): sword in hand 21, chain and
-  thrown sword 16, floor fire 8, Unbound's sweep 19, Drag Down's yank 5, the Hook's tug 4.
+  thrown sword 16, floor fire 8, the Pyre Brand's floor 16 as it catches, Unbound's sweep 19, Drag
+  Down's yank 5, the Hook's tug 4.
   - It is tuned for plain diamond to netherite armor (the developer's target, Nov 11).
     There a sword blow costs 8.6 or 7.7 of 20 health, so two leave a player alive and the
     third kills. The chain costs 5.8 or 5.2, and a second in his fire about 2.
@@ -116,8 +114,9 @@ always draw the same move.
 | Target is | He weighs |
 | --- | --- |
 | More than 3 blocks up for 1.5 s | Drag Down, once within 18 blocks; until then he closes in |
-| Within 6.5 | Royal Cut (most), Overhead, Thrust (never the Scythe, since Nov 11) |
-| 6.5–14 | Low Scythe (most), Lunge, high Scythe, Thrust and Overhead where they reach |
+| Within 6.5 | Royal Cut (most), Overhead, Thrust: his sword in hand and nothing else |
+| 6.5–11.5 | Pyre Brand (most), Lunge, Thrust and Overhead where they reach |
+| 11.5–14 | Lunge, Cast |
 | 14–26 | Cast (most, a little under half), Lunge, Hook |
 | Beyond 26 | Hook (most), Lunge, Cast |
 
@@ -130,7 +129,6 @@ What the target just did tilts the weights:
 
 - **Behind him** for 0.4 s: the Turning Cut, heavily.
 - **Backed straight away** from his last sword string: the Thrust.
-- **Jumped** in the last 2 s: the high Scythe instead of the low.
 - **Eating or drinking** more than 5 blocks away: he stops waiting out his gap, and the
   Cast and Lunge are weighted up (the developer's choice, Nov 10).
 - **Out of sight** behind a pillar: he starts no move at them. He runs round it.
@@ -176,6 +174,52 @@ What the target just did tilts the weights:
 - Otherwise his gap between strings is 0.15 to 0.4 s in phase one and under 0.2 s in two.
 - A move called off part-way (the third cut, a Drag Down whose target has landed) eases him
   back to his guard, so the clip does not go on to show a blow that cannot hit.
+
+### The Pyre Brand
+
+Fire on the floor. It is the developer's idea (Nov 24): he sticks his sword in the ground
+and "there's a bunch of fire on their ground", an area to keep out of that cannot be
+jumped over. It replaced the Chain Scythe, which they found janky, and a jet of fire that
+was built in the Scythe's place and never played; the reasons are in his
+[design notes](../design/pyre-king.md#the-chain-scythe-goes-nov-24). It is a first pass
+that nobody has played.
+
+- **It is his middle-range move** (the developer, Nov 24: "more of a mid ranged attack since
+  close range I want the boss to focus on the real sword swings"). He uses it on a target
+  more than 6.5 and up to 11.5 blocks away, and never nearer.
+- **The tell.** He steps back and lowers the point of the sword to the floor in front of
+  him, the hilt drawn back to his belt, and rears back over it, looking at the floor. His
+  aim freezes 0.5 s in. From then every block of floor that will burn shows low flames.
+- **The plant.** At 1.52 s he lunges in and drops his weight onto the sword. The blade
+  meets the floor at 1.58 s, about 4.1 blocks in front of him, and the fire on it drains
+  into the stone.
+- **The floor catches** at 1.7 s, 1.2 s after it first showed, and burns for 1.8 s.
+  - It is a fan. Its point is 1.5 blocks behind the sword, toward him, so the sword stands
+    in its own fire. It opens 35° to either side of the way he faces, 40° in phase two,
+    and runs 10 blocks from its point: from about 2.6 to 12.6 blocks in front of him.
+  - It burns as blocks of his fire two blocks tall, on every block of floor whose middle
+    is in the fan. A jump does not clear it.
+  - From the worst place to stand in it, the nearest way out is about 4.5 blocks (4.7 in
+    phase two): out through the nearer edge, or on past its end. That is 0.8 s at a
+    sprint and just over a second at a walk.
+- **What it costs.** 16 as it catches, to whoever is still on it. After that it is his
+  floor fire like any other: 8 on contact and once a second. Standing there to the end is
+  24, about a sword blow in diamond or netherite armor. A shield and Fire Resistance do
+  not stop it. The catch is the only thing that hurts on the tick the floor lights, so
+  armor sees one blow of 16 and not two of 8.
+- **Stone stops it.** A block of floor the sword cannot see does not burn, so the far side
+  of a pillar is safe, and its shadow shows in the warning too. The floor is judged again
+  as it catches, so a wall raised across it during the warning shadows what lies behind.
+- **He does not spend it on stone.** Once his aim has frozen, a target out of his sight for
+  0.4 s, counted from the freeze, ends it: the fire dies, he is free 0.3 s later, and he
+  goes round the pillar as he would for any hiding player. A rehearsed move
+  (`/ew pyreking move brand`) plays in full.
+- **The fire lasts only while the sword is in the floor.** If the move is dropped because
+  the last player has left or fallen, its floor goes out with it, caught or not.
+- **No blade strikes.** The sword hits nobody on its way into the floor, and a player
+  within about 2.5 blocks of him, or beside or behind him, is not on the fan.
+- **He kneels behind the hilt** for as long as it burns, and is free 0.6 s after he
+  begins to tear the sword out: whoever is off the fan has 1.8 s of him.
 
 **Throws are aimed.** The clips throw the sword at one authored point. At the aim freeze
 the server picks the real one and syncs the difference. `PyreKingAim` says how much of that
@@ -231,6 +275,7 @@ A line of fire stops at a pillar.
 | Fire | Height | Lasts |
 | --- | --- | --- |
 | Where a Cast lands | 1 block | 3 s |
+| The Pyre Brand's fan | 2 blocks | 1.8 s, while the sword is in the floor |
 | The line a Haul flew | 1 block, 2 in phase two | 4 s |
 | The third Royal Cut's line (phase two) | 1 block | 3 s |
 | A Cast's pull-back path and a Zip's line (phase two) | 2 blocks | 4 s |
@@ -244,6 +289,7 @@ held at half health starts Unbound again.
 
 **Warnings.** Each blow has a sound and a ring of embers at his feet. A throw's line is
 marked on the floor from the aim freeze, and a ring marks where a Zip or Lunge will land.
+The Pyre Brand shows every block of floor it will burn, as low flames, from its aim freeze.
 These are particles sent by the server.
 
 **Around the fight.**
@@ -353,8 +399,9 @@ Lunge and the Turning Cut leave him back where he stood when the clip ends.
 
 The model, its 46 bones and its clips are the approved review candidate, installed
 unchanged. The intro's three clips (`throned`, `awaken` and `intro_haul`) were approved
-from the in-game video on Nov 12. The exceptions are the Haul and Snare clips (Nov 11),
-which the developer has not yet reviewed in the workshop. Do not edit the installed files, `PyreKingClips.java` or
+from the in-game video on Nov 12. The exceptions are the Haul and Snare clips (Nov 11) and
+`pyre_brand` (Nov 24), which the developer has not yet reviewed in the workshop. The two
+Chain Scythe clips were removed with the move on Nov 24. Do not edit the installed files, `PyreKingClips.java` or
 `pyre_king_tracks.json`; change the art sources and run
 `py -3 art/pyre_king/build_art.py --install`.
 
@@ -377,7 +424,7 @@ which the developer has not yet reviewed in the workshop. Do not edit the instal
 ## Blade fire and chains
 
 `PyreKingEffectsLayer` is the game's copy of the workshop's `effects.js`, which the
-developer approved in the workshop. It draws three things in the world each frame, from
+developer approved in the workshop. It draws four things in the world each frame, from
 his posed bones:
 
 - **Blade fire.** Upright flames along the blade. They lie back along the path the blade
@@ -386,16 +433,24 @@ his posed bones:
   his hand. It bows while the sword is swung on it.
 - **Unbound's six chains,** from his chest to each marker bone the clip has moved. They
   burn, every third link glows, each ends in a barbed hook, and they bow with their swing.
+- **The Pyre Brand's blade,** only while its clip plays. As he drives the sword into the
+  floor its fire drains down the blade and is gone; as he tears it free the fire runs back
+  up from the point. The developer has not seen it. The fire on the floor is not drawn by
+  this layer: it is the server's blocks of fire.
 
 Both copies read the same numbers. The workshop reads them from the candidate's
 `manifest.json`; the game reads `pyre_king_effects.json`, which the installer writes from
 that manifest. **A change to how the effects are built must be made in both
 `effects.js` and `PyreKingEffectsLayer`.**
 
-The two differ in one way. The workshop re-poses the clip to learn where the blade was a
+The two differ in two ways. The workshop re-poses the clip to learn where the blade was a
 moment ago. The game remembers where it really was, for up to 1.15 seconds per king. So in
 the game the fire also leans when he is moved or turned, and it starts from rest when he
 first comes into view.
+
+The moments the Pyre Brand's blade drains and catches are in the same file under `brand`,
+with the two between which the floor burns. `PyreKingRules` names those two again for the
+server, and `checkPyreKing` fails if they differ.
 
 The layer poses the model itself before reading any bone, because GeckoLib 5 poses the
 mesh later, in a deferred callback.
@@ -406,24 +461,33 @@ mesh later, in a deferred callback.
   installed files, including `PyreKingClips.java` and `pyre_king_tracks.json`.
 - `./gradlew build` runs `checkPyreKing` (`PyreKingContractTest`): every move fits its clip
   and warns before it lands, the openings are tight, the thrown sword's aim, the chooser's
-  reads, and the sweep's geometry.
+  reads, the sweep's geometry, and the Pyre Brand: the shape of its fan, that the clip
+  puts the sword in the floor when the rules say, that the fan can be left in time from
+  its worst spot, what it costs in armor, and that the renderer's moments match.
 - `pyre_king_fight_smoke.init.gradle` runs a hidden, muted client against a Survival player.
-  - Twenty-seven cases check each move: its damage, its reach, a sidestep after the aim
-    freezes, the jump, the crouch, a raised shield, where a thrown sword lands, the drags,
-    the Haul, Unbound, and a pillar in the way of a Cast, a Hook, the Scythe and Unbound's
-    chains.
+  - Thirty cases check each move: its damage, its reach, a sidestep after the aim
+    freezes, the jump, a raised shield, where a thrown sword lands, the drags, the Haul,
+    Unbound, and a pillar in the way of a Cast, a Hook, the Pyre Brand and Unbound's chains.
+  - Eight of them are the Pyre Brand's. Standing on its floor costs 24, and the same behind
+    a raised shield, in mid-jump, and near its end 12 blocks out. A sprint out sideways a
+    quarter of a second after the floor shows, a player at his feet, one 14 blocks out and
+    one behind a pillar are not burned. The first also checks the floor itself: in the last
+    run (Nov 24) 62 blocks burned, out to 12 blocks from him, none outside the fan, and
+    none were left once he had torn the sword free.
   - Three of them are for hiding, behind a round pillar 7 across like the hall's.
     - A player standing behind it draws a flank within 3 s, is seen within 3 s more, and
-      is struck. In the last run he Hauled 17.5 blocks, then Snare, then Overhead.
+      is struck. In the last run (Nov 24) he Hauled 22.8 blocks, then Snare, then Overhead.
     - A player who sprints round it for 30 s, acting on where he was a quarter of a second
       ago, and eats for the second half (which slows them to a crawl, as the game does),
-      must be flanked six times and struck twice, and never go unseen for 6 s. In the
-      last run: seven flanks, hooked once in the first 15 s, struck four times while
-      eating, burned once, 79 raw in all.
+      must be flanked four times and struck twice, and never go unseen for 6 s. In the
+      last run: five flanks, struck nine times (eight of them while eating), not burned,
+      154 raw in all.
     - A player who circles perfectly, with no reaction time, must be flanked three times
-      in 15 s. In the last run: three Hauls, two of them ending in a catch, and both
-      Overheads missed as they ran on, so 8 raw in all.
-  - Four cases check that the drawn sword is where the server sweeps it (within 0.01 of
+      in 15 s. In the last run: four Hauls and a Lunge, struck once and burned four times,
+      36 raw in all.
+    - The 30 s case can sit on its limit of four flanks. The four runs with the Pyre Brand
+      on Nov 24 had seven, four, five and five.
+  - Five cases check that the drawn sword is where the server sweeps it (within 0.01 of
     the pommel). They measure a sword at rest; no case yet measures a blow in mid-swing.
   - A free fight then runs through Unbound to his death. The player stands, backs away,
     circles and jumps, runs far off, eats, climbs out of reach and gets behind him.
@@ -437,7 +501,7 @@ mesh later, in a deferred callback.
   saves every tick, for judging a fast move).
 - `pyre_king_client_smoke.init.gradle` runs a hidden, muted client. It checks that he uses
   his GeckoLib renderer and that every clip in `PyreKingClips` is in the baked animation
-  file. It then rehearses every clip and saves 56 screenshots to
+  file. It then rehearses every clip and saves 53 screenshots to
   `build/pyre-king-client-smoke/screenshots/`.
 - The screenshots show how he draws in the fixture; they are not a Lunar look.
 
@@ -630,6 +694,9 @@ the floor's rim are faint: most of the hall's brightness is the ambient light.
   pillar (he does not throw at a target behind one), pull-backs that bow toward the dodge
   or run through a player, the memory of a reversal, a Cast answering a movement spell,
   and Stone Wall as cover.
+- **Open to play:** the Pyre Brand. The fan's size, its 1.2 s of warning, its damage and
+  its 1.8 s are first guesses. Between 11.5 and 14 blocks he now has only the Lunge and
+  the Cast.
 - **Open to play:** a player who stays in the air (a hover, a string of launches) draws
   only Drag Down. Nobody can stand on a pillar in the hall.
 - **Open to play:** a player who only sprints round a pillar is now hooked off it on about

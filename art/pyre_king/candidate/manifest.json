@@ -610,6 +610,23 @@
     "bow_period_seconds": 0.55,
     "bow_damping": 0.45
   },
+  "brand": {
+    "about": "The Pyre Brand, drawn only while its clip plays (t = seconds into the clip). He drives the sword into the floor and its fire goes into the stone: from drain[0] to drain[1] the blade goes dark from the hilt down until only lit_floor of its sockets (counted from the point) still burn; from catch[0] to catch[1], as he tears it free, the fire runs back up the blade from the point. Between burn[0] and burn[1] the game burns a fan of the floor ahead of the sword as blocks of fire; neither the workshop nor this layer draws that.",
+    "clip": "pyre_brand",
+    "drain": [
+      1.6,
+      1.8
+    ],
+    "lit_floor": 0,
+    "catch": [
+      3.5,
+      3.8
+    ],
+    "burn": [
+      1.7,
+      3.5
+    ]
+  },
   "clips": {
     "idle": {
       "length": 6.0,
@@ -688,19 +705,8 @@
         0.0
       ]
     },
-    "chain_scythe_low": {
-      "length": 2.9,
-      "loop": false,
-      "ground_speed": 0,
-      "end_turn_degrees": 0,
-      "end_offset_blocks": [
-        0.0,
-        0.0,
-        0.0
-      ]
-    },
-    "chain_scythe_high": {
-      "length": 2.9,
+    "pyre_brand": {
+      "length": 4.4,
       "loop": false,
       "ground_speed": 0,
       "end_turn_degrees": 0,

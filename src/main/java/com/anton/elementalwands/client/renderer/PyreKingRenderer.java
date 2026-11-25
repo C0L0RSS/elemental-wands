@@ -45,6 +45,7 @@ public class PyreKingRenderer extends GeoEntityRenderer<PyreKingEntity, PyreKing
         state.ember = state.intro < 0 ? 1 : PyreKingIntroTrack.get().ember(state.intro);
         state.blade = state.intro < 0 ? 1 : PyreKingIntroTrack.get().blade(state.intro);
         state.clip = entity.clip();
+        state.clipSeconds = entity.clipSeconds(partialTick);
         var aim = entity.aim();
         state.aimRight = aim.x; state.aimUp = aim.y; state.aimAhead = aim.z;
         state.carryRight = state.carryUp = state.carryAhead = 0;

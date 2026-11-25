@@ -22,6 +22,12 @@ public final class PyreKingContractTest {
             require(armored(PyreKingRules.UNBOUND_SWEEP, 20, toughness) < sword, "Unbound's sweep should not out-hit his sword");
             double fire = armored(PyreKingRules.FIRE, 20, toughness);
             require(fire >= 1.5 && fire <= 3, "A second in his fire should cost about a tenth of a player's health: " + fire);
+            // The Pyre Brand: caught on its floor as it catches costs about what the chain does, and standing there
+            // until it dies about a sword blow.
+            double brand = armored(PyreKingRules.BRAND, 20, toughness);
+            int more = (int) ((Move.BRAND.seconds(PyreKingRules.BRAND_TO) - Move.BRAND.seconds(PyreKingRules.BRAND_FROM)) * 20 / PyreKingRules.FIRE_EVERY);
+            require(more == 1 && brand <= chain + .01 && brand > sword * .5 && brand + fire * more > sword * .75 && brand + fire * more < sword * 1.25,
+                    "The Pyre Brand should cost about a chain blow as it catches and about a sword blow in all: " + brand + " + " + fire + " x " + more);
         }
         require(PyreKingRules.YANK < PyreKingRules.CHAIN && PyreKingRules.TUG < PyreKingRules.CHAIN, "The drags' own damage is light: what follows them is the threat");
         // Hiding: a pillar is answered in under two seconds, eating there sooner than a bite takes, and slipping back
@@ -51,14 +57,68 @@ public final class PyreKingContractTest {
                 "He must be a little slower than a sprint, and no slower than that");
         require(near(PyreKingRules.tempo("run").clip(1), PyreKingRules.RUN / PyreKingRules.RUN_AUTHORED), "His run clip should stride at the speed he runs");
 
-        // The Chain Scythe up close (the developer's second playtest, Nov 11: "impossible to dodge at close range").
-        require(!PyreKingRules.scytheReaches(PyreKingRules.HOLD, .3) && !PyreKingRules.scytheReaches(4, .3) && PyreKingRules.scytheReaches(6.5, .3),
-                "The Scythe should strike only out where its blade swings, not a player standing close to him");
-        for (double d : new double[]{1, 3, 5, 6.5})
-            for (boolean jumped : new boolean[]{false, true}) {
-                Map<Move, Double> near = PyreKingRules.weights(new Read(d, false, false, false, jumped, false, true, d > 3), null, null);
-                require(!near.containsKey(Move.SCYTHE_LOW) && !near.containsKey(Move.SCYTHE_HIGH), "He should not use the Scythe on a player " + d + " blocks away");
-            }
+        // The Pyre Brand (the developer, Nov 24: the Chain Scythe went; he sticks his sword in the ground and the floor in front burns).
+        require(java.util.Arrays.stream(Move.values()).noneMatch(move -> move.name().startsWith("SCYTHE") || move.name().equals("BREATH"))
+                && PyreKingClips.get("chain_scythe_low") == null && PyreKingClips.get("chain_scythe_high") == null && PyreKingClips.get("kings_breath") == null,
+                "The Chain Scythe and the jet built after it are gone");
+        require(Move.BRAND.windows.isEmpty() && Move.BRAND.tempo().plain() && near(PyreKingRules.BRAND_TO - PyreKingRules.BRAND_FROM, 1.8),
+                "The Pyre Brand strikes with no blade, and its floor burns for 1.8 s, as its clip was made");
+        require(Move.BRAND.cues[0] < Move.BRAND.aimUntil && Move.BRAND.free > PyreKingRules.BRAND_TO + .4 && Move.BRAND.free <= PyreKingRules.BRAND_TO + .8,
+                "The Pyre Brand warns before its aim freezes, and he is free soon after he tears the sword out");
+        // The floor shows from the aim's freeze. From the worst place in the fan a player must be able to get out before it
+        // catches: at a sprint after a quarter second's thought, or at a walk at once. In both phases.
+        double brandWarned = Move.BRAND.seconds(PyreKingRules.BRAND_FROM) - Move.BRAND.seconds(Move.BRAND.aimUntil);
+        for (double half : new double[]{PyreKingRules.BRAND_HALF, PyreKingRules.BRAND_HALF_TWO}) {
+            // Half a body and the block the fire rounds up to, past the fan's own edge.
+            double out = PyreKingRules.brandEscape(half) + .8;
+            require(out / 5.6 + .25 <= brandWarned && out / 4.3 <= brandWarned && out > 2,
+                    "The Pyre Brand's floor should be wide enough to matter and narrow enough to leave in time: " + out + " blocks, " + brandWarned + " s");
+        }
+        require(PyreKingRules.BRAND_HALF_TWO > PyreKingRules.BRAND_HALF && PyreKingRules.BRAND_HALF_TWO <= 60, "Phase two's fan is the wider one, and still a fan");
+        // The renderer drains the blade's fire by pyre_king_effects.json; the server burns the floor by the rules. The same moments.
+        com.google.gson.JsonObject drawn;
+        try (var in = PyreKingContractTest.class.getResourceAsStream("/assets/elementalwands/pyre_king_effects.json")) {
+            drawn = com.google.gson.JsonParser.parseReader(new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject().getAsJsonObject("brand");
+        } catch (java.io.IOException e) {
+            throw new java.io.UncheckedIOException(e);
+        }
+        require(drawn.get("clip").getAsString().equals(Move.BRAND.clip) && near(drawn.getAsJsonArray("burn").get(0).getAsDouble(), PyreKingRules.BRAND_FROM)
+                && near(drawn.getAsJsonArray("burn").get(1).getAsDouble(), PyreKingRules.BRAND_TO), "The clip's burn and the rules' have drifted apart");
+        require(drawn.getAsJsonArray("drain").get(0).getAsDouble() >= PyreKingRules.BRAND_STRIKES - 1e-9 && drawn.getAsJsonArray("drain").get(0).getAsDouble() <= PyreKingRules.BRAND_FROM
+                && drawn.getAsJsonArray("drain").get(1).getAsDouble() <= PyreKingRules.BRAND_FROM + .15 && drawn.getAsJsonArray("catch").get(0).getAsDouble() >= PyreKingRules.BRAND_TO - 1e-9,
+                "The blade should go dark as the floor catches, not before it is in the floor, and light again only once the floor is out");
+        // The clip really puts the sword in the floor between those moments, in front of him, and nowhere else in it.
+        PyreKingTracks.Track brandTrack = PyreKingTracks.get(Move.BRAND.clip);
+        java.util.function.DoubleFunction<double[]> enters = t -> PyreKingRules.entersFloor(brandTrack.pommel(t), brandTrack.tip(t));
+        require(enters.apply(Move.BRAND.aimUntil) == null && enters.apply(PyreKingRules.BRAND_STRIKES - .1) == null && enters.apply(PyreKingRules.BRAND_STRIKES + .05) != null
+                && enters.apply(PyreKingRules.BRAND_FROM) != null && enters.apply(PyreKingRules.BRAND_TO) != null && enters.apply(PyreKingRules.BRAND_TO + .4) == null,
+                "The sword should meet the floor at the moment the rules name, stand in it while the floor burns, and be out after");
+        double[] sunk = enters.apply(PyreKingRules.BRAND_FROM + .2);
+        require(Math.abs(sunk[0]) < .8 && sunk[1] > 3 && sunk[1] < 5.5, "The sword should go into the floor a few blocks in front of him: " + sunk[0] + ", " + sunk[1]);
+        // The fan: the sword stands in it, it ends BRAND_REACH from its point, it opens by its half angle, and he is not in it.
+        double fanEnd = PyreKingRules.BRAND_REACH - PyreKingRules.BRAND_BACK, h = PyreKingRules.BRAND_HALF, wide = PyreKingRules.BRAND_HALF_TWO;
+        require(PyreKingRules.inBrand(0, 0, h) && PyreKingRules.inBrand(0, fanEnd - .1, h) && !PyreKingRules.inBrand(0, fanEnd + .1, h)
+                && !PyreKingRules.inBrand(0, -PyreKingRules.BRAND_BACK - .1, h), "The fan runs from just behind the sword to its reach");
+        double across = (4 + PyreKingRules.BRAND_BACK) * Math.tan(Math.toRadians(h));
+        require(PyreKingRules.inBrand(across - .1, 4, h) && PyreKingRules.inBrand(.1 - across, 4, h) && !PyreKingRules.inBrand(across + .1, 4, h)
+                && PyreKingRules.inBrand(across + .1, 4, wide), "The fan opens by its half angle to both sides, and wider in phase two");
+        require(!PyreKingRules.inBrand(-sunk[0], -sunk[1], h) && !PyreKingRules.inBrand(-sunk[0], -sunk[1], wide) && !PyreKingRules.inBrand(2 - sunk[0], -sunk[1], wide)
+                && !PyreKingRules.inBrand(-sunk[0], -2 - sunk[1], wide), "Neither he nor a player beside or behind him stands in his own fire");
+        // He uses it on targets it will be under: both ends of the range are in the fan, the far one with room to spare.
+        require(PyreKingRules.inBrand(-sunk[0], PyreKingRules.BRAND_NEAR - sunk[1], h) && PyreKingRules.inBrand(-sunk[0], PyreKingRules.BRAND_RANGE + .8 - sunk[1], h)
+                && !PyreKingRules.inBrand(-sunk[0], PyreKingRules.BRAND_RANGE + 2.5 - sunk[1], h), "He should use the Pyre Brand only on a target its fan covers");
+        require(PyreKingRules.BRAND_LOST >= 4 && PyreKingRules.BRAND_LOST <= 12 && PyreKingRules.BRAND_LOST < PyreKingRules.FLANK_AFTER && PyreKingRules.BRAND_DROP <= .5,
+                "A target who gets behind stone should fanEnd the Pyre Brand within about half a second, so that he can go round");
+        for (double d : new double[]{7, 8, 9.5, 11.5})
+            require(PyreKingRules.weights(new Read(d, false, false, false, false, true, d > 9), null, null).containsKey(Move.BRAND), "He should burn the floor under a player " + d + " blocks away");
+        // It is his middle-range move (the developer, Nov 24): close in he keeps to his blade in hand.
+        for (double d : new double[]{1, 2.5, 4, 5.5, 6.5})
+            for (boolean second : new boolean[]{false, true})
+                require(PyreKingRules.weights(new Read(d, false, false, false, false, true, second), null, null).keySet().stream().allMatch(Move::swordString),
+                        "At sword range he should use only his sword strings: " + d);
+        require(!PyreKingRules.weights(new Read(13, false, false, false, false, true, false), null, null).containsKey(Move.BRAND)
+                && PyreKingRules.weights(new Read(13, false, false, false, false, true, false), null, null).size() >= 2,
+                "Past the fan's reach he uses something else, and has more than one other answer");
 
         // Tempo: the pace the developer's playtest asked for (Nov 11), set without baking the clips again.
         for (PyreKingClips.Clip clip : PyreKingClips.ALL) {
@@ -133,7 +193,7 @@ public final class PyreKingContractTest {
                 "The Haul must carry his body to its stuck sword, and the Snare's sword must take the whole aim");
         require(PyreKingTracks.get("haul").travelEnd() > PyreKingTracks.get("lunge").travelEnd() * 1.5, "The Haul should go much further than the Lunge");
         require(near(PyreKingAim.get("drag_down").lift(1.3), 0), "Drag Down's sword must come down to the floor");
-        require(PyreKingAim.get("royal_cut") == null && PyreKingAim.get("chain_scythe_low") == null, "Only throws are aimed");
+        require(PyreKingAim.get("royal_cut") == null && PyreKingAim.get("pyre_brand") == null, "Only throws are aimed");
         double[] stick = PyreKingAim.get("cast_reel").stick();
         require(near(stick[1], 0) && stick[2] > 11.5 && stick[2] < 12.5, "The Cast's sword should meet the floor about 12 blocks out");
 
@@ -179,32 +239,33 @@ public final class PyreKingContractTest {
 
         // The chooser: distance picks the family, reads tilt it, and he never repeats a string three times.
         Random random = new Random(7);
-        Read close = new Read(4, false, false, false, false, false, true, false), behind = new Read(4, false, true, false, false, false, true, false);
-        Read mid = new Read(10, false, false, false, false, false, true, false), jumper = new Read(10, false, false, false, true, false, true, false);
-        Read far = new Read(20, false, false, false, false, false, true, false), distant = new Read(32, false, false, false, false, false, true, false);
-        Read hidden = new Read(32, false, false, false, false, false, false, false), aloft = new Read(8, true, false, false, false, false, true, false);
-        Read out = new Read(30, true, false, false, false, false, true, false), healer = new Read(18, false, false, false, false, true, true, false);
-        Read retreat = new Read(8, false, false, true, false, false, true, false), two = new Read(4, false, false, false, false, false, true, true);
+        Read close = new Read(4, false, false, false, false, true, false), behind = new Read(4, false, true, false, false, true, false);
+        Read mid = new Read(10, false, false, false, false, true, false);
+        Read far = new Read(20, false, false, false, false, true, false), distant = new Read(32, false, false, false, false, true, false);
+        Read hidden = new Read(32, false, false, false, false, false, false), aloft = new Read(8, true, false, false, false, true, false);
+        Read out = new Read(30, true, false, false, false, true, false), healer = new Read(18, false, false, false, true, true, false);
+        Read retreat = new Read(8, false, false, true, false, true, false), two = new Read(4, false, false, false, false, true, true);
         Map<Move, Integer> counts = new EnumMap<>(Move.class);
         for (int i = 0; i < 4000; i++) counts.merge(PyreKingRules.choose(close, null, null, random::nextDouble), 1, Integer::sum);
-        require(counts.keySet().stream().allMatch(move -> move.swordString() || move == Move.SCYTHE_LOW), "Close in he uses sword strings: " + counts);
+        require(counts.keySet().stream().allMatch(Move::swordString), "Close in he uses sword strings: " + counts);
         require(counts.size() >= 3 && counts.get(Move.ROYAL_CUT) > counts.get(Move.OVERHEAD), "Close in he should mix his strings, the Royal Cut most: " + counts);
         require(share(behind, Move.TURNING_CUT, random) > .55, "Standing behind him should draw the Turning Cut");
-        require(share(mid, Move.SCYTHE_LOW, random) > share(mid, Move.SCYTHE_HIGH, random), "The low Scythe is the usual one");
-        require(share(jumper, Move.SCYTHE_HIGH, random) > share(jumper, Move.SCYTHE_LOW, random) * 3, "Jumping should draw the high Scythe");
+        Read fan = new Read(8, false, false, false, false, true, false);
+        require(share(fan, Move.BRAND, random) > share(fan, Move.LUNGE, random) && share(fan, Move.LUNGE, random) > .15 && share(mid, Move.LUNGE, random) > .15,
+                "In the middle the Pyre Brand is the usual one, and the Lunge is common");
         require(share(retreat, Move.THRUST, random) > .4, "Backing straight away should draw the Thrust");
         require(share(far, Move.CAST, random) > share(far, Move.LUNGE, random) && share(far, Move.LUNGE, random) > share(far, Move.HOOK, random)
                 && share(distant, Move.HOOK, random) > .5, "Far targets draw the Cast most, very far ones the Hook");
         // A player who keeps their distance is brought to sword range (the developer's playtest, Nov 11: at range he only threw).
         require(share(far, Move.LUNGE, random) + share(far, Move.HOOK, random) > .45, "Far targets should often draw a move that closes the distance");
         require(PyreKingRules.choose(hidden, null, null, random::nextDouble) == null
-                && PyreKingRules.weights(new Read(10, false, false, false, false, false, false, false), null, null).isEmpty()
-                && PyreKingRules.weights(new Read(4, false, true, false, false, true, false, true), null, null).isEmpty(),
-                "He swings at nothing he cannot see: stone shelters a player from every blow, the Scythe included");
+                && PyreKingRules.weights(new Read(10, false, false, false, false, false, false), null, null).isEmpty()
+                && PyreKingRules.weights(new Read(4, false, true, false, true, false, true), null, null).isEmpty(),
+                "He swings at nothing he cannot see: stone shelters a player from every blow");
         require(PyreKingRules.choose(aloft, null, null, random::nextDouble) == Move.DRAG_DOWN && PyreKingRules.choose(out, null, null, random::nextDouble) == null,
                 "A player overhead draws Drag Down once he is under them");
         // Eating in the open: he does not wait out his gap, and it is the sword that comes, thrown or flown after.
-        require(PyreKingRules.punishes(healer) && !PyreKingRules.punishes(far) && !PyreKingRules.punishes(new Read(3, false, false, false, false, true, true, false))
+        require(PyreKingRules.punishes(healer) && !PyreKingRules.punishes(far) && !PyreKingRules.punishes(new Read(3, false, false, false, true, true, false))
                 && share(healer, Move.HOOK, random) < share(far, Move.HOOK, random), "Eating in the open should be punished");
         require(share(two, Move.ROYAL_CUT_THREE, random) > 0 && share(two, Move.ROYAL_CUT, random) == 0, "Phase two's Royal Cut has three blows");
         for (Read read : new Read[]{close, mid, far, distant, two, healer})
@@ -216,9 +277,8 @@ public final class PyreKingContractTest {
                 "After the first cut he turns on a player behind him and otherwise carries on");
         require(PyreKingRules.chainLimit(true) > PyreKingRules.chainLimit(false) && PyreKingRules.chainChance(true) > PyreKingRules.chainChance(false), "Phase two chains more");
 
-        // Heights: a floor sweep is jumped, a head-height one is crouched under, a cut reaches the floor.
+        // Heights: a floor sweep is jumped, a cut reaches the floor.
         require(PyreKingRules.inBand(Band.LOW, 0, 1.8, .2, .3) && !PyreKingRules.inBand(Band.LOW, .7, 2.5, .2, .3), "The low sweep must be jumpable");
-        require(PyreKingRules.inBand(Band.HIGH, 0, 1.8, 1.4, 2.6) && !PyreKingRules.inBand(Band.HIGH, 0, 1.5, 1.4, 2.6), "The high sweep must pass over a crouch");
         require(PyreKingRules.inBand(Band.SOLID, 0, 1.8, 2.7, 3.1) && !PyreKingRules.inBand(Band.SOLID, 5, 6.8, 2.7, 3.1), "A cut reaches the floor but not a pillar top");
         require(!PyreKingRules.inBand(Band.SOLID, -4, -2.2, 2.7, 3.1) && !PyreKingRules.inBand(Band.LOW, -4, -2.2, .2, .3), "Nothing reaches a player in a cave under his floor");
         require(PyreKingAim.get("drag_down").lift(.85) == 0, "Drag Down must not lift a sword that is still in his hand");

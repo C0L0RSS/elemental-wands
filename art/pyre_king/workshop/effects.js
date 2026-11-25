@@ -193,8 +193,8 @@ function chainBows(model,clip,t,matrices){
  const past=[now];for(let k=1;k<=BOW_SAMPLES;k++)past.push(endsAt(model,clip,t-k*BOW_STEP));
  return now.map((c,i)=>bowOf(past.map(p=>p[i]),BOW_SHARE));
 }
-// The sword's own chain bows the same way while the sword is swung on it (the Chain Scythe),
-// by at most WRIST_BOW_SHARE of its length, as an even arc.
+// The sword's own chain bows the same way while the sword is swung on it, by at most
+// WRIST_BOW_SHARE of its length, as an even arc.
 const WRIST_BOW_SHARE=.12,wristRigs=new WeakMap();
 function wristBow(model,clip,t){
  if(!clip)return null;
@@ -236,8 +236,16 @@ function chainBetween(a,b,faces,uvs,hot,bow,arc){
   for(const qd of quads){const pts=qd.map(([s,x,y])=>corner(s,x,y));faces.push({bone:'long_chain',pts,n:norm(cross(sub(pts[1],pts[0]),sub(pts[2],pts[0]))),uvs:hot&&i%3===1?hot:uvs});}
  }
 }
+// The Pyre Brand (manifest.brand): while its clip plays, the blade's fire drains into the floor
+// he drives it into, and runs back up the blade as he tears it free. brandLit gives, for a moment
+// of the clip, how much of the blade burns: 0-1 of its sockets, counted from the point.
+function brandLit(br,t){
+ const [d0,d1]=br.drain,[c0,c1]=br.catch,low=br.lit_floor;
+ return t<d0?1:t<d1?1-(1-low)*smooth((t-d0)/(d1-d0)):t<c0?low:t<c1?low+(1-low)*smooth((t-c0)/(c1-c0)):1;
+}
 // opts.travel is the body's own world velocity in blocks/s, for clips that play in place (a walk
 // or run): the fire moves through still air, so its history drifts back at that speed.
+// opts.clip names the clip being played, for the effects that belong to one clip (the Pyre Brand).
 function scene(model,manifest,t=.65,motion=false,planted=false,clip=null,opts=null){
  const pose=posed(model,manifest,t,motion,planted,clip);
  const faces=model.faces.filter(f=>!f.empty).map(f=>{const m=pose.matrices[f.bone];return {...f,bone:model.bones[f.bone].name,pts:f.pts.map(p=>M.apply(m,p)),n:norm(M.dir(m,f.n))};});
@@ -369,8 +377,10 @@ function scene(model,manifest,t=.65,motion=false,planted=false,clip=null,opts=nu
    }
   }
  }
- active.forEach(i=>{tongue(i);if(peaks.has(i))tongue(i,peaks.get(i));});
- if(moving)wake();
+ // In the Pyre Brand the fire drains down the blade into the floor: only the sockets nearest the point burn.
+ const br=manifest.brand,litCount=Math.round((br&&clip&&opts&&opts.clip===br.clip?brandLit(br,t):1)*active.length);
+ active.slice(active.length-litCount).forEach(i=>{tongue(i);if(peaks.has(i))tongue(i,peaks.get(i));});
+ if(moving&&litCount>=active.length)wake();
  // The loose chains burn along their whole length: a low flame every half block or so and a
  // tall one on each hook. A flame stands upright where its chain is still; where the chain
  // moves it lies back along the way it came (up to 1.1 blocks) and loses part of its rise.
@@ -391,5 +401,5 @@ function scene(model,manifest,t=.65,motion=false,planted=false,clip=null,opts=nu
  }
  return {faces,flames,sockets:pose.sockets,fire};
 }
-globalThis.PyreEffects={scene,posed,sweep,reach};
+globalThis.PyreEffects={scene,posed,sweep,reach,brandLit};
 })();

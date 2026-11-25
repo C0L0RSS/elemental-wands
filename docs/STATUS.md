@@ -27,7 +27,8 @@ Videos, browser previews and workshop clips waiting for the developer's approval
 - **Storm Roc landings:** the in-game video of each element's landing
   (`roc_intro_client_smoke -ProcIntroElement=<element> -ProcIntroVideo`).
 - **Guardian intro (the zombie):** the in-game video of the retimed intro.
-- **Pyre King:** the Haul and Snare clips and the Chain Scythe's bowed chain in the workshop.
+- **Pyre King:** the Haul and Snare clips and the Pyre Brand clip in the workshop (the
+  floor's fire shows only in the game).
 - **Necromancer:** the remaining workshop clips, including the standalone dragged-soul
   clip, and the fireball and soul models (`.local-previews/soul-fire/`). Once approved they
   need installing and a client check.
@@ -39,6 +40,9 @@ Looks and balance that only a person playing can judge.
 ### Pyre King
 
 - His health is a first guess; damage is set for plain diamond to netherite armor.
+- The Pyre Brand, which replaced the Chain Scythe on November 24: whether the tell reads
+  as "the floor is about to burn", whether 1.2 s is the right warning for the size of the
+  fan, and what it costs.
 
 ### Storm Roc
 
@@ -205,6 +209,10 @@ Things one player cannot show.
 
 Automated work an agent can do without the developer.
 
+- **Pyre King:** the fight fixture's `circles-a-pillar` case can sit on its limit of four
+  flanks in 30 s now that the Pyre Brand takes a share of his time (seven, four, five and
+  five in its four runs). Watch it over a few more runs; if it fails without a real fault, judge the
+  case by how often he strikes.
 - No fixture has run on a dedicated server since the Nature rework; the November 10–11 runs
   were hosted in a singleplayer world on the Windows machine.
 - The party fixture's restart half was not run after the Nature rework.

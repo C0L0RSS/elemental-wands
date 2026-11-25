@@ -271,7 +271,7 @@ def build():
     def png(im):b=io.BytesIO();im.save(b,format='PNG');return b.getvalue()
     # The exported guard stays static; effects.js owns the workshop-only sweep exercise.
     from rig import bake
-    from clips import CLIPS, GROUND_SPEED, END_TURN, END_OFFSET, UNBOUND_CHAINS
+    from clips import CLIPS, GROUND_SPEED, END_TURN, END_OFFSET, UNBOUND_CHAINS, BRAND
     anim={'format_version':'1.8.0','animations':{'animation.pyre_king.guard':{'loop':True,'animation_length':1,'bones':{}}}}
     for name,(fn,length,loop) in CLIPS.items():
         anim['animations']['animation.pyre_king.'+name]=bake(fn,length,loop)
@@ -306,6 +306,10 @@ def build():
                 'stream':{'about':'The wake (trail true): one sheet across the arc the blade swept. drawn = the tip root\'s path length over min(seconds, window); W = the age at which the tip\'s path covers max_length_blocks*tanh(drawn/max_length_blocks). Every plain root is sampled at ages W*k/rows (k = 0..rows, x = k/rows) and lifted by rise_blocks*x*x plus an upward flutter 0.6*flutter_blocks*stream*x*x*sin(13.7t + 1.7*phase + 4.1x), phase 1.9*socket + 0.7; quads join neighbouring roots at neighbouring ages. Per-vertex opacity = ramp(wake_speed, that root\'s speed at that age) * (1 - smoothstep(age/window)) * smoothstep(x/fade_in) * (1 - smoothstep((x - hold)/(1 - hold))) * (1 - smoothstep(drop/drop_fade_blocks)), drop being how far the vertex hangs below that root now: zero at the blade and at the old edge, and a rising blade\'s sheet fades out below it instead of hanging as a curtain. Every quad is emitted twice: a normally blended tint (opacity*tint) that turns what is behind it fire-coloured, then an additive glow (opacity*glow, blend add). Texture: one lick frame per columns_per_frame roots, using the middle frame_span of its width, v from v_start at the blade to v_end at the old edge, so the sheet is continuous near the blade and breaks into a few ragged tongues behind.',
                     'rows':6,'seconds':.12,'max_length_blocks':2.4,'tint':.45,'glow':.5,'fade_in':.3,'hold':.45,'columns_per_frame':3,'frame_span':.6,'v_start':.85,'v_end':.15,'rise_blocks':.35,'flutter_blocks':.12,'drop_fade_blocks':1.2}}},
         'loose_chains':{'markers':UNBOUND_CHAINS,'about':'Six empty marker bones on the torso. A clip (Unbound) moves a marker to where the far end of a loose chain is; at rest each sits on the chest chain. Whatever draws him draws a chain from the rest place of the marker on the torso to the marker when they are more than draw_beyond_blocks apart. The workshop (effects.js) draws heavy links with a little sag, bowed while the chain is swung so that its far end trails (the sideways velocity of its far end over the last second, passed through a damped oscillator of bow_period_seconds and bow_damping so the chain lags, overshoots and settles, times bow_seconds, at most bow_share of its length, largest two thirds of the way along), every third one hot, a barbed hook hook_blocks long on the far end, lying flat and curving to his left, and fire: a low flame about every flame_spacing_blocks and a tall one on the hook, upright where the chain is still and laid back along its travel where it moves.','draw_beyond_blocks':.6,'hook_blocks':1.25,'flame_spacing_blocks':.6,'bow_seconds':.09,'bow_share':.22,'bow_period_seconds':.55,'bow_damping':.45},
+        # The Pyre Brand: effects.js and the game's renderer draw the blade's fire draining into the floor from
+        # these numbers; the fight's rules (PyreKingRules) light the floor's fire between the same moments.
+        'brand':{'about':'The Pyre Brand, drawn only while its clip plays (t = seconds into the clip). He drives the sword into the floor and its fire goes into the stone: from drain[0] to drain[1] the blade goes dark from the hilt down until only lit_floor of its sockets (counted from the point) still burn; from catch[0] to catch[1], as he tears it free, the fire runs back up the blade from the point. Between burn[0] and burn[1] the game burns a fan of the floor ahead of the sword as blocks of fire; neither the workshop nor this layer draws that.',
+            'clip':BRAND['clip'],'drain':list(BRAND['drain']),'lit_floor':0,'catch':list(BRAND['catch']),'burn':list(BRAND['burn'])},
         'clips':{name:{'length':length,'loop':loop,'ground_speed':GROUND_SPEED.get(name,0),'end_turn_degrees':END_TURN.get(name,0),'end_offset_blocks':[float(v) for v in END_OFFSET.get(name,(0,0,0))]} for name,(fn,length,loop) in CLIPS.items()},
         'preview_rendering':'Shared effects.js samples posed sockets: a low overlapping flame roots on the blade\'s upper edge at every socket, making one continuous fringe, and five taller peaks break the silhouette. Still flames stand upright in world space. As the blade moves, it re-poses the clip at a few earlier moments (carried back by the body\'s own travel for a walk or run played in place): each flame lies back along the path its root just travelled, never shorter than it stands still and never hanging below the blade, and a fast blow leaves one sheet of fire across the arc the blade swept, faded in from the blade, tinted and glowing additively. Slow moves only lean the fire, everything settles upright within a fraction of a second after the blade stops, and a teleport or parent switch is never traced. No flame geometry in either sword export.'}
     # Measure the transformed corners with the same GeckoLib baker as the workshop.
@@ -368,7 +372,7 @@ def build():
 
 def numbers(o):
     """A manifest block without its prose: the numbers and names the game reads."""
-    if isinstance(o,dict):return {k:numbers(v) for k,v in o.items() if not isinstance(v,str) or k in ('bone',)}
+    if isinstance(o,dict):return {k:numbers(v) for k,v in o.items() if not isinstance(v,str) or k in ('bone','clip')}
     return o
 
 
@@ -410,7 +414,7 @@ def runtime(assets,manifest,model,atlas):
     def rect(bone):                                  # the first cube's north face, as u0 v0 u1 v1 of the atlas
         f=bones[bone]['cubes'][0]['uv']['north'];(u,v),(w,h)=f['uv'],f['uv_size']
         return [u/atlas.size[0],v/atlas.size[1],(u+w)/atlas.size[0],(v+h)/atlas.size[1]]
-    effects={'blade_fire':numbers(manifest['blade_fire']),'loose_chains':numbers(manifest['loose_chains']),
+    effects={'blade_fire':numbers(manifest['blade_fire']),'loose_chains':numbers(manifest['loose_chains']),'brand':numbers(manifest['brand']),
              'chain':{'wrist_bone':'right_wrist_shackle','sword_bone':'sword','hidden_tether':'hanging_wrist_chain',
                       'draw_beyond_blocks':.8,'bow_share':.12,'iron_uv':rect('hanging_wrist_chain'),'hot_uv':rect('chest_shard')}}
     files[EFFECTS]=(json.dumps(effects,indent=2)+'\n').encode()

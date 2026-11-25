@@ -49,8 +49,8 @@ public final class PyreKingClientSmoke implements ClientModInitializer {
             new Scene("royal_cut", "close", 18, 20, 38), new Scene("royal_cut", "front", 20, 38),
             new Scene("kingsguard_thrust", "side", 16, 19), new Scene("turning_cut", "front", 12, 15, 17),
             new Scene("overhead_sentence", "side", 14, 16, 17), new Scene("royal_cut_three", "side", 53, 55),
-            new Scene("cast_reel", "wide", 16, 26, 76), new Scene("chain_scythe_low", "wide", 12, 18, 21),
-            new Scene("chain_scythe_high", "wide", 12, 18, 21), new Scene("drag_down", "wide", 15, 20, 26),
+            new Scene("cast_reel", "wide", 16, 26, 76), new Scene("pyre_brand", "wide", 12, 34, 50),
+            new Scene("drag_down", "wide", 15, 20, 26),
             new Scene("hook", "wide", 18, 24, 36), new Scene("zip", "wide", 10, 17, 28), new Scene("lunge", "wide", 9, 22, 34),
             new Scene("haul", "wide", 5, 10, 14, 18), new Scene("snare", "wide", 5, 8, 12, 30),
             new Scene("unbound", "wide", 13, 26, 35, 46, 60), new Scene("unbound", "close", 26, 35));

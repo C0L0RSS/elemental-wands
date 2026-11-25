@@ -215,6 +215,7 @@ scene the camera, HUD, input, fog and light, `mixin/IntroCameraMixin`, `IntroGam
 | Moves, chooser, tuning, clip tempo | `entity/pyreking/PyreKingRules` | [Pyre King](reference/pyre-king.md#the-fight) |
 | Weapon tracks and thrown-sword aim | `entity/pyreking/PyreKingTracks`, `PyreKingAim`, `PyreKingClips` (generated) | [Pyre King](reference/pyre-king.md#ownership) |
 | His fire on the floor | `block/PyreKingFireBlock` | [Pyre King](reference/pyre-king.md#the-fight) |
+| Pyre Brand (the sword in the floor and its fan of fire) | `entity/pyreking/PyreKingRules`, `PyreKingCombat`; the blade's fire `client/renderer/PyreKingEffectsLayer`; clip and moments `art/pyre_king/clips.py`, `art/pyre_king/build_art.py` | [Pyre King](reference/pyre-king.md#the-pyre-brand) |
 | Intro cinematic | `entity/pyreking/PyreKingIntro`, `PyreKingIntroTrack`, `client/PyreKingIntroClient`; scene `art/pyre_king/intro/build_intro.py` | [Pyre King](reference/pyre-king.md#the-intro) |
 | Model, renderer, blade fire and chains | `client/model/PyreKingModel`, `client/renderer/PyreKingRenderer`, `PyreKingEffectsLayer` | [Pyre King](reference/pyre-king.md#blade-fire-and-chains) |
 | Burned Gate, fight roster, spectating and return | `hall/PyreGate`, `PyreHallManager`, `PyreSealBlock`, `PyreGateVeilBlock`, `PyreGateLayout` (generated), `world/PyreGateStructure`; layout `art/pyre_gate/build_layout.py` | [Pyre King](reference/pyre-king.md#the-burned-gate) |

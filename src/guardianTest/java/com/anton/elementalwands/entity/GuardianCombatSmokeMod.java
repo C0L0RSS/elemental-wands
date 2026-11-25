@@ -25,7 +25,13 @@ public final class GuardianCombatSmokeMod implements ModInitializer {
     private static final double[] DISTANCE={18,18,3,8,20,12,4,15};
     private int spikesSeen;
     private int shieldTestStart = 125; // Allow normal join protection to expire.
-    private boolean testingFists;
+    private record ShieldTrial(String name, GuardianCombatRules.Attack attack, double targetZ, int impactTick) {}
+    // The ground wave is emitted on its own to check facing after the Guardian has leapt past.
+    private static final List<ShieldTrial> SHIELD_TRIALS = List.of(
+            new ShieldTrial("ground wave", null, 8.5, -1),
+            new ShieldTrial("slam fists", GuardianCombatRules.Attack.SLAM, 3.5, GuardianPhaseRules.slamImpact(false)),
+            new ShieldTrial("Sweep", GuardianCombatRules.Attack.SWEEP, 4.5, GuardianSweepRules.IMPACT));
+    private int shieldTrial;
     private int guardBrokenAt = -1;
     public void onInitialize() {
         ServerTickEvents.END_SERVER_TICK.register(server -> {try{run(server);}catch(Throwable e){e.printStackTrace();try{Files.writeString(Path.of("COMBAT_FAILED.txt"),e.toString());}catch(Exception ignored){}server.stop(false);}});
@@ -42,9 +48,8 @@ public final class GuardianCombatSmokeMod implements ModInitializer {
             target.onTeleportationDone();
         }
         if (action < 0) {
-            if (tick < shieldTestStart || !checkSlamShield(world, tick - shieldTestStart)) return;
-            if (!testingFists) {
-                testingFists = true;
+            if (tick < shieldTestStart || !checkShield(world, tick - shieldTestStart, SHIELD_TRIALS.get(shieldTrial))) return;
+            if (++shieldTrial < SHIELD_TRIALS.size()) {
                 shieldTestStart = tick + 1;
                 return;
             }
@@ -72,20 +77,20 @@ public final class GuardianCombatSmokeMod implements ModInitializer {
                 log.begin(world.getTime(), 1);
                 guardian.setRemoved(net.minecraft.entity.Entity.RemovalReason.UNLOADED_TO_CHUNK);
                 if (log.active()) throw new AssertionError("Chunk unload left the Guardian fight log open");
-                Files.writeString(Path.of("COMBAT_PASSED.txt"),results.toString()+"\nGround wave and slam fists: rear hits dealt damage with the shield raised. Each front block absorbed the hit and disabled the shield for 100 ticks. Blocking the fists also spared the player the following wave.\nBeam, throw, slam fists (3), slam wave only (8), leap and Airburst (12, grounded, rehearsal) all damaged stationary targets; the Sweep struck a target behind it and the Scar's eruption one who stepped onto a crack ("+spikesSeen+" spikes); gravity, projectile and spike cleanup verified.\n");server.stop(false);return;
+                Files.writeString(Path.of("COMBAT_PASSED.txt"),results.toString()+"\nGround wave, slam fists and Sweep: rear hits dealt damage with the shield raised. Each front block absorbed the hit and disabled the shield for 100 ticks. Blocking the fists also spared the player the following wave.\nBeam, throw, slam fists (3), slam wave only (8), leap and Airburst (12, grounded, rehearsal) all damaged stationary targets; the Sweep struck a target behind it and the Scar's eruption one who stepped onto a crack ("+spikesSeen+" spikes); gravity, projectile and spike cleanup verified.\n");server.stop(false);return;
             }
             next(world);
         }
     }
-    private boolean checkSlamShield(ServerWorld world, int age) {
-        String attack = testingFists ? "slam fists" : "ground wave";
-        int turnAt = testingFists ? 10 + GuardianCombatRules.Attack.SLAM.duration : 30;
+    private boolean checkShield(ServerWorld world, int age, ShieldTrial trial) {
+        String attack = trial.name();
+        int turnAt = trial.attack() == null ? 30 : 10 + trial.attack().duration;
         int frontAttackAt = turnAt + 10;
-        double targetZ = testingFists ? 3.5 : 8.5;
+        double targetZ = trial.targetZ();
         if (age == 0) {
             guardBrokenAt = -1;
             // In the wave case the Guardian has leapt past the player, away from the wave's origin.
-            guardian.setPosition(.5, ground, testingFists ? .5 : 16.5);
+            guardian.setPosition(.5, ground, trial.attack() == null ? 16.5 : .5);
             target.setPosition(.5, ground, targetZ);
             target.setStackInHand(Hand.OFF_HAND, new ItemStack(Items.SHIELD));
             target.setCurrentHand(Hand.OFF_HAND);
@@ -97,8 +102,17 @@ public final class GuardianCombatSmokeMod implements ModInitializer {
         var cooldown = target.getItemCooldownManager();
         if (age == 10 || age == frontAttackAt) {
             if (!target.isBlocking()) throw new AssertionError("Shield was not raised before " + attack);
-            if (testingFists) guardian.testAttack(target, GuardianCombatRules.Attack.SLAM);
-            else guardian.combat().emitWave(world, new Vec3d(.5, ground, .5), Set.of());
+            if (trial.attack() == null) {
+                guardian.combat().emitWave(world, new Vec3d(.5, ground, .5), Set.of());
+            } else {
+                // The Sweep hits behind the Guardian. Keep the player in its arc for both shield facings.
+                if (trial.attack() == GuardianCombatRules.Attack.SWEEP) {
+                    guardian.setYaw(180);
+                    guardian.setBodyYaw(180);
+                    guardian.setHeadYaw(180);
+                }
+                guardian.testAttack(target, trial.attack());
+            }
         }
         if (age == turnAt) {
             float damage = target.getMaxHealth() - target.getHealth();
@@ -109,8 +123,8 @@ public final class GuardianCombatSmokeMod implements ModInitializer {
         }
         if (age >= frontAttackAt && cooldown.isCoolingDown(shield) && guardBrokenAt < 0) {
             guardBrokenAt = age;
-            if (testingFists && age != frontAttackAt + GuardianPhaseRules.slamImpact(false))
-                throw new AssertionError("Guard should break on the fists' impact tick");
+            if (trial.attack() != null && age != frontAttackAt + trial.impactTick())
+                throw new AssertionError("Guard should break on the impact tick for " + attack);
             if (target.getHealth() != target.getMaxHealth() || shield.getDamage() == 0 || target.isUsingItem())
                 throw new AssertionError("Facing block should absorb " + attack + ", wear the shield and drop guard");
             target.interactionManager.interactItem(target, world, shield, Hand.OFF_HAND);

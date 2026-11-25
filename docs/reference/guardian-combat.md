@@ -108,7 +108,7 @@ thirds.
 | --- | --- | --- |
 | Slam's ground wave | 10 | Full circle, out to 32 blocks (44 in phase two). Jump the wave or block it at the cost of a five-second shield cooldown. |
 | Slam fists | 14 | Its front half within 5 blocks, plus anywhere under its body. Blocking the fists disables the shield for five seconds. Anyone the fists reach is spared the same slam's wave. |
-| Sweep | 14 | Everyone within 7 blocks outside the wedge in front of it; cannot be jumped |
+| Sweep | 14 | Hits within 7 blocks outside the front wedge. A raised shield facing the Guardian blocks the hit and drops for five seconds. |
 | Scar's eruption | 14 | Whoever stands on a crack as its spike comes up; once per cast |
 | Standing spikes | 10 | On touch, with a shove away; at most once a second per player |
 | Rock, direct / splash | 13 / 10 | Splash within 3 blocks |
@@ -201,7 +201,8 @@ got behind it is still behind it when the arm comes round.
    the reach, with the wedge in front of it left open.
 2. Then one blow: 14 damage and a hard knock away for everyone within 7 blocks who is more than
    60 degrees round from straight ahead, or standing under its body. It reaches 3.5 blocks up,
-   so jumping does not help. Cover blocks it.
+   so jumping does not help. Cover blocks it. A player in the arc can face the Guardian and
+   block the backhand. The shield absorbs the blow and goes on cooldown for five seconds.
 
 The slam covers its front and the Sweep everything else, so the two wind-ups ask for opposite
 answers: leave its front for a slam, get in front of it (or out of reach) for a Sweep. It is

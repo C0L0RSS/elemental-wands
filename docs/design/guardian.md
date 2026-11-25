@@ -64,7 +64,7 @@ The developer agreed this kit on November 12 ("yes it fits I think this is good"
 
 | Move | Change | What it does | Answer |
 | --- | --- | --- | --- |
-| Slam | Kept; the Shockwave merged into it | Fists in front, a damaging ring outward. The Guardian holds the slam when the player jumped the last wave. | Leave its front, then jump the wave or face its origin and block. Blocking disables the shield for five seconds. |
+| Slam | Kept; the Shockwave merged into it | Fists in front, a damaging ring outward. The Guardian holds the slam when the player jumped the last wave. | Block the fists up close, or step out of their reach and jump or block the wave. Either block costs five seconds of guard. |
 | Sweep | New, step two | A slow backhand through its sides and back, about 7 blocks, for players circling or behind | Back out of reach |
 | Leap | Reworked | Gap closer and heaviest hit; aim locks late; lands on a marked ring | Run out of the ring |
 | Rock | Kept | Thrown at once at anyone standing still or eating | Sidestep |

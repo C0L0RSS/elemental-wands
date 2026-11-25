@@ -770,7 +770,8 @@ final class GuardianBossCombat {
             if (!fistContact(anchor, attackYaw, player.getBoundingBox())
                     || !walls.clear(world, guardian, anchor.add(0,1,0), player.getBoundingBox().getCenter(), false)) continue;
             struck.add(player.getUuid());
-            if (strike(world, player, world.getDamageSources().mobAttack(guardian), FIST_DAMAGE, "slam fists")) knockAway(player, anchor, 1.0);
+            if (guardian.strikeBreakingGuard(world, player, world.getDamageSources().mobAttack(guardian), FIST_DAMAGE, "slam fists"))
+                knockAway(player, anchor, 1.0);
         }
         return struck;
     }

@@ -13,6 +13,8 @@ public class PyreKingRenderState extends LivingEntityRenderState implements GeoR
     public int id;
     /** The clip the server has him in, and the thrown sword's real target less the clip's authored one (blocks: right, up, ahead). */
     public String clip = "idle";
+    /** The moment of that clip that shows now, in seconds; negative while it is still being blended into. */
+    public double clipSeconds;
     public float aimRight, aimUp, aimAhead;
     /** For a clip that carries him: where the clip began less where he is drawn, in the clip's own axes (blocks). */
     public float carryRight, carryUp, carryAhead;

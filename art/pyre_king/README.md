@@ -12,7 +12,7 @@ Pass 11 answers the developer's review of those clips:
 
 The developer approved pass 11 on November 9. Pass 12 added two more sword strings, the
 Kingsguard Thrust and the Turning Cut, and the developer approved those the same day.
-Pass 13 adds the rest of the kit's clips: both Chain Scythes, Zip, Hook, Overhead Sentence,
+Pass 13 adds the rest of the kit's clips: both Chain Scythes (removed in pass 16), Zip, Hook, Overhead Sentence,
 Lunge, Drag Down, phase two's third Royal Cut, and Unbound. The sculpt is unchanged, but
 the model gains six empty marker bones for Unbound's chains.
 
@@ -21,6 +21,12 @@ The developer asked for the move; they have not yet seen these two clips.
 
 Pass 15 (November 11) adds his intro's two clips, `throned` and `awaken`, from the
 developer's idea for the scene. They have not yet seen them either.
+
+Pass 16 (November 24) removes both Chain Scythe clips, which the developer found janky in
+the fight, and adds `pyre_brand` in their place: he drives the sword into the floor and the
+floor in front of it burns. A first version of the pass threw the blade's fire as a jet
+(`kings_breath`); the developer asked for the sword in the ground before seeing it, and that
+clip and its drawn jet are gone. They have not yet seen `pyre_brand`.
 
 ## The design
 
@@ -158,6 +164,9 @@ workshop's GeckoLib baker, and asserts the structural contract:
 - The outer blade streams more than the hilt, and the wake appears only when fast.
 - Teleports and spins are never traced, and travel leans the flames calmly.
 - Nothing pops, every face is well formed, and the output is deterministic.
+- The Pyre Brand: no other clip is drawn with it; the blade's fire drains away as he drives
+  the sword in, what is left as it drains burns at the point and not the hilt, the blade is
+  dark while the floor burns, and it is whole again once he has torn it free.
 - The socket spacing, the frozen level sweep, the sweep's fist IK, upper-edge roots and
   matching held/thrown sword geometry are also checked.
 
@@ -353,25 +362,34 @@ channels.
     one sample; the Turning Cut's plan had swung one 150°.
   - No earlier clip swings more than 40°, so their bakes are byte-identical to before.
 
+**The Pyre Brand (pass 16).** `pyre_brand`: he drives the sword into the floor and kneels
+behind it while the floor burns, 4.4 s. Both fists stay on the grip throughout, and no edge
+leads, so the blade rolls freely for the wrists as in the thrust. The blade keeps one line
+for the whole move, 32° below level (`BRAND_D`), and slides along it.
+- 0–0.5 s: his right foot steps back and he lowers the point to the floor about 3.9 blocks
+  in front of him, the hilt drawn back to his belt.
+- 0.5–1.5 s: he gathers. He rears back over the sword, drawing the hilt a third of a block
+  further back along the blade's line, his eyes on the floor. The point hangs just clear of
+  the floor.
+- 1.52–1.68 s: his left foot lunges in a block and he drops his weight onto the sword. The
+  point meets the floor at 1.58 s and the blade goes in about 1.1 blocks, entering the floor
+  4.1 blocks in front of him. It overshoots a little and settles by 1.9 s.
+- 1.7–3.5 s: he kneels behind the hilt, bent over it and looking up at a player, while the
+  floor burns. The sword shudders in his fists and the heat lifts his cape.
+- 3.5–3.8 s: he tears the blade out along its line, and it is clear of the floor at 3.63 s.
+- 3.95–4.4 s: the thrust's pause with the point dropped, then he steps back to his guard.
+- `clips.BRAND` holds the moments the blade's fire drains and catches again, and the two
+  between which the floor burns. `build_art.py` writes them to the manifest's `brand`, and
+  `effects.js` draws the blade from that; see [the Pyre Brand's blade](#the-pyre-brands-blade).
+- The steeper stabs tried first (the hilt high, the point straight down) bent both wrists
+  past 75°: with the fist's grip as it is sculpted, the blade leaves the hand toward the
+  thumb, and it cannot be turned point down above the waist. A low drive from the belt
+  costs the wrists about what the thrust's chamber does.
+
 **Chain moves and the overhead cut (pass 13).** Every chain move ends on the Reel's catch
 unless noted: the sword whips in, the right fist takes it, and the left follows 0.1 s later.
 - While the sword is swung on its chain, `effects.js` bows that chain too, with the same
-  springy filter as Unbound's chains but as an even arc of at most 12% of its length. The
-  Scythes' sword trails 25° behind the chain's line at full swing (`clips.SCYTHE_LAG`), so
-  it carries on from the bowed chain's end.
-- `chain_scythe_low`: the sword's point sweeps a 14-block circle at ankle height.
-  - 0–0.45 s: he casts the sword out low to his right. It skids to full chain, and the
-    chain snaps taut at 0.45 s.
-  - 0.45–0.7 s: he sinks into a deep crouch and winds up against the chain.
-  - 0.7–1.2 s: he spins once to his left like a hammer thrower, dragging the blade flat on
-    the floor. The clang is at 0.9 s, mid-spin. He ends facing the way he started.
-  - 1.2–1.5 s: he hauls the chain, and the sword whips round his right side into his hand.
-- `chain_scythe_high`: the same reach at a player's head height.
-  - 0–0.3 s: he swings the sword up behind his right shoulder and lets it go.
-  - 0.3–0.7 s: it whirls over his head like a lasso as the chain runs out.
-  - 0.7–1.1 s: one turn at full chain, the clang at 0.9 s. The pommel rides 2.6 blocks up
-    and the point hangs to about 1.5.
-  - 1.1–1.5 s: he hauls it down and in, and catches it.
+  springy filter as Unbound's chains but as an even arc of at most 12% of its length.
 - `zip`: starts from the throw's unarmed wait, with the sword stuck 11.5 blocks out.
   - 0–0.62 s: he takes the chain in both hands, sinks back against it, and is hauled off
     his feet.
@@ -468,7 +486,7 @@ unless noted: the sword whips in, the right fist takes it, and the left follows 
   at the end, in the frame he started in: 10.4, 6.9 and 12.9 blocks forward. The game moves him there on
   the clip's last frame. The flight is authored for one distance, so the game will have to
   stretch it to the real one.
-- The low Scythe, Zip and Lunge spin him a full turn, so their pelvis channel ends at 360°.
+- Zip and Lunge spin him a full turn, so their pelvis channel ends at 360°.
   As with the Turning Cut, the next clip must start with no blend.
 - Throw distances and targets are fixed in the clips (27 blocks for the Hook and the Snare,
   8.5 up for Drag Down). The game will have to aim the real sword.
@@ -498,7 +516,7 @@ legs now equal it is 0.
 - kingsguard-thrust (side and three-quarter) and kingsguard-thrust-player;
 - turning-cut (from behind and above) and turning-cut-player, from the eye of a player
   4.5 blocks behind him;
-- chain-scythe-low and chain-scythe-high, each from far enough to see the chain, then close;
+- pyre-brand (side and three-quarter) and pyre-brand-player;
 - zip, lunge, hook, overhead-sentence (side and player's eye), royal-cut-three, drag-down;
 - unbound, wide and close;
 - walk-run, from the side and front.
@@ -563,6 +581,20 @@ reproduce it.
 - `scene(model, manifest, t, motion, planted, clip, opts)` also returns per-flame `fire`
   records for checks.
 
+### The Pyre Brand's blade
+
+`manifest.brand` holds every number; `scene()` applies it only when `opts.clip` names its
+clip (`pyre_brand`), from the moment of the clip `t`.
+
+- From `drain[0]` to `drain[1]` the blade goes dark from the hilt down, until only
+  `lit_floor` of its sockets (none), counted from the point, still burn: the fire runs down
+  the steel into the floor.
+- From `catch[0]` to `catch[1]`, as he tears it free, the fire runs back up from the point.
+- A blade that is not whole draws no wake.
+- `burn` names the two moments between which the floor burns. Nothing here draws that fire:
+  in the game it is blocks of fire the server lights (`PyreKingRules`, `PyreKingCombat`), and
+  the workshop shows the clip over a bare floor.
+
 **Socket space:** `manifest.blade_fire.sockets` contains positions **relative to the sword
 bone pivot, before rotation**, in model pixels. To place them:
 1. Add the king pivot (`manifest.blade_fire.king_pivot`), or `[0,0,0]` for the standalone.
@@ -626,12 +658,19 @@ round. **Known limits:**
   links with a little sag and the swing's bow, and they pass through his arms and through
   each other. Their
   fire follows the chain's motion over the last 0.03 s only, so it has no wake.
-- Free arms swing fast in places: up to 136° in one 0.05 s sample (the high Scythe, the
-  Zip and the Lunge).
+- Free arms swing fast in places: up to 136° in one 0.05 s sample (the Zip and the
+  Lunge; the high Scythe, since removed, was the third).
 - The third Royal Cut inherits the Royal Cut's wrist limit.
 - None of these clips pushes cloth off the legs.
 - Unbound's chains now spiral in as he hauls them. The proposed fight has them reel in
   along straight ember lines that become fire walls, so one of the two will have to change.
+
+**Pass 16 known limits:**
+- `pyre_brand` was checked with `check_edges` and looked at as still frames only. The
+  developer has not watched it.
+- The second he spends gathering is nearly still: a third of a block of draw and a lean back.
+- His wrists are near their limit through the tell (twist 87°, bend 82°; the limit is 90°).
+- The workshop does not show the floor's fire, so the clip there is half the move.
 
 **Still open:** the phone layout was tested only in desktop browser emulation, not on a
 real phone.

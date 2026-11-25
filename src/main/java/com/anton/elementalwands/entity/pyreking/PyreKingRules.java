@@ -23,6 +23,11 @@ public final class PyreKingRules {
      */
     public static final float SWORD = 21, CHAIN = 16, FIRE = 8, UNBOUND_SWEEP = 19, YANK = 5, TUG = 4;
     /**
+     * The Pyre Brand burns whoever stands on its floor as it catches this much: the chain's blow, in fire. After that
+     * the floor is his fire like any other, FIRE once a second.
+     */
+    public static final float BRAND = 16;
+    /**
      * Blocks per second. A little slower than a sprinting player (5.6), the developer's rule, and well clear of one
      * backing away (4.3). It was 4.5 and 5.2 until their playtest (Nov 11) found him slow.
      */
@@ -81,25 +86,68 @@ public final class PyreKingRules {
         SOLID,
         /** A floor sweep: jump it. Feet at or above LOW_CLEAR are over it. */
         LOW,
-        /** A head-height sweep: crouch under it. A body shorter than HIGH_UNDER is under it. */
-        HIGH,
         /** A thrown sword: it hits only where it really is. */
         TRUE
     }
 
-    public static final double LOW_CLEAR = .6, HIGH_UNDER = 1.55, HIGH_OVER = 3.2;
+    public static final double LOW_CLEAR = .6;
+
+    // ── The Pyre Brand ───────────────────────────────────────────────────────
 
     /**
-     * The Chain Scythe hurts only out where its blade swings: a body must reach this far from him (blocks, on the
-     * floor). Inside it the low swing's chain runs at chest height and the high one's four blocks overhead, so
-     * neither a jump nor a crouch could be read there; the developer's second playtest (Nov 11) found the Scythe
-     * "impossible to dodge at close range". Close in, his sword is the threat, and stepping in under the chain is
-     * a third way out of it.
+     * Fire on the floor (the developer, Nov 24: he sticks his sword in the ground and "there's a bunch of fire on
+     * their ground", an area to keep out of that cannot be jumped over). It replaced the Chain Scythe, which they found
+     * janky, and the jet of fire first built in its place. He drives the sword into the floor in front of him and a
+     * fan of the floor ahead of it burns, two blocks tall, for as long as he kneels behind the hilt.
+     * <p>
+     * The fan is measured from where the blade enters the floor. Its point is BRAND_BACK blocks behind that, toward
+     * him, so the sword stands in its own fire; it opens BRAND_HALF degrees to either side of the way he faces (wider
+     * in phase two) and runs BRAND_REACH blocks from its point. Stone stops it: a block of floor the sword cannot see
+     * does not burn.
      */
-    public static final double SCYTHE_INNER = 5;
+    public static final double BRAND_REACH = 10, BRAND_BACK = 1.5, BRAND_HALF = 35, BRAND_HALF_TWO = 40;
+    /** The moments of its clip between which the floor burns: the blade is home, and he begins to tear it out. */
+    public static final double BRAND_FROM = 1.7, BRAND_TO = 3.5;
+    /** The moment the blade meets the floor. */
+    public static final double BRAND_STRIKES = 1.6;
+    /**
+     * He does not spend it on stone. Once his aim has frozen, a target out of his sight this many ticks ends it: he
+     * lets the fire die and is free this many seconds later, to go round the pillar (hiding buys a moment, not a rest).
+     */
+    public static final int BRAND_LOST = 8;
+    public static final double BRAND_DROP = .3;
+    /**
+     * He uses it on a target between these distances from him: it is his middle-range move (the developer, Nov 24:
+     * "more of a mid ranged attack since close range I want the boss to focus on the real sword swings"). The fan's
+     * point is about 2.6 blocks in front of him and its end about 12.6, so a target at either distance is well on it.
+     */
+    public static final double BRAND_NEAR = 6.5, BRAND_RANGE = 11.5;
 
-    /** Whether the Chain Scythe can strike a body whose middle is this far from him, this wide across. */
-    public static boolean scytheReaches(double distance, double halfWidth) { return distance + halfWidth >= SCYTHE_INNER; }
+    /**
+     * Whether a spot on the floor is in the fan: `right` and `ahead` are its place from where the blade enters the
+     * floor, across and along the way he faces; `half` is the fan's half angle in degrees.
+     */
+    public static boolean inBrand(double right, double ahead, double half) {
+        double along = ahead + BRAND_BACK, out = Math.hypot(right, along);
+        if (out > BRAND_REACH || along <= 0) return false;
+        return Math.toDegrees(Math.atan2(Math.abs(right), along)) <= half;
+    }
+
+    /** Where the line from the pommel through the point meets his floor (x and z), or null while the point is above it. */
+    public static double[] entersFloor(double[] pommel, double[] tip) {
+        if (tip[1] >= 0 || pommel[1] <= 0) return null;
+        double f = pommel[1] / (pommel[1] - tip[1]);
+        return new double[]{pommel[0] + (tip[0] - pommel[0]) * f, pommel[2] + (tip[2] - pommel[2]) * f};
+    }
+
+    /**
+     * How far the nearest way out of the fan is from the worst place to stand in it, on its middle line: sideways
+     * through an edge or on through its end, whichever is nearer.
+     */
+    public static double brandEscape(double half) {
+        double sine = Math.sin(Math.toRadians(half));
+        return BRAND_REACH * sine / (1 + sine);
+    }
 
     /**
      * Seconds into the clip the part can hit, how thick it is, and what it does. Each blow is its own group: it tests a
@@ -134,12 +182,11 @@ public final class PyreKingRules {
         /** A straight overhead cut down the line in front of him. Sidestep it. */
         OVERHEAD("overhead_sentence", .5, 1.75, new double[]{.25},
                 List.of(blade(.7, .87, Band.SOLID, .9, SWORD, 0)), List.of(new Advance(.64, .82, 2.2)), List.of()),
-        /** The sword whirls round him at ankle height on its chain. Jump it. */
-        SCYTHE_LOW("chain_scythe_low", .3, 2.1, new double[]{.2},
-                List.of(new Window(.7, 1.17, Part.CHAIN, Band.LOW, .4, CHAIN, 0)), List.of(), List.of()),
-        /** The sword whirls round him at head height. Crouch under it. */
-        SCYTHE_HIGH("chain_scythe_high", .3, 2.1, new double[]{.2},
-                List.of(new Window(.64, 1.15, Part.CHAIN, Band.HIGH, .4, CHAIN, 0)), List.of(), List.of()),
+        /**
+         * The Pyre Brand: he lowers the point to the floor, drives the sword into it and kneels behind the hilt while a
+         * fan of the floor in front of it burns. No blade strikes: the fire is all of it. Get off that floor.
+         */
+        BRAND("pyre_brand", .5, 4.1, new double[]{.1}, List.of(), List.of(), List.of()),
         /** He throws the sword, waits, and reels it back along its chain, or follows it with a Zip. */
         CAST("cast_reel", .72, 4.25, new double[]{.47, 2.8},
                 List.of(new Window(.87, 1.26, Part.BLADE, Band.TRUE, .55, CHAIN, 0), new Window(3.48, 3.8, Part.CHAIN, Band.TRUE, .55, CHAIN, 1)),
@@ -185,13 +232,16 @@ public final class PyreKingRules {
         }
 
         public boolean swordString() { return this == ROYAL_CUT || this == ROYAL_CUT_THREE || this == THRUST || this == TURNING_CUT || this == OVERHEAD; }
-        public boolean chainMove() { return this == SCYTHE_LOW || this == SCYTHE_HIGH || this == CAST || this == HOOK || this == ZIP || this == HAUL || this == SNARE; }
+        public boolean chainMove() { return this == CAST || this == HOOK || this == ZIP || this == HAUL || this == SNARE; }
         /** The Hook and the Snare: a thrown sword that catches whoever it strikes and drags them in. */
         public boolean hooks() { return this == HOOK || this == SNARE; }
         /** How much sooner than the Hook this does everything from the throw on. */
         public double hookLead() { return this == SNARE ? SNARE_LEAD : 0; }
-        /** The end of his last blow, which the opening is measured from. A move with no blow has none until it ends. */
-        public double lastBlow() { return windows.isEmpty() ? free : windows.get(windows.size() - 1).to(); }
+        /**
+         * The end of his last blow, which the opening is measured from: for the Pyre Brand, the end of its fire. Any
+         * other move with no blow has none until it ends.
+         */
+        public double lastBlow() { return this == BRAND ? BRAND_TO : windows.isEmpty() ? free : windows.get(windows.size() - 1).to(); }
         /** How fast this move's clip is played, part by part. */
         public Tempo tempo() { return PyreKingRules.tempo(clip); }
         /** Seconds after the move began at which this moment of its clip shows. */
@@ -251,7 +301,7 @@ public final class PyreKingRules {
      * The pace of each clip (the developer's playtest, Nov 11: "his overall speed in terms of the speed between his
      * attacks just has to be faster"; the thrown sword "was very slow"; and the pause before the spinning cut "was
      * really easy to get out" of). A clip not named here plays plainly: the Haul and the Snare, which they liked,
-     * Drag Down, Unbound and his intro.
+     * the Pyre Brand, Drag Down, Unbound and his intro.
      * <ul>
      * <li>Sword strings: a little quicker throughout, and the return to his guard after the last blow much quicker.
      * <li>The Cast: a quicker wind-up, and the 2.2 s he stood with the sword out is under half a second.
@@ -267,8 +317,6 @@ public final class PyreKingRules {
             Map.entry("kingsguard_thrust", Tempo.of(0, STRING, .97, RECOVER)),
             Map.entry("turning_cut", Tempo.of(0, STRING, .86, RECOVER)),
             Map.entry("overhead_sentence", Tempo.of(0, STRING, .87, RECOVER)),
-            Map.entry("chain_scythe_low", Tempo.of(0, 1.1, 1.17, RECOVER)),
-            Map.entry("chain_scythe_high", Tempo.of(0, 1.1, 1.15, RECOVER)),
             // wind-up, flight, the wait with the sword out, the pull-back, his guard
             Map.entry("cast_reel", Tempo.of(0, 1.4, .87, 1.25, 1.3, 4.9, 3.45, 1.2, 3.8, 1.5)),
             // the wait, the flight, landing to the cut, the cut, his guard
@@ -371,7 +419,7 @@ public final class PyreKingRules {
     // ── The chooser ──────────────────────────────────────────────────────────
 
     /** What he knows about his target when he picks. Distances are horizontal, in blocks. */
-    public record Read(double distance, boolean elevated, boolean behind, boolean backedAway, boolean jumped,
+    public record Read(double distance, boolean elevated, boolean behind, boolean backedAway,
                        boolean healing, boolean sight, boolean second) {}
 
     /**
@@ -390,8 +438,8 @@ public final class PyreKingRules {
 
     /**
      * The weights of every move he could open with now. Distance decides the family (sword strings
-     * close, the Scythe in the middle, throws far away); what the target just did tilts it; chance
-     * picks within it, so the same spot does not always draw the same move.
+     * close, the Pyre Brand and the Lunge in the middle, throws far away); what the target just did tilts
+     * it; chance picks within it, so the same spot does not always draw the same move.
      */
     public static Map<Move, Double> weights(Read read, Move last, Move before) {
         Map<Move, Double> w = new EnumMap<>(Move.class);
@@ -404,16 +452,16 @@ public final class PyreKingRules {
         // round it is the flank's work.
         if (!read.sight()) return w;
         Move cut = read.second() ? Move.ROYAL_CUT_THREE : Move.ROYAL_CUT;
-        if (d <= 6.5) {
+        if (d <= BRAND_NEAR) {       // sword range: his blade in hand and nothing else
             w.put(cut, 5.0);
             w.put(Move.OVERHEAD, 2.0);
             if (d > 3) w.put(Move.THRUST, 2.0);
-            // No Scythe this close: it could not touch them (SCYTHE_INNER).
             if (read.behind()) w.put(Move.TURNING_CUT, 14.0);
             if (read.backedAway() && d > 3) w.merge(Move.THRUST, 5.0, Double::sum);
         } else if (d <= 14) {
-            w.put(Move.SCYTHE_LOW, read.jumped() ? 1.0 : 5.0);
-            w.put(Move.SCYTHE_HIGH, read.jumped() ? 7.0 : 2.0);
+            if (d <= BRAND_RANGE) w.put(Move.BRAND, 5.0);
+            // Past the fan's reach the Cast comes in closer than it used to, so the Lunge is not all he has there.
+            else w.put(Move.CAST, 3.0);
             w.put(Move.LUNGE, read.second() ? 4.0 : 3.0);
             if (d <= 9.5) w.put(Move.THRUST, read.backedAway() ? 9.0 : 3.0);
             if (d <= 8) w.put(Move.OVERHEAD, 1.5);
@@ -475,7 +523,6 @@ public final class PyreKingRules {
             // Both reach the floor he stands on and no deeper: a player in a pit or a cave under him is out of them.
             case SOLID -> feet < high + .5 && top > -.5;
             case LOW -> feet < LOW_CLEAR && top > -.5;
-            case HIGH -> top - feet > HIGH_UNDER && top > HIGH_UNDER && feet < HIGH_OVER;
             case TRUE -> feet < high + .4 && top > low - .4;
         };
     }

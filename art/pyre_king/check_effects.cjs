@@ -79,6 +79,25 @@ function sound(sample,label){
    if(len(a)>1e-6&&len(b)>1e-6)assert(Math.acos(Math.max(-1,Math.min(1,dot(a,b)/len(a)/len(b))))<=turnLimit,`${label}: flame ${g.socket} folds`);}
  }
 }
+// The Pyre Brand: outside its clip nothing changes. In it the blade's fire drains into the floor
+// as he drives the sword in, the blade is dark while the floor burns, and it is whole again once
+// he has torn it free. What is left burning as it drains is at the point, not the hilt.
+{
+ const br=manifest.brand,king=models[0],still={animation_length:5,bones:{}},{brandLit}=ctx.PyreEffects;
+ const at=(t,name)=>scene(king,manifest,t,false,false,still,{clip:name});
+ const plain=at(2,'idle');wellFormed(plain,'brand: another clip');
+ assert.equal(plain.flames.length,flameCount,'another clip is drawn with a drained blade');
+ assert.equal(at(br.drain[0],br.clip).flames.length,flameCount,'the blade drains before its moment');
+ assert.equal(at((br.burn[0]+br.burn[1])/2,br.clip).flames.length,Math.round(br.lit_floor*flameCount),'the blade burns while its fire is in the floor');
+ assert.equal(at(br.catch[1]+.01,br.clip).flames.length,flameCount,'the blade is not whole again after he tears it free');
+ close(brandLit(br,br.drain[0]),1);close(brandLit(br,br.drain[1]),br.lit_floor);close(brandLit(br,br.catch[0]),br.lit_floor);close(brandLit(br,br.catch[1]),1);
+ assert(br.drain[0]<=br.burn[0]&&br.burn[0]<=br.drain[1]&&br.catch[0]>=br.burn[1],'the blade is lit while the floor is, or dark before the floor catches');
+ const half=at((br.drain[0]+br.drain[1])/2,br.clip),whole=at(br.drain[0],br.clip);wellFormed(half,'brand: draining');
+ assert(half.fire.length>0&&half.fire.length<whole.fire.length,'the blade does not drain by degrees');
+ const sockets=half.fire.map(f=>f.socket),all=whole.fire.map(f=>f.socket);
+ assert.equal(Math.max(...sockets),Math.max(...all),'the fire left on a draining blade is not at its point');
+ assert(Math.min(...sockets)>Math.min(...all),'the fire left on a draining blade reaches the hilt');
+}
 for(const model of models){
  for(const planted of [false,true])for(const time of [0,.8,1.1,1.5,1.8,2,2.4,3.6,4]){
   const sample=scene(model,manifest,time,true,planted),points=sample.sockets;

@@ -811,6 +811,74 @@ def kingsguard_thrust(t):
             'extra': cloth(t, swing=float(swing(t)))}
 
 
+# ---------------------------------------------------------------- Pyre Brand
+# The fire of his blade, put into the floor. He draws the hilt back to his belt and lowers the
+# point to the floor in front of him, rearing back over it; then he drops his weight onto the
+# sword and drives it into the stone. The fire leaves the blade for the floor: the game lights
+# a fan of it ahead of the sword, and he kneels behind the hilt for as long as it burns. Then
+# he tears the blade out, the floor goes dark, and the fire runs back up the steel.
+# The blade keeps one line throughout (BRAND_D), so the sword slides along it into the floor.
+# BRAND says when the blade's fire drains into the floor and when it catches again: the
+# workshop's effects.js and the game's renderer draw from these numbers (the manifest's
+# 'brand'), and the fight's rules name the same moments for the fire on the floor ('burn').
+BRAND_D = unit((.08, -.53, -.844))                    # the blade's line: 32 deg down into the floor ahead
+BRAND_DRAWN = np.array([-.1, 2.1, -.75])              # right fist in the tell: the hilt at his belt, the point on the floor
+BRAND_DRIVE = 1.3                                     # how far the blade goes in along its line, blocks
+BRAND_SUNK = BRAND_DRAWN+BRAND_DRIVE*BRAND_D
+BRAND = {'clip': 'pyre_brand', 'drain': (1.6, 1.8), 'catch': (3.5, 3.8), 'burn': (1.7, 3.5)}
+
+
+@easy_wrists(4.4)
+def pyre_brand(t):
+    """1.7 s tell: he steps back and lowers the point to the floor in front of him, the hilt
+    drawn back to his belt (the aim freezes at 0.5 s), then rears back over it for a second,
+    drawing the hilt further back, his eyes on the floor. At 1.52 s the left foot lunges in and
+    he drops onto the sword, driving it into the floor; it is home at 1.7 s, when the floor
+    ahead of it catches. He kneels behind the hilt, watching you, for the 1.8 s it burns. At
+    3.5 s he tears the blade out, and steps back to his guard."""
+    home = GUARD_P+GRIP['right']*GUARD_D
+    on, off = BRAND['burn']
+    # The fire shakes the sword in his fists while the floor burns.
+    burn = _ramp(t, on, on+.2)*(1-_ramp(t, off-.05, off+.1))
+    shake = burn*np.array([.012*math.sin(2*math.pi*4.3*t), .01*math.sin(2*math.pi*3.1*t+1.), .008*math.sin(2*math.pi*5.*t+2.)])
+    fist = curve([(0, home),
+                  (.5, BRAND_DRAWN, 'out'), (1.5, BRAND_DRAWN-.3*BRAND_D),                    # the point down, then he gathers
+                  (1.68, BRAND_SUNK+.08*BRAND_D, 'hit'), (1.9, BRAND_SUNK, 'settle'),         # the drive, and it settles
+                  (off, BRAND_SUNK), (off+.3, BRAND_DRAWN-.25*BRAND_D, 'out'),                # torn free
+                  (3.95, REST_FIST), (4.4, home)])
+    D = ncurve([(0, GUARD_D), (.5, BRAND_D, 'out'), (off+.3, BRAND_D), (3.95, REST_D), (4.4, GUARD_D)])
+    torso = curve([(0, (0, 0, 0)), (.5, (-4, 0, 0), 'out'), (1.5, (-12, 0, 0)),
+                   (1.68, (26, 0, 0), 'hit'), (1.9, (24, 0, 0), 'settle'), (off, (25, 0, 0)),
+                   (off+.3, (8, 0, 0)), (3.95, (15, 2, -1)), (4.4, (0, 0, 0))])
+    pelvis = curve([(0, (0, 0, 0)), (.5, (-2, 0, 0), 'out'), (1.5, (-4, 0, 0)), (1.68, (8, 0, 0), 'hit'),
+                    (off, (8, 0, 0)), (off+.3, (4, 0, 0)), (3.95, (5, 0, 0)), (4.4, (0, 0, 0))])
+    shift = curve([(0, (0, 0, 0)), (.5, (0, -.1, .1), 'out'), (1.5, (0, -.06, .22)),
+                   (1.68, (0, -.55, -.5), 'hit'), (1.9, (0, -.5, -.5), 'settle'), (off, (0, -.52, -.5)),
+                   (off+.3, (0, -.25, -.45)), (3.95, (-.02, -.14, -.6)), (4.4, (0, 0, 0))])
+    # He looks down the blade at the floor as he gathers, then up at you from behind the hilt.
+    neck = curve([(0, (0, 0, 0)), (.5, (4, 0, 0), 'out'), (1.5, (6, 0, 0)), (1.68, (-6, 0, 0), 'hit'),
+                  (off, (-6, 0, 0)), (off+.3, (-2, 0, 0)), (4.4, (0, 0, 0))])
+    head = curve([(0, (0, 0, 0)), (.5, (8, 0, 0), 'out'), (1.5, (12, 0, 0)), (1.68, (-4, 0, 0), 'hit'),
+                  (2.0, (-14, 0, 0)), (off, (-14, 0, 0)), (off+.3, (-4, -2, 0)), (3.95, (-3, -2, 0)), (4.4, (0, 0, 0))])
+    # Feet: the right steps back as the point goes down; the left lunges in with the drive; both come home.
+    back = curve([(0, (0, 0, 0)), (.05, (0, 0, 0)), (.35, (.06, 0, .3)), (3.95, (.06, 0, .3)), (4.35, (0, 0, 0))])
+    back_lift = curve([(0, 0), (.05, 0), (.2, .12, 'out'), (.35, 0, 'in'), (3.95, 0), (4.12, .1, 'out'), (4.35, 0, 'in')])
+    lunge_ = curve([(0, (0, 0, 0)), (1.52, (0, 0, -.05)), (1.68, (-.05, 0, -1.), 'hit'), (3.95, (-.05, 0, -1.)),
+                    (4.35, (0, 0, 0))])
+    lunge_lift = curve([(0, 0), (1.52, 0), (1.6, .2, 'out'), (1.68, 0, 'in'), (3.95, 0), (4.14, .14, 'out'), (4.35, 0, 'in')])
+    # The cape is thrown forward by the drive, and the heat off the floor lifts it while the fire burns.
+    swing = curve([(0, 0), (.5, -.3), (1.5, -.5), (1.68, 1, 'hit'), (2.1, .3), (off, .2), (off+.4, 0)])
+    lift = curve([(0, 0), (1.6, 0), (1.9, .8), (off, .7), (off+.4, 0)])
+    # No edge leads, so easy_wrists rolls the blade freely for the wrists (as in the thrust).
+    rest = ncurve([(0, GUARD_N), (.5, _turned_n(BRAND_D), 'out'), (off+.3, _turned_n(BRAND_D)),
+                   (3.95, _turned_n(REST_D)), (4.4, GUARD_N)])
+    d = D(t); b = back(t); s = lunge_(t)
+    return {'pelvis_pos': shift(t), 'pelvis_rot': pelvis(t), 'torso_rot': torso(t), 'neck_rot': neck(t),
+            'head_rot': head(t), 'sword_p': fist(t)+shake-GRIP['right']*d, 'sword_d': d, 'sword_n': rest(t),
+            'feet': planted(dx=(b[0], float(back_lift(t)), b[2]), sx=(s[0], float(lunge_lift(t)), s[2])),
+            'extra': cloth(t, swing=float(swing(t)), lift=float(lift(t)))}
+
+
 # ---------------------------------------------------------------- Turning Cut
 # He spins to his left and cuts the half behind him. The clip is authored in his own frame,
 # then the whole pose turns by the root yaw SPIN(t) (degrees, + turns him left) about his
@@ -1064,143 +1132,6 @@ def _hands(t, let_go, release, catch):
     """Which fists grip: both; the right alone from let_go; none from release until the catch,
     when the right takes the sword and the left follows 0.1 s later."""
     return 'both' if t < let_go else 'right' if t < release else 'none' if t < catch else 'right' if t < catch+.1 else 'both'
-
-
-# ---------------------------------------------------------------- Chain Scythe
-# The sword whirls round him on the chain, its point SCYTHE_REACH blocks out.
-# Low: he casts the sword out along the floor, drops into a crouch and spins once, dragging it
-# round at ankle height like a hammer thrower. High: he stands tall and whirls it over his
-# head like a lasso, the blade at a player's head height. Both then haul it in and catch it.
-SCYTHE_REACH = 14.
-SCYTHE_LAG = 25.         # deg the sword trails behind its chain's line at full swing, as the bowed chain's end does
-
-
-@easy_wrists(2.9)
-def chain_scythe_low(t):
-    """0.9 s tell: he casts the sword out low to his right (the chain snaps taut at 0.45 s),
-    sinks into a crouch and winds up against it. Then he spins once to his left, the blade
-    flat on the floor at full chain (the clang at 0.9 s, mid-spin). He stops, hauls the chain,
-    and the sword whips round his right side into his hand."""
-    tr, tc, R = .3, 1.5, SCYTHE_REACH-SWORD_TIP*math.cos(SCYTHE_LAG*RAD)
-    spin = curve([(0, 0), (.3, 0), (.62, -28), (.72, 10, 'in'), (1.06, 320, 'linear'), (1.2, 362, 'out'), (1.4, 360)])
-    psi = float(spin(t))
-    home = GUARD_P+GRIP['right']*GUARD_D
-    fist = curve([(0, home), (.12, (.85, 2.3, -.6)), (tr, (1.25, 1.9, .1))])
-    held = ncurve([(0, GUARD_D), (.12, (.75, .2, -.6)), (tr, (.95, -.3, .1))])
-    P0 = fist(tr)-GRIP['right']*held(tr)
-    # After the release, in his own frame: where the pommel is round him, how far out, how high.
-    az = curve([(tr, math.degrees(math.atan2(-P0[0], -P0[2]))), (.45, -108), (.62, -100), (.72, -118), (1.06, -128),
-                (1.2, -80), (tc, CATCH_AZ)])
-    r = curve([(tr, float(np.hypot(P0[0], P0[2]))), (.45, R, 'linear'), (1.06, R), (tc, CATCH_R)])
-    y = curve([(tr, P0[1]), (.4, .24, 'in'), (1.1, .24), (tc, CATCH_P[1])])
-    lag = curve([(tr, 0), (.45, 0), (.72, SCYTHE_LAG), (1.06, SCYTHE_LAG), (1.3, 0)])
-    tail_p = curve([(tc, CATCH_P), (tc+.24, SETTLE_P, 'snap'), (2.9, GUARD_P)])
-    tail_d = dcurve([(tc, CATCH_D), (tc+.24, SETTLE_D, 'snap'), (2.9, GUARD_D)])
-
-    def P(s):
-        if s <= tr: return fist(s)-GRIP['right']*held(s)
-        if s >= tc: return tail_p(s)
-        return float(r(s))*_az(float(az(s)))+np.array([0, float(y(s)), 0])
-
-    def D(s):
-        if s <= tr: return held(s)
-        if s >= tc: return tail_d(s)
-        d = slerp(held(tr), _az(float(az(s))-float(lag(s))), _ramp(s, tr, tr+.1))   # flat on the floor, point out
-        return slerp(d, CATCH_D, _ramp(s, tc-.2, tc))
-
-    def N(s):
-        n = slerp(_turned_n(held(min(s, tr))), UP, _ramp(s, tr, tr+.12))
-        return slerp(n, GUARD_N, _ramp(s, tc-.2, tc))
-    left = curve([(.12, P(.12)+GRIP['left']*D(.12)), (.3, (-.9, 2.6, -.6)), (.62, (-1.1, 2.1, -.5)), (.9, (-1.5, 2.6, -.1)),
-                  (1.2, (-1.1, 2.6, -.5)), (tc, (-.3, 2.6, -.9)), (tc+.1, (-.05, 2.55, -1.0))])
-    right = curve([(tr, fist(tr)), (.45, (1.5, 1.75, .4)), (.62, (1.45, 1.3, .65)), (1.06, (1.45, 1.35, .7)),
-                   (1.2, (1.3, 1.7, .2)), (1.36, (.8, 2.4, -.7)), (tc-.06, (.3, 2.45, -.95))])
-    shift = curve([(0, (0, 0, 0)), (.3, (.05, -.1, .05)), (.62, (.1, -.5, .1)), (1.06, (.05, -.45, 0)), (1.25, (0, -.25, -.05)),
-                   (tc, (0, -.06, -.16)), (tc+.24, (0, -.05, -.1)), (2.9, (0, 0, 0))])
-    torso = curve([(0, (0, 0, 0)), (.3, (8, 20, 0)), (.62, (22, 38, 0)), (.76, (20, 8, 0), 'in'), (1.06, (18, -12, 0)),
-                   (1.25, (10, -8, 0)), (tc, (6, -6, 0), 'hit'), (tc+.24, (4, 0, 0)), (2.9, (0, 0, 0))])
-    pelvis = curve([(0, (0, 0, 0)), (.62, (6, 0, 0)), (1.06, (6, 0, 0)), (1.3, (2, 0, 0)), (2.9, (0, 0, 0))])
-    # He keeps his eyes on you through the wind-up, then looks into the spin.
-    look = float(curve([(0, 0), (.3, -30), (.62, -45), (.72, 30, 'in'), (1.06, 35), (1.25, 0)])(t))
-    gather = curve([(0, 0), (.3, 0), (.6, .8), (1.1, .8), (1.38, 0)])
-    tip = curve([(0, 0), (.58, 0), (.7, 14, 'out'), (1.1, 14), (1.25, 0)])
-    step_r = curve([(0, 0), (.4, 0), (.5, .08, 'out'), (.6, 0, 'in')])
-    step_l = curve([(0, 0), (1.2, 0), (1.29, .08, 'out'), (1.38, 0, 'in')])
-    feet, foot_r = _pivot_feet(float(gather(t)), float(tip(t)), (float(step_r(t)), float(step_l(t))))
-    swing = curve([(0, 0), (.62, -.3), (.9, .8), (1.3, .3), (2., 0)])
-    flare = curve([(0, 0), (.62, 0), (.8, 1.6), (1.1, 1.4), (1.5, 0)])
-    spec = _placed({'pelvis_pos': shift(t), 'pelvis_rot': pelvis(t), 'torso_rot': torso(t),
-                    'neck_rot': (0, -.4*look, 0), 'head_rot': (3, -.6*look, 0),
-                    'sword_p': P(t), 'sword_d': D(t), 'sword_n': N(t),
-                    'free_hands': {'left': left(t), 'right': right(t)}, 'free_elbow': {'left': (-.6, -.2, 1)}, 'feet': feet, 'foot_r': foot_r}, psi)
-    spec.update({'hands': _hands(t, .12, tr, tc), 'extra': cloth(t, swing=float(swing(t)), lift=float(flare(t)))})
-    spec['hinge'] = True
-    if tr <= t < tc+.1: spec['hidden'] = ['hanging_wrist_chain']
-    return spec
-
-
-@easy_wrists(2.9)
-def chain_scythe_high(t):
-    """0.9 s tell: he swings the sword up behind his right shoulder and lets it out into a
-    whirl over his head (the chain snaps out at 0.45 s). One turn at full chain follows, the
-    blade at a player's head height (the clang at 0.9 s, mid-turn). He hauls it down and in,
-    and it whips round into his hand."""
-    tr, tc, top = .3, 1.5, 5.15
-    home = GUARD_P+GRIP['right']*GUARD_D
-    fist = curve([(0, home), (.1, (.9, 2.7, -.5)), (.2, (1.0, 3.7, -.2), 'linear'), (tr, (.95, 4.6, .25), 'out')])
-    held = ncurve([(0, GUARD_D), (.1, (.8, .45, -.4)), (.2, (.7, .6, .2), 'linear'), (tr, (.45, .55, .7), 'out')])
-    P0 = fist(tr)-GRIP['right']*held(tr)
-    c = curve([(tr, (.75, 0, 0)), (1.1, (.75, 0, 0)), (tc, (0, 0, 0))])                # the whirl's axis
-    az = curve([(tr, -147), (.45, -70, 'in'), (.7, 155, 'linear'), (1.1, 515, 'linear'), (tc, 720+CATCH_AZ, 'out')])
-    level = 2.6                                          # the pommel at full chain; the point hangs lower
-    lag = curve([(tr, 10), (.45, 10), (.7, SCYTHE_LAG), (1.1, SCYTHE_LAG), (1.3, 10)])
-    slope = math.atan2(top-level, 9.6); R = SCYTHE_REACH-SWORD_TIP*math.cos(slope)
-    rho = curve([(tr, -.3), (.45, 2.5, 'in'), (.7, R, 'linear'), (1.1, R), (tc, CATCH_R)])
-    y = curve([(tr, P0[1]), (.45, top+.15), (.7, level), (1.1, level), (1.3, 3.0), (tc, CATCH_P[1])])
-    tail_p = curve([(tc, CATCH_P), (tc+.24, SETTLE_P, 'snap'), (2.9, GUARD_P)])
-    tail_d = dcurve([(tc, CATCH_D), (tc+.24, SETTLE_D, 'snap'), (2.9, GUARD_D)])
-
-    def polar(s): return c(s)+float(rho(s))*_az(float(az(s)))+np.array([0, float(y(s)), 0])
-    slip = P0-polar(tr)
-
-    def P(s):
-        if s <= tr: return fist(s)-GRIP['right']*held(s)
-        if s >= tc: return tail_p(s)
-        return polar(s)+slip*(1-_ramp(s, tr, tr+.1))
-
-    def D(s):
-        if s <= tr: return held(s)
-        if s >= tc: return tail_d(s)
-        e = math.atan2(float(y(s))-top, max(float(rho(s)), 1.5))            # the chain's line, carried on
-        line = math.cos(e)*_az(float(az(s))-float(lag(s)))+math.sin(e)*UP
-        return slerp(slerp(held(tr), line, _ramp(s, tr, .45)), CATCH_D, _ramp(s, tc-.2, tc))
-
-    def N(s):
-        n = slerp(_turned_n(held(min(s, tr))), UP, _ramp(s, tr, tr+.12))
-        return slerp(n, GUARD_N, _ramp(s, tc-.2, tc))
-    whirl = _ramp(t, tr, .45)*(1-_ramp(t, 1.1, 1.2))
-    hand = curve([(tr, fist(tr)), (.42, (.75, top, 0)), (1.1, (.75, top, 0)), (1.28, (.6, 3.7, -1.3), 'in'),
-                  (tc-.06, (.3, 2.45, -.95))])
-    left = curve([(.1, P(.1)+GRIP['left']*D(.1)), (.4, (-1.2, 3.0, -.4)), (1.1, (-1.3, 2.9, -.3)), (1.3, (-.9, 2.8, -.7)),
-                  (tc, (-.3, 2.6, -.9)), (tc+.1, (-.05, 2.55, -1.0))])
-    a = float(az(t))
-    shift = curve([(0, (0, 0, 0)), (.3, (0, 0, .05)), (.7, (0, .03, 0)), (1.1, (0, .03, 0)), (1.3, (0, -.15, -.1)),
-                   (tc, (0, -.06, -.16)), (tc+.24, (0, -.05, -.1)), (2.9, (0, 0, 0))])
-    torso = curve([(0, (0, 0, 0)), (.15, (4, 14, 0)), (.3, (-6, 10, 0)), (1.1, (-6, 0, 0)), (1.3, (12, -6, 0)),
-                   (tc, (6, -6, 0), 'hit'), (tc+.24, (4, 0, 0)), (2.9, (0, 0, 0))])
-    brace = curve([(0, 0), (.08, 0), (.28, 1), (2.3, 1), (2.6, 0)])
-    lift_r = curve([(0, 0), (.08, 0), (.18, .1, 'out'), (.28, 0, 'in'), (2.3, 0), (2.45, .08, 'out'), (2.6, 0, 'in')])
-    b = float(brace(t))
-    swing = curve([(0, 0), (.3, -.3), (1.1, 0), (1.3, .6), (2., 0)])
-    spec = {'pelvis_pos': shift(t)-.06*whirl*_az(a), 'torso_rot': torso(t)+np.array([0, 5*whirl*math.sin(a*RAD), 0]),
-            'neck_rot': (4*whirl, 0, 0), 'head_rot': (6*whirl, 0, 0),
-            'sword_p': P(t), 'sword_d': D(t), 'sword_n': N(t), 'hands': _hands(t, .1, tr, tc),
-            'free_hands': {'left': left(t), 'right': hand(t)+.2*whirl*_az(a+25)}, 'free_elbow': {'left': (-.6, -.2, 1)},
-            'feet': planted(dx=(.1*b, float(lift_r(t)), .22*b), sx=(-.06*b, 0, -.08*b)),
-            'extra': cloth(t, swing=float(swing(t)), lift=.5*whirl)}
-    spec['hinge'] = True
-    if tr <= t < tc+.1: spec['hidden'] = ['hanging_wrist_chain']
-    return spec
 
 
 # ---------------------------------------------------------------- the overhead cut
@@ -1937,11 +1868,11 @@ def unbound(t):
 BLOWS = {'royal_cut': ((.9, 1.3), (1.75, 2.2)), 'turning_cut': ((.68, .85),), 'cast_reel': ((.74, RELEASE),),
          'overhead_sentence': ((.7, .88),), 'royal_cut_three': ((.9, 1.3), (1.75, 2.2), (2.62, 2.8)),
          'zip': ((1.24, 1.62),), 'lunge': ((1.54, 1.92),), 'unbound': ((.5, .66),)}
-ATTACKS = ('royal_cut', 'royal_cut_three', 'kingsguard_thrust', 'turning_cut', 'cast_reel', 'chain_scythe_low',
-           'chain_scythe_high', 'zip', 'hook', 'overhead_sentence', 'lunge', 'drag_down', 'unbound', 'haul', 'snare')
+ATTACKS = ('royal_cut', 'royal_cut_three', 'kingsguard_thrust', 'pyre_brand', 'turning_cut', 'cast_reel',
+           'zip', 'hook', 'overhead_sentence', 'lunge', 'drag_down', 'unbound', 'haul', 'snare')
 # While a fist holds the sword it must stay above the floor, except where the clip means it
-# to be in the floor: Unbound drives it in and later tears it out.
-BURIED = {'unbound': ((.6, 3.8),), 'awaken': ((GRASP, 19.8),)}
+# to be in the floor: Unbound and the Pyre Brand drive it in and later tear it out.
+BURIED = {'unbound': ((.6, 3.8),), 'awaken': ((GRASP, 19.8),), 'pyre_brand': ((1.5, 3.8),)}
 
 
 # What check_edges holds each clip to (summary key: limit; 'lowest' keys are minimums).
@@ -2083,8 +2014,7 @@ CLIPS = {
     'kingsguard_thrust': (kingsguard_thrust, 2.9, False),
     'turning_cut': (turning_cut, 2.6, False),
     'cast_reel': (cast_reel, 4.7, False),
-    'chain_scythe_low': (chain_scythe_low, 2.9, False),
-    'chain_scythe_high': (chain_scythe_high, 2.9, False),
+    'pyre_brand': (pyre_brand, 4.4, False),
     'overhead_sentence': (overhead_sentence, 2.6, False),
     'royal_cut_three': (royal_cut_three, 4.4, False),
     'drag_down': (drag_down, 2.4, False),

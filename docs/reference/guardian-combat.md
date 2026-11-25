@@ -106,9 +106,9 @@ thirds.
 
 | Attack | Raw | Notes |
 | --- | --- | --- |
-| Slam's ground wave | 10 | Full circle, out to 32 blocks (44 in phase two). Jump the wave or block it at the cost of a five-second shield cooldown. |
-| Slam fists | 14 | Its front half within 5 blocks, plus anywhere under its body. Blocking the fists disables the shield for five seconds. Anyone the fists reach is spared the same slam's wave. |
-| Sweep | 14 | Hits within 7 blocks outside the front wedge. A raised shield facing the Guardian blocks the hit and drops for five seconds. |
+| Slam's ground wave | 10 | Full circle, out to 32 blocks (44 in phase two); jumpable |
+| Slam fists | 14 | Its front half within 5 blocks, plus anywhere under its body. Anyone the fists reach, blocked or not, is spared the same slam's wave. |
+| Sweep | 14 | Everyone within 7 blocks outside the wedge in front of it; cannot be jumped |
 | Scar's eruption | 14 | Whoever stands on a crack as its spike comes up; once per cast |
 | Standing spikes | 10 | On touch, with a shove away; at most once a second per player |
 | Rock, direct / splash | 13 / 10 | Splash within 3 blocks |
@@ -119,6 +119,13 @@ thirds.
 
 All of these are mob or thrown damage, so vanilla's difficulty scaling applies on top: Easy
 roughly halves them and Hard multiplies them by 1.5.
+
+**Shields.** A raised shield can block any of these, but every one is heavy: the shield takes
+the hit and is knocked aside for five seconds, as by a vanilla axe. A player can block once,
+then must move until the shield is back. The shield has to face where the hit comes from:
+the Guardian's body for its blows, spikes and blasts (a spike rising underfoot included), the
+origin of a ground wave, and the stone itself for a rock or an Airburst. Vanilla only disables
+a shield for a blow, so `mixin/GuardianShieldBreakMixin` does the same for the thrown stones.
 
 ### Intensity, co-op and targeting
 
@@ -152,8 +159,7 @@ lockouts ×1, 0.85, 0.75 and 0.7.
 **The slam** sends its fists forward and a full ring along the ground. Up close, a shield
 raised toward the Guardian absorbs the punch. The same slam's wave passes over anyone the
 fists hit, including a player who blocked. Farther out, players can jump the wave or block
-while facing its origin. Blocking either hit wears the shield and disables it for five
-seconds, just like a vanilla axe strike. The leap's
+while facing its origin; either block costs the shield, as for every Guardian hit. The leap's
 takeoff and landing waves follow the same rule, each from its own origin. The
 Guardian remembers, for each player, whether they jumped the last wave that reached them. Its
 next slam aimed at a player who did holds its fists overhead for 10, 16 or 22 ticks before

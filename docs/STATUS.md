@@ -126,8 +126,8 @@ Looks and balance that only a person playing can judge.
 
 ### Spells
 
-- Decide how shields should handle Guardian attacks beyond the slam fists, ground waves
-  and Sweep, and the Hollow Necromancer's attacks. [Playtest issue #32](https://github.com/C0L0RSS/elemental-wands/issues/32)
+- Decide whether a shield that blocks the Hollow Necromancer should be knocked aside, as it
+  now is for every Fractured Guardian attack. [Playtest issue #32](https://github.com/C0L0RSS/elemental-wands/issues/32)
 - Decide what players should earn or work toward after buying an element's
   spell store. [Progression suggestions in #54](https://github.com/C0L0RSS/elemental-wands/issues/54)
 

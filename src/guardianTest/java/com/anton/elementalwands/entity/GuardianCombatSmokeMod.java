@@ -27,9 +27,13 @@ public final class GuardianCombatSmokeMod implements ModInitializer {
     private int shieldTestStart = 125; // Allow normal join protection to expire.
     private record ShieldTrial(String name, GuardianCombatRules.Attack attack, double targetZ, int impactTick) {}
     // The ground wave is emitted on its own to check facing after the Guardian has leapt past.
+    // The rock is thrown damage, which vanilla never lets disable a shield; the beam is a blow that used not to.
+    // An impact tick of -1 is not checked.
     private static final List<ShieldTrial> SHIELD_TRIALS = List.of(
             new ShieldTrial("ground wave", null, 8.5, -1),
             new ShieldTrial("slam fists", GuardianCombatRules.Attack.SLAM, 3.5, GuardianPhaseRules.slamImpact(false)),
+            new ShieldTrial("thrown rock", GuardianCombatRules.Attack.THROW, 12.5, -1),
+            new ShieldTrial("beam", GuardianCombatRules.Attack.BEAM, 12.5, -1),
             new ShieldTrial("Sweep", GuardianCombatRules.Attack.SWEEP, 4.5, GuardianSweepRules.IMPACT));
     private int shieldTrial;
     private int guardBrokenAt = -1;
@@ -77,7 +81,7 @@ public final class GuardianCombatSmokeMod implements ModInitializer {
                 log.begin(world.getTime(), 1);
                 guardian.setRemoved(net.minecraft.entity.Entity.RemovalReason.UNLOADED_TO_CHUNK);
                 if (log.active()) throw new AssertionError("Chunk unload left the Guardian fight log open");
-                Files.writeString(Path.of("COMBAT_PASSED.txt"),results.toString()+"\nGround wave, slam fists and Sweep: rear hits dealt damage with the shield raised. Each front block absorbed the hit and disabled the shield for 100 ticks. Blocking the fists also spared the player the following wave.\nBeam, throw, slam fists (3), slam wave only (8), leap and Airburst (12, grounded, rehearsal) all damaged stationary targets; the Sweep struck a target behind it and the Scar's eruption one who stepped onto a crack ("+spikesSeen+" spikes); gravity, projectile and spike cleanup verified.\n");server.stop(false);return;
+                Files.writeString(Path.of("COMBAT_PASSED.txt"),results.toString()+"\nGround wave, slam fists, thrown rock, beam and Sweep: rear hits dealt damage with the shield raised. Each front block absorbed the hit and disabled the shield for 100 ticks. Blocking the fists also spared the player the following wave.\nBeam, throw, slam fists (3), slam wave only (8), leap and Airburst (12, grounded, rehearsal) all damaged stationary targets; the Sweep struck a target behind it and the Scar's eruption one who stepped onto a crack ("+spikesSeen+" spikes); gravity, projectile and spike cleanup verified.\n");server.stop(false);return;
             }
             next(world);
         }
@@ -123,7 +127,7 @@ public final class GuardianCombatSmokeMod implements ModInitializer {
         }
         if (age >= frontAttackAt && cooldown.isCoolingDown(shield) && guardBrokenAt < 0) {
             guardBrokenAt = age;
-            if (trial.attack() != null && age != frontAttackAt + trial.impactTick())
+            if (trial.impactTick() >= 0 && age != frontAttackAt + trial.impactTick())
                 throw new AssertionError("Guard should break on the impact tick for " + attack);
             if (target.getHealth() != target.getMaxHealth() || shield.getDamage() == 0 || target.isUsingItem())
                 throw new AssertionError("Facing block should absorb " + attack + ", wear the shield and drop guard");

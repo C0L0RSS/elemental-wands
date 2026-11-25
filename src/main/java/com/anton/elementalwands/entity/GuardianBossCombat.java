@@ -607,7 +607,7 @@ final class GuardianBossCombat {
         for (ServerPlayerEntity player : world.getPlayers(p -> canDamage(guardian, p))) {
             if (!GuardianSweepRules.contact(anchor, attackYaw, player.getBoundingBox())
                     || !walls.clear(world, guardian, shoulder, player.getBoundingBox().getCenter(), false)) continue;
-            if (guardian.strikeBreakingGuard(world, player, world.getDamageSources().mobAttack(guardian), GuardianSweepRules.DAMAGE, "sweep"))
+            if (strike(world, player, world.getDamageSources().mobAttack(guardian), GuardianSweepRules.DAMAGE, "sweep"))
                 knockAway(player, anchor, 1.3);
         }
     }
@@ -770,7 +770,7 @@ final class GuardianBossCombat {
             if (!fistContact(anchor, attackYaw, player.getBoundingBox())
                     || !walls.clear(world, guardian, anchor.add(0,1,0), player.getBoundingBox().getCenter(), false)) continue;
             struck.add(player.getUuid());
-            if (guardian.strikeBreakingGuard(world, player, world.getDamageSources().mobAttack(guardian), FIST_DAMAGE, "slam fists"))
+            if (strike(world, player, world.getDamageSources().mobAttack(guardian), FIST_DAMAGE, "slam fists"))
                 knockAway(player, anchor, 1.0);
         }
         return struck;

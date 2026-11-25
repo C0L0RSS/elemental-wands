@@ -18,6 +18,7 @@
     "TitanGearDropMixin",
     "GuardianArenaPlayerMixin",
     "GuardianArenaWorldMixin",
+    "GuardianShieldBreakMixin",
     "TemporaryTerrainChunkMixin",
     "GuardianChurchExplosionMixin",
     "WandExplosionFireMixin",

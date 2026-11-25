@@ -68,7 +68,6 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
     private static final UUID ENVIRONMENT_DAMAGE = new UUID(0,0);
     private final GuardianBeamAttack beam = new GuardianBeamAttack(this);
     private final GuardianBossCombat combat = new GuardianBossCombat(this);
-    private boolean breakingGuard;
     private static final String PASSIVE_TAG = "ew_guardian_passive";
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     // Test sessions deliberately expire on reload, disconnect, or leaving this dimension.
@@ -215,22 +214,17 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
             @Override public Vec3d getPosition() { return origin; }
             @Override public Vec3d getStoredPosition() { return origin; }
         };
-        return strikeBreakingGuard(world, player, source, amount, "wave");
+        return strike(world, player, source, amount, "wave");
     }
 
-    boolean strikeBreakingGuard(ServerWorld world, ServerPlayerEntity player, DamageSource source, float amount, String what) {
-        boolean previous = breakingGuard;
-        breakingGuard = true;
-        try {
-            return strike(world, player, source, amount, what);
-        } finally {
-            breakingGuard = previous;
-        }
-    }
-
+    /**
+     * Every Guardian attack is heavy: a shield that blocks one is knocked aside for as long as an
+     * axe would leave it, so a player can block once and must then move. Vanilla applies this to
+     * its blows; {@code GuardianShieldBreakMixin} applies it to its rocks and Airburst shards.
+     */
     @Override
     public float getWeaponDisableBlockingForSeconds() {
-        return breakingGuard ? WeaponComponent.AXE_DISABLE_BLOCKING_FOR_SECONDS : super.getWeaponDisableBlockingForSeconds();
+        return WeaponComponent.AXE_DISABLE_BLOCKING_FOR_SECONDS;
     }
 
     GuardianBossCombat combat() { return combat; }

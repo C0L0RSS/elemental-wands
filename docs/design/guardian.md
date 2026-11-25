@@ -75,6 +75,10 @@ The developer agreed this kit on November 12 ("yes it fits I think this is good"
 On top sits the chooser, with its own table of distance bands, reads and strings. Phase two
 strings attacks together where it used to triple them.
 
+- **Decided (November 24):** every attack can be blocked, and every block costs five seconds
+  of guard, as an axe does. The Guardian's attacks are "very heavy", so "a player can block
+  them once every couple of seconds" but cannot rely on the shield alone.
+
 - **Decided:** build it in two playable steps. Step one is the chooser, the leap, the Airburst
   and the heavier damage, with no new art, so the new brain can be felt in a fight quickly.
   Step two is the Sweep and the Scar, which need a new clip and new effects.

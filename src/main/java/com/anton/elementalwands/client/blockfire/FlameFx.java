@@ -3,7 +3,6 @@ package com.anton.elementalwands.client.blockfire;
 import static com.anton.elementalwands.client.blockfire.BlockFireKit.*;
 
 import com.anton.elementalwands.util.FireBuildRules;
-import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.Map;
 import net.minecraft.client.MinecraftClient;
@@ -25,6 +24,9 @@ final class FlameFx {
     /** Puffs per second grow with heat: RATE0 cold, RATE1 at overheat, so the count is a quadratic in spray time. */
     private static final double ACC = (RATE1 - RATE0) / 100 * HEAT_PER_S / 2;
     private static final double SPUTTER = .45, LEASE = .16, MAX_AGE = .66 + .45 + .95;
+    private static final double AIM_WINDOW = MAX_AGE + .2;
+    private static final int AIM_SAMPLES_PER_SECOND = 240;
+    private static final int AIM_CAPACITY = (int) Math.ceil(AIM_WINDOW * AIM_SAMPLES_PER_SECOND) + 2;
     private static final Map<Integer, Stream> STREAMS = new HashMap<>();
 
     private FlameFx() {}
@@ -57,13 +59,50 @@ final class FlameFx {
     private record Aim(double time, Vec3d eye, Vec3d look, Vec3d tip) {}
     private record Hit(double t, Vec3d n) {}
 
+    private static final class AimHistory {
+        private final Aim[] samples = new Aim[AIM_CAPACITY];
+        private int head, size;
+
+        private int index(int offset) { return (head + offset) % samples.length; }
+        private Aim at(int offset) { return samples[index(offset)]; }
+        private static double sampleSlot(double time) { return Math.floor(time * AIM_SAMPLES_PER_SECOND + 1e-7); }
+
+        void record(Aim aim) {
+            // The render clock can pause or step backwards. Discard any sample from the future.
+            while (size > 0 && at(size - 1).time >= aim.time) samples[index(--size)] = null;
+            // Keep the first aim in each time slot so previously emitted puffs keep their aim.
+            if (size == 0 || sampleSlot(at(size - 1).time) < sampleSlot(aim.time)) {
+                if (size == samples.length) removeFirst();
+                samples[index(size++)] = aim;
+            }
+            while (size > 2 && at(0).time < aim.time - AIM_WINDOW) removeFirst();
+        }
+
+        private void removeFirst() {
+            samples[head] = null;
+            head = index(1);
+            size--;
+        }
+
+        Aim atTime(double time) {
+            int lo = 0, hi = size;
+            while (lo < hi) {
+                int mid = (lo + hi) >>> 1;
+                if (at(mid).time <= time) lo = mid + 1;
+                else hi = mid;
+            }
+            return at(Math.max(0, lo - 1));
+        }
+    }
+
     private static final class Stream implements BlockFireEffects.Fx {
         final ClientWorld world;
         final int entity;
         /** from: the earliest birth time this stream draws; puffs before it belong to the stream it replaced. */
         final double start, heat0, from;
         double last, overheat = Double.NaN, cut = Double.POSITIVE_INFINITY;
-        final ArrayDeque<Aim> aims = new ArrayDeque<>();
+        final AimHistory aims = new AimHistory();
+        Aim current;
         final Map<Long, Hit> hits = new HashMap<>();
         Stream(ClientWorld world, int entity, double start, double heat0, double from) {
             this.world = world; this.entity = entity; this.start = start; this.heat0 = heat0; this.from = from;
@@ -86,24 +125,15 @@ final class FlameFx {
             return smoothstep((noise(e * 10 + 3.7) - (.18 + .55 * q)) / .12);
         }
 
-        Aim aimAt(double time) {
-            Aim best = aims.peekFirst();
-            for (Aim a : aims) { if (a.time > time) break; best = a; }
-            return best;
-        }
-
         @Override public boolean draw(BlockFireEffects.Frame f) {
             double now = f.now(), stop = stop();
             if (now > stop + MAX_AGE) return false;
             if (world.getEntityById(entity) instanceof LivingEntity caster && !caster.isRemoved() && now <= stop + .2) {
-                // One aim per moment: the clock stands still while the game is paused and can step back a tick.
-                while (!aims.isEmpty() && aims.peekLast().time >= now) aims.removeLast();
                 Vec3d eye = caster.getCameraPosVec(f.delta());
-                aims.addLast(new Aim(now, eye, caster.getRotationVec(f.delta()).normalize(), BlockFireEffects.tip(caster, f.delta())));
-                while (aims.size() > 2 && aims.peekFirst().time < now - MAX_AGE - .2) aims.removeFirst();
+                current = new Aim(now, eye, caster.getRotationVec(f.delta()).normalize(), BlockFireEffects.tip(caster, f.delta()));
+                aims.record(current);
             }
-            if (aims.isEmpty()) return true;
-            Aim current = aims.peekLast();
+            if (current == null) return true;
             if (!BlockFireEffects.near(f, current.eye, 96)) return true;
             var client = MinecraftClient.getInstance();
             boolean own = f.m().lens && client.getCameraEntity() != null && client.getCameraEntity().getId() == entity;
@@ -147,7 +177,7 @@ final class FlameFx {
             if (age < 0 || age > MAX_AGE) return;
             double sd = k * 7.31 + 11;
             if (rnd(sd + 4.4) > gate(e)) return;
-            Aim aim = aimAt(e);
+            Aim aim = aims.atTime(e);
             Vec3d look = aim.look, right = look.crossProduct(Math.abs(look.y) > .99 ? X : UP).normalize(), vup = right.crossProduct(look);
             Vec3d tipOff = aim.tip.subtract(aim.eye);
             // Heat at birth: hotter puffs leave the tip whiter and stay yellow further out.

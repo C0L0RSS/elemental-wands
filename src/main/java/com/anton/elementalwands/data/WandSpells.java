@@ -150,16 +150,14 @@ public final class WandSpells {
     }
     public static List<String> reconcile(WizardAffinity affinity,List<String> current,List<String> owned) {
         if(affinity==WizardAffinity.NONE)return defaults(affinity);
-        var result=new java.util.ArrayList<>(normalize(affinity,current));
+        // Seed an element's first loadout, including owned spells migrated from older saves.
+        var result=new java.util.ArrayList<>(normalize(affinity,current == null ? owned : current));
         for(int i=0;i<SLOT_COUNT;i++)if(!slotOpen(owned,i)||!owned.contains(result.get(i)))result.set(i,"");
-        // Newly owned spells fill the first empty slots so a purchase is usable at once.
-        for(int i=0;i<SLOT_COUNT;i++)if(slotOpen(owned,i)&&result.get(i).isEmpty())
-            for(String id:owned){var spell=find(id);if(spell!=null&&spell.affinity()==affinity&&fits(spell,i)&&!result.contains(id)){result.set(i,id);break;}}
         return List.copyOf(result);
     }
     public static List<String> equip(WizardAffinity affinity,List<String> current,int slot,String id) {
         var spell=find(id);
-        if(!valid(affinity,current)||slot<0||slot>=SLOT_COUNT||spell==null||spell.affinity()!=affinity||!fits(spell,slot))return current;
+        if(!valid(affinity,current)||slot<0||slot>=current.size()||spell==null||spell.affinity()!=affinity||!fits(spell,slot))return current;
         var next=new java.util.ArrayList<>(current);int oldSlot=next.indexOf(id);
         if(oldSlot>=0&&oldSlot!=slot){String displaced=next.get(slot);next.set(oldSlot,fits(find(displaced),oldSlot)?displaced:"");}
         next.set(slot,id);return valid(affinity,next)?List.copyOf(next):current;

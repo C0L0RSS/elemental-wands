@@ -59,7 +59,7 @@ public final class WandProgression {
         var ids = new ArrayList<>(old.spells()); ids.add(id);
         put(player, affinity, new ElementProgress(old.flux() - (freeTier>=0 ? 0 : spell.price()), ids, old.xp()));
         if (freeTier>=0) SpellBooks.spend(player, freeTier);
-        WandLoadouts.get(player); // Fill newly available capacity without replacing chosen spells.
+        WandLoadouts.equipNewSpells(player, List.of(id));
         return (freeTier>=0 ? "Learned for free: " : "Purchased ") + spell.name() + ".";
     }
     public static boolean adminMatches(WandSpells.Spell spell, int bits) {
@@ -70,8 +70,11 @@ public final class WandProgression {
         if (affinity == WizardAffinity.NONE) return;
         var old = get(player, affinity);
         var ids = new HashSet<>(old.spells());
-        WandSpells.forAffinity(affinity).stream().filter(s -> adminMatches(s,bits)).forEach(s -> ids.add(s.id()));
+        var learned = WandSpells.forAffinity(affinity).stream()
+                .filter(s -> adminMatches(s,bits) && !owns(player, s)).map(WandSpells.Spell::id).toList();
+        ids.addAll(learned);
         put(player, affinity, new ElementProgress(old.flux(), ids.stream().sorted().toList(), old.xp()));
+        WandLoadouts.equipNewSpells(player, learned);
     }
     public static void experience(ServerPlayerEntity player, WizardAffinity source, double amount) {
         if (source==WizardAffinity.NONE || !Double.isFinite(amount) || amount<=0) return;

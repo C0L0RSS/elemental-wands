@@ -52,6 +52,10 @@ public final class WandHubServerSmoke implements ModInitializer {
             WandProgression.migrate(pending);
             com.anton.elementalwands.ElementalWandsMod.handleAffinitySet(pending.getCommandSource(), WizardAffinity.STONE);
             require(WandProgression.flux(pending) == 90 && WandProgression.skills(pending) == 1, "Unaffiliated legacy progress was discarded");
+            require(pending.getInventory().contains(ModItems.FRACTURED_WAND.getDefaultStack()), "First affinity choice did not grant the starter wand");
+            pending.getInventory().clear();
+            com.anton.elementalwands.ElementalWandsMod.handleAffinitySet(pending.getCommandSource(), WizardAffinity.WIND);
+            require(!pending.getInventory().contains(ModItems.FRACTURED_WAND.getDefaultStack()), "An affinity change granted a second wand");
             player = (ServerPlayerEntity)factory.invoke(null, server, UUID.randomUUID(), "HubTester", .5, 100.0, .5);
             player.setNoGravity(true);
             player.setAttached(EWAttachments.AFFINITY, "FIRE");
@@ -63,7 +67,7 @@ public final class WandHubServerSmoke implements ModInitializer {
             WandLoadouts.equip(player, "FIRE", 0, "dragons_pyre");
             require(WandLoadouts.get(player).equals(defaults), "Locked spell equipped");
             WandLoadouts.cast(player, 1);
-            require(!wand.contains(DataComponentTypes.CUSTOM_DATA), "Locked cast changed cooldowns");
+            require(WandCooldowns.state(player).isEmpty(), "Locked cast changed cooldowns");
             player.experienceLevel = 15;
             require(WandProgression.flux(player) == 500, "Legacy Flux was not migrated");
             require(com.anton.elementalwands.ElementalWandsMod.handleSkillUnlock(player.getCommandSource(), "secondary") == 1, "Existing unlock flow failed");
@@ -81,8 +85,10 @@ public final class WandHubServerSmoke implements ModInitializer {
             hub.invoke(null, player, new com.anton.elementalwands.network.ModNetworking.HubActionPayload("unlock", "FIRE", 0, "meteor"));
             require(WandProgression.flux(player) == 0 && WandProgression.skills(player) == 3 && player.experienceLevel == 0,
                     "Store purchase failed with zero XP");
+            long legacyTick = player.getEntityWorld().getTime();
             NbtComponent.set(DataComponentTypes.CUSTOM_DATA, wand, n -> {
-                n.putLong(AbstractWandItem.cooldownKey("inferno_wave"), 345); n.putLong(AbstractWandItem.cooldownKey("dragons_pyre"), 678);
+                n.putLong(WandCooldowns.cooldownKey("dragons_pyre"), legacyTick);
+                n.putInt(WandCooldowns.durationKey("dragons_pyre"), 200);
                 n.putInt(AbstractWandItem.NBT_ULTIMATE_CHARGE, 74);
             });
             require(!player.getAttachedOrElse(EWAttachments.WELCOME_SEEN, false), "New player guide already acknowledged");
@@ -116,6 +122,9 @@ public final class WandHubServerSmoke implements ModInitializer {
                 require(WandSpells.equip(element, ids, 5, ids.get(0)).equals(ids), "Out-of-range slot accepted");
             }
             require(wand.get(DataComponentTypes.CUSTOM_DATA).copyNbt().equals(original), "Equip reset cooldown or charge");
+            hub.invoke(null, player, new com.anton.elementalwands.network.ModNetworking.HubActionPayload("equip", "FIRE", 1, ""));
+            require(WandLoadouts.get(player).get(1).isEmpty() && WandProgression.owns(player, WandSpells.find("dragons_pyre")),
+                    "Clearing a slot refilled it or removed ownership");
             var equipped = WandLoadouts.get(player);
             for (String id : List.of("blink_rift", "missing")) WandLoadouts.equip(player, "FIRE", 0, id);
             WandLoadouts.equip(player, "SPACE", 1, "inferno_wave");
@@ -136,10 +145,17 @@ public final class WandHubServerSmoke implements ModInitializer {
             require(fireRecord.equals(WandProgression.get(player, WizardAffinity.FIRE)), "Invalid/duplicate purchases charged Flux");
             require(com.anton.elementalwands.ElementalWandsMod.handleAffinitySet(player.getCommandSource(), WizardAffinity.NATURE) == 1, "Element switch failed");
             require(WandProgression.flux(player) == 0 && WandProgression.skills(player) == 0, "Nature inherited Fire currency or purchases");
-            AbstractWandItem.onWandDamageDealt(player, 7, WizardAffinity.FIRE);
+            int initialCharge = AbstractWandItem.getUltimateCharge(player.getMainHandStack());
+            rewardedHit(player, WizardAffinity.FIRE, 7, 0);
             require(WandProgression.flux(player) == 0 && WandProgression.get(player, WizardAffinity.FIRE).flux() == 130, "Lingering Fire damage credited Nature");
-            AbstractWandItem.onWandDamageDealt(player, 15, WizardAffinity.NATURE);
+            require(AbstractWandItem.getUltimateCharge(player.getMainHandStack()) == initialCharge, "Lingering Fire charged Nature");
+            rewardedHit(player, WizardAffinity.NATURE, 15, 0);
             require(WandProgression.flux(player) == 15, "Nature damage did not earn Nature Flux");
+            int charged = AbstractWandItem.getUltimateCharge(player.getMainHandStack());
+            require(charged > initialCharge, "A damaging Nature hit earned no charge");
+            rewardedHit(player, WizardAffinity.NATURE, 20, 20);
+            require(WandProgression.flux(player) == 15 && AbstractWandItem.getUltimateCharge(player.getMainHandStack()) == charged,
+                    "A fully absorbed hit earned Flux or charge");
             require(WandLoadouts.get(player).equals(List.of("seed", "", "", "", "")), "Other affinity inherited Fire choices");
             com.anton.elementalwands.ElementalWandsMod.handleAffinitySet(player.getCommandSource(), WizardAffinity.FIRE);
             require(WandProgression.flux(player) == 130 && WandProgression.skills(player) == 3, "Switch did not restore Fire progress");
@@ -151,12 +167,18 @@ public final class WandHubServerSmoke implements ModInitializer {
             require(WandProgression.skills(player) == 3, "Permanent purchases failed save/reload");
             require(WandLoadouts.get(player).equals(equipped), "Fire loadout was lost on affinity change");
             wand = player.getMainHandStack();
-            NbtComponent.set(DataComponentTypes.CUSTOM_DATA, wand, n -> { n.putLong(AbstractWandItem.cooldownKey("inferno_wave"), -10000); n.putLong("ew_last_global", -10000); });
+            player.getInventory().setStack(10, wand);
+            player.setStackInHand(Hand.MAIN_HAND, new ItemStack(ModItems.FRACTURED_WAND));
+            require(!AbstractWandItem.canStartCooldown(player.getEntityWorld(), player, player.getMainHandStack(), "dragons_pyre", 200),
+                    "A fresh wand bypassed another carried wand's legacy timer");
+            require(!wand.get(DataComponentTypes.CUSTOM_DATA).copyNbt().contains(WandCooldowns.cooldownKey("dragons_pyre"))
+                    && AbstractWandItem.getUltimateCharge(wand) == charged, "Migration lost charge or retained stack cooldown");
             WandLoadouts.cast(player, 0); // Slot 1 casts Inferno Wave.
-            var castData = wand.get(DataComponentTypes.CUSTOM_DATA).copyNbt();
-            require(castData.getLong(AbstractWandItem.cooldownKey("inferno_wave")).orElseThrow() == player.getEntityWorld().getTime(), "Slot 1 dispatched wrong spell");
-            require(castData.getLong(AbstractWandItem.cooldownKey("dragons_pyre")).orElseThrow() == 678, "Inferno Wave cast touched Dragon's Pyre cooldown");
-            WandLoadouts.equip(player, "FIRE", 0, "inferno_wave");
+            var castData = WandCooldowns.state(player).copy();
+            require(castData.getLong(WandCooldowns.cooldownKey("inferno_wave")).orElseThrow() == player.getEntityWorld().getTime(), "Slot 1 dispatched wrong spell");
+            require(castData.getLong(WandCooldowns.cooldownKey("dragons_pyre")).orElseThrow() == legacyTick, "Inferno Wave cast touched Dragon's Pyre cooldown");
+            require(!AbstractWandItem.canStartCooldown(player.getEntityWorld(), player, wand, "inferno_wave", 20), "Swapping back bypassed recovery");
+            WandLoadouts.equip(player, "FIRE", 0, "");
             require(WandLoadouts.get(player).equals(equipped), "Combat lock bypassed");
             require(com.anton.elementalwands.ElementalWandsMod.handleAffinitySet(player.getCommandSource(), WizardAffinity.NATURE) == 0,
                     "Element switching bypassed combat lock");
@@ -171,6 +193,7 @@ public final class WandHubServerSmoke implements ModInitializer {
             var id = player.getUuid();
             player = server.getPlayerManager().respawnPlayer(player, false, net.minecraft.entity.Entity.RemovalReason.KILLED);
             require(player.getUuid().equals(id) && WandLoadouts.get(player).equals(equipped), "Death/respawn lost saved loadout");
+            require(WandCooldowns.state(player).equals(castData), "Respawn lost player cooldowns");
             require(WandProgression.flux(player) == 130 && WandProgression.skills(player) == 3
                     && WandProgression.get(player, WizardAffinity.NATURE).flux() == 15, "Respawn lost permanent progression");
             require(player.getAttachedOrElse(EWAttachments.WELCOME_SEEN, false), "Guide acknowledgement lost on respawn");
@@ -179,11 +202,20 @@ public final class WandHubServerSmoke implements ModInitializer {
         }
         if (tick == 235) {
             require(WandLoadouts.canEdit(player), "Combat lock did not expire");
-            WandLoadouts.equip(player, "FIRE", 0, "inferno_wave");
+            WandLoadouts.equip(player, "FIRE", 1, "dragons_pyre");
             require(WandLoadouts.get(player).equals(List.of("inferno_wave", "dragons_pyre", "meteor", "", "")), "Post-combat loadout changed");
             Files.writeString(Path.of("HUB_PASSED.txt"), "Legacy migration, element balances, permanent purchases, duplicate/stale purchase rejection, XP preservation, damage-source currency attribution, switch restrictions, unlock gates, invalid/stale payloads, cooldown/charge retention, category restrictions and Basic dispatch, player serialization, respawn persistence, interaction and combat lock checks passed.\n");
             server.stop(false);
         }
+    }
+    private static void rewardedHit(ServerPlayerEntity owner, WizardAffinity affinity, float health, float absorption) {
+        var world = owner.getEntityWorld();
+        var target = new net.minecraft.entity.passive.CowEntity(net.minecraft.entity.EntityType.COW, world);
+        target.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.MAX_HEALTH).setBaseValue(20);
+        target.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.MAX_ABSORPTION).setBaseValue(20);
+        target.setHealth(health);
+        target.setAbsorptionAmount(absorption);
+        require(SpellCombat.damageAndReward(target, world, world.getDamageSources().generic(), 20, owner, affinity), "Damage rejected");
     }
     private static void require(boolean value, String message) { if (!value) throw new AssertionError(message); }
 }

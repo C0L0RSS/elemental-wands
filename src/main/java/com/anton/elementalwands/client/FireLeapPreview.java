@@ -3,43 +3,76 @@ package com.anton.elementalwands.client;
 import java.util.*;
 import com.anton.elementalwands.entity.GuardianWaveSurface;
 import com.anton.elementalwands.util.FireLeapRules;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientWorldEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.world.ClientWorld;
+import net.minecraft.entity.EquipmentSlot;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.Item;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Vec3d;
 
 /** Private aim geometry never goes over the network. Committed leaps reveal only the landing ring. */
 public final class FireLeapPreview {
     public record Segment(Vec3d a,Vec3d b,double width,int color) {}
+    private record Ring(Vec3d target,List<Segment> lines) {}
+    /** Vanilla collision shapes such as scaffolding and powder snow depend on the viewer. */
+    private record Viewer(PlayerEntity player,double feetY,boolean descending,boolean falling,Item boots,Item held) {
+        static Viewer of(PlayerEntity player) {
+            return new Viewer(player,player.getY(),player.isDescending(),player.fallDistance>2.5,
+                    player.getEquippedStack(EquipmentSlot.FEET).getItem(),player.getMainHandStack().getItem());
+        }
+    }
+
+    private static final Map<Vec3d,List<Segment>> LANDING_RINGS=new HashMap<>();
+    private static final Set<Vec3d> VISIBLE_LANDINGS=new HashSet<>();
+    private static ClientWorld world;
+    private static Viewer viewer;
+    private static Ring aimRing;
     private static List<Segment> frame=List.of();
     private static Vec3d camera=Vec3d.ZERO;
+
     public static void init() {
+        ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE.register((client,nextWorld) -> reset());
+        ClientPlayConnectionEvents.DISCONNECT.register((handler,client) -> reset());
+        ClientChunkEvents.CHUNK_LOAD.register((chunkWorld,chunk) -> chunkChanged(chunkWorld,chunk.getPos()));
+        ClientChunkEvents.CHUNK_UNLOAD.register((chunkWorld,chunk) -> chunkChanged(chunkWorld,chunk.getPos()));
         WorldRenderEvents.END_EXTRACTION.register(context -> {
-            var client=MinecraftClient.getInstance();var result=new ArrayList<Segment>();
-            camera=context.camera().getPos();
-            if(client.player!=null) {
-                if(WandControls.aimingLeap()) {
-                    Vec3d to=FireLeapClient.aim(client.player);
-                    boolean valid=to!=null;
-                    if(to==null) to=client.player.getEyePos().add(client.player.getRotationVec(1).multiply(FireLeapRules.RANGE));
-                    int color=valid ? 0x60ffc36a : 0x90ff5148;
-                    Vec3d previous=client.player.getEntityPos();
-                    for(int i=1;i<=40;i++) {
-                        Vec3d next=FireLeapRules.position(client.player.getEntityPos(),to,i/40.);
-                        // Avoid drawing the near-camera takeoff leg as a full-screen strip.
-                        if(i%2==0 && previous.squaredDistanceTo(camera)>4 && next.squaredDistanceTo(camera)>4)
-                            result.add(new Segment(previous,next,.008,color));
-                        previous=next;
-                    }
-                    if(valid) sigil(result,client,to,false,client.world.getTime()+context.tickCounter().getTickProgress(false));
-                    else {
-                        result.add(new Segment(to.add(-.3,.05,-.3),to.add(.3,.05,.3),.025,0xc0ff5148));
-                        result.add(new Segment(to.add(-.3,.05,.3),to.add(.3,.05,-.3),.025,0xc0ff5148));
-                    }
-                }
-                for(var landing:FireLeapClient.landings())
-                    sigil(result,client,landing.to(),true,client.world.getTime()+context.tickCounter().getTickProgress(false));
+            var client=MinecraftClient.getInstance();
+            if(client.player==null || client.world!=context.world()) {
+                reset();
+                return;
             }
+            var landings=FireLeapClient.landings();
+            boolean aiming=WandControls.aimingLeap();
+            if(!aiming && landings.isEmpty()) {
+                if(viewer!=null) reset();
+                return;
+            }
+            var result=new ArrayList<Segment>();
+            camera=context.camera().getPos();
+            Viewer nextViewer=Viewer.of(client.player);
+            if(world!=client.world || viewer==null || viewer.player!=client.player || !nextViewer.equals(viewer)) {
+                clearGeometry();
+                world=client.world;
+                viewer=nextViewer;
+            }
+            double time=world.getTime()+context.tickCounter().getTickProgress(false);
+            if(aiming) drawAim(result,client,time);
+            else aimRing=null;
+            VISIBLE_LANDINGS.clear();
+            for(var landing:landings) {
+                Vec3d target=landing.to();
+                VISIBLE_LANDINGS.add(target);
+                result.addAll(LANDING_RINGS.computeIfAbsent(target,pos -> groundSigil(client,pos,true)));
+                sparks(result,client,target,true,time);
+            }
+            LANDING_RINGS.keySet().retainAll(VISIBLE_LANDINGS);
             frame=List.copyOf(result);
         });
         WorldRenderEvents.BEFORE_DEBUG_RENDER.register(context -> {
@@ -54,8 +87,65 @@ public final class FireLeapPreview {
                 immediate.draw(RenderLayer.getLightning());
         });
     }
-    /** Broken outer seal, eight inward flame runes, a central fire glyph and rising ember flecks. */
-    private static void sigil(List<Segment> result,MinecraftClient client,Vec3d origin,boolean committed,double time) {
+
+    private static void drawAim(List<Segment> result,MinecraftClient client,double time) {
+        Vec3d to=FireLeapClient.aim(client.player);
+        boolean valid=to!=null;
+        if(!valid) to=client.player.getEyePos().add(client.player.getRotationVec(1).multiply(FireLeapRules.RANGE));
+        int color=valid ? 0x60ffc36a : 0x90ff5148;
+        Vec3d from=client.player.getEntityPos(),previous=from;
+        for(int i=1;i<=40;i++) {
+            Vec3d next=FireLeapRules.position(from,to,i/40.);
+            // Avoid drawing the near-camera takeoff leg as a full-screen strip.
+            if(i%2==0 && previous.squaredDistanceTo(camera)>4 && next.squaredDistanceTo(camera)>4)
+                result.add(new Segment(previous,next,.008,color));
+            previous=next;
+        }
+        if(valid) {
+            if(aimRing==null || !to.equals(aimRing.target)) aimRing=new Ring(to,groundSigil(client,to,false));
+            result.addAll(aimRing.lines);
+            sparks(result,client,to,false,time);
+        } else {
+            aimRing=null;
+            result.add(new Segment(to.add(-.3,.05,-.3),to.add(.3,.05,.3),.025,0xc0ff5148));
+            result.add(new Segment(to.add(-.3,.05,.3),to.add(.3,.05,-.3),.025,0xc0ff5148));
+        }
+    }
+
+    private static void clearGeometry() {
+        LANDING_RINGS.clear();VISIBLE_LANDINGS.clear();aimRing=null;
+    }
+
+    private static void reset() {
+        clearGeometry();
+        world=null;viewer=null;frame=List.of();
+    }
+
+    public static void blockChanged(ClientWorld changedWorld,BlockPos pos) {
+        invalidate(changedWorld,pos.getX(),pos.getY(),pos.getZ(),pos.getX(),pos.getY(),pos.getZ());
+    }
+
+    private static void chunkChanged(ClientWorld changedWorld,ChunkPos chunk) {
+        invalidate(changedWorld,chunk.getStartX(),changedWorld.getBottomY(),chunk.getStartZ(),
+                chunk.getEndX(),changedWorld.getTopYInclusive(),chunk.getEndZ());
+    }
+
+    private static void invalidate(ClientWorld changedWorld,int minX,int minY,int minZ,int maxX,int maxY,int maxZ) {
+        if(world!=changedWorld) return;
+        if(aimRing!=null && nearRing(aimRing.target,minX,minY,minZ,maxX,maxY,maxZ)) aimRing=null;
+        if(!LANDING_RINGS.isEmpty()) LANDING_RINGS.keySet().removeIf(to -> nearRing(to,minX,minY,minZ,maxX,maxY,maxZ));
+    }
+
+    private static boolean nearRing(Vec3d target,int minX,int minY,int minZ,int maxX,int maxY,int maxZ) {
+        // Include the sampled cover and one neighboring block around the collision queries.
+        double margin=FireLeapRules.WAVE_RANGE+2;
+        return target.x>=minX-margin && target.x<=maxX+margin && target.z>=minZ-margin && target.z<=maxZ+margin
+                && maxY>=target.y-5 && minY<=target.y+3;
+    }
+
+    /** Broken outer seal, eight inward flame runes and a central fire glyph. */
+    private static List<Segment> groundSigil(MinecraftClient client,Vec3d origin,boolean committed) {
+        var result=new ArrayList<Segment>();
         int amber=committed?0xb0ff852e:0x78ffad54,gold=committed?0xc0ffd37c:0x90ffd37c;
         double width=committed?.04:.027;
         for(int sector=0;sector<8;sector++) {
@@ -79,6 +169,10 @@ public final class FireLeapPreview {
             groundLine(result,client,origin,point,point.add(polar(a+Math.PI*.9,.25)),width*.7,gold);
             groundLine(result,client,origin,point,point.add(polar(a-Math.PI*.4,.25)),width*.7,gold);
         }
+        return List.copyOf(result);
+    }
+
+    private static void sparks(List<Segment> result,MinecraftClient client,Vec3d origin,boolean committed,double time) {
         for(int i=0;i<12;i++) {
             double phase=(time*.018+i*.173)%1,angle=i*Math.PI/6+Math.sin(time*.018+i)*.04;
             Vec3d offset=polar(angle,4.6),floor=GuardianWaveSurface.ground(client.world,client.player,origin,origin.x+offset.x,origin.z+offset.z);

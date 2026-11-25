@@ -2,6 +2,7 @@ package com.anton.elementalwands.data;
 
 import com.mojang.serialization.Codec;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
+import net.fabricmc.fabric.api.attachment.v1.AttachmentSyncPredicate;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
@@ -26,6 +27,20 @@ public final class EWAttachments {
     public static final AttachmentType<Boolean> WELCOME_SEEN = AttachmentRegistry.create(
             Identifier.of("elementalwands", "welcome_seen"), builder -> builder.initializer(() -> false)
                     .persistent(Codec.BOOL).copyOnDeath());
+
+    public static final AttachmentType<Boolean> STARTER_WAND_ISSUED = AttachmentRegistry.create(
+            Identifier.of("elementalwands", "starter_wand_issued"), builder -> builder
+                    .persistent(Codec.BOOL).copyOnDeath());
+
+    public static final AttachmentType<NbtCompound> WAND_COOLDOWNS = AttachmentRegistry.create(
+            Identifier.of("elementalwands", "wand_cooldowns"), builder -> builder
+                    .persistent(NbtCompound.CODEC).copyOnDeath()
+                    .syncWith(net.minecraft.network.codec.PacketCodecs.NBT_COMPOUND, AttachmentSyncPredicate.targetOnly()));
+
+    public static final AttachmentType<NbtCompound> WAYLAY_DASH = AttachmentRegistry.create(
+            Identifier.of("elementalwands", "waylay_dash"), builder -> builder
+                    .persistent(NbtCompound.CODEC).copyOnDeath()
+                    .syncWith(net.minecraft.network.codec.PacketCodecs.NBT_COMPOUND, AttachmentSyncPredicate.targetOnly()));
 
     public static final AttachmentType<NbtCompound> FIRE_BUILD_STATE = AttachmentRegistry.create(
             Identifier.of("elementalwands", "fire_build_state"), builder -> builder.initializer(NbtCompound::new)

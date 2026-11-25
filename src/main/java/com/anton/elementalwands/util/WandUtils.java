@@ -18,6 +18,13 @@ import java.util.Optional;
 
 public class WandUtils {
 
+    public static boolean realmKeepsTerrain(World world) {
+        return com.anton.elementalwands.crypt.HollowCryptRealm.keepsTerrain(world)
+                || com.anton.elementalwands.arena.ShatteredNave.keepsTerrain(world)
+                || com.anton.elementalwands.summit.StormSummit.keepsTerrain(world)
+                || com.anton.elementalwands.hall.PyreHall.keepsTerrain(world);
+    }
+
     /**
      * Raycasts for BOTH blocks and entities and returns whichever is hit first.
      * (PlayerEntity#raycast only finds blocks.)

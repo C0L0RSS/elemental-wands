@@ -10,6 +10,8 @@ Ruins generate in eligible new Overworld terrain; existing explored chunks are n
 retrofitted. Biome/terrain filtering means structure spacing is not a guaranteed
 distance between churches. Locating churches is incremental and cancellable so
 large searches do not block the server. Keep ticket cleanup and search timeouts.
+Each registered church is indexed in the chunks its rotated footprint touches.
+Block writes check nearby sites and also protect ritual sockets in newly generated churches.
 
 `/locate` reports a church or graveyard at a standing cell of its own template, with a real
 height, and its click-to-teleport link goes there rather than keeping the player's height
@@ -130,9 +132,12 @@ open a hole in it or reach outside the walls. Explosions and Hollow Purple destr
   where they stood at the church three seconds later. The church offers a fresh heart.
 - **Victory:** the Guardian's death commits the win before any block changes, then the church
   is restored in the Overworld while the party waits ten seconds in the nave, so they return
-  to the finished church. Seeded treasure cannot be rerolled by recall/restart and collected
+  to the finished church. If rebuilding blocked the original spot, the party member
+  returns to safe footing by the entrance, with world spawn as the fallback.
+  Seeded treasure cannot be rerolled by recall/restart and collected
   chests never refill. Each enrolled player may claim one personal spell book per site from
-  its restored reward chest; require inventory space before recording the receipt. See
+  its restored reward chest. If it is missing, use its cell or the top of the block
+  underneath to claim the book. A free inventory slot is required. See
   [progression](progression-and-controls.md). Removal, Peaceful, an operator reset and a
   wipe are not victories.
 - **Restart:** a fight is never resumed. Players still in the nave go home with their game
@@ -151,7 +156,8 @@ slots, return points, game modes to restore and fights in progress, beneath the 
 - Commit return records before admission, and victory before restoration or rewards.
 - Replay interrupted builds/restorations idempotently. Restart aborts a running
   fight safely; committed victory must not become a fresh loot roll.
-- Save world/player changes before retiring their recovery records.
+- The Nave and Crypt save the returned player's dimension and game mode before
+  removing their return records. A failed teleport keeps the records for a retry.
 - Release only chunk force flags owned by the church; preserve pre-existing ones.
 - Preserve temporary-block ownership, equipment recovery, and offline returns.
 - Use site accessors such as `Site.socket()` and `Site.offering()` rather than
@@ -271,7 +277,9 @@ rewards go beside its open grave.
   first win at a graveyard places two chests on the ground either side of the mausoleum steps,
   facing them. They hold the church's seeded treasure roll plus bones and never refill. Every
   player who has won at that graveyard may claim one personal spell book there (free Basic or
-  Technique spell) by opening a chest; the receipt key is `graveyard:<site>`. The graveyard is
+  Technique spell) by opening a chest. A later win replaces missing chests in empty
+  cells. A victor can also claim at the original chest cell or its support if the
+  chest is gone. Replacement chests are empty. The receipt key is `graveyard:<site>`. The graveyard is
   otherwise unchanged.
 - **Restart:** a fight is never resumed. On startup its slot is marked for rebuilding, and
   each player still in the realm goes home with their game mode restored when they join.

@@ -44,8 +44,7 @@ tasks.withType(JavaCompile).configureEach {
 
 java {
     withSourcesJar()
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
 }
 
 jar {
@@ -96,6 +95,9 @@ tasks.register('checkParties', JavaExec) {
     dependsOn guardianTestClasses
     classpath = sourceSets.guardianTest.runtimeClasspath
     mainClass = 'com.anton.elementalwands.party.PartyStoreTest'
+    // The damaged-save case logs an error through Minecraft's logging configuration.
+    workingDir = layout.buildDirectory.dir('party-contract').get().asFile
+    doFirst { workingDir.mkdirs() }
 }
 check.dependsOn checkParties
 

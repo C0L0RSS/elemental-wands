@@ -2,6 +2,12 @@ package com.anton.elementalwands.util;
 
 import com.anton.elementalwands.data.*;
 import com.anton.elementalwands.registry.ModItems;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.entity.ChestBlockEntity;
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.item.Item;
@@ -9,6 +15,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.text.Text;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 
 /** Credits and claim receipts share the player's inventory save and survive death. */
 public final class SpellBooks {
@@ -39,6 +46,22 @@ public final class SpellBooks {
     }
     public static boolean claim(ServerPlayerEntity p,String site) {
         return claim(p,"church:"+site,"Your Guardian spell book is in your inventory. Right-click it for a free Basic or Technique spell.");
+    }
+
+    /** A broken reward chest can still be reached by using the top of its supporting block. */
+    public static boolean targetsChest(BlockHitResult hit, BlockPos cell) {
+        return hit.getBlockPos().equals(cell) || hit.getSide()==Direction.UP && hit.getBlockPos().up().equals(cell);
+    }
+
+    /** Open an existing chest normally. Only an outstanding personal claim can replace a missing one. */
+    public static boolean recoverChest(ServerWorld world, BlockHitResult hit, BlockPos cell, BlockState chest, BooleanSupplier grant) {
+        if (world.getBlockEntity(cell) instanceof ChestBlockEntity) {
+            if (hit.getBlockPos().equals(cell)) grant.getAsBoolean();
+            return false;
+        }
+        if (!grant.getAsBoolean()) return false;
+        if (world.getBlockState(cell).isAir()) world.setBlockState(cell,chest);
+        return true;
     }
     /** One personal book per receipt key, e.g. per church or per graveyard. */
     public static boolean claim(ServerPlayerEntity p,String key,String message) {

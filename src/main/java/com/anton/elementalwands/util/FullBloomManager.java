@@ -110,7 +110,11 @@ public final class FullBloomManager {
             PlayerEntity caster = world == null ? null : world.getPlayerByUuid(entry.getKey());
             int age = now - bloom.start;
             if (caster == null || !caster.isAlive() || caster.isSpectator() || age >= DURATION) { it.remove(); continue; }
-            if (age <= WAVE_TICKS) wave(world, bloom, RADIUS * age / (double) WAVE_TICKS);
+            if (age <= WAVE_TICKS && caster.canModifyBlocks() && !WandUtils.realmKeepsTerrain(world)) {
+                double radius = RADIUS * age / (double) WAVE_TICKS;
+                sprout(world, caster, bloom, radius);
+                bloom.reached = radius;
+            }
             for (UUID id : bloom.allies) {
                 PlayerEntity ally = world.getPlayerByUuid(id);
                 if (ally != null && ally.isAlive()) SpellBuffs.regeneration(ally, caster, WizardAffinity.NATURE, REGENERATION_AMPLIFIER);
@@ -118,14 +122,8 @@ public final class FullBloomManager {
         }
     }
 
-    /** The ring between the last radius and this one grows on grass. It hurts nothing; clients draw its petals. */
-    private static void wave(ServerWorld world, Bloom bloom, double radius) {
-        sprout(world, bloom, radius);
-        bloom.reached = radius;
-    }
-
     /** On grass the wave leaves short grass and wild flowers, as bone meal does. It touches nothing else. */
-    private static void sprout(ServerWorld world, Bloom bloom, double radius) {
+    private static void sprout(ServerWorld world, PlayerEntity caster, Bloom bloom, double radius) {
         BlockPos centre = BlockPos.ofFloored(bloom.origin);
         int reach = (int) Math.ceil(radius);
         for (int dx = -reach; dx <= reach; dx++) for (int dz = -reach; dz <= reach; dz++) {
@@ -134,10 +132,11 @@ public final class FullBloomManager {
             for (int dy = 3; dy >= -4; dy--) {
                 BlockPos ground = centre.add(dx, dy, dz);
                 if (!world.isChunkLoaded(ground) || !world.getBlockState(ground).isOf(Blocks.GRASS_BLOCK)) continue;
-                if (world.getBlockState(ground.up()).isAir()) {
+                BlockPos plant = ground.up();
+                if (world.getBlockState(plant).isAir() && world.canEntityModifyAt(caster, plant)) {
                     float roll = world.random.nextFloat();
-                    if (roll < 0.14f) world.setBlockState(ground.up(), WILD_FLOWERS[world.random.nextInt(WILD_FLOWERS.length)].getDefaultState(), Block.NOTIFY_ALL);
-                    else if (roll < 0.55f) world.setBlockState(ground.up(), Blocks.SHORT_GRASS.getDefaultState(), Block.NOTIFY_ALL);
+                    if (roll < 0.14f) world.setBlockState(plant, WILD_FLOWERS[world.random.nextInt(WILD_FLOWERS.length)].getDefaultState(), Block.NOTIFY_ALL);
+                    else if (roll < 0.55f) world.setBlockState(plant, Blocks.SHORT_GRASS.getDefaultState(), Block.NOTIFY_ALL);
                 }
                 break;
             }

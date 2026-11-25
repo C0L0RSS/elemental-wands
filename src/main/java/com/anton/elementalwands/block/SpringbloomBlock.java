@@ -33,7 +33,8 @@ public final class SpringbloomBlock extends Block {
         if (world instanceof ServerWorld server) server.scheduleBlockTick(pos, this, 1);
     }
     @Override protected void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
-        if (!SpringbloomManager.hasPad(world, pos)) world.removeBlock(pos, false);
+        if (!SpringbloomManager.hasPad(world, pos) && !com.anton.elementalwands.util.TemporaryBlockManager.isTracked(world, pos))
+            world.removeBlock(pos, false);
         else world.scheduleBlockTick(pos, this, 1);
     }
 }

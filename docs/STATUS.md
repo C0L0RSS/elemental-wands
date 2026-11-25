@@ -126,6 +126,11 @@ Looks and balance that only a person playing can judge.
 
 ### Spells
 
+- Decide whether a shield that blocks the Hollow Necromancer should be knocked aside, as it
+  now is for every Fractured Guardian attack. [Playtest issue #32](https://github.com/C0L0RSS/elemental-wands/issues/32)
+- Decide what players should earn or work toward after buying an element's
+  spell store. [Progression suggestions in #54](https://github.com/C0L0RSS/elemental-wands/issues/54)
+
 - **Meteor in the boss arenas:** it used to burst on the invisible barrier lid over the
   Hollow Crypt and the Burned Throne Hall (fixed November 15). Check it lands on the floor
   in the Crypt, the Hall, the Shattered Nave and the Storm Summit. Outside the arenas it is
@@ -213,23 +218,22 @@ Automated work an agent can do without the developer.
   flanks in 30 s now that the Pyre Brand takes a share of his time (seven, four, five and
   five in its four runs). Watch it over a few more runs; if it fails without a real fault, judge the
   case by how often he strikes.
-- No fixture has run on a dedicated server since the Nature rework; the November 10–11 runs
-  were hosted in a singleplayer world on the Windows machine.
+- Verify the Nature rework on a dedicated server. The local Windows runs used a
+  singleplayer host.
+- Run the Nave and church recovery fixtures across a dedicated-server restart. Check that
+  returned players keep their game mode and that a recovered reward chest stays empty.
 - The party fixture's restart half was not run after the Nature rework.
 - The Thornbite heal buff inside Full Bloom has no fixture.
 - Springbloom's launch and flight leaves are in no client fixture, and its revised arc has
   no fresh native-client measurement (the server fixture checks about a 15-block apex and
   21-block travel).
 - The client fixtures do not press collect or break on a flower.
-- The hub and progression regression checks have not been rerun since the free-slot and
-  cooldown changes.
 - Wand-tip cast particles have had no native-client check (right and left hand, first and
   third person, wide FOV).
 - The Astral Double tuning against the Necromancer has had no client check.
-- `tools/check_assets.py` has not had a full run on the Windows machine since the
-  structure files and the Pyre King's model were made to come out the same on every
-  machine (November 12). Run it there once; a failure means a generator still depends on
-  the machine. A run of only its Guardian checks there on November 13 found two such cases:
+- Resolve the Windows export differences reported by `tools/check_assets.py` for
+  Fire, wand and Guardian textures, boss models and cinematics, the summit sky,
+  and Grasping Hands preview candidates. Known reproduction details:
   - `tools/prepare_guardian_assets.py --check` calls the four Guardian body textures stale.
     Regenerated there, their pixels match the committed files exactly, but the last seven
     bytes of the compressed data differ (Pillow 13.0.0). The committed files were kept.

@@ -770,7 +770,8 @@ final class GuardianBossCombat {
             if (!fistContact(anchor, attackYaw, player.getBoundingBox())
                     || !walls.clear(world, guardian, anchor.add(0,1,0), player.getBoundingBox().getCenter(), false)) continue;
             struck.add(player.getUuid());
-            if (strike(world, player, world.getDamageSources().mobAttack(guardian), FIST_DAMAGE, "slam fists")) knockAway(player, anchor, 1.0);
+            if (strike(world, player, world.getDamageSources().mobAttack(guardian), FIST_DAMAGE, "slam fists"))
+                knockAway(player, anchor, 1.0);
         }
         return struck;
     }
@@ -1143,7 +1144,7 @@ final class GuardianBossCombat {
             if (!walls.clear(world,guardian,center.add(0,.7,0),p.add(0,.7,0),true)) continue;
             hitPlayers.add(player.getUuid());
             jumped.put(player.getUuid(), false);
-            if (strike(world, player, world.getDamageSources().mobAttack(guardian), WAVE_DAMAGE, "wave")) {
+            if (guardian.strikeGroundWave(world, player, center, WAVE_DAMAGE)) {
                 Vec3d delta = player.getEntityPos().subtract(center);
                 player.takeKnockback(.7, -delta.x, -delta.z);
             }

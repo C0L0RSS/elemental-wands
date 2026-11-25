@@ -6,6 +6,9 @@ import com.anton.elementalwands.client.screen.WandHubScreen;
 import com.anton.elementalwands.data.WandSpells;
 import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.network.ModNetworking;
+import com.anton.elementalwands.registry.ModSpellBlocks;
+import com.anton.elementalwands.util.FlashoverManager;
+import com.anton.elementalwands.util.FlowerTurretManager;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
@@ -121,7 +124,7 @@ public final class WandControls {
     public static boolean aimingLeap() { return leapAim && validLeapContext(); }
     private static boolean validLeapContext() {
         var c=MinecraftClient.getInstance();
-        return c.player!=null && c.world!=null && c.currentScreen==null && c.isWindowFocused() && c.player.isAlive()
+        return c.player!=null && c.world!=null && c.currentScreen==null && !BossIntroCamera.frozen() && c.isWindowFocused() && c.player.isAlive()
                 && !c.player.isSpectator() && !c.player.hasVehicle() && !FireLeapClient.active() && !c.player.isGliding() && !c.player.isTouchingWater()
                 && c.player.getMainHandStack()==leapWand && heldHotbar==c.player.getInventory().getSelectedSlot()
                 && heldAffinity.equals(ClientPlayerData.getAffinity().name()) && ClientPlayerData.loadout().contains("fire_hop");
@@ -143,26 +146,46 @@ public final class WandControls {
             for (int i = 0; i < KEYS.length; i++) if (KEYS[i].equals(key)) { if (HELD[i] && (spellAtInput(i,"flamethrower") || spellAtInput(i,"stone_charge"))) release(); if(HELD[i] && spellAtInput(i,"fire_hop") && leapAim) releaseLeap(); HELD[i] = false; if(i==0)daggerPrimaryHeld=false; }
             return false;
         }
-        if (client.currentScreen != null || client.player == null || !client.player.isAlive() || client.player.isSpectator()
+        if (client.currentScreen != null || BossIntroCamera.frozen() || client.player == null || !client.player.isAlive() || client.player.isSpectator()
                 || !client.isWindowFocused() || !(client.player.getMainHandStack().getItem() instanceof AbstractWandItem)) return false;
         if (key.getTranslationKey().equals(hubKey.getBoundKeyTranslationKey())) return false;
         if (sneakInteraction(client, key)) return false;
         for (int i = 0; i < KEYS.length; i++) if (KEYS[i].equals(key)) {
-            if (action == GLFW.GLFW_PRESS) {
-                boolean daggersReady=client.player.getAttachedOrElse(com.anton.elementalwands.data.EWAttachments.GALE_PREPARED,0)>0;
-                if(i==0)daggerPrimaryHeld=daggersReady;
-                else if(spellAtInput(i,"gale_daggers") && daggersReady && HELD[0])daggerPrimaryHeld=true;
-                HELD[i] = true; heldHotbar = client.player.getInventory().getSelectedSlot();
-                heldAffinity = ClientPlayerData.getAffinity().name(); repeatTick = 0;
-                if(i==3) {
-                    if(ClientPlayerData.loadout().contains("flashover"))ClientPlayNetworking.send(ModNetworking.AlternateSpellPayload.INSTANCE);
-                } else if(spellAtInput(i,"fire_hop")) {
-                    leapWand=client.player.getMainHandStack();leapAim=true;
-                } else ClientPlayNetworking.send(new ModNetworking.CastSlotPayload(slotForInput(i)));
+            if (action != GLFW.GLFW_PRESS) return HELD[i];
+            boolean daggersReady=client.player.getAttachedOrElse(com.anton.elementalwands.data.EWAttachments.GALE_PREPARED,0)>0;
+            if (i == 3) {
+                if (!ClientPlayerData.loadout().contains("flashover")) return false;
+            } else {
+                int slot = slotForInput(i);
+                var loadout = ClientPlayerData.loadout();
+                boolean empty = slot >= loadout.size() || loadout.get(slot).isEmpty();
+                if (empty && !(slot == 0 && daggersReady) && !aimedSlotAction(client, slot)) return false;
             }
+            if(i==0)daggerPrimaryHeld=daggersReady;
+            else if(spellAtInput(i,"gale_daggers") && daggersReady && HELD[0])daggerPrimaryHeld=true;
+            HELD[i] = true; heldHotbar = client.player.getInventory().getSelectedSlot();
+            heldAffinity = ClientPlayerData.getAffinity().name(); repeatTick = 0;
+            if(i==3) {
+                ClientPlayNetworking.send(ModNetworking.AlternateSpellPayload.INSTANCE);
+            } else if(spellAtInput(i,"fire_hop") && !(i==0 && daggersReady)) {
+                leapWand=client.player.getMainHandStack();leapAim=true;
+            } else ClientPlayNetworking.send(new ModNetworking.CastSlotPayload(slotForInput(i)));
             return true;
         }
         return false;
+    }
+    /** Empty primary and secondary slots still have their close-range wand interactions. */
+    private static boolean aimedSlotAction(MinecraftClient client, int slot) {
+        if (slot > 1) return false;
+        var player = client.player;
+        if (slot == 0 && FlashoverManager.aimedEmber(player) != null) return true;
+        double reach = slot == 0 ? 4.5 : FlowerTurretManager.CLICK_REACH;
+        var hit = player.raycast(reach, 1, false);
+        if (!(hit instanceof BlockHitResult block) || hit.getType() != HitResult.Type.BLOCK) return false;
+        var state = player.getEntityWorld().getBlockState(block.getBlockPos());
+        if (slot == 0 && state.isOf(ModSpellBlocks.SPRINGBLOOM)) return true;
+        return state.isOf(ModSpellBlocks.NATURE_SEEDLING)
+                && hit.getPos().squaredDistanceTo(player.getEyePos()) <= FlowerTurretManager.CLICK_REACH * FlowerTurretManager.CLICK_REACH;
     }
     /** Sneak + Use on something to use within reach is the interaction gesture and goes to vanilla
      * without a cast: a block (doors, chests, ritual blocks), or a villager, mount, pet, vehicle or
@@ -216,6 +239,7 @@ public final class WandControls {
         if(leapAim && !validLeapContext()) { leapAim=false;leapWand=null; }
         boolean open = false;
         while (hubKey.wasPressed()) open = true;
+        if (BossIntroCamera.frozen()) { clear(); return; }
         if (open && client.currentScreen == null && client.player != null && client.player.isAlive() && !client.player.isSpectator()) {
             open(); return;
         }
@@ -236,16 +260,16 @@ public final class WandControls {
     /** Client-side repeat gate mirroring the server's per-spell cooldown check. */
     private static boolean spellReady(MinecraftClient client, WandSpells.Spell spell) {
         long now = client.world.getTime();
-        var data = client.player.getMainHandStack().getOrDefault(net.minecraft.component.DataComponentTypes.CUSTOM_DATA,
-                net.minecraft.component.type.NbtComponent.DEFAULT).copyNbt();
-        if (now - data.getLong("ew_last_global").orElse(-1000000000L) < 6) return false;
-        if (spell.id().equals("gathered_mass")) return ClientPlayerData.stoneRemaining(now) <= 0;
-        int duration = data.getInt(AbstractWandItem.durationKey(spell.id()), 0);
-        long elapsed = now - data.getLong(AbstractWandItem.cooldownKey(spell.id())).orElse(-1000000000L);
+        var data = com.anton.elementalwands.util.WandCooldowns.state(client.player);
+        if (com.anton.elementalwands.util.WandCooldowns.globalRemaining(data, now) > 0) return false;
         boolean entangled = ClientPlayerData.getEntangleStacks(client.player.getId()) > 0;
-        if (entangled) elapsed /= 2;
-        if (spell.category() == WandSpells.Category.BASIC && AbstractWandItem.basicSharedRemaining(data, now, entangled) > 0) return false;
-        return elapsed >= duration;
+        if (spell.id().equals("gathered_mass")) {
+            // Gathering uses the global tap and its own pull cadence.
+            return com.anton.elementalwands.util.WandCooldowns.spellRemaining(data, spell.id(), now, 0, entangled) == 0;
+        }
+        if (spell.category() == WandSpells.Category.BASIC
+                && com.anton.elementalwands.util.WandCooldowns.basicRemaining(data, now, entangled) > 0) return false;
+        return com.anton.elementalwands.util.WandCooldowns.spellRemaining(data, spell.id(), now, 0, entangled) == 0;
     }
     public static void open() {
         clear();

@@ -1,7 +1,9 @@
 package com.anton.elementalwands.util;
 
+import com.anton.elementalwands.ElementalWandsMod;
 import com.anton.elementalwands.data.*;
 import com.anton.elementalwands.entity.WandBoss;
+import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.party.WandAllies;
 import net.minecraft.entity.*;
 import net.minecraft.entity.mob.HostileEntity;
@@ -13,11 +15,19 @@ import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import java.util.*;
+import java.util.function.Consumer;
 
-/** Explicit source attribution; XP measures actual health, not nominal or rounded hit damage. */
+/** Applies attributed spell damage and measures the resulting health loss once. */
 public final class SpellCombat {
     private record Effect(UUID owner,WizardAffinity element,long until,int amplifier) {}
     private static final Map<Entity,Effect> BURNS=new WeakHashMap<>(),REGEN=new WeakHashMap<>();
+    public record DamageResult(boolean accepted, float healthLost) {}
+    private static final DamageResult REJECTED = new DamageResult(false, 0);
+
+    @FunctionalInterface
+    public interface ApplyDamage {
+        boolean apply(Entity target, DamageSource source, float amount);
+    }
     /**
      * Damage from something a caster left behind to fight beside them (a flower's seed). It is
      * not one of the caster's own hits, so a boss's per-attacker hurt window neither swallows it
@@ -31,31 +41,74 @@ public final class SpellCombat {
         return owner instanceof PlayerEntity p && affinity!=WizardAffinity.NONE ? ElementLevels.multiplier(WandProgression.get(p,affinity).xp()) : 1;
     }
     public static boolean damage(Entity target,ServerWorld world,DamageSource source,float amount,Entity owner,WizardAffinity affinity) {
+        return damageWithResult(target, world, source, amount, owner, affinity).accepted();
+    }
+    public static boolean damage(Entity target,ServerWorld world,DamageSource source,float amount,Entity owner,
+            WizardAffinity affinity, ApplyDamage applyDamage) {
+        return damageWithResult(target, source, amount, owner, affinity, applyDamage).accepted();
+    }
+    public static DamageResult damageWithResult(Entity target, ServerWorld world, DamageSource source, float amount,
+            Entity owner, WizardAffinity affinity) {
+        return damageWithResult(target, source, amount, owner, affinity,
+                (victim, attributedSource, scaled) -> victim.damage(world, attributedSource, scaled));
+    }
+    private static DamageResult damageWithResult(Entity target, DamageSource source, float amount, Entity owner,
+            WizardAffinity affinity, ApplyDamage applyDamage) {
         target = damageTarget(target);
-        if(!Float.isFinite(amount)||amount<=0||WandAllies.protectedFrom(owner,target))return false;
+        if(!Float.isFinite(amount)||amount<=0||WandAllies.protectedFrom(owner,target))return REJECTED;
         // Environmental spell sources (coals and flame floors) still have an explicit
         // caster. Preserve the damage type while presenting that owner to Roc admission.
         if(target instanceof com.anton.elementalwands.entity.roc.StormRocEntity
                 && owner instanceof ServerPlayerEntity && source.getAttacker()!=owner)
             source=new DamageSource(source.getTypeRegistryEntry(),source.getSource(),owner);
         float health=target instanceof LivingEntity living?living.getHealth():0;
-        boolean accepted=target.damage(world,source,amount*multiplier(owner,affinity));
-        if(accepted && target instanceof LivingEntity living) reward(living,owner,affinity,health);
-        return accepted;
+        if (!applyDamage.apply(target, source, amount * multiplier(owner, affinity))) return REJECTED;
+        float lost = 0;
+        if (target instanceof LivingEntity living) {
+            lost = healthLost(living, health);
+            rewardExperience(living, owner, affinity, lost);
+        }
+        return new DamageResult(true, lost);
+    }
+    public static boolean damageAndReward(Entity target, ServerWorld world, DamageSource source, float amount,
+            Entity owner, WizardAffinity affinity) {
+        return damageAndReward(target, world, source, amount, owner, affinity, 5);
+    }
+    public static boolean damageAndReward(Entity target, ServerWorld world, DamageSource source, float amount,
+            Entity owner, WizardAffinity affinity, int charge) {
+        var hit = damageWithResult(target, world, source, amount, owner, affinity);
+        rewardDamage(hit, owner, affinity, charge);
+        return hit.accepted();
+    }
+    public static void rewardDamage(DamageResult hit, Entity owner, WizardAffinity affinity, int charge) {
+        if (!(owner instanceof ServerPlayerEntity player) || hit.healthLost() <= 0) return;
+        WandProgression.earn(player, affinity, Math.max(1L, Math.round(hit.healthLost())));
+        ElementalWandsMod.refreshProgression(player);
+        if (charge > 0 && EWAttachments.getAffinity(player) == affinity) {
+            AbstractWandItem.addUltimateCharge(player.getMainHandStack(), charge);
+        }
+    }
+    private static float healthLost(LivingEntity target, float before) {
+        float lost = before - Math.max(0, target.getHealth());
+        return Float.isFinite(lost) ? Math.max(0, lost) : 0;
     }
     public static double targetRate(LivingEntity target) {
         return target instanceof PlayerEntity || target instanceof HostileEntity || target instanceof WandBoss
                 || target instanceof MobEntity mob && mob.getTarget()!=null ? 1 : .1;
     }
     public static void reward(LivingEntity target,Entity owner,WizardAffinity affinity,float before) {
-        if(!(owner instanceof ServerPlayerEntity player) || affinity==WizardAffinity.NONE || before<=0) return;
-        double lost=Math.max(0,before-Math.max(0,target.getHealth()));
-        if(lost<=0)return;
+        rewardExperience(target, owner, affinity, healthLost(target, before));
+    }
+    private static void rewardExperience(LivingEntity target, Entity owner, WizardAffinity affinity, float lost) {
+        if (!(owner instanceof ServerPlayerEntity player) || affinity == WizardAffinity.NONE || lost <= 0) return;
         double bonus=target.isDead() ? target.getMaxHealth()*.25 : 0;
         WandProgression.experience(player,affinity,(lost+bonus)*targetRate(target));
     }
     public static void heal(LivingEntity target,float amount,Entity owner,WizardAffinity affinity) {
         float before=target.getHealth();target.heal(amount);
+        rewardHealing(target, owner, affinity, before);
+    }
+    private static void rewardHealing(LivingEntity target, Entity owner, WizardAffinity affinity, float before) {
         if(owner instanceof ServerPlayerEntity p && target.getHealth()>before)
             WandProgression.experience(p,affinity,(target.getHealth()-before)*(target==owner?.25:1));
     }
@@ -80,11 +133,20 @@ public final class SpellCombat {
             REGEN.put(target,new Effect(owner.getUuid(),affinity,world.getTime()+60,amplifier));
     }
     public static void regenerationHeal(LivingEntity target,float amount){
+        regenerationHeal(target, amount, target::heal);
+    }
+    public static void regenerationHeal(LivingEntity target, float amount, Consumer<Float> applyHeal) {
         var effect=REGEN.get(target);var status=target.getStatusEffect(StatusEffects.REGENERATION);
         if(effect!=null && target.getEntityWorld() instanceof ServerWorld world && world.getTime()<=effect.until()
                 && status!=null && status.getAmplifier()==effect.amplifier()) {
-            heal(target,amount,world.getPlayerByUuid(effect.owner()),effect.element());
-        } else {REGEN.remove(target);target.heal(amount);}
+            Entity owner = world.getPlayerByUuid(effect.owner());
+            float before = target.getHealth();
+            applyHeal.accept(amount);
+            rewardHealing(target, owner, effect.element(), before);
+        } else {
+            REGEN.remove(target);
+            applyHeal.accept(amount);
+        }
     }
     /** A multipart hit keeps its visible contact point but shares one health and spell owner. */
     public static Entity damageTarget(Entity target){

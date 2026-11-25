@@ -162,9 +162,9 @@ public class SeedProjectileEntity extends ProjectileEntity {
                         : (owner instanceof LivingEntity livingOwner
                                 ? sw.getDamageSources().thrown(this, livingOwner)
                                 : sw.getDamageSources().magic());
-                if (com.anton.elementalwands.util.SpellCombat.damage(living, sw, source, NatureCombat.SEED_DAMAGE, owner,
-                        com.anton.elementalwands.data.WizardAffinity.NATURE))
-                    NatureCombat.seedDamageDealt(owner, living);
+                var hit = com.anton.elementalwands.util.SpellCombat.damageWithResult(living, sw, source,
+                        NatureCombat.SEED_DAMAGE, owner, com.anton.elementalwands.data.WizardAffinity.NATURE);
+                NatureCombat.directHit(owner, living, hit);
                 com.anton.elementalwands.util.BlockNatureEvents.send(sw, com.anton.elementalwands.util.BlockNatureEvents.SEED_HIT,
                         new Vec3d(living.getX(), living.getBodyY(0.5), living.getZ()));
             }
@@ -181,15 +181,15 @@ public class SeedProjectileEntity extends ProjectileEntity {
     private void flowerHit(ServerWorld sw, LivingEntity living, Entity owner) {
         Entity struck = com.anton.elementalwands.util.SpellCombat.damageTarget(living);
         int cooldown = struck.timeUntilRegen;
-        float before = struck instanceof LivingEntity body ? body.getHealth() : 0;
         var type = sw.getRegistryManager().getOrThrow(net.minecraft.registry.RegistryKeys.DAMAGE_TYPE)
                 .getOrThrow(FlowerTurretManager.DAMAGE_TYPE);
-        if (com.anton.elementalwands.util.SpellCombat.damage(living, sw, new DamageSource(type, this, owner),
-                FlowerTurretManager.DAMAGE, owner, com.anton.elementalwands.data.WizardAffinity.NATURE)) {
+        var hit = com.anton.elementalwands.util.SpellCombat.damageWithResult(living, sw, new DamageSource(type, this, owner),
+                FlowerTurretManager.DAMAGE, owner, com.anton.elementalwands.data.WizardAffinity.NATURE);
+        if (hit.accepted()) {
             struck.timeUntilRegen = cooldown;
-            NatureCombat.flowerDamageDealt(owner);
+            NatureCombat.flowerDamageDealt(owner, hit);
             // The flower keeps a share of the health it took, for its owner to collect.
-            FlowerTurretManager.bank(sw, flower, owner, struck instanceof LivingEntity body ? Math.max(0, before - Math.max(0, body.getHealth())) : 0);
+            FlowerTurretManager.bank(sw, flower, owner, hit.healthLost());
         }
         com.anton.elementalwands.util.BlockNatureEvents.send(sw, com.anton.elementalwands.util.BlockNatureEvents.SEED_HIT, -1, getEntityPos(), Vec3d.ZERO, 1);
     }

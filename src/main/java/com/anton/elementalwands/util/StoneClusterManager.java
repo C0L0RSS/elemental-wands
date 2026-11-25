@@ -13,8 +13,6 @@ import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.NbtComponent;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.player.PlayerEntity;
@@ -32,20 +30,17 @@ import java.util.*;
 
 /** Player-owned, transient material reserve. Gathering never writes to the world. */
 public final class StoneClusterManager {
+    private static final String ID = "gathered_mass";
     public static final Identifier WEIGHT = Identifier.of("elementalwands", "stone_cluster_weight");
     private static final Map<UUID, Reserve> RESERVES = new HashMap<>();
     private static final class Reserve {
         final ServerPlayerEntity player;
         final ServerWorld world;
         StoneClusterEntity cluster;
-        int mass, duration = StoneClusterRules.SMALL_COOLDOWN;
-        long lastShot = -1_000_000_000L, lastPull = -1_000_000_000L, lastChip = -1_000_000_000L;
+        int mass;
+        long lastPull = -1_000_000_000L, lastChip = -1_000_000_000L;
         int lastSentMass = -1, lastSentRemaining = -1;
         Reserve(ServerPlayerEntity player, ServerWorld world) { this.player = player; this.world = world; }
-        int remaining() {
-            return StoneClusterRules.cooldownRemaining(world.getTime() - lastShot, duration,
-                    EntangleTracker.getStacks(player) > 0);
-        }
     }
     private StoneClusterManager() {}
     public static void init() {
@@ -77,8 +72,8 @@ public final class StoneClusterManager {
         return reserve == null ? 0 : reserve.mass;
     }
     public static int remaining(PlayerEntity player) {
-        Reserve reserve = RESERVES.get(player.getUuid());
-        return reserve == null ? 0 : reserve.remaining();
+        return (int) WandCooldowns.spellRemaining(WandCooldowns.state(player), ID,
+                player.getEntityWorld().getTime(), StoneClusterRules.SMALL_COOLDOWN, EntangleTracker.getStacks(player) > 0);
     }
     public static StoneClusterEntity held(PlayerEntity player) {
         Reserve reserve = RESERVES.get(player.getUuid());
@@ -94,15 +89,17 @@ public final class StoneClusterManager {
         if (reserve == null) {
             reserve = new Reserve(player, world); RESERVES.put(player.getUuid(), reserve);
         }
-        if (reserve.remaining() > 0) {
-            AbstractWandItem.sendCooldownActionbar(player, AbstractWandItem.Ability.PRIMARY, reserve.remaining());
+        WandCooldowns.migrateInventory(player, wand);
+        int remaining = remaining(player);
+        if (remaining > 0) {
+            AbstractWandItem.sendCooldownActionbar(player, AbstractWandItem.Ability.PRIMARY, remaining);
             return;
         }
         BlockHitResult ground = gatheringTarget(world, player);
-        if (ground != null) { gather(reserve, wand, ground); return; }
+        if (ground != null) { gather(reserve, ground); return; }
         // The previous attack's duration is authoritative, including after swapping wands.
         if (!AbstractWandItem.tryStartCooldown(world, player, wand,
-                AbstractWandItem.Ability.PRIMARY, reserve.duration)) return;
+                ID, StoneClusterRules.SMALL_COOLDOWN)) return;
         int mass = reserve.mass;
         StoneClusterEntity projectile = reserve.cluster;
         if (projectile == null || projectile.isRemoved()) {
@@ -113,8 +110,8 @@ public final class StoneClusterManager {
             if (!world.spawnEntity(projectile)) return;
         } else projectile.release(player, mass);
         reserve.mass = 0; reserve.cluster = null;
-        reserve.duration = mass == 0 ? StoneClusterRules.SMALL_COOLDOWN : StoneClusterRules.HEAVY_COOLDOWN;
-        reserve.lastShot = world.getTime();
+        AbstractWandItem.startCooldown(world, player, ID,
+                mass == 0 ? StoneClusterRules.SMALL_COOLDOWN : StoneClusterRules.HEAVY_COOLDOWN, false);
         applyWeight(reserve); sync(reserve);
         world.playSound(null, player.getBlockPos(), ModSounds.SPELL_STONE_GATHERED_MASS_LAUNCH,
                 SoundCategory.PLAYERS, mass == 0 ? .6f : 1.2f, mass == 0 ? 1.3f : .9f);
@@ -139,14 +136,12 @@ public final class StoneClusterManager {
         return state.isSolidBlock(world, hit.getBlockPos()) && !state.hasBlockEntity()
                 && state.getFluidState().isEmpty() ? hit : null;
     }
-    private static void gather(Reserve reserve, ItemStack wand, BlockHitResult ground) {
+    private static void gather(Reserve reserve, BlockHitResult ground) {
         long now = reserve.world.getTime();
         if (reserve.mass >= StoneClusterRules.MAX_MASS) return;
         if (StoneClusterRules.cooldownRemaining(now-reserve.lastPull, StoneClusterRules.PULL_TICKS,
                 EntangleTracker.getStacks(reserve.player)>0) > 0) return;
-        long global = wand.getOrDefault(DataComponentTypes.CUSTOM_DATA, NbtComponent.DEFAULT)
-                .copyNbt().getLong("ew_last_global").orElse(-1_000_000_000L);
-        if (now-global < 6) return;
+        if (WandCooldowns.globalRemaining(WandCooldowns.state(reserve.player), now) > 0) return;
         int before = reserve.mass;
         if (reserve.cluster == null || reserve.cluster.isRemoved()) {
             reserve.cluster = new StoneClusterEntity(ModEntities.STONE_CLUSTER, reserve.world);
@@ -156,7 +151,7 @@ public final class StoneClusterManager {
         reserve.mass = StoneClusterRules.mass(before + StoneClusterRules.PULL_MASS);
         reserve.cluster.gather(reserve.mass, before, ground.getBlockPos());
         reserve.lastPull = now;
-        NbtComponent.set(DataComponentTypes.CUSTOM_DATA, wand, data -> data.putLong("ew_last_global", now));
+        WandCooldowns.tapGlobal(reserve.player, now);
         applyWeight(reserve); sync(reserve);
         var p = ground.getPos();
         reserve.world.spawnParticles(ModParticles.STONE_DUST,p.x,p.y+.1,p.z,14,.45,.1,.45,.035);
@@ -183,11 +178,12 @@ public final class StoneClusterManager {
                 StoneClusterRules.weight(reserve.mass), EntityAttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
     }
     private static void sync(Reserve reserve) {
-        int remaining = reserve.remaining();
+        int remaining = remaining(reserve.player);
         if (reserve.mass == reserve.lastSentMass && remaining == reserve.lastSentRemaining) return;
         reserve.lastSentMass = reserve.mass; reserve.lastSentRemaining = remaining;
         ServerPlayNetworking.send(reserve.player,
-                new ModNetworking.SyncStoneClusterPayload(reserve.mass, remaining, reserve.duration));
+                new ModNetworking.SyncStoneClusterPayload(reserve.mass, remaining,
+                        WandCooldowns.spellDuration(WandCooldowns.state(reserve.player), ID, StoneClusterRules.SMALL_COOLDOWN)));
     }
     public static void clear(ServerPlayerEntity player) {
         Reserve reserve = RESERVES.get(player.getUuid());

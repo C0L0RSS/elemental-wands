@@ -89,12 +89,17 @@ public final class ProgressionInputClientSmoke implements ClientModInitializer {
                 var uuid=c.player.getUuid();
                 server.execute(()->{
                     var p=server.getPlayerManager().getPlayer(uuid);
-                    p.setAttached(EWAttachments.WAND_LOADOUTS,java.util.Map.of("FIRE",java.util.List.of("inferno_wave","dragons_pyre","meteor","fire_hop","flamethrower")));
+                    p.setAttached(EWAttachments.WAND_LOADOUTS,java.util.Map.of("FIRE",java.util.List.of("inferno_wave","","meteor","fire_hop","flamethrower")));
                     p.setStackInHand(Hand.MAIN_HAND,new ItemStack(ModItems.FRACTURED_WAND));
                     ModNetworking.syncPlayerData(p);p.networkHandler.requestTeleport(.5,floor,.5,0,10);
                 });
             }
-            if(t==150){require(ClientPlayerData.loadout().get(4).equals("flamethrower"),"Flexible sync failed");WandControls.input(false,GLFW.GLFW_KEY_V,GLFW.GLFW_PRESS);}
+            if(t==150){
+                require(ClientPlayerData.loadout().get(4).equals("flamethrower") && ClientPlayerData.loadout().get(1).isEmpty(),"Flexible sync failed");
+                require(!WandControls.input(true,1,GLFW.GLFW_PRESS),"Empty slot took over vanilla Use");
+                require(!WandControls.input(false,GLFW.GLFW_KEY_R,GLFW.GLFW_PRESS),"Alternate input claimed without Flashover");
+                WandControls.input(false,GLFW.GLFW_KEY_V,GLFW.GLFW_PRESS);
+            }
             if(t==160)server.execute(()->{var p=server.getPlayerManager().getPlayer(c.player.getUuid());sawSpray=FireBuildManager.spraying(p)&&FireBuildManager.heat(p)>0;});
             if(t==170){require(sawSpray,"Flexible held spell never channeled");WandControls.input(false,GLFW.GLFW_KEY_V,GLFW.GLFW_RELEASE);}
             if(t==180)server.execute(()->stoppedSpray=!FireBuildManager.spraying(server.getPlayerManager().getPlayer(c.player.getUuid())));

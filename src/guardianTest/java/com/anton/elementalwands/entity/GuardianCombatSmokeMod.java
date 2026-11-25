@@ -2,10 +2,14 @@ package com.anton.elementalwands.entity;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.util.Hand;
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.Heightmap;
 import java.nio.file.*;
 import java.util.*;
@@ -20,6 +24,19 @@ public final class GuardianCombatSmokeMod implements ModInitializer {
     private static final GuardianCombatRules.Attack[] ATTACKS={GuardianCombatRules.Attack.BEAM,GuardianCombatRules.Attack.THROW,GuardianCombatRules.Attack.SLAM,GuardianCombatRules.Attack.SLAM,GuardianCombatRules.Attack.LEAP,GuardianCombatRules.Attack.AIRBURST,GuardianCombatRules.Attack.SWEEP,GuardianCombatRules.Attack.SCAR};
     private static final double[] DISTANCE={18,18,3,8,20,12,4,15};
     private int spikesSeen;
+    private int shieldTestStart = 125; // Allow normal join protection to expire.
+    private record ShieldTrial(String name, GuardianCombatRules.Attack attack, double targetZ, int impactTick) {}
+    // The ground wave is emitted on its own to check facing after the Guardian has leapt past.
+    // The rock is thrown damage, which vanilla never lets disable a shield; the beam is a blow that used not to.
+    // An impact tick of -1 is not checked.
+    private static final List<ShieldTrial> SHIELD_TRIALS = List.of(
+            new ShieldTrial("ground wave", null, 8.5, -1),
+            new ShieldTrial("slam fists", GuardianCombatRules.Attack.SLAM, 3.5, GuardianPhaseRules.slamImpact(false)),
+            new ShieldTrial("thrown rock", GuardianCombatRules.Attack.THROW, 12.5, -1),
+            new ShieldTrial("beam", GuardianCombatRules.Attack.BEAM, 12.5, -1),
+            new ShieldTrial("Sweep", GuardianCombatRules.Attack.SWEEP, 4.5, GuardianSweepRules.IMPACT));
+    private int shieldTrial;
+    private int guardBrokenAt = -1;
     public void onInitialize() {
         ServerTickEvents.END_SERVER_TICK.register(server -> {try{run(server);}catch(Throwable e){e.printStackTrace();try{Files.writeString(Path.of("COMBAT_FAILED.txt"),e.toString());}catch(Exception ignored){}server.stop(false);}});
     }
@@ -34,8 +51,14 @@ public final class GuardianCombatSmokeMod implements ModInitializer {
             guardian.setPosition(.5,ground,.5);guardian.stopReview();world.spawnEntity(guardian);
             target.onTeleportationDone();
         }
-        if(tick==125)next(world); // Allow normal join protection to expire before measuring attacks.
-        if(action<0)return;
+        if (action < 0) {
+            if (tick < shieldTestStart || !checkShield(world, tick - shieldTestStart, SHIELD_TRIALS.get(shieldTrial))) return;
+            if (++shieldTrial < SHIELD_TRIALS.size()) {
+                shieldTestStart = tick + 1;
+                return;
+            }
+            next(world);
+        }
         dealt+=Math.max(0,target.getMaxHealth()-target.getHealth());target.setHealth(target.getMaxHealth());
         target.setVelocity(net.minecraft.util.math.Vec3d.ZERO);target.setPosition(.5+sidestep(),ground,DISTANCE[action]+.5);
         if(ATTACKS[action]==GuardianCombatRules.Attack.SCAR)
@@ -53,10 +76,79 @@ public final class GuardianCombatSmokeMod implements ModInitializer {
                 if(!world.getEntitiesByClass(GuardianSpikeEntity.class,new Box(-80,ground-5,-80,80,ground+80,80),e -> !e.isRemoved()).isEmpty())throw new AssertionError("Stopping left spikes behind");
                 if(Math.abs(results.get("SWEEP@4")-GuardianSweepRules.DAMAGE)>.01f||Math.abs(results.get("SCAR@15")-GuardianScarRules.ERUPT_DAMAGE)>.01f)
                     throw new AssertionError("The Sweep or the Scar's eruption dealt the wrong damage: "+results);
-                Files.writeString(Path.of("COMBAT_PASSED.txt"),results.toString()+"\nBeam, throw, slam fists (3), slam wave only (8), leap and Airburst (12, grounded, rehearsal) all damaged stationary targets; the Sweep struck a target behind it and the Scar's eruption one who stepped onto a crack ("+spikesSeen+" spikes); gravity, projectile and spike cleanup verified.\n");server.stop(false);return;
+                GuardianFightLog.setEnabled(true);
+                var log = guardian.combat().log();
+                log.begin(world.getTime(), 1);
+                guardian.setRemoved(net.minecraft.entity.Entity.RemovalReason.UNLOADED_TO_CHUNK);
+                if (log.active()) throw new AssertionError("Chunk unload left the Guardian fight log open");
+                Files.writeString(Path.of("COMBAT_PASSED.txt"),results.toString()+"\nGround wave, slam fists, thrown rock, beam and Sweep: rear hits dealt damage with the shield raised. Each front block absorbed the hit and disabled the shield for 100 ticks. Blocking the fists also spared the player the following wave.\nBeam, throw, slam fists (3), slam wave only (8), leap and Airburst (12, grounded, rehearsal) all damaged stationary targets; the Sweep struck a target behind it and the Scar's eruption one who stepped onto a crack ("+spikesSeen+" spikes); gravity, projectile and spike cleanup verified.\n");server.stop(false);return;
             }
             next(world);
         }
+    }
+    private boolean checkShield(ServerWorld world, int age, ShieldTrial trial) {
+        String attack = trial.name();
+        int turnAt = trial.attack() == null ? 30 : 10 + trial.attack().duration;
+        int frontAttackAt = turnAt + 10;
+        double targetZ = trial.targetZ();
+        if (age == 0) {
+            guardBrokenAt = -1;
+            // In the wave case the Guardian has leapt past the player, away from the wave's origin.
+            guardian.setPosition(.5, ground, trial.attack() == null ? 16.5 : .5);
+            target.setPosition(.5, ground, targetZ);
+            target.setStackInHand(Hand.OFF_HAND, new ItemStack(Items.SHIELD));
+            target.setCurrentHand(Hand.OFF_HAND);
+        }
+        float yaw = age < turnAt ? 0 : 180;
+        target.setYaw(yaw);
+        target.setHeadYaw(yaw);
+        ItemStack shield = target.getOffHandStack();
+        var cooldown = target.getItemCooldownManager();
+        if (age == 10 || age == frontAttackAt) {
+            if (!target.isBlocking()) throw new AssertionError("Shield was not raised before " + attack);
+            if (trial.attack() == null) {
+                guardian.combat().emitWave(world, new Vec3d(.5, ground, .5), Set.of());
+            } else {
+                // The Sweep hits behind the Guardian. Keep the player in its arc for both shield facings.
+                if (trial.attack() == GuardianCombatRules.Attack.SWEEP) {
+                    guardian.setYaw(180);
+                    guardian.setBodyYaw(180);
+                    guardian.setHeadYaw(180);
+                }
+                guardian.testAttack(target, trial.attack());
+            }
+        }
+        if (age == turnAt) {
+            float damage = target.getMaxHealth() - target.getHealth();
+            if (damage <= 0 || shield.getDamage() != 0 || cooldown.isCoolingDown(shield))
+                throw new AssertionError(attack + " from behind should damage the player and leave the shield ready");
+            results.put(attack + " behind raised shield", damage);
+            target.setHealth(target.getMaxHealth());
+        }
+        if (age >= frontAttackAt && cooldown.isCoolingDown(shield) && guardBrokenAt < 0) {
+            guardBrokenAt = age;
+            if (trial.impactTick() >= 0 && age != frontAttackAt + trial.impactTick())
+                throw new AssertionError("Guard should break on the impact tick for " + attack);
+            if (target.getHealth() != target.getMaxHealth() || shield.getDamage() == 0 || target.isUsingItem())
+                throw new AssertionError("Facing block should absorb " + attack + ", wear the shield and drop guard");
+            target.interactionManager.interactItem(target, world, shield, Hand.OFF_HAND);
+            if (target.isUsingItem()) throw new AssertionError("Disabled shield could be raised immediately");
+        }
+        if (guardBrokenAt >= 0 && target.getHealth() != target.getMaxHealth())
+            throw new AssertionError("Player took damage after blocking " + attack);
+        if (guardBrokenAt >= 0 && !cooldown.isCoolingDown(shield)) {
+            if (age - guardBrokenAt != 100) throw new AssertionError("Shield cooldown lasted " + (age - guardBrokenAt) + " ticks");
+            target.interactionManager.interactItem(target, world, shield, Hand.OFF_HAND);
+            if (!target.isUsingItem()) throw new AssertionError("Recovered shield could not be raised");
+            target.stopUsingItem();
+            target.setStackInHand(Hand.OFF_HAND, ItemStack.EMPTY);
+            return true;
+        }
+        if (age > frontAttackAt + 150) throw new AssertionError("Shield did not break guard and recover for " + attack);
+        target.playerTick(); // The simulated player's use and cooldown need a client tick.
+        target.setVelocity(Vec3d.ZERO);
+        target.setPosition(.5, ground, targetZ);
+        return false;
     }
     /**
      * The Scar pens a target who stays put and hurts nobody, so this one steps onto a crack after the aim

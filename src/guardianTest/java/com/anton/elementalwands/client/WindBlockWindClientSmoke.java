@@ -107,9 +107,9 @@ public final class WindBlockWindClientSmoke implements ClientModInitializer {
             if (q == 100) cast(server, p -> { aim(p, 90, 0); com.anton.elementalwands.item.WindAbilityHandler.castPrimary(p.getEntityWorld(), p, p.getMainHandStack()); });
             if (q == 150) { reset(c, server, pass, 0, 0); if (pass == 1) { c.setCameraEntity(c.player); c.options.setPerspective(Perspective.THIRD_PERSON_BACK); } }
             if (q == 170 || q == 190) cast(server, p -> {
-                int before = com.anton.elementalwands.item.WindAbilityHandler.getDashCharges(p.getMainHandStack());
+                int before = com.anton.elementalwands.item.WindAbilityHandler.getDashCharges(p);
                 com.anton.elementalwands.item.WindAbilityHandler.castSecondary(p.getEntityWorld(), p, p.getMainHandStack());
-                require(com.anton.elementalwands.item.WindAbilityHandler.getDashCharges(p.getMainHandStack()) == before - 1, "Dash did not consume charge");
+                require(com.anton.elementalwands.item.WindAbilityHandler.getDashCharges(p) == before - 1, "Dash did not consume charge");
             });
             if (q == 230) require(effects.contains("DashFx"), "Dash never produced a client effect");
             if (q == 245) reset(c, server, pass, 0, 18);

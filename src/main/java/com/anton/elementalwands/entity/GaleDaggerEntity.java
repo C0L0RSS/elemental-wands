@@ -1,7 +1,6 @@
 package com.anton.elementalwands.entity;
 
 import com.anton.elementalwands.data.WizardAffinity;
-import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.party.WandAllies;
 import com.anton.elementalwands.registry.*;
 import com.anton.elementalwands.registry.ModSounds;
@@ -87,8 +86,7 @@ public final class GaleDaggerEntity extends ProjectileEntity {
     @Override protected void onEntityHit(EntityHitResult hit){
         if(getEntityWorld() instanceof ServerWorld world){
             var source=new DamageSource(world.getRegistryManager().getOrThrow(RegistryKeys.DAMAGE_TYPE).getOrThrow(DAMAGE_TYPE),this,getOwner());
-            if(SpellCombat.damage(hit.getEntity(),world,source,GaleDaggers.DAMAGE,getOwner(),WizardAffinity.WIND))
-                AbstractWandItem.onWandDamageDealt(getOwner(),GaleDaggers.DAMAGE,WizardAffinity.WIND);
+            SpellCombat.damageAndReward(hit.getEntity(),world,source,GaleDaggers.DAMAGE,getOwner(),WizardAffinity.WIND);
         }
         discard();
     }

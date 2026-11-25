@@ -41,9 +41,8 @@ public final class FireBuildManager {
         return (int)Math.clamp(FireBuildRules.HOP_COOLDOWN-elapsed,0,FireBuildRules.HOP_COOLDOWN);
     }
     private static boolean canUse(ServerPlayerEntity player, String id) {
-        return player.isAlive() && !player.isSpectator() && !FireLeapManager.flying(player) && EWAttachments.getAffinity(player)==WizardAffinity.FIRE
+        return WandLoadouts.canCast(player) && !FireLeapManager.flying(player) && EWAttachments.getAffinity(player)==WizardAffinity.FIRE
                 && player.getMainHandStack().getItem() instanceof AbstractWandItem
-                && com.anton.elementalwands.arena.GuardianArenaManager.canCast(player)
                 && !HollowPurpleChargeManager.isCharging(player.getEntityWorld(),player)
                 && WandLoadouts.get(player).contains(id) && WandProgression.owns(player,WandSpells.find(id));
     }
@@ -61,7 +60,7 @@ public final class FireBuildManager {
     }
     public static void stop(ServerPlayerEntity player) {
         var channel=CHANNELS.remove(player.getUuid());
-        if(channel!=null) AbstractWandItem.startCooldown(player.getEntityWorld(),channel.wand(),"flamethrower",AbstractWandItem.DEFAULT_PRIMARY_COOLDOWN_TICKS,false);
+        if(channel!=null) AbstractWandItem.startCooldown(player.getEntityWorld(),player,"flamethrower",AbstractWandItem.DEFAULT_PRIMARY_COOLDOWN_TICKS,false);
     }
     public static boolean spraying(ServerPlayerEntity player) { return CHANNELS.containsKey(player.getUuid()); }
     private static void tick(ServerPlayerEntity player) {
@@ -109,9 +108,10 @@ public final class FireBuildManager {
             }
             if (touches) {
                 SpellCombat.ignite(target,player,FireBuildRules.IGNITE_SECONDS);
-                if (com.anton.elementalwands.util.SpellCombat.damage(target,player.getEntityWorld(),player.getDamageSources().playerAttack(player),damage,player,com.anton.elementalwands.data.WizardAffinity.FIRE)) {
-                    AbstractWandItem.onWandDamageDealt(player,damage,0,WizardAffinity.FIRE);hit=true;
-                }
+                var result = SpellCombat.damageWithResult(target, player.getEntityWorld(),
+                        player.getDamageSources().playerAttack(player), damage, player, WizardAffinity.FIRE);
+                SpellCombat.rewardDamage(result, player, WizardAffinity.FIRE, 0);
+                hit |= result.healthLost() > 0;
             }
         }
         if (hit) AbstractWandItem.addUltimateCharge(player.getMainHandStack(),2);

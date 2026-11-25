@@ -4,7 +4,10 @@ import com.anton.elementalwands.registry.ModSounds;
 
 import java.util.UUID;
 import net.minecraft.block.BlockState;
+import net.minecraft.component.type.WeaponComponent;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.damage.DamageTypes;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
@@ -203,6 +206,27 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
     boolean strike(ServerWorld world, ServerPlayerEntity player, net.minecraft.entity.damage.DamageSource source, float amount, String what) {
         return combat.strike(world, player, source, amount, what);
     }
+
+    boolean strikeGroundWave(ServerWorld world, ServerPlayerEntity player, Vec3d origin, float amount) {
+        // A leap's wave keeps coming from its impact point even after the Guardian moves.
+        var type = world.getRegistryManager().getOrThrow(net.minecraft.registry.RegistryKeys.DAMAGE_TYPE).getOrThrow(DamageTypes.MOB_ATTACK);
+        var source = new DamageSource(type, this) {
+            @Override public Vec3d getPosition() { return origin; }
+            @Override public Vec3d getStoredPosition() { return origin; }
+        };
+        return strike(world, player, source, amount, "wave");
+    }
+
+    /**
+     * Every Guardian attack is heavy: a shield that blocks one is knocked aside for as long as an
+     * axe would leave it, so a player can block once and must then move. Vanilla applies this to
+     * its blows; {@code GuardianShieldBreakMixin} applies it to its rocks and Airburst shards.
+     */
+    @Override
+    public float getWeaponDisableBlockingForSeconds() {
+        return WeaponComponent.AXE_DISABLE_BLOCKING_FOR_SECONDS;
+    }
+
     GuardianBossCombat combat() { return combat; }
 
     void syncBeam(long start, Vec3d origin, Vec3d end, float pitch) {
@@ -416,21 +440,14 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
         }
     }
 
-    @Override
-    public void remove(net.minecraft.entity.Entity.RemovalReason reason) {
-        if (getEntityWorld() instanceof ServerWorld) {
-            combat.finishLog("removed (" + reason.name().toLowerCase(java.util.Locale.ROOT) + ")");
-            combat.cancel();
-        }
-        super.remove(reason);
-    }
-
     /** Every removal passes here, including a chunk unload or a portal, which skip {@link #remove}. */
     @Override
     public void onRemove(net.minecraft.entity.Entity.RemovalReason reason) {
-        if (getEntityWorld() instanceof ServerWorld && intro != null) {
-            intro.cancel();
+        if (getEntityWorld() instanceof ServerWorld) {
+            if (intro != null) intro.cancel();
             intro = null;
+            combat.finishLog("removed (" + reason.name().toLowerCase(java.util.Locale.ROOT) + ")");
+            combat.cancel();
         }
         super.onRemove(reason);
     }

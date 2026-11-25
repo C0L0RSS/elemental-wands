@@ -55,10 +55,10 @@ public final class StoneChargeManager {
     public static double speed(ServerPlayerEntity p) { Run r=RUNS.get(p.getUuid());return r==null?0:r.speed; }
     public static void hold(ServerPlayerEntity p) { Run r=RUNS.get(p.getUuid());if(r!=null && !r.released)r.lastHeld=r.world.getServer().getTicks(); }
     public static void start(ServerPlayerEntity p) {
-        if (!p.isAlive() || p.isSpectator() || EWAttachments.getAffinity(p)!=WizardAffinity.STONE
+        if (!WandLoadouts.canCast(p) || EWAttachments.getAffinity(p)!=WizardAffinity.STONE
                 || !(p.getMainHandStack().getItem() instanceof AbstractWandItem)
                 || !WandProgression.owns(p,WandSpells.find(StoneTechniqueRules.CHARGE))
-                || !WandLoadouts.get(p).contains(StoneTechniqueRules.CHARGE) || !GuardianArenaManager.canCast(p)
+                || !WandLoadouts.get(p).contains(StoneTechniqueRules.CHARGE)
                 || HollowPurpleChargeManager.isCharging(p.getEntityWorld(),p)
                 || active(p) || !grounded(p) || p.hasVehicle() || p.isGliding() || p.isTouchingWater() || p.isInLava()
                 || p.getAbilities().flying || ((StoneMotionAccess)p).elementalwands$stoneInterrupted()
@@ -109,10 +109,10 @@ public final class StoneChargeManager {
     }
     private static void tick(Run r) {
         var p=r.player;var world=r.world;
-        if(!p.isAlive() || p.isDisconnected() || p.isSpectator() || p.getEntityWorld()!=world
+        if(!WandLoadouts.canCast(p) || p.isDisconnected() || p.getEntityWorld()!=world
                 || p.getMainHandStack()!=r.wand || EWAttachments.getAffinity(p)!=WizardAffinity.STONE
                 || !WandLoadouts.get(p).contains(StoneTechniqueRules.CHARGE) || p.hasVehicle() || p.isGliding()
-                || p.getAbilities().flying || p.isTouchingWater() || p.isInLava() || !GuardianArenaManager.canCast(p)
+                || p.getAbilities().flying || p.isTouchingWater() || p.isInLava()
                 || rooted(p) || ((StoneMotionAccess)p).elementalwands$stoneInterrupted()) { finish(r);return; }
         if(r.released) {
             if(--r.brake<=0 || !p.isOnGround() || p.horizontalCollision) { finish(r);return; }
@@ -205,8 +205,7 @@ public final class StoneChargeManager {
             if(world.raycast(new RaycastContext(origin,target.getBoundingBox().getCenter(),RaycastContext.ShapeType.COLLIDER,
                     RaycastContext.FluidHandling.NONE,p)).getType()!=HitResult.Type.MISS)continue;
             float amount=StoneTechniqueRules.damage(power)*(target==direct?1:(float)(.65-.25*ahead/depth));
-            if(SpellCombat.damage(target,world,p.getDamageSources().playerAttack(p),amount,p,WizardAffinity.STONE)) {
-                AbstractWandItem.onWandDamageDealt(p,amount,WizardAffinity.STONE);
+            if(SpellCombat.damageAndReward(target,world,p.getDamageSources().playerAttack(p),amount,p,WizardAffinity.STONE)) {
                 if(!(target instanceof WandBoss)) {
                     target.addVelocity(direction.x*(.35+power),.12+power*.12,direction.z*(.35+power));target.velocityModified=true;
                 }
@@ -258,7 +257,7 @@ public final class StoneChargeManager {
         return broken;
     }
     private static void cooldown(Run run) {
-        AbstractWandItem.startCooldown(run.world,run.wand,StoneTechniqueRules.CHARGE,StoneTechniqueRules.CHARGE_COOLDOWN,false);
+        AbstractWandItem.startCooldown(run.world,run.player,StoneTechniqueRules.CHARGE,StoneTechniqueRules.CHARGE_COOLDOWN,false);
         READY.put(run.player.getUuid(),run.world.getServer().getTicks()+StoneTechniqueRules.CHARGE_COOLDOWN);
     }
     private static void finish(Run run) {

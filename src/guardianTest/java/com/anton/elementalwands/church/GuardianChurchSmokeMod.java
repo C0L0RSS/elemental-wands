@@ -53,6 +53,9 @@ public final class GuardianChurchSmokeMod implements ModInitializer {
                 check(!GuardianChurchManager.busy(),"Restart left the church active");
                 check(world.getBlockState(site.socket()).get(GuardianSocketBlock.RITUAL)==2,"Completed pedestal state lost on restart");
                 check(world.getBlockState(site.socket().down()).isOf(ModBlocks.GUARDIAN_PEDESTAL),"Completed pedestal support lost on restart");
+                var blocked=Vec3d.ofBottomCenter(site.at(6,-1,9));
+                var safeReturn=GuardianChurchManager.naveReturn(world,blocked);
+                check(safeReturn!=null && !safeReturn.equals(blocked),"Restart lost indexed church return protection");
                 Files.writeString(Path.of("CHURCH_RECOVERY_PASSED.txt"),"Completed church and collected loot survived restart without regeneration.\n");server.stop(false);
             }
             return;
@@ -120,6 +123,9 @@ public final class GuardianChurchSmokeMod implements ModInitializer {
             check(site.phase==GuardianChurchManager.Phase.RUINED,"Aborted fight granted restoration");
             check(world.getBlockState(site.socket()).get(GuardianSocketBlock.RITUAL)==0,"Aborted ritual left a seated heart");
             player.setPosition(site.x-1.5,site.y-1,site.z-7.5);player.setStackInHand(net.minecraft.util.Hand.MAIN_HAND,ItemStack.EMPTY);player.setSneaking(true);GuardianChurchManager.interact(player,site.socket());player.setSneaking(false);
+            // An open spot in the ruin becomes a solid buttress in the restored church.
+            var wall=Vec3d.ofBottomCenter(site.at(6,-1,9));
+            player.setPosition(wall);
             var retry=GuardianChurchManager.interact(player,site.socket());
             check(retry.startsWith("The heart pulls") && GuardianArenaManager.hosts(site.key()),"Socket did not start the retry");stage=4;
         }
@@ -128,6 +134,9 @@ public final class GuardianChurchSmokeMod implements ModInitializer {
         if(stage==5 && !GuardianArenaManager.hosts(site.key())){
             check(player.getEntityWorld()==world && player.getEntityPos().distanceTo(Vec3d.ofCenter(site.socket()))<20,"The victor was not returned to the church");
             check(site.phase==GuardianChurchManager.Phase.RESTORED,"Church was not restored before return");
+            check(!world.getBlockState(site.at(6,-1,9)).isAir()
+                            && com.anton.elementalwands.party.PartyLine.canStand(world,player.getEntityPos()),
+                    "The returning victor was buried in the restored church");
             check(world.getBlockState(site.socket()).get(GuardianSocketBlock.RITUAL)==2,"Restored offering state was not synchronized");
             for (int x:new int[]{-5,5}) {
                 var reward=(ChestBlockEntity)world.getBlockEntity(site.at(x,-1,35));
@@ -135,13 +144,16 @@ public final class GuardianChurchSmokeMod implements ModInitializer {
                 for (int slot=0;slot<27;slot++) check(ItemStack.areEqual(reward.getStack(slot),expected.get(slot)),"Victory chest differs from its site-specific roll");
             }
             check(site.rewardPlayers.contains(player.getUuidAsString()),"Victory did not retain admitted player's book entitlement");
-            var hit=new net.minecraft.util.hit.BlockHitResult(Vec3d.ofCenter(site.at(-5,-1,35)),net.minecraft.util.math.Direction.UP,site.at(-5,-1,35),false);
+            var cell=site.at(-5,-1,35);
+            world.breakBlock(cell,false);
+            var hit=new net.minecraft.util.hit.BlockHitResult(Vec3d.ofCenter(cell.down()),Direction.UP,cell.down(),false);
             long beforeBooks=java.util.stream.IntStream.range(0,player.getInventory().size()).filter(i->player.getInventory().getStack(i).isOf(ModItems.SECONDARY_SPELL_BOOK)).count();
             net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.invoker().interact(player,world,net.minecraft.util.Hand.MAIN_HAND,hit);
             net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.invoker().interact(player,world,net.minecraft.util.Hand.MAIN_HAND,hit);
             long afterBooks=java.util.stream.IntStream.range(0,player.getInventory().size()).filter(i->player.getInventory().getStack(i).isOf(ModItems.SECONDARY_SPELL_BOOK)).count();
             check(afterBooks==beforeBooks+1,"Reward chest did not grant exactly one personal book");
-            var chest=(ChestBlockEntity)world.getBlockEntity(site.at(-5,-1,35));chest.clear();chest.markDirty();
+            check(world.getBlockEntity(cell) instanceof ChestBlockEntity recovered && recovered.isEmpty(),
+                    "Claiming a missing chest did not restore it empty");
             check(GuardianChurchManager.interact(player,site.socket()).contains("already been restored"),"Completed church can be farmed");
             var roof=site.at(7,20,25);check(world.getBlockState(roof).isOf(Blocks.WARPED_PLANKS),"Collapsed roof was not rebuilt");
             check(!GuardianChurchManager.protectedBlock(world,site.at(7,0,25)),"Completed church is still warded");

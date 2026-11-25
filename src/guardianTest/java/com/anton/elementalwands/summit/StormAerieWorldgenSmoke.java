@@ -18,7 +18,6 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.block.BlockState;
 import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.CommandOutput;
 import net.minecraft.server.command.ServerCommandSource;
@@ -35,8 +34,6 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.biome.source.BiomeCoords;
-import net.minecraft.world.chunk.ChunkStatus;
-import net.minecraft.world.gen.structure.Structure;
 
 /**
  * Test-only entrypoint for tools/aerie_worldgen_smoke.init.gradle: in a fresh normal world, runs the
@@ -47,7 +44,7 @@ import net.minecraft.world.gen.structure.Structure;
  */
 public final class StormAerieWorldgenSmoke implements ModInitializer {
     private static final Identifier ID = Identifier.of("elementalwands", "storm_aerie");
-    private static final Pattern FOUND = Pattern.compile("\\[(-?\\d+), ~, (-?\\d+)\\] \\((\\d+) blocks away\\)");
+    private static final Pattern FOUND = Pattern.compile("\\[(-?\\d+), (-?\\d+), (-?\\d+)\\] \\(\\d+ blocks away\\)");
     private static final int[][] FROM = {{0, 0}, {1600, 0}, {0, 1600}, {-1600, 0}, {0, -1600}, {3200, 0}, {0, 3200}, {-3200, -3200}};
     /** Blocks a stony peak's surface must never show, whoever placed them. */
     private static final Set<String> SNOW = Set.of("snow", "snow_block", "powder_snow", "ice", "packed_ice", "blue_ice");
@@ -86,8 +83,8 @@ public final class StormAerieWorldgenSmoke implements ModInitializer {
                 if (offset[0] == 0 && offset[1] == 0) throw new AssertionError("/locate from spawn found no aerie: " + said + "\n" + report);
                 continue;
             }
-            int x = Integer.parseInt(m.group(1)), z = Integer.parseInt(m.group(2));
-            String measured = measure(world, x, z, from, seen, problems);
+            BlockPos arrival = new BlockPos(Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2)), Integer.parseInt(m.group(3)));
+            String measured = measure(world, arrival, from, seen, problems);
             report.append(measured);
         }
         report.append("\nproblems: ").append(problems.isEmpty() ? "none" : String.join("; ", problems)).append('\n');
@@ -107,10 +104,12 @@ public final class StormAerieWorldgenSmoke implements ModInitializer {
         return String.join(" | ", feedback);
     }
 
-    private String measure(ServerWorld world, int lx, int lz, Vec3d from, Set<BlockPos> seen, List<String> problems) throws Exception {
-        Structure structure = world.getRegistryManager().getOrThrow(RegistryKeys.STRUCTURE).get(ID);
-        StructureStart start = world.getChunk(lx >> 4, lz >> 4, ChunkStatus.STRUCTURE_STARTS).getStructureStart(structure);
-        if (start == null || !start.hasChildren()) { problems.add("no structure start at located chunk " + lx + "," + lz); return "  no start at located chunk\n"; }
+    private String measure(ServerWorld world, BlockPos arrival, Vec3d from, Set<BlockPos> seen, List<String> problems) throws Exception {
+        StructureStart start = world.getStructureAccessor().getStructureContaining(arrival, entry -> entry.matchesId(ID));
+        if (!start.hasChildren()) {
+            problems.add("no aerie contains the reported arrival at " + arrival.toShortString());
+            return "  no aerie at arrival\n";
+        }
         PoolStructurePiece piece = (PoolStructurePiece) start.getChildren().getFirst();
         BlockBox box = piece.getBoundingBox();
         for (int cx = (box.getMinX() - 24) >> 4; cx <= (box.getMaxX() + 24) >> 4; cx++)
@@ -135,14 +134,19 @@ public final class StormAerieWorldgenSmoke implements ModInitializer {
         StormAerie.Gong gong = anchors.size() == 1 ? StormAerie.gong(world, anchors.getFirst()) : null;
         StringBuilder out = new StringBuilder();
         if (gong == null) { problems.add("not one gong anchor in the aerie at " + box + ": " + anchors); return "  NO GONG in " + box + " (anchors " + anchors + ")\n"; }
+        BlockPos stand = StormAerie.cell(gong, StormAerieLayout.STAND);
+        if (arrival.getX() != stand.getX() || arrival.getZ() != stand.getZ()
+                || (arrival.getY() != stand.getY() && arrival.getY() != world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, stand.getX(), stand.getZ())))
+            problems.add("locate returned " + arrival.toShortString() + " instead of the gong's standing cell " + stand.toShortString());
         if (!seen.add(gong.anchor())) return "  (same aerie as before: anchor " + gong.anchor().toShortString() + ")\n";
         if (!gong.anchor().equals(expected) || gong.facing() != piece.getRotation().rotate(Direction.SOUTH))
             problems.add("gong " + gong + " differs from the piece's " + expected + " facing " + piece.getRotation().rotate(Direction.SOUTH));
         long strays = parts.stream().filter(p -> !gong.equals(StormAerie.gong(world, p))).count();
-        if (parts.size() != 11 || strays > 0) problems.add(parts.size() + " parts, " + strays + " not resolving to the anchor");
+        int expectedParts = StormAerieLayout.GONG_CELLS.length - 1; // Cell zero is the anchor.
+        if (parts.size() != expectedParts || strays > 0)
+            problems.add(parts.size() + " of " + expectedParts + " gong parts, " + strays + " not resolving to the anchor");
         if (!(world.getBlockEntity(gong.anchor()) instanceof StormGongBlockEntity)) problems.add("anchor " + gong.anchor().toShortString() + " has no gong block entity");
         int floor = origin.getY() + StormAerieLayout.FLOOR;
-        BlockPos stand = StormAerie.cell(gong, StormAerieLayout.STAND);
         double distance = Math.hypot(gong.anchor().getX() + .5 - from.x, gong.anchor().getZ() + .5 - from.z);
         String biome = biome(world, gong.foot());
         out.append("  AERIE anchor=").append(gong.anchor().toShortString()).append(" facing=").append(gong.facing())
@@ -150,7 +154,7 @@ public final class StormAerieWorldgenSmoke implements ModInitializer {
                 .append(" floorY=").append(floor).append(" stand=").append(stand.toShortString())
                 .append(" box=").append(box.getMinX()).append("..").append(box.getMaxX()).append(",").append(box.getMinY()).append("..").append(box.getMaxY())
                 .append(",").append(box.getMinZ()).append("..").append(box.getMaxZ())
-                .append(" locatedChunkCorner=").append(lx).append(",").append(lz)
+                .append(" locatedArrival=").append(arrival.toShortString())
                 .append(" anchorDistanceFromLocateOrigin=").append(Math.round(distance)).append('\n');
         out.append("  biome at gong=").append(biome).append("; box corners=")
                 .append(biome(world, new BlockPos(box.getMinX(), floor, box.getMinZ()))).append(',')

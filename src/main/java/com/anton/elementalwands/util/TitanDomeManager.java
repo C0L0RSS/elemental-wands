@@ -18,18 +18,25 @@ import com.anton.elementalwands.registry.ModParticles;
 import com.anton.elementalwands.registry.ModSounds;
 import com.anton.elementalwands.registry.ModSpellBlocks;
 
-import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
+import net.minecraft.block.ShelfBlock;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.EquippableComponent;
 import net.minecraft.component.type.NbtComponent;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EquipmentSlot;
+import net.minecraft.entity.ItemEntity;
+import net.minecraft.entity.decoration.ArmorStandEntity;
+import net.minecraft.entity.decoration.ItemFrameEntity;
+import net.minecraft.entity.passive.AllayEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
@@ -37,6 +44,7 @@ import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.equipment.EquipmentAsset;
@@ -48,6 +56,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.util.Hand;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
@@ -67,7 +76,8 @@ public final class TitanDomeManager {
         private final int startTick;
         private final int expiryTick;
         private int nextRepairTick;
-        private final Long2ObjectMap<BlockState> originalByPos;
+        private final TemporaryBlockManager.TemporaryPlacement terrain;
+        private final List<BlockPos> shellBlocks = new ArrayList<>();
         private final List<ShellCandidate> shellCandidates;
         private final Set<UUID> confinedEntityUuids;
         private final NbtCompound originalArmorNbt;
@@ -79,11 +89,11 @@ public final class TitanDomeManager {
         private boolean collapsing;
         private boolean loadoutRestored;
         private int collapseStartedTick;
-        private List<Long> collapsePositions = List.of();
+        private List<BlockPos> collapsePositions = List.of();
         private int collapseIndex;
 
         private Dome(BlockPos center, int radius, UUID casterUuid, int startTick, int expiryTick, int nextRepairTick,
-                Long2ObjectMap<BlockState> originalByPos, List<ShellCandidate> shellCandidates,
+                TemporaryBlockManager.TemporaryPlacement terrain, List<ShellCandidate> shellCandidates,
                 Set<UUID> confinedEntityUuids, NbtCompound originalArmorNbt,
                 ItemStack originalMainHand, int nextBuffRefreshTick, int nextAmbientFxTick) {
             this.center = center;
@@ -92,7 +102,7 @@ public final class TitanDomeManager {
             this.startTick = startTick;
             this.expiryTick = expiryTick;
             this.nextRepairTick = nextRepairTick;
-            this.originalByPos = originalByPos;
+            this.terrain = terrain;
             this.shellCandidates = shellCandidates;
             this.confinedEntityUuids = confinedEntityUuids;
             this.originalArmorNbt = originalArmorNbt;
@@ -145,6 +155,26 @@ public final class TitanDomeManager {
     }
 
     public static void init() {
+        ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> {
+            if (entity instanceof ItemEntity item && isMarkedTitanGear(item.getStack())) item.discard();
+        });
+        UseEntityCallback.EVENT.register((player, world, hand, entity, hit) -> {
+            boolean canTakeGear = entity instanceof ItemFrameEntity || entity instanceof ArmorStandEntity
+                    || entity instanceof AllayEntity;
+            return canTakeGear && isMarkedTitanGear(player.getStackInHand(hand)) ? ActionResult.FAIL : ActionResult.PASS;
+        });
+        UseBlockCallback.EVENT.register((player, world, hand, hit) -> {
+            var state = world.getBlockState(hit.getBlockPos());
+            // A powered shelf can swap several hotbar slots, even when used with an empty hand.
+            if (state.getBlock() instanceof ShelfBlock) {
+                for (int slot = 0; slot < PlayerInventory.HOTBAR_SIZE; slot++) {
+                    if (isMarkedTitanGear(player.getInventory().getStack(slot))) return ActionResult.FAIL;
+                }
+            }
+            if ((state.getBlock() instanceof ShelfBlock || state.isOf(Blocks.DECORATED_POT))
+                    && isMarkedTitanGear(player.getStackInHand(hand))) return ActionResult.FAIL;
+            return ActionResult.PASS;
+        });
         ServerTickEvents.END_WORLD_TICK.register(TitanDomeManager::tickWorld);
         ServerPlayerEvents.LEAVE.register(TitanDomeManager::finishForPlayer);
         ServerPlayerEvents.JOIN.register(TitanDomeManager::recoverSavedGear);
@@ -171,7 +201,8 @@ public final class TitanDomeManager {
         ItemStack originalMainHand = caster.getMainHandStack().copy();
         NbtCompound receipt = originalArmorNbt.copy();
         EquipmentReceipt.put(caster, receipt, "main_hand", originalMainHand);
-        Long2ObjectOpenHashMap<BlockState> originalByPos = new Long2ObjectOpenHashMap<>();
+        var terrain = TemporaryBlockManager.startPlacement(world,
+                DOME_FORMATION_TICKS + DURATION_TICKS + DOME_COLLAPSE_TICKS + 3, caster.getUuid());
         List<ShellCandidate> shellCandidates = buildFormationCandidates(world, center, RADIUS);
 
         DOMES.computeIfAbsent(world.getRegistryKey(), _k -> new ArrayList<>())
@@ -182,7 +213,7 @@ public final class TitanDomeManager {
                         now,
                         now + DOME_FORMATION_TICKS + DURATION_TICKS,
                         now + REPAIR_INTERVAL_TICKS,
-                        originalByPos,
+                        terrain,
                         shellCandidates,
                         new HashSet<>(),
                         originalArmorNbt,
@@ -315,11 +346,9 @@ public final class TitanDomeManager {
             dome.formationIndex++;
 
             BlockPos pos = candidate.pos();
-            BlockState current = world.getBlockState(pos);
-            if (!canReplace(current)) continue;
-
-            if (!world.setBlockState(pos, DOME_STATE, 3)) continue;
-            dome.originalByPos.put(pos.asLong(), TemporaryBlockManager.claimTrackedOriginal(world, pos, current));
+            if (!TemporaryBlockManager.placeTemporaryBlock(world, dome.terrain, pos, DOME_STATE,
+                    TitanDomeManager::canReplace)) continue;
+            dome.shellBlocks.add(pos);
             placedThisTick++;
             if (candidate.rib()) ribBlocksThisTick++;
 
@@ -432,12 +461,9 @@ public final class TitanDomeManager {
 
     private static void repairDome(ServerWorld world, Dome dome) {
         int repaired = 0;
-        for (Long2ObjectMap.Entry<BlockState> entry : dome.originalByPos.long2ObjectEntrySet()) {
-            BlockPos pos = BlockPos.fromLong(entry.getLongKey());
-            BlockState current = world.getBlockState(pos);
-
-            if (current.isAir()) {
-                world.setBlockState(pos, DOME_STATE, 3);
+        for (BlockPos pos : dome.shellBlocks) {
+            if (world.isChunkLoaded(pos) && TemporaryBlockManager.placeTemporaryBlock(world, dome.terrain,
+                    pos, DOME_STATE, BlockState::isAir)) {
                 repaired++;
                 if (repaired <= 16) {
                     Vec3d center = pos.toCenterPos();
@@ -527,13 +553,8 @@ public final class TitanDomeManager {
         dome.collapsing = true;
         dome.collapseStartedTick = now;
         dome.collapseIndex = 0;
-        dome.collapsePositions = new ArrayList<>();
-        for (long packedPos : dome.originalByPos.keySet()) {
-            dome.collapsePositions.add(packedPos);
-        }
-        dome.collapsePositions.sort(Comparator
-                .comparingInt((Long packed) -> BlockPos.fromLong(packed).getY())
-                .thenComparingLong(Long::longValue));
+        dome.collapsePositions = new ArrayList<>(TemporaryBlockManager.placementPositions(world, dome.terrain));
+        dome.collapsePositions.sort(Comparator.comparingInt(BlockPos::getY).thenComparingLong(BlockPos::asLong));
 
         PlayerEntity caster = world.getPlayerByUuid(dome.casterUuid);
         if (caster != null) {
@@ -546,7 +567,7 @@ public final class TitanDomeManager {
         int samples = Math.min(96, dome.collapsePositions.size());
         for (int index = 0; index < samples; index++) {
             int sampleIndex = index * dome.collapsePositions.size() / Math.max(1, samples);
-            BlockPos pos = BlockPos.fromLong(dome.collapsePositions.get(sampleIndex));
+            BlockPos pos = dome.collapsePositions.get(sampleIndex);
             Vec3d center = pos.toCenterPos();
             world.spawnParticles(ModParticles.STONE_FAULT,
                     center.x, center.y, center.z, 1, 0.12, 0.16, 0.12, 0.0);
@@ -602,12 +623,7 @@ public final class TitanDomeManager {
 
     private static void finishDomeImmediately(ServerWorld world, Dome dome,
             ServerPlayerEntity player) {
-        for (Long2ObjectMap.Entry<BlockState> entry : dome.originalByPos.long2ObjectEntrySet()) {
-            BlockPos pos = BlockPos.fromLong(entry.getLongKey());
-            if (world.getBlockState(pos).isOf(DOME_STATE.getBlock())) {
-                world.setBlockState(pos, entry.getValue(), 3);
-            }
-        }
+        TemporaryBlockManager.restoreTemporaryBlocks(world, dome.terrain);
         if (player != null) {
             removeKnockbackResistance(player);
             restoreJuggernautLoadout(world, player, dome);
@@ -617,22 +633,19 @@ public final class TitanDomeManager {
 
     private static boolean tickDomeCollapse(ServerWorld world, Dome dome, int now) {
         int total = dome.collapsePositions.size();
-        if (total == 0) return true;
+        if (total == 0) {
+            TemporaryBlockManager.restoreTemporaryBlocks(world, dome.terrain);
+            return true;
+        }
 
         int elapsed = now - dome.collapseStartedTick;
         int targetIndex = Math.min(total,
                 MathHelper.ceil(total * Math.min(1.0, (elapsed + 1) / (double) DOME_COLLAPSE_TICKS)));
         int particleBudget = 18;
         while (dome.collapseIndex < targetIndex) {
-            long packedPos = dome.collapsePositions.get(dome.collapseIndex++);
-            BlockPos pos = BlockPos.fromLong(packedPos);
-            BlockState current = world.getBlockState(pos);
-            if (!current.isOf(DOME_STATE.getBlock())) continue;
-
-            BlockState original = dome.originalByPos.get(packedPos);
-            if (original != null) {
-                world.setBlockState(pos, original, 3);
-            }
+            BlockPos pos = dome.collapsePositions.get(dome.collapseIndex++);
+            if (!TemporaryBlockManager.owns(world, dome.terrain, pos)) continue;
+            TemporaryBlockManager.restoreTemporaryBlock(world, dome.terrain, pos);
 
             if (particleBudget-- > 0) {
                 Vec3d center = pos.toCenterPos();
@@ -661,12 +674,7 @@ public final class TitanDomeManager {
         if (dome.collapseIndex < total && elapsed < DOME_COLLAPSE_TICKS + 2) return false;
 
         // Guarantee restoration even if a very large shell exceeded the staged target.
-        for (Long2ObjectMap.Entry<BlockState> entry : dome.originalByPos.long2ObjectEntrySet()) {
-            BlockPos pos = BlockPos.fromLong(entry.getLongKey());
-            if (world.getBlockState(pos).isOf(DOME_STATE.getBlock())) {
-                world.setBlockState(pos, entry.getValue(), 3);
-            }
-        }
+        TemporaryBlockManager.restoreTemporaryBlocks(world, dome.terrain);
         world.spawnParticles(ModParticles.STONE_SHOCKWAVE,
                 dome.center.getX() + 0.5, dome.center.getY() + 0.28, dome.center.getZ() + 0.5,
                 8, 1.6, 0.1, 1.6, 0.0);
@@ -794,6 +802,9 @@ public final class TitanDomeManager {
     }
 
     private static void removeMarkedTitanGear(PlayerEntity player) {
+        if (isMarkedTitanGear(player.currentScreenHandler.getCursorStack())) {
+            player.currentScreenHandler.setCursorStack(ItemStack.EMPTY);
+        }
         for (int i = 0; i < player.getInventory().size(); i++) {
             ItemStack stack = player.getInventory().getStack(i);
             if (isMarkedTitanGear(stack)) {
@@ -816,11 +827,9 @@ public final class TitanDomeManager {
         }
     }
 
-    private static boolean isMarkedTitanGear(ItemStack stack) {
-        return stack != null && !stack.isEmpty()
-                && stack.getOrDefault(DataComponentTypes.CUSTOM_DATA, NbtComponent.DEFAULT)
-                        .copyNbt()
-                        .getBoolean(NBT_TITAN_GEAR, false);
+    public static boolean isMarkedTitanGear(ItemStack stack) {
+        NbtComponent data = stack.get(DataComponentTypes.CUSTOM_DATA);
+        return data != null && data.copyNbt().getBoolean(NBT_TITAN_GEAR, false);
     }
 
     private static boolean isMarkedTitanArmor(ItemStack stack) {

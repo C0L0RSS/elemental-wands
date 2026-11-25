@@ -7,6 +7,9 @@ planned. Java owners below are under `src/main/java/com/anton/elementalwands/`.
 
 ## Encounter intent
 
+Removing or unloading the Guardian closes its fight log and clears the boss bar
+for everyone who was watching.
+
 The Guardian is the first shardbearer: the slow, heavy one, meant to take a new duo in full
 iron about ten tries on Normal (see the [roadmap](../ROADMAP.md)). A winning run should last
 about four minutes. It is never hurried and it cannot catch a player, so every hit is an area
@@ -104,7 +107,7 @@ thirds.
 | Attack | Raw | Notes |
 | --- | --- | --- |
 | Slam's ground wave | 10 | Full circle, out to 32 blocks (44 in phase two); jumpable |
-| Slam fists | 14 | Its front half within 5 blocks, plus anywhere under its body; those struck are spared the same slam's wave |
+| Slam fists | 14 | Its front half within 5 blocks, plus anywhere under its body. Anyone the fists reach, blocked or not, is spared the same slam's wave. |
 | Sweep | 14 | Everyone within 7 blocks outside the wedge in front of it; cannot be jumped |
 | Scar's eruption | 14 | Whoever stands on a crack as its spike comes up; once per cast |
 | Standing spikes | 10 | On touch, with a shove away; at most once a second per player |
@@ -116,6 +119,13 @@ thirds.
 
 All of these are mob or thrown damage, so vanilla's difficulty scaling applies on top: Easy
 roughly halves them and Hard multiplies them by 1.5.
+
+**Shields.** A raised shield can block any of these, but every one is heavy: the shield takes
+the hit and is knocked aside for five seconds, as by a vanilla axe. A player can block once,
+then must move until the shield is back. The shield has to face where the hit comes from:
+the Guardian's body for its blows, spikes and blasts (a spike rising underfoot included), the
+origin of a ground wave, and the stone itself for a rock or an Airburst. Vanilla only disables
+a shield for a blow, so `mixin/GuardianShieldBreakMixin` does the same for the thrown stones.
 
 ### Intensity, co-op and targeting
 
@@ -146,8 +156,11 @@ lockouts ×1, 0.85, 0.75 and 0.7.
 
 ### The slam, the leap and the Airburst
 
-**The slam** is one attack at every range: fists in front of it and a ring wave outward. The
-wave follows terrain and can be jumped; it is a full circle by explicit design choice. The
+**The slam** sends its fists forward and a full ring along the ground. Up close, a shield
+raised toward the Guardian absorbs the punch. The same slam's wave passes over anyone the
+fists hit, including a player who blocked. Farther out, players can jump the wave or block
+while facing its origin; either block costs the shield, as for every Guardian hit. The leap's
+takeoff and landing waves follow the same rule, each from its own origin. The
 Guardian remembers, for each player, whether they jumped the last wave that reached them. Its
 next slam aimed at a player who did holds its fists overhead for 10, 16 or 22 ticks before
 smashing, so jumping in rhythm stops working; a player the wave struck gets an ordinary slam.
@@ -194,7 +207,8 @@ got behind it is still behind it when the arm comes round.
    the reach, with the wedge in front of it left open.
 2. Then one blow: 14 damage and a hard knock away for everyone within 7 blocks who is more than
    60 degrees round from straight ahead, or standing under its body. It reaches 3.5 blocks up,
-   so jumping does not help. Cover blocks it.
+   so jumping does not help. Cover blocks it. A player in the arc can face the Guardian and
+   block the backhand. The shield absorbs the blow and goes on cooldown for five seconds.
 
 The slam covers its front and the Sweep everything else, so the two wind-ups ask for opposite
 answers: leave its front for a slam, get in front of it (or out of reach) for a Sweep. It is

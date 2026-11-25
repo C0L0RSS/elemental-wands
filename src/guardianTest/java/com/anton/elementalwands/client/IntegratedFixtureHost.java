@@ -8,6 +8,9 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.screen.world.BackupPromptScreen;
+import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.input.KeyInput;
 import net.minecraft.resource.DataConfiguration;
 import net.minecraft.resource.featuretoggle.FeatureFlags;
 import net.minecraft.util.math.BlockPos;
@@ -27,10 +30,14 @@ import net.minecraft.world.level.LevelInfo;
  * fixtures' simulated players, and must not stand in their scene.
  */
 public final class IntegratedFixtureHost implements ClientModInitializer {
+    private static final String WORLDGEN_SEED = System.getProperty("ew.fixture.worldgenSeed");
+    private static final String WORLD_NAME = System.getProperty("ew.fixture.world");
+    private static final boolean RESUME = Boolean.getBoolean("ew.fixture.resume");
     private int ticks, left;
-    private boolean started, joined, done;
+    private boolean started, joined, done, backedUp;
     public void onInitializeClient() {
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+            if (WORLDGEN_SEED != null || RESUME) return;
             var world = server.getOverworld();
             for (int x = -48; x <= 80; x++) for (int z = -24; z <= 48; z++) for (int y = 96; y <= 180; y++) {
                 BlockPos pos = new BlockPos(x, y, z);
@@ -49,12 +56,33 @@ public final class IntegratedFixtureHost implements ClientModInitializer {
         String receipt = System.getProperty("ew.fixture.receipt", "NATURE");
         if (!started) {
             started = true; c.options.pauseOnLostFocus = false;
-            c.createIntegratedServerLoader().createAndStart("fixture-host-" + System.currentTimeMillis(),
+            var loader = c.createIntegratedServerLoader();
+            String name = WORLD_NAME == null ? "fixture-host-" + System.currentTimeMillis() : "fixture-host-" + WORLD_NAME;
+            if (RESUME) {
+                loader.start(name, c::scheduleStop);
+                return;
+            }
+            if (WORLD_NAME != null && Files.exists(c.runDirectory.toPath().resolve("saves").resolve(name))) {
+                throw new IllegalStateException("Choose a new disposable fixture world name: " + name);
+            }
+            boolean worldgen = WORLDGEN_SEED != null;
+            loader.createAndStart(name,
                     // Survival, as on the test server: a Creative attacker would damage invulnerable targets.
                     new LevelInfo("Server fixture host", GameMode.SURVIVAL, false, Difficulty.NORMAL, true,
                             new GameRules(FeatureFlags.DEFAULT_ENABLED_FEATURES), DataConfiguration.SAFE_MODE),
-                    new GeneratorOptions(813L, false, false), WorldPresets::createTestOptions, null);
+                    new GeneratorOptions(worldgen ? Long.parseLong(WORLDGEN_SEED) : 813L, worldgen, false),
+                    worldgen ? WorldPresets::createDemoOptions : WorldPresets::createTestOptions, null);
             return;
+        }
+        if (RESUME && !joined && !backedUp && c.currentScreen instanceof BackupPromptScreen prompt) {
+            for (var child : prompt.children()) {
+                if (child instanceof ButtonWidget button && button.active
+                        && button.getMessage().equals(BackupPromptScreen.CONFIRM_BUTTON_TEXT)) {
+                    backedUp = true;
+                    button.onPress(new KeyInput(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, 0, 0));
+                    break;
+                }
+            }
         }
         if (c.world != null) joined = true;
         // The fixture stops the server when it finishes; a world lost without a receipt is a failure.

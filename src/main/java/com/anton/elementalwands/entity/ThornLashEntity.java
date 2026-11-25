@@ -95,14 +95,14 @@ public final class ThornLashEntity extends Entity {
         if (time >= ThornLashRules.EXTEND_TICKS) dataTracker.set(STOP, 1f);
     }
     private void bite(ServerWorld world, PlayerEntity caster, LivingEntity target, Vec3d contact) {
-        float before = target.getHealth();
-        if (!SpellCombat.damage(target, world, world.getDamageSources().playerAttack(caster), ThornLashRules.DAMAGE, caster, WizardAffinity.NATURE)) return;
-        float lost = Math.max(0, before - target.getHealth());
-        NatureCombat.lashDamageDealt(caster, target, lost);
+        var hit = SpellCombat.damageWithResult(target, world, world.getDamageSources().playerAttack(caster),
+                ThornLashRules.DAMAGE, caster, WizardAffinity.NATURE);
+        if (!hit.accepted()) return;
+        NatureCombat.directHit(caster, target, hit);
         // In Full Bloom the bite gives back everything it takes, up to a higher cap.
         boolean blooming = com.anton.elementalwands.util.FullBloomManager.blooming(caster);
         float heal = Math.min(blooming ? com.anton.elementalwands.util.FullBloomManager.BITE_HEAL_CAP : ThornLashRules.HEAL_CAP,
-                lost * (blooming ? com.anton.elementalwands.util.FullBloomManager.BITE_LIFESTEAL : ThornLashRules.LIFESTEAL));
+                hit.healthLost() * (blooming ? com.anton.elementalwands.util.FullBloomManager.BITE_LIFESTEAL : ThornLashRules.LIFESTEAL));
         float health = caster.getHealth();
         if (heal > 0) SpellCombat.heal(caster, heal, caster, WizardAffinity.NATURE);
         dataTracker.set(HEAL, caster.getHealth() - health);

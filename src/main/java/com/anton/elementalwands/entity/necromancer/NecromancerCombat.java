@@ -337,7 +337,7 @@ final class NecromancerCombat {
             if (now - emptySince >= 200 && !boss.isColossus()) {
                 log.finish(boss, "reset: nobody left");
                 cancel();
-                boss.setStage(Stage.DUEL_A);
+                boss.resetToFirstDuel();
                 boss.getAttributeInstance(EntityAttributes.MAX_HEALTH).setBaseValue(health(1));
                 boss.setHealth(health(1));
                 home = boss.getEntityPos(); // A displaced encounter settles where it stands.

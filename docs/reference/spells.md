@@ -13,9 +13,10 @@ provide validation, cooldown/charge, attributed damage/XP, and allied protection
 Preserve all four when adding a spell. See [progression](progression-and-controls.md).
 
 Timed effects live in owning managers registered at common initialization.
-Temporary terrain uses `TemporaryBlockManager`: overlapping effects must restore
-prior ownership correctly, never turn another temporary layer into permanent
-terrain or overwrite unrelated later edits. Equipment loans must restore the
+Temporary terrain uses `TemporaryBlockManager`. Each affected chunk saves the
+original and placed block states together with the placement ID. On restart,
+chunks restore abandoned placements as they load. A replacement spell inherits the
+underlying terrain, and later edits release the cell from restoration. Equipment loans must restore the
 original item across death/reload without losing it or duplicating it.
 
 Cast particles leave the wand, not the caster's face. `util/SpellCastVisuals`
@@ -52,8 +53,11 @@ not add unintended damage.
 Spell ground fire is owned and temporary so it cannot bypass allied protection.
 
 Flamethrower is a held close-range cone with gradual damage ramp, heat, overheat,
-and release/timeout handling. Fire Leap is hold-to-aim/release-to-commit, with
+and release/timeout handling. Its visual stream stores a bounded history of aim samples.
+Fire Leap is hold-to-aim/release-to-commit, with
 terrain targeting, a validated full-body flight arc, and a jumpable landing wave.
+The client reuses grounded ring segments until their target, surface or viewing
+conditions change. Sparks animate between those updates.
 Targeting accepts horizon aim and reachable ledge tops within a 22-block
 horizontal cap. When the aimed arc is blocked, it pulls the landing back along
 the aim to the farthest clear leap. It keeps the elevation, cover, fluid, chunk
@@ -178,6 +182,9 @@ Stone Wall provides cover and can be recast nearby to shatter forward. A Guardia
 hit consumes the wall after it absorbs that hit; shared beam/wave/volley cover
 must protect against that same attack without shielding later attacks. Titan Dome
 owns temporary terrain, confinement, and equipment effects through its lifecycle.
+The dome lends you marked armor and a sword. Inventory clicks and the drop key
+keep them with you, and loose copies disappear. When the loan ends you get your
+original equipment back with its item data intact.
 The retired primary spike attack and Titan Aegis wall path remain retired.
 Faultline is a separately purchased Technique, not a replacement for Gathered Mass.
 
@@ -326,9 +333,9 @@ first head). A grown flower does not age, and a flower planted mid-bloom unfurls
 grows too. When the bloom ends each flower is one head again.
 
 The wave is harmless: Full Bloom is a blessing for the party, and Nature's damage comes from
-its flowers and its other spells. On grass blocks the wave leaves short grass and wild flowers
-behind, as bone meal would; that is the only thing Full Bloom places, and it places nothing on
-any other ground. Flower seeds give no ultimate charge while their owner blooms.
+its flowers and its other spells. Outside boss realms the wave leaves short grass and wild
+flowers on grass blocks where the caster has permission to build. The blessing and petal
+wave still work in protected areas. Flower seeds give no ultimate charge while their owner blooms.
 `FullBloomManager` owns it.
 
 The earlier ultimate, Overgrowth (a thrown acorn that grows a healing oak with a solid trunk
@@ -424,7 +431,9 @@ Singularity Bolt is a black star with limited initial aim assistance. It cannot
 retarget or U-turn and loses guidance through cover or invalid angles. Impact
 causes damage without restoring the retired pull/mobility-disruption mechanics.
 Blink Rift teleports up to 10 blocks along the caster's aim to the farthest safe
-spot, on a 10-second cooldown. It leaves no return point. The aim's pitch counts, by
+spot reachable by the caster's entire body on a straight path. A low obstacle or
+narrow opening can shorten the blink. A blocked cast spends no cooldown. A
+successful cast starts a 10-second cooldown and leaves no return point. The aim's pitch counts, by
 choice: it reaches up onto ledges, and aimed at the floor it lands only a block or two
 ahead.
 
@@ -496,10 +505,11 @@ Owners: `GravityWellManager`, `GravityBombEntity`.
 Hollow Purple commits for its complete charge. The player can aim but cannot
 walk, blink, or use items; switching/dropping the wand does not cancel or refund
 it. Death, world exit, and encounter teardown clean it up without a refund.
-The orb erases blocks along its path except in the Hollow Crypt realm, where it
-leaves the terrain intact (as do explosions there; see `HollowCryptRealm.keepsTerrain`).
-Owners: `SpaceAbilityHandler`, `SingularityBoltEntity`,
-`HollowPurpleChargeManager`. Keep arena containment in all teleport paths.
+The orb can damage each eligible living target once. Dropped items, minecarts and
+other nonliving entities survive direct contact. Outside the four boss realms it
+tunnels through breakable terrain where the caster can build. Spawn protection,
+world borders and Fabric block-break vetoes apply to each block.
+`HollowPurpleChargeManager` owns the charge and `HollowPurpleOrbEntity` handles impact.
 
 All five Space spells are drawn client-side as "void glass": dark see-through glass pieces
 with a bright frame and stars inside, opaque void cores ringed by a corona that faces the

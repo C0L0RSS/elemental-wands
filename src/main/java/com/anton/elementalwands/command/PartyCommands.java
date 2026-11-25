@@ -16,7 +16,12 @@ public final class PartyCommands {
     @FunctionalInterface private interface Action { void run(PartyManager parties, ServerPlayerEntity player) throws IOException; }
     private static int run(ServerCommandSource source, Action action) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         var player = source.getPlayerOrThrow();
-        try { action.run(PartyManager.get(source.getServer()), player); return 1; }
+        var parties = PartyManager.get(source.getServer());
+        if (!parties.available()) {
+            source.sendError(Text.literal("Parties are unavailable. A server administrator can check the log and repair parties.json."));
+            return 0;
+        }
+        try { action.run(parties, player); return 1; }
         catch (IllegalArgumentException e) { source.sendError(Text.literal(e.getMessage())); return 0; }
         catch (IOException e) {
             org.slf4j.LoggerFactory.getLogger("elementalwands").error("Could not save parties", e);
@@ -43,7 +48,7 @@ public final class PartyCommands {
                     .executes(ctx -> run(ctx.getSource(), (parties, player) -> {
                         if (verb.equals("accept")) parties.accept(player, null); else parties.decline(player, null);
                     }))
-                    .then(CommandManager.argument("leader", StringArgumentType.word())
+                    .then(CommandManager.argument("leader", StringArgumentType.greedyString())
                             .suggests((ctx, builder) -> CommandSource.suggestMatching(ctx.getSource().getPlayerNames(), builder))
                             .executes(ctx -> run(ctx.getSource(), (parties, player) -> {
                                 String leader = StringArgumentType.getString(ctx, "leader");
@@ -51,7 +56,7 @@ public final class PartyCommands {
                             }))));
         }
         for (String verb : new String[]{"kick", "transfer"}) {
-            root.then(CommandManager.literal(verb).then(CommandManager.argument("member", StringArgumentType.word())
+            root.then(CommandManager.literal(verb).then(CommandManager.argument("member", StringArgumentType.greedyString())
                     .suggests((ctx, builder) -> CommandSource.suggestMatching(
                             PartyManager.get(ctx.getSource().getServer()).memberNames(ctx.getSource().getPlayerOrThrow()), builder))
                     .executes(ctx -> run(ctx.getSource(), (parties, player) -> {

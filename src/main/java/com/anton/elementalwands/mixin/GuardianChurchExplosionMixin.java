@@ -1,7 +1,7 @@
 package com.anton.elementalwands.mixin;
 
 import com.anton.elementalwands.church.GuardianChurchManager;
-import com.anton.elementalwands.crypt.HollowCryptRealm;
+import com.anton.elementalwands.util.WandUtils;
 import net.minecraft.world.explosion.ExplosionImpl;
 import net.minecraft.util.math.BlockPos;
 import org.spongepowered.asm.mixin.Mixin;
@@ -15,8 +15,7 @@ public abstract class GuardianChurchExplosionMixin {
     private void keepWard(CallbackInfoReturnable<List<BlockPos>> ci) {
         var world=((ExplosionImpl)(Object)this).getWorld();
         // Explosion fire also lands only on this list, so an empty one keeps the boss realms unburnt.
-        if (HollowCryptRealm.keepsTerrain(world) || com.anton.elementalwands.arena.ShatteredNave.keepsTerrain(world)
-                || com.anton.elementalwands.summit.StormSummit.keepsTerrain(world) || com.anton.elementalwands.hall.PyreHall.keepsTerrain(world)) {
+        if (WandUtils.realmKeepsTerrain(world)) {
             ci.setReturnValue(new java.util.ArrayList<>());
             return;
         }

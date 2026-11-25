@@ -9,8 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import com.anton.elementalwands.data.WizardAffinity;
 import com.anton.elementalwands.entity.AwakenedTreeEntity;
-import com.anton.elementalwands.item.AbstractWandItem;
 import com.anton.elementalwands.registry.ModEntities;
 import com.anton.elementalwands.registry.ModParticles;
 import com.anton.elementalwands.registry.ModSounds;
@@ -209,10 +209,8 @@ public final class OvergrowthManager {
             double dz = target.getZ() - centerVec.z;
             if (dx * dx + dz * dz > TREE_RADIUS_SQ) continue;
 
-            boolean damaged = com.anton.elementalwands.util.SpellCombat.damage(target, world, world.getDamageSources().playerAttack(caster), damage, caster, com.anton.elementalwands.data.WizardAffinity.NATURE);
-            if (damaged) {
-                AbstractWandItem.onWandDamageDealt(caster, damage, 0, com.anton.elementalwands.data.WizardAffinity.NATURE);
-            }
+            SpellCombat.damageAndReward(target, world, world.getDamageSources().playerAttack(caster), damage, caster,
+                    com.anton.elementalwands.data.WizardAffinity.NATURE, 0);
 
             // The roots pin ordinary enemies for a moment. A boss takes the same damage and is not held.
             EntangleTracker.applyNatureSlow(target, ROOT_CRUSH_SLOW_TICKS, ROOT_CRUSH_SLOW_AMPLIFIER);

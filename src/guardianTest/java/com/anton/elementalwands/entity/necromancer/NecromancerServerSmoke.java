@@ -335,7 +335,7 @@ public final class NecromancerServerSmoke implements ModInitializer {
             intro = t;
         }
         if (intro >= 0) introFlow(w, t - intro);
-        if (siege > 0) siegeFlow(w, t, t - since);
+        if (siege != 0) siegeFlow(w, t, t - since);
     }
 
     /** The whole intro plays out: the zombie's soul, the grave souls, the ring lighting the braziers, then the fight. */
@@ -354,7 +354,7 @@ public final class NecromancerServerSmoke implements ModInitializer {
             require(!boss.inIntro() && boss.isBossAggressive() && !boss.isAiDisabled(), "The fight did not start after the intro");
             require(!NecromancerIntro.watching(target) && !NecromancerIntro.watching(second), "Players were still held after the intro");
             intro = -1;
-            siege = 1; since = tick;
+            siege = -1; since = tick;
         }
     }
 
@@ -364,6 +364,22 @@ public final class NecromancerServerSmoke implements ModInitializer {
         if (siege >= 2) for (var p : List.of(target, second)) if (p.getHealth() < 10) heal(p);
         if (count(w, SoulFireballEntity.class) > 0) rained = true;
         switch (siege) {
+            case -1 -> { // Leave just as the colossus is queued, before the transformation begins.
+                if (s == 5) {
+                    require(boss.status().contains("fighting"), "Abandonment test did not engage the boss");
+                    boss.requestTransform();
+                    require(boss.phasePending(), "Transformation was not queued");
+                    target.setPosition(100.5, 100, .5);
+                    second.setPosition(100.5, 100, 1.5);
+                }
+                if (s == 210) {
+                    require(boss.stage() == Stage.DUEL_A && !boss.phasePending() && !boss.isColossus()
+                            && boss.getHealth() == boss.getMaxHealth(), "Abandoned fight kept its phase: " + boss.status());
+                    target.setPosition(10.5, 100, .5);
+                    second.setPosition(.5, 100, 14.5);
+                    siege = 1; since = tick;
+                }
+            }
             case 1 -> { // Engage, then burst: the first duel holds at 75% and starts the siege.
                 if (s == 25) {
                     require(boss.status().contains("fighting"), "Fight did not engage: " + boss.status());

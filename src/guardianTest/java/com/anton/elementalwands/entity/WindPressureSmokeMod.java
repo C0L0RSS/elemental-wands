@@ -25,7 +25,7 @@ public final class WindPressureSmokeMod implements ModInitializer {
     private FracturedGuardianEntity boss;
     private ServerPlayerEntity player;
     private ZombieEntity zombie;
-    private ItemStack wand;
+    private ItemStack wand, spareWand;
     private float health,lockedPitch;
     private final Set<UUID> shards=new HashSet<>();
     private java.util.Set<UUID> wallHits;
@@ -42,18 +42,25 @@ public final class WindPressureSmokeMod implements ModInitializer {
             y=world.getTopY(Heightmap.Type.MOTION_BLOCKING,0,0);
             var factory=com.anton.elementalwands.arena.GuardianNaveSmokeMod.class.getDeclaredMethod("player",MinecraftServer.class,UUID.class,String.class,double.class,double.class,double.class);factory.setAccessible(true);
             player=(ServerPlayerEntity)factory.invoke(null,server,UUID.randomUUID(),"WindPressure",.5,(double)y,.5);player.onTeleportationDone();player.setInvulnerable(true);player.setYaw(0);player.setHeadYaw(0);player.setBodyYaw(0);player.setPitch(0);
-            wand=new ItemStack(ModItems.FRACTURED_WAND);
-            WindAbilityHandler.castSecondary(world,player,wand);WindAbilityHandler.castSecondary(world,player,wand);
-            require(WindAbilityHandler.getDashCharges(wand)==0,"Two dashes did not consume two charges");
-            for(int i=0;i<99;i++)WindAbilityHandler.inventoryTick(wand,world,player,EquipmentSlot.MAINHAND);
-            require(WindAbilityHandler.getDashCharges(wand)==0,"Dash recharged before five seconds");
-            WindAbilityHandler.inventoryTick(wand,world,player,EquipmentSlot.MAINHAND);
-            require(WindAbilityHandler.getDashCharges(wand)==1,"Dash failed to recharge at five seconds");
+            wand=new ItemStack(ModItems.FRACTURED_WAND);spareWand=new ItemStack(ModItems.FRACTURED_WAND);
+            WindAbilityHandler.castSecondary(world,player,wand);WindAbilityHandler.castSecondary(world,player,spareWand);
+            require(WindAbilityHandler.getDashCharges(player)==0,"Two wands did not share two dash charges");
+            var afterTwoDashes = player.getVelocity();
+            WindAbilityHandler.castSecondary(world,player,new ItemStack(ModItems.FRACTURED_WAND));
+            require(player.getVelocity().equals(afterTwoDashes),"A fresh wand granted an extra dash");
             player.setVelocity(Vec3d.ZERO);player.setPosition(.5,y,.5);
             boss=new FracturedGuardianEntity(ModEntities.FRACTURED_GUARDIAN,world);boss.setPosition(.5,y,4.5);boss.stopReview();world.spawnEntity(boss);
-            report.append("Two dash charges retained; recharge occurs exactly at 100 ticks.\n");
         }
         if(boss==null)return;
+        if (tick > 25 && tick <= 125) {
+            WindAbilityHandler.inventoryTick(wand,world,player,EquipmentSlot.MAINHAND);
+            WindAbilityHandler.inventoryTick(spareWand,world,player,EquipmentSlot.OFFHAND);
+        }
+        if (tick == 124) require(WindAbilityHandler.getDashCharges(player)==0,"Multiple wands recharged Dash early");
+        if (tick == 125) {
+            require(WindAbilityHandler.getDashCharges(player)==1,"Dash failed to recharge at five seconds");
+            report.append("Two shared dash charges retained across wands; recharge occurs exactly at 100 ticks.\n");
+        }
         if(tick==30) {player.setHeadYaw(0);health=boss.getHealth();firePrimary(world);}
         if(tick==36) {
             float loss=health-boss.getHealth();require(loss>3.75 && loss<=7,"Fan damage stacked or center missed: "+loss);

@@ -45,10 +45,10 @@ public final class FireLeapManager {
     public static boolean protectedFall(ServerPlayerEntity p) { var leap=LEAPS.get(p.getUuid());return leap!=null && leap.player==p; }
     public static boolean commit(ServerPlayerEntity p,Vec3d target) {
         var world=p.getEntityWorld();
-        if(!p.isAlive() || p.isSpectator() || p.hasVehicle() || p.isGliding() || p.isTouchingWater() || flying(p)
+        if(!WandLoadouts.canCast(p) || p.hasVehicle() || p.isGliding() || p.isTouchingWater() || flying(p)
                 || EWAttachments.getAffinity(p)!=WizardAffinity.FIRE || !(p.getMainHandStack().getItem() instanceof AbstractWandItem)
                 || !WandLoadouts.get(p).contains("fire_hop") || !WandProgression.owns(p,WandSpells.find("fire_hop"))
-                || !com.anton.elementalwands.arena.GuardianArenaManager.canCast(p) || HollowPurpleChargeManager.isCharging(world,p)
+                || HollowPurpleChargeManager.isCharging(world,p)
                 || FireBuildManager.hopRemaining(p)>0) return false;
         // A normal sprint jump is allowed, but a high fall cannot be converted into another flight.
         if(!FireLeapRules.supported(world,p,p.getEntityPos(),1.5) || !FireLeapRules.validTarget(p,target)) {
@@ -67,9 +67,8 @@ public final class FireLeapManager {
     }
     private static void tick(Leap leap) {
         var p=leap.player;long age=leap.world.getTime()-leap.started;
-        if(!p.isAlive() || p.isRemoved() || p.isSpectator() || p.isDisconnected() || p.getEntityWorld()!=leap.world
+        if(!WandLoadouts.canCast(p) || p.isRemoved() || p.isDisconnected() || p.getEntityWorld()!=leap.world
                 || p.hasVehicle() || p.isGliding() || p.isTouchingWater() || p.isInLava()
-                || !com.anton.elementalwands.arena.GuardianArenaManager.canCast(p)
                 || FireLeapRules.offPath(leap.from,leap.to,p.getEntityPos())>STRAY || age>leap.duration+GRACE) { end(p);return; }
         p.fallDistance=0;
         // onGround comes from the caster's movement packets and can flip a tick before the body arrives;
@@ -116,7 +115,7 @@ public final class FireLeapManager {
             if(distance-half>outer || distance+half<inner || target.getBoundingBox().minY>surface.y+FireLeapRules.WAVE_HEIGHT
                     || target.getBoundingBox().maxY<surface.y) continue;
             hits.add(target.getUuid());float damage=FireLeapRules.damage(distance);
-            if(com.anton.elementalwands.util.SpellCombat.damage(target,world,p.getDamageSources().playerAttack(p),damage,p,com.anton.elementalwands.data.WizardAffinity.FIRE)) AbstractWandItem.onWandDamageDealt(p,damage,1,WizardAffinity.FIRE);
+            SpellCombat.damageAndReward(target, world, p.getDamageSources().playerAttack(p), damage, p, WizardAffinity.FIRE, 1);
         }
         // Clients draw the moving crest from LEAP_LAND with these same surface and cover rules.
     }

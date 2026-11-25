@@ -1,7 +1,10 @@
 package com.anton.elementalwands.entity;
 
-import com.anton.elementalwands.crypt.HollowCryptRealm;
+import com.anton.elementalwands.data.WizardAffinity;
 import com.anton.elementalwands.party.WandAllies;
+import com.anton.elementalwands.util.BlockSpaceEvents;
+import com.anton.elementalwands.util.SpellCombat;
+import com.anton.elementalwands.util.WandUtils;
 
 import java.util.HashSet;
 import java.util.List;
@@ -11,6 +14,7 @@ import java.util.UUID;
 import com.anton.elementalwands.registry.ModEntities;
 import com.anton.elementalwands.registry.ModSounds;
 
+import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
@@ -21,6 +25,7 @@ import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.particle.BlockStateParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
@@ -107,8 +112,8 @@ public class HollowPurpleOrbEntity extends ProjectileEntity {
     }
 
     private void erasePath(ServerWorld world, Vec3d center) {
-        if (HollowCryptRealm.keepsTerrain(world) || com.anton.elementalwands.arena.ShatteredNave.keepsTerrain(world)
-                || com.anton.elementalwands.summit.StormSummit.keepsTerrain(world) || com.anton.elementalwands.hall.PyreHall.keepsTerrain(world)) {
+        if (WandUtils.realmKeepsTerrain(world) || !(getOwner() instanceof ServerPlayerEntity caster)
+                || caster.isRemoved() || caster.isSpectator() || !caster.canModifyBlocks()) {
             return;
         }
         int minX = MathHelper.floor(center.x - ORB_RADIUS);
@@ -140,11 +145,13 @@ public class HollowPurpleOrbEntity extends ProjectileEntity {
                     }
 
                     float hardness = state.getHardness(world, pos);
-                    if (hardness < 0.0f) {
+                    if (hardness < 0.0f || !world.canEntityModifyAt(caster, pos)
+                            || !PlayerBlockBreakEvents.BEFORE.invoker().beforeBlockBreak(world, caster, pos, state,
+                                    state.hasBlockEntity() ? world.getBlockEntity(pos) : null)) {
                         continue;
                     }
 
-                    world.setBlockState(pos, Blocks.AIR.getDefaultState(), 3);
+                    if (!world.setBlockState(pos, Blocks.AIR.getDefaultState(), 3)) continue;
                     if (world.random.nextInt(6) == 0) {
                         Vec3d fragmentPos = new Vec3d(x + 0.5, y + 0.5, z + 0.5);
                         Vec3d inward = center.subtract(fragmentPos);
@@ -166,35 +173,23 @@ public class HollowPurpleOrbEntity extends ProjectileEntity {
         double radiusSq = ORB_RADIUS * ORB_RADIUS;
         Box box = Box.of(center, ORB_RADIUS * 2.0, ORB_RADIUS * 2.0, ORB_RADIUS * 2.0);
 
-        List<Entity> entities = world.getOtherEntities(this, box,
+        List<LivingEntity> entities = world.getEntitiesByClass(LivingEntity.class, box,
                 entity -> entity.isAlive() && !entity.isSpectator() && !protectsAlly(entity));
 
         DamageSource source = owner instanceof LivingEntity livingOwner
                 ? world.getDamageSources().thrown(this, livingOwner)
                 : world.getDamageSources().magic();
 
-        for (Entity entity : entities) {
-            if (entity.squaredDistanceTo(center) > radiusSq) {
+        for (LivingEntity living : entities) {
+            if (living.squaredDistanceTo(center) > radiusSq || !damagedUuids.add(living.getUuid())) {
                 continue;
             }
 
-            if (entity instanceof LivingEntity living) {
-                if (!damagedUuids.add(entity.getUuid())) {
-                    continue;
-                }
-
-                boolean damaged = com.anton.elementalwands.util.SpellCombat.damage(living, world, source, MASSIVE_DAMAGE, getOwner(), com.anton.elementalwands.data.WizardAffinity.SPACE);
-                if (damaged) {
-                    com.anton.elementalwands.item.AbstractWandItem.onWandDamageDealt(getOwner(), MASSIVE_DAMAGE, com.anton.elementalwands.data.WizardAffinity.SPACE);
-                }
-                living.velocityModified = true;
-                living.fallDistance = 0.0f;
-
-                Vec3d targetCenter = living.getEntityPos().add(0.0, living.getHeight() * 0.5, 0.0);
-                com.anton.elementalwands.util.BlockSpaceEvents.send(world, com.anton.elementalwands.util.BlockSpaceEvents.POOF, living.getId(), targetCenter);
-            } else {
-                entity.discard();
-            }
+            SpellCombat.damageAndReward(living, world, source, MASSIVE_DAMAGE, owner, WizardAffinity.SPACE);
+            living.velocityModified = true;
+            living.fallDistance = 0.0f;
+            Vec3d targetCenter = living.getEntityPos().add(0.0, living.getHeight() * 0.5, 0.0);
+            BlockSpaceEvents.send(world, BlockSpaceEvents.POOF, living.getId(), targetCenter);
         }
     }
 

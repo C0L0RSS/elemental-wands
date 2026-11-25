@@ -106,7 +106,7 @@ thirds.
 
 | Attack | Raw | Notes |
 | --- | --- | --- |
-| Slam's ground wave | 10 | Full circle, out to 32 blocks (44 in phase two); jumpable |
+| Slam's ground wave | 10 | Full circle, out to 32 blocks (44 in phase two). Jump the wave or block it at the cost of a five-second shield cooldown. |
 | Slam fists | 14 | Its front half within 5 blocks, plus anywhere under its body; those struck are spared the same slam's wave |
 | Sweep | 14 | Everyone within 7 blocks outside the wedge in front of it; cannot be jumped |
 | Scar's eruption | 14 | Whoever stands on a crack as its spike comes up; once per cast |
@@ -149,8 +149,10 @@ lockouts ×1, 0.85, 0.75 and 0.7.
 
 ### The slam, the leap and the Airburst
 
-**The slam** is one attack at every range: fists in front of it and a ring wave outward. The
-wave follows terrain and can be jumped; it is a full circle by explicit design choice. The
+**The slam** sends its fists forward and a full ring along the ground. Players can jump the
+wave or raise a shield toward the point where it began. A successful block absorbs the hit,
+wears the shield and disables it for five seconds, just like a vanilla axe strike. The leap's
+takeoff and landing waves follow the same rule, each from its own origin. The
 Guardian remembers, for each player, whether they jumped the last wave that reached them. Its
 next slam aimed at a player who did holds its fists overhead for 10, 16 or 22 ticks before
 smashing, so jumping in rhythm stops working; a player the wave struck gets an ordinary slam.

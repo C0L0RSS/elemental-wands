@@ -122,8 +122,9 @@ Looks and balance that only a person playing can judge.
 
 ### Spells
 
-- Decide which Guardian and Hollow Necromancer attacks a raised shield should
-  block, disable or bypass. [Playtest issue #32](https://github.com/C0L0RSS/elemental-wands/issues/32)
+- Decide how shields should handle the Guardian’s remaining attacks and the
+  Hollow Necromancer’s attacks. The Guardian’s ground waves now break guard on a
+  successful block. [Playtest issue #32](https://github.com/C0L0RSS/elemental-wands/issues/32)
 - Decide what players should earn or work toward after buying an element's
   spell store. [Progression suggestions in #54](https://github.com/C0L0RSS/elemental-wands/issues/54)
 

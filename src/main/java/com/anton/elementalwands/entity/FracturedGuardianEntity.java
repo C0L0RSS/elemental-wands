@@ -4,7 +4,10 @@ import com.anton.elementalwands.registry.ModSounds;
 
 import java.util.UUID;
 import net.minecraft.block.BlockState;
+import net.minecraft.component.type.WeaponComponent;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.damage.DamageTypes;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
@@ -65,6 +68,7 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
     private static final UUID ENVIRONMENT_DAMAGE = new UUID(0,0);
     private final GuardianBeamAttack beam = new GuardianBeamAttack(this);
     private final GuardianBossCombat combat = new GuardianBossCombat(this);
+    private boolean strikingGroundWave;
     private static final String PASSIVE_TAG = "ew_guardian_passive";
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     // Test sessions deliberately expire on reload, disconnect, or leaving this dimension.
@@ -203,6 +207,28 @@ public class FracturedGuardianEntity extends PathAwareEntity implements GeoEntit
     boolean strike(ServerWorld world, ServerPlayerEntity player, net.minecraft.entity.damage.DamageSource source, float amount, String what) {
         return combat.strike(world, player, source, amount, what);
     }
+
+    boolean strikeGroundWave(ServerWorld world, ServerPlayerEntity player, Vec3d origin, float amount) {
+        // A leap's wave keeps coming from its impact point even after the Guardian moves.
+        var type = world.getRegistryManager().getOrThrow(net.minecraft.registry.RegistryKeys.DAMAGE_TYPE).getOrThrow(DamageTypes.MOB_ATTACK);
+        var source = new DamageSource(type, this) {
+            @Override public Vec3d getPosition() { return origin; }
+            @Override public Vec3d getStoredPosition() { return origin; }
+        };
+        boolean previous = strikingGroundWave;
+        strikingGroundWave = true;
+        try {
+            return strike(world, player, source, amount, "wave");
+        } finally {
+            strikingGroundWave = previous;
+        }
+    }
+
+    @Override
+    public float getWeaponDisableBlockingForSeconds() {
+        return strikingGroundWave ? WeaponComponent.AXE_DISABLE_BLOCKING_FOR_SECONDS : super.getWeaponDisableBlockingForSeconds();
+    }
+
     GuardianBossCombat combat() { return combat; }
 
     void syncBeam(long start, Vec3d origin, Vec3d end, float pitch) {

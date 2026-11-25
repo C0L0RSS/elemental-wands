@@ -28,7 +28,7 @@ THRUST_SIDE = (90, 4, 9, 0, 2.4, -1.8)
 THRUST_34 = (-35, 10, 9, 0, 2.6, -1.2)
 TURN_BEHIND = (150, 14, 11, 0, 2.4, 1)
 TURN_ABOVE = (20, 60, 12, 0, 1, 0)
-WHIRL_WIDE, WHIRL_NEAR = (30, 22, 22, 0, 2, 0), (30, 12, 8, 0, 2.6, 0)
+BRAND_SIDE, BRAND_34 = (90, 6, 12, 0, 2.2, -2), (-40, 14, 12, 0, 2.2, -2)
 UNBOUND_WIDE, UNBOUND_NEAR = (25, 24, 22, 0, 2, 0), (25, 10, 9, 0, 2.8, -.8)
 STRIPS = {
     # Tell, cock, the cut at mid-blow, follow-through, re-cock, the backhand at mid-blow, the pause.
@@ -65,12 +65,11 @@ STRIPS = {
     'turning-cut.png': [('turning_cut', [0, .25, .45, .6, .68, .72, .76, .8, .95, 2.6], TURN_BEHIND, False),
                         ('turning_cut', [0, .25, .45, .6, .68, .72, .76, .8, .95, 2.6], TURN_ABOVE, False)],
     'turning-cut-player.png': [('turning_cut', [.25, .6, .68, .72, .76], None, 'behind')],
-    # Chain Scythe, low then high: the cast or the raise, the chain snapping out, the turn at
-    # full chain, the haul and the catch; each from far enough to see the chain, then close.
-    'chain-scythe-low.png': [('chain_scythe_low', [.2, .45, .65, .8, .9, 1.0, 1.2, 1.45, 1.6, 2.9], WHIRL_WIDE, False),
-                             ('chain_scythe_low', [.2, .45, .65, .8, .9, 1.0, 1.2, 1.45, 1.6, 2.9], WHIRL_NEAR, False)],
-    'chain-scythe-high.png': [('chain_scythe_high', [.2, .3, .45, .7, .9, 1.0, 1.3, 1.45, 1.6, 2.9], WHIRL_WIDE, False),
-                              ('chain_scythe_high', [.2, .3, .45, .7, .9, 1.0, 1.3, 1.45, 1.6, 2.9], WHIRL_NEAR, False)],
+    # The Pyre Brand: the point lowered to the floor, the gather, the drive, kneeling behind the
+    # hilt while the floor burns, the blade torn free; from the side and three-quarter.
+    'pyre-brand.png': [('pyre_brand', [.25, .5, 1.0, 1.5, 1.6, 1.7, 2.6, 3.5, 3.7, 3.95], BRAND_SIDE, False),
+                       ('pyre_brand', [.25, .5, 1.0, 1.5, 1.6, 1.7, 2.6, 3.5, 3.7, 3.95], BRAND_34, False)],
+    'pyre-brand-player.png': [('pyre_brand', [.3, .5, 1.5, 1.7, 2.6], None, True)],
     # Zip and Lunge from the side: the haul or the wind-up, the flight, the landing, the spin.
     'zip.png': [('zip', [.25, .5, .7, .95, 1.1, 1.25, 1.4, 1.6, 1.8, 3.2], (70, 10, 18, 0, 2.5, -5.5), False)],
     'lunge.png': [('lunge', [.3, .45, .62, .8, 1.1, 1.4, 1.55, 1.7, 1.9, 3.4], (70, 10, 14, 0, 2.5, -3.8), False)],

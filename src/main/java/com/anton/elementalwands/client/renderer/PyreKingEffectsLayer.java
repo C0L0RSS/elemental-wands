@@ -39,7 +39,9 @@ import software.bernie.geckolib.util.RenderUtil;
  * and leave a fading wake behind a fast blow;</li>
  * <li>the sword's chain, from his wrist shackle to the pommel while the sword is out of his hand;</li>
  * <li>Unbound's six loose chains, from his chest to each marker bone the clip has moved: burning,
- * every third link hot, each ending in a barbed hook, bowed by their own swing.</li>
+ * every third link hot, each ending in a barbed hook, bowed by their own swing;</li>
+ * <li>the Pyre Brand: while its clip plays the blade's fire drains into the floor he drives it into, and runs
+ * back up the blade as he tears it free. (The fire on the floor is the server's, as blocks.)</li>
  * </ul>
  * The workshop re-poses the clip to learn where the blade was a moment ago. Here the layer
  * remembers where it really was, so walking and turning lean the fire too.
@@ -74,6 +76,9 @@ final class PyreKingEffectsLayer extends GeoRenderLayer<PyreKingEntity, Void, Py
     private static final double LOOSE_MIN = num(LOOSE, "draw_beyond_blocks"), HOOK = num(LOOSE, "hook_blocks"),
             FLAME_SPACING = num(LOOSE, "flame_spacing_blocks"), BOW_SECONDS = num(LOOSE, "bow_seconds"), BOW_SHARE = num(LOOSE, "bow_share"),
             WRIST_MIN = num(WRIST, "draw_beyond_blocks"), WRIST_BOW_SHARE = num(WRIST, "bow_share");
+    private static final JsonObject BRAND = DATA.getAsJsonObject("brand");
+    private static final String BRAND_CLIP = BRAND.get("clip").getAsString();
+    private static final double[] DRAIN = row(BRAND.getAsJsonArray("drain")), CATCH = row(BRAND.getAsJsonArray("catch"));
     private static final double BOW_STEP = .05;
     private static final int BOW_SAMPLES = 20;
     private static final double[] BOW_WEIGHTS = bowWeights(num(LOOSE, "bow_period_seconds"), num(LOOSE, "bow_damping"));
@@ -156,8 +161,10 @@ final class PyreKingEffectsLayer extends GeoRenderLayer<PyreKingEntity, Void, Py
 
         Batch core = new Batch(), tint = new Batch(), glow = new Batch(), iron = new Batch(), hot = new Batch();
         // In his intro the blade is cold until his fist lights it, and the fire runs up it from the hilt.
+        // In the Pyre Brand it drains down the blade into the floor: what is left burns nearest the point.
         int lit = (int) Math.round(Math.max(0, Math.min(1, state.blade)) * roots.length);
-        if (lit > 0) fire(memory, now, roots, lit, core, tint, glow);
+        int dark = state.clip.equals(BRAND_CLIP) ? roots.length - (int) Math.round(brandLit(state.clipSeconds) * roots.length) : 0;
+        if (lit > dark) fire(memory, now, roots, dark, lit, core, tint, glow);
         // Nor does his wrist's chain run to a sword that hangs from the roof or stands in the floor.
         boolean tether = state.intro < 0 || state.intro >= PyreKingIntroTrack.get().beat("grasp");
         chains(memory, now, tether, wrist, pommel, chest, ends, iron, hot, core);
@@ -286,7 +293,7 @@ final class PyreKingEffectsLayer extends GeoRenderLayer<PyreKingEntity, Void, Py
         return new Motion(stream / total);
     }
 
-    private static void fire(Memory memory, double now, double[][] roots, int lit, Batch core, Batch tint, Batch glow) {
+    private static void fire(Memory memory, double now, double[][] roots, int dark, int lit, Batch core, Batch tint, Batch glow) {
         int n = roots.length;
         // Where every root was at each sampled age, one extra sample past the window to catch a jump.
         double[][][] history = new double[SAMPLES + 2][][];
@@ -318,11 +325,11 @@ final class PyreKingEffectsLayer extends GeoRenderLayer<PyreKingEntity, Void, Py
         for (int i = 0; i < n; i++) licks[i] = between(plain[i], plain[Math.min(i + 1, n - 1)], .45 * hash(i));
         Motion[] plainMotion = new Motion[n], lickMotion = new Motion[n];
         for (int i = 0; i < n; i++) { plainMotion[i] = motionOf(plain[i]); lickMotion[i] = motionOf(licks[i]); }
-        for (int i = 0; i < Math.min(n, lit); i++) {
+        for (int i = dark; i < Math.min(n, lit); i++) {
             tongue(core, now, i, 0, licks[i], lickMotion[i], bladeAxis);
             for (double[] peak : PEAKS) if ((int) peak[0] == i) tongue(core, now, i, peak[1], plain[i], plainMotion[i], bladeAxis);
         }
-        if (lit >= n) wake(tint, glow, now, plain, plainMotion);
+        if (lit >= n && dark == 0) wake(tint, glow, now, plain, plainMotion);
     }
 
     private static double noise(double t, double i) { return .5 + .27 * Math.sin(t * 7.3 + i * 2.71) + .23 * Math.sin(t * 11.9 + i * 7.13); }
@@ -465,6 +472,17 @@ final class PyreKingEffectsLayer extends GeoRenderLayer<PyreKingEntity, Void, Py
                 glow.quad(v[s][k], v[s + 1][k], v[s + 1][k + 1], v[s][k + 1], ua, va, ub, va, ub, vb, ua, vb, a0 * glowShare, a1 * glowShare, a2 * glowShare, a3 * glowShare);
             }
         }
+    }
+
+    // ---------------------------------------------------------------- the Pyre Brand
+    /** How much of the blade burns at this moment of the clip, counted from the point: all of it, but while its fire is in the floor. */
+    private static double brandLit(double t) {
+        double low = num(BRAND, "lit_floor");
+        if (t < DRAIN[0]) return 1;
+        if (t < DRAIN[1]) return 1 - (1 - low) * smooth((t - DRAIN[0]) / (DRAIN[1] - DRAIN[0]));
+        if (t < CATCH[0]) return low;
+        if (t < CATCH[1]) return low + (1 - low) * smooth((t - CATCH[0]) / (CATCH[1] - CATCH[0]));
+        return 1;
     }
 
     // ---------------------------------------------------------------- chains

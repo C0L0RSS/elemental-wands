@@ -162,6 +162,57 @@ After the pace was raised the developer fought him again: "it was really good."
 - **Decided:** a win sends everyone home, as in the other arenas. Built the same day: ten
   seconds after he dies.
 
+## The Chain Scythe goes (Nov 24)
+
+The developer asked for the spin to be removed, replaced or made less janky: "I don't really
+like the way he spins his sword and you have to either shift or jump to dodge it. It feels
+very janky," and "it is hard to read when he will dash."
+
+- **What was wrong with it,** measured from its own tracks:
+  - The blade lapped the whole circle in about 0.35 s. Ten blocks out it passed a player at
+    about 165 blocks a second, too fast to watch come round.
+  - The warning came at 0.18 s and the blade began to hit at 0.58 s (high) or 0.64 s (low),
+    which left about 0.4 s to choose a jump or a crouch. A jump weighted the next one high,
+    7 to 1.
+  - When it arrived depended on where the player stood: 0.78 s in front of him, 0.86 s on
+    his left, 0.95 s behind.
+  - The low swing turned about 395°, so a slice on his right was swept at 0.65 s and again
+    at 1.04 s, further apart than one jump stays over it.
+  - The chain was drawn straight through pillars, though its damage stopped at them.
+  - The low Scythe and the Lunge both opened with him dropping low and sending the sword
+    out along the floor, in the same range, under the same warning.
+- **Decided:** replace it. "I think the new ability should be a new fire type ability, since
+  most things he uses his sword and chains for, but he doesn't really do anything with fire.
+  Maybe a close range flame thrower, or doing something with his sword."
+- **Decided:** of five fire moves offered, the first: King's Breath, a held jet of fire that
+  turns slowly after its target. The other four were not chosen and are not planned:
+  crescents of fire thrown by two cuts, a fan of five fire lines to stand between, eruptions
+  that chase a standing player, and a ring of fire that shuts a player in at sword range.
+- **Decided:** the fire comes off the sword, not from his mask or the shard in his chest.
+- **Decided:** a raised shield does not stop it, as it does not stop his fire on the floor.
+- **Changed before it was seen (Nov 24):** King's Breath was built and tested, and the
+  developer asked for something else on reading its description: "I want him to stick his
+  sword in the ground", with "a bunch of fire on their ground" in front of him, as a boss
+  they know lays fire on the floor, so that players "have to avoid that specific area where
+  they can't just jump over it." It is "not a wave of fire".
+- **Built (Nov 24), not yet seen or played by the developer:** the Pyre Brand. He drives
+  the sword into the floor and a fan of the floor in front of it burns, two blocks tall,
+  while he kneels behind the hilt. See [Pyre King](../reference/pyre-king.md#the-pyre-brand).
+  - It is the floor's fire he already had, as blocks, not a drawn effect: the jet drawn for
+    King's Breath came out streakier and darker in the game than in the workshop.
+  - **Decided while it was being built:** "I want this attack to be more of a mid ranged
+    attack since close range I want the boss to focus on the real sword swings." He uses it
+    on a target 6.5 to 11.5 blocks away, and inside 6.5 he has only his sword strings.
+  - The agent chose the fan's size, the 1.2 s of warning (the worst spot in it is about
+    4.5 blocks from an edge), the 16 it deals as it catches, that stone shadows it, and
+    that no blade strikes on the way down. None of these was asked for.
+  - The stab is a low drive from his belt, not a plunge from overhead: the rig's wrists
+    cannot hold the sword point down above his waist.
+  - Both Chain Scythe clips and the jump and crouch reads went with the Scythe. With the spin gone, him dropping low
+  and slinging the sword always means he is coming: the Lunge or the Haul.
+- **Open:** the fight has no jump check left outside Unbound. The Pyre Brand is answered
+  by getting off a piece of floor, which no other move of his asks.
+
 ## Summoning and the intro (Nov 11)
 
 - **Decided:** players reach him at a burned gatehouse of his kingdom in the Nether, by
@@ -284,8 +335,9 @@ which brings him to the player.
 
 ## Chain moves (proposed)
 
-**Chain Scythe (6–14 blocks).** The sword whirls round him on 14 blocks of chain, with a
-0.9 s tell.
+**Chain Scythe (6–14 blocks).** Built, then removed on Nov 24; see
+[the Chain Scythe goes](#the-chain-scythe-goes-nov-24). The sword whirls round him on 14
+blocks of chain, with a 0.9 s tell.
 - **Low:** sparks drag along the floor, and the hit zone is 0–0.6 blocks up. Jump.
 - **High:** the sword is raised and whistles, and the hit zone is 1.55–3.2 blocks up.
   Crouch; a crouching player is 1.5 blocks tall.

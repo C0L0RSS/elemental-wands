@@ -297,6 +297,22 @@
     "bow_period_seconds": 0.55,
     "bow_damping": 0.45
   },
+  "brand": {
+    "clip": "pyre_brand",
+    "drain": [
+      1.6,
+      1.8
+    ],
+    "lit_floor": 0,
+    "catch": [
+      3.5,
+      3.8
+    ],
+    "burn": [
+      1.7,
+      3.5
+    ]
+  },
   "chain": {
     "wrist_bone": "right_wrist_shackle",
     "sword_bone": "sword",

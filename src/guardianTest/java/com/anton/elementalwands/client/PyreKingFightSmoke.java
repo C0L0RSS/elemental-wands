@@ -42,8 +42,8 @@ import org.lwjgl.glfw.GLFW;
 
 /**
  * The Pyre King's fight, move by move, against a Survival player who stands where each case puts
- * them: what every blow deals, what dodges it (range, a sidestep after the aim freezes, a jump, a
- * crouch), where a thrown sword lands, where the chain drags a caught player and where it sets
+ * them: what every blow deals, what dodges it (range, a sidestep after the aim freezes, a jump,
+ * leaving the floor he sets alight), where a thrown sword lands, where the chain drags a caught player and where it sets
  * him down, and that the drawn sword is where the server sweeps it. A free fight then runs
  * through the phase change to his death against a player who stands, backs away, circles and
  * jumps, runs far off, eats, climbs out of reach and gets behind him. The window stays hidden and
@@ -56,7 +56,7 @@ public final class PyreKingFightSmoke implements ClientModInitializer {
     private record Case(String name, PyreKingRules.Move move, double x, double y, double z, boolean hover, boolean sneak,
                         int ticks, float expected, int... shots) {}
 
-    private static final float SWORD = PyreKingRules.SWORD, CHAIN = PyreKingRules.CHAIN;
+    private static final float SWORD = PyreKingRules.SWORD, CHAIN = PyreKingRules.CHAIN, BRAND = PyreKingRules.BRAND, FIRE = PyreKingRules.FIRE;
     private static final List<Case> CASES = List.of(
             new Case("royal-cut", PyreKingRules.Move.ROYAL_CUT, 0, 0, -3.5, false, false, 70, SWORD, 14, 22, 40),
             new Case("royal-cut-out-of-reach", PyreKingRules.Move.ROYAL_CUT, 0, 0, -9.5, false, false, 60, 0),
@@ -66,13 +66,19 @@ public final class PyreKingFightSmoke implements ClientModInitializer {
             new Case("thrust-sidestepped", PyreKingRules.Move.THRUST, 0, 0, -7, false, false, 50, 0),
             new Case("turning-cut", PyreKingRules.Move.TURNING_CUT, 0, 0, 3.5, false, false, 60, SWORD, 9, 17, 19),
             new Case("overhead", PyreKingRules.Move.OVERHEAD, 0, 0, -6, false, false, 50, SWORD, 12, 18, 20),
-            new Case("scythe-low", PyreKingRules.Move.SCYTHE_LOW, 0, 0, -10, false, false, 60, CHAIN, 13, 19, 22),
-            new Case("scythe-low-jumped", PyreKingRules.Move.SCYTHE_LOW, 0, 1, -10, true, false, 60, 0, 20),
-            new Case("scythe-high", PyreKingRules.Move.SCYTHE_HIGH, 10, 0, 0, false, false, 60, CHAIN, 17, 21),
-            new Case("scythe-high-crouched", PyreKingRules.Move.SCYTHE_HIGH, 10, 0, 0, false, true, 60, 0, 21),
-            // Standing close, under the chain: neither swing reaches them.
-            new Case("scythe-low-inside", PyreKingRules.Move.SCYTHE_LOW, 0, 0, -3.5, false, false, 60, 0, 19),
-            new Case("scythe-high-inside", PyreKingRules.Move.SCYTHE_HIGH, 3.5, 0, 0, false, false, 60, 0, 21),
+            // The Pyre Brand. His aim freezes at tick 13 here (the blend included) and the floor shows; it catches at
+            // tick 37 and burns until 73. Caught on it: the catch, and the floor's fire once more a second later.
+            new Case("brand", PyreKingRules.Move.BRAND, 0, 0, -8, false, false, 96, BRAND + FIRE, 10, 20, 30, 36, 38, 44, 60, 72, 78, 86),
+            // Fire is not a blow: a raised shield stops none of it.
+            new Case("brand-shielded", PyreKingRules.Move.BRAND, 0, 0, -8, false, false, 96, BRAND + FIRE, 44),
+            // It cannot be jumped: the fire stands two blocks tall.
+            new Case("brand-jumped", PyreKingRules.Move.BRAND, 0, 1.2, -8, true, false, 96, BRAND + FIRE, 44),
+            // Out of it at a sprint, a quarter of a second after the floor shows.
+            new Case("brand-run-out-of", PyreKingRules.Move.BRAND, 0, 0, -8, false, false, 96, 0, 30, 38, 44),
+            // At his feet, in front of the fan's point; near its end; and past its end.
+            new Case("brand-at-his-feet", PyreKingRules.Move.BRAND, 0, 0, -2, false, false, 96, 0, 44),
+            new Case("brand-near-its-end", PyreKingRules.Move.BRAND, 0, 0, -12, false, false, 96, BRAND + FIRE, 44),
+            new Case("brand-past-its-end", PyreKingRules.Move.BRAND, 0, 0, -14, false, false, 96, 0, 44),
             new Case("cast", PyreKingRules.Move.CAST, 0, 0, -20, false, false, 70, CHAIN, 10, 16, 22, 26),
             // The throw and the pull-back are one combo now (they are half a second apart), so a player takes only one
             // of them: this one steps out of the throw and onto the line the sword comes back along.
@@ -88,8 +94,8 @@ public final class PyreKingFightSmoke implements ClientModInitializer {
             // hiding cases one like the hall's, round and 7 across).
             new Case("cast-at-a-pillar", PyreKingRules.Move.CAST, 0, 0, -20, false, false, 70, 0, 22, 26),
             new Case("hook-at-a-pillar", PyreKingRules.Move.HOOK, 0, 0, -30, false, false, 70, 0, 26),
-            // The stone stops his chain: a player just behind the pillar, inside the Scythe's reach, is not struck.
-            new Case("scythe-behind-a-pillar", PyreKingRules.Move.SCYTHE_LOW, 0, 0, -13.5, false, false, 60, 0, 19),
+            // The stone stops his fire: the same spot near the fan's end, just behind a pillar, does not burn.
+            new Case("brand-behind-a-pillar", PyreKingRules.Move.BRAND, 0, 0, -10, false, false, 96, 0, 40, 60),
             new Case("flanks-a-pillar", null, 0, 0, -20, false, false, 240, -1, 40, 60, 80, 100, 120, 160, 200),
             // A player who sprints round the pillar to keep it between them, a quarter of a second behind what he
             // does, and from half way eats as they go, which slows them to a crawl. Then one who is never behind: no
@@ -116,6 +122,8 @@ public final class PyreKingFightSmoke implements ClientModInitializer {
     private volatile float healthBefore;
     private volatile Vec3d[] serverBlade;
     private volatile double[][] clientBlade;
+    private volatile List<BlockPos> brandFloor = List.of();
+    private volatile int brandLeft = -1;
     private final Set<String> movesSeen = java.util.Collections.synchronizedSet(new LinkedHashSet<>());
     private volatile boolean sawSecondPhase, sawUnbound, kingGone;
     private volatile float fightDamage;
@@ -209,6 +217,18 @@ public final class PyreKingFightSmoke implements ClientModInitializer {
         }
     }
 
+    /** The Pyre King's fire standing on the fixture's floor now: the foot of each column. */
+    private List<BlockPos> floorFire(MinecraftServer server) {
+        List<BlockPos> cells = new ArrayList<>();
+        var w = server.getOverworld();
+        Vec3d from = home();
+        for (int x = -16; x <= 16; x++) for (int z = -18; z <= 6; z++) {
+            BlockPos pos = BlockPos.ofFloored(from.x + x, floor, from.z + z);
+            if (w.getBlockState(pos).isOf(com.anton.elementalwands.registry.ModSpellBlocks.PYRE_KING_FIRE)) cells.add(pos);
+        }
+        return cells;
+    }
+
     private void guard(Runnable work) {
         try { work.run(); } catch (Throwable e) { e.printStackTrace(); serverFailure = e.toString(); }
     }
@@ -218,6 +238,21 @@ public final class PyreKingFightSmoke implements ClientModInitializer {
     /** What a case does to the player while the move plays, and what it measures along the way. */
     private void during(MinecraftServer server, UUID uuid, Case scene, int t) {
         switch (scene.name) {
+            // A quarter of a second after the floor shows (tick 13 here) they sprint out of it sideways.
+            case "brand-run-out-of" -> {
+                if (t >= 18 && t <= 44) {
+                    double x = Math.min(7, (t - 17) * 5.6 / 20);
+                    server.execute(() -> guard(() -> place(server, uuid, x, 0, scene.z, false)));
+                }
+            }
+            // Measured while he kneels behind it: the drawn blade is where the server has it, in the floor. And the
+            // floor that burns is the fan the rules describe, which he does not stand in.
+            case "brand" -> {
+                if (t == 50) server.execute(() -> guard(() -> { serverBlade = king(server).sweptBlade(); brandFloor = floorFire(server); }));
+                if (t == 51) clientBlade = PyreKingRenderer.drawnBlade();
+                if (t == 80) server.execute(() -> guard(() -> brandLeft = floorFire(server).size()));
+            }
+            case "brand-behind-a-pillar" -> { if (t == 50) server.execute(() -> guard(() -> brandFloor = floorFire(server))); }
             // The aim froze 0.35 s in; a step aside after that beats it.
             case "thrust-sidestepped" -> { if (t == 13) server.execute(() -> guard(() -> place(server, uuid, 3.5, 0, -7, false))); }
             // Struck by the throw, then well clear of the fire it leaves and of the pull-back.
@@ -338,6 +373,28 @@ public final class PyreKingFightSmoke implements ClientModInitializer {
                 boolean aside = p.getItemCooldownManager().isCoolingDown(p.getOffHandStack());
                 notes.add(aside ? "the shield was knocked aside" : "the shield was not knocked aside");
                 if (!aside) fail(scene, "a blocked blow should knock the shield aside");
+            }
+            case "brand" -> {
+                agree(scene, notes, null, 0);
+                // What burns is the fan: every block of fire in it, none of it behind the sword's back or under him.
+                int stray = 0, behind = 0;
+                double farthest = 0;
+                for (BlockPos cell : brandFloor) {
+                    double ahead = from.z - (cell.getZ() + .5), right = cell.getX() + .5 - from.x;
+                    farthest = Math.max(farthest, ahead);
+                    if (ahead < 2) behind++;
+                    if (Math.abs(right) > (ahead - 2) * Math.tan(Math.toRadians(PyreKingRules.BRAND_HALF)) + 1.5) stray++;
+                }
+                notes.add(brandFloor.size() + " blocks of floor burned, out to " + farthest + " blocks from him; " + brandLeft + " left burning after it");
+                if (brandFloor.size() < 45) fail(scene, "the fan should cover a wide piece of floor; " + brandFloor.size() + " blocks burned");
+                if (stray > 0 || behind > 0) fail(scene, stray + " blocks burned outside the fan and " + behind + " at his feet");
+                if (farthest < 11.5 || farthest > 13.5) fail(scene, "the fan should end about 12.6 blocks from him; it reached " + farthest);
+                if (brandLeft != 0) fail(scene, "the floor should be out once he has torn the sword free; " + brandLeft + " blocks still burned");
+            }
+            case "brand-behind-a-pillar" -> {
+                notes.add(brandFloor.size() + " blocks of floor burned round the pillar");
+                if (brandFloor.isEmpty()) fail(scene, "the floor beside the pillar should still burn");
+                for (BlockPos cell : brandFloor) if (Math.abs(cell.getX() + .5 - from.x) < 2 && from.z - (cell.getZ() + .5) > 9.4) { fail(scene, "the floor in the pillar's shadow burned at " + cell.toShortString()); break; }
             }
             case "turning-cut" -> {
                 float turned = Math.abs(MathHelper.wrapDegrees(k.getBodyYaw() - 0));
@@ -518,7 +575,7 @@ public final class PyreKingFightSmoke implements ClientModInitializer {
         report.add("free fight: moves used " + moves + "; the player took " + fightDamage);
         report.add("free fight timeline (tick move): " + timeline);
         if (moves.size() < 7) failures.add("free fight: he should use at least seven different moves in a minute; he used " + moves);
-        if (!moves.contains("scythe_low") && !moves.contains("scythe_high")) failures.add("free fight: a player circling at 10 blocks should draw the Chain Scythe");
+        if (!moves.contains("brand")) failures.add("free fight: a player standing or circling 6.5 to 11.5 blocks away should draw the Pyre Brand");
         if (!moves.contains("cast") && !moves.contains("hook") && !moves.contains("lunge")) failures.add("free fight: a player far off should draw a throw or a Lunge");
         if (!moves.contains("drag_down")) failures.add("free fight: a player out of reach overhead should draw Drag Down");
         if (!moves.contains("unbound")) failures.add("free fight: Unbound should start once he is wounded to half health");
@@ -531,7 +588,7 @@ public final class PyreKingFightSmoke implements ClientModInitializer {
         String body = String.join("\n", report) + "\n";
         Files.writeString(Path.of("PYRE_KING_FIGHT_REPORT.txt"), body + (failures.isEmpty() ? "" : "\nFAILURES\n" + String.join("\n", failures) + "\n"));
         if (failures.isEmpty()) Files.writeString(Path.of("PYRE_KING_FIGHT_PASSED.txt"), "Pyre King fight passed: every move against a standing Survival player "
-                + "(damage, reach, the sidestep, the jump, the crouch, the thrown sword's landing, the drags), the drawn sword where the server sweeps it, "
+                + "(damage, reach, the sidestep, the jump, the Pyre Brand's floor, the thrown sword's landing, the drags), the drawn sword where the server sweeps it, "
                 + "and a free fight through Unbound to his death. Human Lunar review pending.\n\n" + body);
         else Files.writeString(Path.of("PYRE_KING_FIGHT_FAILED.txt"), String.join("\n", failures) + "\n");
         done = true; c.scheduleStop();
@@ -598,7 +655,8 @@ public final class PyreKingFightSmoke implements ClientModInitializer {
         p.setStackInHand(net.minecraft.util.Hand.MAIN_HAND, net.minecraft.item.ItemStack.EMPTY);
         p.setStackInHand(net.minecraft.util.Hand.OFF_HAND, shield ? new net.minecraft.item.ItemStack(net.minecraft.item.Items.SHIELD) : net.minecraft.item.ItemStack.EMPTY);
         p.getItemCooldownManager().remove(net.minecraft.util.Identifier.ofVanilla("shield"));
-        pillar(server, !fight && CASES.get(next).name.contains("pillar"), !fight && CASES.get(next).name.startsWith("unbound") ? -8 : -12,
+        pillar(server, !fight && CASES.get(next).name.contains("pillar"),
+                !fight && CASES.get(next).name.startsWith("unbound") ? -8 : !fight && CASES.get(next).name.startsWith("brand") ? -9 : -12,
                 !fight && (CASES.get(next).name.startsWith("flanks") || CASES.get(next).name.startsWith("circles")));
         if (fight) { place(server, uuid, 0, 0, -15, false); watch(server, 0, -15); }
         else {
@@ -658,7 +716,7 @@ public final class PyreKingFightSmoke implements ClientModInitializer {
 
     /**
      * A pillar 8 tall in front of his mark, or none: 5 across with its far face at block z = far (8 to 12 blocks out,
-     * or 4 to 8 for Unbound), or round and 7 across like the hall's, centred 10 blocks out.
+     * 4 to 9 for the Pyre Brand, or 4 to 8 for Unbound), or round and 7 across like the hall's, centred 10 blocks out.
      */
     private void pillar(MinecraftServer server, boolean stands, int far, boolean round) {
         var w = server.getOverworld();

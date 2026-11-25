@@ -125,8 +125,9 @@ not been confirmed on that machine: confirm it when your task needs it, then rep
 | Python | `python3` | `py -3` |
 | Home folder in a command | `$HOME` | `$env:USERPROFILE` |
 | SHA-256 of a file | `shasum -a 256 <file>` | `Get-FileHash <file>` |
-| Lunar mods folder | `~/.lunarclient/profiles/1.21/mods/fabric-1.21.10/` | `%USERPROFILE%\.lunarclient\profiles\lunar\1.21\mods\fabric-1.21.10\` (*unverified*) |
+| Lunar mods folder | `~/.lunarclient/profiles/1.21/mods/fabric-1.21.10/` | `%USERPROFILE%\.lunarclient\profiles\1.21\mods\fabric-1.21.10\` |
 | Minecraft assets for test clients | `$HOME/.lunarclient/shared/assets` | `$env:USERPROFILE\.lunarclient\shared\assets` |
+| `ffmpeg` for encoding recordings | installed | not on the `PATH` (checked November 24, 2026) |
 | Server fixtures | Dedicated runners | No `run/eula.txt` on file: use the [hosted runner](docs/reference/testing.md#server-fixtures-on-a-machine-with-no-accepted-eula) |
 | Viewing review pages from another device | not set up | [Remote preview](docs/reference/remote-preview.md) |
 

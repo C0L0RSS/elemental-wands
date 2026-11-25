@@ -107,7 +107,7 @@ function clipTime(){const c=clips[state.clip];if(!c)return state.time;const L=c.
 function activeClip(){return state.model==='king'&&clips[state.clip]?clips[state.clip]:null;}
 // An in-place walk or run moves at its ground speed (blocks per second, from the manifest).
 function groundSpeed(name=state.clip){const v=+(manifest&&manifest.clips&&manifest.clips[name]&&manifest.clips[name].ground_speed);return v>0?v:0;}
-function sceneOpts(name){const v=groundSpeed(name);return v>0?{travel:[0,0,-v]}:undefined;}
+function sceneOpts(name){const v=groundSpeed(name);return v>0?{clip:name,travel:[0,0,-v]}:{clip:name};}
 function poseAt(t){const c=activeClip();
   return PyreEffects.scene(models[state.model==='king'?'king':'sword'],manifest,t,c?false:state.motion,state.model==='planted',c,c?sceneOpts(state.clip):undefined);}
 function scene(){return poseAt(activeClip()?clipTime():state.time);}

@@ -6,6 +6,7 @@ use [current guides](../README.md) for today’s behavior and [status](../STATUS
 for outstanding verification. Detailed historical reports are optional background.
 
 - [2026-11-24 — Wand controls, boss fights and reward recovery](2026-11-24-playtest-fixes.md)
+- [2026-11-24 — Pyre King: the Pyre Brand replaces the spin](2026-11-24-pyre-king-brand.md)
 - [2026-11-19 — Storm Roc: every wand lands its own way](2026-11-19-storm-roc-landings.md)
 - [2026-11-18 — Spectating boss fights](2026-11-18-boss-spectating.md)
 - [2026-11-18 — Springbloom and Updraft landings no longer hurt](2026-11-18-launch-fall-damage.md)

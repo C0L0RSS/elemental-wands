@@ -1,6 +1,8 @@
 package com.anton.elementalwands.entity.pyreking;
 
 import com.anton.elementalwands.ElementalWandsMod;
+import com.anton.elementalwands.entity.BossHealthBar;
+import com.anton.elementalwands.hall.PyreGate;
 import com.anton.elementalwands.registry.ModSpellBlocks;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -184,20 +186,6 @@ final class PyreKingCombat {
         return true;
     }
 
-    /**
-     * The intro's last beat: his chain hauls him to his mark from wherever the scene has stood him, with nobody to
-     * aim at. The mark is his home from here on.
-     */
-    void introHaul(ServerWorld world, Vec3d mark) {
-        home = mark;
-        reviewing = true;
-        Vec3d heading = mark.subtract(boss.getEntityPos()).multiply(1, 0, 1).normalize();
-        double shortOf = PyreKingAim.get(Move.HAUL.clip).stick()[2] - PyreKingTracks.get(Move.HAUL.clip).travelEnd();
-        face(mark, 180);
-        begin(world, Move.HAUL, null, world.getTime(), 2);
-        flank = mark.add(heading.multiply(shortOf));
-    }
-
     boolean requestUnbound() {
         if (boss.unboundDone() || move == Move.UNBOUND) return false;
         phasePending = true;
@@ -335,9 +323,7 @@ final class PyreKingCombat {
     }
 
     private void updateBar(List<ServerPlayerEntity> players) {
-        for (ServerPlayerEntity previous : new ArrayList<>(bar.getPlayers())) if (!players.contains(previous)) bar.removePlayer(previous);
-        for (ServerPlayerEntity player : players) bar.addPlayer(player);
-        bar.setPercent(MathHelper.clamp(boss.getHealth() / Math.max(1, boss.getMaxHealth()), 0, 1));
+        BossHealthBar.update(bar, boss, players, p -> PyreGate.spectatorViewer(boss, p));
     }
 
     // ── What he sees ─────────────────────────────────────────────────────────
@@ -1207,6 +1193,9 @@ final class PyreKingCombat {
         fires.add(new Fire(from, to, half, height, now + FIRE_ARM, now + ticks));      // lit as blocks when it arms
         sound(world, from, SoundEvents.ITEM_FIRECHARGE_USE, 1.8f, .7f);
     }
+
+    /** The haul that ends his intro scorches the line he flew, as a Haul does in the fight. */
+    void scorch(ServerWorld world, Vec3d from, Vec3d to) { fire(world, from, to, FIRE_HALF, FIRE_LOW, world.getTime(), HAUL_FIRE); }
 
     private void tickFloor(ServerWorld world, long now, List<ServerPlayerEntity> players) {
         marks.removeIf(mark -> now >= mark.until());

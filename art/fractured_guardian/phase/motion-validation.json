@@ -1,6 +1,6 @@
 {
   "samples": 257,
-  "minimum_vertex": -6.791602507144835e-15,
+  "minimum_vertex": -5.912974925894676e-15,
   "phase_seconds": 3.2,
   "slam_impact_tick": 21,
   "throw_release_tick": 29,
@@ -11,5 +11,12 @@
     22
   ],
   "core_pulse_seconds": 3.8,
-  "core_pulse_minimum_vertex": -0.04518291298509847
+  "core_pulse_minimum_vertex": -0.04518291298509847,
+  "sweep_seconds": 3.2,
+  "sweep_hit_tick": 30,
+  "sweep_minimum_vertex": -7.188272179009261e-15,
+  "scar_seconds": 2.5,
+  "scar_contact_tick": 20,
+  "scar_erupt_tick": 30,
+  "scar_minimum_vertex": -7.54999190712913e-15
 }

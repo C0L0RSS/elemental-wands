@@ -13,7 +13,7 @@ public abstract class SpringbloomFallMixin {
     @Inject(method="handleFallDamage",at=@At("HEAD"),cancellable=true)
     private void protect(double distance,float multiplier,DamageSource source,CallbackInfoReturnable<Boolean> cir) {
         if((Object)this instanceof ServerPlayerEntity p && (SpringbloomManager.protectedFall(p) || SpringbloomManager.catching(p))) {
-            SpringbloomManager.finishLanding(p);cir.setReturnValue(false);
+            SpringbloomManager.landing(p);cir.setReturnValue(false);
         }
     }
 }

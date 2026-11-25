@@ -28,8 +28,6 @@ public class NecromancerModel extends GeoModel<NecromancerEntity> {
             getBone(name).ifPresent(bone -> bone.setHidden(!transforming || name.startsWith("soul_")));
         // The camera looks out of his eyes from inside the hood.
         getBone("hood").ifPresent(bone -> bone.setHidden(state.povHood));
-        // With the soul torn free the ribcage stands empty.
-        getBone("soul_core").ifPresent(bone -> bone.setHidden(state.split));
     }
 
     private static boolean playingTransform(AnimationState<NecromancerEntity> animationState) {

@@ -1,5 +1,5 @@
 // The Pyre King's intro in a disposable integrated world: /ew hall enter, /ew pyreking intro, the whole scene through its own camera, then again skipped; hidden, muted window.
-// ./gradlew -I tools/pyre_king_intro_smoke.init.gradle runClient -PhubClientAssets="$HOME/.lunarclient/shared/assets" [-PpyreIntroVideo]
+// ./gradlew -I tools/pyre_king_intro_smoke.init.gradle runClient -PhubClientAssets="$HOME/.lunarclient/shared/assets" [-PpyreIntroVideo] [-PpyreIntroEvery=1]
 allprojects {
     plugins.withId('fabric-loom') {
         def smokeRoot=layout.buildDirectory.dir('pyre-king-intro-smoke').get().asFile
@@ -34,8 +34,10 @@ allprojects {
                 }
             }
         }
-        // -PpyreIntroVideo: also save a frame every other tick (screenshots/intro-*.png), for a review clip.
-        if (project.hasProperty('pyreIntroVideo')) loom.runs.client.vmArg('-DpyreIntroEvery=2')
+        // -PpyreIntroVideo: also save a frame every other tick (screenshots/intro-*.png), for a review clip;
+        // -PpyreIntroEvery=1 saves every tick instead, for judging a fast move.
+        if (project.hasProperty('pyreIntroVideo') || project.hasProperty('pyreIntroEvery'))
+            loom.runs.client.vmArg('-DpyreIntroEvery=' + (project.findProperty('pyreIntroEvery') ?: '2'))
         tasks.register('pyreKingIntroJar',Jar) {
             dependsOn guardianTestClasses, pyreKingIntroMetadata
             archiveFileName='pyre-king-intro-smoke.jar'

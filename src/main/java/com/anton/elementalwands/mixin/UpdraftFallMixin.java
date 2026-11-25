@@ -13,7 +13,7 @@ public abstract class UpdraftFallMixin {
     @Inject(method = "handleFallDamage", at = @At("HEAD"), cancellable = true)
     private void protect(double distance, float multiplier, DamageSource source, CallbackInfoReturnable<Boolean> cir) {
         if ((Object) this instanceof ServerPlayerEntity p && UpdraftManager.protectedFall(p)) {
-            UpdraftManager.finish(p);
+            UpdraftManager.landing(p);
             p.fallDistance = 0;
             cir.setReturnValue(false);
         }

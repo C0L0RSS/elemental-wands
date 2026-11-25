@@ -110,6 +110,9 @@ public final class StormRocEntity extends PathAwareEntity implements GeoEntity, 
     public void testDive(Vec3d mark) { combat.dive(mark); }
     public RocEffectEntity testTornado(Vec3d point) { return combat.tornado(point); }
     public void testChain() { combat.chain(); }
+    public void testCall(StormRocBrain.Call call) { combat.rehearseCall(call); }
+    public boolean testPass() { return combat.rehearsePass(); }
+    public void testLanding() { combat.rehearseDive(); }
 
     @Override public double getAttributeValue(RegistryEntry<EntityAttribute> attribute) {
         // Vanilla caps max health at 1024; larger parties need more, like the other bosses.

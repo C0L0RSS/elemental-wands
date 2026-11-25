@@ -325,9 +325,22 @@ public final class GuardianNaveSmokeMod implements ModInitializer {
     }
 
     /** A simulated player has no client to press Respawn; do what the respawn packet does. */
-    private static void respawn(MinecraftServer server, ServerPlayerEntity dead) {
+    public static void respawn(MinecraftServer server, ServerPlayerEntity dead) {
+        require(!dead.isAlive(), "Expected a dead player before respawning");
         var handler = dead.networkHandler;
         handler.player = server.getPlayerManager().respawnPlayer(dead, false, Entity.RemovalReason.KILLED);
+        handler.player.setLoaded(true);
+        handler.player.onTeleportationDone();
+    }
+
+    /** Join an integrated client's party with a second player whose original game mode is easy to verify. */
+    public static void joinInAdventure(ServerPlayerEntity leader, UUID id, String name) {
+        ServerWorld world = leader.getEntityWorld();
+        try {
+            var teammate = player(world.getServer(), world, id, name, leader.getX(), leader.getY(), leader.getZ());
+            teammate.changeGameMode(GameMode.ADVENTURE);
+            teammate.setLoaded(true);
+        } catch (Exception failure) { throw new AssertionError("Could not join the party", failure); }
     }
 
     /** A simulated player standing in the Overworld, for fixtures that borrow this helper. */

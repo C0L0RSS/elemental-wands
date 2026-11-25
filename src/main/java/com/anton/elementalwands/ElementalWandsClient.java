@@ -128,7 +128,6 @@ public class ElementalWandsClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.GRASPING_HAND, com.anton.elementalwands.client.renderer.GraspingHandRenderer::new);
         EntityRendererRegistry.register(ModEntities.SOUL_FIREBALL, com.anton.elementalwands.client.renderer.SoulFireballRenderer::new);
         EntityRendererRegistry.register(ModEntities.HARVEST_SOUL, com.anton.elementalwands.client.renderer.HarvestSoulRenderer::new);
-        EntityRendererRegistry.register(ModEntities.NECROMANCER_SOUL, com.anton.elementalwands.client.renderer.NecromancerSoulRenderer::new);
         EntityRendererRegistry.register(ModEntities.INTRO_ZOMBIE, com.anton.elementalwands.client.renderer.IntroZombieRenderer::new);
         EntityRendererRegistry.register(ModEntities.INTRO_SOUL, com.anton.elementalwands.client.renderer.IntroSoulRenderer::new);
         com.anton.elementalwands.client.NecromancerIntroClient.init();
@@ -146,6 +145,7 @@ public class ElementalWandsClient implements ClientModInitializer {
         com.anton.elementalwands.client.FireLeapPreview.init();
         EntityRendererRegistry.register(ModEntities.FLASHOVER_EMBER, com.anton.elementalwands.client.renderer.EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.GUARDIAN_ROCK, com.anton.elementalwands.client.renderer.GuardianRockRenderer::new);
+        EntityRendererRegistry.register(ModEntities.GUARDIAN_SPIKE, com.anton.elementalwands.client.renderer.GuardianSpikeRenderer::new);
         EntityRendererRegistry.register(ModEntities.STONE_CLUSTER, com.anton.elementalwands.client.renderer.StoneClusterRenderer::new);
 
         // Receive synced player data from server

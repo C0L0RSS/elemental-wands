@@ -96,8 +96,9 @@ public abstract class AbstractWandItem extends Item {
 
     @Override
     public ActionResult use(World world, PlayerEntity user, Hand hand) {
-        // Casting uses explicit slot requests. Ordinary item use remains available
-        // for interaction (sneak + right-click bypasses the bound spell input).
+        // Casting uses explicit slot requests. Ordinary item use remains available for
+        // interaction: Sneak + Use on a block or a usable entity in reach skips the spell
+        // input (WandControls.sneakInteraction).
         return ActionResult.PASS;
     }
 

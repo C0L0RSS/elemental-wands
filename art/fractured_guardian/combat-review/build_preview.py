@@ -20,6 +20,10 @@ REWORKED={
     'phase_change': {'description':'Brace and strain through 1.48 s. Heave at the unchanged 1.60 s shell burst; shoulders, head and hands follow through 1.90 s and it roars through 2.80 s; the body settles by 3.20 s. The chest stays shut.', 'events':[(1.48,'Full strain'),(1.6,'Shell burst'),(1.9,'Follow-through'),(2.8,'Roar ends'),(3.2,'Ready')]},
     'fan': {'description':'Plant and load over 0.75 s. Release three deliberate hand strikes at 0.90, 1.30 and 1.70 s while the body commits forward once; recover by 2.40 s.', 'events':[(.7,'Aim lock'),(.9,'Burst 1'),(1.3,'Burst 2'),(1.7,'Burst 3'),(2.4,'Recovered')]},
     'core_pulse': {'description':'Plant by 0.50 s and slowly open into a sustained brace through 2.40 s. Heave at the fixed 2.50 s blast; shoulders, hands and head follow, with low recovery through 3.80 s.', 'events':[(.5,'Pull starts'),(2.4,'Full brace'),(2.5,'Blast'),(2.7,'Follow-through'),(3.8,'Recovered')]},
+    'sweep': {'description':'3.20 s turning backhand. Coil left and look back over the right shoulder through 1.40 s, elbow out and forearm across the chest. The torso whips round like a turret: the right arm is at its right side at 1.45 s, straight behind at the 1.50 s hit (tick 30) and 60° left of front at 1.60 s; then an overswung, slow unwind to stance by 3.20 s. Feet stay planted.',
+              'events':[(1.0,'Loaded'),(1.4,'Blow starts'),(1.45,'Arm at its right'),(1.5,'Hit: arm behind'),(1.6,'Arm 60° left'),(3.2,'Recovered')]},
+    'scar': {'description':'2.50 s floor scar. Rear up with open hands spread wide and high by 0.75 s, drive both hands into the floor, wide apart in front, at 1.00 s (tick 20), bear down with the head low, then wrench both arms up and out at the 1.50 s eruption (tick 30). Short recovery by 2.50 s.',
+             'events':[(.75,'Reared, hands open'),(1.0,'Hands hit floor'),(1.5,'Walls erupt / heave'),(1.62,'Arms wrenched up'),(2.5,'Recovered')]},
     'slam': {'description':'0.00–1.075 s: crouch and haul both fists overhead. Bear the weight until 1.17 s; strike at 1.30 s. Stay compressed to 1.70 s, then recover through 2.80 s.',
              'events':[(.32,'Plant'),(1.075,'Apex'),(1.17,'Downstroke'),(1.3,'Impact'),(1.7,'Recovery begins')]},
     'slam_fast': {'description':'Same heavy performance within the fixed combo clock: overhead apex at 0.868 s, impact at 1.05 s, low through 1.37 s, recovered at 2.25 s.',
@@ -39,9 +43,9 @@ REWORKED={
 
 def build():
     p=runpy.run_path(str(HERE.parent/'v4-expressive/preview_motion.py'))
-    clips=json.loads((ROOT/'src/main/resources/assets/elementalwands/geckolib/animations/fractured_guardian.animation.json').read_text())['animations']
-    assert len(clips)==18 and {PREFIX+n for n in REWORKED}<=clips.keys()
-    script=(HERE/'viewer.js').read_text()
+    clips=json.loads((ROOT/'src/main/resources/assets/elementalwands/geckolib/animations/fractured_guardian.animation.json').read_text(encoding='utf-8'))['animations']
+    assert len(clips)==20 and {PREFIX+n for n in REWORKED}<=clips.keys()
+    script=(HERE/'viewer.js').read_text(encoding='utf-8')
     replacements={
         '__MESH_DATA__':json.dumps(p['mesh'],separators=(',',':')),
         '__BONES_DATA__':json.dumps(p['bones'],separators=(',',':')),
@@ -52,13 +56,13 @@ def build():
     for key,value in replacements.items():
         assert key in script,key
         script=script.replace(key,value)
-    return (HERE/'viewer.template.html').read_text().replace('__REWORKED_COUNT__',str(len(REWORKED))).replace('__SCRIPT__',script)
+    return (HERE/'viewer.template.html').read_text(encoding='utf-8').replace('__REWORKED_COUNT__',str(len(REWORKED))).replace('__SCRIPT__',script)
 
 
 def build_sequence():
     """Keep the V5 full-flight viewer and its unchanged entity arc beside review."""
     p=runpy.run_path(str(HERE.parent/'v4-expressive/preview_motion.py'))
-    template=(HERE.parent/'v4-expressive/viewer.template.html').read_text()
+    template=(HERE.parent/'v4-expressive/viewer.template.html').read_text(encoding='utf-8')
     template=re.sub(r'<select id="clip">.*?</select>', '<select id="clip"><option selected>leap_launch</option><option>leap_air</option><option>leap_land</option></select>',template)
     template=template.replace("let clipName='idle'","let clipName='leap_launch'")
     template=runpy.run_path(str(HERE.parent/'v5-leap/sequence_preview.py'))['extend'](template)
@@ -68,7 +72,7 @@ def build_sequence():
     template=template.replace('Braced legs, opening chest, expressive hands.<br>Actual animated rig · Beam effects run in Minecraft.',
         '<strong style="background:#f4ff3a;color:#142218;padding:6px">Reworked tonight: launch · air · land</strong><br>0.70 s launch · 1.80 s flight · 2.20 s landing. Same entity arc.')
     template=re.sub(r'<aside>.*?</aside>','<aside><a href="index.html">← All clips and timing landmarks</a></aside>',template,flags=re.S)
-    clips=json.loads((ROOT/'src/main/resources/assets/elementalwands/geckolib/animations/fractured_guardian.animation.json').read_text())['animations']
+    clips=json.loads((ROOT/'src/main/resources/assets/elementalwands/geckolib/animations/fractured_guardian.animation.json').read_text(encoding='utf-8'))['animations']
     for key,value in {'__MESH_DATA__':json.dumps(p['mesh'],separators=(',',':')),
                       '__BONES_DATA__':json.dumps(p['bones'],separators=(',',':')),
                       '__ANIMATION_DATA__':json.dumps(clips,separators=(',',':')),
@@ -85,8 +89,8 @@ if __name__=='__main__':
     for filename,content in [('index.html',build()),('full-leap.html',build_sequence())]:
         target=OUT/filename
         if args.check:
-            assert target.read_text()==content,f'Guardian combat preview is stale: {filename}'
+            assert target.read_text(encoding='utf-8')==content,f'Guardian combat preview is stale: {filename}'
         else:
             OUT.mkdir(parents=True,exist_ok=True)
-            target.write_text(content)
-    print(f'Guardian preview {"verified" if args.check else "built"}: 18 clips, {len(REWORKED)} marked reworked; {OUT}/index.html; full-leap.html includes the unchanged V5 arc.')
+            target.write_text(content,encoding='utf-8')
+    print(f'Guardian preview {"verified" if args.check else "built"}: 20 clips, {len(REWORKED)} marked reworked; {OUT}/index.html; full-leap.html includes the unchanged V5 arc.')

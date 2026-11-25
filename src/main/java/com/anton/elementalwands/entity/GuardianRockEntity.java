@@ -31,18 +31,26 @@ public class GuardianRockEntity extends ProjectileEntity implements FlyingItemEn
     private int flyingTicks;
     private GuardianWallImpact walls = new GuardianWallImpact();
     private java.util.Set<java.util.UUID> volleyHits = new java.util.HashSet<>();
+    /** A bursting stone: ticks of flight before it bursts. */
+    private int fuse;
 
     public GuardianRockEntity(EntityType<? extends GuardianRockEntity> type, World world) { super(type, world); }
 
     @Override protected void initDataTracker(DataTracker.Builder builder) { builder.add(HELD, true); builder.add(SHARD, false); }
     @Override public ItemStack getStack() { return STACK; }
+    /** A small stone of the Airburst, which bursts where it arrives instead of striking one player. */
     public boolean isShard() { return dataTracker.get(SHARD); }
-    void releaseShard(Vec3d direction,java.util.Set<java.util.UUID> hits,GuardianWallImpact walls) {
-        this.volleyHits=hits;this.walls=walls;
+    /**
+     * Sends a small stone to {@code aim}, where it bursts after {@code fuse} ticks (see
+     * {@link GuardianAirburstRules}), or sooner against whatever it meets. Stones released with the
+     * same {@code hits} hurt a player once between them.
+     */
+    void releaseBurst(Vec3d aim,int fuse,java.util.Set<java.util.UUID> hits,GuardianWallImpact walls) {
+        this.volleyHits=hits;this.walls=walls;this.fuse=Math.max(1,fuse);
         dataTracker.set(SHARD,true);dataTracker.set(HELD,false);
-        setVelocity(direction.normalize().multiply(GuardianFanRules.SPEED));velocityDirty=true;
+        setVelocity(aim.subtract(getEntityPos()).multiply(1.0/this.fuse));velocityDirty=true;
     }
-    /** A back-volley stone, rising with the Guardian until {@link #releaseShard} launches it. */
+    /** A back stone, rising with the Guardian until {@link #releaseBurst} launches it. */
     void holdShard() { dataTracker.set(SHARD, true); }
     public boolean isHeld() { return dataTracker.get(HELD); }
     @Override protected void readCustomData(ReadView view) {
@@ -62,7 +70,10 @@ public class GuardianRockEntity extends ProjectileEntity implements FlyingItemEn
             if (loadedFromSave || age > 160 || !(getOwner() instanceof FracturedGuardianEntity guardian)
                     || !guardian.isAlive() || guardian.isRemoved()) { discard(); return; }
             if (dataTracker.get(HELD)) return;
-            if (++flyingTicks > (isShard()?(int)Math.ceil(GuardianFanRules.RANGE / GuardianFanRules.SPEED):80)) { discard(); return; }
+            if (++flyingTicks > (isShard()?fuse:80)) {
+                if (isShard()) burst(world, guardian); else discard();
+                return;
+            }
             Vec3d start = getEntityPos(), end = start.add(getVelocity());
             // Sweep the center and the cube's corners to stop its visible volume at cover.
             double fraction = 1;
@@ -105,7 +116,7 @@ public class GuardianRockEntity extends ProjectileEntity implements FlyingItemEn
             if (direct != null || blocked) {
                 setPosition(start.lerp(end, entityFraction));
                 if(direct==null && blockContact!=null)walls.breakWall(world,blockContact);
-                impact(world, guardian, direct);
+                if (isShard()) burst(world, guardian); else impact(world, guardian, direct);
                 return;
             }
             if (age % 2 == 0) world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, Blocks.STONE.getDefaultState()),
@@ -116,31 +127,60 @@ public class GuardianRockEntity extends ProjectileEntity implements FlyingItemEn
         if (!isShard()) setVelocity(getVelocity().add(0, -GuardianCombatRules.ROCK_GRAVITY, 0));
     }
 
+    /** Surface-offset origin for cover rays: a block impact's exact boundary must not occlude the open side. */
+    private Vec3d coverOrigin(Vec3d center) {
+        Vec3d velocity = getVelocity();
+        return velocity.lengthSquared() < 1e-8 ? center : center.subtract(velocity.normalize().multiply(.08));
+    }
+
     private void impact(ServerWorld world, FracturedGuardianEntity guardian, ServerPlayerEntity direct) {
-        Vec3d center = getEntityPos();
-        if(!isShard())for(AstralDoubleEntity clone:world.getEntitiesByClass(AstralDoubleEntity.class,new Box(center,center).expand(3),e->!e.isRemoved())) {
-            Vec3d from=center.subtract(getVelocity().normalize().multiply(.08));
+        Vec3d center = getEntityPos(), from = coverOrigin(center);
+        for(AstralDoubleEntity clone:world.getEntitiesByClass(AstralDoubleEntity.class,new Box(center,center).expand(3),e->!e.isRemoved())) {
             if(clone.squaredDistanceTo(center)<=9 && walls.clear(world,guardian,from,clone.getBoundingBox().getCenter(),false))
                 clone.damage(world,world.getDamageSources().thrown(this,guardian),1);
         }
         for (ServerPlayerEntity player : world.getPlayers(p -> GuardianBossCombat.canDamage(guardian, p))) {
-            if (isShard()) {
-                if (player != direct || volleyHits.contains(player.getUuid())) continue;
-            } else if (player != direct && player.squaredDistanceTo(center) > 3*3) continue;
-            Vec3d contact = player.getBoundingBox().getCenter();
-            // Surface-offset origin avoids a block impact's exact boundary occluding the open side.
-            Vec3d from = center.subtract(getVelocity().normalize().multiply(.08));
-            if (!walls.clear(world, guardian, from, contact, false)) continue;
-            if (isShard()) volleyHits.add(player.getUuid());
-            float damage = isShard() ? GuardianCombatRules.SHARD_DAMAGE : player == direct ? GuardianCombatRules.ROCK_DAMAGE : GuardianCombatRules.ROCK_SPLASH_DAMAGE;
-            if (guardian.strike(world, player, world.getDamageSources().thrown(this, guardian), damage, isShard() ? "stone shard" : "rock")) {
+            if (player != direct && player.squaredDistanceTo(center) > 3*3) continue;
+            if (!walls.clear(world, guardian, from, player.getBoundingBox().getCenter(), false)) continue;
+            float damage = player == direct ? GuardianCombatRules.ROCK_DAMAGE : GuardianCombatRules.ROCK_SPLASH_DAMAGE;
+            if (guardian.strike(world, player, world.getDamageSources().thrown(this, guardian), damage, "rock")) {
                 Vec3d away = player.getEntityPos().subtract(center);
                 player.takeKnockback(.6, -away.x, -away.z);
             }
         }
         world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, Blocks.STONE.getDefaultState()),
-                center.x, center.y, center.z, isShard()?14:48, isShard()?.3:1.2, .4, isShard()?.3:1.2, .12);
+                center.x, center.y, center.z, 48, 1.2, .4, 1.2, .12);
         world.playSound(null, center.x, center.y, center.z, ModSounds.ENTITY_GUARDIAN_ROCK_IMPACT, SoundCategory.HOSTILE, 1.4f, .6f);
+        discard();
+    }
+
+    /** The Airburst: everyone within the blast and not behind cover is hurt once, and knocked straight down if they are in the air. */
+    private void burst(ServerWorld world, FracturedGuardianEntity guardian) {
+        Vec3d center = getEntityPos(), from = coverOrigin(center);
+        double reach = GuardianAirburstRules.BLAST;
+        for(AstralDoubleEntity clone:world.getEntitiesByClass(AstralDoubleEntity.class,new Box(center,center).expand(reach),e->!e.isRemoved())) {
+            if(GuardianAirburstRules.inBlast(center,clone.getBoundingBox()) && walls.clear(world,guardian,from,clone.getBoundingBox().getCenter(),false))
+                clone.damage(world,world.getDamageSources().thrown(this,guardian),1);
+        }
+        for (ServerPlayerEntity player : world.getPlayers(p -> GuardianBossCombat.canDamage(guardian, p))) {
+            if (volleyHits.contains(player.getUuid()) || !GuardianAirburstRules.inBlast(center, player.getBoundingBox())) continue;
+            if (!walls.clear(world, guardian, from, player.getBoundingBox().getCenter(), false)) continue;
+            volleyHits.add(player.getUuid());
+            if (!guardian.strike(world, player, world.getDamageSources().thrown(this, guardian), GuardianAirburstRules.DAMAGE, "airburst")) continue;
+            if (!player.isOnGround()) {
+                Vec3d moving = player.getVelocity();
+                player.setVelocity(moving.x * .3, -GuardianAirburstRules.KNOCK_DOWN, moving.z * .3);
+            } else {
+                Vec3d away = player.getEntityPos().subtract(center);
+                player.takeKnockback(.8, -away.x, -away.z);
+            }
+            player.velocityModified = true;
+        }
+        world.spawnParticles(ParticleTypes.EXPLOSION, center.x, center.y, center.z, 1, 0, 0, 0, 0);
+        world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, Blocks.STONE.getDefaultState()),
+                center.x, center.y, center.z, 40, reach * .4, reach * .4, reach * .4, .2);
+        world.spawnParticles(ParticleTypes.ELECTRIC_SPARK, center.x, center.y, center.z, 16, reach * .4, reach * .4, reach * .4, .1);
+        world.playSound(null, center.x, center.y, center.z, ModSounds.ENTITY_GUARDIAN_ROCK_IMPACT, SoundCategory.HOSTILE, 1.6f, .8f);
         discard();
     }
 }

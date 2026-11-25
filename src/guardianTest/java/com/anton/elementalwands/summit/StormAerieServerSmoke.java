@@ -4,6 +4,7 @@ import com.anton.elementalwands.data.EWAttachments;
 import com.anton.elementalwands.entity.roc.StormRocEntity;
 import com.anton.elementalwands.entity.roc.StormRocRules;
 import com.anton.elementalwands.network.ModNetworking;
+import com.anton.elementalwands.party.PartyLine;
 import com.anton.elementalwands.party.PartyManager;
 import com.anton.elementalwands.party.PartyStore;
 import com.anton.elementalwands.registry.ModBlocks;
@@ -17,6 +18,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -113,6 +115,8 @@ public final class StormAerieServerSmoke implements ModInitializer {
     private record Step(String name, int timeout, Body body) {}
 
     private final List<Step> steps = new ArrayList<>();
+    /** Each player's last recorded way home, kept after the record clears so their arrival can be checked against it. */
+    private final Map<UUID, Vec3d> homes = new HashMap<>();
     private final List<String> passed = new ArrayList<>();
     /** Checks that failed without stopping the run, each with its step. */
     private final List<String> failures = new ArrayList<>();
@@ -155,6 +159,8 @@ public final class StormAerieServerSmoke implements ModInitializer {
         if (++tick > 16000) throw new AssertionError("Aerie fixture timed out");
         if (tick < 25) return;
         if (tick == 25) { setup(server); begun = tick + 1; return; }
+        var recorded = StormSummitManager.savedReturns();
+        if (recorded != null) recorded.forEach((id, point) -> homes.put(UUID.fromString(id), new Vec3d(point.x(), point.y(), point.z())));
         // Simulated clients: confirm every teleport at once, take and acknowledge the chunks streamed to
         // them (until then the server does not count them as tracking those chunks, so block animation
         // triggers there never reach them), stay healthy, and stand where pinned.
@@ -437,11 +443,12 @@ public final class StormAerieServerSmoke implements ModInitializer {
             swingMark = swings(ringer, a);
             return true;
         });
-        step("The commit records the ringer and the near member only, both returning to A's STAND facing the gong; a repeat strike is refused", 5, t -> {
+        step("The commit records the ringer and the near member only, both returning side by side before A's gong, facing it; a repeat strike is refused", 5, t -> {
             for (UUID id : List.of(ringer, near)) {
                 require(StormAerie.pending(id) && called(id), name(id) + " was not held by the call");
                 returnPoint(id, a);
             }
+            apart(ringer, near);
             for (UUID id : List.of(far, bystander, creative, solo))
                 require(!StormAerie.pending(id) && !called(id) && !returns(id), name(id) + " was taken by the call");
             require(lastChat(near).contains(NAME_RINGER + " struck the storm gong"), "Near member was not told: " + lastChat(near));
@@ -459,7 +466,7 @@ public final class StormAerieServerSmoke implements ModInitializer {
             for (UUID id : List.of(far, bystander, creative, solo)) require(INTROS.get(id).isEmpty(), name(id) + " was told to play the intro");
             return true;
         });
-        step("The intro holds the pair at A's STAND, unhurt and unmoving, until each client reports the cloud; then both land on the slot's arrival facing where the scene ends, the gong unstruck; the far member and the bystander stay in the Overworld", 200, t -> {
+        step("The intro holds the pair at A's STAND, unhurt and unmoving, until each client reports the cloud; then each lands at their own place in the slot's arrival line, two blocks apart, facing where their scene ends, the gong unstruck; the far member and the bystander stay in the Overworld", 200, t -> {
             if (!StormSummitManager.inRealm(player(ringer))) {
                 for (UUID id : List.of(ringer, near))
                     require(player(id).getEntityWorld() == overworld && player(id).getEntityPos().distanceTo(a.stand()) < .01, name(id) + " left A's STAND before the cloud: " + player(id).getEntityPos());
@@ -478,12 +485,18 @@ public final class StormAerieServerSmoke implements ModInitializer {
             require(t >= INTRO_CLOUD - 3, "Carried up " + t + " ticks into the intro, before the client reported the cloud");
             require(swings(ringer, a) == swingMark, "The intro struck the gong " + (swings(ringer, a) - swingMark) + " more times");
             StormRocIntroTrack track = StormRocIntroTrack.get();
-            for (UUID id : List.of(ringer, near)) {
+            List<UUID> line = List.of(ringer, near);
+            for (UUID id : line) {
                 ServerPlayerEntity p = player(id);
-                require(StormSummitManager.inRealm(p) && p.getEntityPos().distanceTo(StormSummit.arrival(centre)) < .01, name(id) + " did not land at the arrival: " + p.getEntityPos());
-                require(Math.abs(wrap(p.getYaw() - track.yaw(track.length()))) < .5, name(id) + " faces " + p.getYaw() + " at the arrival, not where the scene ends");
+                double place = StormSummit.linePlace(line.indexOf(id), line.size());
+                require(StormSummitManager.inRealm(p) && p.getEntityPos().distanceTo(StormSummit.arrival(centre, place)) < .01,
+                        name(id) + " did not land at their place " + place + " in the arrival line: " + p.getEntityPos());
+                require(Math.abs(wrap(p.getYaw() - track.yaw(track.length()) - StormSummit.lineTurn(place))) < .5,
+                        name(id) + " faces " + p.getYaw() + " at the arrival, not where their scene ends");
                 require(StormRocIntro.watching(p) && !StormRocEncounter.enrolled(p), name(id) + " left the intro or was enrolled before landing");
             }
+            double apart = player(ringer).getEntityPos().distanceTo(player(near).getEntityPos());
+            require(apart > 1.9 && apart < 2.1, "The pair landed " + apart + " blocks apart, not side by side");
             require(player(far).getEntityWorld() == overworld && player(far).getEntityPos().distanceTo(farAt) < .01, "Far member moved");
             require(player(bystander).getEntityWorld() == overworld && player(bystander).getEntityPos().distanceTo(bystanderAt) < .01, "Bystander moved");
             return true;
@@ -518,6 +531,7 @@ public final class StormAerieServerSmoke implements ModInitializer {
             String r = ring(ringer, b, 3);
             require(r != null && r.startsWith("The storm gong calls"), "A strike exactly 100 ticks after the first did not commit: " + r);
             for (UUID id : List.of(ringer, near)) returnPoint(id, b);
+            apart(ringer, near);
             centre = (BlockPos) field(calls().getFirst(), "centre");
             return true;
         });
@@ -660,7 +674,7 @@ public final class StormAerieServerSmoke implements ModInitializer {
             mark = tick;
             return true;
         });
-        step("Near dies during the intro on the summit (killing damage still lands): the respawned player is sent to A's STAND with belongings kept, the scene over", 30, t -> {
+        step("Near dies during the intro on the summit (killing damage still lands): the respawned player is sent home beside A's STAND with belongings kept, the scene over", 30, t -> {
             if (t == 0) {
                 require(StormRocIntro.watching(player(near)), "Near is not in the intro on the summit");
                 player(near).kill(realm);
@@ -669,10 +683,10 @@ public final class StormAerieServerSmoke implements ModInitializer {
             if (t == 2) respawn(near);
             if (t < 3) return false;
             ServerPlayerEntity n = player(near);
-            boolean there = n.getEntityWorld() == overworld && n.getEntityPos().distanceTo(a.stand()) < .01;
+            boolean there = atHome(near, a);
             if (!there && t < 12) return false;
             if (soft(there, "A called player who died during the arrival wait respawned at " + n.getEntityPos() + " in "
-                    + n.getEntityWorld().getRegistryKey().getValue() + " instead of A's STAND " + a.stand() + "; called=" + called(near) + " return=" + returns(near)))
+                    + n.getEntityWorld().getRegistryKey().getValue() + " instead of their place beside A's STAND " + homes.get(near) + "; called=" + called(near) + " return=" + returns(near)))
                 home(near, a, "after dying in the arrival wait");
             else go(near, overworld, a.stand(), a.standYaw());
             require(books(near) == 1, "Belongings lost on the summit death: books=" + books(near));
@@ -680,7 +694,7 @@ public final class StormAerieServerSmoke implements ModInitializer {
             require(StormAerie.pending(ringer) && StormSummitManager.inRealm(player(ringer)) && StormRocIntro.watching(player(ringer)), "The ringer's call ended with the death");
             return true;
         });
-        step("Recovery: with the call lost (as after a crash) the ringer is on the summit with no fight; the recovery tick sends them to A's STAND and no fight starts", 100, t -> {
+        step("Recovery: with the call lost (as after a crash) the ringer is on the summit with no fight; the recovery tick sends them home beside A's STAND and no fight starts", 100, t -> {
             if (t == 0) {
                 require(tick - mark < INTRO_LAND, "Too late to test the arrival wait");
                 // A crash forgets the calls and the scenes alike.
@@ -703,14 +717,14 @@ public final class StormAerieServerSmoke implements ModInitializer {
             return true;
         });
         step("Wipe fight starts", 400, t -> StormRocEncounter.enrolled(player(ringer)) && StormRocEncounter.enrolled(player(near)));
-        step("Wipe by death: both die, the fight ends, and both respawns are sent to A's STAND in Survival", 40, t -> {
+        step("Wipe by death: both die, the fight ends, and both respawns are sent home beside A's STAND in Survival", 40, t -> {
             if (t == 0) { player(ringer).kill(realm); player(near).kill(realm); }
             if (t == 2) { require(!StormRocEncounter.activeAt(centre), "Wipe did not end the fight"); respawn(ringer); respawn(near); }
             if (t < 3) return false;
-            boolean there = List.of(ringer, near).stream().allMatch(id -> player(id).getEntityWorld() == overworld && player(id).getEntityPos().distanceTo(a.stand()) < .01);
+            boolean there = List.of(ringer, near).stream().allMatch(id -> atHome(id, a));
             if (!there && t < 15) return false;
             if (soft(there, "Wiped players respawned at " + player(ringer).getEntityPos() + " / " + player(near).getEntityPos()
-                    + " instead of A's STAND " + a.stand() + "; called=" + called(ringer) + "," + called(near)))
+                    + " instead of their places beside A's STAND " + homes.get(ringer) + " / " + homes.get(near) + "; called=" + called(ringer) + "," + called(near)))
                 for (UUID id : List.of(ringer, near)) home(id, a, "after a wipe by death");
             return true;
         });
@@ -761,7 +775,7 @@ public final class StormAerieServerSmoke implements ModInitializer {
             neverLand.clear();
             return true;
         });
-        step("The late-clients fight ends with the ringer's fall, home at A's STAND", 60, t -> {
+        step("The late-clients fight ends with the ringer's fall, home beside A's STAND", 60, t -> {
             if (t == 0) player(ringer).setPosition(centre.getX() + .5, 60, centre.getZ() + .5);
             if (StormRocEncounter.activeAt(centre) || player(ringer).getEntityWorld() != overworld) return false;
             home(ringer, a, "after the late-clients fight");
@@ -820,17 +834,39 @@ public final class StormAerieServerSmoke implements ModInitializer {
     private void returnPoint(UUID id, Site site) {
         StormSummitManager.Point point = StormSummitManager.savedReturns().get(id.toString());
         require(point != null, name(id) + " has no return point");
-        Vec3d stand = site.stand();
-        require(point.dimension().equals("minecraft:overworld") && new Vec3d(point.x(), point.y(), point.z()).distanceTo(stand) < 1e-6,
-                name(id) + " returns to " + point + ", not " + site.name + "'s STAND " + stand);
+        require(point.dimension().equals("minecraft:overworld") && inLine(new Vec3d(point.x(), point.y(), point.z()), site),
+                name(id) + " returns to " + point + ", not beside " + site.name + "'s STAND " + site.stand());
         require(Math.abs(wrap(point.yaw() - site.standYaw())) < .5, name(id) + " return yaw " + point.yaw() + " does not face the gong (" + site.standYaw() + ")");
     }
 
-    /** Back at a site's STAND in the Overworld, in Survival, held by nothing, records cleared. */
+    /** On the ground of a site's STAND, level with it and within the party line's reach of it. */
+    private static boolean inLine(Vec3d at, Site site) {
+        Vec3d stand = site.stand();
+        return Math.abs(at.y - stand.y) < 1e-6 && Math.hypot(at.x - stand.x, at.z - stand.z) <= PartyLine.REACH * PartyLine.SPACING + 6;
+    }
+
+    /** In the Overworld at their recorded way home beside a site's STAND. */
+    private boolean atHome(UUID id, Site site) {
+        ServerPlayerEntity p = player(id);
+        return p.getEntityWorld() == overworld && p.getEntityPos().distanceTo(homes.getOrDefault(id, site.stand())) < .01;
+    }
+
+    /** Two called players' ways home are side by side, not one on the other. */
+    private void apart(UUID one, UUID two) {
+        var returns = StormSummitManager.savedReturns();
+        var p = returns.get(one.toString());
+        var q = returns.get(two.toString());
+        double apart = Math.hypot(p.x() - q.x(), p.z() - q.z());
+        require(apart >= 1.5, name(one) + " and " + name(two) + " return " + apart + " blocks apart, on top of each other");
+    }
+
+    /** Back at their place beside a site's STAND (their recorded way home) in the Overworld, in Survival, held by nothing, records cleared. */
     private void home(UUID id, Site site, String when) {
         ServerPlayerEntity p = player(id);
-        require(p.getEntityWorld() == overworld && p.getEntityPos().distanceTo(site.stand()) < .01,
-                name(id) + " is not at " + site.name + "'s STAND " + when + ": " + p.getEntityPos() + " in " + p.getEntityWorld().getRegistryKey().getValue());
+        Vec3d expected = homes.getOrDefault(id, site.stand());
+        require(inLine(expected, site), name(id) + "'s way home " + expected + " is not beside " + site.name + "'s STAND " + site.stand());
+        require(p.getEntityWorld() == overworld && p.getEntityPos().distanceTo(expected) < .01,
+                name(id) + " is not at their place beside " + site.name + "'s STAND " + expected + " " + when + ": " + p.getEntityPos() + " in " + p.getEntityWorld().getRegistryKey().getValue());
         require(Math.abs(wrap(p.getYaw() - site.standYaw())) < .5, name(id) + " does not face the gong " + when + ": yaw " + p.getYaw());
         require(p.interactionManager.getGameMode() == GameMode.SURVIVAL, name(id) + " is in " + p.interactionManager.getGameMode() + " " + when);
         require(!StormAerie.pending(id) && !StormRocEncounter.enrolled(p), name(id) + " is still held " + when);

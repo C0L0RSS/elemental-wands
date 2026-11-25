@@ -1,7 +1,7 @@
 # Guardian combat review
 
-An offline review page for all 18 packaged Guardian clips, with the clips from the heavy
-performance pass (every clip but the throws and the intro: 15 of 18) marked
+An offline review page for all 20 packaged Guardian clips, with the clips from the heavy
+performance pass (every clip but the throws and the intro: 17 of 20) marked
 "Reworked tonight", each with its timings and events. The 3D view uses the same pose math as
 `v4-expressive/preview_motion.py`.
 

@@ -20,7 +20,17 @@ the minimum development target per element, not a cap on the learnable catalog.
 Default slot inputs are left mouse, right mouse, X, Z, V; Spell alternate is R.
 Bindings are editable in Controls and saved in
 `config/elementalwands-controls.properties`. Existing saved bindings can differ.
-Sneak + right mouse performs ordinary block interaction. Slot 1 also handles
+Sneak + Use aimed at a block within reach performs ordinary block interaction (doors,
+chests, ritual sockets, the gong, the seal) and casts nothing. Grass, flowers and fire,
+which have no collision, count only with solid ground behind them in reach and no mob in
+front of that ground, so they do not stop a cast at a mob among them; gates, signs,
+buttons and berry bushes always count. The same goes to vanilla for a villager, a horse,
+donkey, llama or camel, a tamed pet, a boat or minecart and an item frame or painting.
+Aimed at anything else, including a mob or a boss within reach, the press reaches the
+wand slot on that key (slot 2 on right mouse by default) and casts, so with a wand in
+the main hand an off-hand shield or food is used only where the press goes to vanilla.
+`WandControls` follows the player's own Sneak and Use bindings, toggled Sneak included.
+Slot 1 also handles
 close aimed Flashover disarming and Springbloom breaking, and a fresh slot-1 press
 breaks a Sentry Bloom aimed at from within three blocks. A fresh slot-2 press aimed
 at the player's own Sentry Bloom from that close collects its banked health and
@@ -99,6 +109,17 @@ identity and resolve current allies. Respect PvP-disabled rules too. Ordinary
 sword/bow PvP and physical terrain obstruction remain Minecraft behavior.
 `PartyStore` writes membership atomically before publishing changes; failed writes
 must not partially change live membership, and corrupt data must be preserved.
+
+Wherever a boss takes a group in or sends it back, it sets them down side by side, two
+blocks apart across the way they face, up to eight places either side of the middle, so
+nobody lands inside anyone else: into the Shattered Nave, the Hollow Crypt, the Burned Throne
+Hall and onto the Storm Summit, and home before the Storm Roc's gong, the Pyre King's seal
+and the crypt's court. `party/PartyLine` checks each spot is clear ground level with the
+point (a floor, room for the body, no fluid, fire or powder snow, nothing in the way from the
+point); a spot that isn't moves to the nearest that is, a row behind or in front if need be.
+The point itself, the boss's own arrival or stand, is used as it is. The Guardian's group goes
+home to where each of them stood at the church, and the summit's line is its own (see
+[Storm Summit](storm-summit.md)).
 
 For commands and historical verification, see the
 [party report](../archive/reports/parties-2026-09-12.md). For applicable runners,

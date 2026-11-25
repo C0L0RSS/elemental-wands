@@ -6,6 +6,15 @@ use [current guides](../README.md) for today’s behavior and [status](../STATUS
 for outstanding verification. Detailed historical reports are optional background.
 
 - [2026-11-24 — Pyre King: the Pyre Brand replaces the spin](2026-11-24-pyre-king-brand.md)
+- [2026-11-19 — Storm Roc: every wand lands its own way](2026-11-19-storm-roc-landings.md)
+- [2026-11-18 — Spectating boss fights](2026-11-18-boss-spectating.md)
+- [2026-11-18 — Springbloom and Updraft landings no longer hurt](2026-11-18-launch-fall-damage.md)
+- [2026-11-17 — Storm Roc: a hunter's brain](2026-11-17-storm-roc-brain.md)
+- [2026-11-17 — Fire: Dragon's Pyre follows the ground, and crouching casts](2026-11-17-pyre-ground-and-crouch-cast.md)
+- [2026-11-16 — Hollow Necromancer: a smarter fight](2026-11-16-necromancer-ai.md)
+- [2026-11-15 — Fire: Meteor works inside boss arenas](2026-11-15-meteor-arenas.md)
+- [2026-11-12 — Fractured Guardian: a smarter, heavier fight](2026-11-12-guardian-overhaul.md)
+- [2026-11-12 — Pyre King: a more natural awakening](2026-11-12-pyre-king-intro.md)
 - [2026-11-12 — Wind: longer-reaching Sky Shear](2026-11-12-wind-range.md)
 - [2026-11-11 — The Pyre King](2026-11-11-pyre-king.md)
 - [2026-11-11 — Nature: thrown flowers that store health](2026-11-11-nature-flowers.md)

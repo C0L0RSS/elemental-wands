@@ -14,7 +14,11 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.RaycastContext;
 import static com.anton.elementalwands.entity.GuardianLeapRules.*;
 
-/** Committed, collision-respecting leap. Invalid/blocked routes cancel rather than teleport. */
+/**
+ * Collision-respecting leap. It follows its target until {@link GuardianLeapRules#LOCK}, part of
+ * the way through the flight, then commits to a ring marked on the floor. Invalid/blocked routes
+ * cancel rather than teleport.
+ */
 final class GuardianLeapAttack {
     private final FracturedGuardianEntity guardian;
     private final GuardianBossCombat combat;
@@ -62,14 +66,18 @@ final class GuardianLeapAttack {
                 || guardian.getEntityPos().squaredDistanceTo(expected) > 1) return abort("boss moved unexpectedly, died, or acquired a passenger.");
         if (tick < LOCK) {
             ServerPlayerEntity player = world.getServer().getPlayerManager().getPlayer(target);
-            if (player == null || !player.isAlive() || player.isSpectator() || player.getEntityWorld() != world
-                    || player.squaredDistanceTo(origin) > 36*36) return abort("target left during windup.");
-            Vec3d aim = GuardianCombatRules.lead(player.getEntityPos(),motion.observe(player.getEntityPos()),LAND-tick);
-            Vec3d proposed = findLanding(world,aim);
-            if (proposed != null) landing = proposed;
-            faceLanding(); guardian.showLeapMarker(started,landing);
+            boolean present = player != null && player.isAlive() && !player.isSpectator() && player.getEntityWorld() == world
+                    && player.squaredDistanceTo(origin) <= 36*36;
+            // On the ground it gives up; in the air it lands where it was already going.
+            if (!present && tick < TAKEOFF) return abort("target left during windup.");
+            if (present) {
+                Vec3d aim = GuardianCombatRules.lead(player.getEntityPos(),motion.observe(player.getEntityPos()),LAND-tick);
+                Vec3d proposed = findLanding(world,aim);
+                if (proposed != null) landing = tick <= TAKEOFF ? proposed : steer(world,proposed);
+                faceLanding(); guardian.showLeapMarker(started,landing);
+            }
         }
-        if (tick == LOCK && !clearRoute(world,landing)) return abort("route obstructed before aim lock.");
+        if (tick == LOCK) combat.markRing(landing,IMPACT_RADIUS,world.getTime()+LAND-LOCK);
         if (tick == TAKEOFF) {
             if (!supported(world)) return abort("ground beneath feet changed before takeoff.");
             if (!clearRoute(world,landing)) return abort("route obstructed before takeoff.");
@@ -117,7 +125,7 @@ final class GuardianLeapAttack {
         if (active) {
             status = "Stopped.";
             guardian.setVelocity(Vec3d.ZERO);
-            guardian.clearLeapMarker(); combat.clearWaves();
+            guardian.clearLeapMarker(); combat.clearWaves(); combat.clearLeapRing();
             guardian.stopTriggeredAnim("guardian",null);
         }
         restoreGravity(); active = false;
@@ -136,17 +144,35 @@ final class GuardianLeapAttack {
 
     private Vec3d findLanding(ServerWorld world, Vec3d aim) {
         for (double[] offset : new double[][]{{0,0},{2,0},{-2,0},{0,2},{0,-2},{2,2},{-2,-2}}) {
-            double x=aim.x+offset[0],z=aim.z+offset[1];
-            if (!world.isChunkLoaded(BlockPos.ofFloored(x,aim.y,z))) continue;
-            var floor=world.raycast(new RaycastContext(new Vec3d(x,aim.y+3,z),new Vec3d(x,aim.y-8,z),
-                    RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,guardian));
-            if (floor.getType() == HitResult.Type.MISS) continue;
-            Vec3d point=floor.getPos();
-            if (!com.anton.elementalwands.arena.GuardianArenaManager.validLanding(guardian,arena,point) || point.subtract(origin).horizontalLength()>MAX_RANGE+2) continue;
-            if (!world.getFluidState(BlockPos.ofFloored(point.add(0,.1,0))).isEmpty()) continue;
-            if (space(world,point) && clearRoute(world,point)) return point;
+            Vec3d point=landingAt(world,aim.x+offset[0],aim.y,aim.z+offset[1]);
+            if (point != null) return point;
         }
         return null;
+    }
+
+    /** The floor under this spot, if it could land there and fly there from where the leap began. */
+    private Vec3d landingAt(ServerWorld world, double x, double y, double z) {
+        if (!world.isChunkLoaded(BlockPos.ofFloored(x,y,z))) return null;
+        // Deep enough to find the floor under a target who is in the air.
+        var floor=world.raycast(new RaycastContext(new Vec3d(x,y+3,z),new Vec3d(x,y-16,z),
+                RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,guardian));
+        if (floor.getType() == HitResult.Type.MISS) return null;
+        Vec3d point=floor.getPos();
+        if (!com.anton.elementalwands.arena.GuardianArenaManager.validLanding(guardian,arena,point) || point.subtract(origin).horizontalLength()>MAX_RANGE+2) return null;
+        if (!world.getFluidState(BlockPos.ofFloored(point.add(0,.1,0))).isEmpty()) return null;
+        return space(world,point) && clearRoute(world,point) ? point : null;
+    }
+
+    /** In the air the landing slides toward its target a little each tick, across level floor, so the body never lurches. */
+    private Vec3d steer(ServerWorld world, Vec3d proposed) {
+        Vec3d delta=proposed.subtract(landing).multiply(1,0,1);
+        Vec3d point=proposed;
+        if (delta.length() > STEER) {
+            Vec3d step=landing.add(delta.normalize().multiply(STEER));
+            point=landingAt(world,step.x,landing.y+1,step.z);
+        }
+        // Nor onto a floor more than a step higher or lower: the arc would jump by that much.
+        return point == null || Math.abs(point.y-landing.y) > 1 ? landing : point;
     }
 
     private boolean space(ServerWorld world, Vec3d pos) {

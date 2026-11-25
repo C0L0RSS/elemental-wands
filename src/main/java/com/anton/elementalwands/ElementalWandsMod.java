@@ -85,7 +85,6 @@ public class ElementalWandsMod implements ModInitializer {
         FabricDefaultAttributeRegistry.register(ModEntities.HOLLOW_NECROMANCER, com.anton.elementalwands.entity.necromancer.NecromancerEntity.createAttributes().build());
         FabricDefaultAttributeRegistry.register(ModEntities.PYRE_KING, com.anton.elementalwands.entity.pyreking.PyreKingEntity.createAttributes().build());
         FabricDefaultAttributeRegistry.register(ModEntities.HARVEST_SOUL, com.anton.elementalwands.entity.necromancer.HarvestSoulEntity.createAttributes().build());
-        FabricDefaultAttributeRegistry.register(ModEntities.NECROMANCER_SOUL, com.anton.elementalwands.entity.necromancer.NecromancerSoulEntity.createAttributes().build());
         FabricDefaultAttributeRegistry.register(ModEntities.INTRO_ZOMBIE, net.minecraft.entity.mob.ZombieEntity.createZombieAttributes().build());
         FabricDefaultAttributeRegistry.register(ModEntities.INTRO_SOUL, com.anton.elementalwands.entity.necromancer.IntroSoulEntity.createAttributes().build());
         FabricDefaultAttributeRegistry.register(ModEntities.TRANSFORM_SOUL, com.anton.elementalwands.entity.necromancer.TransformSoulEntity.createAttributes().build());
@@ -139,6 +138,7 @@ public class ElementalWandsMod implements ModInitializer {
         com.anton.elementalwands.hall.PyreHallManager.init();
         com.anton.elementalwands.entity.necromancer.NecromancerFightLog.init();
         com.anton.elementalwands.entity.GuardianFightLog.init();
+        com.anton.elementalwands.entity.roc.StormRocFightLog.init();
 
         // ── First-join starter kit ──────────────────────────────────────
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {

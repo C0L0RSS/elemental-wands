@@ -3,6 +3,7 @@ package com.anton.elementalwands.client.renderer;
 import com.anton.elementalwands.client.SummitStormClient;
 import com.anton.elementalwands.summit.StormSummit;
 import com.anton.elementalwands.entity.roc.RocEffectEntity;
+import com.anton.elementalwands.entity.roc.StormRocEntity;
 import com.anton.elementalwands.entity.roc.StormRocRules;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
@@ -37,6 +38,8 @@ public final class RocEffectRenderer extends EntityRenderer<RocEffectEntity, Roc
         RocEffectEntity.Kind kind;
         float tick, yaw, radius;
         int duration, warning;
+        /** A lane circle's bolt comes from the Roc's bill: where that is from the effect, or null with no Roc near. */
+        Vec3d bill;
         float[] ground = new float[0];
         int groundX, groundZ, groundSize;
     }
@@ -46,6 +49,11 @@ public final class RocEffectRenderer extends EntityRenderer<RocEffectEntity, Roc
         super.updateRenderState(e,s,delta);
         s.kind=e.kind(); s.tick=e.effectTicks(delta); s.duration=e.duration();
         s.radius=(float)e.radius(); s.warning=e.warningTicks(); s.yaw=e.getYaw();
+        s.bill=null;
+        if(s.kind==RocEffectEntity.Kind.LANE&&s.tick>=s.warning) {
+            var rocs=e.getEntityWorld().getEntitiesByClass(StormRocEntity.class,e.getBoundingBox().expand(96),r->r.isAlive());
+            if(!rocs.isEmpty())s.bill=rocs.getFirst().socket("beak").subtract(e.getEntityPos());
+        }
         sampleGround(e,s);
     }
     /**
@@ -116,6 +124,7 @@ public final class RocEffectRenderer extends EntityRenderer<RocEffectEntity, Roc
         if(s.kind==RocEffectEntity.Kind.SWEEP_WAVE)queue.submitCustom(matrices, StormRocCrackleLayer.LIGHT, (entry,v)->sweepWave(s,entry,v,camera));
         if(s.kind==RocEffectEntity.Kind.SCREAM)queue.submitCustom(matrices, StormRocCrackleLayer.LIGHT, (entry,v)->screamCrackles(s,entry,v,camera));
         if(s.kind==RocEffectEntity.Kind.CLAP_WAVE)queue.submitCustom(matrices, StormRocCrackleLayer.LIGHT, (entry,v)->clapCrackles(s,entry,v,camera));
+        if(s.kind==RocEffectEntity.Kind.LANE)queue.submitCustom(matrices, LIGHT, (entry,v)->laneBolt(s,entry,v));
         super.render(s,matrices,queue,camera);
     }
     private static void draw(State s, MatrixStack.Entry m, VertexConsumer v, boolean light) {
@@ -124,6 +133,8 @@ public final class RocEffectRenderer extends EntityRenderer<RocEffectEntity, Roc
             case DISTANT_BOLT, STORM_BOLT, CHARGE_BOLT, CALL_BOLT -> skyBolt(s,m,v,light);
             case TORNADO -> tornado(s,m,v,light);
             case DIVE_MARKER -> marker(s,m,v,light);
+            case SHADOW -> shadow(s,m,v,light);
+            case LANE -> lane(s,m,v,light);
             case SHOCKWAVE, CLAP_WAVE -> shockwave(s,m,v,light);
             case LIVE_GROUND -> live(s,m,v,light);
             case STORM -> {}
@@ -131,6 +142,61 @@ public final class RocEffectRenderer extends EntityRenderer<RocEffectEntity, Roc
     }
     /** Seeds that differ per effect, so neighbouring bolts never share a shape. */
     private static int seed(State s) { return (int)Math.floor(s.x*7.31+s.z*13.7); }
+    /**
+     * The Raptor Strike's shadow: dark on the rock where it will land, growing and deepening as it
+     * comes down, inside a faint pale rim that shows the whole of what its talons reach.
+     */
+    private static void shadow(State s, MatrixStack.Entry m, VertexConsumer v, boolean light) {
+        float f=Math.min(1,s.tick/Math.max(1,s.warning));
+        if(light) {
+            // The rim and a second ring closing on it carry the mark where the storm has the rock dark already.
+            ring(s,v,m,s.radius,.05,.14,alpha(0xFFFFE4A0,.6f+.35f*f),64);
+            ring(s,v,m,s.radius*(1.6-.6*f),.06,.07,alpha(0xFFFFF3CE,.25f+.5f*f),64);
+            return;
+        }
+        disk(s,v,m,s.radius*(.45+.55*f),.02,alpha(0xFF05060C,.45f+.4f*f),48);
+        disk(s,v,m,s.radius,.015,alpha(0xFF05060C,.3f),48);
+    }
+    /**
+     * One circle of the low pass's lane: a strike's warning ring, filling as the Roc's lightning
+     * nears it, with a chevron on the rock pointing the way it flies; then a white flare as its
+     * bolt lands (see laneBolt).
+     */
+    private static void lane(State s, MatrixStack.Entry m, VertexConsumer v, boolean light) {
+        float progress=Math.min(1,s.tick/Math.max(1,s.warning));
+        float hit=s.tick-s.warning;
+        if(!light) { disk(s,v,m,s.radius,.02,0x223E354B,48);return; }
+        if(hit<0) {
+            ring(s,v,m,s.radius,.055,.14,0xE6FFE4A0,48);
+            ring(s,v,m,s.radius*progress,.065,.08,0x90FFF3CE,48);
+            // The matrices are turned to the effect's yaw, where it flies toward +z.
+            Vec3d tip=ground(s,new Vec3d(0,.08,s.radius*.55));
+            line(v,m,ground(s,new Vec3d(-s.radius*.45,.08,-s.radius*.1)),tip,.09,0xD0FFF9DD);
+            line(v,m,ground(s,new Vec3d(s.radius*.45,.08,-s.radius*.1)),tip,.09,0xD0FFF9DD);
+            return;
+        }
+        if(hit>=5)return;
+        float fade=1-hit/5;
+        ring(s,v,m,s.radius*(.4+hit*.12),.09,.2,alpha(0xFFFFFADD,.8f*fade),48);
+        disk(s,v,m,1.4,.06,alpha(0xFFFFF6DE,.7f*fade),16);
+    }
+    /** A lane circle's bolt: jagged, from the Roc's bill down to the rock, in the world's own axes. */
+    private static void laneBolt(State s, MatrixStack.Entry m, VertexConsumer v) {
+        float hit=s.tick-s.warning;
+        if(hit<0||hit>=4.5)return;
+        float fade=1-hit/5;
+        // With no Roc in sight it falls from above, back along the way it flew.
+        double yaw=Math.toRadians(s.yaw);
+        Vec3d top=s.bill!=null?s.bill:new Vec3d(Math.sin(yaw)*StormRocRules.PASS_FRONT,StormRocRules.PASS_HEIGHT,-Math.cos(yaw)*StormRocRules.PASS_FRONT);
+        int steps=Math.max(4,(int)(top.length()/3)),seed=seed(s);
+        Vec3d[] joints=new Vec3d[steps+1];
+        for(int i=0;i<=steps;i++) {
+            double f=i/(double)steps,wide=Math.sin(f*Math.PI)*1.1;
+            joints[i]=top.multiply(f).add(noise(i*19+seed*71)*wide,noise(i*31+seed*17)*wide*.5,noise(i*43+seed*33)*wide);
+        }
+        for(int i=1;i<=steps;i++)beam(v,m,joints[i-1],joints[i],.2*(1-hit/7),alpha(0xFFFFFFEE,fade));
+        for(int i=1;i<=steps;i++)beam(v,m,joints[i-1],joints[i],.52*(1-hit/7),alpha(0xFFFFD27A,.34f*fade));
+    }
     private static void strike(State s, MatrixStack.Entry m, VertexConsumer v, boolean light) {
         float progress=Math.min(1,s.tick/Math.max(1,s.warning));
         if(light) {

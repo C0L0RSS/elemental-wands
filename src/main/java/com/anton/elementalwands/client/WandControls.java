@@ -11,9 +11,24 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
+import net.minecraft.block.PlantBlock;
+import net.minecraft.block.SweetBerryBushBlock;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.decoration.BlockAttachedEntity;
+import net.minecraft.entity.decoration.InteractionEntity;
+import net.minecraft.entity.passive.AbstractHorseEntity;
+import net.minecraft.entity.passive.MerchantEntity;
+import net.minecraft.entity.passive.TameableEntity;
+import net.minecraft.entity.projectile.ProjectileUtil;
+import net.minecraft.entity.vehicle.VehicleEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.hit.EntityHitResult;
+import net.minecraft.util.hit.HitResult;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.RaycastContext;
 import org.lwjgl.glfw.GLFW;
 
 /** Slot bindings are separate from vanilla's single-key lookup, so mouse bindings
@@ -131,9 +146,7 @@ public final class WandControls {
         if (client.currentScreen != null || client.player == null || !client.player.isAlive() || client.player.isSpectator()
                 || !client.isWindowFocused() || !(client.player.getMainHandStack().getItem() instanceof AbstractWandItem)) return false;
         if (key.getTranslationKey().equals(hubKey.getBoundKeyTranslationKey())) return false;
-        // A deliberate vanilla interaction gesture; never casts as well as interacting.
-        if (mouse && code == GLFW.GLFW_MOUSE_BUTTON_RIGHT && (InputUtil.isKeyPressed(client.getWindow(), GLFW.GLFW_KEY_LEFT_SHIFT)
-                || InputUtil.isKeyPressed(client.getWindow(), GLFW.GLFW_KEY_RIGHT_SHIFT))) return false;
+        if (sneakInteraction(client, key)) return false;
         for (int i = 0; i < KEYS.length; i++) if (KEYS[i].equals(key)) {
             if (action == GLFW.GLFW_PRESS) {
                 boolean daggersReady=client.player.getAttachedOrElse(com.anton.elementalwands.data.EWAttachments.GALE_PREPARED,0)>0;
@@ -150,6 +163,54 @@ public final class WandControls {
             return true;
         }
         return false;
+    }
+    /** Sneak + Use on something to use within reach is the interaction gesture and goes to vanilla
+     * without a cast: a block (doors, chests, ritual blocks), or a villager, mount, pet, vehicle or
+     * frame. Aimed at anything else, mobs and bosses included, it casts as usual. Both follow the
+     * player's own Sneak and Use bindings, toggled Sneak included. */
+    private static boolean sneakInteraction(MinecraftClient client, InputUtil.Key key) {
+        if (!held(client, client.options.sneakKey)
+                || !key.getTranslationKey().equals(client.options.useKey.getBoundKeyTranslationKey())) return false;
+        if (client.crosshairTarget instanceof EntityHitResult e) return usable(e.getEntity());
+        if (!(client.crosshairTarget instanceof BlockHitResult b) || b.getType() != HitResult.Type.BLOCK) return false;
+        var world = client.player.getEntityWorld();
+        var state = world.getBlockState(b.getBlockPos());
+        var block = state.getBlock();
+        // Grass, flowers and fire take the crosshair without being in the way, even in front of a mob:
+        // they count only with solid ground behind them in reach, as when aimed at the floor. Every other
+        // block, gates, signs, buttons and berry bushes included, is something to use.
+        boolean decor = state.getCollisionShape(world, b.getBlockPos()).isEmpty()
+                && (state.isReplaceable() || block instanceof PlantBlock && !(block instanceof SweetBerryBushBlock));
+        if (!decor) return true;
+        Vec3d eye = client.player.getCameraPosVec(1f);
+        Vec3d end = eye.add(client.player.getRotationVec(1f).multiply(client.player.getBlockInteractionRange()));
+        var ground = world.raycast(new RaycastContext(eye, end, RaycastContext.ShapeType.COLLIDER,
+                RaycastContext.FluidHandling.NONE, client.player));
+        if (ground.getType() != HitResult.Type.BLOCK) return false;
+        // A mob too short to show over the grass, between it and that ground, still takes the cast.
+        Vec3d to = ground.getPos();
+        var mob = ProjectileUtil.raycast(client.player, eye, to,
+                client.player.getBoundingBox().stretch(to.subtract(eye)).expand(1),
+                e -> !e.isSpectator() && e.canHit(), eye.squaredDistanceTo(to));
+        return mob == null || usable(mob.getEntity());
+    }
+    /** Entities a player uses rather than fights: never a mob or a boss, which a sneaking caster aims at. */
+    private static boolean usable(Entity entity) {
+        if (entity.isInvisible()) return false;
+        return entity instanceof MerchantEntity || entity instanceof AbstractHorseEntity
+                || entity instanceof TameableEntity t && t.isTamed()
+                || entity instanceof VehicleEntity || entity instanceof BlockAttachedEntity
+                || entity instanceof InteractionEntity;
+    }
+    /** A binding pressed for vanilla, or its key physically down: a wand slot on the same key keeps vanilla from
+     * ever seeing it pressed. */
+    private static boolean held(MinecraftClient client, KeyBinding binding) {
+        if (binding.isPressed()) return true;
+        var key = InputUtil.fromTranslationKey(binding.getBoundKeyTranslationKey());
+        if (key.getCode() < 0) return false;
+        if (key.getCategory() == InputUtil.Type.MOUSE)
+            return GLFW.glfwGetMouseButton(client.getWindow().getHandle(), key.getCode()) == GLFW.GLFW_PRESS;
+        return key.getCategory() == InputUtil.Type.KEYSYM && InputUtil.isKeyPressed(client.getWindow(), key.getCode());
     }
     public static void tick(MinecraftClient client) {
         if(leapAim && !validLeapContext()) { leapAim=false;leapWand=null; }

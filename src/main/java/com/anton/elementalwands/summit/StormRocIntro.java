@@ -1,8 +1,8 @@
 package com.anton.elementalwands.summit;
 
 import com.anton.elementalwands.network.ModNetworking;
-import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
@@ -31,7 +31,9 @@ import net.minecraft.world.World;
  * there still and unhurt, carries them into the sky realm once their client says its screen is
  * inside the cloud (it never shows the loading screen: the cloud shot waits for the summit), holds
  * them at the arrival, and tells {@link StormAerie} when each has landed or skipped so the fight
- * can start. The scene's clock is the client's, since it pauses in the cloud for as long as loading
+ * can start. A party lands side by side in the arrival line ({@link StormSummit#arrival(BlockPos, double)}):
+ * each player's summit scene is the same scene turned about the Roc's home perch to their own
+ * place, so nobody lands in anyone else, and the Roc still ends on the fight's perch. The scene's clock is the client's, since it pauses in the cloud for as long as loading
  * takes; the server only needs its beats.
  */
 public final class StormRocIntro {
@@ -41,8 +43,8 @@ public final class StormRocIntro {
      * never moved while its screen might still show the aerie.
      */
     public static final int CLOUD_LATE = StormRocIntroTrack.get().beat("cloud") + 400;
-    /** The scene's own length. */
-    public static final int LENGTH = StormRocIntroTrack.get().length();
+    /** The scene's length: the longest version's, since each player sees their own element's landing. */
+    public static final int LENGTH = StormRocIntroTrack.longest();
     /** How long past its length a scene may run (a slow load, a lost client) before the fight starts anyway. */
     public static final int GRACE = 600;
 
@@ -54,7 +56,13 @@ public final class StormRocIntro {
         RegistryKey<World> world;
         float yaw, pitch;
         boolean inCloud, carried, landed, skipped;
-        Watcher(Vec3d lock, RegistryKey<World> world, float yaw, float pitch) { this.lock = lock; this.world = world; this.yaw = yaw; this.pitch = pitch; }
+        /** The version of the scene their client plays: their element's landing. */
+        final String landing;
+        /** Their place in the arrival line. */
+        final double place;
+        Watcher(Vec3d lock, RegistryKey<World> world, float yaw, float pitch, String landing, double place) {
+            this.lock = lock; this.world = world; this.yaw = yaw; this.pitch = pitch; this.landing = landing; this.place = place;
+        }
     }
 
     private StormRocIntro() {}
@@ -77,29 +85,34 @@ public final class StormRocIntro {
 
     /**
      * Starts the scene for these players at the gong: each stands where the striker stood, facing
-     * the gong (the aerie half of the scene is laid out from there), and is told the summit's slot.
+     * the gong (the aerie half of the scene is laid out from there; each sees only their own, so
+     * they may share the spot), and is told the summit's slot, their place in its arrival line (as
+     * the turn of their summit scene) and which landing to play: their element's.
      */
-    static void begin(ServerWorld world, StormAerie.Gong gong, BlockPos centre, Collection<ServerPlayerEntity> players) {
+    static void begin(ServerWorld world, StormAerie.Gong gong, BlockPos centre, List<ServerPlayerEntity> players) {
         StormSummitManager.Point stand = StormAerie.stand(world, gong);
         Vec3d at = new Vec3d(stand.x(), stand.y(), stand.z());
         float pitch = StormRocIntroTrack.get().pitch(0);
-        for (ServerPlayerEntity p : players) {
+        for (int i = 0; i < players.size(); i++) {
+            ServerPlayerEntity p = players.get(i);
+            double place = StormSummit.linePlace(i, players.size());
+            String landing = StormRocIntroTrack.landingFor(com.anton.elementalwands.data.EWAttachments.getAffinity(p));
             StormSummitManager.transfer(p, world, at, stand.yaw(), pitch);
-            WATCHING.put(p.getUuid(), new Watcher(at, world.getRegistryKey(), stand.yaw(), pitch));
-            ServerPlayNetworking.send(p, new ModNetworking.StormRocIntroPayload(true, at, stand.yaw(), centre));
+            WATCHING.put(p.getUuid(), new Watcher(at, world.getRegistryKey(), stand.yaw(), pitch, landing, place));
+            ServerPlayNetworking.send(p, new ModNetworking.StormRocIntroPayload(true, at, stand.yaw(), centre, StormSummit.lineTurn(place), landing));
         }
     }
 
     /**
-     * Carries a player into the sky realm at the arrival, already facing where the scene ends:
-     * looking up at the Roc on its home spire, so handing the view back moves nothing.
+     * Carries a player into the sky realm at their place in the arrival line, already facing where
+     * their scene ends: looking up at the Roc on its home spire, so handing the view back moves nothing.
      */
     static void carryUp(ServerPlayerEntity player, ServerWorld realm, BlockPos centre) {
         Watcher w = WATCHING.get(player.getUuid());
         if (w == null || w.carried) return;
-        StormRocIntroTrack track = StormRocIntroTrack.get();
-        Vec3d arrival = StormSummit.arrival(centre);
-        w.yaw = track.yaw(track.length());
+        StormRocIntroTrack track = StormRocIntroTrack.get(w.landing);
+        Vec3d arrival = StormSummit.arrival(centre, w.place);
+        w.yaw = track.yaw(track.length()) + StormSummit.lineTurn(w.place);
         w.pitch = track.pitch(track.length());
         StormSummitManager.transfer(player, realm, arrival, w.yaw, w.pitch);
         w.lock = arrival;
@@ -143,7 +156,7 @@ public final class StormRocIntro {
     /** Ends the scene for this player: the fight is starting, or they have left the call (or died). */
     static void end(ServerPlayerEntity player) {
         if (WATCHING.remove(player.getUuid()) != null && player.networkHandler != null && !player.isDisconnected())
-            ServerPlayNetworking.send(player, new ModNetworking.StormRocIntroPayload(false, Vec3d.ZERO, 0, BlockPos.ORIGIN));
+            ServerPlayNetworking.send(player, new ModNetworking.StormRocIntroPayload(false, Vec3d.ZERO, 0, BlockPos.ORIGIN, 0, ""));
     }
 
     /** Forgets a player who died or disconnected; the call drops them. */

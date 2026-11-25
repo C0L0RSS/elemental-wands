@@ -239,7 +239,8 @@ Entry is free: walking into the veil seals every living non-Creative player with
 into a fight in a free slot. It records their return points first and blinds them for a moment
 on the way in. Anyone taken from the doorway (within 3.5 blocks of the veil's bottom-centre
 cell) returns to the court six blocks in front of it, facing the door, so they don't walk
-straight back in. Anyone already sealed into a fight or waiting for a slot to open stays with
+straight back in; a party taken from the doorway comes back out side by side there
+(`party/PartyLine`), and the group arrives in the crypt side by side too. Anyone already sealed into a fight or waiting for a slot to open stays with
 it, so standing in the veil or a second party member walking in while the slot is laid out
 starts no second fight. A refusal (such as a full crypt) repeats only after the player has
 stepped out of the veil for two seconds. A player who dies or disconnects before the slot opens
@@ -255,9 +256,10 @@ rewards go beside its open grave.
   also after quitting from the death screen or a restart before respawning. The crypt handles
   only a death in the realm or in a fight; a return point alone never pulls a later death
   elsewhere back to the graveyard.
-  A fallen fighter respawns as a spectator above their own clearing. They cannot leave it or
-  teleport away, and get their game mode back when the fight ends. Disconnecting also counts
-  as falling; rejoining mid-fight puts the player back as a spectator.
+  A fallen fighter respawns as a spectator above their own clearing and sees the Necromancer's
+  health bar. Spectator flight and teleports stay within that clearing. Their original game
+  mode returns when the fight ends. Disconnecting counts as falling, and rejoining mid-fight
+  puts the player back as a spectator.
 - **Wipe:** when nobody is left standing (dead, disconnected or gone), the boss and its army
   vanish. Everyone is sent back to where they entered and the slot's layout is rebuilt. The
   group may walk into the veil again straight away; a fight's end releases only the players in

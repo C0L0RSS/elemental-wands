@@ -53,7 +53,7 @@ task; `./gradlew checkDocs` fails when it names something that does not exist.
 | Churches, the Shattered Nave, the Hollow Crypt, recovery, rewards | [Church and arena](docs/reference/church-and-arena.md) |
 | Storm Roc's fight, summit realm and aerie | [Storm Summit](docs/reference/storm-summit.md) |
 | Pyre King's fight, body, clips, gate and hall | [Pyre King](docs/reference/pyre-king.md) |
-| Why a built boss is designed the way it is | Design notes: [Storm Roc](docs/design/storm-roc.md), [Pyre King](docs/design/pyre-king.md) |
+| Why a built boss is designed the way it is | Design notes: [Fractured Guardian](docs/design/guardian.md), [Hollow Necromancer](docs/design/necromancer.md), [Storm Roc](docs/design/storm-roc.md), [Pyre King](docs/design/pyre-king.md) |
 | Test runners and verification boundaries | [Testing](docs/reference/testing.md) |
 | Viewing local review pages from another device | [Remote preview](docs/reference/remote-preview.md) |
 | What changed for players | [Release summaries](docs/releases/README.md) |
@@ -87,8 +87,8 @@ the testing guide before launching a fixture.
 ```
 
 Run `./gradlew build` after code changes. It includes the Guardian, Necromancer,
-Pyre King, party and Roc gaze contract checks and `checkDocs`; none of them launches a
-live gameplay session.
+Pyre King, Pyre wave, party, Roc gaze and Roc brain contract checks and `checkDocs`; none of
+them launches a live gameplay session.
 
 For changes to art, models, textures, effects, layouts or sounds, also run:
 
@@ -128,6 +128,7 @@ not been confirmed on that machine: confirm it when your task needs it, then rep
 | Lunar mods folder | `~/.lunarclient/profiles/1.21/mods/fabric-1.21.10/` | `%USERPROFILE%\.lunarclient\profiles\lunar\1.21\mods\fabric-1.21.10\` (*unverified*) |
 | Minecraft assets for test clients | `$HOME/.lunarclient/shared/assets` | `$env:USERPROFILE\.lunarclient\shared\assets` |
 | `ffmpeg` for encoding recordings | installed | not on the `PATH` (checked November 24, 2026) |
+| Server fixtures | Dedicated runners | No `run/eula.txt` on file: use the [hosted runner](docs/reference/testing.md#server-fixtures-on-a-machine-with-no-accepted-eula) |
 | Viewing review pages from another device | not set up | [Remote preview](docs/reference/remote-preview.md) |
 
 Git does not carry these between the machines, so never assume the other one has them:

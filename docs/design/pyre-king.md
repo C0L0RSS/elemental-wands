@@ -233,12 +233,12 @@ very janky," and "it is hard to read when he will dash."
 - **Decided:** it should be long. The other intros run over 30 seconds and there is no time
   limit: "I would rather have a long intro that is cool and feels the impact instead of an
   intro that looks super sped up."
-- **Built (Nov 11), first pass, not yet seen by the developer:** 58 seconds, started by an
-  operator command. See [Pyre King](../reference/pyre-king.md#the-intro).
-- **Open:** whether the player's touch at the gate should show in the intro itself (the
-  scene opens in the hall as before); whether a fallen player should watch the rest of a
-  co-op fight, as in the other realms; where the Pyre King comes in the order of bosses,
-  since his gate needs a Nether portal.
+- **Built (Nov 11) and approved (Nov 12):** 61 seconds. The developer had the arms reworked
+  and the last pull given weight, then approved it from the in-game video. See
+  [Pyre King](../reference/pyre-king.md#the-intro).
+- A fallen player gets to see how their teammates finish the fight, as in the Guardian's nave.
+- Two questions remain open. Should the intro show the player's touch at the gate? Where does
+  the Pyre King come in the order of bosses, given that his gate needs a Nether portal?
 
 ## Decided for the fight (Nov 10)
 

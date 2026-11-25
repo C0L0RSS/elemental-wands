@@ -27,6 +27,12 @@ public final class NatureMeshes {
             return new Gson().fromJson(reader,new TypeToken<Map<String,float[]>>(){}.getType());
         }catch(java.io.IOException e){throw new IllegalStateException(e);}
     }
+    /** A mesh's raw triangles (per vertex: position, normal, red, green, blue, material), for the Storm Roc intro's Nature landing. */
+    public static float[] mesh(String name){
+        float[] data=MESHES.get(name);
+        if(data==null)throw new IllegalArgumentException("Unknown Nature mesh "+name);
+        return data;
+    }
     public static void draw(String name,VertexConsumer out,MatrixStack.Entry entry,int light,
             float opacity,float reveal,Vec3d cameraLocal,boolean firstPerson){
         float[] data=MESHES.get(name);

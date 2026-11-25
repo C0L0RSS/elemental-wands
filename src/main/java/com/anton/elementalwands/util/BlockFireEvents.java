@@ -17,7 +17,7 @@ public final class BlockFireEvents {
     public static final int INFERNO_HIT = 2;
     /** pos: where the wave stopped; dir: flight direction; aux: the face it struck, or zero in open air. */
     public static final int INFERNO_BREAK = 3;
-    /** entity: caster; pos: eye at the cast; dir: the front's direction. */
+    /** entity: caster; pos: the caster's feet at the cast; dir: the front's flat heading. */
     public static final int PYRE_CAST = 4;
     /** pos: the target's body; dir: the front's direction. */
     public static final int PYRE_HIT = 5;

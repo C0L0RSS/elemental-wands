@@ -20,8 +20,8 @@ import net.minecraft.world.BlockRenderView;
  */
 public final class BlockFireMesh {
     public static final Identifier ATLAS = Identifier.of("elementalwands", "textures/misc/blockfire.png");
-    static final RenderLayer FIRE = RenderLayer.getEntityCutoutNoCull(ATLAS);
-    static final RenderLayer SMOKE = RenderLayer.getEntityTranslucent(ATLAS);
+    public static final RenderLayer FIRE = RenderLayer.getEntityCutoutNoCull(ATLAS);
+    public static final RenderLayer SMOKE = RenderLayer.getEntityTranslucent(ATLAS);
     private static final int COLUMNS = 4, ROWS = 8;
     /** A frame never draws more than this many cubes, whatever is on screen. */
     private static final int MAX_CUBES = 6000;

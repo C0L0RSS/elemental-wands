@@ -111,8 +111,9 @@ public final class PyreKingRules {
     /** The moment the blade meets the floor. */
     public static final double BRAND_STRIKES = 1.6;
     /**
-     * He does not spend it on stone. Once his aim has frozen, a target out of his sight this many ticks ends it: he
-     * lets the fire die and is free this many seconds later, to go round the pillar (hiding buys a moment, not a rest).
+     * He does not spend it on stone. Once his aim has frozen, a target out of his sight this many ticks, counted from
+     * the freeze, ends it: he lets the fire die and is free this many seconds later, to go round the pillar (hiding
+     * buys a moment, not a rest).
      */
     public static final int BRAND_LOST = 8;
     public static final double BRAND_DROP = .3;

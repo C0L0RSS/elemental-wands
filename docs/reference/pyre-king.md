@@ -186,7 +186,7 @@ that nobody has played.
 
 - **It is his middle-range move** (the developer, Nov 24: "more of a mid ranged attack since
   close range I want the boss to focus on the real sword swings"). He uses it on a target
-  6.5 to 11.5 blocks away and never nearer.
+  more than 6.5 and up to 11.5 blocks away, and never nearer.
 - **The tell.** He steps back and lowers the point of the sword to the floor in front of
   him, the hilt drawn back to his belt, and rears back over it, looking at the floor. His
   aim freezes 0.5 s in. From then every block of floor that will burn shows low flames.
@@ -205,12 +205,17 @@ that nobody has played.
 - **What it costs.** 16 as it catches, to whoever is still on it. After that it is his
   floor fire like any other: 8 on contact and once a second. Standing there to the end is
   24, about a sword blow in diamond or netherite armor. A shield and Fire Resistance do
-  not stop it.
+  not stop it. The catch is the only thing that hurts on the tick the floor lights, so
+  armor sees one blow of 16 and not two of 8.
 - **Stone stops it.** A block of floor the sword cannot see does not burn, so the far side
-  of a pillar is safe, and its shadow shows in the warning too.
+  of a pillar is safe, and its shadow shows in the warning too. The floor is judged again
+  as it catches, so a wall raised across it during the warning shadows what lies behind.
 - **He does not spend it on stone.** Once his aim has frozen, a target out of his sight for
-  0.4 s ends it: the fire dies, he is free 0.3 s later, and he goes round the pillar as he
-  would for any hiding player. A rehearsed move (`/ew pyreking move brand`) plays in full.
+  0.4 s, counted from the freeze, ends it: the fire dies, he is free 0.3 s later, and he
+  goes round the pillar as he would for any hiding player. A rehearsed move
+  (`/ew pyreking move brand`) plays in full.
+- **The fire lasts only while the sword is in the floor.** If the move is dropped because
+  the last player has left or fallen, its floor goes out with it, caught or not.
 - **No blade strikes.** The sword hits nobody on its way into the floor, and a player
   within about 2.5 blocks of him, or beside or behind him, is not on the fan.
 - **He kneels behind the hilt** for as long as it burns, and is free 0.6 s after he
@@ -471,18 +476,17 @@ mesh later, in a deferred callback.
     none were left once he had torn the sword free.
   - Three of them are for hiding, behind a round pillar 7 across like the hall's.
     - A player standing behind it draws a flank within 3 s, is seen within 3 s more, and
-      is struck. In the last run (Nov 24) he Hauled 20.6 blocks, then Snare, then Overhead.
+      is struck. In the last run (Nov 24) he Hauled 22.8 blocks, then Snare, then Overhead.
     - A player who sprints round it for 30 s, acting on where he was a quarter of a second
       ago, and eats for the second half (which slows them to a crawl, as the game does),
       must be flanked four times and struck twice, and never go unseen for 6 s. In the
-      last run: four flanks, struck nine times (seven of them while eating), not burned,
-      153 raw in all. He began one Pyre Brand and let it die after 1.9 s when they got
-      behind the stone.
+      last run: five flanks, struck nine times (eight of them while eating), not burned,
+      154 raw in all.
     - A player who circles perfectly, with no reaction time, must be flanked three times
-      in 15 s. In the last run: four Hauls and a Lunge, struck once and burned twice, 20 raw
-      in all.
-    - The 30 s case can sit on its limit of four flanks. The two runs with the Pyre Brand
-      on Nov 24 had seven and four.
+      in 15 s. In the last run: four Hauls and a Lunge, struck once and burned four times,
+      36 raw in all.
+    - The 30 s case can sit on its limit of four flanks. The four runs with the Pyre Brand
+      on Nov 24 had seven, four, five and five.
   - Five cases check that the drawn sword is where the server sweeps it (within 0.01 of
     the pommel). They measure a sword at rest; no case yet measures a blow in mid-swing.
   - A free fight then runs through Unbound to his death. The player stands, backs away,

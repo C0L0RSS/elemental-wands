@@ -210,8 +210,8 @@ Things one player cannot show.
 Automated work an agent can do without the developer.
 
 - **Pyre King:** the fight fixture's `circles-a-pillar` case can sit on its limit of four
-  flanks in 30 s now that the Pyre Brand takes a share of his time (seven and four in its
-  two runs). Watch it over a few more runs; if it fails without a real fault, judge the
+  flanks in 30 s now that the Pyre Brand takes a share of his time (seven, four, five and
+  five in its four runs). Watch it over a few more runs; if it fails without a real fault, judge the
   case by how often he strikes.
 - No fixture has run on a dedicated server since the Nature rework; the November 10–11 runs
   were hosted in a singleplayer world on the Windows machine.

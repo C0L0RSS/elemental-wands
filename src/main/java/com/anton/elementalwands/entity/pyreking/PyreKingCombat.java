@@ -251,7 +251,7 @@ final class PyreKingCombat {
         }
         updateBar(players);
         if (players.isEmpty()) {
-            if (move != null && move != Move.UNBOUND) { release(); move = null; }
+            if (move != null && move != Move.UNBOUND) { release(); dropBrand(now); move = null; }
             if (move == null) { halt(); settle(); }
             if (emptySince < 0) emptySince = now;
             if (now - emptySince >= RESET_AFTER) reset(world);
@@ -908,9 +908,7 @@ final class PyreKingCombat {
         Vec3d sword = enters == null ? boss.getEntityPos().add(ahead.multiply(4)) : world(new double[]{enters[0], 0, enters[1]});
         Fire fire = new Fire(sword, sword.add(ahead.multiply(BRAND_REACH)), 0, FIRE_TALL, at(BRAND_FROM), at(BRAND_TO));
         fire.fan = true;
-        // What the fire spreads from: the sword in the floor, or himself if he is driving it into something that stands there.
-        Vec3d source = sword.add(0, .5, 0);
-        if (!world.getBlockState(BlockPos.ofFloored(source)).getCollisionShape(world, BlockPos.ofFloored(source)).isEmpty()) source = boss.getEntityPos().add(0, 2.5, 0);
+        Vec3d source = brandSource(world, sword);
         double half = second ? BRAND_HALF_TWO : BRAND_HALF;
         int floor = MathHelper.floor(boss.getY() + .5), span = (int) Math.ceil(BRAND_REACH) + 1;
         int x0 = MathHelper.floor(sword.x), z0 = MathHelper.floor(sword.z);
@@ -918,14 +916,31 @@ final class PyreKingCombat {
             Vec3d to = new Vec3d(x + .5 - sword.x, 0, z + .5 - sword.z);
             if (!inBrand(to.dotProduct(across), to.dotProduct(ahead), half)) continue;
             BlockPos foot = footing(world, x, floor, z);
-            if (foot != null && clear(world, source, new Vec3d(x + .5, foot.getY() + .5, z + .5))) fire.cells.add(foot);
+            if (foot != null && clear(world, source, Vec3d.ofCenter(foot))) fire.cells.add(foot);
         }
         fires.add(fire);
+        catching(world, fire);      // the warning starts on the tick his aim freezes, not at the floor's next pass
         return fire;
+    }
+
+    /** What the Pyre Brand's fire spreads from: the sword in the floor, or himself if he drives it into something that stands there. */
+    private Vec3d brandSource(ServerWorld world, Vec3d sword) {
+        Vec3d source = sword.add(0, .5, 0);
+        BlockPos in = BlockPos.ofFloored(source);
+        return world.getBlockState(in).getCollisionShape(world, in).isEmpty() ? source : boss.getEntityPos().add(0, 2.5, 0);
+    }
+
+    /** The Pyre Brand's fire lives while his sword is in the floor: a move dropped part-way takes its floor with it, caught or not. */
+    private void dropBrand(long now) {
+        if (brand != null) brand.until = now;
+        brand = null;
     }
 
     /** The floor catches: its blocks of fire stand up at once, and whoever is still on it is burned. */
     private void catchBrand(ServerWorld world, long now, List<ServerPlayerEntity> players) {
+        // The floor is judged again as it catches: whatever was raised on it or across it since his aim froze counts.
+        Vec3d source = brandSource(world, brand.from);
+        brand.cells.removeIf(cell -> !cell.equals(footing(world, cell.getX(), cell.getY(), cell.getZ())) || !clear(world, source, Vec3d.ofCenter(cell)));
         light(world, brand);
         for (BlockPos cell : brand.cells) {
             world.spawnParticles(ParticleTypes.FLAME, true, false, cell.getX() + .5, cell.getY() + .7, cell.getZ() + .5, 3, .3, .6, .3, .07);
@@ -998,8 +1013,9 @@ final class PyreKingCombat {
                 // A target behind stone is out of it: he lets the fire die, tears the sword out and goes round.
                 if (!reviewing && player != null && t >= move.aimUntil && t < BRAND_TO) {
                     Seen hiding = seen.get(player.getUuid());
-                    if (hiding != null && hiding.hidden >= BRAND_LOST) {
-                        if (brand != null) brand.until = now;
+                    // Counted from the freeze: time out of sight before it does not end the move the moment it is aimed.
+                    if (hiding != null && Math.min(hiding.hidden, now - at(move.aimUntil)) >= BRAND_LOST) {
+                        dropBrand(now);
                         if (t >= BRAND_FROM) sound(world, boss.getEntityPos(), SoundEvents.BLOCK_FIRE_EXTINGUISH, 1.8f, .8f);
                         callOff(t + BRAND_DROP);
                         return true;
@@ -1211,7 +1227,8 @@ final class PyreKingCombat {
         }
         if (now % 3 == 0) for (Fire fire : fires) if (!fire.lit) catching(world, fire);
         for (Fire fire : fires) {
-            if (now < fire.armed) continue;
+            // The Pyre Brand's fan is lit by its own catch (catchBrand), which is all that hurts on that tick.
+            if (now < fire.armed || fire.fan && !fire.lit) continue;
             if (!fire.lit || now % 10 == 0) light(world, fire);
             for (ServerPlayerEntity player : players) {
                 Seen s = seen.computeIfAbsent(player.getUuid(), id -> new Seen());
